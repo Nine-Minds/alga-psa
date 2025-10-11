@@ -92,7 +92,7 @@ export function WorkItemDetailsDrawer({
                                 initialTicket={ticketData.ticket}
                                 initialComments={ticketData.comments}
                                 initialBoard={ticketData.board}
-                                initialCompany={ticketData.company}
+                                initialClient={ticketData.client}
                                 initialContactInfo={ticketData.contactInfo}
                                 initialCreatedByUser={ticketData.createdByUser}
                                 initialAdditionalAgents={ticketData.additionalAgents}
@@ -101,7 +101,7 @@ export function WorkItemDetailsDrawer({
                                 boardOptions={ticketData.options.board}
                                 priorityOptions={ticketData.options.priority}
                                 initialCategories={ticketData.categories}
-                                initialCompanies={ticketData.companies}
+                                initialClients={ticketData.clients}
                                 initialAgentSchedules={ticketData.agentSchedules}
                                 initialUserMap={ticketData.userMap}
                                 initialAvailableAgents={ticketData.availableAgents}

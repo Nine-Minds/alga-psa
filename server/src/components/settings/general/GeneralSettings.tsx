@@ -9,28 +9,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "s
 import { Checkbox } from "server/src/components/ui/Checkbox";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getTenantDetails, updateTenantName, addCompanyToTenant, removeCompanyFromTenant, setDefaultCompany } from "server/src/lib/actions/tenantActions";
-import { getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
-import { CompanyPicker } from "server/src/components/companies/CompanyPicker";
-import { ICompany } from "server/src/interfaces/company.interfaces";
+import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "server/src/lib/actions/tenantActions";
+import { getAllClients } from "server/src/lib/actions/client-actions/clientActions";
+import { ClientPicker } from "server/src/components/clients/ClientPicker";
+import { IClient } from "server/src/interfaces/client.interfaces";
 
 const GeneralSettings = () => {
   const [tenantName, setTenantName] = React.useState('');
-  const [companies, setCompanies] = React.useState<{ id: string; name: string; isDefault: boolean }[]>([]);
+  const [clients, setClients] = React.useState<{ id: string; name: string; isDefault: boolean }[]>([]);
 
   React.useEffect(() => {
     loadTenantData();
   }, []);
-  const [selectedCompanyId, setSelectedCompanyId] = React.useState<string | null>(null);
-  const [allCompanies, setAllCompanies] = React.useState<ICompany[]>([]);
+  const [selectedClientId, setSelectedClientId] = React.useState<string | null>(null);
+  const [allClients, setAllClients] = React.useState<IClient[]>([]);
 
   const loadTenantData = async () => {
     try {
       const tenant = await getTenantDetails();
-      setTenantName(tenant.company_name);
-      setCompanies(tenant.companies.map(c => ({
-        id: c.company_id,
-        name: c.company_name,
+      setTenantName(tenant.client_name);
+      setClients(tenant.clients.map(c => ({
+        id: c.client_id,
+        name: c.client_name,
         isDefault: c.is_default
       })));
     } catch (error) {
@@ -47,70 +47,70 @@ const GeneralSettings = () => {
     }
   };
 
-  const handleAddCompany = async () => {
-    if (!selectedCompanyId) {
-      toast.error("Please select a company");
+  const handleAddClient = async () => {
+    if (!selectedClientId) {
+      toast.error("Please select a client");
       return;
     }
 
     try {
-      const companyToAdd = allCompanies.find(c => c.company_id === selectedCompanyId);
-      if (!companyToAdd) {
-        throw new Error("Company not found");
+      const clientToAdd = allClients.find(c => c.client_id === selectedClientId);
+      if (!clientToAdd) {
+        throw new Error("Client not found");
       }
 
-      const newCompany = {
-        id: companyToAdd.company_id,
-        name: companyToAdd.company_name,
-        isDefault: companies.length === 0
+      const newClient = {
+        id: clientToAdd.client_id,
+        name: clientToAdd.client_name,
+        isDefault: clients.length === 0
       };
       
-      await addCompanyToTenant(newCompany.id);
-      setCompanies([...companies, newCompany]);
-      setSelectedCompanyId(null);
+      await addClientToTenant(newClient.id);
+      setClients([...clients, newClient]);
+      setSelectedClientId(null);
       
-      if (newCompany.isDefault) {
-        await setDefaultCompany(newCompany.id);
+      if (newClient.isDefault) {
+        await setDefaultClient(newClient.id);
       }
 
-      toast.success("Company added successfully");
+      toast.success("Client added successfully");
     } catch (error) {
-      toast.error("Failed to add company");
+      toast.error("Failed to add client");
     }
   };
 
   React.useEffect(() => {
-    const loadCompanies = async () => {
+    const loadClients = async () => {
       try {
-        const companies = await getAllCompanies();
-        setAllCompanies(companies);
+        const clients = await getAllClients();
+        setAllClients(clients);
       } catch (error) {
-        toast.error("Failed to load companies");
+        toast.error("Failed to load clients");
       }
     };
-    loadCompanies();
+    loadClients();
   }, []);
 
-  const handleRemoveCompany = async (companyId: string) => {
+  const handleRemoveClient = async (clientId: string) => {
     try {
-      await removeCompanyFromTenant(companyId);
-      setCompanies(companies.filter(c => c.id !== companyId));
-      toast.success("Company removed successfully");
+      await removeClientFromTenant(clientId);
+      setClients(clients.filter(c => c.id !== clientId));
+      toast.success("Client removed successfully");
     } catch (error) {
-      toast.error("Failed to remove company");
+      toast.error("Failed to remove client");
     }
   };
 
-  const handleSetDefaultCompany = async (companyId: string) => {
+  const handleSetDefaultClient = async (clientId: string) => {
     try {
-      await setDefaultCompany(companyId);
-      setCompanies(companies.map(c => ({
+      await setDefaultClient(clientId);
+      setClients(clients.map(c => ({
         ...c,
-        isDefault: c.id === companyId
+        isDefault: c.id === clientId
       })));
-      toast.success("Default company updated successfully");
+      toast.success("Default client updated successfully");
     } catch (error) {
-      toast.error("Failed to set default company");
+      toast.error("Failed to set default client");
     }
   };
 
@@ -135,7 +135,7 @@ const GeneralSettings = () => {
           </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Companies</h3>
+          <h3 className="text-lg font-semibold">Clients</h3>
           <Table>
             <TableHeader>
               <TableRow>
@@ -145,22 +145,22 @@ const GeneralSettings = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {companies.map((company) => (
-                <TableRow key={company.id}>
-                  <TableCell>{company.name}</TableCell>
+              {clients.map((client) => (
+                <TableRow key={client.id}>
+                  <TableCell>{client.name}</TableCell>
                   <TableCell>
                     <Checkbox
-                      id={`default-company-checkbox-${company.id}`}
-                      checked={company.isDefault}
-                      onChange={() => handleSetDefaultCompany(company.id)}
+                      id={`default-client-checkbox-${client.id}`}
+                      checked={client.isDefault}
+                      onChange={() => handleSetDefaultClient(client.id)}
                     />
                   </TableCell>
                   <TableCell>
                     <Button
-                      id={`remove-company-button-${company.id}`}
+                      id={`remove-client-button-${client.id}`}
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleRemoveCompany(company.id)}
+                      onClick={() => handleRemoveClient(client.id)}
                     >
                       <Trash className="h-4 w-4" />
                     </Button>
@@ -171,23 +171,23 @@ const GeneralSettings = () => {
           </Table>
 
           <div className="space-y-4">
-            <CompanyPicker
-              id="tenant-company-picker"
-              companies={allCompanies}
-              onSelect={setSelectedCompanyId}
-              selectedCompanyId={selectedCompanyId}
+            <ClientPicker
+              id="tenant-client-picker"
+              clients={allClients}
+              onSelect={setSelectedClientId}
+              selectedClientId={selectedClientId}
               filterState="all"
               onFilterStateChange={() => {}}
               clientTypeFilter="all"
               onClientTypeFilterChange={() => {}}
             />
             <Button
-              onClick={handleAddCompany}
-              id="add-company-button"
-              disabled={!selectedCompanyId}
+              onClick={handleAddClient}
+              id="add-client-button"
+              disabled={!selectedClientId}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Company
+              Add Client
             </Button>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientBillingPlan from 'server/src/lib/models/clientBilling';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { Session } from 'next-auth';
 import {
@@ -18,8 +18,8 @@ import {
   DiscountType,
   PreviewInvoiceResponse
 } from 'server/src/interfaces/invoice.interfaces';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, IClientBillingCycle } from 'server/src/interfaces/billing.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import Invoice from 'server/src/lib/models/invoice';
 import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
 import { createTenantKnex } from 'server/src/lib/db';
@@ -33,7 +33,7 @@ import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
-import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
+import { getClientDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 
 export interface ManualInvoiceUpdate { // Add export
   service_id?: string;

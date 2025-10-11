@@ -5,7 +5,7 @@ import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getUserRolesWithPermissions, getUserClientId } from 'server/src/lib/actions/user-actions/userActions';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from 'server/src/lib/actions/policyActions';
@@ -171,7 +171,7 @@ export async function createClientUser({
   email,
   password,
   contactId,
-  companyId,
+  clientId,
   firstName,
   lastName,
   roleId
@@ -179,7 +179,7 @@ export async function createClientUser({
   email: string;
   password: string;
   contactId: string;
-  companyId: string;
+  clientId: string;
   firstName?: string;
   lastName?: string;
   roleId?: string;
@@ -205,7 +205,7 @@ export async function createClientUser({
       email,
       password,
       contactId,
-      companyId,
+      clientId,
       tenantId: tenant,
       firstName,
       lastName,
@@ -481,12 +481,12 @@ export async function deleteContactAvatar(
 
 /**
  * Check client portal permissions for navigation
- * Returns permissions for billing, user management, and company settings
+ * Returns permissions for billing, user management, and client settings
  */
 export async function checkClientPortalPermissions(): Promise<{
   hasBillingAccess: boolean;
   hasUserManagementAccess: boolean;
-  hasCompanySettingsAccess: boolean;
+  hasClientSettingsAccess: boolean;
 }> {
   try {
     const currentUser = await getCurrentUser();
@@ -494,12 +494,12 @@ export async function checkClientPortalPermissions(): Promise<{
       return {
         hasBillingAccess: false,
         hasUserManagementAccess: false,
-        hasCompanySettingsAccess: false
+        hasClientSettingsAccess: false
       };
     }
 
     // Check permissions using the hasPermission function from rbac
-    const [hasBilling, hasUser, hasCompany] = await Promise.all([
+    const [hasBilling, hasUser, hasClient] = await Promise.all([
       hasPermission(currentUser, 'billing', 'read'),
       hasPermission(currentUser, 'user', 'read'),
       hasPermission(currentUser, 'client', 'read')
@@ -508,14 +508,14 @@ export async function checkClientPortalPermissions(): Promise<{
     return {
       hasBillingAccess: hasBilling,
       hasUserManagementAccess: hasUser,
-      hasCompanySettingsAccess: hasCompany
+      hasClientSettingsAccess: hasClient
     };
   } catch (error) {
     console.error('Error checking client portal permissions:', error);
     return {
       hasBillingAccess: false,
       hasUserManagementAccess: false,
-      hasCompanySettingsAccess: false
+      hasClientSettingsAccess: false
     };
   }
 }

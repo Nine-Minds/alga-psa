@@ -1,11 +1,11 @@
 // server/src/app/msp/account-manager/page.tsx
 
 import AccountManagerDashboard from 'server/src/components/AccountManagerDashboard';
-import Company from 'server/src/lib/models/company';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import Client from 'server/src/lib/models/client';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 
 export default async function AccountManagerPage() {
-  // const companies = await Company.getAll();
+  // const clients = await Client.getAll();
 
-  return <AccountManagerDashboard companies={[]} />;
+  return <AccountManagerDashboard clients={[]} />;
 }

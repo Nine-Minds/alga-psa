@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import ContactDetails from 'server/src/components/contacts/ContactDetails';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { getContactPortalPermissions } from 'server/src/lib/actions/permission-actions';
 
 const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
@@ -17,7 +17,7 @@ const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const [documents, setDocuments] = useState<IDocument[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [contactId, setContactId] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState({
@@ -49,9 +49,9 @@ const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
         const permissions = await getContactPortalPermissions();
         setUserPermissions(permissions);
 
-        // Fetch companies using server action
-        const companiesData = await getAllCompanies();
-        setCompanies(companiesData);
+        // Fetch clients using server action
+        const clientsData = await getAllClients();
+        setClients(clientsData);
 
         // Fetch contact data using server action
         const contactData = await getContactByContactNameId(contactId);
@@ -94,8 +94,8 @@ const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
                   const permissions = await getContactPortalPermissions();
                   setUserPermissions(permissions);
                   
-                  const companiesData = await getAllCompanies();
-                  setCompanies(companiesData);
+                  const clientsData = await getAllClients();
+                  setClients(clientsData);
                   
                   const contactData = await getContactByContactNameId(contactId!);
                   setContact(contactData);
@@ -162,7 +162,7 @@ const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
     <div className="p-6">
       <ContactDetails 
         contact={contact} 
-        companies={companies} 
+        clients={clients} 
         documents={documents}
         userId={currentUser.user_id}
         onDocumentCreated={handleDocumentCreated}

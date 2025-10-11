@@ -7,20 +7,20 @@ import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 
 export interface ExpiringCreditsNotificationJobData extends Record<string, unknown> {
   tenantId: string;
-  companyId?: string; // Optional: process only a specific company
+  clientId?: string; // Optional: process only a specific client
 }
 
 /**
  * Job handler for sending notifications about credits that will expire soon
  * This job:
  * 1. Finds credits that will expire within the configured notification thresholds
- * 2. Groups them by company and expiration date
- * 3. Sends notifications to company contacts
+ * 2. Groups them by client and expiration date
+ * 3. Sends notifications to client contacts
  * 
- * @param data Job data containing tenant ID and optional company ID
+ * @param data Job data containing tenant ID and optional client ID
  */
 export async function expiringCreditsNotificationHandler(data: ExpiringCreditsNotificationJobData): Promise<void> {
-  const { tenantId, companyId } = data;
+  const { tenantId, clientId } = data;
   
   if (!tenantId) {
     throw new Error('Tenant ID is required for expiring credits notification job');
@@ -31,7 +31,7 @@ export async function expiringCreditsNotificationHandler(data: ExpiringCreditsNo
     throw new Error('No tenant found');
   }
   
-  console.log(`Processing expiring credits notifications for tenant ${tenant}${companyId ? ` and company ${companyId}` : ''}`);
+  console.log(`Processing expiring credits notifications for tenant ${tenant}${clientId ? ` and client ${clientId}` : ''}`);
   
   try {
     // Get notification thresholds from settings
@@ -53,7 +53,7 @@ export async function expiringCreditsNotificationHandler(data: ExpiringCreditsNo
     
     // Process each threshold
     for (const daysBeforeExpiration of notificationThresholds) {
-      await processNotificationsForThreshold(knex, tenant, daysBeforeExpiration, companyId);
+      await processNotificationsForThreshold(knex, tenant, daysBeforeExpiration, clientId);
     }
     
   } catch (error: any) {
@@ -69,7 +69,7 @@ async function processNotificationsForThreshold(
   knex: Knex,
   tenant: string,
   daysBeforeExpiration: number,
-  companyId?: string
+  clientId?: string
 ): Promise<void> {
   // Calculate the target date (credits expiring in exactly daysBeforeExpiration days)
   const targetDate = new Date();
@@ -90,9 +90,9 @@ async function processNotificationsForThreshold(
     .where('remaining_amount', '>', 0)
     .whereBetween('expiration_date', [startOfDay.toISOString(), endOfDay.toISOString()]);
   
-  // Add company filter if provided
-  if (companyId) {
-    query = query.where('company_id', companyId);
+  // Add client filter if provided
+  if (clientId) {
+    query = query.where('client_id', clientId);
   }
   
   const expiringCredits: ICreditTracking[] = await query;
@@ -104,50 +104,50 @@ async function processNotificationsForThreshold(
   
   console.log(`Found ${expiringCredits.length} credits expiring in ${daysBeforeExpiration} days`);
   
-  // Group credits by company
-  const creditsByCompany: Record<string, ICreditTracking[]> = {};
+  // Group credits by client
+  const creditsByClient: Record<string, ICreditTracking[]> = {};
   
   for (const credit of expiringCredits) {
-    if (!creditsByCompany[credit.company_id]) {
-      creditsByCompany[credit.company_id] = [];
+    if (!creditsByClient[credit.client_id]) {
+      creditsByClient[credit.client_id] = [];
     }
-    creditsByCompany[credit.company_id].push(credit);
+    creditsByClient[credit.client_id].push(credit);
   }
   
-  // Process each company
-  for (const [companyId, credits] of Object.entries(creditsByCompany)) {
-    await sendCompanyNotification(knex, tenant, companyId, credits, daysBeforeExpiration);
+  // Process each client
+  for (const [clientId, credits] of Object.entries(creditsByClient)) {
+    await sendClientNotification(knex, tenant, clientId, credits, daysBeforeExpiration);
   }
 }
 
 /**
- * Send notification for a specific company's expiring credits
+ * Send notification for a specific client's expiring credits
  */
-async function sendCompanyNotification(
+async function sendClientNotification(
   knex: Knex,
   tenant: string,
-  companyId: string,
+  clientId: string,
   credits: ICreditTracking[],
   daysBeforeExpiration: number
 ): Promise<void> {
   try {
-    // Get company details
-    const company = await knex('companies')
-      .where({ company_id: companyId, tenant })
+    // Get client details
+    const client = await knex('clients')
+      .where({ client_id: clientId, tenant })
       .first();
       
-    if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found`);
     }
     
-    // Get company billing contacts
-    const contacts = await knex('company_contacts')
-      .where({ company_id: companyId, tenant })
+    // Get client billing contacts
+    const contacts = await knex('client_contacts')
+      .where({ client_id: clientId, tenant })
       .where('is_billing_contact', true)
       .select('user_id', 'email');
       
     if (!contacts.length) {
-      console.log(`No billing contacts found for company ${companyId}, skipping notification`);
+      console.log(`No billing contacts found for client ${clientId}, skipping notification`);
       return;
     }
     
@@ -177,16 +177,16 @@ async function sendCompanyNotification(
     
     // Prepare email template data
     const templateData = {
-      company: {
-        id: company.company_id,
-        name: company.name
+      client: {
+        id: client.client_id,
+        name: client.name
       },
       credits: {
         totalAmount: formatCurrency(totalAmount),
         expirationDate: formatDate(credits[0].expiration_date),
         daysRemaining: daysBeforeExpiration,
         items: creditItems,
-        url: `${process.env.APP_URL}/billing/credits?company=${companyId}`
+        url: `${process.env.APP_URL}/billing/credits?client=${clientId}`
       }
     };
     
@@ -213,11 +213,11 @@ async function sendCompanyNotification(
         data: templateData
       });
       
-      console.log(`Sent credit expiration notification to ${contact.email} for company ${company.name}`);
+      console.log(`Sent credit expiration notification to ${contact.email} for client ${client.name}`);
     }
     
   } catch (error: any) {
-    console.error(`Error sending company notification for ${companyId}: ${error.message}`);
+    console.error(`Error sending client notification for ${clientId}: ${error.message}`);
     throw error;
   }
 }

@@ -411,15 +411,15 @@ export async function fetchTicketActivities(
       return await trx("tickets")
       .select(
         "tickets.*",
-        "companies.company_name",
+        "clients.client_name",
         "contacts.full_name as contact_name",
         "statuses.name as status_name",
         "statuses.is_closed",
         "priorities.priority_name"
       )
-      .leftJoin("companies", function() {
-        this.on("tickets.company_id", "companies.company_id")
-            .andOn("tickets.tenant", "companies.tenant");
+      .leftJoin("clients", function() {
+        this.on("tickets.client_id", "clients.client_id")
+            .andOn("tickets.tenant", "clients.tenant");
       })
       .leftJoin("contacts", function() {
         this.on("tickets.contact_name_id", "contacts.contact_name_id")
@@ -478,9 +478,9 @@ export async function fetchTicketActivities(
         }
         // If isClosed is true, show all tickets (both open and closed)
 
-        // Company filter
-        if (filters.companyId) {
-          queryBuilder.where("tickets.company_id", filters.companyId);
+        // Client filter
+        if (filters.clientId) {
+          queryBuilder.where("tickets.client_id", filters.clientId);
         }
 
         // Contact filter
@@ -500,8 +500,8 @@ export async function fetchTicketActivities(
           queryBuilder.where(function() {
             this.where("tickets.title", 'ilike', searchTerm)
               .orWhere("tickets.ticket_number", 'ilike', searchTerm);
-            // Add other fields to search if needed (e.g., company name, contact name)
-            // .orWhere("companies.company_name", 'ilike', searchTerm)
+            // Add other fields to search if needed (e.g., client name, contact name)
+            // .orWhere("clients.client_name", 'ilike', searchTerm)
             // .orWhere("contacts.full_name", 'ilike', searchTerm);
           });
         }
@@ -538,8 +538,8 @@ export async function fetchTicketActivities(
         sourceId: ticket.ticket_id,
         sourceType: ActivityType.TICKET,
         ticketNumber: ticket.ticket_number,
-        companyId: ticket.company_id,
-        companyName: ticket.company_name,
+        clientId: ticket.client_id,
+        clientName: ticket.client_name,
         contactId: ticket.contact_name_id,
         contactName: ticket.contact_name,
         estimatedHours: ticket.estimated_hours,

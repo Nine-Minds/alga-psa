@@ -37,3 +37,15 @@ vi.mock('../types/ui-reflection/UIStateContext', () => ({
   UIStateProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+vi.mock('next/server', async () => {
+  const mod = await import('./stubs/next-server');
+  return mod;
+});
+
+vi.mock('server/src/app/api/auth/[...nextauth]/edge-auth', () => ({
+  auth: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn().mockResolvedValue(null),
+}));

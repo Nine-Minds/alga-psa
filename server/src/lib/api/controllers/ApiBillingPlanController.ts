@@ -24,12 +24,12 @@ import {
   addPlanToBundleSchema,
   updatePlanInBundleSchema,
   
-  // Company assignment schemas
-  createCompanyBillingPlanSchema,
-  updateCompanyBillingPlanSchema,
-  companyBillingPlanListQuerySchema,
-  createCompanyPlanBundleSchema,
-  updateCompanyPlanBundleSchema,
+  // Client assignment schemas
+  createClientBillingPlanSchema,
+  updateClientBillingPlanSchema,
+  clientBillingPlanListQuerySchema,
+  createClientPlanBundleSchema,
+  updateClientPlanBundleSchema,
   
   // Template and copying schemas
   copyBillingPlanSchema,
@@ -38,7 +38,7 @@ import {
   
   // Activation schemas
   planActivationSchema,
-  companyPlanActivationSchema,
+  clientPlanActivationSchema,
   
   // Bulk operation schemas
   bulkCreateBillingPlansSchema,
@@ -46,8 +46,8 @@ import {
   bulkDeleteBillingPlansSchema,
   bulkAddServicesToPlanSchema,
   bulkRemoveServicesFromPlanSchema,
-  bulkAssignPlansToCompanySchema,
-  bulkUnassignPlansFromCompanySchema,
+  bulkAssignPlansToClientSchema,
+  bulkUnassignPlansFromClientSchema,
   
   // Type exports
   CreateBillingPlanData,
@@ -61,22 +61,22 @@ import {
   UpdatePlanBundleData,
   AddPlanToBundleData,
   UpdatePlanInBundleData,
-  CreateCompanyBillingPlanData,
-  UpdateCompanyBillingPlanData,
-  CreateCompanyPlanBundleData,
-  UpdateCompanyPlanBundleData,
+  CreateClientBillingPlanData,
+  UpdateClientBillingPlanData,
+  CreateClientPlanBundleData,
+  UpdateClientPlanBundleData,
   CopyBillingPlanData,
   CreatePlanTemplateData,
   CreatePlanFromTemplateData,
   PlanActivationData,
-  CompanyPlanActivationData,
+  ClientPlanActivationData,
   BulkCreateBillingPlansData,
   BulkUpdateBillingPlansData,
   BulkDeleteBillingPlansData,
   BulkAddServicesToPlanData,
   BulkRemoveServicesFromPlanData,
-  BulkAssignPlansToCompanyData,
-  BulkUnassignPlansFromCompanyData
+  BulkAssignPlansToClientData,
+  BulkUnassignPlansFromClientData
 } from '../schemas/billingPlanSchemas';
 import { z } from 'zod';
 import { createApiResponse, createErrorResponse } from '../utils/response';
@@ -110,13 +110,13 @@ export class ApiBillingPlanController {
       const includeAnalytics = query.include_analytics === 'true';
       const includeServices = query.include_services === 'true';
       const includeUsage = query.include_usage === 'true';
-      const includeCompanies = query.include_companies === 'true';
+      const includeClients = query.include_clients === 'true';
 
       const serviceOptions: BillingPlanServiceOptions = {
         includeAnalytics,
         includeServices,
         includeUsage,
-        includeCompanies
+        includeClients
       };
 
       const listOptions = { 
@@ -167,7 +167,7 @@ export class ApiBillingPlanController {
         includeAnalytics: url.searchParams.get('include_analytics') === 'true',
         includeServices: url.searchParams.get('include_services') === 'true',
         includeUsage: url.searchParams.get('include_usage') === 'true',
-        includeCompanies: url.searchParams.get('include_companies') === 'true'
+        includeClients: url.searchParams.get('include_clients') === 'true'
       };
       
       const plan = await this.billingPlanService.getByIdWithOptions(params.id, requestContext, serviceOptions);
@@ -584,15 +584,15 @@ export class ApiBillingPlanController {
   }
 
   /**
-   * GET /api/v2/company-billing-plans - List company billing plan assignments
+   * GET /api/v2/client-billing-plans - List client billing plan assignments
    */
-  listCompanyBillingPlans() {
+  listClientBillingPlans() {
     return async (req: NextRequest): Promise<NextResponse> => {
       const query = Object.fromEntries(new URL(req.url).searchParams.entries());
       const context = requireRequestContext(req);
       
       // Validate query parameters
-      const validation = companyBillingPlanListQuerySchema.safeParse(query);
+      const validation = clientBillingPlanListQuerySchema.safeParse(query);
       if (!validation.success) {
         return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
@@ -606,7 +606,7 @@ export class ApiBillingPlanController {
         filters
       };
       
-      // TODO: Implement listCompanyBillingPlans in BillingPlanService
+      // TODO: Implement listClientBillingPlans in BillingPlanService
       const result = { data: [], total: 0 };
       
       const response = createApiResponse({
@@ -618,8 +618,8 @@ export class ApiBillingPlanController {
           totalPages: Math.ceil(result.total / listOptions.limit)
         },
         _links: {
-          self: { href: `/api/v2/company-billing-plans` },
-          create: { href: `/api/v2/company-billing-plans`, method: 'POST' }
+          self: { href: `/api/v2/client-billing-plans` },
+          create: { href: `/api/v2/client-billing-plans`, method: 'POST' }
         }
       });
 
@@ -628,20 +628,20 @@ export class ApiBillingPlanController {
   }
 
   /**
-   * POST /api/v2/company-billing-plans - Assign plan to company
+   * POST /api/v2/client-billing-plans - Assign plan to client
    */
-  assignPlanToCompany() {
+  assignPlanToClient() {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
       
       // Validate request body
-      const validation = createCompanyBillingPlanSchema.safeParse(data);
+      const validation = createClientBillingPlanSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const assignment = await this.billingPlanService.assignPlanToCompany(validation.data, context);
+      const assignment = await this.billingPlanService.assignPlanToClient(validation.data, context);
       
       const response = createApiResponse({ data: assignment }, 201);
       return NextResponse.json(response);
@@ -649,14 +649,14 @@ export class ApiBillingPlanController {
   }
 
   /**
-   * DELETE /api/v2/company-billing-plans/{id} - Unassign plan from company
+   * DELETE /api/v2/client-billing-plans/{id} - Unassign plan from client
    */
-  unassignPlanFromCompany() {
+  unassignPlanFromClient() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const requestContext = requireRequestContext(req);
       
-      await this.billingPlanService.unassignPlanFromCompany(params.id, requestContext);
+      await this.billingPlanService.unassignPlanFromClient(params.id, requestContext);
       
       return NextResponse.json(createApiResponse(null, 204));
     };

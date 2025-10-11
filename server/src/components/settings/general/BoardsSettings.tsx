@@ -282,6 +282,12 @@ const BoardsSettings: React.FC = () => {
             checked={value || false}
             onCheckedChange={async (checked) => {
               try {
+                // Prevent unchecking if this is the only default board
+                if (!checked && value) {
+                  toast.error('At least one board must be set as default for client portal tickets');
+                  return;
+                }
+
                 if (checked) {
                   // First unset any existing default boards
                   const currentDefault = boards.find(b => b.is_default && b.board_id !== record.board_id);

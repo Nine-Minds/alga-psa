@@ -123,7 +123,7 @@ export class TeamService extends BaseService<ITeam> {
         order
       } = options;
   
-      // Build base query with manager and company joins
+      // Build base query with manager and client joins
       let dataQuery = knex('teams as t')
         .leftJoin('users as manager', function() {
           this.on('t.manager_id', '=', 'manager.user_id')
@@ -819,7 +819,12 @@ export class TeamService extends BaseService<ITeam> {
         payload: {}
       });
 
-      return this.getById(teamId, context) as Promise<ITeam>;
+      // Fetch updated team using the transaction to ensure we see the changes
+      const updatedTeam = await trx('teams')
+        .where({ team_id: teamId, tenant: context.tenant })
+        .first();
+
+      return updatedTeam as ITeam;
     });
   }
 
@@ -1326,7 +1331,7 @@ export class TeamService extends BaseService<ITeam> {
       },
       benchmarks: {
         industry_velocity: 0,
-        company_velocity: 0,
+        client_velocity: 0,
         target_quality_score: 85
       }
     };

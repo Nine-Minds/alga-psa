@@ -21,7 +21,7 @@ export const createTicketSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   url: z.string().url().optional(),
   board_id: uuidSchema,
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   location_id: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema,
@@ -53,7 +53,7 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   title: z.string().optional(),
   ticket_number: z.string().optional(),
   board_id: uuidSchema.optional(),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   location_id: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema.optional(),
@@ -70,7 +70,7 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   entered_to: z.string().datetime().optional(),
   closed_from: z.string().datetime().optional(),
   closed_to: z.string().datetime().optional(),
-  company_name: z.string().optional(),
+  client_name: z.string().optional(),
   contact_name: z.string().optional(),
   status_name: z.string().optional(),
   priority_name: z.string().optional(),
@@ -88,7 +88,7 @@ export const ticketResponseSchema = z.object({
   title: z.string(),
   url: z.string().nullable(),
   board_id: uuidSchema,
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   location_id: uuidSchema.nullable(),
   contact_name_id: uuidSchema.nullable(),
   status_id: uuidSchema,
@@ -110,7 +110,7 @@ export const ticketResponseSchema = z.object({
 // Ticket with related data response schema
 export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
   // Joined fields
-  company_name: z.string().optional(),
+  client_name: z.string().optional(),
   contact_name: z.string().optional(),
   status_name: z.string().optional(),
   priority_name: z.string().optional(),
@@ -122,9 +122,9 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
   location_name: z.string().optional(),
   
   // Related objects
-  company: z.object({
-    company_id: uuidSchema,
-    company_name: z.string(),
+  client: z.object({
+    client_id: uuidSchema,
+    client_name: z.string(),
     email: z.string().nullable(),
     phone_no: z.string().nullable()
   }).optional(),
@@ -223,8 +223,8 @@ export const ticketStatsResponseSchema = z.object({
 export const ticketSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
   fields: z.union([
-    z.array(z.enum(['title', 'ticket_number', 'company_name', 'contact_name'])),
-    arrayTransform(z.enum(['title', 'ticket_number', 'company_name', 'contact_name']))
+    z.array(z.enum(['title', 'ticket_number', 'client_name', 'contact_name'])),
+    arrayTransform(z.enum(['title', 'ticket_number', 'client_name', 'contact_name']))
   ]).optional(),
   status_ids: z.union([
     z.array(uuidSchema),
@@ -234,7 +234,7 @@ export const ticketSearchSchema = z.object({
     z.array(uuidSchema),
     arrayTransform(uuidSchema)
   ]).optional(),
-  company_ids: z.union([
+  client_ids: z.union([
     z.array(uuidSchema),
     arrayTransform(uuidSchema)
   ]).optional(),
@@ -262,7 +262,7 @@ export const ticketMetricsQuerySchema = z.object({
   period: z.enum(['day', 'week', 'month', 'quarter', 'year']).optional().default('month'),
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),
-  group_by: z.enum(['status', 'priority', 'category', 'board', 'assignee', 'company']).optional()
+  group_by: z.enum(['status', 'priority', 'category', 'board', 'assignee', 'client']).optional()
 });
 
 // Asset ticket creation schema
@@ -270,7 +270,7 @@ export const createTicketFromAssetSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   priority_id: uuidSchema,
   asset_id: uuidSchema,
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   description: z.string().optional(),
   contact_name_id: uuidSchema.optional(),
   category_id: uuidSchema.optional()

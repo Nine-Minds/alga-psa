@@ -46,7 +46,7 @@ ee/
 #### Tenant Schema
 ```typescript
 export const TenantSchema = z.object({
-  company_name: z.string().min(1, "Company name is required"),
+  client_name: z.string().min(1, "Client name is required"),
   email: z.string().email("Invalid email address"),
   phone_number: z.string().optional(),
   industry: z.string().optional(),
@@ -103,7 +103,7 @@ Authorization: Bearer <jwt_token>
 Content-Type: application/json
 
 {
-  "company_name": "Example Corp",
+  "client_name": "Example Corp",
   "email": "admin@example.com",
   "phone_number": "+1234567890",
   "industry": "Technology"
@@ -114,7 +114,7 @@ Content-Type: application/json
 ```json
 {
   "tenant": "550e8400-e29b-41d4-a716-446655440000",
-  "company_name": "Example Corp",
+  "client_name": "Example Corp",
   "email": "admin@example.com",
   "phone_number": "+1234567890",
   "industry": "Technology",

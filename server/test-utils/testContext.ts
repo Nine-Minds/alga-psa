@@ -2,8 +2,8 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from './dbConfig';
 import { resetDatabase } from './dbReset';
-import { createTenant, createCompany, createUser } from './testDataFactory';
-import { ICompany } from '../src/interfaces/company.interfaces';
+import { createTenant, createClient, createUser } from './testDataFactory';
+import { IClient } from '../src/interfaces/client.interfaces';
 import { IUserWithRoles } from '../src/interfaces/auth.interfaces';
 
 /**
@@ -27,10 +27,10 @@ export interface TestContextOptions {
   setupCommands?: string[];
 
   /**
-   * Company name for test data
-   * @default "Test Company"
+   * Client name for test data
+   * @default "Test Client"
    */
-  companyName?: string;
+  clientName?: string;
 
   /**
    * User type for test data
@@ -55,9 +55,9 @@ export class TestContext {
   private baseTenantId?: string;
   private tenantKnexMockApplied = false;
   public tenantId!: string;
-  public companyId!: string;
+  public clientId!: string;
   public userId!: string;
-  public company!: ICompany;
+  public client!: IClient;
   public user!: IUserWithRoles;
   private options: TestContextOptions;
 
@@ -126,7 +126,7 @@ export class TestContext {
       runSeeds: true,
       cleanupTables: [],
       setupCommands: [],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal',
       resetBetweenTests: true,
       ...options
@@ -288,24 +288,24 @@ export class TestContext {
       throw new Error('Tenant not initialized in ensureBaseEntities');
     }
 
-    let companyRecord = this.companyId
-      ? await this.db('companies')
-          .where({ company_id: this.companyId, tenant: this.tenantId })
+    let clientRecord = this.clientId
+      ? await this.db('clients')
+          .where({ client_id: this.clientId, tenant: this.tenantId })
           .first()
       : null;
 
-    if (!companyRecord) {
-      this.companyId = await createCompany(this.db, this.tenantId, this.options.companyName);
-      companyRecord = await this.db('companies')
-        .where({ company_id: this.companyId, tenant: this.tenantId })
+    if (!clientRecord) {
+      this.clientId = await createClient(this.db, this.tenantId, this.options.clientName);
+      clientRecord = await this.db('clients')
+        .where({ client_id: this.clientId, tenant: this.tenantId })
         .first();
     }
 
-    if (!companyRecord) {
-      throw new Error('Failed to ensure company record');
+    if (!clientRecord) {
+      throw new Error('Failed to ensure client record');
     }
 
-    this.company = companyRecord as ICompany;
+    this.client = clientRecord as IClient;
 
     let userRecord = this.userId
       ? await this.db('users')

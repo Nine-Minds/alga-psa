@@ -1,6 +1,6 @@
 /**
  * Financial Credits API Route
- * GET /api/v1/financial/credits - List company credits
+ * GET /api/v1/financial/credits - List client credits
  */
 
 import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';

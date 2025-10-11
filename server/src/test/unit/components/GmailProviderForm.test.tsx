@@ -46,7 +46,7 @@ describe('GmailProviderForm', () => {
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
     expect(screen.getByPlaceholderText('e.g., Support Gmail')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('support@company.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('support@client.com')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Enter client secret')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('my-project-id')).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('GmailProviderForm', () => {
     // redirectUri, pubSubTopic and pubSubSubscription already have default values
     
     // Type invalid email
-    const emailInput = screen.getByPlaceholderText('support@company.com');
+    const emailInput = screen.getByPlaceholderText('support@client.com');
     await user.type(emailInput, 'invalid-email');
     
     const saveButton = screen.getByText(/add provider/i);
@@ -105,7 +105,7 @@ describe('GmailProviderForm', () => {
       // Re-render for each test to ensure clean state
       const { unmount } = renderWithProviders(<GmailProviderForm {...defaultProps} />);
       
-      const emailInput = screen.getByPlaceholderText('support@company.com');
+      const emailInput = screen.getByPlaceholderText('support@client.com');
       
       // Type invalid email to trigger validation
       await user.type(emailInput, invalidEmail);
@@ -140,7 +140,7 @@ describe('GmailProviderForm', () => {
       // Re-render for each test to ensure clean state
       const { unmount } = renderWithProviders(<GmailProviderForm {...defaultProps} />);
       
-      const emailInput = screen.getByPlaceholderText('support@company.com');
+      const emailInput = screen.getByPlaceholderText('support@client.com');
       
       // Type email to trigger validation
       await user.type(emailInput, validEmail);
@@ -160,7 +160,7 @@ describe('GmailProviderForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    const emailInput = screen.getByPlaceholderText('support@company.com');
+    const emailInput = screen.getByPlaceholderText('support@client.com');
     
     // Type invalid email to trigger validation
     await user.type(emailInput, 'invalid-email');
@@ -188,7 +188,7 @@ describe('GmailProviderForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    const emailInput = screen.getByPlaceholderText('support@company.com');
+    const emailInput = screen.getByPlaceholderText('support@client.com');
     
     // Type invalid email
     await user.type(emailInput, 'invalid-email');
@@ -208,7 +208,7 @@ describe('GmailProviderForm', () => {
         tenant: 'test-tenant-123',
         providerType: 'google',
         providerName: 'Test Provider',
-        mailbox: 'test@company.com',
+        mailbox: 'test@client.com',
         isActive: true,
         status: 'connected',
         vendorConfig: {},
@@ -222,7 +222,7 @@ describe('GmailProviderForm', () => {
 
     // Fill all fields with valid data including non-gmail email (Google Workspace)
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@company.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'test@client.com');
     await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'test-client-id');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
     await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
@@ -263,7 +263,7 @@ describe('GmailProviderForm', () => {
 
     // Fill in the form
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Gmail Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@gmail.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'test@gmail.com');
     await user.type(screen.getByPlaceholderText(/\.apps\.googleusercontent\.com/), 'test-client-id');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
     await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
@@ -308,7 +308,7 @@ describe('GmailProviderForm', () => {
 
     // Fill in all required fields
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Gmail Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@gmail.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'test@gmail.com');
     await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'test-client-id');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
     await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
@@ -409,7 +409,7 @@ describe('GmailProviderForm', () => {
 
     // Fill in some but not all required fields
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@gmail.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'test@gmail.com');
     
     // Button should still be disabled
     expect(submitButton).toBeDisabled();
@@ -430,7 +430,7 @@ describe('GmailProviderForm', () => {
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
     const submitButton = screen.getByText(/add provider/i);
-    const emailInput = screen.getByPlaceholderText('support@company.com');
+    const emailInput = screen.getByPlaceholderText('support@client.com');
     
     // Fill all required fields
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Provider');

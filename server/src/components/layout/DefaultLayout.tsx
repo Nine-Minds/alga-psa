@@ -47,7 +47,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
 
   // Add state for Chat component props
-  const [companyUrl, setCompanyUrl] = useState('');
+  const [clientUrl, setClientUrl] = useState('');
   const [accountId, setAccountId] = useState('');
   const [messages, setMessages] = useState([]);
   const [userRole, setUserRole] = useState('');
@@ -67,7 +67,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
     // Fetch or set up the necessary data for Chat component
     // This is just an example, you'll need to implement the actual data fetching logic
-    setCompanyUrl('https://example.com');
+    setClientUrl('https://example.com');
     // setHf(/* your hf object */);
     setAccountId('123');
     setMessages([]);
@@ -114,7 +114,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             <RightSidebar
               isOpen={rightSidebarOpen}
               setIsOpen={setRightSidebarOpen}
-              companyUrl={companyUrl}
+              clientUrl={clientUrl}
               accountId={accountId}
               messages={messages}
               userRole={userRole}

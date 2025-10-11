@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import { IStatus } from 'server/src/interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
@@ -11,12 +11,12 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { TagManager } from 'server/src/components/tags';
 import { updateProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
-import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
@@ -25,7 +25,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
-  companies: ICompany[];
+  clients: IClient[];
   onSave: (updatedProject: IProject) => void;
   onCancel: () => void;
   onChange?: () => void;
@@ -33,7 +33,7 @@ interface ProjectDetailsEditProps {
 
 const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   initialProject,
-  companies,
+  clients,
   onSave,
   onCancel,
 }) => {
@@ -44,10 +44,10 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   useEffect(() => {
     console.log('ProjectDetailsEdit:', {
       initialProject,
-      companiesLength: companies?.length,
-      companies
+      clientsLength: clients?.length,
+      clients
     });
-  }, [initialProject, companies]);
+  }, [initialProject, clients]);
 
   const [project, setProject] = useState<IProject>(initialProject);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,8 +85,8 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const contactsData = project.company_id 
-          ? await getContactsByCompany(project.company_id)
+        const contactsData = project.client_id 
+          ? await getContactsByClient(project.client_id)
           : await getAllContacts();
           setContacts(contactsData.map((contact): { value: string; label: string } => ({
             value: contact.contact_name_id,
@@ -98,7 +98,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       }
     };
     fetchContacts();
-  }, [project.company_id]);
+  }, [project.client_id]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
@@ -118,7 +118,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     if (!project.status) {
       errors.push('Status');
     }
-    if (!project.company_id) {
+    if (!project.client_id) {
       errors.push('Client');
     }
 
@@ -137,7 +137,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       const updatedProject = await updateProject(project.project_id, {
         project_name: project.project_name,
         description: project.description,
-        company_id: project.company_id,
+        client_id: project.client_id,
         start_date: project.start_date,
         end_date: project.end_date,
         assigned_to: project.assigned_to,
@@ -172,11 +172,11 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     clearErrorIfSubmitted();
   };
 
-  const handleCompanySelect = (companyId: string | null) => {
+  const handleClientSelect = (clientId: string | null) => {
     setProject(prev => ({
       ...prev,
-      company_id: companyId || '',
-      // Reset contact when company changes
+      client_id: clientId || '',
+      // Reset contact when client changes
       contact_name_id: null,
       contact_name: null,
     }));
@@ -240,16 +240,16 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Client *
             </label>
-            <CompanyPicker
-              id='company-picker'
-              companies={companies}
-              selectedCompanyId={project.company_id}
-              onSelect={handleCompanySelect}
+            <ClientPicker
+              id='client-picker'
+              clients={clients}
+              selectedClientId={project.client_id}
+              onSelect={handleClientSelect}
               filterState="all"
               onFilterStateChange={() => {}}
               clientTypeFilter="all"
               onClientTypeFilterChange={() => {}}
-              className={hasAttemptedSubmit && !project.company_id ? 'ring-1 ring-red-500 rounded-md' : ''}
+              className={hasAttemptedSubmit && !project.client_id ? 'ring-1 ring-red-500 rounded-md' : ''}
             />
           </div>
 
@@ -473,7 +473,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             type="button"
             onClick={() => setShowSaveConfirm(true)}
             disabled={isSubmitting}
-            className={!project.project_name?.trim() || !project.status || !project.company_id ? 'opacity-50' : ''}
+            className={!project.project_name?.trim() || !project.status || !project.client_id ? 'opacity-50' : ''}
           >
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>

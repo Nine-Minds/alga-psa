@@ -5,13 +5,13 @@ import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {
-  ICompanyBillingPlan,
+  IClientBillingPlan,
   IBillingResult,
   IBucketUsage,
   IService
 } from 'server/src/interfaces/billing.interfaces';
 import {
-  fetchInvoicesByCompany,
+  fetchInvoicesByClient,
   getInvoiceLineItems,
   getInvoiceForRendering
 } from 'server/src/lib/actions/invoiceQueries';
@@ -23,10 +23,10 @@ import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/sch
 import { scheduleInvoiceEmailAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceEmailAction';
 import { getSession } from 'server/src/lib/auth/getSession';
 
-export async function getClientBillingPlan(): Promise<ICompanyBillingPlan | null> {
+export async function getClientBillingPlan(): Promise<IClientBillingPlan | null> {
   const session = await getSession();
   
-  if (!session?.user?.tenant || !session.user.companyId) {
+  if (!session?.user?.tenant || !session.user.clientId) {
     throw new Error('Unauthorized');
   }
 
@@ -34,25 +34,25 @@ export async function getClientBillingPlan(): Promise<ICompanyBillingPlan | null
   
   try {
     const plan = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('company_billing_plans')
+      return await trx('client_billing_plans')
         .select(
-          'company_billing_plans.*',
+          'client_billing_plans.*',
           'billing_plans.plan_name',
           'billing_plans.billing_frequency',
           'service_categories.category_name as service_category_name'
         )
         .join('billing_plans', function() {
-          this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
-            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant')
+          this.on('client_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+            .andOn('billing_plans.tenant', '=', 'client_billing_plans.tenant')
         })
         .leftJoin('service_categories', function() {
-          this.on('company_billing_plans.service_category', '=', 'service_categories.category_id')
-            .andOn('service_categories.tenant', '=', 'company_billing_plans.tenant')
+          this.on('client_billing_plans.service_category', '=', 'service_categories.category_id')
+            .andOn('service_categories.tenant', '=', 'client_billing_plans.tenant')
         })
         .where({
-          'company_billing_plans.company_id': session.user.companyId,
-          'company_billing_plans.is_active': true,
-          'company_billing_plans.tenant': session.user.tenant
+          'client_billing_plans.client_id': session.user.clientId,
+          'client_billing_plans.is_active': true,
+          'client_billing_plans.tenant': session.user.tenant
         })
         .first();
     });
@@ -70,7 +70,7 @@ export async function getClientBillingPlan(): Promise<ICompanyBillingPlan | null
 export async function getClientInvoices(): Promise<InvoiceViewModel[]> {
   const session = await getSession();
   
-  if (!session?.user?.tenant || !session.user.companyId) {
+  if (!session?.user?.tenant || !session.user.clientId) {
     throw new Error('Unauthorized');
   }
 
@@ -88,7 +88,7 @@ export async function getClientInvoices(): Promise<InvoiceViewModel[]> {
 
   try {
     // Directly fetch only invoices for the current client
-    return await fetchInvoicesByCompany(session.user.companyId);
+    return await fetchInvoicesByClient(session.user.clientId);
   } catch (error) {
     console.error('Error fetching client invoices:', error);
     throw new Error('Failed to fetch invoices');
@@ -101,7 +101,7 @@ export async function getClientInvoices(): Promise<InvoiceViewModel[]> {
 export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceViewModel> {
   const session = await getSession();
   
-  if (!session?.user?.tenant || !session.user.companyId) {
+  if (!session?.user?.tenant || !session.user.clientId) {
     throw new Error('Unauthorized');
   }
 
@@ -125,7 +125,7 @@ export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceVi
       return await trx('invoices')
         .where({
           invoice_id: invoiceId,
-          company_id: session.user.companyId,
+          client_id: session.user.clientId,
           tenant: session.user.tenant
         })
         .first();
@@ -149,7 +149,7 @@ export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceVi
 export async function getClientInvoiceLineItems(invoiceId: string) {
   const session = await getSession();
   
-  if (!session?.user?.tenant || !session.user.companyId) {
+  if (!session?.user?.tenant || !session.user.clientId) {
     throw new Error('Unauthorized');
   }
 
@@ -173,7 +173,7 @@ export async function getClientInvoiceLineItems(invoiceId: string) {
       return await trx('invoices')
         .where({
           invoice_id: invoiceId,
-          company_id: session.user.companyId,
+          client_id: session.user.clientId,
           tenant: session.user.tenant
         })
         .first();
@@ -216,7 +216,7 @@ export async function getClientInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
 export async function downloadClientInvoicePdf(invoiceId: string) {
   const session = await getSession();
   
-  if (!session?.user?.tenant || !session.user.companyId) {
+  if (!session?.user?.tenant || !session.user.clientId) {
     throw new Error('Unauthorized');
   }
 
@@ -240,7 +240,7 @@ export async function downloadClientInvoicePdf(invoiceId: string) {
       return await trx('invoices')
         .where({
           invoice_id: invoiceId,
-          company_id: session.user.companyId,
+          client_id: session.user.clientId,
           tenant: session.user.tenant
         })
         .first();
@@ -264,7 +264,7 @@ export async function downloadClientInvoicePdf(invoiceId: string) {
 export async function sendClientInvoiceEmail(invoiceId: string) {
   const session = await getSession();
   
-  if (!session?.user?.tenant || !session.user.companyId) {
+  if (!session?.user?.tenant || !session.user.clientId) {
     throw new Error('Unauthorized');
   }
 
@@ -288,7 +288,7 @@ export async function sendClientInvoiceEmail(invoiceId: string) {
       return await trx('invoices')
         .where({
           invoice_id: invoiceId,
-          company_id: session.user.companyId,
+          client_id: session.user.clientId,
           tenant: session.user.tenant
         })
         .first();
@@ -312,7 +312,7 @@ export async function getCurrentUsage(): Promise<{
 }> {
   const session = await getSession();
   
-  if (!session?.user?.tenant || !session.user.companyId) {
+  if (!session?.user?.tenant || !session.user.clientId) {
     throw new Error('Unauthorized');
   }
 
@@ -324,29 +324,29 @@ export async function getCurrentUsage(): Promise<{
       const bucketUsage = await trx('bucket_usage')
         .select('*')
         .where({
-          company_id: session.user.companyId,
+          client_id: session.user.clientId,
           tenant: session.user.tenant
         })
         .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
         .first();
 
-      // Get all services associated with the company's plan
+      // Get all services associated with the client's plan
       const services = await trx('service_catalog')
         .select('service_catalog.*')
         .join('plan_services', function() {
           this.on('service_catalog.service_id', '=', 'plan_services.service_id')
             .andOn('service_catalog.tenant', '=', 'plan_services.tenant')
         })
-        .join('company_billing_plans', function() {
-          this.on('plan_services.plan_id', '=', 'company_billing_plans.plan_id')
-            .andOn('plan_services.tenant', '=', 'company_billing_plans.tenant')
+        .join('client_billing_plans', function() {
+          this.on('plan_services.plan_id', '=', 'client_billing_plans.plan_id')
+            .andOn('plan_services.tenant', '=', 'client_billing_plans.tenant')
         })
         .where({
-          'company_billing_plans.company_id': session.user.companyId,
-          'company_billing_plans.is_active': true,
+          'client_billing_plans.client_id': session.user.clientId,
+          'client_billing_plans.is_active': true,
           'service_catalog.tenant': session.user.tenant,
           'plan_services.tenant': session.user.tenant,
-          'company_billing_plans.tenant': session.user.tenant
+          'client_billing_plans.tenant': session.user.tenant
         });
 
       return {

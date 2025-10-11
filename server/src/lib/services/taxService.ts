@@ -1,5 +1,5 @@
-import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday, ITaxCalculationResult } from '../../interfaces/tax.interfaces';
-import CompanyTaxSettings from '../models/companyTaxSettings';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday, ITaxCalculationResult } from '../../interfaces/tax.interfaces';
+import ClientTaxSettings from '../models/clientTaxSettings';
 import { ISO8601String } from '../../types/types.d';
 import { createTenantKnex } from '../db';
 import { v4 as uuid4 } from 'uuid';
@@ -44,30 +44,30 @@ export class TaxService {
     }
   }
 
-  async calculateTax(companyId: string, netAmount: number, date: ISO8601String, regionCode?: string, is_taxable: boolean = true): Promise<ITaxCalculationResult> {
+  async calculateTax(clientId: string, netAmount: number, date: ISO8601String, regionCode?: string, is_taxable: boolean = true): Promise<ITaxCalculationResult> {
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
       throw new Error('Tenant context is required for tax calculation');
     }
 
-    console.log(`Calculating tax for company ${companyId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, regionCode ${regionCode}`);
+    console.log(`Calculating tax for client ${clientId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, regionCode ${regionCode}`);
 
-    // Check if company is tax exempt
-    const company = await knex('companies')
+    // Check if client is tax exempt
+    const client = await knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant
       })
       .select('is_tax_exempt')
       .first();
 
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
     }
 
-    if (company.is_tax_exempt || !is_taxable) {
-      console.log(`No tax applied: company ${companyId} is tax exempt or item is not taxable`);
+    if (client.is_tax_exempt || !is_taxable) {
+      console.log(`No tax applied: client ${clientId} is tax exempt or item is not taxable`);
       return { taxAmount: 0, taxRate: 0 };
     }
 
@@ -122,20 +122,20 @@ export class TaxService {
       };
     }
 
-    // Fallback: Get the company's default tax rate if no regionCode provided
-    console.log(`No regionCode provided, fetching default tax rate for company ${companyId}`);
+    // Fallback: Get the client's default tax rate if no regionCode provided
+    console.log(`No regionCode provided, fetching default tax rate for client ${clientId}`);
 
-    // Check reverse charge applicability first (still on company_tax_settings)
-    const taxSettings = await this.getCompanyTaxSettings(companyId); // Fetch settings for reverse charge check
+    // Check reverse charge applicability first (still on client_tax_settings)
+    const taxSettings = await this.getClientTaxSettings(clientId); // Fetch settings for reverse charge check
     if (taxSettings.is_reverse_charge_applicable) {
-      console.log(`Reverse charge is applicable for company ${companyId}. Returning zero tax.`);
+      console.log(`Reverse charge is applicable for client ${clientId}. Returning zero tax.`);
       return { taxAmount: 0, taxRate: 0 };
     }
 
     // Find the default tax rate association
-    const defaultRateAssoc = await knex('company_tax_rates')
+    const defaultRateAssoc = await knex('client_tax_rates')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: tenant,
         is_default: true,
       })
@@ -145,9 +145,9 @@ export class TaxService {
 
     if (!defaultRateAssoc) {
       // Consider creating default settings if none exist, or throw error
-      console.error(`No default tax rate configured for company ${companyId} in tenant ${tenant}`);
+      console.error(`No default tax rate configured for client ${clientId} in tenant ${tenant}`);
       // Option 1: Throw error
-      // throw new Error(`No default tax rate configured for company ${companyId}`);
+      // throw new Error(`No default tax rate configured for client ${clientId}`);
       // Option 2: Return zero tax (safer default?)
        return { taxAmount: 0, taxRate: 0 };
     }
@@ -167,10 +167,10 @@ export class TaxService {
       })
       .first();
 
-     console.log(`Default tax rate details retrieved for company ${companyId}:`, taxRate);
+     console.log(`Default tax rate details retrieved for client ${clientId}:`, taxRate);
 
     if (!taxRate) {
-      const error = `Default tax rate (ID: ${defaultRateAssoc.tax_rate_id}) found for company ${companyId} is inactive or invalid for date ${date} in tenant ${tenant}`;
+      const error = `Default tax rate (ID: ${defaultRateAssoc.tax_rate_id}) found for client ${clientId} is inactive or invalid for date ${date} in tenant ${tenant}`;
       console.error(error);
       // Decide how to handle - throw error or return zero tax?
       // throw new Error(error);
@@ -179,20 +179,20 @@ export class TaxService {
 
     let result: ITaxCalculationResult;
     if (taxRate.is_composite) {
-      console.log(`Calculating composite tax for company ${companyId}`);
+      console.log(`Calculating composite tax for client ${clientId}`);
       result = await this.calculateCompositeTax(taxRate, netAmount, date);
     } else {
-      console.log(`Calculating simple tax for company ${companyId}`);
+      console.log(`Calculating simple tax for client ${clientId}`);
       result = await this.calculateSimpleTax(taxRate, netAmount, date);
     }
 
-    console.log(`Tax calculation result for company ${companyId}:`, result);
+    console.log(`Tax calculation result for client ${clientId}:`, result);
     return result;
   }
   
   private async calculateCompositeTax(taxRate: ITaxRate, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
     const { knex } = await createTenantKnex();
-    const components = await CompanyTaxSettings.getCompositeTaxComponents(taxRate.tax_rate_id);
+    const components = await ClientTaxSettings.getCompositeTaxComponents(taxRate.tax_rate_id);
     let totalTaxAmount = 0;
     let taxableAmount = netAmount;
     const appliedComponents: ITaxComponent[] = [];
@@ -220,7 +220,7 @@ export class TaxService {
 
   private async calculateSimpleTax(taxRate: ITaxRate, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
     const { knex } = await createTenantKnex();
-    const thresholds = await CompanyTaxSettings.getTaxRateThresholds(taxRate.tax_rate_id);
+    const thresholds = await ClientTaxSettings.getTaxRateThresholds(taxRate.tax_rate_id);
     
     if (thresholds.length > 0) {
       return this.calculateThresholdBasedTax(thresholds, netAmount);
@@ -298,7 +298,7 @@ export class TaxService {
 
   private async getApplicableTaxHoliday(taxComponentId: string, date: ISO8601String): Promise<ITaxHoliday | undefined> {
     const { knex } = await createTenantKnex();
-    const holidays = await CompanyTaxSettings.getTaxHolidays(taxComponentId);
+    const holidays = await ClientTaxSettings.getTaxHolidays(taxComponentId);
     const currentDate = new Date(date);
 
     return holidays.find(holiday => 
@@ -306,23 +306,23 @@ export class TaxService {
     );
   }
 
-  private async getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings> {
+  private async getClientTaxSettings(clientId: string): Promise<IClientTaxSettings> {
     const { tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required for tax settings lookup');
     }
 
     const { knex } = await createTenantKnex();
-    let taxSettings = await CompanyTaxSettings.get(companyId);
+    let taxSettings = await ClientTaxSettings.get(clientId);
 
     if (!taxSettings) {
-      taxSettings = await this.createDefaultTaxSettings(companyId);
+      taxSettings = await this.createDefaultTaxSettings(clientId);
     }
 
     return taxSettings;
   }
 
-  async createDefaultTaxSettings(companyId: string): Promise<ICompanyTaxSettings> {
+  async createDefaultTaxSettings(clientId: string): Promise<IClientTaxSettings> {
     const { knex, tenant } = await createTenantKnex();
     const trx = await knex.transaction();
 
@@ -338,21 +338,21 @@ export class TaxService {
         throw new Error('No active tax rates found in the system to assign as default.');
       }
 
-      // Create default company tax settings (without tax_rate_id)
-      const [taxSettings] = await trx<ICompanyTaxSettings>('company_tax_settings')
+      // Create default client tax settings (without tax_rate_id)
+      const [taxSettings] = await trx<IClientTaxSettings>('client_tax_settings')
         .insert({
-          company_id: companyId,
+          client_id: clientId,
           // tax_rate_id: defaultTaxRate.tax_rate_id, // Removed
           is_reverse_charge_applicable: false,
           tenant: tenant!
         })
         .returning('*');
 
-      // Create the default association in company_tax_rates
-      await trx('company_tax_rates')
+      // Create the default association in client_tax_rates
+      await trx('client_tax_rates')
         .insert({
-          // company_tax_rate_id: uuid4(), // Assuming auto-generated or sequence
-          company_id: companyId,
+          // client_tax_rate_id: uuid4(), // Assuming auto-generated or sequence
+          client_id: clientId,
           tax_rate_id: defaultTaxRate.tax_rate_id,
           is_default: true,
           location_id: null,
@@ -384,21 +384,21 @@ export class TaxService {
     }
   }
 
-  async isReverseChargeApplicable(companyId: string): Promise<boolean> {
-    const taxSettings = await this.getCompanyTaxSettings(companyId);
+  async isReverseChargeApplicable(clientId: string): Promise<boolean> {
+    const taxSettings = await this.getClientTaxSettings(clientId);
     return taxSettings.is_reverse_charge_applicable;
   }
 
-  async getTaxType(companyId: string): Promise<string> {   
+  async getTaxType(clientId: string): Promise<string> {   
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required for tax type lookup');
     }
 
-    // Find the default tax rate association for the company
-    const defaultRateAssoc = await knex('company_tax_rates')
+    // Find the default tax rate association for the client
+    const defaultRateAssoc = await knex('client_tax_rates')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: tenant,
         is_default: true,
       })
@@ -408,9 +408,9 @@ export class TaxService {
 
     if (!defaultRateAssoc) {
       // Handle case where no default rate is set - maybe return a default type or throw error
-      console.warn(`No default tax rate configured for company ${companyId} in tenant ${tenant}. Cannot determine tax type.`);
+      console.warn(`No default tax rate configured for client ${clientId} in tenant ${tenant}. Cannot determine tax type.`);
       // Option 1: Throw error
-      // throw new Error(`No default tax rate configured for company ${companyId}`);
+      // throw new Error(`No default tax rate configured for client ${clientId}`);
       // Option 2: Return a default/unknown type
       return 'Unknown'; // Or potentially null/undefined depending on desired behavior
     }
@@ -427,7 +427,7 @@ export class TaxService {
 
 
     if (!taxRate) {
-      const error = `Tax rate details not found for default rate ID ${defaultRateAssoc.tax_rate_id} (Company: ${companyId}, Tenant: ${tenant})`;
+      const error = `Tax rate details not found for default rate ID ${defaultRateAssoc.tax_rate_id} (Client: ${clientId}, Tenant: ${tenant})`;
       console.error(error);
       // Handle case where rate details are missing despite association existing
       // throw new Error(error);

@@ -17,6 +17,9 @@
   ],
   "tags": [
     {
+      "name": "Extension Storage"
+    },
+    {
       "name": "Service Categories"
     },
     {
@@ -47,10 +50,10 @@
       "name": "chat"
     },
     {
-      "name": "companies"
+      "name": "clients"
     },
     {
-      "name": "company-billing-plans"
+      "name": "clients"
     },
     {
       "name": "contacts"
@@ -360,6 +363,344 @@
           "data",
           "pagination"
         ]
+      },
+      "ExtStoragePutRequest": {
+        "type": "object",
+        "properties": {
+          "value": {},
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "ttlSeconds": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "ifRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "ExtStoragePutResponse": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "ttlExpiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "namespace",
+          "key",
+          "revision",
+          "ttlExpiresAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ExtStorageGetResponse": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "value": {},
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "ttlExpiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "namespace",
+          "key",
+          "revision",
+          "metadata",
+          "ttlExpiresAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ExtStorageListQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "includeValues": {
+            "type": "boolean"
+          },
+          "includeMetadata": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ExtStorageListItem": {
+        "type": "object",
+        "properties": {
+          "tenant": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "extensionInstallId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "value": {},
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "ttlExpiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "namespace",
+          "key",
+          "revision",
+          "ttlExpiresAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ExtStorageListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtStorageListItem"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "ExtStorageBulkPutRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "value": {},
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "ttlSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "ifRevision": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "schemaVersion": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "key"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ExtStorageBulkPutResponse": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "ttlExpiresAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "key",
+                "revision",
+                "ttlExpiresAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "namespace",
+          "items"
+        ]
+      },
+      "ExtStorageIdNamespaceParams": {
+        "type": "object",
+        "properties": {
+          "installId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "installId",
+          "namespace"
+        ]
+      },
+      "ExtStorageIdNamespaceKeyParams": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExtStorageIdNamespaceParams"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "key"
+            ]
+          }
+        ]
+      },
+      "ExtStorageIfRevisionHeader": {
+        "type": "object",
+        "properties": {
+          "if-revision-match": {
+            "type": "string"
+          }
+        }
+      },
+      "ExtStorageDeleteQuery": {
+        "type": "object",
+        "properties": {
+          "ifRevision": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
       }
     },
     "parameters": {}
@@ -7030,12 +7371,12 @@
         }
       }
     },
-    "/api/v1/companies": {
+    "/api/v1/clients": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7078,7 +7419,7 @@
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7130,12 +7471,12 @@
         }
       }
     },
-    "/api/v1/companies/stats": {
+    "/api/v1/clients/stats": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7175,12 +7516,12 @@
         }
       }
     },
-    "/api/v1/companies/{id}": {
+    "/api/v1/clients/{id}": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7223,7 +7564,7 @@
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7266,7 +7607,7 @@
         "summary": "PUT v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7318,12 +7659,12 @@
         }
       }
     },
-    "/api/v1/companies/{id}/contacts": {
+    "/api/v1/clients/{id}/contacts": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7363,12 +7704,12 @@
         }
       }
     },
-    "/api/v1/companies/{id}/locations": {
+    "/api/v1/clients/{id}/locations": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7411,7 +7752,7 @@
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "companies"
+          "clients"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7463,12 +7804,12 @@
         }
       }
     },
-    "/api/v1/company-billing-plans": {
+    "/api/v1/client-billing-plans": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "company-billing-plans"
+          "client-billing-plans"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7511,7 +7852,7 @@
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "company-billing-plans"
+          "client-billing-plans"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7563,12 +7904,12 @@
         }
       }
     },
-    "/api/v1/company-billing-plans/{id}": {
+    "/api/v1/client-billing-plans/{id}": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "company-billing-plans"
+          "client-billing-plans"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -28472,6 +28813,581 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ext-storage/install/{installId}/{namespace}/records": {
+      "get": {
+        "summary": "List records in a namespace",
+        "tags": [
+          "Extension Storage"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "extension",
+          "x-edition": "EE"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "installId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "required": true,
+            "name": "namespace",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "required": false,
+            "name": "keyPrefix",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "required": false,
+            "name": "includeValues",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "required": false,
+            "name": "includeMetadata",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtStorageListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Bulk insert/update records",
+        "tags": [
+          "Extension Storage"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "extension",
+          "x-edition": "EE"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "installId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "required": true,
+            "name": "namespace",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtStorageBulkPutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk operation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtStorageBulkPutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Quota exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ext-storage/install/{installId}/{namespace}/records/{key}": {
+      "get": {
+        "summary": "Get a record by key",
+        "tags": [
+          "Extension Storage"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "extension",
+          "x-edition": "EE"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "installId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "required": true,
+            "name": "namespace",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "required": true,
+            "name": "key",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "if-revision-match",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtStorageGetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Create or update a record by key",
+        "tags": [
+          "Extension Storage"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "extension",
+          "x-edition": "EE"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "installId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "required": true,
+            "name": "namespace",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "required": true,
+            "name": "key",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtStoragePutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Record metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtStoragePutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Quota exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a record by key",
+        "tags": [
+          "Extension Storage"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "extension",
+          "x-edition": "EE"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "installId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "required": true,
+            "name": "namespace",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "required": true,
+            "name": "key",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "required": false,
+            "name": "ifRevision",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision mismatch",
             "content": {
               "application/json": {
                 "schema": {

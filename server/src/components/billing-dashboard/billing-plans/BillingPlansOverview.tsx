@@ -61,9 +61,9 @@ const BillingPlansOverview: React.FC = () => {
     } catch (error) {
       console.error('Error deleting contract line:', error); // Keep console log for debugging
       if (error instanceof Error) {
-        // Check for the specific error message for plans assigned to companies
-        if (error.message === "Cannot delete billing plan: It is currently assigned to one or more companies.") {
-            toast.error("Cannot delete contract line: It is currently assigned to one or more companies.");
+        // Check for the specific error message for plans assigned to clients
+        if (error.message === "Cannot delete billing plan: It is currently assigned to one or more clients.") {
+            toast.error(error.message);
         // Check for the specific error message for plans with associated services (from pre-check)
         } else if (error.message.includes('associated services')) {
           toast.error(error.message); // Use the exact message from the action

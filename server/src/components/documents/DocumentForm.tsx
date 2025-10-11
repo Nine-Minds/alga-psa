@@ -118,10 +118,10 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Company ID
+                    Client ID
                 </Text>
                 <Input
-                    {...register('company_id')}
+                    {...register('client_id')}
                 />
             </div>
 

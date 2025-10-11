@@ -24,7 +24,7 @@ describe('TemplateRenderer', () => {
             content: [
               {
                 type: 'field',
-                name: 'company.name',
+                name: 'client.name',
                 position: { column: 1, row: 1 },
                 span: { columnSpan: 6, rowSpan: 1 }
               }
@@ -39,7 +39,7 @@ describe('TemplateRenderer', () => {
     };
 
     const invoiceData: InvoiceViewModel = {
-      company: {
+      client: {
         name: 'Acme Corporation',
         logo: '',
         address: ''
@@ -50,7 +50,7 @@ describe('TemplateRenderer', () => {
       total: 0,
       status: 'draft',
       invoice_items: [],
-      company_id: 'test-company-1',
+      client_id: 'test-client-1',
       total_amount: 0,
       credit_applied: 0,
       is_manual: false,
@@ -105,7 +105,7 @@ describe('TemplateRenderer', () => {
     };
 
     const invoiceData: InvoiceViewModel = {
-      company: {
+      client: {
         name: 'Acme Corporation',
         logo: '',
         address: ''
@@ -115,7 +115,7 @@ describe('TemplateRenderer', () => {
       due_date: Temporal.PlainDate.from('2023-01-31'),
       status: 'draft',
       invoice_items: [],
-      company_id: 'test-company-1',
+      client_id: 'test-client-1',
       total_amount: 0,
       credit_applied: 0,
       is_manual: false,
@@ -191,7 +191,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
         }
       ],
       invoice_number: '',
-      company: { name: '', logo: '', address: '' },
+      client: { name: '', logo: '', address: '' },
       contact: { name: '', address: '' },
       invoice_date: Temporal.PlainDate.from('2023-01-01'),
       due_date: Temporal.PlainDate.from('2023-01-31'),
@@ -200,7 +200,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
       tax: 0,
       total: 50,
       invoice_id: '',
-      company_id: 'test-company-1',
+      client_id: 'test-client-1',
       total_amount: 50,
       credit_applied: 0,
       is_manual: false
@@ -269,7 +269,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
         }
       ],
       invoice_number: '',
-      company: { name: '', logo: '', address: '' },
+      client: { name: '', logo: '', address: '' },
       contact: { name: '', address: '' },
       invoice_date: Temporal.PlainDate.from('2023-01-01'),
       due_date: Temporal.PlainDate.from('2023-01-31'),
@@ -278,7 +278,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
       tax: 0,
       total: 50,
       invoice_id: '',
-      company_id: 'test-company-1',
+      client_id: 'test-client-1',
       total_amount: 50,
       credit_applied: 0,
       is_manual: false
@@ -324,7 +324,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
     };
 
     const invoiceData: InvoiceViewModel = {
-      company: {
+      client: {
         name: 'Acme Corporation',
         logo: '',
         address: ''
@@ -367,7 +367,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
         address: ''
       },
       invoice_id: '',
-      company_id: 'test-company-1',
+      client_id: 'test-client-1',
       total_amount: 150,
       credit_applied: 0,
       is_manual: false

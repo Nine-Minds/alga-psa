@@ -7,7 +7,7 @@ import {
   createTestService,
   createFixedPlanAssignment,
   addServiceToFixedPlan,
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -61,7 +61,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
   let context: TestContext;
 
   async function configureDefaultTax() {
-    await setupCompanyTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State + City Tax',
@@ -81,8 +81,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_service_configuration',
         'plan_service_fixed_config',
         'service_catalog',
@@ -90,10 +90,10 @@ describe('Billing Invoice Subtotal Calculations', () => {
         'billing_plans',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates'
+        'client_tax_settings',
+        'client_tax_rates'
       ],
-      companyName: 'Subtotal Test Company',
+      clientName: 'Subtotal Test Client',
       userType: 'internal'
     });
 
@@ -142,7 +142,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
     });
 
     const invoice = await generateManualInvoice({
-      companyId: context.companyId,
+      clientId: context.clientId,
       items: [
         {
           service_id: fractionalServiceA,
@@ -201,8 +201,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
     await addServiceToFixedPlan(context, planId, serviceB, { detailBaseRateCents: 7500 });
     await addServiceToFixedPlan(context, planId, serviceC, { detailBaseRateCents: 10000 });
 
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: '2025-02-01',
       period_start_date: '2025-02-01',
@@ -238,8 +238,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
       startDate: '2025-02-01'
     });
 
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: '2025-02-01',
       period_start_date: '2025-02-01',
@@ -281,8 +281,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
 
     await addServiceToFixedPlan(context, planId, creditServiceB, { detailBaseRateCents: 7500 });
 
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: '2025-02-01',
       period_start_date: '2025-02-01',

@@ -14,8 +14,8 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { z } from 'zod';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { IClient } from 'server/src/interfaces/client.interfaces';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { 
     createProjectSchema, 
     updateProjectSchema, 
@@ -743,7 +743,7 @@ export async function getProjectMetadata(projectId: string): Promise<{
     users: IUserWithRoles[];
     contact?: { full_name: string };
     assignedUser: IUserWithRoles | null;
-    companies: ICompany[];
+    clients: IClient[];
 }> {
     try {
         const currentUser = await getCurrentUser();
@@ -753,10 +753,10 @@ export async function getProjectMetadata(projectId: string): Promise<{
         const {knex} = await createTenantKnex();
         
         // Fetch data that doesn't need to be in a transaction
-        const [statuses, users, companies] = await Promise.all([
+        const [statuses, users, clients] = await Promise.all([
             getProjectTaskStatuses(projectId),
             getAllUsers(),
-            getAllCompanies()
+            getAllClients()
         ]);
         
         // Fetch project-specific data within a transaction
@@ -799,7 +799,7 @@ export async function getProjectMetadata(projectId: string): Promise<{
             users,
             contact,
             assignedUser,
-            companies
+            clients
         };
     } catch (error) {
         console.error('Error getting project metadata:', error);
@@ -816,7 +816,7 @@ export async function getProjectDetails(projectId: string): Promise<{
     users: IUserWithRoles[];
     contact?: { full_name: string };
     assignedUser: IUserWithRoles | null;
-    companies: ICompany[];
+    clients: IClient[];
 }> {
     try {
         const currentUser = await getCurrentUser();
@@ -827,10 +827,10 @@ export async function getProjectDetails(projectId: string): Promise<{
         const {knex} = await createTenantKnex();
         
         // Fetch data that doesn't need to be in a transaction
-        const [statuses, users, companies] = await Promise.all([
+        const [statuses, users, clients] = await Promise.all([
             getProjectTaskStatuses(projectId),
             getAllUsers(),
-            getAllCompanies()
+            getAllClients()
         ]);
         
         // Fetch project-specific data within a transaction
@@ -884,7 +884,7 @@ export async function getProjectDetails(projectId: string): Promise<{
             users,
             contact,
             assignedUser: project.assigned_user || null,
-            companies
+            clients
         };
     } catch (error) {
         console.error('Error fetching project details:', error);

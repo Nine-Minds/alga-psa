@@ -22,8 +22,16 @@ pub struct ModuleLoader {
     cache: Arc<RwLock<HashMap<String, Arc<Vec<u8>>>>>,
 }
 
+#[derive(Clone, Default)]
+pub struct HostExecutionContext {
+    pub tenant_id: Option<String>,
+    pub extension_id: Option<String>,
+    pub install_id: Option<String>,
+}
+
 pub(crate) struct Limits {
     max_memory: usize,
+    pub context: HostExecutionContext,
 }
 
 impl ResourceLimiter for Limits {
@@ -70,7 +78,10 @@ impl ModuleLoader {
 
     pub fn instantiate(&self, wasm: &[u8], timeout_ms: Option<u64>, memory_mb: Option<u64>) -> anyhow::Result<(Store<Limits>, Linker<Limits>, Module)> {
         let module = Module::new(&self.engine, wasm)?;
-        let limits = Limits { max_memory: (memory_mb.unwrap_or(256) as usize) * 1024 * 1024 };
+        let limits = Limits {
+            max_memory: (memory_mb.unwrap_or(256) as usize) * 1024 * 1024,
+            context: HostExecutionContext::default(),
+        };
         let mut store = Store::new(&self.engine, limits);
 
         // Apply store-level resource limits if needed
@@ -139,8 +150,16 @@ impl ModuleLoader {
         Ok(bytes)
     }
 
-    pub fn execute_handler(&self, wasm: &[u8], timeout_ms: Option<u64>, memory_mb: Option<u64>, input: &[u8]) -> anyhow::Result<Vec<u8>> {
+    pub fn execute_handler(
+        &self,
+        wasm: &[u8],
+        timeout_ms: Option<u64>,
+        memory_mb: Option<u64>,
+        input: &[u8],
+        context: HostExecutionContext,
+    ) -> anyhow::Result<Vec<u8>> {
         let (mut store, mut linker, module) = self.instantiate(wasm, timeout_ms, memory_mb)?;
+        store.data_mut().context = context;
         let instance = linker.instantiate(&mut store, &module)?;
         // Resolve exports
         let memory = instance.get_memory(&mut store, "memory").ok_or_else(|| anyhow::anyhow!("no memory export"))?;

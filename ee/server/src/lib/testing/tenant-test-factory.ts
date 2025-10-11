@@ -1,6 +1,6 @@
 /**
  * Test data factory for tenant onboarding integration tests
- * Provides utilities for creating test tenants, users, and companies
+ * Provides utilities for creating test tenants, users, and clients
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -13,9 +13,9 @@ export interface TenantTestData {
     tenantName: string;
     email: string;
   };
-  company?: {
-    companyId: string;
-    companyName: string;
+  client?: {
+    clientId: string;
+    clientName: string;
   };
   adminUser: {
     userId: string;
@@ -48,7 +48,8 @@ export async function createTestTenant(
       lastName: options.adminUser?.lastName || 'Admin',
       email: options.adminUser?.email || `test-admin-${testId}@example.com`,
     },
-    companyName: options.companyName || `Test Company ${testId}`,
+    companyName: options.companyName || options.clientName || options.tenantName || `Test Client ${testId}`,
+    clientName: options.clientName || options.tenantName || `Test Client ${testId}`,
     billingPlan: options.billingPlan || 'basic',
   };
 
@@ -76,9 +77,9 @@ export async function createTestTenant(
       tenantName: tenantInput.tenantName,
       email: tenantInput.adminUser.email,
     },
-    company: result.companyId ? {
-      companyId: result.companyId,
-      companyName: tenantInput.companyName!,
+    client: result.clientId ? {
+      clientId: result.clientId,
+      clientName: tenantInput.clientName || tenantInput.tenantName,
     } : undefined,
     adminUser: {
       userId: result.adminUserId,
@@ -110,7 +111,7 @@ export async function createTestTenants(
         lastName: baseOptions.adminUser?.lastName || 'Admin',
         email: baseOptions.adminUser?.email || `test-admin-${i + 1}-${testId}@example.com`,
       },
-      companyName: baseOptions.companyName || `Test Company ${i + 1} ${testId}`,
+      clientName: baseOptions.clientName || `Test Client ${i + 1} ${testId}`,
     };
     
     const tenant = await createTestTenant(db, options);
@@ -161,15 +162,15 @@ export const TenantScenarios = {
    */
   basic: (db: Knex) => createTestTenant(db, {
     tenantName: 'Basic Test Tenant',
-    companyName: 'Basic Test Company',
+    clientName: 'Basic Test Client',
   }),
 
   /**
-   * Tenant without company for edge case testing
+   * Tenant without client for edge case testing
    */
-  noCompany: (db: Knex) => createTestTenant(db, {
-    tenantName: 'No Company Tenant',
-    companyName: undefined,
+  noClient: (db: Knex) => createTestTenant(db, {
+    tenantName: 'No Client Tenant',
+    clientName: undefined,
   }),
 
   /**
@@ -177,7 +178,7 @@ export const TenantScenarios = {
    */
   longNames: (db: Knex) => createTestTenant(db, {
     tenantName: 'Very Long Tenant Name That Might Cause UI Issues',
-    companyName: 'Very Long Company Name That Might Cause UI Layout Problems',
+    clientName: 'Very Long Client Name That Might Cause UI Layout Problems',
     adminUser: {
       firstName: 'VeryLongFirstName',
       lastName: 'VeryLongLastNameThatMightCauseIssues',
@@ -189,8 +190,8 @@ export const TenantScenarios = {
    * Tenant with special characters for validation testing
    */
   specialChars: (db: Knex) => createTestTenant(db, {
-    tenantName: "Test & Company, Ltd. (Special Chars!)",
-    companyName: "Company with Special Characters: & < > \" '",
+    tenantName: "Test & Client, Ltd. (Special Chars!)",
+    clientName: "Client with Special Characters: & < > \" '",
     adminUser: {
       firstName: "José",
       lastName: "O'Connor-Smith",

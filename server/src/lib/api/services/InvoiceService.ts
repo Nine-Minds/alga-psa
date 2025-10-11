@@ -59,8 +59,8 @@ import {
   PreviewInvoiceResponse
 } from '../../../interfaces/invoice.interfaces';
 
-import { IBillingResult, IBillingCharge, ICompanyBillingCycle } from '../../../interfaces/billing.interfaces';
-import { ICompany } from '../../../interfaces/company.interfaces';
+import { IBillingResult, IBillingCharge, IClientBillingCycle } from '../../../interfaces/billing.interfaces';
+import { IClient } from '../../../interfaces/client.interfaces';
 import { ISO8601String } from '../../../types/types.d';
 
 export interface InvoiceServiceContext extends ServiceContext {
@@ -69,7 +69,7 @@ export interface InvoiceServiceContext extends ServiceContext {
 
 export interface InvoiceListOptions extends ListOptions {
   include_items?: boolean;
-  include_company?: boolean;
+  include_client?: boolean;
   include_billing_cycle?: boolean;
   include_transactions?: boolean;
 }
@@ -84,9 +84,9 @@ export interface InvoiceAnalytics {
     count: number;
     amount: number;
   }>;
-  topCompanies: Array<{
-    company_id: string;
-    company_name: string;
+  topClients: Array<{
+    client_id: string;
+    client_name: string;
     total_amount: number;
     invoice_count: number;
   }>;
@@ -100,7 +100,7 @@ export interface InvoiceAnalytics {
 export interface InvoiceHATEOASLinks {
   self: string;
   items?: string;
-  company?: string;
+  client?: string;
   billing_cycle?: string;
   transactions?: string;
   pdf?: string;
@@ -169,11 +169,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Add joins based on include options
-      if ((options as any).include_company) {
+      if ((options as any).include_client) {
         // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = trx('company_locations as cl')
+        const billingAddressSubquery = trx('client_locations as cl')
           .select(
-            'cl.company_id',
+            'cl.client_id',
             'cl.tenant',
             trx.raw(`CONCAT_WS(', ', 
               cl.address_line1, 
@@ -193,20 +193,20 @@ export class InvoiceService extends BaseService<IInvoice> {
           .as('billing_loc');
 
         query = query
-          .leftJoin('companies', 'invoices.company_id', 'companies.company_id')
+          .leftJoin('clients', 'invoices.client_id', 'clients.client_id')
           .leftJoin(billingAddressSubquery, function() {
-            this.on('companies.company_id', '=', 'billing_loc.company_id')
-                .andOn('companies.tenant', '=', 'billing_loc.tenant');
+            this.on('clients.client_id', '=', 'billing_loc.client_id')
+                .andOn('clients.tenant', '=', 'billing_loc.tenant');
           })
           .select(
-            'companies.company_name',
+            'clients.client_name',
             trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
           );
       }
 
       if ((options as any).include_billing_cycle) {
-        query = query.leftJoin('company_billing_cycles', 'invoices.billing_cycle_id', 'company_billing_cycles.cycle_id')
-          .select('company_billing_cycles.period_start', 'company_billing_cycles.period_end');
+        query = query.leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.cycle_id')
+          .select('client_billing_cycles.period_start', 'client_billing_cycles.period_end');
       }
 
       if ((options as any).include_tax_details) {
@@ -268,11 +268,11 @@ export class InvoiceService extends BaseService<IInvoice> {
         // Get related data based on options
         const includeItems = options?.include_items !== false;
         const includeTransactions = options?.include_transactions === true;
-        const includeCompany = options?.include_company !== false;
+        const includeClient = options?.include_client !== false;
   
-        const [lineItems, company, billingCycle, taxDetails, payments, credits] = await Promise.all([
+        const [lineItems, client, billingCycle, taxDetails, payments, credits] = await Promise.all([
           includeItems ? this.getInvoiceLineItems(id, trx, context) : [],
-          includeCompany ? this.getInvoiceCompany(invoice.company_id, trx, context) : null,
+          includeClient ? this.getInvoiceClient(invoice.client_id, trx, context) : null,
           invoice.billing_cycle_id ? this.getBillingCycle(invoice.billing_cycle_id, trx, context) : null,
           invoice.tax_rate_id ? this.getTaxDetails(invoice.tax_rate_id, trx, context) : null,
           includeTransactions ? this.getInvoicePayments(id, trx, context) : [],
@@ -288,8 +288,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           result.line_items = lineItems;
           result.invoice_items = lineItems; // Alias for controller compatibility
         }
-        if (includeCompany) {
-          result.company = company;
+        if (includeClient) {
+          result.client = client;
         }
         if (billingCycle) {
           result.billing_cycle = billingCycle;
@@ -327,9 +327,9 @@ export class InvoiceService extends BaseService<IInvoice> {
       let taxCalculation: { tax_amount: number; tax_region: string; tax_rate: number; calculation_date: string } | null = null;
       if (data.items?.length) {
         taxCalculation = await this.calculateTaxes({
-          company_id: data.company_id,
+          client_id: data.client_id,
           amount: data.subtotal,
-          tax_region: 'US' // Default, should come from company
+          tax_region: 'US' // Default, should come from client
         }, context);
       }
 
@@ -337,7 +337,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const invoiceData = {
         invoice_id: uuidv4(),
         invoice_number: invoiceNumber,
-        company_id: data.company_id,
+        client_id: data.client_id,
         billing_cycle_id: data.billing_cycle_id,
         status: data.status || 'draft',
         invoice_date: data.invoice_date || new Date().toISOString().split('T')[0],
@@ -382,7 +382,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           tenantId: context.tenant,
           invoiceId: invoice.invoice_id,
           invoiceNumber: invoiceNumber,
-          companyId: data.company_id,
+          clientId: data.client_id,
           totalAmount: invoice.total_amount,
           userId: context.userId,
           timestamp: new Date().toISOString()
@@ -949,7 +949,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       try {
         await this.sendInvoice({
           invoice_id: invoiceId,
-          email_addresses: [], // Would need to get from company
+          email_addresses: [], // Would need to get from client
           include_pdf: data.include_pdf
         }, context);
 
@@ -1026,16 +1026,16 @@ export class InvoiceService extends BaseService<IInvoice> {
         baseQuery = this.applyInvoiceFilters(baseQuery, filters);
       }
 
-      const [statusStats, monthlyStats, topCompanies] = await Promise.all([
+      const [statusStats, monthlyStats, topClients] = await Promise.all([
         this.getStatusStatistics(baseQuery.clone(), trx),
         this.getMonthlyStatistics(baseQuery.clone(), trx),
-        this.getTopCompaniesByRevenue(baseQuery.clone(), trx)
+        this.getTopClientsByRevenue(baseQuery.clone(), trx)
       ]);
 
       return {
         status_breakdown: statusStats,
         monthly_trends: monthlyStats,
-        top_companies: topCompanies,
+        top_clients: topClients,
         generated_at: new Date().toISOString()
       };
     });
@@ -1087,7 +1087,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     
     return withTransaction(knex, async (trx) => {
       // Get billing cycle details
-      const billingCycle = await trx('company_billing_cycles')
+      const billingCycle = await trx('client_billing_cycles')
         .where({ cycle_id: data.billing_cycle_id, tenant: context.tenant })
         .first();
 
@@ -1098,10 +1098,10 @@ export class InvoiceService extends BaseService<IInvoice> {
         };
       }
 
-      // Get company details with location
-      const company = await trx('companies as c')
-        .leftJoin('company_locations as cl', function() {
-          this.on('c.company_id', '=', 'cl.company_id')
+      // Get client details with location
+      const client = await trx('clients as c')
+        .leftJoin('client_locations as cl', function() {
+          this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
               .andOn('cl.is_default', '=', trx.raw('true'));
         })
@@ -1109,20 +1109,20 @@ export class InvoiceService extends BaseService<IInvoice> {
           'c.*',
           'cl.address_line1 as location_address'
         )
-        .where({ 'c.company_id': billingCycle.company_id, 'c.tenant': context.tenant })
+        .where({ 'c.client_id': billingCycle.client_id, 'c.tenant': context.tenant })
         .first();
 
-      if (!company) {
+      if (!client) {
         return {
           success: false,
-          error: 'Company not found'
+          error: 'Client not found'
         };
       }
 
-      // Get tenant company details with location
-      const tenantCompany = await trx('companies as c')
-        .leftJoin('company_locations as cl', function() {
-          this.on('c.company_id', '=', 'cl.company_id')
+      // Get tenant client details with location
+      const tenantClient = await trx('clients as c')
+        .leftJoin('client_locations as cl', function() {
+          this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
               .andOn('cl.is_default', '=', trx.raw('true'));
         })
@@ -1130,7 +1130,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           'c.*',
           'cl.address_line1 as location_address'
         )
-        .where({ 'c.tenant': context.tenant, 'c.is_tenant_company': true })
+        .where({ 'c.tenant': context.tenant, 'c.is_tenant_client': true })
         .first();
 
       // Generate preview data
@@ -1160,13 +1160,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           issueDate,
           dueDate,
           customer: {
-            name: company.company_name,
-            address: company.location_address || ''
+            name: client.client_name,
+            address: client.location_address || ''
           },
-          tenantCompany: tenantCompany ? {
-            name: tenantCompany.company_name,
-            address: tenantCompany.location_address || '',
-            logoUrl: tenantCompany.logo_url || null
+          tenantClient: tenantClient ? {
+            name: tenantClient.client_name,
+            address: tenantClient.location_address || '',
+            logoUrl: tenantClient.logo_url || null
           } : null,
           items,
           subtotal,
@@ -1203,11 +1203,11 @@ export class InvoiceService extends BaseService<IInvoice> {
             query.where('invoices.status', value);
           }
           break;
-        case 'company_id':
+        case 'client_id':
           if (Array.isArray(value)) {
-            query.whereIn('invoices.company_id', value);
+            query.whereIn('invoices.client_id', value);
           } else {
-            query.where('invoices.company_id', value);
+            query.where('invoices.client_id', value);
           }
           break;
         case 'invoice_number':
@@ -1303,15 +1303,15 @@ export class InvoiceService extends BaseService<IInvoice> {
       .orderBy('line_number');
   }
 
-  private async getInvoiceCompany(companyId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('companies')
-      .where({ company_id: companyId, tenant: context.tenant })
-      .select('company_id', 'company_name', 'billing_address', 'email', 'phone_no')
+  private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
+    return trx('clients')
+      .where({ client_id: clientId, tenant: context.tenant })
+      .select('client_id', 'client_name', 'billing_address', 'email', 'phone_no')
       .first();
   }
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('company_billing_cycles')
+    return trx('client_billing_cycles')
       .where({ cycle_id: cycleId, tenant: context.tenant })
       .first();
   }
@@ -1355,7 +1355,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       discount_percentage: item.discount_percentage,
       applies_to_item_id: item.applies_to_item_id,
       applies_to_service_id: item.applies_to_service_id,
-      company_bundle_id: item.company_bundle_id,
+      client_bundle_id: item.client_bundle_id,
       bundle_name: item.bundle_name,
       is_bundle_header: item.is_bundle_header || false,
       parent_item_id: item.parent_item_id,
@@ -1404,13 +1404,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       .limit(12);
   }
 
-  private async getTopCompaniesByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction): Promise<any[]> {
+  private async getTopClientsByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction): Promise<any[]> {
     return query
-      .join('companies', 'invoices.company_id', 'companies.company_id')
-      .groupBy('companies.company_id', 'companies.company_name')
+      .join('clients', 'invoices.client_id', 'clients.client_id')
+      .groupBy('clients.client_id', 'clients.client_name')
       .select(
-        'companies.company_id',
-        'companies.company_name',
+        'clients.client_id',
+        'clients.client_name',
         trx.raw('SUM(invoices.total_amount) as total_revenue'),
         trx.raw('COUNT(*) as invoice_count')
       )

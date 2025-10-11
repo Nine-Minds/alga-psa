@@ -30,6 +30,7 @@ export interface ManifestV2 {
 }
 
 export interface TenantInstall {
+  install_id: string;
   version_id: string;
   content_hash: string;
 }
@@ -63,6 +64,7 @@ class DevRegistryFacade implements RegistryFacade {
     // Provide a deterministic install to exercise local gateway without DB
     // We scope it for any tenant/extension to keep demo simple.
     return {
+      install_id: `dev-install-${sanitize(tenantId)}-${sanitize(extensionId)}`,
       version_id: `v2-dev-${sanitize(extensionId)}`,
       content_hash: 'sha256:devcontenthash',
     };

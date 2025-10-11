@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const PlanBundle = {
   /**
-   * Check if a bundle is in use by any company
+   * Check if a bundle is in use by any client
    */
   isInUse: async (bundleId: string): Promise<boolean> => {
     const { knex: db, tenant } = await createTenantKnex();
@@ -15,13 +15,13 @@ const PlanBundle = {
     }
 
     try {
-      const result = await db('company_plan_bundles')
+      const result = await db('client_plan_bundles')
         .where({
           bundle_id: bundleId,
           tenant,
           is_active: true
         })
-        .count('company_bundle_id as count')
+        .count('client_bundle_id as count')
         .first() as { count: string };
       
       return parseInt(result?.count || '0', 10) > 0;
@@ -44,7 +44,7 @@ const PlanBundle = {
     try {
       const isUsed = await PlanBundle.isInUse(bundleId);
       if (isUsed) {
-        throw new Error('Cannot delete bundle that is in use by companies');
+        throw new Error('Cannot delete bundle that is in use by clients');
       }
 
       // Start a transaction to ensure all related records are deleted

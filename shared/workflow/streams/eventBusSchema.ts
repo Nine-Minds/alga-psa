@@ -20,8 +20,8 @@ export const EventTypeEnum = z.enum([
   'CUSTOM_EVENT', // Added for test events
   'INVOICE_CREATED', // QBO Invoice Created
   'INVOICE_UPDATED', // QBO Invoice Updated
-  'COMPANY_CREATED', // QBO Company Created
-  'COMPANY_UPDATED', // QBO Company Updated
+  'CLIENT_CREATED', // QBO Client Created
+  'CLIENT_UPDATED', // QBO Client Updated
   'INBOUND_EMAIL_RECEIVED', // Inbound email processing
 ]);
 
@@ -89,7 +89,7 @@ export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({
 // Invoice event payload schema
 export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   invoiceId: z.string().uuid(),
-  companyId: z.string().uuid(),
+  clientId: z.string().uuid(),
   userId: z.string().uuid(),
   totalAmount: z.string(), // Corrected type to string based on logs
   realmId: z.string().nullable().optional(), // For QBO integration
@@ -98,9 +98,9 @@ export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   invoiceNumber: z.string(), // Matches published 'invoiceNumber'
 });
 
-// Company event payload schema
-export const CompanyEventPayloadSchema = BasePayloadSchema.extend({
-  companyId: z.string().uuid(),
+// Client event payload schema
+export const ClientEventPayloadSchema = BasePayloadSchema.extend({
+  clientId: z.string().uuid(),
   userId: z.string().uuid().optional(), // User might not always be available for system-triggered events
   changes: z.record(z.unknown()).optional(), // Details of what changed
 });
@@ -162,8 +162,8 @@ export const EventPayloadSchemas = {
   CUSTOM_EVENT: CustomEventPayloadSchema,
   INVOICE_CREATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
   INVOICE_UPDATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
-  COMPANY_CREATED: CompanyEventPayloadSchema, // Use new Company schema
-  COMPANY_UPDATED: CompanyEventPayloadSchema, // Use new Company schema
+  CLIENT_CREATED: ClientEventPayloadSchema, // Client creation event
+  CLIENT_UPDATED: ClientEventPayloadSchema, // Client update event
   INBOUND_EMAIL_RECEIVED: InboundEmailEventPayloadSchema, // Inbound email processing
 } as const;
 
@@ -219,8 +219,8 @@ export type Event =
   | InboundEmailReceivedEvent
   | z.infer<typeof EventSchemas.INVOICE_CREATED> // QBO Invoice Created
   | z.infer<typeof EventSchemas.INVOICE_UPDATED> // QBO Invoice Updated
-  | z.infer<typeof EventSchemas.COMPANY_CREATED> // QBO Company Created
-  | z.infer<typeof EventSchemas.COMPANY_UPDATED>; // QBO Company Updated
+  | z.infer<typeof EventSchemas.CLIENT_CREATED> // QBO Client Created
+  | z.infer<typeof EventSchemas.CLIENT_UPDATED>; // QBO Client Updated
 
 /**
  * Convert an event bus event to a workflow event

@@ -8,14 +8,9 @@ import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
 // Removed direct Radix imports:
-// TooltipContent,
-// TooltipProvider,
 // TooltipTrigger,
-import { Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react'; // Added Eye for preview
-import { useDrawer } from 'server/src/context/DrawerContext';
-import CompanyDetails from 'server/src/components/companies/CompanyDetails';
-import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
-import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
+import { Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
+import { IClientBillingCycle } from '../../interfaces/billing.interfaces';
 // Import PreviewInvoiceResponse (which uses the correct VM internally)
 import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
 // Import the InvoiceViewModel directly from the renderer types
@@ -38,8 +33,8 @@ import {
 // Use ConfirmationDialog instead of AlertDialog
 import { ConfirmationDialog } from '../ui/ConfirmationDialog'; // Corrected import
 interface AutomaticInvoicesProps {
-  periods: (ICompanyBillingCycle & {
-    company_name: string;
+  periods: (IClientBillingCycle & {
+    client_name: string;
     can_generate: boolean;
     period_start_date: ISO8601String;
     period_end_date: ISO8601String;
@@ -47,8 +42,8 @@ interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
 }
 
-interface Period extends ICompanyBillingCycle {
-  company_name: string;
+interface Period extends IClientBillingCycle {
+  client_name: string;
   can_generate: boolean;
   billing_cycle_id?: string;
   period_start_date: ISO8601String;
@@ -58,12 +53,12 @@ interface Period extends ICompanyBillingCycle {
 }
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenerateSuccess }) => {
-  const drawer = useDrawer();
+  // Drawer removed: client details quick view no longer used here
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
-  const [companyFilter, setCompanyFilter] = useState<string>('');
+  const [clientFilter, setClientFilter] = useState<string>('');
   const [invoicedPeriods, setInvoicedPeriods] = useState<Period[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentReadyPage, setCurrentReadyPage] = useState(1);
@@ -71,7 +66,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
     id: string;
-    company: string;
+    client: string;
     period: string;
   } | null>(null);
   // State to hold both preview data and the associated billing cycle ID
@@ -87,17 +82,17 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedCycleToDelete, setSelectedCycleToDelete] = useState<{
     id: string;
-    company: string;
+    client: string;
     period: string;
   } | null>(null);
   const itemsPerPage = 10;
 
   const filteredPeriods = periods.filter(period =>
-    period.company_name.toLowerCase().includes(companyFilter.toLowerCase())
+    period.client_name.toLowerCase().includes(clientFilter.toLowerCase())
   );
 
   const filteredInvoicedPeriods = invoicedPeriods.filter(period =>
-    period.company_name.toLowerCase().includes(companyFilter.toLowerCase())
+    period.client_name.toLowerCase().includes(clientFilter.toLowerCase())
   );
 
   useEffect(() => {
@@ -179,12 +174,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       try {
         await generateInvoice(billingCycleId);
       } catch (err) {
-        // Get company name for the failed billing cycle
+        // Get client name for the failed billing cycle
         const period = periods.find(p => p.billing_cycle_id === billingCycleId);
-        const companyName = period?.company_name || billingCycleId;
+        const clientName = period?.client_name || billingCycleId;
 
-        // Store error message for this company
-        newErrors[companyName] = err instanceof Error ? err.message : 'Unknown error occurred';
+        // Store error message for this client
+        newErrors[clientName] = err instanceof Error ? err.message : 'Unknown error occurred';
       }
     }
 
@@ -223,7 +218,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       onGenerateSuccess(); // This will refresh the available periods list
     } catch (error) {
       setErrors({
-        [selectedCycleToReverse.company]: error instanceof Error ? error.message : 'Failed to reverse billing cycle'
+        [selectedCycleToReverse.client]: error instanceof Error ? error.message : 'Failed to reverse billing cycle'
       });
     }
     setIsReversing(false);
@@ -249,7 +244,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       onGenerateSuccess();
     } catch (error) {
       setErrors({
-        [selectedCycleToDelete.company]: error instanceof Error ? error.message : 'Failed to delete billing cycle'
+        [selectedCycleToDelete.client]: error instanceof Error ? error.message : 'Failed to delete billing cycle'
       });
       // Keep dialog open on error to show message? Or close it? Closing for now.
       setShowDeleteDialog(false);
@@ -280,26 +275,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     }
   };
 
-  const handleOpenCompanyDrawer = async (companyId: string) => {
-    try {
-      const company = await getCompanyById(companyId);
-      if (company) {
-        drawer.openDrawer(
-          <CompanyDetails
-            company={company}
-            documents={[]}
-            contacts={[]}
-            isInDrawer={true}
-            quickView={true}
-          />
-        );
-      } else {
-        console.error('Company not found');
-      }
-    } catch (error) {
-      console.error('Error fetching company details:', error);
-    }
-  };
+  // Removed company drawer handler (migrated to client-only flow)
 
   return (
     // Removed TooltipProvider wrapper
@@ -311,10 +287,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
             <div className="flex gap-4">
               <input
                 type="text"
-                placeholder="Filter companies..."
+                placeholder="Filter clients..."
                 className="px-3 py-2 border rounded-md"
-                value={companyFilter}
-                onChange={(e) => setCompanyFilter(e.target.value)}
+                value={clientFilter}
+                onChange={(e) => setClientFilter(e.target.value)}
               />
               <Button
                 id='preview-selected-button'
@@ -351,9 +327,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
               </button>
               <h4 className="font-semibold mb-2">Errors occurred while finalizing invoices:</h4>
               <ul className="list-disc pl-5">
-                {Object.entries(errors).map(([company, errorMessage]): JSX.Element => (
-                  <li key={company}>
-                    <span className="font-medium">{company}:</span> {errorMessage}
+                {Object.entries(errors).map(([client, errorMessage]): JSX.Element => (
+                  <li key={client}>
+                    <span className="font-medium">{client}:</span> {errorMessage}
                   </li>
                 ))}
               </ul>
@@ -394,39 +370,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                   />
                 ) : null
               },
-              {
-                title: 'Client',
-                dataIndex: 'company_name',
-                render: (value: string, record: Period) => (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenCompanyDrawer(record.company_id);
-                    }}
-                    className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
-                  >
-                    {value}
-                  </button>
-                )
-              },
-              {
-                title: 'Contract',
-                dataIndex: 'contract_name',
-                render: (value: string | undefined) => value || <span className="text-gray-400 text-sm">No contract</span>
-              },
-              {
-                title: 'Status',
-                dataIndex: 'is_early',
-                render: (_: unknown, record: Period) => {
-                  if (!record.can_generate) {
-                    return <Badge variant="default" className="bg-gray-100 text-gray-800 border-gray-200">Not Ready</Badge>;
-                  }
-                  if (record.is_early) {
-                    return <Badge variant="default" className="bg-yellow-100 text-yellow-800 border-yellow-200">Early</Badge>;
-                  }
-                  return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">Ready</Badge>;
-                }
-              },
+              { title: 'Client', dataIndex: 'client_name' },
               {
                 title: 'Billing Cycle',
                 dataIndex: 'billing_cycle'
@@ -491,7 +435,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                             onClick={() => {
                               setSelectedCycleToDelete({
                                 id: record.billing_cycle_id || '',
-                                company: record.company_name,
+                                client: record.client_name,
                                 period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
                               });
                               setShowDeleteDialog(true); // Open the confirmation dialog
@@ -526,31 +470,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
               <DataTable
                 data={filteredInvoicedPeriods}
                 columns={[
-                  {
-                    title: 'Client',
-                    dataIndex: 'company_name',
-                    render: (value: string, record: Period) => (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenCompanyDrawer(record.company_id);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
-                      >
-                        {value}
-                      </button>
-                    )
-                  },
-                  {
-                    title: 'Contract',
-                    dataIndex: 'contract_name',
-                    render: (value: string | undefined) => value || <span className="text-gray-400 text-sm">No contract</span>
-                  },
-                  {
-                    title: 'Status',
-                    dataIndex: 'billing_cycle_id',
-                    render: () => <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-200">Invoiced</Badge>
-                  },
+                  { title: 'Client', dataIndex: 'client_name' },
                   {
                     title: 'Billing Cycle',
                     dataIndex: 'billing_cycle'
@@ -584,7 +504,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                               onClick={() => {
                                 setSelectedCycleToReverse({
                                   id: record.billing_cycle_id || '',
-                                  company: record.company_name,
+                                  client: record.client_name,
                                   period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
                                 });
                                 setShowReverseDialog(true);
@@ -623,7 +543,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
           </div>
           <div className="text-sm space-y-2">
             <p className="font-semibold">You are about to reverse the billing cycle for:</p>
-            <p>Company: {selectedCycleToReverse?.company}</p>
+            <p>Client: {selectedCycleToReverse?.client}</p>
             <p>Period: {selectedCycleToReverse?.period}</p>
           </div>
 
@@ -680,7 +600,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
           ) : previewState.data && ( // Check previewState.data instead of previewData
             <div className="space-y-4">
               <div className="border-b pb-4">
-                <h3 className="font-semibold">Company Details</h3>
+                <h3 className="font-semibold">Client Details</h3>
                 {/* Use customer property */}
                 <p>{previewState.data.customer?.name}</p>
                 <p>{previewState.data.customer?.address}</p>
@@ -813,7 +733,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         onConfirm={handleDeleteBillingCycle}
         title="Permanently Delete Billing Cycle?"
         // Use the 'message' prop (string) instead of 'description'
-        message={`This action cannot be undone. This will permanently delete the billing cycle and any associated invoice data for:\nCompany: ${selectedCycleToDelete?.company}\nPeriod: ${selectedCycleToDelete?.period}`}
+        message={`This action cannot be undone. This will permanently delete the billing cycle and any associated invoice data for:\nClient: ${selectedCycleToDelete?.client}\nPeriod: ${selectedCycleToDelete?.period}`}
         confirmLabel={isDeleting ? 'Deleting...' : 'Yes, Delete Permanently'} // Renamed prop
         isConfirming={isDeleting}
         // Removed unsupported props: confirmButtonVariant, icon

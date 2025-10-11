@@ -218,7 +218,7 @@ exports.seed = async function(knex) {
             <p><strong>Invoice Number:</strong> {{invoice.number}}</p>
             <p><strong>Amount:</strong> {{invoice.amount}}</p>
             <p><strong>Due Date:</strong> {{invoice.dueDate}}</p>
-            <p><strong>Company:</strong> {{invoice.companyName}}</p>
+            <p><strong>Client:</strong> {{invoice.clientName}}</p>
           </div>
           <a href="{{invoice.url}}" class="button">View Invoice</a>
         `,
@@ -230,7 +230,7 @@ exports.seed = async function(knex) {
   Invoice Number: {{invoice.number}}
   Amount: {{invoice.amount}}
   Due Date: {{invoice.dueDate}}
-  Company: {{invoice.companyName}}
+  Client: {{invoice.clientName}}
   
   View invoice at: {{invoice.url}}
         `
@@ -450,7 +450,7 @@ exports.seed = async function(knex) {
           <p>A new project has been created:</p>
           <div class="details">
             <p><strong>Project Name:</strong> {{project.name}}</p>
-            <p><strong>Company:</strong> {{project.company}}</p>
+            <p><strong>Client:</strong> {{project.client}}</p>
             <p><strong>Description:</strong> {{project.description}}</p>
             <p><strong>Start Date:</strong> {{project.startDate}}</p>
             <p><strong>Project Manager:</strong> {{project.manager}}</p>
@@ -463,7 +463,7 @@ exports.seed = async function(knex) {
   A new project has been created:
   
   Project Name: {{project.name}}
-  Company: {{project.company}}
+  Client: {{project.client}}
   Description: {{project.description}}
   Start Date: {{project.startDate}}
   Project Manager: {{project.manager}}

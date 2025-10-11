@@ -101,8 +101,8 @@ export interface InboundEmailEvent {
     providerId: string;
     emailData: EmailMessage;
     matchedClient?: {
-      companyId: string;
-      companyName: string;
+      clientId: string;
+      clientName: string;
       contactId?: string;
       contactName?: string;
     };
@@ -112,7 +112,7 @@ export interface InboundEmailEvent {
 export interface EmailConnectionStatus {
   connected: boolean;
   status: 'connected' | 'disconnected' | 'error';
-  companyName?: string;
+  clientName?: string;
   providerId?: string;
   errorMessage?: string;
   lastConnectionTest?: string;

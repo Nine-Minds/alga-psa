@@ -62,7 +62,6 @@ export class Permission implements IPermission {
 }
 
 const RESOURCE_CANONICAL_MAP: Record<string, string> = {
-  company: 'client',
   client: 'client'
 };
 

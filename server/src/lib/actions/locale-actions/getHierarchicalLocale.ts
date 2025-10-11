@@ -5,9 +5,9 @@ import { getConnection } from '@/lib/db/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@/lib/i18n/config';
 
 /**
- * Get the user's company ID from their contact
+ * Get the user's client ID from their contact
  */
-async function getUserCompanyId(userId: string, tenantId: string): Promise<string | null> {
+async function getUserClientId(userId: string, tenantId: string): Promise<string | null> {
   const knex = await getConnection(tenantId);
 
   // Get user's contact_id
@@ -20,7 +20,7 @@ async function getUserCompanyId(userId: string, tenantId: string): Promise<strin
 
   if (!user?.contact_id) return null;
 
-  // Get contact's company
+  // Get contact's client
   const contact = await knex('contacts')
     .where({
       contact_name_id: user.contact_id,
@@ -28,13 +28,13 @@ async function getUserCompanyId(userId: string, tenantId: string): Promise<strin
     })
     .first();
 
-  return contact?.company_id || null;
+  return contact?.client_id || null;
 }
 
 /**
  * Get the proper locale for the current user based on the hierarchy:
  * 1. User preference
- * 2. Company preference
+ * 2. Client preference
  * 3. Tenant preference
  * 4. System default
  */
@@ -66,25 +66,25 @@ export async function getHierarchicalLocaleAction(): Promise<SupportedLocale> {
     }
   }
 
-  // 2. Check company preference
-  let companyId: string | null = null;
+  // 2. Check client preference
+  let clientId: string | null = null;
 
-  // For client users, get their company
+  // For client users, get their client
   if (user.user_type === 'client') {
-    companyId = await getUserCompanyId(user.user_id, user.tenant);
+    clientId = await getUserClientId(user.user_id, user.tenant);
   }
 
-  if (companyId) {
-    const company = await knex('companies')
+  if (clientId) {
+    const client = await knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: user.tenant
       })
       .first();
 
-    const companyLocale = company?.properties?.defaultLocale;
-    if (companyLocale && isSupportedLocale(companyLocale)) {
-      return companyLocale;
+    const clientLocale = client?.properties?.defaultLocale;
+    if (clientLocale && isSupportedLocale(clientLocale)) {
+      return clientLocale;
     }
   }
 

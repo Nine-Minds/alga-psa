@@ -35,6 +35,9 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'enable_teams_integration': true,
   'enable_jira_sync': false,
   'enable_salesforce_sync': false,
+  
+  // Migration features
+  'enable_client_client_dual_write': true, // Dual-write to both clients and clients tables during migration
 };
 
 const DEFAULT_VARIANT_FLAGS: Record<string, string> = {

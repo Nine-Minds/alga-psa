@@ -7,7 +7,7 @@ import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate,
   createTestService,
   createFixedPlanAssignment,
@@ -77,7 +77,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
   let context: TestContext;
 
   async function ensureDefaultTaxConfiguration() {
-    await setupCompanyTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State + City Tax',
@@ -97,8 +97,8 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'plan_service_configuration',
         'plan_service_fixed_config',
@@ -108,11 +108,11 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         'billing_plans',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates',
+        'client_tax_settings',
+        'client_tax_rates',
         'next_number'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
@@ -183,17 +183,17 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       });
 
       // Create billing cycle and assign plan
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
@@ -205,7 +205,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         {
           tenant: context.tenantId,
           usage_id: uuidv4(),
-          company_id: context.companyId,
+          client_id: context.clientId,
           service_id: serviceId,
           usage_date: '2023-01-15',
           quantity: '50'
@@ -213,7 +213,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         {
           tenant: context.tenantId,
           usage_id: uuidv4(),
-          company_id: context.companyId,
+          client_id: context.clientId,
           service_id: serviceId,
           usage_date: '2023-01-20',
           quantity: '30'
@@ -282,8 +282,8 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       });
 
       // Create billing cycle and assign plan
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -294,7 +294,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       await createBucketUsageRecord(context, {
         planId,
         serviceId,
-        companyId: context.companyId,
+        clientId: context.clientId,
         periodStart: '2023-01-01',
         periodEnd: '2023-01-31',
         minutesUsed: 45 * 60,
@@ -353,8 +353,8 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       });
 
       // Create billing cycle
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),

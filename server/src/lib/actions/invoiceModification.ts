@@ -7,7 +7,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
 import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
 // import { auditLog } from 'server/src/lib/logging/auditLog';
-import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientBillingPlan from 'server/src/lib/models/clientBilling';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions'; // Assuming this stays or moves appropriately
 import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
@@ -112,34 +112,34 @@ export async function finalizeInvoiceWithKnex(
 
   // Check if this is a prepayment invoice (no billing_cycle_id)
   if (invoice && !invoice.billing_cycle_id) {
-    // For prepayment invoices, update the company's credit balance
-    await CompanyBillingPlan.updateCompanyCredit(invoice.company_id, invoice.subtotal);
+    // For prepayment invoices, update the client's credit balance
+    await ClientBillingPlan.updateClientCredit(invoice.client_id, invoice.subtotal);
 
     // Log the credit update
-    console.log(`Updated credit balance for company ${invoice.company_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
+    console.log(`Updated credit balance for client ${invoice.client_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
   }
   // Handle regular invoices with negative totals
   else if (invoice && invoice.total_amount < 0) {
     // Get absolute value of negative total
     const creditAmount = Math.abs(invoice.total_amount);
 
-    // Update company credit balance and record transaction in a single transaction
-    // We handle this directly without using CompanyBillingPlan.updateCompanyCredit to avoid validation issues
+    // Update client credit balance and record transaction in a single transaction
+    // We handle this directly without using ClientBillingPlan.updateClientCredit to avoid validation issues
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get current credit balance
-      const company = await trx('companies')
-        .where({ company_id: invoice.company_id, tenant })
+      const client = await trx('clients')
+        .where({ client_id: invoice.client_id, tenant })
         .select('credit_balance')
         .first();
 
-      if (!company) {
-        throw new Error(`Company ${invoice.company_id} not found`);
+      if (!client) {
+        throw new Error(`Client ${invoice.client_id} not found`);
       }
 
-      // Get company's credit expiration settings or default settings
-      const companySettings = await trx('company_billing_settings')
+      // Get client's credit expiration settings or default settings
+      const clientSettings = await trx('client_billing_settings')
         .where({
-          company_id: invoice.company_id,
+          client_id: invoice.client_id,
           tenant
         })
         .first();
@@ -148,10 +148,10 @@ export async function finalizeInvoiceWithKnex(
         .where({ tenant })
         .first();
 
-      // Determine expiration days - use company setting if available, otherwise use default
+      // Determine expiration days - use client setting if available, otherwise use default
       let expirationDays: number | undefined;
-      if (companySettings?.credit_expiration_days != null) {
-        expirationDays = companySettings.credit_expiration_days;
+      if (clientSettings?.credit_expiration_days != null) {
+        expirationDays = clientSettings.credit_expiration_days;
       } else if (defaultSettings?.credit_expiration_days != null) {
         expirationDays = defaultSettings.credit_expiration_days;
       }
@@ -166,11 +166,11 @@ export async function finalizeInvoiceWithKnex(
       }
 
       // Calculate new balance
-      const newBalance = (company.credit_balance || 0) + creditAmount;
+      const newBalance = (client.credit_balance || 0) + creditAmount;
 
-      // Update company credit balance within the transaction
-      await trx('companies')
-        .where({ company_id: invoice.company_id, tenant })
+      // Update client credit balance within the transaction
+      await trx('clients')
+        .where({ client_id: invoice.client_id, tenant })
         .update({
           credit_balance: newBalance,
           updated_at: new Date().toISOString()
@@ -181,7 +181,7 @@ export async function finalizeInvoiceWithKnex(
       const transactionId = uuidv4();
       await trx('transactions').insert({
         transaction_id: transactionId,
-        company_id: invoice.company_id,
+        client_id: invoice.client_id,
         invoice_id: invoiceId,
         amount: creditAmount,
         type: 'credit_issuance_from_negative_invoice',
@@ -197,7 +197,7 @@ export async function finalizeInvoiceWithKnex(
       await trx('credit_tracking').insert({
         credit_id: uuidv4(),
         tenant,
-        company_id: invoice.company_id,
+        client_id: invoice.client_id,
         transaction_id: transactionId,
         amount: creditAmount,
         remaining_amount: creditAmount, // Initially, remaining amount equals the full amount
@@ -213,8 +213,8 @@ export async function finalizeInvoiceWithKnex(
       //   {
       //     userId: userId,
       //     operation: 'credit_issuance_from_negative_invoice',
-      //     tableName: 'companies',
-      //     recordId: invoice.company_id,
+      //     tableName: 'clients',
+      //     recordId: invoice.client_id,
       //     changedData: {
       //       credit_balance: newBalance,
       //       expiration_date: expirationDate
@@ -233,8 +233,8 @@ export async function finalizeInvoiceWithKnex(
     console.log(`Created credit of ${creditAmount} from negative invoice ${invoiceId} (${invoice.invoice_number})`);
   }
   // For regular invoices, check if there's available credit to apply
-  else if (invoice && invoice.company_id) {
-    const availableCredit = await CompanyBillingPlan.getCompanyCredit(invoice.company_id);
+  else if (invoice && invoice.client_id) {
+    const availableCredit = await ClientBillingPlan.getClientCredit(invoice.client_id);
 
     if (availableCredit > 0) {
       // Get the current invoice with updated totals
@@ -250,7 +250,7 @@ export async function finalizeInvoiceWithKnex(
 
         if (creditToApply > 0) {
           // Apply credit to the invoice
-          await applyCreditToInvoice(invoice.company_id, invoiceId, creditToApply);
+          await applyCreditToInvoice(invoice.client_id, invoiceId, creditToApply);
         }
       }
     }
@@ -344,14 +344,14 @@ export async function updateInvoiceManualItems(
     throw new Error('Cannot modify a paid or cancelled invoice');
   }
 
-  const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('companies')
-      .where({ company_id: invoice.company_id })
+  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('clients')
+      .where({ client_id: invoice.client_id })
       .first();
   });
 
-  if (!company) {
-    throw new Error('Company not found');
+  if (!client) {
+    throw new Error('Client not found');
   }
 
   const currentDate = Temporal.Now.plainDateISO().toString();
@@ -385,14 +385,14 @@ async function updateManualInvoiceItemsInternal(
     throw new Error('Cannot modify a paid or cancelled invoice');
   }
 
-  const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('companies')
-      .where({ company_id: invoice.company_id, tenant })
+  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('clients')
+      .where({ client_id: invoice.client_id, tenant })
       .first();
   });
 
-  if (!company) {
-    throw new Error('Company not found');
+  if (!client) {
+    throw new Error('Client not found');
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -500,12 +500,12 @@ async function updateManualInvoiceItemsInternal(
           applies_to_item_id: item.applies_to_item_id,
           service_id: item.service_id || undefined,
           description: item.description,
-          tax_region: item.tax_region || company.tax_region,
+          tax_region: item.tax_region || client.tax_region,
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
         })),
-        company,
+        client,
         session,
         tenant
         // No 'isManual' boolean needed for persistManualInvoiceItems
@@ -598,7 +598,7 @@ async function updateManualInvoiceItemsInternal(
         eventName: 'INVOICE_UPDATED', // This will be used by convertToWorkflowEvent
         // Original payload content:
         invoiceId: invoiceId,
-        companyId: updatedInvoice.company_id,
+        clientId: updatedInvoice.client_id,
         status: updatedInvoice.status,
         totalAmount: updatedInvoice.total_amount,
         invoiceNumber: updatedInvoice.invoice_number,
@@ -648,17 +648,17 @@ export async function addManualItemsToInvoice(
     throw new Error('Cannot modify a paid or cancelled invoice');
   }
 
-  const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('companies')
+  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('clients')
       .where({
-        company_id: invoice.company_id,
+        client_id: invoice.client_id,
         tenant
       })
       .first();
   });
 
-  if (!company) {
-    throw new Error('Company not found');
+  if (!client) {
+    throw new Error('Client not found');
   }
 
   await addManualInvoiceItemsInternal(invoiceId, items, session, tenant); // Renamed internal call
@@ -688,14 +688,14 @@ async function addManualInvoiceItemsInternal(
     throw new Error('Cannot modify a paid or cancelled invoice');
   }
 
-  const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('companies')
-      .where({ company_id: invoice.company_id, tenant })
+  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('clients')
+      .where({ client_id: invoice.client_id, tenant })
       .first();
   });
 
-  if (!company) {
-    throw new Error('Company not found');
+  if (!client) {
+    throw new Error('Client not found');
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -712,12 +712,12 @@ async function addManualInvoiceItemsInternal(
           applies_to_item_id: item.applies_to_item_id,
           service_id: item.service_id || undefined,
           description: item.description,
-          tax_region: item.tax_region || company.tax_region,
+          tax_region: item.tax_region || client.tax_region,
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
       })),
-      company,
+      client,
       session,
       tenant
       // No 'isManual' boolean needed for persistManualInvoiceItems
@@ -763,7 +763,7 @@ export async function hardDeleteInvoice(invoiceId: string) {
       await trx('transactions').insert(
         payments.map((p): any => ({ // Use 'any' for flexibility, ensure required fields are present
           transaction_id: uuidv4(),
-          company_id: p.company_id, // Ensure company_id is included
+          client_id: p.client_id, // Ensure client_id is included
           invoice_id: p.invoice_id,
           amount: -p.amount,
           type: 'payment_reversal',
@@ -775,7 +775,7 @@ export async function hardDeleteInvoice(invoiceId: string) {
           // Copy other relevant fields if necessary
         }))
       );
-       // TODO: Recalculate company balance after reversals
+       // TODO: Recalculate client balance after reversals
     }
 
     // 3. Handle credit applied to this invoice
@@ -812,9 +812,9 @@ export async function hardDeleteInvoice(invoiceId: string) {
             .where({ transaction_id: creditAppTransaction?.transaction_id })
             .delete();
 
-        // Update the company's credit balance
-        await CompanyBillingPlan.updateCompanyCredit(
-            invoice.company_id,
+        // Update the client's credit balance
+        await ClientBillingPlan.updateClientCredit(
+            invoice.client_id,
             invoice.credit_applied // Add the credit back
         );
     }
@@ -848,9 +848,9 @@ export async function hardDeleteInvoice(invoiceId: string) {
                 await trx('credit_tracking')
                     .where({ credit_id: creditTrackingEntry.credit_id })
                     .delete();
-                // Also update company balance back
-                 await CompanyBillingPlan.updateCompanyCredit(
-                    invoice.company_id,
+                // Also update client balance back
+                 await ClientBillingPlan.updateClientCredit(
+                    invoice.client_id,
                     -creditTrackingEntry.amount // Subtract the credit that was issued
                 );
             }
@@ -927,6 +927,6 @@ export async function hardDeleteInvoice(invoiceId: string) {
       })
       .delete();
 
-     // TODO: Recalculate company balance after all deletions/reversals
+     // TODO: Recalculate client balance after all deletions/reversals
   });
 }

@@ -11,7 +11,7 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
-import { listCompanyCredits, getCreditDetails } from 'server/src/lib/actions/creditActions';
+import { listClientCredits, getCreditDetails } from 'server/src/lib/actions/creditActions';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import {
   BarChart,
@@ -219,15 +219,15 @@ const CreditManagement: React.FC = () => {
       try {
         setLoading(true);
         
-        // Get the company ID from the current context
+        // Get the client ID from the current context
         // In a real implementation, this would come from a context or URL parameter
-        const companyId = 'current-company-id'; // This would be dynamically determined
+        const clientId = 'current-client-id'; // This would be dynamically determined
         
         // Fetch active credits (non-expired)
-        const activeCreditsResult = await listCompanyCredits(companyId, false, 1, 100);
+        const activeCreditsResult = await listClientCredits(clientId, false, 1, 100);
         
         // Fetch expired credits
-        const expiredCreditsResult = await listCompanyCredits(companyId, true, 1, 100);
+        const expiredCreditsResult = await listClientCredits(clientId, true, 1, 100);
         
         // Filter out the expired credits from the active credits result
         const activeCreditsFiltered = activeCreditsResult.credits.filter(credit => !credit.is_expired);

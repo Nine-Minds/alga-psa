@@ -66,7 +66,7 @@ export const menuItems: MenuItem[] = [
   {
     name: 'Clients',
     icon: Building2,
-    href: '/msp/companies'
+    href: '/msp/clients'
   },
   {
     name: 'Contacts',

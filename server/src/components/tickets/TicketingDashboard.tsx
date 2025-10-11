@@ -9,17 +9,19 @@ import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { PrioritySelect } from './PrioritySelect';
 import { Button } from 'server/src/components/ui/Button';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
-import { TagFilter, TagManager } from 'server/src/components/tags';
+import { TagFilter } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
-import { IBoard, ICompany, IUser } from 'server/src/interfaces';
+import { IBoard, IClient, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { deleteTicket, deleteTickets } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { XCircle, Clock } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -29,7 +31,7 @@ import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/
 import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
-import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 
 interface TicketingDashboardProps {
@@ -39,7 +41,7 @@ interface TicketingDashboardProps {
   initialStatuses: SelectOption[];
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
-  initialCompanies: ICompany[];
+  initialClients: IClient[];
   initialTags?: string[];
   nextCursor: string | null;
   onLoadMore: () => Promise<void>;
@@ -70,7 +72,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialStatuses,
   initialPriorities,
   initialCategories,
-  initialCompanies,
+  initialClients,
   initialTags = [],
   nextCursor,
   onLoadMore,
@@ -84,20 +86,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useTagPermissions(['ticket']);
   
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
+  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+  const [visibleTicketIds, setVisibleTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isIntervalDrawerOpen, setIsIntervalDrawerOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(user || null);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
 
   const [boards] = useState<IBoard[]>(initialBoards);
-  const [companies] = useState<ICompany[]>(initialCompanies);
+  const [clients] = useState<IClient[]>(initialClients);
   const [categories] = useState<ITicketCategory[]>(initialCategories);
   const [statusOptions] = useState<SelectOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
   const [selectedBoard, setSelectedBoard] = useState<string | null>(initialFilterValues.boardId || null);
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(initialFilterValues.companyId === undefined ? null : initialFilterValues.companyId); // Keep previous fix for company
+  const [selectedClient, setSelectedClient] = useState<string | null>(initialFilterValues.clientId === undefined ? null : initialFilterValues.clientId); // Keep previous fix for client
   const [selectedStatus, setSelectedStatus] = useState<string>(initialFilterValues.statusId || 'open');
   const [selectedPriority, setSelectedPriority] = useState<string>(initialFilterValues.priorityId || 'all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []);
@@ -105,14 +112,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery || '');
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState || 'active');
   
-  const [companyFilterState, setCompanyFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
   
   // Quick View state
-  const [quickViewCompanyId, setQuickViewCompanyId] = useState<string | null>(null);
+  const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
   // Tag-related state
@@ -174,7 +181,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     
     // Only add non-default/non-empty values to URL
     if (selectedBoard) params.set('boardId', selectedBoard);
-    if (selectedCompany) params.set('companyId', selectedCompany);
+    if (selectedClient) params.set('clientId', selectedClient);
     if (selectedStatus && selectedStatus !== 'open') params.set('statusId', selectedStatus);
     if (selectedPriority && selectedPriority !== 'all') params.set('priorityId', selectedPriority);
     if (selectedCategories.length > 0) params.set('categoryId', selectedCategories[0]);
@@ -184,7 +191,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
 
     return params.toString();
-  }, [selectedBoard, selectedCompany, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState]);
 
   const hasSyncedInitialFilters = useRef(false);
 
@@ -194,7 +201,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       statusId: selectedStatus,
       priorityId: selectedPriority,
       categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
-      companyId: selectedCompany || undefined,
+      clientId: selectedClient || undefined,
       searchQuery: debouncedSearchQuery,
       boardFilterState: boardFilterState,
       showOpenOnly: selectedStatus === 'open',
@@ -210,7 +217,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedStatus, 
     selectedPriority, 
     selectedCategories, 
-    selectedCompany, 
+    selectedClient, 
     debouncedSearchQuery, 
     boardFilterState,
     selectedTags
@@ -223,14 +230,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setDeleteError(null);
   };
   
-  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   
-  const onQuickViewCompany = async (companyId: string) => {
-    // First try to find the company in our existing data
-    const company = initialCompanies.find(c => c.company_id === companyId);
-    if (company) {
-      setQuickViewCompany(company);
-      setQuickViewCompanyId(companyId);
+  const onQuickViewClient = async (clientId: string) => {
+    // First try to find the client in our existing data
+    const client = initialClients.find(c => c.client_id === clientId);
+    if (client) {
+      setQuickViewClient(client);
+      setQuickViewClientId(clientId);
       setIsQuickViewOpen(true);
     }
   };
@@ -269,6 +276,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
       await deleteTicket(ticketToDelete, currentUser);
       setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
+      setSelectedTicketIds(prev => {
+        if (!ticketToDelete || !prev.has(ticketToDelete)) {
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(ticketToDelete);
+        return next;
+      });
       setTicketToDelete(null);
       setTicketToDeleteName(null);
       setDeleteError(null);
@@ -291,20 +306,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     window.location.href = href;
   }, [getCurrentFiltersQuery]);
 
-
-  // Create columns using shared utility
-  const columns = useMemo(() =>
-    createTicketColumns({
-      categories,
-      boards,
-      displaySettings: displaySettings || undefined,
-      onTicketClick: handleTicketClick,
-      onDeleteClick: handleDeleteTicket,
-      ticketTagsRef,
-      onTagsChange: handleTagsChange,
-      showClient: true,
-      onClientClick: onQuickViewCompany,
-    }), [categories, boards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, ticketTagsRef, onQuickViewCompany]);
 
   // Handle saving time entries created from intervals
   const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {
@@ -337,6 +338,305 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       id: ticket.ticket_id 
     })), [filteredTickets]);
 
+  const selectableTicketIds = useMemo(
+    () => {
+      const ids = ticketsWithIds
+        .map(ticket => ticket.ticket_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+      return Array.from(new Set(ids));
+    },
+    [ticketsWithIds]
+  );
+
+  useEffect(() => {
+    setSelectedTicketIds(prev => {
+      if (prev.size === 0) {
+        return prev;
+      }
+
+      const validIds = new Set(selectableTicketIds);
+      let changed = false;
+      const next = new Set<string>();
+
+      prev.forEach(id => {
+        if (validIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      });
+
+      if (!changed && next.size === prev.size) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [selectableTicketIds]);
+
+  const handleTicketSelectionChange = useCallback((ticketId: string, isChecked: boolean) => {
+    setSelectedTicketIds(prev => {
+      const alreadySelected = prev.has(ticketId);
+
+      if (isChecked && alreadySelected) {
+        return prev;
+      }
+
+      if (!isChecked && !alreadySelected) {
+        return prev;
+      }
+
+      const next = new Set(prev);
+
+      if (isChecked) {
+        next.add(ticketId);
+      } else {
+        next.delete(ticketId);
+      }
+
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllVisibleTickets = useCallback((shouldSelect: boolean) => {
+    const visibleIds = visibleTicketIds.filter((id): id is string => !!id);
+
+    setSelectedTicketIds(prev => {
+      if (visibleIds.length === 0) {
+        return prev;
+      }
+
+      const next = new Set(prev);
+
+      if (shouldSelect) {
+        let changed = false;
+        visibleIds.forEach(id => {
+          if (!next.has(id)) {
+            next.add(id);
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      }
+
+      let changed = false;
+      visibleIds.forEach(id => {
+        if (next.delete(id)) {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [visibleTicketIds]);
+
+  const handleSelectAllMatchingTickets = useCallback(() => {
+    if (selectableTicketIds.length === 0) {
+      return;
+    }
+    setSelectedTicketIds(new Set(selectableTicketIds));
+  }, [selectableTicketIds]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
+  }, []);
+
+  const visibleTicketIdSet = useMemo(() => new Set(visibleTicketIds.filter((id): id is string => !!id)), [visibleTicketIds]);
+  const allVisibleTicketsSelected = visibleTicketIds.length > 0 && visibleTicketIds.every(id => selectedTicketIds.has(id));
+  const selectedTicketIdsArray = useMemo(() => Array.from(selectedTicketIds), [selectedTicketIds]);
+  const hasHiddenSelections = useMemo(
+    () => selectedTicketIdsArray.some(id => !visibleTicketIdSet.has(id)),
+    [selectedTicketIdsArray, visibleTicketIdSet]
+  );
+  const allFilteredTicketsSelected = selectableTicketIds.length > 0 && selectableTicketIds.every(id => selectedTicketIds.has(id));
+  const isSelectionIndeterminate = selectedTicketIds.size > 0 && (!allVisibleTicketsSelected || hasHiddenSelections) && !allFilteredTicketsSelected;
+  const selectedTicketDetails = useMemo(() => {
+    if (selectedTicketIds.size === 0) {
+      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_name?: string }>;
+    }
+
+    const selectedSet = new Set(selectedTicketIds);
+
+    return tickets
+      .filter(ticket => ticket.ticket_id && selectedSet.has(ticket.ticket_id))
+      .map(ticket => ({
+        ticket_id: ticket.ticket_id as string,
+        ticket_number: ticket.ticket_number,
+        title: ticket.title,
+        client_name: ticket.client_name,
+      }))
+      .sort((a, b) => {
+        if (a.ticket_number && b.ticket_number) {
+          return a.ticket_number.localeCompare(b.ticket_number, undefined, { numeric: true, sensitivity: 'base' });
+        }
+        if (a.title && b.title) {
+          return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+        }
+        return 0;
+      });
+  }, [tickets, selectedTicketIds]);
+
+  const hasSelection = selectedTicketIds.size > 0;
+  const totalSelectableTickets = selectableTicketIds.length;
+  const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && !allFilteredTicketsSelected && visibleTicketIds.length > 0;
+  const showAllSelectedBanner = allFilteredTicketsSelected && totalSelectableTickets > 0;
+
+  const handleVisibleRowsChange = useCallback((rows: ITicketListItem[]) => {
+    const ids = rows
+      .map(row => row.ticket_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const uniqueIds = Array.from(new Set(ids));
+    setVisibleTicketIds(prev => {
+      if (prev.length === uniqueIds.length && prev.every((value, index) => value === uniqueIds[index])) {
+        return prev;
+      }
+      return uniqueIds;
+    });
+  }, []);
+
+  const columns = useMemo(() => {
+    const baseColumns = createTicketColumns({
+      categories,
+      boards,
+      displaySettings: displaySettings || undefined,
+      onTicketClick: handleTicketClick,
+      onDeleteClick: handleDeleteTicket,
+      ticketTagsRef,
+      onTagsChange: handleTagsChange,
+      showClient: true,
+      onClientClick: onQuickViewClient,
+    });
+
+    const selectionColumn: ColumnDefinition<ITicketListItem> = {
+      title: (
+        <div
+          className="flex justify-center"
+          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <Checkbox
+            id={`${id}-select-all`}
+            checked={allVisibleTicketsSelected}
+            indeterminate={isSelectionIndeterminate}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              event.stopPropagation();
+              handleSelectAllVisibleTickets(event.target.checked);
+            }}
+            containerClassName="mb-0"
+            className="m-0"
+            skipRegistration
+          />
+        </div>
+      ),
+      dataIndex: 'selection',
+      width: '4%',
+      headerClassName: 'text-center px-4',
+      cellClassName: 'text-center px-4',
+      sortable: false,
+      render: (_value: string, record: ITicketListItem) => {
+        const ticketId = record.ticket_id;
+        if (!ticketId) {
+          return null;
+        }
+
+        const isChecked = selectedTicketIds.has(ticketId);
+
+        return (
+          <div
+            className="flex justify-center"
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <Checkbox
+              id={`${id}-select-${ticketId}`}
+              checked={isChecked}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                event.stopPropagation();
+                handleTicketSelectionChange(ticketId, event.target.checked);
+              }}
+              containerClassName="mb-0"
+              className="m-0"
+              skipRegistration
+            />
+          </div>
+        );
+      },
+    };
+
+    return [selectionColumn, ...baseColumns];
+  }, [
+    categories,
+    boards,
+    displaySettings,
+    handleTicketClick,
+    handleDeleteTicket,
+    handleTagsChange,
+    ticketTagsRef,
+    onQuickViewClient,
+    id,
+    allVisibleTicketsSelected,
+    isSelectionIndeterminate,
+    handleSelectAllVisibleTickets,
+    handleTicketSelectionChange,
+    selectedTicketIds,
+  ]);
+
+  const handleBulkDeleteClose = useCallback(() => {
+    if (isBulkDeleting) {
+      return;
+    }
+    setIsBulkDeleteDialogOpen(false);
+    setBulkDeleteErrors([]);
+  }, [isBulkDeleting]);
+
+  const handleConfirmBulkDelete = useCallback(async () => {
+    if (selectedTicketIdsArray.length === 0) {
+      return;
+    }
+
+    if (!currentUser) {
+      toast.error('You must be logged in to delete tickets');
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    setBulkDeleteErrors([]);
+
+    try {
+      const result = await deleteTickets(selectedTicketIdsArray, currentUser);
+
+      if (result.deletedIds.length > 0) {
+        const deletedSet = new Set(result.deletedIds);
+        setTickets(prev => prev.filter(ticket => {
+          if (!ticket.ticket_id) {
+            return true;
+          }
+          return !deletedSet.has(ticket.ticket_id);
+        }));
+      }
+
+      if (result.failed.length > 0) {
+        setBulkDeleteErrors(result.failed);
+        setSelectedTicketIds(() => new Set(result.failed.map(item => item.ticketId)));
+
+        if (result.deletedIds.length > 0) {
+          toast.success(`${result.deletedIds.length} ticket${result.deletedIds.length === 1 ? '' : 's'} deleted`);
+        }
+        toast.error('Some tickets could not be deleted');
+      } else {
+        if (result.deletedIds.length > 0) {
+          toast.success(`${result.deletedIds.length} ticket${result.deletedIds.length === 1 ? '' : 's'} deleted`);
+        }
+        clearSelection();
+        setIsBulkDeleteDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to delete selected tickets:', error);
+      toast.error('Failed to delete selected tickets');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }, [selectedTicketIdsArray, currentUser, clearSelection]);
+
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
     // Add the new ticket to the local state
@@ -353,9 +653,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
       }
       
-      // Find the company name
-      const company = initialCompanies.find(c => c.company_id === newTicket.company_id);
-      const companyName = company ? company.company_name : 'Unknown';
+      // Find the client name
+      const client = initialClients.find(c => c.client_id === newTicket.client_id);
+      const clientName = client ? client.client_name : 'Unknown';
       
       // Convert the new ticket to match the ITicketListItem format
       const newTicketListItem: ITicketListItem = {
@@ -372,8 +672,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         category_id: newTicket.category_id,
         subcategory_id: newTicket.subcategory_id,
         category_name: categoryName,
-        company_id: newTicket.company_id,
-        company_name: companyName,
+        client_id: newTicket.client_id,
+        client_name: clientName,
         contact_name_id: newTicket.contact_name_id,
         entered_by: newTicket.entered_by,
         entered_by_name: currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : '',
@@ -404,12 +704,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setExcludedCategories(newExcludedCategories);
   }, []);
   
-  const handleCompanySelect = useCallback((companyId: string | null) => {
-    setSelectedCompany(companyId);
+  const handleClientSelect = useCallback((clientId: string | null) => {
+    setSelectedClient(clientId);
   }, []);
 
-  const handleCompanyFilterStateChange = useCallback((state: 'active' | 'inactive' | 'all') => {
-    setCompanyFilterState(state);
+  const handleClientFilterStateChange = useCallback((state: 'active' | 'inactive' | 'all') => {
+    setClientFilterState(state);
   }, []);
 
   const handleClientTypeFilterChange = useCallback((type: 'all' | 'company' | 'individual') => {
@@ -419,7 +719,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const handleResetFilters = useCallback(() => {
     // Define the true default/reset states
     const defaultBoard: string | null = null;
-    const defaultCompany: string | null = null;
+    const defaultClient: string | null = null;
     const defaultStatus: string = 'open';
     const defaultPriority: string = 'all';
     const defaultCategories: string[] = [];
@@ -427,7 +727,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
 
     setSelectedBoard(defaultBoard);
-    setSelectedCompany(defaultCompany);
+    setSelectedClient(defaultClient);
     setSelectedStatus(defaultStatus);
     setSelectedPriority(defaultPriority);
     setSelectedCategories(defaultCategories);
@@ -436,12 +736,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBoardFilterState(defaultBoardFilterState);
     setSelectedTags([]);
     
-    setCompanyFilterState('active'); 
+    setClientFilterState('active'); 
     setClientTypeFilter('all');
+
+    clearSelection();
 
     onFiltersChanged({
       boardId: defaultBoard === null ? undefined : defaultBoard,
-      companyId: defaultCompany === null ? undefined : defaultCompany,
+      clientId: defaultClient === null ? undefined : defaultClient,
       statusId: defaultStatus,
       priorityId: defaultPriority,
       categoryId: defaultCategories.length > 0 ? defaultCategories[0] : undefined,
@@ -449,7 +751,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardFilterState: defaultBoardFilterState,
       showOpenOnly: defaultStatus === 'open',
     });
-  }, [onFiltersChanged]);
+  }, [onFiltersChanged, clearSelection]);
 
   return (
     <ReflectionContainer id={id} label="Ticketing Dashboard">
@@ -470,6 +772,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               </span>
             )}
           </Button>
+          {hasSelection && (
+            <Button
+              id={`${id}-bulk-delete-button`}
+              variant="destructive"
+              onClick={() => {
+                setBulkDeleteErrors([]);
+                setIsBulkDeleteDialogOpen(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              Delete Selected ({selectedTicketIds.size})
+            </Button>
+          )}
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
         </div>
       </div>
@@ -484,14 +799,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               filterState={boardFilterState}
               onFilterStateChange={setBoardFilterState}
             />
-            <CompanyPicker
-              id='company-picker'
-              data-automation-id={`${id}-company-picker`}
-              companies={companies}
-              onSelect={handleCompanySelect}
-              selectedCompanyId={selectedCompany}
-              filterState={companyFilterState}
-              onFilterStateChange={handleCompanyFilterStateChange}
+            <ClientPicker
+              id='client-picker'
+              data-automation-id={`${id}-client-picker`}
+              clients={clients}
+              onSelect={handleClientSelect}
+              selectedClientId={selectedClient}
+              filterState={clientFilterState}
+              onFilterStateChange={handleClientFilterStateChange}
               clientTypeFilter={clientTypeFilter}
               onClientTypeFilterChange={handleClientTypeFilterChange}
               fitContent={true}
@@ -563,10 +878,56 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </div>
         ) : (
           <>
+            {showSelectAllBanner && (
+              <div className="mb-3 flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
+                <span>
+                  All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    id={`${id}-select-all-matching`}
+                    variant="link"
+                    onClick={handleSelectAllMatchingTickets}
+                    className="p-0"
+                  >
+                    Select all {totalSelectableTickets} ticket{totalSelectableTickets === 1 ? '' : 's'} matching your filters
+                  </Button>
+                  <Button
+                    id={`${id}-clear-visible-selection`}
+                    variant="link"
+                    onClick={clearSelection}
+                    className="p-0"
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+              </div>
+            )}
+            {showAllSelectedBanner && (
+              <div className="mb-3 flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
+                <span>
+                  All {totalSelectableTickets} ticket{totalSelectableTickets === 1 ? '' : 's'} matching your filters are selected.
+                </span>
+                <Button
+                  id={`${id}-clear-all-selection`}
+                  variant="link"
+                  onClick={clearSelection}
+                  className="p-0"
+                >
+                  Clear selection
+                </Button>
+              </div>
+            )}
             <DataTable
               {...withDataAutomationId({ id: `${id}-tickets-table` })}
               data={ticketsWithIds}
               columns={columns}
+              rowClassName={(record: ITicketListItem) =>
+                record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                  ? '!bg-blue-50'
+                  : ''
+              }
+              onVisibleRowsChange={handleVisibleRowsChange}
             />
             
             {/* Load More Button */}
@@ -610,6 +971,79 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         confirmLabel={deleteError ? undefined : "Delete"}
         cancelLabel={deleteError ? "Close" : "Cancel"}
       />
+      <Dialog
+        isOpen={isBulkDeleteDialogOpen && hasSelection}
+        onClose={handleBulkDeleteClose}
+        id={`${id}-bulk-delete-dialog`}
+        title="Delete Selected Tickets"
+      >
+        <DialogContent>
+          {bulkDeleteErrors.length > 0 && (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <p className="font-medium">The following tickets could not be deleted:</p>
+              <ul className="mt-2 space-y-1">
+                {bulkDeleteErrors.map(error => {
+                  const detail = selectedTicketDetails.find(item => item.ticket_id === error.ticketId);
+                  const label = detail?.ticket_number || detail?.title || error.ticketId;
+                  return (
+                    <li key={error.ticketId}>
+                      <span className="font-medium">{label}</span>: {error.message}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          <p className="text-gray-600">
+            {selectedTicketIdsArray.length === 1
+              ? 'Are you sure you want to delete this ticket? This action cannot be undone.'
+              : `Are you sure you want to delete these ${selectedTicketIdsArray.length} tickets? This action cannot be undone.`}
+          </p>
+          <div className="mt-4 max-h-60 overflow-y-auto rounded-md border border-gray-200">
+            {selectedTicketDetails.length > 0 ? (
+              <ul>
+                {selectedTicketDetails.map(detail => (
+                  <li key={detail.ticket_id} className="border-b border-gray-200 px-4 py-2 last:border-b-0">
+                    <span className="font-medium text-gray-700">
+                      {detail.ticket_number || detail.title || detail.ticket_id}
+                    </span>
+                    {detail.title && detail.ticket_number && (
+                      <span className="ml-2 text-sm text-gray-500">{detail.title}</span>
+                    )}
+                    {detail.client_name && (
+                      <span className="ml-2 text-sm text-gray-400">· {detail.client_name}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-3 text-sm text-gray-500">
+                No tickets selected.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id={`${id}-bulk-delete-cancel`}
+            variant="outline"
+            onClick={handleBulkDeleteClose}
+            disabled={isBulkDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            id={`${id}-bulk-delete-confirm`}
+            variant="destructive"
+            onClick={handleConfirmBulkDelete}
+            disabled={isBulkDeleting || selectedTicketIdsArray.length === 0}
+          >
+            {isBulkDeleting
+              ? 'Deleting...'
+              : `Delete ${selectedTicketIdsArray.length} Ticket${selectedTicketIdsArray.length === 1 ? '' : 's'}`}
+          </Button>
+        </DialogFooter>
+      </Dialog>
       
       {/* Interval Management Drawer */}
       {currentUser && (
@@ -621,18 +1055,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         />
       )}
       
-      {/* Company Quick View Drawer */}
+      {/* Client Quick View Drawer */}
       <Drawer
         isOpen={isQuickViewOpen}
         onClose={() => {
           setIsQuickViewOpen(false);
-          setQuickViewCompanyId(null);
-          setQuickViewCompany(null);
+          setQuickViewClientId(null);
+          setQuickViewClient(null);
         }}
       >
-        {quickViewCompany && (
-          <CompanyDetails
-            company={quickViewCompany}
+        {quickViewClient && (
+          <ClientDetails
+            client={quickViewClient}
             isInDrawer={true}
             quickView={true}
           />

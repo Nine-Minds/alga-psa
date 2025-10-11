@@ -1,8 +1,8 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { getEligibleBillingPlansForUI, getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
-import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { getEligibleBillingPlansForUI, getClientIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { Input } from 'server/src/components/ui/Input';
@@ -22,7 +22,7 @@ import { ISO8601String } from 'server/src/types/types.d';
 // including the date fields needed for filtering.
 // Type matching the apparent return structure of getEligibleBillingPlansForUI
 interface EligiblePlanUI {
-  company_billing_plan_id: string;
+  client_billing_plan_id: string;
   plan_name: string;
   plan_type: string;
   start_date: ISO8601String; // Required for filtering
@@ -97,7 +97,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   const [showErrors, setShowErrors] = useState(false);
   const [eligibleBillingPlans, setEligibleBillingPlans] = useState<EligiblePlanUI[]>([]);
   const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
-  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(null);
   const prevServiceIdRef = useRef<string | undefined | null>();
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (entry?.start_time) {
@@ -128,38 +128,38 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     return Object.keys(newErrors).length === 0;
   }, [entry?.start_time, entry?.end_time]);
 
-  // Get company ID from entry or work item
+  // Get client ID from entry or work item
   useEffect(() => {
-    const fetchCompanyId = async () => {
-      let resolvedCompanyId: string | null = null;
-      if (entry?.company_id) {
-        console.log('Using company ID directly from entry:', entry.company_id);
-        resolvedCompanyId = entry.company_id;
+    const fetchClientId = async () => {
+      let resolvedClientId: string | null = null;
+      if (entry?.client_id) {
+        console.log('Using client ID directly from entry:', entry.client_id);
+        resolvedClientId = entry.client_id;
       } else if (entry?.work_item_id) {
-        console.log('Attempting to get company ID from work item:', entry.work_item_id);
+        console.log('Attempting to get client ID from work item:', entry.work_item_id);
         try {
           // Pass tenant ID as the second argument
-          resolvedCompanyId = await getCompanyIdForWorkItem(entry.work_item_id, entry.work_item_type);
-          console.log('Resolved company ID from work item:', resolvedCompanyId);
+          resolvedClientId = await getClientIdForWorkItem(entry.work_item_id, entry.work_item_type);
+          console.log('Resolved client ID from work item:', resolvedClientId);
         } catch (error) {
-          console.error('Error fetching company ID for work item:', error);
-          resolvedCompanyId = null;
+          console.error('Error fetching client ID for work item:', error);
+          resolvedClientId = null;
         }
       } else {
-        console.log('No company ID or work item ID in entry.');
-        resolvedCompanyId = null;
+        console.log('No client ID or work item ID in entry.');
+        resolvedClientId = null;
       }
 
-      if (companyId !== resolvedCompanyId) {
-        setCompanyId(resolvedCompanyId);
-        console.log('Set companyId state to:', resolvedCompanyId);
+      if (clientId !== resolvedClientId) {
+        setClientId(resolvedClientId);
+        console.log('Set clientId state to:', resolvedClientId);
       }
     };
 
-    fetchCompanyId();
-  }, [entry?.company_id, entry?.work_item_id, companyId]); // Added work_item_id and companyId dependencies
+    fetchClientId();
+  }, [entry?.client_id, entry?.work_item_id, clientId]); // Added work_item_id and clientId dependencies
 
-  // Load eligible billing plans and set default tax region when service or company ID changes
+  // Load eligible billing plans and set default tax region when service or client ID changes
   useEffect(() => {
     const loadDataAndSetDefaults = async () => {
       // --- Removed Tax Region / Default Rate Logic ---
@@ -169,33 +169,33 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // Always show the plan selector
       setShowBillingPlanSelector(true);
 
-      let companyDetails: any | null = null;
+      let clientDetails: any | null = null;
       let currentEligiblePlans: EligiblePlanUI[] = [];
 
-      // 1. Fetch Company Details (if companyId exists) - Still needed for plan logic
-      if (companyId) {
+      // 1. Fetch Client Details (if clientId exists) - Still needed for plan logic
+      if (clientId) {
         try {
-          companyDetails = await getCompanyById(companyId);
-          console.log('Fetched company details:', companyDetails);
+          clientDetails = await getClientById(clientId);
+          console.log('Fetched client details:', clientDetails);
         } catch (error) {
-          console.error('Error fetching company details:', error);
-          companyDetails = null; // Ensure it's null on error
+          console.error('Error fetching client details:', error);
+          clientDetails = null; // Ensure it's null on error
         }
       } else {
-        console.log('No company ID available, cannot fetch company details.');
+        console.log('No client ID available, cannot fetch client details.');
       }
 
-      // 2. Load Eligible Billing Plans (dependent on service and company)
+      // 2. Load Eligible Billing Plans (dependent on service and client)
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load billing plans');
         setEligibleBillingPlans([]);
-      } else if (!companyId) {
-        console.log('No company ID available, using default billing plan logic (no specific plans loaded)');
+      } else if (!clientId) {
+        console.log('No client ID available, using default billing plan logic (no specific plans loaded)');
         setEligibleBillingPlans([]);
       } else {
-        // Fetch and filter plans only if service and company are known
+        // Fetch and filter plans only if service and client are known
         try {
-          const plans = await getEligibleBillingPlansForUI(companyId, entry.service_id) as EligiblePlanUI[];
+          const plans = await getEligibleBillingPlansForUI(clientId, entry.service_id) as EligiblePlanUI[];
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
           const filteredPlans = plans.filter(plan => {
@@ -214,12 +214,12 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           if (!currentBillingPlanId && currentEligiblePlans.length > 0) {
             let defaultPlanId: string | null = null;
             if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].company_billing_plan_id;
+              defaultPlanId = currentEligiblePlans[0].client_billing_plan_id;
               console.log('Setting default billing plan (only one eligible):', defaultPlanId);
             } else {
               const bucketPlans = currentEligiblePlans.filter(plan => plan.plan_type === 'Bucket');
               if (bucketPlans.length === 1) {
-                defaultPlanId = bucketPlans[0].company_billing_plan_id;
+                defaultPlanId = bucketPlans[0].client_billing_plan_id;
                 console.log('Setting default billing plan (single bucket plan):', defaultPlanId);
               } else {
                 console.log('Multiple eligible plans, no single default determined.');
@@ -245,17 +245,17 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         }
       }
 
-      // 2. Load Eligible Billing Plans (dependent on service and company)
+      // 2. Load Eligible Billing Plans (dependent on service and client)
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load billing plans');
         setEligibleBillingPlans([]);
-      } else if (!companyId) {
-        console.log('No company ID available, using default billing plan logic (no specific plans loaded)');
+      } else if (!clientId) {
+        console.log('No client ID available, using default billing plan logic (no specific plans loaded)');
         setEligibleBillingPlans([]);
       } else {
-        // Fetch and filter plans only if service and company are known
+        // Fetch and filter plans only if service and client are known
         try {
-          const plans = await getEligibleBillingPlansForUI(companyId, entry.service_id) as EligiblePlanUI[];
+          const plans = await getEligibleBillingPlansForUI(clientId, entry.service_id) as EligiblePlanUI[];
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
           const filteredPlans = plans.filter(plan => {
@@ -274,12 +274,12 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           if (!currentBillingPlanId && currentEligiblePlans.length > 0) {
             let defaultPlanId: string | null = null;
             if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].company_billing_plan_id;
+              defaultPlanId = currentEligiblePlans[0].client_billing_plan_id;
               console.log('Setting default billing plan (only one eligible):', defaultPlanId);
             } else {
               const bucketPlans = currentEligiblePlans.filter(plan => plan.plan_type === 'Bucket');
               if (bucketPlans.length === 1) {
-                defaultPlanId = bucketPlans[0].company_billing_plan_id;
+                defaultPlanId = bucketPlans[0].client_billing_plan_id;
                 console.log('Setting default billing plan (single bucket plan):', defaultPlanId);
               } else {
                 console.log('Multiple eligible plans, no single default determined.');
@@ -310,7 +310,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (entry) {
       loadDataAndSetDefaults();
     }
-  }, [entry?.service_id, companyId, entry?.start_time, entry?.billing_plan_id, index, onUpdateEntry]);
+  }, [entry?.service_id, clientId, entry?.start_time, entry?.billing_plan_id, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);
@@ -496,8 +496,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               </label>
               <Tooltip content={
                 <p className="max-w-xs">
-                  {!companyId
-                    ? "Company information not available. The system will use the default billing plan."
+                  {!clientId
+                    ? "Client information not available. The system will use the default billing plan."
                     : eligibleBillingPlans.length > 1
                       ? "This service appears in multiple billing plans. You can optionally select which plan to use for this time entry, or leave it blank to use the default billing plan."
                       : eligibleBillingPlans.length === 1
@@ -517,15 +517,15 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                   onUpdateEntry(index, updatedEntry);
                 }
               }}
-              disabled={!isEditable || !companyId || eligibleBillingPlans.length <= 1}
+              disabled={!isEditable || !clientId || eligibleBillingPlans.length <= 1}
               className={`mt-1 w-full ${eligibleBillingPlans.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
               options={eligibleBillingPlans.map(plan => ({
-                value: plan.company_billing_plan_id,
+                value: plan.client_billing_plan_id,
                 label: plan.contract_name
                   ? `${plan.plan_name} - ${plan.contract_name} (${plan.plan_type})`
                   : `${plan.plan_name} (${plan.plan_type})`
               }))}
-              placeholder={!companyId
+              placeholder={!clientId
                 ? "Using default billing plan"
                 : eligibleBillingPlans.length === 0
                   ? "No eligible plans"

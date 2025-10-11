@@ -5,12 +5,121 @@ use once_cell::sync::Lazy;
 use reqwest::Client;
 use url::Url;
 use base64::Engine;
+use serde_json::{Map, Value};
+
 
 static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| Client::builder().build().expect("client"));
+static STORAGE_BASE_URL: Lazy<Option<String>> = Lazy::new(|| std::env::var("STORAGE_API_BASE_URL").ok());
+static RUNNER_STORAGE_API_TOKEN: Lazy<Option<String>> = Lazy::new(|| std::env::var("RUNNER_STORAGE_API_TOKEN").ok());
 
 #[derive(Clone, Default)]
 pub struct HostApiConfig {
     pub egress_allowlist: Vec<String>,
+}
+
+async fn storage_request(install_id: &str, operation: &str, mut payload: Map<String, Value>) -> anyhow::Result<Value> {
+    let base = STORAGE_BASE_URL
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("STORAGE_API_BASE_URL not set"))?;
+    let token = RUNNER_STORAGE_API_TOKEN
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("RUNNER_STORAGE_API_TOKEN not set"))?;
+
+    payload.insert("operation".to_string(), Value::String(operation.to_string()));
+    let body = Value::Object(payload);
+    let url = format!(
+        "{}/api/internal/ext-storage/install/{}",
+        base.trim_end_matches('/'),
+        install_id
+    );
+
+    let resp = HTTP_CLIENT
+        .post(url)
+        .header("content-type", "application/json")
+        .header("x-runner-auth", token)
+        .json(&body)
+        .send()
+        .await?;
+
+    let status = resp.status();
+    let text = resp.text().await?;
+    if !status.is_success() {
+        anyhow::bail!("storage api error {}: {}", status, text);
+    }
+    let json: Value = if text.trim().is_empty() {
+        Value::Null
+    } else {
+        serde_json::from_str(&text).unwrap_or(Value::Null)
+    };
+    Ok(json)
+}
+
+fn register_storage_op(
+    linker: &mut Linker<Limits>,
+    export_name: &str,
+    operation: &'static str,
+) -> anyhow::Result<()> {
+    linker.func_wrap3_async(
+        "alga",
+        export_name,
+        move |mut caller: Caller<'_, Limits>, req_ptr: i32, req_len: i32, out_ptr: i32| {
+            let op = operation.to_string();
+            Box::new(async move {
+                let install_id = caller
+                    .data()
+                    .context
+                    .install_id
+                    .clone()
+                    .ok_or_else(|| anyhow::anyhow!("install_id not available in host context"))?;
+
+                let mem = caller
+                    .get_export("memory")
+                    .and_then(|e| e.into_memory())
+                    .ok_or_else(|| anyhow::anyhow!("no memory export"))?;
+                let data = mem.data(&caller);
+                let start = req_ptr as usize;
+                let end = start.saturating_add(req_len as usize);
+                if end > data.len() {
+                    anyhow::bail!("req oob");
+                }
+                let req_bytes = &data[start..end];
+                let mut req_json: Value = serde_json::from_slice(req_bytes).unwrap_or(Value::Null);
+                let obj = req_json
+                    .as_object_mut()
+                    .ok_or_else(|| anyhow::anyhow!("storage request must be a JSON object"))?;
+
+                let resp_json = storage_request(&install_id, &op, obj.clone()).await?;
+                let out_bytes = serde_json::to_vec(&resp_json)?;
+
+                let alloc = caller
+                    .get_export("alloc")
+                    .and_then(|e| e.into_func())
+                    .ok_or_else(|| anyhow::anyhow!("no alloc export"))?;
+                let alloc = alloc.typed::<i32, i32>(&caller)?;
+                let resp_ptr = alloc.call(&mut caller, out_bytes.len() as i32)?;
+                let mem = caller
+                    .get_export("memory")
+                    .and_then(|e| e.into_memory())
+                    .ok_or_else(|| anyhow::anyhow!("no memory export"))?;
+                let data_mut = mem.data_mut(&mut caller);
+                let rstart = resp_ptr as usize;
+                let rend = rstart.saturating_add(out_bytes.len());
+                if rend > data_mut.len() {
+                    anyhow::bail!("resp oob");
+                }
+                data_mut[rstart..rend].copy_from_slice(&out_bytes);
+
+                let ostart = out_ptr as usize;
+                if ostart + 8 > data_mut.len() {
+                    anyhow::bail!("out oob");
+                }
+                data_mut[ostart..ostart + 4].copy_from_slice(&(resp_ptr as u32).to_le_bytes());
+                data_mut[ostart + 4..ostart + 8].copy_from_slice(&((out_bytes.len() as u32)).to_le_bytes());
+                Ok(0)
+            })
+        },
+    )?;
+    Ok(())
 }
 
 pub fn add_host_imports(linker: &mut Linker<Limits>, cfg: &HostApiConfig) -> anyhow::Result<()> {
@@ -127,6 +236,12 @@ pub fn add_host_imports(linker: &mut Linker<Limits>, cfg: &HostApiConfig) -> any
             Ok(0)
         })
     })?;
+
+    register_storage_op(linker, "storage_put", "put")?;
+    register_storage_op(linker, "storage_get", "get")?;
+    register_storage_op(linker, "storage_list", "list")?;
+    register_storage_op(linker, "storage_delete", "delete")?;
+    register_storage_op(linker, "storage_bulk_put", "bulkPut")?;
 
     Ok(())
 }

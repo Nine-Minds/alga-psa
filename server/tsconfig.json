@@ -44,7 +44,9 @@
       "@product/client-portal-domain/entry": ["../packages/product-client-portal-domain/oss/entry"],
       "@product/client-portal-domain/*": ["../packages/product-client-portal-domain/*"],
       "@product/billing/entry": ["../packages/product-billing/oss/entry"],
-      "@product/billing/*": ["../packages/product-billing/*"]
+      "@product/billing/*": ["../packages/product-billing/*"],
+      "@product/extension-storage-api/records": ["../packages/product-extension-storage-api/records"],
+      "@product/extension-storage-api/record": ["../packages/product-extension-storage-api/record"]
     }
   },
   "include": [
@@ -53,7 +55,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/types/**/*.d.ts",
-    ".next/types/**/*.ts",
+    
     "migrations/*.cjs"
   ],
   "exclude": [

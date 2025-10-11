@@ -509,6 +509,16 @@ describe('Companies API E2E Tests', () => {
 - Clean up test data in `afterEach` or `afterAll`
 - Use transactions where possible for isolation
 - Ensure tests can run in any order
+- For REST/E2E suites that need real HTTP semantics:
+  - Spin up a lightweight HTTP server (e.g. Node's `http.createServer`) that delegates incoming requests to the Next.js route handlers using `NextRequest`.
+  - Use `ApiTestClient` (or similar API helper) to exercise the endpoints the same way the product does, including headers, auth, and query parameters.
+  - Manage the server lifecycle in `beforeAll`/`afterAll` so the listener is available across tests and shut down cleanly.
+- When the test flow requires overlaid storage/migration behavior without a running application:
+  - Ensure required tables exist by inspecting the schema and creating or altering tables as needed inside the test setup.
+  - Create or update database roles (e.g. `app_user`) and grant privileges so the real connection pool can authenticate exactly as the application would.
+- For isolation between tests while still hitting the live handlers:
+  - Use `TestContext.createHelpers()` to wrap each test in a database transaction; perform per-test seeding after `beforeEach()` so every test sees a clean, consistent state.
+  - If tests need to override service configuration (quotas, limits, etc.), use `vi.spyOn` to swap implementations temporarily, and restore them in `finally` blocks.
 
 ### 8. Mock External Dependencies
 - Mock external APIs (email providers, payment gateways, etc.)

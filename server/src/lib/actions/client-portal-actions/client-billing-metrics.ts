@@ -8,7 +8,7 @@ import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
 import { 
   IService, 
   IServiceType, 
-  ICompanyBillingPlan,
+  IClientBillingPlan,
   IBillingPlan,
   IBucketUsage,
   IPlanService
@@ -46,7 +46,7 @@ export interface ClientHoursByServiceResult {
 
 /**
  * Server action to fetch total billable hours grouped by service type or service name
- * for the client's company within a given date range.
+ * for the client's client within a given date range.
  *
  * @param input - Object containing startDate, endDate, and groupByServiceType flag.
  * @returns A promise that resolves to an array of aggregated hours by service.
@@ -68,7 +68,7 @@ export async function getClientHoursByService(
     throw new Error('Not authenticated');
   }
 
-  // Get tenant and company ID from session
+  // Get tenant and client ID from session
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required.');
@@ -76,7 +76,7 @@ export async function getClientHoursByService(
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get user's company_id
+      // Get user's client_id
       const user = await trx('users')
         .where({
           user_id: session.user.id,
@@ -95,13 +95,13 @@ export async function getClientHoursByService(
         })
         .first();
 
-      if (!contact?.company_id) {
-        throw new Error('Contact not associated with a company');
+      if (!contact?.client_id) {
+        throw new Error('Contact not associated with a client');
       }
 
-      const companyId = contact.company_id;
+      const clientId = contact.client_id;
 
-      console.log(`Fetching hours by service for client company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
+      console.log(`Fetching hours by service for client client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
       // Base query for time entries within the date range and for the tenant
       const timeEntriesQuery = trx<ITimeEntry>('time_entries')
@@ -111,15 +111,15 @@ export async function getClientHoursByService(
       .where('start_time', '<=', endDate);
 
     // --- Join Logic based on work_item_type ---
-    // We need to join time_entries to either tickets or projects to filter by companyId
+    // We need to join time_entries to either tickets or projects to filter by clientId
 
-      // Subquery for tickets linked to the company
-      const ticketCompanySubquery = trx<ITicket>('tickets')
+      // Subquery for tickets linked to the client
+      const ticketClientSubquery = trx<ITicket>('tickets')
       .select('ticket_id')
-      .where({ company_id: companyId, tenant: tenant });
+      .where({ client_id: clientId, tenant: tenant });
 
-      // Subquery for project tasks linked to the company
-      const projectTaskCompanySubquery = trx<IProjectTask>('project_tasks')
+      // Subquery for project tasks linked to the client
+      const projectTaskClientSubquery = trx<IProjectTask>('project_tasks')
       .join<IProjectPhase>('project_phases', function() {
         this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
             .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
@@ -129,17 +129,17 @@ export async function getClientHoursByService(
             .andOn('project_phases.tenant', '=', 'projects.tenant');
       })
       .select('project_tasks.task_id')
-      .where('projects.company_id', '=', companyId)
+      .where('projects.client_id', '=', clientId)
       .andWhere('project_tasks.tenant', '=', tenant);
 
-    // Apply the company filter using the subqueries
+    // Apply the client filter using the subqueries
     timeEntriesQuery.where(function() {
       this.where(function() {
         this.whereRaw('LOWER(work_item_type) = ?', ['ticket'])
-            .whereIn('work_item_id', ticketCompanySubquery);
+            .whereIn('work_item_id', ticketClientSubquery);
       }).orWhere(function() {
         this.whereRaw('LOWER(work_item_type) = ?', ['project task'])
-            .whereIn('work_item_id', projectTaskCompanySubquery);
+            .whereIn('work_item_id', projectTaskClientSubquery);
       });
     });
 
@@ -179,7 +179,7 @@ export async function getClientHoursByService(
         total_duration: typeof row.total_duration === 'string' ? parseInt(row.total_duration, 10) : row.total_duration,
       }));
 
-      console.log(`Found ${results.length} service groupings for client company ${companyId}`);
+      console.log(`Found ${results.length} service groupings for client client ${clientId}`);
       return results;
     });
 
@@ -209,7 +209,7 @@ export interface ClientUsageMetricResult {
 }
 
 /**
- * Server action to fetch key usage data metrics for the client's company
+ * Server action to fetch key usage data metrics for the client's client
  * within a given date range.
  *
  * @param input - Object containing startDate and endDate.
@@ -232,7 +232,7 @@ export async function getClientUsageMetrics(
     throw new Error('Not authenticated');
   }
 
-  // Get tenant and company ID from session
+  // Get tenant and client ID from session
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required.');
@@ -240,7 +240,7 @@ export async function getClientUsageMetrics(
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get user's company_id
+      // Get user's client_id
       const user = await trx('users')
         .where({
           user_id: session.user.id,
@@ -259,22 +259,22 @@ export async function getClientUsageMetrics(
         })
         .first();
 
-      if (!contact?.company_id) {
-        throw new Error('Contact not associated with a company');
+      if (!contact?.client_id) {
+        throw new Error('Contact not associated with a client');
       }
 
-      const companyId = contact.company_id;
+      const clientId = contact.client_id;
 
       // No permission check needed for usage metrics - all users can access
 
-      console.log(`Fetching usage metrics for client company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
+      console.log(`Fetching usage metrics for client client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
       const query = trx<IUsageRecord>('usage_tracking as ut')
       .join<IService>('service_catalog as sc', function() {
         this.on('ut.service_id', '=', 'sc.service_id')
             .andOn('ut.tenant', '=', 'sc.tenant');
       })
-      .where('ut.company_id', companyId)
+      .where('ut.client_id', clientId)
         .andWhere('ut.tenant', tenant)
         .andWhere(trx.raw('ut.usage_date::date'), '>=', startDate)
         .andWhere(trx.raw('ut.usage_date::date'), '<=', endDate)
@@ -297,7 +297,7 @@ export async function getClientUsageMetrics(
         total_quantity: typeof row.total_quantity === 'string' ? parseFloat(row.total_quantity) : row.total_quantity,
       }));
 
-      console.log(`Found ${results.length} usage metric groupings for client company ${companyId}`);
+      console.log(`Found ${results.length} usage metric groupings for client client ${clientId}`);
       return results;
     });
 
@@ -329,10 +329,10 @@ export interface ClientBucketUsageResult {
 }
 
 /**
- * Server action to fetch historical bucket usage across multiple periods for the client's company.
+ * Server action to fetch historical bucket usage across multiple periods for the client's account.
  *
  * @param serviceId - Optional service ID to filter by specific service
- * @returns A promise that resolves to an array of historical bucket usage data.
+ * @returns Array of historical bucket usage data grouped by service
  */
 export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
   service_id: string;
@@ -345,7 +345,7 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
     hours_total: number;
   }>;
 }[]> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
@@ -357,47 +357,31 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const user = await trx('users')
-        .where({ user_id: session.user.id, tenant })
-        .first();
+      const user = await trx('users').where({ user_id: session.user.id, tenant }).first();
+      if (!user?.contact_id) throw new Error('User not associated with a contact');
 
-      if (!user?.contact_id) {
-        throw new Error('User not associated with a contact');
-      }
+      const contact = await trx('contacts').where({ contact_name_id: user.contact_id, tenant }).first();
+      if (!contact?.client_id) throw new Error('Contact not associated with a client');
 
-      const contact = await trx('contacts')
-        .where({ contact_name_id: user.contact_id, tenant })
-        .first();
-
-      if (!contact?.company_id) {
-        throw new Error('Contact not associated with a company');
-      }
-
-      const companyId = contact.company_id;
+      const clientId = contact.client_id;
 
       let query = trx<IBucketUsage>('bucket_usage as bu')
         .join<IBillingPlan>('billing_plans as bp', function() {
-          this.on('bu.plan_id', '=', 'bp.plan_id')
-              .andOn('bu.tenant', '=', 'bp.tenant');
+          this.on('bu.plan_id', '=', 'bp.plan_id').andOn('bu.tenant', '=', 'bp.tenant');
         })
         .join<IPlanService>('plan_services as ps', function() {
-          this.on('bp.plan_id', '=', 'ps.plan_id')
-              .andOn('bp.tenant', '=', 'ps.tenant');
+          this.on('bp.plan_id', '=', 'ps.plan_id').andOn('bp.tenant', '=', 'ps.tenant');
         })
         .join<IService>('service_catalog as sc', function() {
-          this.on('ps.service_id', '=', 'sc.service_id')
-              .andOn('ps.tenant', '=', 'sc.tenant');
+          this.on('ps.service_id', '=', 'sc.service_id').andOn('ps.tenant', '=', 'sc.tenant');
         })
         .join<IPlanServiceConfiguration>('plan_service_configuration as psc', function() {
-          this.on('ps.plan_id', '=', 'psc.plan_id')
-              .andOn('ps.service_id', '=', 'psc.service_id')
-              .andOn('ps.tenant', '=', 'psc.tenant');
+          this.on('ps.plan_id', '=', 'psc.plan_id').andOn('ps.service_id', '=', 'psc.service_id').andOn('ps.tenant', '=', 'psc.tenant');
         })
         .join<IPlanServiceBucketConfig>('plan_service_bucket_config as psbc', function() {
-          this.on('psc.config_id', '=', 'psbc.config_id')
-              .andOn('psc.tenant', '=', 'psbc.tenant');
+          this.on('psc.config_id', '=', 'psbc.config_id').andOn('psc.tenant', '=', 'psbc.tenant');
         })
-        .where('bu.company_id', companyId)
+        .where('bu.client_id', clientId)
         .andWhere('bu.tenant', tenant)
         .andWhere('bp.plan_type', 'Bucket');
 
@@ -420,35 +404,19 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
 
       const rawResults: any[] = await query;
 
-      // Group by service
-      const serviceMap = new Map<string, {
-        service_id: string;
-        service_name: string;
-        history: Array<{
-          period_start: string;
-          period_end: string;
-          percentage_used: number;
-          hours_used: number;
-          hours_total: number;
-        }>;
-      }>();
+      const serviceMap = new Map<string, { service_id: string; service_name: string; history: Array<{ period_start: string; period_end: string; percentage_used: number; hours_used: number; hours_total: number; }>; }>();
 
       rawResults.forEach(row => {
         const totalMinutes = typeof row.total_minutes === 'string' ? parseFloat(row.total_minutes) : row.total_minutes;
         const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
         const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
-
         const totalWithRollover = totalMinutes + rolledOverMinutes;
         const percentageUsed = totalWithRollover > 0 ? (minutesUsed / totalWithRollover) * 100 : 0;
         const hoursUsed = minutesUsed / 60;
         const hoursTotal = totalWithRollover / 60;
 
         if (!serviceMap.has(row.service_id)) {
-          serviceMap.set(row.service_id, {
-            service_id: row.service_id,
-            service_name: row.service_name,
-            history: []
-          });
+          serviceMap.set(row.service_id, { service_id: row.service_id, service_name: row.service_name, history: [] });
         }
 
         serviceMap.get(row.service_id)!.history.push({
@@ -456,7 +424,7 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
           period_end: row.period_end.toISOString().split('T')[0],
           percentage_used: Math.round(percentageUsed * 100) / 100,
           hours_used: Math.round(hoursUsed * 100) / 100,
-          hours_total: Math.round(hoursTotal * 100) / 100
+          hours_total: Math.round(hoursTotal * 100) / 100,
         });
       });
 
@@ -469,9 +437,7 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
     throw new Error(`Failed to fetch bucket usage history: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
-
 /**
- * Server action to fetch enhanced bucket usage details for the client's company.
  * This provides more detailed information than the basic getCurrentUsage function.
  *
  * @returns A promise that resolves to an array of detailed bucket usage information.
@@ -483,7 +449,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
     throw new Error('Not authenticated');
   }
 
-  // Get tenant and company ID from session
+  // Get tenant and client ID from session
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant context is required.');
@@ -491,7 +457,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get user's company_id
+      // Get user's client_id
       const user = await trx('users')
         .where({
           user_id: session.user.id,
@@ -510,18 +476,18 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         })
         .first();
 
-      if (!contact?.company_id) {
-        throw new Error('Contact not associated with a company');
+      if (!contact?.client_id) {
+        throw new Error('Contact not associated with a client');
       }
 
-      const companyId = contact.company_id;
+      const clientId = contact.client_id;
 
       // No permission check needed for bucket usage - all users can access
 
       const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
-      console.log(`Fetching bucket usage for client company ${companyId} in tenant ${tenant} as of ${currentDate}`);
+      console.log(`Fetching bucket usage for client client ${clientId} in tenant ${tenant} as of ${currentDate}`);
 
-      const query = trx<ICompanyBillingPlan>('company_billing_plans as cbp')
+      const query = trx<IClientBillingPlan>('client_billing_plans as cbp')
       .join<IBillingPlan>('billing_plans as bp', function() {
         this.on('cbp.plan_id', '=', 'bp.plan_id')
             .andOn('cbp.tenant', '=', 'bp.tenant');
@@ -545,12 +511,12 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       })
       .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
         this.on('bp.plan_id', '=', 'bu.plan_id')
-            .andOn('cbp.company_id', '=', 'bu.company_id')
+            .andOn('cbp.client_id', '=', 'bu.client_id')
             .andOn('cbp.tenant', '=', 'bu.tenant')
             .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
             .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
       })
-      .where('cbp.company_id', companyId)
+      .where('cbp.client_id', clientId)
       .andWhere('cbp.tenant', tenant)
       .andWhere('bp.plan_type', 'Bucket')
       .andWhere('cbp.is_active', true)
@@ -610,7 +576,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         };
       });
         
-      console.log(`Found ${results.length} active bucket plans for client company ${companyId}`);
+      console.log(`Found ${results.length} active bucket plans for client client ${clientId}`);
       return results;
     });
 

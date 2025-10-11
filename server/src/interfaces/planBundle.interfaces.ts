@@ -3,7 +3,7 @@ import { ISO8601String } from '../types/types.d';
 
 /**
  * Interface for a Plan Bundle
- * Represents a collection of billing plans that can be assigned to companies
+ * Represents a collection of billing plans that can be assigned to clients
  */
 export interface IPlanBundle extends TenantEntity {
   bundle_id: string;
@@ -27,12 +27,12 @@ export interface IBundleBillingPlan extends TenantEntity {
 }
 
 /**
- * Interface for associating bundles with companies
- * Represents the assignment of a bundle to a company
+ * Interface for associating bundles with clients
+ * Represents the assignment of a bundle to a client
  */
-export interface ICompanyPlanBundle extends TenantEntity {
-  company_bundle_id: string;
-  company_id: string;
+export interface IClientPlanBundle extends TenantEntity {
+  client_bundle_id: string;
+  client_id: string;
   bundle_id: string;
   start_date: ISO8601String;
   end_date: ISO8601String | null;

@@ -6,7 +6,11 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
-const canonicalUrlEnv = process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
+
+// Helper function to get canonical URL (reads env var dynamically for testing)
+function getCanonicalUrl(): URL | null {
+  return process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
+}
 
 const _middleware = auth((request) => {
   const pathname = request.nextUrl.pathname;
@@ -79,6 +83,7 @@ const _middleware = auth((request) => {
       return redirectResponse;
     } else if (request.auth.user?.user_type !== 'internal') {
       // Redirect authenticated client users to their dashboard instead of trapping them in a login loop
+      const canonicalUrlEnv = getCanonicalUrl();
       const redirectTarget = canonicalUrlEnv
         ? new URL('/client-portal/dashboard', canonicalUrlEnv.origin)
         : new URL('/client-portal/dashboard', request.nextUrl);
@@ -92,6 +97,7 @@ const _middleware = auth((request) => {
   if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
     if (!request.auth) {
       const callbackUrlAbsolute = new URL(request.nextUrl.pathname + (request.nextUrl.search || ''), request.nextUrl);
+      const canonicalUrlEnv = getCanonicalUrl();
 
       if (canonicalUrlEnv && requestHostname !== canonicalUrlEnv.hostname) {
         const canonicalLogin = new URL('/auth/client-portal/signin', canonicalUrlEnv.origin);
@@ -99,6 +105,7 @@ const _middleware = auth((request) => {
         const protocol = request.nextUrl.protocol.replace(/:$/, '');
         const callbackUrl = `${protocol}://${hostHeader}${request.nextUrl.pathname}${request.nextUrl.search}`;
         canonicalLogin.searchParams.set('callbackUrl', callbackUrl);
+        canonicalLogin.searchParams.set('portalDomain', hostHeader);
         console.log('[middleware] vanity redirect', {
           requestHost: requestHostname,
           callback: callbackUrl,

@@ -8,9 +8,9 @@ import UserAvatar from '../../ui/UserAvatar';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
-import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 
-import { getUsersCompanyInfo } from 'server/src/lib/actions/user-actions/userCompanyActions';
+import { getUsersClientInfo } from 'server/src/lib/actions/user-actions/userClientActions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,13 +24,13 @@ interface UserListProps {
   users: IUser[];
   onDeleteUser: (userId: string) => Promise<void>;
   onUpdate: () => void;
-  selectedCompanyId?: string | null;
+  selectedClientId?: string | null;
 }
 
-const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, selectedCompanyId = null }) => {
+const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, selectedClientId = null }) => {
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
-  const [userCompanies, setUserCompanies] = useState<Record<string, { company_id: string; company_name: string } | null>>({});
+  const [userClients, setUserClients] = useState<Record<string, { client_id: string; client_name: string } | null>>({});
   const { openDrawer } = useDrawer();
 
   useEffect(() => {
@@ -71,41 +71,41 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
   }, [users.length]); // Only re-run when the number of users changes
 
   useEffect(() => {
-    // Fetch associated company for client users in bulk
-    const fetchCompaniesForUsers = async () => {
+    // Fetch associated client for client users in bulk
+    const fetchClientsForUsers = async () => {
       const usersToFetch = users
-        .filter((u) => u.user_type === 'client' && userCompanies[u.user_id] === undefined)
+        .filter((u) => u.user_type === 'client' && userClients[u.user_id] === undefined)
         .map((u) => u.user_id);
 
       if (usersToFetch.length === 0) return;
 
       try {
-        const result = await getUsersCompanyInfo(usersToFetch);
-        const map: Record<string, { company_id: string; company_name: string } | null> = {};
+        const result = await getUsersClientInfo(usersToFetch);
+        const map: Record<string, { client_id: string; client_name: string } | null> = {};
         result.forEach((row) => {
-          map[row.user_id] = row.company_id
-            ? { company_id: row.company_id, company_name: row.company_name || 'Unnamed Company' }
+          map[row.user_id] = row.client_id
+            ? { client_id: row.client_id, client_name: row.client_name || 'Unnamed Client' }
             : null;
         });
-        setUserCompanies((prev) => ({ ...prev, ...map }));
+        setUserClients((prev) => ({ ...prev, ...map }));
       } catch (e) {
-        console.error('Error fetching companies for users', e);
+        console.error('Error fetching clients for users', e);
       }
     };
 
     if (users.length > 0) {
-      fetchCompaniesForUsers();
+      fetchClientsForUsers();
     }
-  }, [users, userCompanies]);
+  }, [users, userClients]);
 
-  // Filter by selected company if provided (client users only)
+  // Filter by selected client if provided (client users only)
   const visibleUsers = React.useMemo(() => {
-    if (!selectedCompanyId) return users;
+    if (!selectedClientId) return users;
     const clientUsers = users.filter((u) => u.user_type === 'client');
-    const allResolved = clientUsers.every((u) => userCompanies[u.user_id] !== undefined);
+    const allResolved = clientUsers.every((u) => userClients[u.user_id] !== undefined);
     if (!allResolved) return users; // avoid flicker while resolving
-    return users.filter((u) => userCompanies[u.user_id]?.company_id === selectedCompanyId);
-  }, [users, userCompanies, selectedCompanyId]);
+    return users.filter((u) => userClients[u.user_id]?.client_id === selectedClientId);
+  }, [users, userClients, selectedClientId]);
 
   const handleDeleteClick = async (user: IUser): Promise<void> => {
     setUserToDelete(user);
@@ -124,15 +124,15 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
     openDrawer(<UserDetails userId={userId} onUpdate={onUpdate} />);
   };
 
-  const handleCompanyClick = async (companyId: string) => {
-    if (companyId) {
-      // Fetch the company data first
-      const { getCompanyById } = await import('server/src/lib/actions/company-actions/companyActions');
-      const company = await getCompanyById(companyId);
-      if (company) {
+  const handleClientClick = async (clientId: string) => {
+    if (clientId) {
+      // Fetch the client data first
+      const { getClientById } = await import('server/src/lib/actions/client-actions/clientActions');
+      const client = await getClientById(clientId);
+      if (client) {
         openDrawer(
-          <CompanyDetails
-            company={company}
+          <ClientDetails
+            client={client}
             isInDrawer={true}
             quickView={true}
           />
@@ -174,26 +174,26 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
     ...(hasClientUsers
       ? [{
           title: 'Client',
-          dataIndex: 'company',
+          dataIndex: 'client',
           width: '20%',
           render: (_: any, record: IUser) => {
-            const company = userCompanies[record.user_id];
-            if (company === undefined) {
+            const client = userClients[record.user_id];
+            if (client === undefined) {
               return <span className="text-gray-400">Loading...</span>;
             }
-            if (!company) {
-              return <span className="text-gray-400">No Company</span>;
+            if (!client) {
+              return <span className="text-gray-400">No Client</span>;
             }
             return (
               <button
-                id={`open-company-details-${record.user_id}`}
+                id={`open-client-details-${record.user_id}`}
                 onClick={(e) => {
                   e.preventDefault();
-                  handleCompanyClick(company.company_id);
+                  handleClientClick(client.client_id);
                 }}
                 className="text-blue-500 hover:underline text-left whitespace-normal break-words"
               >
-                {company.company_name}
+                {client.client_name}
               </button>
             );
           },

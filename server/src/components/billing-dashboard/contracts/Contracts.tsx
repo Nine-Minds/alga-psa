@@ -330,7 +330,7 @@ const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
+                  <Button id="status-filter-button" variant="outline" className="gap-2">
                     <Filter className="h-4 w-4" />
                     Status: {statusFilter === 'all' ? 'All' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
                   </Button>

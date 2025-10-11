@@ -60,11 +60,11 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
         .first();
       return user ? `${user.first_name} ${user.last_name}` : String(value);
 
-    case 'company_id':
-      const company = await db('companies')
-        .where('company_id', value)
+    case 'client_id':
+      const client = await db('clients')
+        .where('client_id', value)
         .first();
-      return company ? company.company_name : String(value);
+      return client ? client.client_name : String(value);
 
       case 'contact_name_id':
         const contact_name = await db('contacts')
@@ -88,7 +88,7 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
  */
 function formatFieldName(field: string): string {
   const specialCases: Record<string, string> = {
-    company_id: 'Company',
+    client_id: 'Client',
     project_name: 'Project Name',
     description: 'Description',
     start_date: 'Start Date',
@@ -128,20 +128,20 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       .where('p.tenant', tenant!)
       .select(
         'p.*',
-        'dcl.email as company_email',
-        'c.company_name',
+        'dcl.email as client_email',
+        'c.client_name',
         's.name as status_name',
         'u.first_name as manager_first_name',
         'u.last_name as manager_last_name',
         'u.email as assigned_user_email',
         'ct.email as contact_email'
       )
-      .leftJoin('companies as c', function() {
-        this.on('c.company_id', '=', 'p.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('c.client_id', '=', 'p.client_id')
             .andOn('c.tenant', '=', 'p.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 'p.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 'p.client_id')
             .andOn('dcl.tenant', '=', 'p.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -204,16 +204,16 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
     // Collect all recipient emails
     const recipients: string[] = [];
 
-    // Add contact or company email
+    // Add contact or client email
     if (project.contact_email) {
       recipients.push(project.contact_email);
       logger.info('[ProjectEmailSubscriber] Adding contact email as recipient', {
         contactEmail: project.contact_email
       });
-    } else if (project.company_email) {
-      recipients.push(project.company_email);
-      logger.info('[ProjectEmailSubscriber] Adding company email as recipient', {
-        companyEmail: project.company_email
+    } else if (project.client_email) {
+      recipients.push(project.client_email);
+      logger.info('[ProjectEmailSubscriber] Adding client email as recipient', {
+        clientEmail: project.client_email
       });
     }
 
@@ -230,7 +230,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
         projectId: payload.projectId,
         hasContactEmail: !!project.contact_email,
         hasAssignedUserEmail: !!project.assigned_user_email,
-        hasCompanyEmail: !!project.company_email
+        hasClientEmail: !!project.client_email
       });
       return;
     }
@@ -252,7 +252,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
           endDate: project.end_date,
           createdBy: payload.userId,
           url: `/projects/${project.project_number}`,
-          company: project.company_name || 'No Company'
+          client: project.client_name || 'No Client'
         }
       },
       replyContext: {
@@ -307,20 +307,20 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
       .where('p.tenant', tenant!)
       .select(
         'p.*',
-        'dcl.email as company_email',
-        'c.company_name',
+        'dcl.email as client_email',
+        'c.client_name',
         's.name as status_name',
         'u.first_name as manager_first_name',
         'u.last_name as manager_last_name',
         'u.email as assigned_user_email',
         'ct.email as contact_email'
       )
-      .leftJoin('companies as c', function() {
-        this.on('c.company_id', '=', 'p.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('c.client_id', '=', 'p.client_id')
             .andOn('c.tenant', '=', 'p.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 'p.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 'p.client_id')
             .andOn('dcl.tenant', '=', 'p.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -388,16 +388,16 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     // Collect all recipient emails
     const recipients: string[] = [];
 
-    // Add contact or company email
+    // Add contact or client email
     if (project.contact_email) {
       recipients.push(project.contact_email);
       logger.info('[ProjectEmailSubscriber] Adding contact email as recipient', {
         contactEmail: project.contact_email
       });
-    } else if (project.company_email) {
-      recipients.push(project.company_email);
-      logger.info('[ProjectEmailSubscriber] Adding company email as recipient', {
-        companyEmail: project.company_email
+    } else if (project.client_email) {
+      recipients.push(project.client_email);
+      logger.info('[ProjectEmailSubscriber] Adding client email as recipient', {
+        clientEmail: project.client_email
       });
     }
 
@@ -413,7 +413,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     logger.info('[ProjectEmailSubscriber] Available email addresses:', {
       projectId: payload.projectId,
       contactEmail: project.contact_email,
-      companyEmail: project.company_email,
+      clientEmail: project.client_email,
       assignedUserEmail: project.assigned_user_email
     });
 
@@ -422,7 +422,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
         projectId: payload.projectId,
         hasContactEmail: !!project.contact_email,
         hasAssignedUserEmail: !!project.assigned_user_email,
-        hasCompanyEmail: !!project.company_email,
+        hasClientEmail: !!project.client_email,
         project: project // Log the full project object for debugging
       });
       return;
@@ -467,7 +467,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
           changes: formattedChanges,
           updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId,
           url: `/projects/${project.project_number}`,
-          company: project.company_name || 'No Company'
+          client: project.client_name || 'No Client'
         }
       },
       replyContext: {
@@ -499,20 +499,20 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     const query = db('projects as p')
       .select(
         'p.*',
-        'dcl.email as company_email',
-        'c.company_name',
+        'dcl.email as client_email',
+        'c.client_name',
         's.name as status_name',
         'u.first_name as manager_first_name',
         'u.last_name as manager_last_name',
         'u.email as assigned_user_email',
         'ct.email as contact_email'
       )
-      .leftJoin('companies as c', function() {
-        this.on('c.company_id', '=', 'p.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('c.client_id', '=', 'p.client_id')
             .andOn('c.tenant', '=', 'p.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 'p.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 'p.client_id')
             .andOn('dcl.tenant', '=', 'p.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -580,16 +580,16 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     // Collect all recipient emails
     const recipients: string[] = [];
 
-    // Add contact or company email
+    // Add contact or client email
     if (project.contact_email) {
       recipients.push(project.contact_email);
       logger.info('[ProjectEmailSubscriber] Adding contact email as recipient', {
         contactEmail: project.contact_email
       });
-    } else if (project.company_email) {
-      recipients.push(project.company_email);
-      logger.info('[ProjectEmailSubscriber] Adding company email as recipient', {
-        companyEmail: project.company_email
+    } else if (project.client_email) {
+      recipients.push(project.client_email);
+      logger.info('[ProjectEmailSubscriber] Adding client email as recipient', {
+        clientEmail: project.client_email
       });
     }
 
@@ -606,7 +606,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         projectId: payload.projectId,
         hasContactEmail: !!project.contact_email,
         hasAssignedUserEmail: !!project.assigned_user_email,
-        hasCompanyEmail: !!project.company_email
+        hasClientEmail: !!project.client_email
       });
       return;
     }
@@ -630,7 +630,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
           closedBy: await resolveValue(db, 'closed_by', payload.userId),
           closedAt: new Date().toISOString(),
           url: `/projects/${project.project_number}`,
-          company: project.company_name || 'No Company'
+          client: project.client_name || 'No Client'
         }
       },
       replyContext: {
@@ -662,20 +662,20 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
     const query = db('projects as p')
       .select(
         'p.*',
-        'c.company_name',
-        'dcl.email as company_email',
+        'c.client_name',
+        'dcl.email as client_email',
         'u.email as user_email',
         'u.first_name as user_first_name',
         'u.last_name as user_last_name',
         'au.first_name as assigner_first_name',
         'au.last_name as assigner_last_name'
       )
-      .leftJoin('companies as c', function() {
-        this.on('c.company_id', '=', 'p.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('c.client_id', '=', 'p.client_id')
             .andOn('c.tenant', '=', 'p.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 'p.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 'p.client_id')
             .andOn('dcl.tenant', '=', 'p.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -740,7 +740,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
           startDate: project.start_date,
           assignedBy: `${project.assigner_first_name} ${project.assigner_last_name}`,
           url: `/projects/${project.project_number}`,
-          company: project.company_name || 'No Company'
+          client: project.client_name || 'No Client'
         }
       },
       replyContext: {

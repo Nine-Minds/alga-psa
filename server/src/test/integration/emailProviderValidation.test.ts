@@ -42,8 +42,8 @@ describe('Email Provider Validation Tests', () => {
       // Create tenant record
       await testDb('tenants').insert({
         tenant: testTenant,
-        company_name: 'Validation Test Company',
-        email: 'validation-test@company.com',
+        client_name: 'Validation Test Client',
+        email: 'validation-test@client.com',
         created_at: new Date(),
         updated_at: new Date()
       });

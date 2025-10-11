@@ -7,14 +7,14 @@ import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { addTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getCompanyLocations } from 'server/src/lib/actions/company-actions/companyLocationActions';
+import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getClientLocations } from 'server/src/lib/actions/client-actions/clientLocationActions';
 import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
 import { getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
-import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, ICompany, ICompanyLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
+import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
@@ -30,7 +30,7 @@ import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegist
 import { calculateItilPriority, ItilLabels } from '../../lib/utils/itilUtils';
 
 // Helper function to format location display
-const formatLocationDisplay = (location: ICompanyLocation): string => {
+const formatLocationDisplay = (location: IClientLocation): string => {
   const parts: string[] = [];
   
   if (location.location_name) {
@@ -61,7 +61,7 @@ interface QuickAddTicketProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTicketAdded: (ticket: ITicket) => void;
-  prefilledCompany?: {
+  prefilledClient?: {
     id: string;
     name: string;
   };
@@ -78,7 +78,7 @@ export function QuickAddTicket({
   open,
   onOpenChange,
   onTicketAdded,
-  prefilledCompany,
+  prefilledClient,
   prefilledContact,
   prefilledDescription,
   isEmbedded = false
@@ -93,11 +93,11 @@ export function QuickAddTicket({
   const [boardId, setBoardId] = useState('');
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
-  const [companyId, setCompanyId] = useState(prefilledCompany?.id || '');
+  const [clientId, setClientId] = useState(prefilledClient?.id || '');
   const [contactId, setContactId] = useState(prefilledContact?.id || null);
-  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  const [selectedCompanyType, setSelectedCompanyType] = useState<'company' | 'individual' | null>(null);
+  const [selectedClientType, setSelectedClientType] = useState<'company' | 'individual' | null>(null);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
     category_type: 'custom',
@@ -110,11 +110,11 @@ export function QuickAddTicket({
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
-  const [locations, setLocations] = useState<ICompanyLocation[]>([]);
+  const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
-  const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
+  const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
 
   // ITIL-specific state
@@ -177,27 +177,27 @@ export function QuickAddTicket({
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const formData = await getTicketFormData(prefilledCompany?.id);
+        const formData = await getTicketFormData(prefilledClient?.id);
 
         setUsers(formData.users);
         setBoards(formData.boards);
         setPriorities(formData.priorities);
-        setCompanies(formData.companies);
+        setClients(formData.clients);
 
         if (Array.isArray(formData.statuses) && formData.statuses.length > 0) {
           setStatuses(formData.statuses);
         }
 
-        if (formData.selectedCompany) {
-          setIsPrefilledCompany(true);
-          setCompanyId(formData.selectedCompany.company_id);
-          setSelectedCompanyType(formData.selectedCompany.client_type as 'company' | 'individual');
+        if (formData.selectedClient) {
+          setIsPrefilledClient(true);
+          setClientId(formData.selectedClient.client_id);
+          setSelectedClientType(formData.selectedClient.client_type as 'company' | 'individual');
           if (formData.contacts) {
             setContacts(formData.contacts);
           }
         } else {
-          // No prefilled company, ensure isPrefilledCompany is false
-          setIsPrefilledCompany(false);
+          // No prefilled client, ensure isPrefilledClient is false
+          setIsPrefilledClient(false);
         }
 
         if (prefilledContact) {
@@ -216,28 +216,28 @@ export function QuickAddTicket({
     };
 
     fetchData();
-  }, [open, prefilledCompany?.id]);
+  }, [open, prefilledClient?.id]);
 
   useEffect(() => {
-    const fetchCompanyData = async () => {
-      if (!companyId) {
-        // Clear both contacts and locations when no company is selected
+    const fetchClientData = async () => {
+      if (!clientId) {
+        // Clear both contacts and locations when no client is selected
         setContacts([]);
         setLocations([]);
         return;
       }
 
-      console.log('Fetching company data for:', { companyId, isPrefilledCompany });
+      console.log('Fetching client data for:', { clientId, isPrefilledClient });
 
       try {
         // Fetch both locations and contacts (when needed) in parallel
         const promises: Promise<any>[] = [
-          getCompanyLocations(companyId)
+          getClientLocations(clientId)
         ];
         
-        // Only fetch contacts if not prefilled (contacts are already loaded for prefilled companies)
-        if (!isPrefilledCompany) {
-          promises.push(getContactsByCompany(companyId, 'all'));
+        // Only fetch contacts if not prefilled (contacts are already loaded for prefilled clients)
+        if (!isPrefilledClient) {
+          promises.push(getContactsByClient(clientId, 'all'));
         }
         
         const results = await Promise.all(promises);
@@ -245,23 +245,23 @@ export function QuickAddTicket({
         console.log('Fetched locations:', locationsData);
         setLocations(locationsData || []);
         
-        if (!isPrefilledCompany) {
+        if (!isPrefilledClient) {
           const contactsData = results[1];
           console.log('Fetched contacts:', contactsData);
           setContacts(contactsData || []);
         }
       } catch (error) {
-        console.error('Error fetching company data:', error);
+        console.error('Error fetching client data:', error);
         setLocations([]);
         // Only clear contacts if we were trying to fetch them
-        if (!isPrefilledCompany) {
+        if (!isPrefilledClient) {
           setContacts([]);
         }
       }
     };
 
-    fetchCompanyData();
-  }, [companyId, isPrefilledCompany]);
+    fetchClientData();
+  }, [clientId, isPrefilledClient]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -318,25 +318,25 @@ export function QuickAddTicket({
     }
   };
 
-  const handleCompanyChange = async (newCompanyId: string | null) => {
-    if (isPrefilledCompany) return;
+  const handleClientChange = async (newClientId: string | null) => {
+    if (isPrefilledClient) return;
 
-    setCompanyId(newCompanyId || '');
+    setClientId(newClientId || '');
     setContactId(null);
     clearErrorIfSubmitted();
 
-    if (newCompanyId !== null) {
-      const selectedCompany = companies.find(company => company.company_id === newCompanyId);
+    if (newClientId !== null) {
+      const selectedClient = clients.find(client => client.client_id === newClientId);
 
-      if (selectedCompany?.client_type === 'company') {
-        setSelectedCompanyType('company');
-      } else if (selectedCompany?.client_type === 'individual') {
-        setSelectedCompanyType('individual');
+      if (selectedClient?.client_type === 'company') {
+        setSelectedClientType('company');
+      } else if (selectedClient?.client_type === 'individual') {
+        setSelectedClientType('individual');
       } else {
-        setSelectedCompanyType(null);
+        setSelectedClientType(null);
       }
     } else {
-      setSelectedCompanyType(null);
+      setSelectedClientType(null);
     }
   };
 
@@ -355,18 +355,18 @@ export function QuickAddTicket({
     setBoardId('');
     setStatusId('');
     setPriorityId('');
-    setCompanyId(prefilledCompany?.id || '');
+    setClientId(prefilledClient?.id || '');
     setContactId(prefilledContact?.id || null);
     setLocationId(null);
     setLocations([]);
     setContacts([]);
-    // Reset isPrefilledCompany - it will be set to true again if there's a prefilled company
-    setIsPrefilledCompany(false);
-    if (prefilledCompany?.id) {
-      const company = companies.find(c => c.company_id === prefilledCompany.id);
-      setSelectedCompanyType(company?.client_type as 'company' | 'individual' || null);
+    // Reset isPrefilledClient - it will be set to true again if there's a prefilled client
+    setIsPrefilledClient(false);
+    if (prefilledClient?.id) {
+      const client = clients.find(c => c.client_id === prefilledClient.id);
+      setSelectedClientType(client?.client_type as 'company' | 'individual' || null);
     } else {
-      setSelectedCompanyType(null);
+      setSelectedClientType(null);
     }
     setSelectedCategories([]);
     // Reset ITIL fields
@@ -408,7 +408,7 @@ export function QuickAddTicket({
       }
     }
 
-    if (!companyId) validationErrors.push('Client');
+    if (!clientId) validationErrors.push('Client');
     return validationErrors;
   };
 
@@ -441,9 +441,9 @@ export function QuickAddTicket({
       // the calculated priority to the correct ITIL standard priority record
       formData.append('priority_id', priorityId);
 
-      formData.append('company_id', companyId);
+      formData.append('client_id', clientId);
 
-      if (selectedCompanyType === 'company' && contactId) {
+      if (selectedClientType === 'company' && contactId) {
         formData.append('contact_name_id', contactId);
       }
 
@@ -493,10 +493,10 @@ export function QuickAddTicket({
     }
   };
 
-  const filteredCompanies = companies.filter(company => {
-    if (companyFilterState === 'all') return true;
-    if (companyFilterState === 'active') return !company.is_inactive;
-    if (companyFilterState === 'inactive') return company.is_inactive;
+  const filteredClients = clients.filter(client => {
+    if (clientFilterState === 'all') return true;
+    if (clientFilterState === 'active') return !client.is_inactive;
+    if (clientFilterState === 'inactive') return client.is_inactive;
     return true;
   });
 
@@ -579,21 +579,21 @@ export function QuickAddTicket({
                     className={hasAttemptedSubmit && !description.trim() ? 'border-red-500' : ''}
                   />
 
-                  <div className={hasAttemptedSubmit && !companyId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                    <CompanyPicker
-                      id={`${id}-company`}
-                      companies={filteredCompanies}
-                      onSelect={handleCompanyChange}
-                      selectedCompanyId={companyId}
-                      filterState={companyFilterState}
-                      onFilterStateChange={setCompanyFilterState}
+                  <div className={hasAttemptedSubmit && !clientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                    <ClientPicker
+                      id={`${id}-client`}
+                      clients={filteredClients}
+                      onSelect={handleClientChange}
+                      selectedClientId={clientId}
+                      filterState={clientFilterState}
+                      onFilterStateChange={setClientFilterState}
                       clientTypeFilter={clientTypeFilter}
                       onClientTypeFilterChange={setClientTypeFilter}
                       placeholder="Select Client *"
                     />
                   </div>
 
-                  {companyId && selectedCompanyType === 'company' && (
+                  {clientId && selectedClientType === 'company' && (
                     <ContactPicker
                       id={`${id}-contact`}
                       contacts={contacts}
@@ -602,7 +602,7 @@ export function QuickAddTicket({
                         setContactId(value || null);
                         clearErrorIfSubmitted();
                       }}
-                      companyId={companyId}
+                      clientId={clientId}
                       placeholder={
                         contacts.length === 0
                           ? "No contacts for selected client"
@@ -612,7 +612,7 @@ export function QuickAddTicket({
                       buttonWidth="full"
                     />
                   )}
-                  {companyId && (
+                  {clientId && (
                     <CustomSelect
                       id={`${id}-location`}
                       value={locationId || ''}
@@ -866,7 +866,7 @@ export function QuickAddTicket({
                         (boardConfig.priority_type === 'custom' && !priorityId) ||
                         (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
                         (boardConfig.priority_type === undefined && !priorityId) ||
-                        !companyId ? 'opacity-50' : ''}
+                        !clientId ? 'opacity-50' : ''}
                     >
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>

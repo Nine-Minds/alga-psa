@@ -609,7 +609,7 @@ export class UnifiedAutomationHelper {
   }
 
   private async selectPicker(parentSelector: string, optionValue: string) {
-    console.log('[UnifiedHelper] Starting company picker selection', {
+    console.log('[UnifiedHelper] Starting client picker selection', {
       parentSelector,
       optionValue
     });
@@ -631,7 +631,7 @@ export class UnifiedAutomationHelper {
       parentSelector = `#${parentId}`;
       console.log('[UnifiedHelper] Updated parent selector:', parentSelector);
     } else {
-      const toggleId = parentSelector.replaceAll(/company-picker-company-picker/g, 'company-picker-toggle');
+      const toggleId = parentSelector.replaceAll(/client-picker-client-picker/g, 'client-picker-toggle');
       console.log('[UnifiedHelper] Generated toggle ID:', toggleId);
 
       console.log('[UnifiedHelper] Waiting for toggle element...');
@@ -689,7 +689,7 @@ export class UnifiedAutomationHelper {
 
     if (buttons.length === 0) {
       console.error('[UnifiedHelper] No button found with text:', optionValue);
-      throw new Error(`Could not find company option with text "${optionValue}"`);
+      throw new Error(`Could not find client option with text "${optionValue}"`);
     }
       
     console.log('[UnifiedHelper] Looking for button:', optionValue);
@@ -697,7 +697,7 @@ export class UnifiedAutomationHelper {
 
     if (!button) {
       console.error('[UnifiedHelper] No button found with id or text:', optionValue);
-      throw new Error(`Could not find company option button for "${optionValue}"`);
+      throw new Error(`Could not find client option button for "${optionValue}"`);
     }
 
     const selectionElement = await this.page.waitForSelector(`button[id='${button.id}']`);
@@ -706,7 +706,7 @@ export class UnifiedAutomationHelper {
       console.log('[UnifiedHelper] Clicking matching option button...');
       await selectionElement.click();
       await selectionElement.dispose();
-      console.log('[UnifiedHelper] Company picker selection complete');
+      console.log('[UnifiedHelper] Client picker selection complete');
     } else {
       console.log('[UnifiedHelper] picker selection not found');
     }

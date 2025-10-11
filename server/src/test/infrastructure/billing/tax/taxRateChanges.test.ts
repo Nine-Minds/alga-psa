@@ -6,7 +6,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import {
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -63,10 +63,10 @@ const {
 describe('Tax Rate Changes Mid-Billing Period', () => {
   let context: TestContext;
   let taxService: TaxService;
-  let company_id: string;
+  let client_id: string;
 
   async function configureDefaultTax() {
-    await setupCompanyTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',
@@ -82,10 +82,10 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
       cleanupTables: [
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates'
+        'client_tax_settings',
+        'client_tax_rates'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
@@ -112,18 +112,18 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
 
-    // Use the default company from context
-    company_id = context.companyId;
+    // Use the default client from context
+    client_id = context.clientId;
 
-    // Configure default tax settings for the company (this creates the tax region)
-    await setupCompanyTaxConfiguration(context, {
+    // Configure default tax settings for the client (this creates the tax region)
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
-      companyId: company_id
+      clientId: client_id
     });
 
-    // Update the company to have the correct region_code and billing settings
-    await context.db('companies')
-      .where({ company_id: company_id, tenant: context.tenantId })
+    // Update the client to have the correct region_code and billing settings
+    await context.db('clients')
+      .where({ client_id: client_id, tenant: context.tenantId })
       .update({
         is_tax_exempt: false,
         region_code: 'US-NY',
@@ -181,13 +181,13 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
 
     // Calculate taxes with explicit tax region
     const taxResult1 = await taxService.calculateTax(
-      company_id, 
+      client_id, 
       charge1.amount, 
       charge1.date,
       'US-NY' // Explicitly pass tax region
     );
     const taxResult2 = await taxService.calculateTax(
-      company_id, 
+      client_id, 
       charge2.amount, 
       charge2.date,
       'US-NY' // Explicitly pass tax region
