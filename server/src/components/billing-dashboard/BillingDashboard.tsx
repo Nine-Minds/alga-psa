@@ -32,10 +32,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const searchParams = useSearchParams();
   const [error] = useState<string | null>(null);
 
-  const handleTabChange = (value: BillingTabValue) => {
+  const handleTabChange = (value: string) => {
+    const tabValue = value as BillingTabValue;
     // Only keep the tab parameter, clearing any other state
     const params = new URLSearchParams();
-    params.set('tab', value);
+    params.set('tab', tabValue);
 
     // If we're on a plan detail page and switching tabs, go back to the main billing dashboard
     if (searchParams?.has('planId')) {

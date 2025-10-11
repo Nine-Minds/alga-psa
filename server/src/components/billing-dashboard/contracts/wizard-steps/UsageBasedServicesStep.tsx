@@ -201,6 +201,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
             </div>
 
             <Button
+              id={`remove-usage-service-${index}`}
               type="button"
               variant="ghost"
               size="sm"
@@ -213,6 +214,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
         ))}
 
         <Button
+          id="add-usage-service-button"
           type="button"
           variant="outline"
           onClick={handleAddService}

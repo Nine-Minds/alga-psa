@@ -365,20 +365,20 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
 
       const clientId = contact.client_id;
 
-      let query = trx<IBucketUsage>('bucket_usage as bu')
-        .join<IBillingPlan>('billing_plans as bp', function() {
+      let query: any = trx('bucket_usage as bu')
+        .join('billing_plans as bp', function(this: any) {
           this.on('bu.plan_id', '=', 'bp.plan_id').andOn('bu.tenant', '=', 'bp.tenant');
         })
-        .join<IPlanService>('plan_services as ps', function() {
+        .join('plan_services as ps', function(this: any) {
           this.on('bp.plan_id', '=', 'ps.plan_id').andOn('bp.tenant', '=', 'ps.tenant');
         })
-        .join<IService>('service_catalog as sc', function() {
+        .join('service_catalog as sc', function(this: any) {
           this.on('ps.service_id', '=', 'sc.service_id').andOn('ps.tenant', '=', 'sc.tenant');
         })
-        .join<IPlanServiceConfiguration>('plan_service_configuration as psc', function() {
+        .join('plan_service_configuration as psc', function(this: any) {
           this.on('ps.plan_id', '=', 'psc.plan_id').andOn('ps.service_id', '=', 'psc.service_id').andOn('ps.tenant', '=', 'psc.tenant');
         })
-        .join<IPlanServiceBucketConfig>('plan_service_bucket_config as psbc', function() {
+        .join('plan_service_bucket_config as psbc', function(this: any) {
           this.on('psc.config_id', '=', 'psbc.config_id').andOn('psc.tenant', '=', 'psbc.tenant');
         })
         .where('bu.client_id', clientId)

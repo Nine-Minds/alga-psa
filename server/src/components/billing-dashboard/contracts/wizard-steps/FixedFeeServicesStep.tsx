@@ -206,6 +206,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
             </div>
 
             <Button
+              id={`remove-fixed-service-${index}`}
               type="button"
               variant="ghost"
               size="sm"

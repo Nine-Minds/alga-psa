@@ -217,6 +217,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
             </div>
 
             <Button
+              id={`remove-hourly-service-${index}`}
               type="button"
               variant="ghost"
               size="sm"
@@ -229,6 +230,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
         ))}
 
         <Button
+          id="add-hourly-service-button"
           type="button"
           variant="outline"
           onClick={handleAddService}

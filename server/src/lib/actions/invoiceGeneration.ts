@@ -500,10 +500,10 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   // Check for Purchase Order requirements
-  const companyPlanBundles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('company_plan_bundles')
+  const clientPlanBundles = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('client_plan_bundles')
       .where({
-        company_id,
+        client_id,
         tenant,
         is_active: true
       })
@@ -517,7 +517,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   });
 
   // Validate PO requirements for active contracts
-  for (const bundle of companyPlanBundles) {
+  for (const bundle of clientPlanBundles) {
     if (bundle.po_required && !bundle.po_number) {
       throw new Error(`Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.`);
     }

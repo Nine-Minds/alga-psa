@@ -29,11 +29,11 @@ export function PricingScheduleDialog({
   onClose,
   onSave
 }: PricingScheduleDialogProps) {
-  const [effectiveDate, setEffectiveDate] = useState<Date | null>(
-    schedule?.effective_date ? new Date(schedule.effective_date) : null
+  const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(
+    schedule?.effective_date ? new Date(schedule.effective_date) : undefined
   );
-  const [endDate, setEndDate] = useState<Date | null>(
-    schedule?.end_date ? new Date(schedule.end_date) : null
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    schedule?.end_date ? new Date(schedule.end_date) : undefined
   );
   const [hasEndDate, setHasEndDate] = useState(!!schedule?.end_date);
   const [useDuration, setUseDuration] = useState(!!schedule?.duration_value);
@@ -57,8 +57,8 @@ export function PricingScheduleDialog({
 
   useEffect(() => {
     if (schedule) {
-      setEffectiveDate(schedule.effective_date ? new Date(schedule.effective_date) : null);
-      setEndDate(schedule.end_date ? new Date(schedule.end_date) : null);
+      setEffectiveDate(schedule.effective_date ? new Date(schedule.effective_date) : undefined);
+      setEndDate(schedule.end_date ? new Date(schedule.end_date) : undefined);
       setHasEndDate(!!schedule.end_date);
       setCustomRate(
         schedule.custom_rate !== undefined && schedule.custom_rate !== null
@@ -118,7 +118,7 @@ export function PricingScheduleDialog({
         end_date: !useDuration && hasEndDate && endDate ? endDate.toISOString() : null,
         duration_value: useDuration ? parseInt(durationValue) : undefined,
         duration_unit: useDuration ? durationUnit : undefined,
-        custom_rate: useDefaultRate ? null : Math.round(parseFloat(customRate) * 100),
+        custom_rate: useDefaultRate ? undefined : Math.round(parseFloat(customRate) * 100),
         notes: notes || undefined
       };
 
@@ -169,7 +169,7 @@ export function PricingScheduleDialog({
                 setUseDuration(checked);
                 if (checked) {
                   setHasEndDate(false);
-                  setEndDate(null);
+                  setEndDate(undefined);
                 }
               }}
             />
@@ -215,7 +215,7 @@ export function PricingScheduleDialog({
                   onCheckedChange={(checked) => {
                     setHasEndDate(checked);
                     if (!checked) {
-                      setEndDate(null);
+                      setEndDate(undefined);
                     }
                   }}
                 />

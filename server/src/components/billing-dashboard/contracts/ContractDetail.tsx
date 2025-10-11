@@ -174,7 +174,7 @@ const ContractDetail: React.FC = () => {
             </div>
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={bundle.is_active ? 'border-orange-300 text-orange-800' : 'border-gray-300 text-gray-600'}>
+                <Badge variant="secondary" className={bundle.is_active ? 'border-orange-300 text-orange-800' : 'border-gray-300 text-gray-600'}>
                   {bundle.is_active ? 'PO Required' : 'PO Optional'}
                 </Badge>
               </div>

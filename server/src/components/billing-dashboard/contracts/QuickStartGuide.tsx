@@ -39,6 +39,7 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
             </Badge>
           </div>
           <Button
+            id="quickstart-show-guide"
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(true)}
@@ -65,16 +66,18 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
           </Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(false)}
-            className="text-gray-500"
-          >
-            Minimize
-          </Button>
+            <Button
+              id="quickstart-minimize"
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(false)}
+              className="text-gray-500"
+            >
+              Minimize
+            </Button>
           {onDismiss && (
             <Button
+              id="quickstart-dismiss"
               variant="ghost"
               size="sm"
               onClick={onDismiss}
@@ -176,6 +179,7 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
         {onCreateContract && (
           <div className="mt-6 pt-4 border-t border-blue-200">
             <Button
+              id="quickstart-create-contract"
               onClick={onCreateContract}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >

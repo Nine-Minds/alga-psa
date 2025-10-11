@@ -85,8 +85,16 @@ const caseInsensitiveSort: SortingFn<any> = (rowA, rowB, columnId) => {
   const b = rowB.getValue(columnId);
 
   // Try to parse as dates - if both are valid dates, compare as timestamps
-  const aDate = a ? new Date(a) : null;
-  const bDate = b ? new Date(b) : null;
+  const parseDate = (val: unknown): Date | null => {
+    if (val instanceof Date) return val;
+    if (typeof val === 'string' || typeof val === 'number') {
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  };
+  const aDate = parseDate(a);
+  const bDate = parseDate(b);
 
   if (aDate && !isNaN(aDate.getTime()) && bDate && !isNaN(bDate.getTime())) {
     return aDate.getTime() - bDate.getTime();

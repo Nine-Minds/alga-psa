@@ -255,7 +255,7 @@ const ContractReports: React.FC = () => {
       title: 'Auto-Renew',
       dataIndex: 'auto_renew',
       render: (value: boolean) => (
-        <Badge variant="outline" className={value ? 'border-green-300 text-green-800' : 'border-gray-300 text-gray-600'}>
+        <Badge variant="secondary" className={value ? 'border-green-300 text-green-800' : 'border-gray-300 text-gray-600'}>
           {value ? 'Yes' : 'No'}
         </Badge>
       )

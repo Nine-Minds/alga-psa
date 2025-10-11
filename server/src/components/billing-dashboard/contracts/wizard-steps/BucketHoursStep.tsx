@@ -363,6 +363,7 @@ export function BucketHoursStep({ data, updateData }: BucketHoursStepProps) {
             </div>
 
             <Button
+              id={`remove-bucket-service-${index}`}
               type="button"
               variant="ghost"
               size="sm"
@@ -375,6 +376,7 @@ export function BucketHoursStep({ data, updateData }: BucketHoursStepProps) {
         ))}
 
         <Button
+          id="add-bucket-service-button"
           type="button"
           variant="outline"
           onClick={handleAddService}
