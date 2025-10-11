@@ -191,21 +191,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
         onClose={() => setShowSuccessDialog(false)}
         message={successMessage}
         id="invoice-success-dialog"
-      >
-        <div className="mt-4 flex gap-2 justify-end">
-          <Button
-            variant="outline"
-            onClick={() => setShowSuccessDialog(false)}
-          >
-            Stay Here
-          </Button>
-          <Button
-            onClick={handleViewDrafts}
-          >
-            View in Drafts
-          </Button>
-        </div>
-      </SuccessDialog>
+      />
     </>
   );
 };

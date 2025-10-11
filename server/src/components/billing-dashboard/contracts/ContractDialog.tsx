@@ -34,8 +34,8 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
   const [isActive, setIsActive] = useState<boolean>(editingContract?.is_active ?? true);
   const [clientId, setClientId] = useState<string>('');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [poRequired, setPoRequired] = useState<boolean>(false);
   const [poNumber, setPoNumber] = useState<string>('');
   const [poAmountInput, setPoAmountInput] = useState<string>('');
@@ -157,8 +157,8 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
     setIsActive(true);
     setClientId('');
     setBillingFrequency('monthly');
-    setStartDate(null);
-    setEndDate(null);
+    setStartDate(undefined);
+    setEndDate(undefined);
     setPoRequired(false);
     setPoNumber('');
     setPoAmountInput('');
@@ -268,7 +268,7 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
               <DatePicker
                 value={startDate}
                 onChange={(date) => {
-                  setStartDate(date);
+                  setStartDate(date ?? undefined);
                   clearErrorIfSubmitted();
                 }}
                 className="w-full"
@@ -285,7 +285,7 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
               </div>
               <DatePicker
                 value={endDate}
-                onChange={(date) => setEndDate(date)}
+                onChange={(date) => setEndDate(date ?? undefined)}
                 className="w-full"
               />
             </div>

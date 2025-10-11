@@ -50,8 +50,8 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   const selectedInvoiceId = searchParams?.get('invoiceId');
   const selectedTemplateId = searchParams?.get('templateId');
 
-  // Filter for finalized only
-  const invoices = allInvoices.filter(inv => inv.finalized_at);
+  // Filter for finalized only. Some environments mark finalization via status, not finalized_at.
+  const invoices = allInvoices.filter(inv => inv.finalized_at || inv.status !== 'draft');
 
   // Apply search filter
   const filteredInvoices = invoices.filter(inv =>
@@ -267,7 +267,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" aria-label="Invoice actions">
+              <Button id={`finalized-row-actions-${record.invoice_id}`} variant="ghost" className="h-8 w-8 p-0" aria-label="Invoice actions">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -339,6 +339,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
+              id="finalized-bulk-actions-trigger"
               variant="outline"
               disabled={selectedInvoices.size === 0}
               className="flex items-center gap-2"
@@ -384,7 +385,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
             <p className="text-gray-600 mb-4">
               Finalized invoices will appear here once you've approved and finalized your drafts.
             </p>
-            <Button onClick={() => router.push('/msp/billing?tab=invoicing&subtab=drafts')} className="flex items-center gap-2">
+            <Button id="finalized-empty-view-drafts" onClick={() => router.push('/msp/billing?tab=invoicing&subtab=drafts')} className="flex items-center gap-2">
               View Drafts
               <ArrowRight className="h-4 w-4" />
             </Button>

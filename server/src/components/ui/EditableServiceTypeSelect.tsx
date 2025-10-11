@@ -187,6 +187,7 @@ export function EditableServiceTypeSelect({
                         disabled={isSaving}
                       />
                       <Button
+                        id="service-type-edit-save"
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
@@ -196,6 +197,7 @@ export function EditableServiceTypeSelect({
                         <Check className="h-4 w-4 text-green-600" />
                       </Button>
                       <Button
+                        id="service-type-edit-cancel"
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0"
@@ -216,6 +218,7 @@ export function EditableServiceTypeSelect({
                       </Select.Item>
                       <div className="flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
+                          id={`service-type-edit-${type.id}`}
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
@@ -228,6 +231,7 @@ export function EditableServiceTypeSelect({
                           <Pencil className="h-3 w-3 text-gray-600" />
                         </Button>
                         <Button
+                          id={`service-type-delete-${type.id}`}
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
@@ -263,6 +267,7 @@ export function EditableServiceTypeSelect({
                     disabled={isSaving}
                   />
                   <Button
+                    id="service-type-add-save"
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0"
@@ -272,6 +277,7 @@ export function EditableServiceTypeSelect({
                     <Check className="h-4 w-4 text-green-600" />
                   </Button>
                   <Button
+                    id="service-type-add-cancel"
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0"

@@ -491,6 +491,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               </div>
 
               <Button
+                id={`remove-fixed-service-${index}`}
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -503,6 +504,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
           ))}
 
           <Button
+            id="add-fixed-service"
             type="button"
             variant="outline"
             onClick={handleAddFixedService}
@@ -748,6 +750,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               </div>
 
               <Button
+                id={`remove-hourly-service-${index}`}
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -760,6 +763,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
           ))}
 
           <Button
+            id="add-hourly-service"
             type="button"
             variant="outline"
             onClick={handleAddHourlyService}
@@ -971,6 +975,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               </div>
 
               <Button
+                id={`remove-bucket-service-${index}`}
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -983,6 +988,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
           ))}
 
           <Button
+            id="add-bucket-service"
             type="button"
             variant="outline"
             onClick={handleAddBucketService}
@@ -1146,6 +1152,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               </div>
 
               <Button
+                id={`remove-usage-service-${index}`}
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -1158,6 +1165,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
           ))}
 
           <Button
+            id="add-usage-service"
             type="button"
             variant="outline"
             onClick={handleAddUsageService}

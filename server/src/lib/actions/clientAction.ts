@@ -13,7 +13,18 @@ export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
     }
 
     const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
+      // Some environments have renamed client_billing -> company_billing_plans.
+      // Detect available table to keep compatibility.
+      const hasClientBillingPlans = await trx.schema.hasTable('client_billing_plans');
+      const hasCompanyBilling = await trx.schema.hasTable('company_billing_plans');
+      const hasClientBilling = await trx.schema.hasTable('client_billing');
+      const billingTable = hasClientBillingPlans
+        ? 'client_billing_plans'
+        : (hasCompanyBilling
+            ? 'company_billing_plans'
+            : (hasClientBilling ? 'client_billing' : null));
+
+      let query = trx('clients')
         .select(
           'clients.client_id',
           'clients.client_name',
@@ -23,15 +34,22 @@ export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
           'billing_plans.is_custom',
           'billing_plans.plan_type'
         )
-        .where('clients.tenant', tenant)
-        .leftJoin('client_billing', function() {
-          this.on('clients.client_id', '=', 'client_billing.client_id')
-              .andOn('clients.tenant', '=', 'client_billing.tenant');
-        })
-        .leftJoin('billing_plans', function() {
-          this.on('client_billing.plan_id', '=', 'billing_plans.plan_id')
-              .andOn('client_billing.tenant', '=', 'billing_plans.tenant');
-        });
+        .where('clients.tenant', tenant as string);
+
+      if (billingTable) {
+        // Join via alias so we can reference consistently
+        query = query
+          .leftJoin({ cb: billingTable }, function() {
+            this.on('clients.client_id', '=', 'cb.client_id')
+                .andOn('clients.tenant', '=', 'cb.tenant');
+          })
+          .leftJoin('billing_plans', function() {
+            this.on('cb.plan_id', '=', 'billing_plans.plan_id')
+                .andOn('cb.tenant', '=', 'billing_plans.tenant');
+          });
+      }
+
+      return await query;
     });
     
     return clients.map((client): Omit<IClientSummary, "tenant"> => ({

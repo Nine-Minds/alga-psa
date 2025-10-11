@@ -138,6 +138,7 @@
   ],
   "exclude": [
     "node_modules",
+    ".next/types/**/*",
     "dist",
     "src/invoice-templates/assemblyscript",
     "src/lib/workflows",

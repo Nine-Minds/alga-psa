@@ -210,6 +210,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             <div className="flex flex-wrap gap-2">
               {!isFinalized && onFinalize && (
                 <Button
+                  id="invoice-finalize"
                   onClick={() => handleAction(onFinalize, 'finalize invoice')}
                   disabled={isActionLoading}
                   className="flex-1"
@@ -220,6 +221,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
               {!isFinalized && onEdit && (
                 <Button
+                  id="invoice-edit-items"
                   variant="outline"
                   onClick={onEdit}
                   disabled={isActionLoading}
@@ -231,6 +233,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
               {onDownload && (
                 <Button
+                  id="invoice-download-pdf"
                   variant="outline"
                   onClick={() => handleAction(onDownload, 'download PDF')}
                   disabled={isActionLoading}
@@ -242,6 +245,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
               {onEmail && (
                 <Button
+                  id="invoice-send-email"
                   variant="outline"
                   onClick={() => handleAction(onEmail, 'send email')}
                   disabled={isActionLoading}
@@ -253,6 +257,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
               {isFinalized && onUnfinalize && (
                 <Button
+                  id="invoice-unfinalize"
                   variant="outline"
                   onClick={() => handleAction(onUnfinalize, 'unfinalize invoice')}
                   disabled={isActionLoading}
