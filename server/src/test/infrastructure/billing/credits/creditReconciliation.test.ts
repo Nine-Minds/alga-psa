@@ -1,30 +1,88 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice, validateCreditBalance } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
-import { v4 as uuidv4 } from 'uuid';
-import type { IClient } from '../../interfaces/client.interfaces';
+import {
+  createTestService,
+  createFixedPlanAssignment,
+  setupClientTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate } from '../../../test-utils/dateUtils';
+import { createTestDate } from '../../../../../test-utils/dateUtils';
+import { TextEncoder as NodeTextEncoder } from 'util';
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 /**
  * Credit Reconciliation Tests
- * 
+ *
  * These tests focus on verifying that the credit tracking table correctly
  * reconciles with the transaction log, ensuring data integrity between
  * the two sources of truth for credit management.
  */
-
 describe('Credit Reconciliation Tests', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
 
+  async function configureDefaultTax() {
+    await setupClientTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State + City Tax',
+      startDate: '2025-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
@@ -34,13 +92,15 @@ describe('Credit Reconciliation Tests', () => {
         'credit_allocations',
         'client_billing_cycles',
         'client_billing_plans',
-        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
         'service_catalog',
+        'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
-        'bucket_usage',
         'tax_rates',
+        'tax_regions',
         'client_tax_settings',
+        'client_tax_rates',
         'client_billing_settings',
         'default_billing_settings'
       ],
@@ -48,37 +108,42 @@ describe('Credit Reconciliation Tests', () => {
       userType: 'internal'
     });
 
-    // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.client.client_id);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 60000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-  });
+    context = await resetContext();
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+    await configureDefaultTax();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   it('should verify credit tracking table reconciliation with transaction log', async () => {
-    // 1. Create test client with a unique name
-    const client_id = await context.createEntity<IClient>('clients', {
-      client_name: `Credit Reconciliation Test Client ${Date.now()}`,
-      billing_cycle: 'monthly',
-      client_id: uuidv4(),
-      region_code: 'US-NY',
-      is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
+    // Use the context's client instead of creating a new one
+    const client_id = context.clientId;
 
-    // 2. Set up client billing settings with expiration days
+    // 1. Set up client billing settings with expiration days
     await context.db('client_billing_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
@@ -90,73 +155,46 @@ describe('Credit Reconciliation Tests', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
-    
-    // Create tax settings for the client
-    // First create a tax rate
-    const nyTaxRateId = uuidv4();
-    await context.db('tax_rates').insert({
-      tax_rate_id: nyTaxRateId,
-      region: 'US-NY',
-      tax_percentage: 8.875,
-      description: 'New York Sales Tax',
-      start_date: '2025-01-01',
-      tenant: context.tenantId
-    });
-    
-    await context.db('client_tax_settings').insert({
-      client_id: client_id,
-      tenant: context.tenantId,
-      tax_rate_id: nyTaxRateId,
-      is_reverse_charge_applicable: false
-    });
 
-    // 3. Create first prepayment invoice
+    // 4. Create first prepayment invoice
     const prepaymentAmount1 = 10000; // $100.00 credit
     const prepaymentInvoice1 = await createPrepaymentInvoice(
       client_id,
       prepaymentAmount1
     );
-    
-    // 4. Finalize the first prepayment invoice to create the credit
+
+    // 5. Finalize the first prepayment invoice to create the credit
     await finalizeInvoice(prepaymentInvoice1.invoice_id);
-    
-    // 5. Create second prepayment invoice
+
+    // 6. Create second prepayment invoice
     const prepaymentAmount2 = 5000; // $50.00 credit
     const prepaymentInvoice2 = await createPrepaymentInvoice(
       client_id,
       prepaymentAmount2
     );
-    
-    // 6. Finalize the second prepayment invoice to create the credit
+
+    // 7. Finalize the second prepayment invoice to create the credit
     await finalizeInvoice(prepaymentInvoice2.invoice_id);
-    
-    // 7. Create a service for a positive invoice
-    const serviceId = await context.createEntity('service_catalog', {
+
+    // 2. Create a service for a positive invoice using test helper
+    const serviceId = await createTestService(context, {
       service_name: 'Regular Service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 8000, // $80.00
       unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true
-    }, 'service_id');
-
-    // 8. Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Regular Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    // 9. Assign service to plan
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
-    // 10. Create a billing cycle
+    // 3. Create billing plan and assign service using test helper
+    const { planId } = await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Regular Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 8000, // $80.00
+      quantity: 1,
+      startDate: '2025-01-01'
+    });
+
+    // 4. Create a billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
@@ -169,51 +207,76 @@ describe('Credit Reconciliation Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    // 11. Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
-      client_id: client_id,
-      plan_id: planId,
-      tenant: context.tenantId,
-      start_date: startDate,
-      is_active: true
-    });
-
-    // 12. Generate positive invoice
+    // 5. Generate positive invoice using transactional connection
     const invoice = await generateInvoice(billingCycleId);
-    
+
     if (!invoice) {
       throw new Error('Failed to generate invoice');
     }
 
-    // 13. Finalize the invoice to apply credit
+    // 6. Verify invoice has expected structure
+    expect(invoice.invoice_id).toBeDefined();
+    expect(invoice.subtotal).toBeGreaterThan(0);
+
+    // 7. Finalize the invoice to apply credit
     await finalizeInvoice(invoice.invoice_id);
 
-    // 14. Manually apply some credit to create a partial application
+    // 8. Verify invoice items were created correctly (invariant check)
+    const invoiceItems = await context.db('invoice_items')
+      .where({
+        invoice_id: invoice.invoice_id,
+        tenant: context.tenantId
+      });
+
+    expect(invoiceItems.length).toBeGreaterThan(0);
+
+    // 9. Verify tax calculation on invoice items (invariant check)
+    const itemsWithTax = invoiceItems.filter(item => Number(item.tax_amount) > 0);
+    expect(itemsWithTax.length).toBeGreaterThan(0);
+
+    // Calculate expected tax (8.875% of subtotal)
+    const expectedTax = Math.round(invoice.subtotal * 0.08875);
+    expect(invoice.tax).toBeCloseTo(expectedTax, -1); // Allow for rounding
+
+    // 10. Verify invoice items sum to subtotal (invariant check)
+    const itemsSubtotal = invoiceItems.reduce(
+      (sum, item) => sum + Number(item.net_amount),
+      0
+    );
+    expect(itemsSubtotal).toBe(invoice.subtotal);
+
+    // 11. Verify invoice items tax sum matches invoice tax (invariant check)
+    const itemsTax = invoiceItems.reduce(
+      (sum, item) => sum + Number(item.tax_amount),
+      0
+    );
+    expect(itemsTax).toBe(invoice.tax);
+
+    // 12. Manually apply some credit to create a partial application
     const remainingCredit = await ClientBillingPlan.getClientCredit(client_id);
     const partialCreditAmount = 3000; // $30.00
     await applyCreditToInvoice(client_id, invoice.invoice_id, partialCreditAmount);
 
-    // 15. Get the current credit balance before validation
+    // 13. Get the current credit balance before validation
     const beforeValidationCredit = await ClientBillingPlan.getClientCredit(client_id);
-    
-    // 16. Get all credit tracking entries before validation
+
+    // 14. Get all credit tracking entries before validation using transactional db
     const preValidationCreditEntries = await context.db('credit_tracking')
       .where({
         client_id: client_id,
         tenant: context.tenantId
       })
       .orderBy('created_at', 'asc');
-    
-    // 17. Calculate the expected credit balance based on credit tracking entries
+
+    // 15. Calculate the expected credit balance based on credit tracking entries
     const expectedCreditBalance = preValidationCreditEntries.reduce(
       (sum, entry) => sum + Number(entry.remaining_amount),
       0
     );
-    
+
     console.log(`Current credit balance: ${beforeValidationCredit}, Expected from tracking: ${expectedCreditBalance}`);
-    
-    // 18. Create an artificial discrepancy by directly modifying the client's credit_balance
+
+    // 16. Create an artificial discrepancy by directly modifying the client's credit_balance
     // This simulates a data corruption scenario that would require reconciliation
     const artificialBalance = expectedCreditBalance - 1000; // Reduce by $10.00
     await context.db('clients')
@@ -225,28 +288,28 @@ describe('Credit Reconciliation Tests', () => {
         credit_balance: artificialBalance,
         updated_at: new Date().toISOString()
       });
-    
-    // Get the modified balance
+
+    // 17. Get the modified balance using transactional context
     const modifiedBalance = await ClientBillingPlan.getClientCredit(client_id);
     console.log(`Artificially modified balance: ${modifiedBalance}, Expected from tracking: ${expectedCreditBalance}`);
-    
-    // 19. Verify that there's a discrepancy between the actual and expected balance
+
+    // 18. Verify that there's a discrepancy between the actual and expected balance
     expect(modifiedBalance).not.toEqual(expectedCreditBalance);
-    
-    // 20. Now run the credit balance validation to check reconciliation
+
+    // 19. Now run the credit balance validation to check reconciliation
     // This will automatically correct any discrepancies
     const validationResult = await validateCreditBalance(client_id);
-    
-    // 21. Verify that the validation detected an issue
+
+    // 20. Verify that the validation detected an issue
     expect(validationResult.isValid).toBe(false);
-    
-    // 22. After validation, the balance should be corrected, so run it again to verify
+
+    // 21. After validation, the balance should be corrected, so run it again to verify
     const secondValidationResult = await validateCreditBalance(client_id);
-    
-    // 23. Verify that the second validation shows the balance is now correct
+
+    // 22. Verify that the second validation shows the balance is now correct
     expect(secondValidationResult.isValid).toBe(true);
-    
-    // 24. Get all credit-related transactions
+
+    // 23. Get all credit-related transactions using transactional db
     const transactions = await context.db('transactions')
       .where({
         client_id: client_id,
@@ -260,27 +323,27 @@ describe('Credit Reconciliation Tests', () => {
         'credit_transfer'
       ])
       .orderBy('created_at', 'asc');
-    
-    // 25. Get all credit tracking entries
+
+    // 24. Get all credit tracking entries using transactional db
     const creditTrackingEntries = await context.db('credit_tracking')
       .where({
         client_id: client_id,
         tenant: context.tenantId
       })
       .orderBy('created_at', 'asc');
-    
-    // 26. Verify that each credit issuance transaction has a corresponding credit tracking entry
+
+    // 25. Verify that each credit issuance transaction has a corresponding credit tracking entry
     const issuanceTransactions = transactions.filter(tx =>
       tx.type === 'credit_issuance' || tx.type === 'credit_issuance_from_negative_invoice'
     );
-    
+
     for (const tx of issuanceTransactions) {
       const matchingEntry = creditTrackingEntries.find(entry => entry.transaction_id === tx.transaction_id);
       expect(matchingEntry).toBeTruthy();
       expect(Number(matchingEntry!.amount)).toBe(Number(tx.amount));
     }
-    
-    // 27. Verify that credit application transactions have updated the remaining amounts correctly
+
+    // 26. Verify that credit application transactions have updated the remaining amounts correctly
     const applicationTransactions = transactions.filter(tx => tx.type === 'credit_application');
     
     for (const tx of applicationTransactions) {
@@ -295,15 +358,15 @@ describe('Credit Reconciliation Tests', () => {
         }
         return false;
       });
-      
+
       // Verify that the sum of remaining amounts plus applied amounts equals the original amounts
       for (const entry of relatedEntries) {
         const originalAmount = Number(entry.amount);
         const remainingAmount = Number(entry.remaining_amount);
-        
+
         // The remaining amount should be less than or equal to the original amount
         expect(remainingAmount).toBeLessThanOrEqual(originalAmount);
-        
+
         // Find all application transactions that reference this credit
         const applicationsForThisCredit = applicationTransactions.filter(appTx => {
           if (appTx.metadata && typeof appTx.metadata === 'string') {
@@ -314,7 +377,7 @@ describe('Credit Reconciliation Tests', () => {
           }
           return false;
         });
-        
+
         // Calculate total applied amount for this credit
         let totalApplied = 0;
         for (const appTx of applicationsForThisCredit) {
@@ -328,27 +391,41 @@ describe('Credit Reconciliation Tests', () => {
             }
           }
         }
-        
+
         // Verify that original amount = remaining amount + total applied
         expect(originalAmount).toBeCloseTo(remainingAmount + totalApplied, 2);
       }
     }
-    
-    // 28. Verify the client's credit balance matches the sum of remaining amounts in credit tracking
+
+    // 27. Verify the client's credit balance matches the sum of remaining amounts in credit tracking
     const clientCredit = await ClientBillingPlan.getClientCredit(client_id);
     const sumOfRemainingAmounts = creditTrackingEntries.reduce(
       (sum, entry) => sum + Number(entry.remaining_amount),
       0
     );
-    
+
     expect(clientCredit).toBeCloseTo(sumOfRemainingAmounts, 2);
-    
-    // 29. Verify that the credit balance in the client record matches the calculated balance from transactions
+
+    // 28. Verify that the credit balance in the client record matches the calculated balance from transactions
     const calculatedBalance = transactions.reduce(
       (balance, tx) => balance + Number(tx.amount),
       0
     );
-    
+
     expect(clientCredit).toBeCloseTo(calculatedBalance, 2);
+
+    // 29. Verify consolidated invoice data integrity (invariant check)
+    const consolidatedInvoice = await context.db('invoices')
+      .where({
+        invoice_id: invoice.invoice_id,
+        tenant: context.tenantId
+      })
+      .first();
+
+    expect(consolidatedInvoice).toBeDefined();
+    expect(Number(consolidatedInvoice!.subtotal)).toBe(Number(invoice.subtotal));
+    expect(Number(consolidatedInvoice!.tax)).toBe(Number(invoice.tax));
+    const expectedRemainingTotal = Number(consolidatedInvoice!.subtotal) + Number(consolidatedInvoice!.tax) - Number(consolidatedInvoice!.credit_applied ?? 0);
+    expect(Number(consolidatedInvoice!.total_amount)).toBe(expectedRemainingTotal);
   });
 });

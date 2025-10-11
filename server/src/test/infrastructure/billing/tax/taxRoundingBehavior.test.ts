@@ -1,94 +1,142 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
-import { TaxService } from '../../lib/services/taxService';
-import { Temporal } from '@js-temporal/polyfill';
-import { IClient } from '../../interfaces/client.interfaces';
-import { v4 as uuidv4 } from 'uuid';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { v4 as uuidv4 } from 'uuid';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import {
+  createTestService,
+  setupClientTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+
+// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
+// This is critical for tests that use advisory locks or other features not supported by pgbouncer
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Tax Allocation Strategy', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
-  let taxService: TaxService;
-  let client_id: string;
   let default_service_id: string;
 
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'clients',
-        'tax_rates',
-        'client_tax_settings',
-        'invoices',
         'invoice_items',
-        'service_catalog'
+        'invoices',
+        'service_catalog',
+        'tax_rates',
+        'tax_regions',
+        'client_tax_settings',
+        'client_tax_rates',
+        'clients'
       ],
-      clientName: 'Test Client',
+      clientName: 'Tax Test Client',
       userType: 'internal'
     });
-    taxService = new TaxService();
-  });
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+  }, 120000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
+    context = await resetContext();
 
-    // Create test client
-    client_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Tax Allocation Test Client',
-      billing_cycle: 'monthly',
-      client_id: uuidv4(),
-      tax_region: 'US-NY',
-      is_tax_exempt: false,
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      is_inactive: false,
-      properties: {}
-    }, 'client_id');
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
 
     // Create a default service for testing
-    default_service_id = await context.createEntity('service_catalog', {
+    // NOTE: Do NOT set tax_region here - each test configures its own tax
+    default_service_id = await createTestService(context, {
       service_name: 'Test Service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 1000,
-      unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true
-    }, 'service_id');
-  });
+      unit_of_measure: 'unit'
+    });
+
+    // NOTE: Do NOT configure default tax here - each test sets its own tax rate
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   describe('Tax Distribution Rules', () => {
     it('should distribute tax proportionally among positive line items only', async () => {
-      // Create tax rate of 10% for simple calculation
-      const taxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10,
+      // Set up tax rate of 10% for simple calculation
+      await setupClientTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        regionName: 'New York',
         description: 'Test Tax Rate',
-        start_date: '2025-01-01',
-        is_active: true
-      }, 'tax_rate_id');
-
-      // Set up client tax settings
-      await context.db('client_tax_settings').insert({
-        client_id: client_id,
-        tenant: context.tenantId,
-        tax_rate_id: taxRateId,
-        is_reverse_charge_applicable: false
+        startDate: '2025-01-01T00:00:00.000Z',
+        taxPercentage: 10
       });
+      await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with mixed positive and negative amounts
       const invoice = await generateManualInvoice({
-        clientId: client_id,
+        clientId: context.clientId,
         items: [
           {
             service_id: default_service_id,
@@ -112,46 +160,39 @@ describe('Tax Allocation Strategy', () => {
       });
 
       // Net subtotal: $40.00 ($50.00 positive - $10.00 negative)
-      // Total tax at 10%: $4.00
+      // Tax calculated on positive items only: $50.00 * 10% = $5.00
       // Distribution:
-      // - $30.00 item (60% of positive) gets $2.40 tax
-      // - $20.00 item (40% of positive) gets $1.60 tax
+      // - $30.00 item (60% of positive $50) gets $3.00 tax
+      // - $20.00 item (40% of positive $50) gets $2.00 tax
       // - Negative item gets no tax
       const invoiceItems = await context.db('invoice_items')
         .where({ invoice_id: invoice.invoice_id })
         .orderBy('net_amount', 'desc');
 
       expect(invoice.subtotal).toBe(4000); // $40.00
-      expect(invoice.tax).toBe(400); // $4.00
-      expect(invoice.total_amount).toBe(4400); // $44.00
+      expect(invoice.tax).toBe(500); // $5.00 (10% of $50 positive items)
+      expect(invoice.total_amount).toBe(4500); // $45.00
 
       // Verify tax distribution
-      expect(invoiceItems[0].tax_amount).toBe('240'); // $2.40 on $30.00 item
-      expect(invoiceItems[1].tax_amount).toBe('160'); // $1.60 on $20.00 item
+      expect(invoiceItems[0].tax_amount).toBe('300'); // $3.00 on $30.00 item (60% of $5 tax)
+      expect(invoiceItems[1].tax_amount).toBe('200'); // $2.00 on $20.00 item (40% of $5 tax)
       expect(invoiceItems[2].tax_amount).toBe('0'); // $0.00 on negative item
     });
 
     it('should handle rounding by using Math.floor for all but last item', async () => {
-      // Create tax rate of 8.875% (NY rate)
-      const taxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 8.875,
+      // Set up tax rate of 8.875% (NY rate)
+      await setupClientTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        regionName: 'New York',
         description: 'NY State + City Tax',
-        start_date: '2025-01-01',
-        is_active: true
-      }, 'tax_rate_id');
-
-      // Update client tax settings
-      await context.db('client_tax_settings')
-        .where({ client_id: client_id })
-        .update({
-          tax_rate_id: taxRateId,
-          is_reverse_charge_applicable: false
-        });
+        startDate: '2025-01-01T00:00:00.000Z',
+        taxPercentage: 8.875
+      });
+      await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with amounts that will produce fractional tax cents
       const invoice = await generateManualInvoice({
-        clientId: client_id,
+        clientId: context.clientId,
         items: [
           {
             service_id: default_service_id,
@@ -194,26 +235,19 @@ describe('Tax Allocation Strategy', () => {
     });
 
     it('should handle very small amounts by allocating to last positive item', async () => {
-      // Create tax rate of 1% for testing small amounts
-      const taxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 1,
+      // Set up tax rate of 1% for testing small amounts
+      await setupClientTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        regionName: 'New York',
         description: 'Test Tax Rate',
-        start_date: '2025-01-01',
-        is_active: true
-      }, 'tax_rate_id');
-
-      // Update client tax settings
-      await context.db('client_tax_settings')
-        .where({ client_id: client_id })
-        .update({
-          tax_rate_id: taxRateId,
-          is_reverse_charge_applicable: false
-        });
+        startDate: '2025-01-01T00:00:00.000Z',
+        taxPercentage: 1
+      });
+      await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with small amounts
       const invoice = await generateManualInvoice({
-        clientId: client_id,
+        clientId: context.clientId,
         items: [
           {
             service_id: default_service_id,

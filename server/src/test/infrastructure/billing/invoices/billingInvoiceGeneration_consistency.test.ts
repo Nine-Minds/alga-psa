@@ -1,17 +1,71 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
-import { v4 as uuidv4 } from 'uuid';
+import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, createFixedPlanAssignment } from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { TextEncoder as NodeTextEncoder } from 'util';
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
 
 describe('Billing Invoice Consistency Checks', () => {
-  const testHelpers = TestContext.createHelpers();
-  let context: TestContext;
+  const {
+    beforeAll: setupContext,
+    beforeEach: resetContext,
+    afterEach: rollbackContext,
+    afterAll: cleanupContext
+  } = TestContext.createHelpers();
+
+let context: TestContext;
+
+async function ensureDefaultTaxConfiguration() {
+  await setupClientTaxConfiguration(context, {
+    regionCode: 'US-NY',
+    regionName: 'New York',
+    description: 'NY State + City Tax',
+    startDate: '2025-01-01T00:00:00.000Z',
+    taxPercentage: 8.875
+  });
+}
 
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
@@ -25,40 +79,60 @@ describe('Billing Invoice Consistency Checks', () => {
         'plan_services',
         'service_catalog',
         'billing_plans',
-        'bucket_plans',
         'tax_rates',
+        'tax_regions',
         'client_tax_settings'
       ],
       clientName: 'Test Client',
       userType: 'internal'
     });
 
-    // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.client.client_id);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+    await ensureDefaultTaxConfiguration();
+  }, 60000);
+
+  beforeEach(async () => {
+    context = await resetContext();
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+    await ensureDefaultTaxConfiguration();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   describe('Tax Calculation Consistency', () => {
     it('should calculate tax consistently between manual and automatic invoices', async () => {
       // Set up test data
-      const serviceId = await context.createEntity('service_catalog', {
+      const serviceId = await createTestService(context, {
         service_name: 'Test Service',
-        service_type: 'Fixed',
         default_rate: 1000,
-        unit_of_measure: 'unit',
         tax_region: 'US-NY'
-      }, 'service_id');
+      });
 
-      // Create tax rate
-      const taxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 8.875,
-        description: 'NY State + City Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
+      await assignServiceTaxRate(context, serviceId, 'US-NY', { onlyUnset: true });
+
+      const { planId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Test Plan',
+        baseRateCents: 1000,
+        startDate: '2025-02-01'
+      });
 
       // Create billing cycle for automatic invoice
       const billingCycle = await context.createEntity('client_billing_cycles', {
@@ -68,30 +142,6 @@ describe('Billing Invoice Consistency Checks', () => {
         period_start_date: '2025-02-01',
         period_end_date: '2025-03-01'
       }, 'billing_cycle_id');
-
-      // Create and assign billing plan
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Test Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
-
-      await context.db('plan_services').insert({
-        plan_id: planId,
-        service_id: serviceId,
-        quantity: 1,
-        tenant: context.tenantId
-      });
-
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
-        client_id: context.clientId,
-        plan_id: planId,
-        start_date: '2025-02-01',
-        is_active: true,
-        tenant: context.tenantId
-      });
 
       // Generate automatic invoice
       const autoInvoice = await generateInvoice(billingCycle);

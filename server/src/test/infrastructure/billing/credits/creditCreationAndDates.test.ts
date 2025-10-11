@@ -1,17 +1,100 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
-import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { setupClientTaxConfiguration, assignServiceTaxRate } from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
-import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { TextEncoder as NodeTextEncoder } from 'util';
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'credit_creation_tests';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+async function mockSharedDb() {
+  const actual = await import('@alga-psa/shared/db');
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+}
+
+vi.mock('@alga-psa/shared/db', mockSharedDb);
+vi.mock('@shared/db', mockSharedDb);
+
+vi.mock('@shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
+vi.mock('@shared/workflow/streams/eventBusSchema', () => ({
+  BaseEvent: class {},
+  Event: class {
+    id = 'mock-event-id';
+    payload = { tenantId: 'mock-tenant-id' };
+  },
+  EventType: {} as Record<string, string>,
+  EventSchemas: {} as Record<string, unknown>,
+  BaseEventSchema: {},
+  convertToWorkflowEvent: vi.fn((event) => event)
+}));
+
+vi.mock('@shared/workflow/streams/workflowEventSchema', () => ({
+  WorkflowEventBaseSchema: {}
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+  getCurrentUser: vi.fn(async () => ({
+    user_id: mockedUserId,
+    tenant: mockedTenantId,
+    user_type: 'internal',
+    roles: []
+  }))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 /**
  * Tests for credit creation with expiration dates.
@@ -23,11 +106,21 @@ import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
  */
 
 describe('Credit Creation and Dates Tests', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
 
+  async function ensureDefaultTax() {
+    await setupClientTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State + City Tax',
+      startDate: '2025-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
@@ -36,13 +129,17 @@ describe('Credit Creation and Dates Tests', () => {
         'credit_tracking',
         'client_billing_cycles',
         'client_billing_plans',
-        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
+        'plan_service_bucket_config',
         'service_catalog',
+        'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
         'bucket_usage',
         'tax_rates',
+        'tax_regions',
         'client_tax_settings',
+        'client_tax_rates',
         'client_billing_settings',
         'default_billing_settings'
       ],
@@ -50,63 +147,81 @@ describe('Credit Creation and Dates Tests', () => {
       userType: 'internal'
     });
 
-    // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.client.client_id);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    const sessionModule = await import('server/src/lib/auth/getSession');
+    vi.mocked(sessionModule.getSession).mockResolvedValue({
+      user: {
+        id: mockedUserId,
+        tenant: mockedTenantId
+      }
+    });
+
+    await ensureDefaultTax();
+  }, 60000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-  });
+    context = await resetContext();
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    const sessionModule = await import('server/src/lib/auth/getSession');
+    vi.mocked(sessionModule.getSession).mockResolvedValue({
+      user: {
+        id: mockedUserId,
+        tenant: mockedTenantId
+      }
+    });
+    await ensureDefaultTax();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   it('should create credits with expiration dates based on client settings', async () => {
-    // Create test client
-    const client_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Client Settings Expiration Test',
-      billing_cycle: 'monthly',
-      client_id: uuidv4(),
-      region_code: 'US-NY',
-      is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
+    const client_id = context.clientId;
 
     // Set up client billing settings with specific expiration days and explicitly enable credit expiration
     const expirationDays = 45; // 45-day expiration period
-    await context.db('client_billing_settings').insert({
-      client_id: client_id,
-      tenant: context.tenantId,
-      zero_dollar_invoice_handling: 'normal',
-      suppress_zero_dollar_invoices: false,
-      enable_credit_expiration: true, // Explicitly enable credit expiration
-      credit_expiration_days: expirationDays,
-      credit_expiration_notification_days: [14, 7, 1],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
-    
+    await context.db('client_billing_settings')
+      .insert({
+        client_id: client_id,
+        tenant: context.tenantId,
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        enable_credit_expiration: true,
+        credit_expiration_days: expirationDays,
+        credit_expiration_notification_days: [14, 7, 1],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .onConflict(['client_id', 'tenant'])
+      .merge({
+        enable_credit_expiration: true,
+        credit_expiration_days: expirationDays,
+        credit_expiration_notification_days: [14, 7, 1],
+        updated_at: new Date().toISOString()
+      });
+
     // Also ensure default settings have credit expiration enabled
-    const defaultSettings = await context.db('default_billing_settings')
-      .where({ tenant: context.tenantId })
-      .first();
-    
-    if (defaultSettings) {
-      await context.db('default_billing_settings')
-        .where({ tenant: context.tenantId })
-        .update({
-          enable_credit_expiration: true
-        });
-    } else {
-      await context.db('default_billing_settings').insert({
+    await context.db('default_billing_settings')
+      .insert({
         tenant: context.tenantId,
         zero_dollar_invoice_handling: 'normal',
         suppress_zero_dollar_invoices: false,
@@ -115,8 +230,12 @@ describe('Credit Creation and Dates Tests', () => {
         credit_expiration_notification_days: [30, 7, 1],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
+      })
+      .onConflict(['tenant'])
+      .merge({
+        enable_credit_expiration: true,
+        updated_at: new Date().toISOString()
       });
-    }
 
     // Create prepayment invoice WITHOUT specifying an expiration date
     // This should use the client settings to determine the expiration date
@@ -172,47 +291,33 @@ describe('Credit Creation and Dates Tests', () => {
   });
 
   it('should create credits with expiration dates based on default settings when client settings are not available', async () => {
-    // Create test client without client-specific billing settings
-    const client_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Default Settings Expiration Test',
-      billing_cycle: 'monthly',
-      client_id: uuidv4(),
-      region_code: 'US-NY',
-      is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
+    const client_id = context.clientId;
 
     // Ensure no client-specific billing settings exist
     await context.db('client_billing_settings')
       .where({ client_id, tenant: context.tenantId })
       .delete();
-    
+
     // Set up default billing settings with specific expiration days
     const defaultExpirationDays = 180; // 180-day default expiration period
-    
-    // Delete any existing default settings to ensure clean state
     await context.db('default_billing_settings')
-      .where({ tenant: context.tenantId })
-      .delete();
-    
-    // Create new default settings
-    await context.db('default_billing_settings').insert({
-      tenant: context.tenantId,
-      zero_dollar_invoice_handling: 'normal',
-      suppress_zero_dollar_invoices: false,
-      enable_credit_expiration: true,
-      credit_expiration_days: defaultExpirationDays,
-      credit_expiration_notification_days: [30, 14, 7],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
+      .insert({
+        tenant: context.tenantId,
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        enable_credit_expiration: true,
+        credit_expiration_days: defaultExpirationDays,
+        credit_expiration_notification_days: [30, 14, 7],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .onConflict(['tenant'])
+      .merge({
+        enable_credit_expiration: true,
+        credit_expiration_days: defaultExpirationDays,
+        credit_expiration_notification_days: [30, 14, 7],
+        updated_at: new Date().toISOString()
+      });
 
     // Create prepayment invoice WITHOUT specifying an expiration date
     // This should use the default settings to determine the expiration date
@@ -268,53 +373,50 @@ describe('Credit Creation and Dates Tests', () => {
   });
 
   it('should allow prepayment invoices to specify custom expiration dates', async () => {
-    // Create test client
-    const client_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Custom Expiration Date Test Client',
-      billing_cycle: 'monthly',
-      client_id: uuidv4(),
-      region_code: 'US-NY',
-      is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
+    const client_id = context.clientId;
 
     // Set up client billing settings with expiration days
     const clientExpirationDays = 30; // 30-day client expiration period
-    await context.db('client_billing_settings').insert({
-      client_id: client_id,
-      tenant: context.tenantId,
-      zero_dollar_invoice_handling: 'normal',
-      suppress_zero_dollar_invoices: false,
-      enable_credit_expiration: true,
-      credit_expiration_days: clientExpirationDays,
-      credit_expiration_notification_days: [7, 1],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
-    
+    await context.db('client_billing_settings')
+      .insert({
+        client_id: client_id,
+        tenant: context.tenantId,
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        enable_credit_expiration: true,
+        credit_expiration_days: clientExpirationDays,
+        credit_expiration_notification_days: [7, 1],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .onConflict(['client_id', 'tenant'])
+      .merge({
+        enable_credit_expiration: true,
+        credit_expiration_days: clientExpirationDays,
+        credit_expiration_notification_days: [7, 1],
+        updated_at: new Date().toISOString()
+      });
+
     // Set up default billing settings with different expiration days
     const defaultExpirationDays = 60; // 60-day default expiration period
     await context.db('default_billing_settings')
-      .where({ tenant: context.tenantId })
-      .delete();
-    
-    await context.db('default_billing_settings').insert({
-      tenant: context.tenantId,
-      zero_dollar_invoice_handling: 'normal',
-      suppress_zero_dollar_invoices: false,
-      enable_credit_expiration: true,
-      credit_expiration_days: defaultExpirationDays,
-      credit_expiration_notification_days: [30, 14, 7],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
+      .insert({
+        tenant: context.tenantId,
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        enable_credit_expiration: true,
+        credit_expiration_days: defaultExpirationDays,
+        credit_expiration_notification_days: [30, 14, 7],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .onConflict(['tenant'])
+      .merge({
+        enable_credit_expiration: true,
+        credit_expiration_days: defaultExpirationDays,
+        credit_expiration_notification_days: [30, 14, 7],
+        updated_at: new Date().toISOString()
+      });
 
     // Create a custom expiration date (120 days in the future)
     const customExpirationDays = 120;

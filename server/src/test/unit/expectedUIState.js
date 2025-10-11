@@ -71,7 +71,7 @@ console.log(JSON.stringify(expectedErrorState, null, 2));
 
 console.log('\n🔧 Manual Testing Steps:');
 console.log('1. Open the application in development mode');
-console.log('2. Navigate to a page with QuickAddClient (e.g., companies list)');  
+console.log('2. Navigate to a page with QuickAddClient (e.g., clients list)');  
 console.log('3. Open the QuickAddClient dialog');
 console.log('4. Check the UI state WebSocket/API endpoint for the dialog component');
 console.log('5. Verify the component appears with id: "quick-add-client-dialog"');

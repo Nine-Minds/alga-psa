@@ -120,6 +120,26 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 
 > Note: The `-d` flag runs containers in detached/background mode. Remove the `-d` flag if you want to monitor the server output directly in the terminal.
 
+### Initial Login Credentials
+
+The first successful boot seeds a sample workspace admin account and prints its credentials to the server logs. Tail the logs right after the stack starts so you can copy the values for your first login:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image logs -f
+```
+
+Look for a banner similar to the following (password redacted here for safety—yours will show the real value):
+
+```
+sebastian_server_ce  | 2025-02-10 15:12:23 [INFO   ]: *******************************************************
+sebastian_server_ce  | 2025-02-10 15:12:23 [INFO   ]: ******** User Email is -> [ glinda@emeraldcity.oz ]  ********
+sebastian_server_ce  | 2025-02-10 15:12:23 [INFO   ]: ********       Password is -> [ ****REDACTED**** ]   ********
+sebastian_server_ce  | 2025-02-10 15:12:23 [INFO   ]: *******************************************************
+```
+
+> Copy the credentials before stopping the logs. After you sign in, update the password for production use.
+
 The CE stack now includes the `workflow-worker` service by default, giving you a production-like asynchronous processing setup without additional compose overrides. The `ALGA_IMAGE_TAG` value determines which prebuilt image is retrieved; compose does not fall back to `latest` unless you leave the variable unset.
 
 ## Production Setup (Persistent Storage)
@@ -224,15 +244,6 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
     --env-file server/.env --env-file .env.image up -d
   ```
 - After credentials are in sync, the `setup` container will finish running and migrations plus seed data will be applied automatically.
-
-## Initial Login Credentials
-
-After successful initialization, the server logs will display a sample username and password that can be used for initial access:
-
-```bash
-docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
-  --env-file server/.env --env-file .env.image logs -f
-```
 
 ## Verification
 

@@ -150,9 +150,9 @@ export async function finalizeInvoiceWithKnex(
 
       // Determine expiration days - use client setting if available, otherwise use default
       let expirationDays: number | undefined;
-      if (clientSettings?.credit_expiration_days !== undefined) {
+      if (clientSettings?.credit_expiration_days != null) {
         expirationDays = clientSettings.credit_expiration_days;
-      } else if (defaultSettings?.credit_expiration_days !== undefined) {
+      } else if (defaultSettings?.credit_expiration_days != null) {
         expirationDays = defaultSettings.credit_expiration_days;
       }
 

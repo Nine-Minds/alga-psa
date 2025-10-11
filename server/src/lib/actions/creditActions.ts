@@ -582,18 +582,6 @@ export async function applyCreditToInvoice(
             metadata: { applied_credits: appliedCredits }
         }).returning('*');
 
-        // Record credit balance adjustment
-        await trx('transactions').insert({
-            transaction_id: uuidv4(),
-            client_id: clientId,
-            amount: -totalAppliedAmount,
-            type: 'credit_adjustment',
-            status: 'completed',
-            description: `Credit balance adjustment from application (Transaction: ${creditTransaction.transaction_id})`,
-            created_at: now,
-            tenant
-        });
-
         // Create credit allocation record
         await trx('credit_allocations').insert({
             allocation_id: uuidv4(),

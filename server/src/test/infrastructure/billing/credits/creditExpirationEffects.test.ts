@@ -1,21 +1,65 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
-import { v4 as uuidv4 } from 'uuid';
-import type { IClient } from '../../interfaces/client.interfaces';
+import {
+  setupClientTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
 import { Temporal } from '@js-temporal/polyfill';
 import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
+import { createTestDate } from '../../../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { createClient } from '../../../../../test-utils/testDataFactory';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 /**
  * Tests for the effects of credit expiration on the system.
- * 
+ *
  * These tests focus on the side effects and system-wide impacts of credit expiration:
  * - Client-specific credit expiration processing
  * - Ensuring expired credits have their remaining amount set to zero
@@ -24,26 +68,39 @@ import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
  */
 
 describe('Credit Expiration Effects Tests', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
 
+  async function setupDefaultTax() {
+    await setupyClientTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
         'invoices',
         'transactions',
         'credit_tracking',
+        'credit_allocations',
         'client_billing_cycles',
         'client_billing_plans',
-        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
         'service_catalog',
+        'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
-        'bucket_usage',
         'tax_rates',
+        'tax_regions',
         'client_tax_settings',
+        'client_tax_rates',
         'client_billing_settings',
         'default_billing_settings'
       ],
@@ -51,51 +108,80 @@ describe('Credit Expiration Effects Tests', () => {
       userType: 'internal'
     });
 
-    // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.client.client_id);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await setupDefaultTax();
+  }, 60000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-  });
+    context = await resetContext();
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+    await setupDefaultTax();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   it('should process expired credits for a specific client when client ID is provided', async () => {
     // Create two test clients
-    const client1_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Client 1 Expiration Test',
+    await context.db('tax_regions')
+      .insert({
+        tenant: context.tenantId,
+        region_code: 'US-NY',
+        region_name: 'New York',
+        is_active: true
+      })
+      .onConflict(['tenant', 'region_code'])
+      .ignore();
+
+    const client1_id = await createClient(context.db, context.tenantId, 'Client 1 Expiration Test', {
       billing_cycle: 'monthly',
-      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
-    
-    const client2_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Client 2 Expiration Test',
+      credit_balance: 0
+    });
+
+    const client2_id = await createClient(context.db, context.tenantId, 'Client 2 Expiration Test', {
       billing_cycle: 'monthly',
-      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
+      credit_balance: 0
+    });
+
+    await setupClientTaxConfiguration(context, {
+      clientId: client1_id,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      taxPercentage: 8.875,
+      startDate: '2020-01-01T00:00:00.000Z',
+      description: 'NY State Tax'
+    });
+
+    await setupClientTaxConfiguration(context, {
+      clientId: client2_id,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      taxPercentage: 8.875,
+      startDate: '2020-01-01T00:00:00.000Z',
+      description: 'NY State Tax'
+    });
 
     // Set up client billing settings for both clients with credit expiration explicitly enabled
     await context.db('client_billing_settings').insert([
@@ -218,25 +304,35 @@ describe('Credit Expiration Effects Tests', () => {
     
     expect(client1Credit).toBe(0); // Credit expired
     expect(client2Credit).toBe(7000); // Credit still active
-  });
+  }, 120000);
 
   it('should test that expired credits have their remaining amount set to zero', async () => {
     // Create test client
-    const client_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Zero Remaining Amount Test Client',
+    await context.db('tax_regions')
+      .insert({
+        tenant: context.tenantId,
+        region_code: 'US-NY',
+        region_name: 'New York',
+        is_active: true
+      })
+      .onConflict(['tenant', 'region_code'])
+      .ignore();
+
+    const client_id = await createClient(context.db, context.tenantId, 'Zero Remaining Amount Test Client', {
       billing_cycle: 'monthly',
-      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
+      credit_balance: 0
+    });
+
+    await setupClientTaxConfiguration(context, {
+      clientId: client_id,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      taxPercentage: 8.875,
+      startDate: '2020-01-01T00:00:00.000Z',
+      description: 'NY State Tax'
+    });
 
     // Set up client billing settings with expiration days
     await context.db('client_billing_settings').insert({
@@ -363,25 +459,35 @@ describe('Credit Expiration Effects Tests', () => {
     
     expect(expirationTransaction).toBeTruthy();
     expect(Number(expirationTransaction.amount)).toBe(-prepaymentAmount1);
-  });
+  }, 120000);
 
   it('should test that expiration transactions are created when credits expire', async () => {
     // Create test client
-    const client_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Expiration Transaction Test Client',
+    await context.db('tax_regions')
+      .insert({
+        tenant: context.tenantId,
+        region_code: 'US-NY',
+        region_name: 'New York',
+        is_active: true
+      })
+      .onConflict(['tenant', 'region_code'])
+      .ignore();
+
+    const client_id = await createClient(context.db, context.tenantId, 'Expiration Transaction Test Client', {
       billing_cycle: 'monthly',
-      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
+      credit_balance: 0
+    });
+
+    await setupClientTaxConfiguration(context, {
+      clientId: client_id,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      taxPercentage: 8.875,
+      startDate: '2020-01-01T00:00:00.000Z',
+      description: 'NY State Tax'
+    });
 
     // Set up client billing settings with expiration days
     await context.db('client_billing_settings').insert({
@@ -472,25 +578,35 @@ describe('Credit Expiration Effects Tests', () => {
     
     expect(updatedCreditTracking.is_expired).toBe(true);
     expect(Number(updatedCreditTracking.remaining_amount)).toBe(0);
-  });
+  }, 120000);
 
   it('should validate that client credit balance is reduced when credits expire', async () => {
     // Create test client
-    const client_id = await context.createEntity<IClient>('clients', {
-      client_name: 'Credit Balance Reduction Test Client',
+    await context.db('tax_regions')
+      .insert({
+        tenant: context.tenantId,
+        region_code: 'US-NY',
+        region_name: 'New York',
+        is_active: true
+      })
+      .onConflict(['tenant', 'region_code'])
+      .ignore();
+
+    const client_id = await createClient(context.db, context.tenantId, 'Credit Balance Reduction Test Client', {
       billing_cycle: 'monthly',
-      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'client_id');
+      credit_balance: 0
+    });
+
+    await setupClientTaxConfiguration(context, {
+      clientId: client_id,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      taxPercentage: 8.875,
+      startDate: '2020-01-01T00:00:00.000Z',
+      description: 'NY State Tax'
+    });
 
     // Set up client billing settings with expiration days
     await context.db('client_billing_settings').insert({
@@ -572,5 +688,5 @@ describe('Credit Expiration Effects Tests', () => {
       .first();
     
     expect(Number(updatedClient.credit_balance)).toBe(0);
-  });
+  }, 120000);
 });

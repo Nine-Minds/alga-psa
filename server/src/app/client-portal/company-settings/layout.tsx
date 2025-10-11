@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'Manage your company settings and configurations',
 };
 
-export default function ClientSettingsLayout({
+export default function CompanySettingsLayout({
   children,
 }: {
   children: React.ReactNode;
