@@ -83,6 +83,14 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
 const caseInsensitiveSort: SortingFn<any> = (rowA, rowB, columnId) => {
   const a = rowA.getValue(columnId);
   const b = rowB.getValue(columnId);
+
+  const aDate = a ? new Date(a) : null;
+  const bDate = b ? new Date(b) : null;
+
+  if (aDate && !isNaN(aDate.getTime()) && bDate && !isNaN(bDate.getTime())) {
+    return aDate.getTime() - bDate.getTime();
+  }
+
   return String(a ?? '').toLowerCase().localeCompare(String(b ?? '').toLowerCase());
 };
 
@@ -150,7 +158,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     sortBy,
     sortDirection,
     onSortChange,
-    rowClassName
+    rowClassName,
+    initialSorting
   } = props;
 
   const { t } = useTranslation('common');
@@ -346,18 +355,29 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         desc: sortDirection === 'desc'
       }];
     }
+    if (initialSorting && initialSorting.length > 0) {
+      return initialSorting;
+    }
     return [];
   });
 
   // Update sorting state when props change (for manual sorting)
   React.useEffect(() => {
     if (manualSorting && sortBy) {
-      setSorting([{
-        id: sortBy,
-        desc: sortDirection === 'desc'
-      }]);
+      setSorting([
+        {
+          id: sortBy,
+          desc: sortDirection === 'desc'
+        }
+      ]);
     }
   }, [manualSorting, sortBy, sortDirection]);
+
+  React.useEffect(() => {
+    if (!manualSorting && initialSorting && initialSorting.length > 0) {
+      setSorting(prev => (prev.length === 0 ? initialSorting : prev));
+    }
+  }, [initialSorting, manualSorting]);
 
   const table = useReactTable({
     data,

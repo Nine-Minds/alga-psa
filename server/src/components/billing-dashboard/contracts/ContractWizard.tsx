@@ -16,8 +16,8 @@ const STEPS = [
   'Contract Basics',
   'Fixed Fee Services',
   'Hourly Services',
-  'Bucket Hours',
   'Usage-Based Services',
+  'Bucket Services',
   'Review & Create'
 ];
 
@@ -26,10 +26,12 @@ const REQUIRED_STEPS = [0, 5]; // Contract Basics and Review are required
 export interface ContractWizardData {
   // Step 1: Contract Basics
   company_id: string;
+  client_id?: string;
   contract_name: string;
   start_date: string;
   end_date?: string;
   description?: string;
+  billing_frequency?: string;
 
   // Purchase Order fields
   po_number?: string;
@@ -54,8 +56,11 @@ export interface ContractWizardData {
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
 
-  // Step 4: Bucket Hours
+  // Step 4/5: Bucket Services configuration
+  bucket_type?: 'hours' | 'usage';
   bucket_hours?: number;
+  bucket_usage_units?: number;
+  bucket_unit_of_measure?: string;
   bucket_monthly_fee?: number;
   bucket_overage_rate?: number;
   bucket_services: Array<{
@@ -63,7 +68,7 @@ export interface ContractWizardData {
     service_name?: string;
   }>;
 
-  // Step 5: Usage-Based Services
+  // Step 4: Usage-Based Services
   usage_services?: Array<{
     service_id: string;
     service_name?: string;
@@ -73,6 +78,7 @@ export interface ContractWizardData {
 
   // Internal tracking
   bundle_id?: string; // Set after creation
+  is_draft?: boolean;
 }
 
 interface ContractWizardProps {
@@ -95,17 +101,22 @@ export function ContractWizard({
 
   const [wizardData, setWizardData] = useState<ContractWizardData>({
     company_id: '',
+    client_id: '',
     contract_name: '',
     start_date: '',
     end_date: undefined,
     description: '',
+    billing_frequency: undefined,
     fixed_services: [],
     fixed_base_rate: undefined,
     enable_proration: true,
     hourly_services: [],
     minimum_billable_time: undefined,
     round_up_to_nearest: undefined,
+    bucket_type: undefined,
     bucket_hours: undefined,
+    bucket_usage_units: undefined,
+    bucket_unit_of_measure: undefined,
     bucket_monthly_fee: undefined,
     bucket_overage_rate: undefined,
     bucket_services: [],
@@ -120,7 +131,19 @@ export function ContractWizard({
   }, [editingContract]);
 
   const updateData = (data: Partial<ContractWizardData>) => {
-    setWizardData((prev) => ({ ...prev, ...data }));
+    setWizardData((prev) => {
+      const next = { ...prev, ...data };
+
+      if ('client_id' in data && !('company_id' in data)) {
+        next.company_id = data.client_id ?? '';
+      }
+
+      if ('company_id' in data && !('client_id' in data)) {
+        next.client_id = data.company_id ?? '';
+      }
+
+      return next;
+    });
   };
 
   const validateStep = (stepIndex: number): boolean => {
@@ -128,7 +151,7 @@ export function ContractWizard({
 
     switch (stepIndex) {
       case 0: // Contract Basics
-        if (!wizardData.company_id) {
+        if (!(wizardData.client_id || wizardData.company_id)) {
           setErrors(prev => ({ ...prev, [stepIndex]: 'Client is required' }));
           return false;
         }
@@ -154,18 +177,42 @@ export function ContractWizard({
         // Optional step
         return true;
 
-      case 3: // Bucket Hours
+      case 3: // Usage-Based Services
+        // Optional step
+        return true;
+
+      case 4: // Bucket Services
         // Optional step - validate only if user has filled any bucket field
-        const hasBucketData = wizardData.bucket_hours || wizardData.bucket_monthly_fee || wizardData.bucket_overage_rate;
+        const hasBucketData =
+          wizardData.bucket_type || wizardData.bucket_monthly_fee || wizardData.bucket_overage_rate;
+
         if (hasBucketData) {
-          if (!wizardData.bucket_hours) {
-            setErrors(prev => ({ ...prev, [stepIndex]: 'Bucket hours are required' }));
+          if (!wizardData.bucket_type) {
+            setErrors(prev => ({ ...prev, [stepIndex]: 'Bucket type is required' }));
             return false;
           }
+
+          if (wizardData.bucket_type === 'hours' && !wizardData.bucket_hours) {
+            setErrors(prev => ({ ...prev, [stepIndex]: 'Bucket hours are required for hours-based buckets' }));
+            return false;
+          }
+
+          if (wizardData.bucket_type === 'usage') {
+            if (!wizardData.bucket_usage_units) {
+              setErrors(prev => ({ ...prev, [stepIndex]: 'Usage units are required for usage-based buckets' }));
+              return false;
+            }
+            if (!wizardData.bucket_unit_of_measure) {
+              setErrors(prev => ({ ...prev, [stepIndex]: 'Unit of measure is required for usage-based buckets' }));
+              return false;
+            }
+          }
+
           if (!wizardData.bucket_monthly_fee) {
             setErrors(prev => ({ ...prev, [stepIndex]: 'Monthly fee is required' }));
             return false;
           }
+
           if (!wizardData.bucket_overage_rate) {
             setErrors(prev => ({ ...prev, [stepIndex]: 'Overage rate is required' }));
             return false;
@@ -173,16 +220,14 @@ export function ContractWizard({
         }
         return true;
 
-      case 4: // Usage-Based Services
-        // Optional step
-        return true;
-
       case 5: // Review
         // Check that at least one service type is configured
         const hasServices =
           wizardData.fixed_services.length > 0 ||
           wizardData.hourly_services.length > 0 ||
-          (wizardData.bucket_hours && wizardData.bucket_services.length > 0) ||
+          ((wizardData.bucket_type === 'hours' && wizardData.bucket_hours) ||
+            (wizardData.bucket_type === 'usage' && wizardData.bucket_usage_units)) &&
+            wizardData.bucket_services.length > 0 ||
           (wizardData.usage_services && wizardData.usage_services.length > 0);
 
         if (!hasServices) {
@@ -274,6 +319,33 @@ export function ContractWizard({
     }
   };
 
+  const handleSaveDraft = async () => {
+    if (!(wizardData.client_id || wizardData.company_id)) {
+      setErrors(prev => ({ ...prev, [currentStep]: 'Select a client before saving as draft' }));
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const clientIdentifier = wizardData.client_id || wizardData.company_id;
+      onComplete?.({
+        ...wizardData,
+        company_id: clientIdentifier ?? '',
+        client_id: clientIdentifier,
+        is_draft: true
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving contract draft:', error);
+      setErrors(prev => ({
+        ...prev,
+        [currentStep]: error instanceof Error ? error.message : 'Failed to save draft'
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 0:
@@ -283,9 +355,9 @@ export function ContractWizard({
       case 2:
         return <HourlyServicesStep data={wizardData} updateData={updateData} />;
       case 3:
-        return <BucketHoursStep data={wizardData} updateData={updateData} />;
-      case 4:
         return <UsageBasedServicesStep data={wizardData} updateData={updateData} />;
+      case 4:
+        return <BucketHoursStep data={wizardData} updateData={updateData} />;
       case 5:
         return <ReviewContractStep data={wizardData} />;
       default:
@@ -336,9 +408,11 @@ export function ContractWizard({
             onNext={handleNext}
             onSkip={handleSkip}
             onFinish={handleFinish}
+            onSaveDraft={handleSaveDraft}
             isNextDisabled={isLoading}
             isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
             isLoading={isLoading}
+            showSaveDraft
           />
         </div>
       </div>

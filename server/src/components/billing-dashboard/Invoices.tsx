@@ -667,6 +667,7 @@ const Invoices: React.FC = () => {
             columns={finalizedColumns}
             pagination={true}
             onRowClick={handleInvoiceSelect}
+            initialSorting={[{ id: 'invoice_date', desc: true }]}
           />
         </div>
 

@@ -513,6 +513,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
             totalItems={filteredPeriods.length}
             // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
             rowClassName={() => "hover:bg-muted/50"}
+            initialSorting={[{ id: 'period_end_date', desc: true }]}
           />
         </div>
 
@@ -603,6 +604,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 onPageChange={setCurrentPage}
                 pageSize={itemsPerPage}
                 totalItems={filteredInvoicedPeriods.length}
+                initialSorting={[{ id: 'period_end_date', desc: true }]}
               />
             </>
           )}
