@@ -37,6 +37,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@ee': path.resolve(__dirname, '../ee/server/src'),
       '@shared': path.resolve(__dirname, '../shared'),
       'next/server': path.resolve(__dirname, './src/test/stubs/next-server.ts'),
       '@product/extension-storage-api/ee/record-impl': path.resolve(

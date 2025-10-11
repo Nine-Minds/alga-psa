@@ -57,7 +57,7 @@
 ### Phase 2 — Data Modeling & Infrastructure
 
 - [x] Design Citus schema (see [storage-api-schema.md](../extension-system/storage-api-schema.md)):
-  - [x] Create partitioned table `ext_storage_records` with distribution key `tenant_id`.
+- [x] Create partitioned table `ext_storage_records` with distribution key `tenant`.
   - [x] Columns: `tenant_id`, `extension_install_id`, `namespace`, `key`, `value` (JSONB), `metadata` (JSONB), `revision` (BIGINT), `ttl_expires_at`, timestamps.
   - [x] Unique constraint on (`tenant_id`, `extension_install_id`, `namespace`, `key`).
   - [x] Supporting indexes for namespace scans and TTL sweeps.

@@ -56,4 +56,3 @@ This document outlines shard validation procedures, connection tuning guidance, 
 - `infra/docs/db-runbook.md` — add shard validation section.
 - `infra/docs/pooling.md` — update connection pool settings.
 - `infra/docs/backup-restore.md` — incorporate storage-specific steps and verification checklist.
-

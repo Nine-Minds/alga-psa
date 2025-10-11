@@ -1,5 +1,6 @@
 import { registerBaseComponents } from './components';
 import { registerServiceCategoryRoutes } from './routes/serviceCategories';
+import { registerExtensionStorageRoutes } from './routes/extensionStorage';
 import { registerInventoryBackfillRoutes } from './backfill';
 import { ApiOpenApiRegistry, RegistryInitOptions, buildDocument, createRegistry } from './registry';
 import { DocumentBuildOptions } from './types';
@@ -10,6 +11,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
 
   registerServiceCategoryRoutes(registry, components);
   registerInventoryBackfillRoutes(registry, components);
+  registerExtensionStorageRoutes(registry, components);
 
   return registry;
 }

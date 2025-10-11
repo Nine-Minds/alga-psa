@@ -6,7 +6,7 @@ This document specifies the relational model for the extension storage service, 
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `tenant_id` | `uuid` | Distribution key; all queries filter by tenant. |
+| `tenant` | `uuid` | Distribution key; all queries filter by tenant. |
 | `extension_install_id` | `uuid` | Identifies extension install within tenant. |
 | `namespace` | `text` | Lowercase slug, ≤ 64 chars. |
 | `key` | `text` | Unique within namespace, ≤ 128 chars. |
@@ -19,13 +19,13 @@ This document specifies the relational model for the extension storage service, 
 
 ### Distribution & Partitioning
 
-- Use Citus `create_distributed_table('ext_storage_records', 'tenant_id')`.
+- Use Citus `create_distributed_table('ext_storage_records', 'tenant')`.
 - Co-locate with other tenant-scoped tables to enable shared transactions.
 - Optionally sub-partition by `tenant_id` hash + `namespace` for maintenance, but defer unless workloads require it.
 
 ### Constraints
 
-- Primary key: `(tenant_id, extension_install_id, namespace, key)`.
+- Primary key: `(tenant, extension_install_id, namespace, key)`.
 - `CHECK (length(namespace) <= 64 AND namespace ~ '^[a-z0-9][a-z0-9-]*$')`.
 - `CHECK (length(key) <= 128 AND key !~ '/')`.
 - `CHECK (jsonb_typeof(metadata) = 'object')` (null allowed).
@@ -66,7 +66,7 @@ Stores namespace schema registrations.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `tenant_id` | `uuid` | Distribution key. |
+| `tenant` | `uuid` | Distribution key. |
 | `extension_install_id` | `uuid` | Scoped to install. |
 | `namespace` | `text` | Matches record namespace. |
 | `schema_version` | `integer` | Monotonic increment. |
@@ -76,10 +76,10 @@ Stores namespace schema registrations.
 | `updated_at` | `timestamptz` | |
 | `created_by` | `uuid` | Host user or service principal. |
 
-- Primary key: `(tenant_id, extension_install_id, namespace, schema_version)`.
-- Unique constraint on `(tenant_id, extension_install_id, namespace)` filtered to `status = 'active'`.
+- Primary key: `(tenant, extension_install_id, namespace, schema_version)`.
+- Partial unique index on `(tenant, extension_install_id, namespace)` filtered to `status = 'active'`.
 - Index on `status` for administrative queries.
-- Distribution: `create_distributed_table('ext_storage_schemas', 'tenant_id')`.
+- Distribution: `create_distributed_table('ext_storage_schemas', 'tenant')`.
 
 ## Quota Tracking: `ext_storage_usage`
 
@@ -87,21 +87,21 @@ Aggregates storage usage to avoid recalculating on every request.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `tenant_id` | `uuid` | Distribution key. |
+| `tenant` | `uuid` | Distribution key. |
 | `extension_install_id` | `uuid` | |
 | `bytes_used` | `bigint` | Updated transactionally with writes. |
 | `keys_count` | `integer` | |
 | `namespaces_count` | `integer` | Maintained by namespace registration flow. |
 | `updated_at` | `timestamptz` | |
 
-- Unique constraint: `(tenant_id, extension_install_id)`.
+- Unique constraint: `(tenant, extension_install_id)`.
 - Maintained via application-side transactions; optional `CHECK (bytes_used >= 0)`.
 
 ## DDL Summary
 
 ```sql
 CREATE TABLE IF NOT EXISTS ext_storage_records (
-  tenant_id uuid NOT NULL,
+  tenant uuid NOT NULL,
   extension_install_id uuid NOT NULL,
   namespace text NOT NULL,
   key text NOT NULL,
@@ -111,14 +111,14 @@ CREATE TABLE IF NOT EXISTS ext_storage_records (
   ttl_expires_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (tenant_id, extension_install_id, namespace, key),
+  PRIMARY KEY (tenant, extension_install_id, namespace, key),
   CHECK (revision > 0),
   CHECK (metadata IS NULL OR jsonb_typeof(metadata) = 'object'),
-  CHECK (length(namespace) <= 64 AND namespace ~ '^[a-z0-9][a-z0-9-]*$'),
-  CHECK (length(key) <= 128 AND key !~ '/')
+CHECK (length(namespace) <= 64 AND namespace ~ '^[a-z0-9][a-z0-9-]*$'),
+CHECK (length(key) <= 128 AND key !~ '/')
 );
 
-SELECT create_distributed_table('ext_storage_records', 'tenant_id');
+SELECT create_distributed_table('ext_storage_records', 'tenant');
 ```
 
 Repeat analogous statements for `ext_storage_schemas` and `ext_storage_usage`.
@@ -128,4 +128,3 @@ Repeat analogous statements for `ext_storage_schemas` and `ext_storage_usage`.
 - Estimate worst-case row size: 64 KiB value + overhead; confirm shard sizing to keep < 80% of available disk.
 - Evaluate autovacuum settings for large JSONB tables; may need per-table thresholds.
 - Monitor `pg_stat_statements` for top queries to validate index choices post-launch.
-

@@ -113,7 +113,12 @@ export async function GET(req: NextRequest, { params }: { params: { installId: s
     const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);
     await ensureExtensionPermission('read', tenantId, knex);
-    const result = await service.get({ namespace: params.namespace, key: params.key });
+    const ifRevisionHeader = req.headers.get('if-revision-match');
+    const result = await service.get({
+      namespace: params.namespace,
+      key: params.key,
+      ifRevision: ifRevisionHeader ? Number(ifRevisionHeader) : undefined,
+    });
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     return mapError(error);

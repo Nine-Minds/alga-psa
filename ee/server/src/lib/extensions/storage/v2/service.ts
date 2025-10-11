@@ -12,6 +12,7 @@ import {
   StoragePutResponse,
   StorageQuota,
 } from './types';
+import type { JsonValue } from './types';
 import {
   StorageLimitError,
   StorageQuotaError,
@@ -21,7 +22,7 @@ import {
 } from './errors';
 
 type NamespaceRecord = {
-  tenant_id: string;
+  tenant: string;
   extension_install_id: string;
   namespace: string;
   key: string;
@@ -124,13 +125,13 @@ function decodeCursor(cursor: string | null | undefined): { key: string } | null
   try {
     const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
     const parsed = JSON.parse(decoded);
-    if (parsed && typeof parsed.key === 'string') {
-      return { key: parsed.key };
+    if (!parsed || typeof parsed.key !== 'string') {
+      throw new StorageValidationError('cursor is invalid or corrupted');
     }
+    return { key: parsed.key };
   } catch {
     throw new StorageValidationError('cursor is invalid or corrupted');
   }
-  return null;
 }
 
 export class ExtensionStorageServiceV2 {
@@ -171,7 +172,7 @@ export class ExtensionStorageServiceV2 {
 
       const existing = await trx<NamespaceRecord>('ext_storage_records')
         .where({
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
           key: request.key,
@@ -188,7 +189,7 @@ export class ExtensionStorageServiceV2 {
       const usageRow = await this.getUsageForUpdate(trx);
       const namespaceCountRow = await trx('ext_storage_records')
         .where({
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
         })
@@ -218,7 +219,7 @@ export class ExtensionStorageServiceV2 {
       const now = trx.fn.now();
       const revision = existing ? Number(existing.revision) + 1 : 1;
       const insertRow = {
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
         namespace: request.namespace,
         key: request.key,
@@ -234,7 +235,7 @@ export class ExtensionStorageServiceV2 {
 
       const [row] = await trx('ext_storage_records')
         .insert(insertRow)
-        .onConflict(['tenant_id', 'extension_install_id', 'namespace', 'key'])
+        .onConflict(['tenant', 'extension_install_id', 'namespace', 'key'])
         .merge({
           revision,
           value: request.value,
@@ -305,7 +306,7 @@ export class ExtensionStorageServiceV2 {
 
       const existingRows = await trx<NamespaceRecord>('ext_storage_records')
         .where({
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
         })
@@ -316,10 +317,20 @@ export class ExtensionStorageServiceV2 {
         .forUpdate();
       const existingMap = new Map(existingRows.map((row) => [row.key, row]));
 
+      // Enforce per-item optimistic concurrency if requested
+      for (const item of request.items) {
+        if (item.ifRevision !== undefined) {
+          const existing = existingMap.get(item.key);
+          if (!existing || Number(existing.revision) !== item.ifRevision) {
+            throw new StorageRevisionMismatchError('ifRevision did not match stored revision');
+          }
+        }
+      }
+
       const usageRow = await this.getUsageForUpdate(trx);
       const namespaceCountRow = await trx('ext_storage_records')
         .where({
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
         })
@@ -363,7 +374,7 @@ export class ExtensionStorageServiceV2 {
         const existing = existingMap.get(item.key);
         const ttlExpiresAt = computeTtl(item.ttlSeconds);
         return {
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
           key: item.key,
@@ -380,7 +391,7 @@ export class ExtensionStorageServiceV2 {
 
       const result = await trx('ext_storage_records')
         .insert(rows)
-        .onConflict(['tenant_id', 'extension_install_id', 'namespace', 'key'])
+        .onConflict(['tenant', 'extension_install_id', 'namespace', 'key'])
         .merge({
           revision: trx.raw('excluded.revision'),
           value: trx.raw('excluded.value'),
@@ -418,7 +429,7 @@ export class ExtensionStorageServiceV2 {
 
       const existing = await trx<NamespaceRecord>('ext_storage_records')
         .where({
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
           key: request.key,
@@ -435,7 +446,7 @@ export class ExtensionStorageServiceV2 {
 
       await trx('ext_storage_records')
         .where({
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
           key: request.key,
@@ -457,7 +468,7 @@ export class ExtensionStorageServiceV2 {
 
       const row = await trx<NamespaceRecord>('ext_storage_records')
         .where({
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
           key: request.key,
@@ -477,7 +488,7 @@ export class ExtensionStorageServiceV2 {
         key: row.key,
         revision: Number(row.revision),
         value: row.value as StorageGetResponse['value'],
-        metadata: (row.metadata ?? {}) as Record<string, unknown>,
+        metadata: (row.metadata ?? {}) as Record<string, JsonValue>,
         ttlExpiresAt: row.ttl_expires_at,
         createdAt: row.created_at instanceof Date ? row.created_at : new Date(row.created_at),
         updatedAt: row.updated_at instanceof Date ? row.updated_at : new Date(row.updated_at),
@@ -498,7 +509,7 @@ export class ExtensionStorageServiceV2 {
 
       let query = trx<NamespaceRecord>('ext_storage_records')
         .where({
-          tenant_id: this.tenantId,
+          tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
           namespace: request.namespace,
         })
@@ -506,7 +517,10 @@ export class ExtensionStorageServiceV2 {
         .limit(limit + 1);
 
       if (request.keyPrefix) {
-        query = query.andWhere('key', 'like', `${request.keyPrefix}%`);
+        // Escape SQL LIKE wildcards in user-supplied prefix, relying on default escape '\\'
+        const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+        const pattern = `${esc(request.keyPrefix)}%`;
+        query = query.andWhere('key', 'like', pattern);
       }
 
       if (cursorInfo?.key) {
@@ -515,11 +529,13 @@ export class ExtensionStorageServiceV2 {
 
       const rows = await query;
       const items = rows.slice(0, limit).map((row) => ({
+        tenantId: this.tenantId,
+        extensionInstallId: this.extensionInstallId,
         namespace: row.namespace,
         key: row.key,
         revision: Number(row.revision),
-        value: includeValues ? row.value : undefined,
-        metadata: includeMetadata ? (row.metadata ?? {}) : undefined,
+        value: includeValues ? (row.value as JsonValue) : undefined,
+        metadata: includeMetadata ? ((row.metadata ?? {}) as Record<string, JsonValue>) : undefined,
         ttlExpiresAt: row.ttl_expires_at,
         createdAt: row.created_at instanceof Date ? row.created_at : new Date(row.created_at),
         updatedAt: row.updated_at instanceof Date ? row.updated_at : new Date(row.updated_at),
@@ -538,7 +554,7 @@ export class ExtensionStorageServiceV2 {
   private async cleanupExpired(trx: Knex.Transaction): Promise<void> {
     const deleted = await trx('ext_storage_records')
       .where({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
       })
       .whereNotNull('ttl_expires_at')
@@ -553,7 +569,7 @@ export class ExtensionStorageServiceV2 {
   private async refreshUsage(trx: Knex.Transaction) {
     const row = await trx('ext_storage_records')
       .where({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
       })
       .select({
@@ -569,14 +585,14 @@ export class ExtensionStorageServiceV2 {
 
     await trx('ext_storage_usage')
       .insert({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
         bytes_used: bytesUsed,
         keys_count: keysCount,
         namespaces_count: namespacesCount,
         updated_at: trx.fn.now(),
       })
-      .onConflict(['tenant_id', 'extension_install_id'])
+      .onConflict(['tenant', 'extension_install_id'])
       .merge({
         bytes_used: bytesUsed,
         keys_count: keysCount,
@@ -586,9 +602,22 @@ export class ExtensionStorageServiceV2 {
   }
 
   private async getUsageForUpdate(trx: Knex.Transaction) {
+    // Ensure a usage row exists, then lock it
+    await trx('ext_storage_usage')
+      .insert({
+        tenant: this.tenantId,
+        extension_install_id: this.extensionInstallId,
+        bytes_used: 0,
+        keys_count: 0,
+        namespaces_count: 0,
+        updated_at: trx.fn.now(),
+      })
+      .onConflict(['tenant', 'extension_install_id'])
+      .ignore();
+
     const row = await trx('ext_storage_usage')
       .where({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
       })
       .forUpdate()
@@ -615,7 +644,7 @@ export class ExtensionStorageServiceV2 {
     const cacheKey = `${namespace}:${schema.schema_version}`;
     let validator = this.validatorCache.get(cacheKey);
     if (!validator) {
-      validator = ajv.compile(schema.schema_document);
+      validator = ajv.compile(schema.schema_document as any);
       this.validatorCache.set(cacheKey, validator);
     }
 
@@ -636,7 +665,7 @@ export class ExtensionStorageServiceV2 {
     const query = trx('ext_storage_schemas')
       .select(['schema_version', 'schema_document'])
       .where({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
         namespace,
       })

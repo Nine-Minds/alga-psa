@@ -7,7 +7,7 @@ This document covers database migration execution, TTL cleanup implementation de
 ### Migration Contents
 
 - Migration `20251008120000_create_ext_storage_tables.ts` will:
-  1. Create `ext_storage_records`, `ext_storage_schemas`, and `ext_storage_usage` tables with constraints per [storage-api-schema.md](storage-api-schema.md).
+  1. Create `ext_storage_records`, `ext_storage_schemas`, and `ext_storage_usage` tables with constraints per [storage-api-schema.md](storage-api-schema.md) using `tenant` as the distribution key.
   2. Call `create_distributed_table` for each table (deferred until after creation).
   3. Create required indexes (`PRIMARY KEY`, namespace scans, TTL partial index).
   4. Add triggers for `updated_at` maintenance if handled at DB layer.
@@ -64,4 +64,3 @@ This document covers database migration execution, TTL cleanup implementation de
 - [ ] Opportunistic TTL cleanup deletes expired records during test runs.
 - [ ] Load testing harness reports metrics within target SLOs.
 - [ ] Alerts configured for TTL backlog (`ttl_expired_rows_pending`) remain within threshold.
-

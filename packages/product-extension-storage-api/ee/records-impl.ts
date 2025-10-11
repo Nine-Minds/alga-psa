@@ -163,7 +163,7 @@ export async function POST(req: NextRequest, { params }: { params: { installId: 
 
     const request: StorageBulkPutRequest = {
       namespace: params.namespace,
-      items: body.items,
+      items: body.items as StorageBulkPutRequest['items'],
     };
 
     const result = await service.bulkPut(request);

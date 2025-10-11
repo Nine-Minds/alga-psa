@@ -142,7 +142,7 @@ export async function ensureExtensionStorageTables(): Promise<void> {
 
     if (!(await db.schema.hasTable('ext_storage_records'))) {
       await db.schema.createTable('ext_storage_records', (table) => {
-        table.uuid('tenant_id').notNullable();
+        table.uuid('tenant').notNullable();
         table.uuid('extension_install_id').notNullable();
         table.string('namespace', 128).notNullable();
         table.string('key', 256).notNullable();
@@ -154,22 +154,22 @@ export async function ensureExtensionStorageTables(): Promise<void> {
         table.timestamp('ttl_expires_at').nullable();
         table.timestamp('created_at').notNullable().defaultTo(db.fn.now());
         table.timestamp('updated_at').notNullable().defaultTo(db.fn.now());
-        table.primary(['tenant_id', 'extension_install_id', 'namespace', 'key'], { constraintName: 'ext_storage_records_pk' });
+        table.primary(['tenant', 'extension_install_id', 'namespace', 'key'], { constraintName: 'ext_storage_records_pk' });
       });
       await db.schema.raw(`
         CREATE INDEX IF NOT EXISTS ext_storage_records_namespace_idx
-          ON ext_storage_records (tenant_id, extension_install_id, namespace, key)
+          ON ext_storage_records (tenant, extension_install_id, namespace, key)
       `);
       await db.schema.raw(`
         CREATE INDEX IF NOT EXISTS ext_storage_records_ttl_idx
-          ON ext_storage_records (tenant_id, extension_install_id, namespace, key)
+          ON ext_storage_records (tenant, extension_install_id, namespace, key)
           WHERE ttl_expires_at IS NOT NULL
       `);
     }
 
     if (!(await db.schema.hasTable('ext_storage_schemas'))) {
       await db.schema.createTable('ext_storage_schemas', (table) => {
-        table.uuid('tenant_id').notNullable();
+        table.uuid('tenant').notNullable();
         table.uuid('extension_install_id').notNullable();
         table.string('namespace', 128).notNullable();
         table.integer('schema_version').notNullable();
@@ -178,20 +178,32 @@ export async function ensureExtensionStorageTables(): Promise<void> {
         table.uuid('created_by').nullable();
         table.timestamp('created_at').notNullable().defaultTo(db.fn.now());
         table.timestamp('updated_at').notNullable().defaultTo(db.fn.now());
-        table.primary(['tenant_id', 'extension_install_id', 'namespace', 'schema_version'], { constraintName: 'ext_storage_schemas_pk' });
-        table.unique(['tenant_id', 'extension_install_id', 'namespace'], { indexName: 'ext_storage_schemas_namespace_uq' });
+        table.primary(['tenant', 'extension_install_id', 'namespace', 'schema_version'], { constraintName: 'ext_storage_schemas_pk' });
       });
+      await db.schema.raw(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE c.relkind = 'i' AND c.relname = 'ext_storage_schemas_namespace_active_uq'
+          ) THEN
+            CREATE UNIQUE INDEX ext_storage_schemas_namespace_active_uq
+              ON ext_storage_schemas (tenant, extension_install_id, namespace)
+              WHERE status = 'active';
+          END IF;
+        END$$;
+      `);
     }
 
     if (!(await db.schema.hasTable('ext_storage_usage'))) {
       await db.schema.createTable('ext_storage_usage', (table) => {
-        table.uuid('tenant_id').notNullable();
+        table.uuid('tenant').notNullable();
         table.uuid('extension_install_id').notNullable();
         table.bigInteger('bytes_used').notNullable().defaultTo(0);
         table.integer('keys_count').notNullable().defaultTo(0);
         table.integer('namespaces_count').notNullable().defaultTo(0);
         table.timestamp('updated_at').notNullable().defaultTo(db.fn.now());
-        table.primary(['tenant_id', 'extension_install_id'], { constraintName: 'ext_storage_usage_pk' });
+        table.primary(['tenant', 'extension_install_id'], { constraintName: 'ext_storage_usage_pk' });
       });
     }
   } finally {
