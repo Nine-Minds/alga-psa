@@ -11,7 +11,7 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { getClients } from 'server/src/lib/actions/clientAction';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { Calendar, Building2, FileText, FileCheck, HelpCircle } from 'lucide-react';
+import { Calendar, Building2, FileText, FileCheck, HelpCircle, Repeat } from 'lucide-react';
 
 interface ContractBasicsStepProps {
   data: ContractWizardData;
@@ -110,6 +110,23 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
           className="w-full"
         />
         <p className="text-xs text-gray-500">Give this contract a descriptive name</p>
+      </div>
+
+      {/* Billing Frequency */}
+      <div className="space-y-2">
+        <Label htmlFor="billing-frequency" className="flex items-center gap-2">
+          <Repeat className="h-4 w-4" />
+          Billing Frequency *
+        </Label>
+        <CustomSelect
+          id="billing-frequency"
+          options={BILLING_FREQUENCY_OPTIONS}
+          onValueChange={(value: string) => updateData({ billing_frequency: value })}
+          value={data.billing_frequency}
+          placeholder="Select billing frequency"
+          className="w-full"
+        />
+        <p className="text-xs text-gray-500">How often should this contract be billed?</p>
       </div>
 
       {/* Start Date */}
@@ -269,4 +286,3 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
     </div>
   );
 }
-

@@ -31,7 +31,7 @@ export interface ContractWizardData {
   start_date: string;
   end_date?: string;
   description?: string;
-  billing_frequency?: string;
+  billing_frequency: string;
 
   // Purchase Order fields
   po_number?: string;
@@ -106,7 +106,7 @@ export function ContractWizard({
     start_date: '',
     end_date: undefined,
     description: '',
-    billing_frequency: undefined,
+    billing_frequency: 'monthly',
     fixed_services: [],
     fixed_base_rate: undefined,
     enable_proration: true,
@@ -157,6 +157,10 @@ export function ContractWizard({
         }
         if (!wizardData.contract_name?.trim()) {
           setErrors(prev => ({ ...prev, [stepIndex]: 'Contract name is required' }));
+          return false;
+        }
+        if (!wizardData.billing_frequency) {
+          setErrors(prev => ({ ...prev, [stepIndex]: 'Billing frequency is required' }));
           return false;
         }
         if (!wizardData.start_date) {
