@@ -178,6 +178,109 @@ ee/temporal-workflows/src/__tests__/
 
 **Note:** Playwright is configured but not widely used. Most E2E testing uses Vitest.
 
+### Playwright E2E (EE) With Fresh DB
+
+For Enterprise Playwright browser tests (VS Code runner and CLI), we keep a clean, migrated, and seeded database at test-session startup. This avoids flakiness and makes tests deterministic.
+
+- Where: `ee/server/src/__tests__/integration/**`
+- Config: `ee/server/playwright.config.ts`, `ee/server/playwright.global-setup.ts`
+- Bootstrap: `scripts/bootstrap-playwright-db.ts`
+
+How It Works
+- Fresh DB per Playwright session, before the web server starts:
+  - `ee/server/playwright.config.ts` runs the DB bootstrap script in `webServer.command` before `npm run dev`:
+    - `cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev`
+  - In VS Code Playwright UI mode this runs once per “Restart” of the runner (session start). Click “Restart” in the Playwright panel to rebuild the DB.
+- The bootstrap script:
+  - Drops and recreates the Playwright test database, runs all migrations and seeds.
+  - Provisions `app_user` and grants privileges.
+  - Reads credentials from `server/.env` (override with `PLAYWRIGHT_DB_*`).
+- globalSetup applies Playwright DB env so the dev server connects to the right DB.
+
+Test File Pattern (seeded data; no DB writes)
+- Use an admin Knex connection to query seed data for test setup (bypasses RLS/ACL).
+- Do not create tenants/users in tests. Pick a seeded user and mint a valid Auth.js cookie.
+
+Template
+```ts
+// ee/server/src/__tests__/integration/my-feature.playwright.test.ts
+import { test, expect } from '@playwright/test';
+import { encode } from '@auth/core/jwt';
+import { knex as createKnex } from 'knex';
+import { PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';
+
+function adminDb() {
+  return createKnex({
+    client: 'pg',
+    connection: {
+      host: PLAYWRIGHT_DB_CONFIG.host,
+      port: PLAYWRIGHT_DB_CONFIG.port,
+      database: PLAYWRIGHT_DB_CONFIG.database,
+      user: PLAYWRIGHT_DB_CONFIG.adminUser,   // admin for read access to seeds
+      password: PLAYWRIGHT_DB_CONFIG.adminPassword,
+    },
+    pool: { min: 0, max: 5 },
+  });
+}
+
+async function getSeededUser(db, email?: string) {
+  if (email) {
+    const row = await db('users').where({ email: email.toLowerCase() }).first();
+    if (row) return row;
+  }
+  const any = await db('users').first();
+  if (!any) throw new Error('No seeded users found. Check seeds.');
+  return any;
+}
+
+async function setSessionCookie(page, user) {
+  const token = await encode({
+    token: {
+      sub: user.user_id,
+      id: user.user_id,
+      email: user.email,
+      tenant: user.tenant,
+      user_type: user.user_type || 'client',
+    },
+    secret: process.env.NEXTAUTH_SECRET!,
+    maxAge: 60 * 60,
+    salt: 'authjs.session-token',
+  });
+  await page.context().addCookies([{
+    name: 'authjs.session-token',
+    value: token,
+    url: 'http://localhost:3000',
+    httpOnly: true,
+    secure: false,
+    sameSite: 'Lax',
+  }]);
+}
+
+test.describe('My Feature', () => {
+  test.setTimeout(180_000); // allow time for first-run migrations
+  let db;
+  test.beforeAll(async () => { db = adminDb(); });
+  test.afterAll(async () => { await db?.destroy().catch(() => undefined); });
+
+  test('happy path', async ({ page }) => {
+    const seeded = await getSeededUser(db, process.env.CLIENT_PORTAL_TEST_EMAIL);
+    await setSessionCookie(page, seeded);
+    await page.goto('http://localhost:3000/some/route');
+    await expect(page.getByText('Welcome')).toBeVisible();
+  });
+});
+```
+
+Running
+- VS Code Playwright panel:
+  - Click “Restart” to start a new session; the Runner executes the DB bootstrap and then starts Next. Subsequent runs reuse the server/DB until you restart.
+- CLI:
+  - `npx playwright test ee/server/src/__tests__/integration/<file>.playwright.test.ts`
+  - The DB bootstrap runs before `npm run dev` (per session).
+
+Variations
+- Reset every run: set `reuseExistingServer: false` in `ee/server/playwright.config.ts`; the server restarts and the DB bootstrap re-runs on every test run.
+- Per‑fixture reset (advanced): add a dev-only reset endpoint and POST it from `beforeAll`. Use only if you need frequent resets while keeping the server running.
 ## File Naming Patterns
 
 | Test Type | Pattern | Example |

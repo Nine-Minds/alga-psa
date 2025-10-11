@@ -1580,12 +1580,17 @@ async function syncBaseVirtualServiceRouting(
     desiredManagedGatewaysList,
   );
 
+  const metadataSanitizationReasons = getMetadataSanitizationReasons(baseVirtualService);
+  const requiresMetadataSanitization = metadataSanitizationReasons.length > 0;
+
   console.log('[syncBaseVS] All change flags:', {
     hostsChanged,
     gatewaysChanged,
     managedHostsChanged,
     managedGatewaysChanged,
     httpRoutesChanged,
+    requiresMetadataSanitization,
+    metadataSanitizationReasons,
   });
 
   if (
@@ -1593,13 +1598,19 @@ async function syncBaseVirtualServiceRouting(
     !gatewaysChanged &&
     !managedHostsChanged &&
     !managedGatewaysChanged &&
-    !httpRoutesChanged
+    !httpRoutesChanged &&
+    !requiresMetadataSanitization
   ) {
     console.log('[syncBaseVS] No changes detected, skipping file write');
     return;
   }
 
   console.log('[syncBaseVS] Changes detected, updating base VirtualService');
+  if (requiresMetadataSanitization) {
+    console.log('[syncBaseVS] Metadata sanitization required before writing base VirtualService', {
+      reasons: metadataSanitizationReasons,
+    });
+  }
 
   if (hostsChanged) {
     baseVirtualService.spec.hosts = desiredHosts;
@@ -1641,6 +1652,7 @@ async function syncBaseVirtualServiceRouting(
 
   try {
     await ensureDirectory(dirname(vsFilePath));
+    sanitizeKubernetesResourceForApply(baseVirtualService);
     const yamlContent = dumpYaml(baseVirtualService, { sortKeys: true, noRefs: true });
     console.log('[syncBaseVS] Writing base VirtualService to file', {
       path: vsFilePath,
@@ -1661,6 +1673,113 @@ async function syncBaseVirtualServiceRouting(
         `Failed to write base VirtualService to ${vsFilePath}`,
       ),
     );
+  }
+}
+
+const RUNTIME_METADATA_FIELDS = [
+  'creationTimestamp',
+  'deletionTimestamp',
+  'resourceVersion',
+  'uid',
+  'generation',
+  'managedFields',
+  'selfLink',
+];
+
+function getMetadataSanitizationReasons(resource: Record<string, any> | undefined | null): string[] {
+  const reasons: string[] = [];
+
+  if (!resource || typeof resource !== 'object') {
+    return reasons;
+  }
+
+  if ('status' in resource) {
+    reasons.push('status field present');
+  }
+
+  const metadata = resource.metadata;
+  if (!metadata || typeof metadata !== 'object') {
+    return reasons;
+  }
+
+  const presentRuntimeFields = RUNTIME_METADATA_FIELDS.filter((field) => field in metadata);
+  if (presentRuntimeFields.length > 0) {
+    reasons.push(`metadata fields: ${presentRuntimeFields.join(', ')}`);
+  }
+
+  if (
+    metadata.annotations &&
+    typeof metadata.annotations === 'object' &&
+    'kubectl.kubernetes.io/last-applied-configuration' in metadata.annotations
+  ) {
+    reasons.push('last-applied annotation present');
+  }
+
+  if (Array.isArray(metadata.finalizers) && metadata.finalizers.length === 0) {
+    reasons.push('empty finalizers array present');
+  }
+
+  return reasons;
+}
+
+function sanitizeKubernetesResourceForApply(resource: Record<string, any> | undefined | null): void {
+  if (!resource || typeof resource !== 'object') {
+    return;
+  }
+
+  let statusRemoved = false;
+  const removedMetadataFields: string[] = [];
+  const removedAnnotations: string[] = [];
+  let annotationsObjectCleared = false;
+  let emptyFinalizersRemoved = false;
+
+  if ('status' in resource) {
+    delete resource.status;
+    statusRemoved = true;
+  }
+
+  const metadata = resource.metadata;
+  if (!metadata || typeof metadata !== 'object') {
+    return;
+  }
+
+  for (const field of RUNTIME_METADATA_FIELDS) {
+    if (field in metadata) {
+      delete (metadata as Record<string, unknown>)[field];
+      removedMetadataFields.push(field);
+    }
+  }
+
+  if (metadata.annotations && typeof metadata.annotations === 'object') {
+    if ('kubectl.kubernetes.io/last-applied-configuration' in metadata.annotations) {
+      delete metadata.annotations['kubectl.kubernetes.io/last-applied-configuration'];
+      removedAnnotations.push('kubectl.kubernetes.io/last-applied-configuration');
+    }
+    if (Object.keys(metadata.annotations).length === 0) {
+      delete metadata.annotations;
+      annotationsObjectCleared = true;
+    }
+  }
+
+  if (Array.isArray(metadata.finalizers) && metadata.finalizers.length === 0) {
+    delete metadata.finalizers;
+    emptyFinalizersRemoved = true;
+  }
+
+  if (
+    statusRemoved ||
+    removedMetadataFields.length > 0 ||
+    removedAnnotations.length > 0 ||
+    annotationsObjectCleared ||
+    emptyFinalizersRemoved
+  ) {
+    console.log('[syncBaseVS] Sanitized base VirtualService metadata', {
+      statusRemoved,
+      removedMetadataFields,
+      removedAnnotations,
+      annotationsObjectCleared,
+      emptyFinalizersRemoved,
+    });
   }
 }
 

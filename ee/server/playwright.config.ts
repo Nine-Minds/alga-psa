@@ -1,18 +1,23 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
-import {
-  applyPlaywrightDatabaseEnv,
-  PLAYWRIGHT_DB_CONFIG,
-} from './src/__tests__/integration/utils/playwrightDatabaseConfig';
+import { applyPlaywrightDatabaseEnv } from './src/__tests__/integration/utils/playwrightDatabaseConfig';
 
 // Load environment variables from the correct path
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-// Ensure critical environment variables are set for tests
-process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+// If Postgres runs in Docker and is published to a different host port,
+// override the Playwright DB host/port here. Prefer existing DB_* envs
+// when available, otherwise fall back to common local defaults.
+process.env.PLAYWRIGHT_DB_HOST =
+  process.env.PLAYWRIGHT_DB_HOST || process.env.DB_HOST || 'localhost';
+process.env.PLAYWRIGHT_DB_PORT =
+  process.env.PLAYWRIGHT_DB_PORT || process.env.DB_DIRECT_PORT || process.env.DB_PORT || '5432';
+
+// Apply Playwright-specific database configuration
 applyPlaywrightDatabaseEnv();
-process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
+
+process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 
 /**
  * Playwright configuration for EE server integration tests
@@ -101,9 +106,10 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: process.env.CI ? undefined : {
-    command: 'cd ../../ && NEXT_PUBLIC_EDITION=enterprise npm run dev',
+    // Reset DB once per session before starting the dev server.
+    command: 'cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 120000,
     stdout: 'pipe',
     stderr: 'pipe',
@@ -111,26 +117,16 @@ export default defineConfig({
       ...process.env,
       NEXT_PUBLIC_EDITION: 'enterprise',
       NEXTAUTH_URL: 'http://canonical.localhost:3000',
-      NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: 'true',
-      DISABLE_FEATURE_FLAGS: 'true',
-      DB_HOST: PLAYWRIGHT_DB_CONFIG.host,
-      DB_PORT: String(PLAYWRIGHT_DB_CONFIG.port),
-      DB_NAME: PLAYWRIGHT_DB_CONFIG.database,
-      DB_USER: PLAYWRIGHT_DB_CONFIG.user,
-      DB_PASSWORD: PLAYWRIGHT_DB_CONFIG.password,
-      DB_SSL: PLAYWRIGHT_DB_CONFIG.ssl ? 'true' : 'false',
-      DB_HOST_SERVER: PLAYWRIGHT_DB_CONFIG.host,
-      DB_PORT_SERVER: String(PLAYWRIGHT_DB_CONFIG.port),
-      DB_NAME_SERVER: PLAYWRIGHT_DB_CONFIG.database,
-      DB_USER_SERVER: PLAYWRIGHT_DB_CONFIG.user,
-      DB_PASSWORD_SERVER: PLAYWRIGHT_DB_CONFIG.password,
-      DB_DIRECT_HOST: PLAYWRIGHT_DB_CONFIG.host,
-      DB_DIRECT_PORT: String(PLAYWRIGHT_DB_CONFIG.port),
-      DB_USER_ADMIN: process.env.DB_USER_ADMIN ?? PLAYWRIGHT_DB_CONFIG.user,
-      DB_PASSWORD_ADMIN: process.env.DB_PASSWORD_ADMIN ?? PLAYWRIGHT_DB_CONFIG.password,
-      DB_USER_READONLY: process.env.DB_USER_READONLY ?? PLAYWRIGHT_DB_CONFIG.user,
-      DB_PASSWORD_READONLY: process.env.DB_PASSWORD_READONLY ?? PLAYWRIGHT_DB_CONFIG.password,
-      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+      NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
+      DB_HOST: process.env.DB_HOST,
+      DB_PORT: process.env.DB_PORT,
+      DB_NAME: process.env.DB_NAME,
+      DB_NAME_SERVER: process.env.DB_NAME_SERVER,
+      DB_USER: process.env.DB_USER,
+      DB_PASSWORD: process.env.DB_PASSWORD,
+      DB_USER_SERVER: process.env.DB_USER_SERVER,
+      DB_PASSWORD_SERVER: process.env.DB_PASSWORD_SERVER,
+      DB_PASSWORD_ADMIN: process.env.DB_PASSWORD_ADMIN
     }
   },
 
