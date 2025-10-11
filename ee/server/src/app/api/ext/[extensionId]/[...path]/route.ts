@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { matchEndpoint, pathnameFromParts, filterRequestHeaders, filterResponseHeaders, getTimeoutMs } from '../../../../../lib/extensions/lib/gateway-utils';
 import { getRegistryFacade } from '../../../../../lib/extensions/lib/gateway-registry';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 export const dynamic = 'force-dynamic';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -38,21 +40,48 @@ async function getTenantIdFromAuth(_req: NextRequest): Promise<string | null> {
   return null;
 }
 
-// TODO: implement RBAC check
-async function assertAccess(tenantId: string, extensionId: string, method: Method, pathname: string): Promise<void> {
-  // Placeholder: allow all, but log for audit visibility
-  console.info('[ext-gateway] access check allow', { tenantId, extensionId, method, pathname });
-  // TODO: integrate with RBAC service/policies
-  return;
+class AccessError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function actionForMethod(method: Method): 'read' | 'write' {
+  return method === 'GET' ? 'read' : 'write';
+}
+
+async function assertAccess(tenantId: string, method: Method): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || !currentUser.tenant) {
+    throw new AccessError(401, 'Unauthorized');
+  }
+  if (currentUser.tenant !== tenantId) {
+    throw new AccessError(401, 'Unauthorized');
+  }
+
+  const requiredAction = actionForMethod(method);
+  const allowed = await hasPermission(currentUser, 'extension', requiredAction);
+  if (!allowed) {
+    throw new AccessError(403, 'Forbidden');
+  }
 }
 
 // Resolve tenant install via the Registry V2 facade seam
 // Returns active version_id and content_hash
-async function resolveInstall(tenantId: string, extensionId: string): Promise<{ version_id: string; content_hash: string } | null> {
+async function resolveInstall(
+  tenantId: string,
+  extensionId: string
+): Promise<{ install_id: string; version_id: string; content_hash: string } | null> {
   const facade = getRegistryFacade();
   const install = await facade.getTenantInstall(tenantId, extensionId);
   if (!install) return null;
-  return { version_id: install.version_id, content_hash: install.content_hash };
+  return {
+    install_id: install.install_id,
+    version_id: install.version_id,
+    content_hash: install.content_hash,
+  };
 }
 
 // Load manifest v2 for version_id and match endpoint (method + path)
@@ -81,7 +110,7 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
     const tenantId = await getTenantIdFromAuth(req);
     if (!tenantId) return json(401, { error: 'Unauthorized' });
 
-    await assertAccess(tenantId, extensionId, method, pathname);
+    await assertAccess(tenantId, method);
 
     const install = await resolveInstall(tenantId, extensionId);
     if (!install) return json(404, { error: 'Extension not installed' });
@@ -98,6 +127,7 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
         request_id: requestId,
         tenant_id: tenantId,
         extension_id: extensionId,
+        install_id: install.install_id,
         version_id: install.version_id,
         content_hash: install.content_hash,
       },
@@ -150,6 +180,9 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
 
     return new NextResponse(body as any, { status, headers });
   } catch (err: any) {
+    if (err instanceof AccessError) {
+      return json(err.status, { error: err.message });
+    }
     if (err?.name === 'AbortError') {
       return json(504, { error: 'Gateway timeout' });
     }

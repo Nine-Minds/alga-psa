@@ -58,11 +58,19 @@ async function buildBaseConnectionConfig(): Promise<Knex.StaticConnectionConfig>
   const directHost = process.env.DB_DIRECT_HOST || process.env.DB_HOST || 'localhost';
   const directPort = Number(process.env.DB_DIRECT_PORT || 5432);
 
+  const user = process.env.DB_USER_ADMIN || 'postgres';
+  const password = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password');
+
+  console.log('[buildBaseConnectionConfig] host:', directHost);
+  console.log('[buildBaseConnectionConfig] port:', directPort);
+  console.log('[buildBaseConnectionConfig] user:', user);
+  console.log('[buildBaseConnectionConfig] password:', password);
+
   return {
     host: directHost,
     port: directPort,
-    user: process.env.DB_USER_ADMIN || 'postgres',
-    password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password')
+    user,
+    password
   };
 }
 

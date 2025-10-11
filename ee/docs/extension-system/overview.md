@@ -72,6 +72,7 @@ The Runner is the execution and static asset host for the EE architecture:
 - Executes WASM handlers out-of-process with isolation and quotas (Rust + Wasmtime)
 - Hosts static UI assets by immutable content hash; the host builds iframe src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
 - Provides HTTP interface for handler execution (POST /v1/execute) called by the API Gateway. Gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Implements host capabilities including the storage API (`alga.storage`). See [storage-api-contract.md](storage-api-contract.md) and [storage-api-access-control.md](storage-api-access-control.md) for capability and access details.
 - Signature and provenance enforcement integrate with Registry v2 services. Registry scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
 
 Runner-related configuration (host environment):

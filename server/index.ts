@@ -69,14 +69,14 @@ async function createServer() {
       return handle(req, res);
     });
 
-    server.on('error', (err) => {
-      console.error('Express server error:', err);
-    });
-
-    server.listen(port, '0.0.0.0', () => {
+    const httpServer = server.listen(port, '0.0.0.0', () => {
       console.log(`> Ready on http://${hostname}:${port}`);
       console.log(`> Environment: ${dev ? 'development' : 'production'}`);
       console.log(`> Version: ${getAppVersion()}`);
+    });
+
+    httpServer.on('error', (err) => {
+      console.error('HTTP server error:', err);
     });
 
     // Next.js handles WebSocket upgrades for HMR automatically

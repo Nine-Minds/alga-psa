@@ -15,7 +15,7 @@ use url::Url;
 use axum::response::{IntoResponse, Redirect, Response};
 
 use crate::cache::fs as cache_fs;
-use crate::engine::loader::ModuleLoader;
+use crate::engine::loader::{HostExecutionContext, ModuleLoader};
 use crate::models::{ExecuteRequest, ExecuteResponse};
 use crate::registry::client::HttpRegistryClient;
 
@@ -177,7 +177,19 @@ async fn execute(
         }
     };
 
-    let out_bytes = match loader.execute_handler(&wasm, req.limits.timeout_ms, req.limits.memory_mb, &input_bytes) {
+    let host_ctx = HostExecutionContext {
+        tenant_id: Some(req.context.tenant_id.clone()),
+        extension_id: Some(req.context.extension_id.clone()),
+        install_id: req.context.install_id.clone(),
+    };
+
+    let out_bytes = match loader.execute_handler(
+        &wasm,
+        req.limits.timeout_ms,
+        req.limits.memory_mb,
+        &input_bytes,
+        host_ctx,
+    ) {
         Ok(v) => v,
         Err(e) => {
             let dur_ms = started.elapsed().as_millis() as u64;

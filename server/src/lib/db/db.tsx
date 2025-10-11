@@ -40,6 +40,17 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
   // Create a single shared instance optimized for transaction-level pooling
   const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
   const baseConfig = await getKnexConfig(environment);
+  console.log('Database configuration:', {
+    client: baseConfig.client,
+    connection: {
+      host: baseConfig.connection.host,
+      port: baseConfig.connection.port,
+      database: baseConfig.connection.database,
+      user: baseConfig.connection.user,
+      password: (environment === 'development' ? baseConfig.connection.password : '[REDACTED]'),
+    },
+    pool: baseConfig.pool
+  });
 
   const sharedConfig: KnexType.Config = {
     ...baseConfig,
