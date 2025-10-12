@@ -239,7 +239,7 @@ export async function createContractFromWizard(
     const hasClientBundles = await trx.schema.hasTable('client_plan_bundles');
     const hasCompanyBundles = await trx.schema.hasTable('company_plan_bundles');
     if (hasClientBundles) {
-      const data: Record<string, any> = {
+      await trx('client_plan_bundles').insert({
         client_bundle_id: uuidv4(),
         tenant,
         client_id: submission.company_id,
@@ -247,21 +247,14 @@ export async function createContractFromWizard(
         start_date: submission.start_date,
         end_date: submission.end_date ?? null,
         is_active: true,
+        po_number: submission.po_number ?? null,
+        po_amount: submission.po_amount ?? null,
+        po_required: submission.po_required ?? false,
         created_at: now,
         updated_at: now,
-      };
-      if (await trx.schema.hasColumn('client_plan_bundles', 'po_number')) {
-        data.po_number = submission.po_number ?? null;
-      }
-      if (await trx.schema.hasColumn('client_plan_bundles', 'po_amount')) {
-        data.po_amount = submission.po_amount ?? null;
-      }
-      if (await trx.schema.hasColumn('client_plan_bundles', 'po_required')) {
-        data.po_required = submission.po_required ?? false;
-      }
-      await trx('client_plan_bundles').insert(data);
+      });
     } else if (hasCompanyBundles) {
-      const data: Record<string, any> = {
+      await trx('company_plan_bundles').insert({
         company_bundle_id: uuidv4(),
         tenant,
         company_id: submission.company_id,
@@ -269,19 +262,12 @@ export async function createContractFromWizard(
         start_date: submission.start_date,
         end_date: submission.end_date ?? null,
         is_active: true,
+        po_number: submission.po_number ?? null,
+        po_amount: submission.po_amount ?? null,
+        po_required: submission.po_required ?? false,
         created_at: now,
         updated_at: now,
-      };
-      if (await trx.schema.hasColumn('company_plan_bundles', 'po_number')) {
-        data.po_number = submission.po_number ?? null;
-      }
-      if (await trx.schema.hasColumn('company_plan_bundles', 'po_amount')) {
-        data.po_amount = submission.po_amount ?? null;
-      }
-      if (await trx.schema.hasColumn('company_plan_bundles', 'po_required')) {
-        data.po_required = submission.po_required ?? false;
-      }
-      await trx('company_plan_bundles').insert(data);
+      });
     } else {
       // No suitable linking table exists; proceed without assignment to avoid hard failure in dev/test
       console.warn('No client/company plan bundles table found; skipping bundle assignment');
