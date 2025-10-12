@@ -307,8 +307,8 @@ export async function createContractFromWizard(
       tenant,
       client_id: submission.company_id,
       bundle_id: bundleId,
-      start_date: submission.start_date,
-      end_date: submission.end_date ?? null,
+      start_date: normalizeDateOnly(submission.start_date),
+      end_date: normalizeDateOnly(submission.end_date) ?? null,
       is_active: true,
       po_number: submission.po_number ?? null,
       po_amount: submission.po_amount ?? null,
@@ -324,3 +324,18 @@ export async function createContractFromWizard(
     };
   });
 }
+    // Normalize date-only fields to YYYY-MM-DD to avoid TZ shifts at DB layer
+    const normalizeDateOnly = (input?: string): string | undefined => {
+      if (!input) return undefined;
+      const t = input.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t; // already Y-M-D
+      if (t.includes('T')) return t.split('T')[0];
+      const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // M/D/YYYY
+      if (m) {
+        const [, mmRaw, ddRaw, yyyy] = m;
+        const mm = mmRaw.padStart(2, '0');
+        const dd = ddRaw.padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+      return t;
+    };

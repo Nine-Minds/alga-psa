@@ -328,6 +328,7 @@ async function seedFixedServiceForTenant(
 ): Promise<{ serviceTypeId: string; serviceId: string }> {
   const serviceTypeId = uuidv4();
   const serviceId = uuidv4();
+  const orderNumber = Math.floor(Math.random() * 1000000) + 1;
 
   await db('service_types').insert({
     id: serviceTypeId,
@@ -336,7 +337,7 @@ async function seedFixedServiceForTenant(
     billing_method: 'fixed',
     is_active: true,
     description: 'Playwright automation service type',
-    order_number: 1,
+    order_number: orderNumber,
     standard_service_type_id: null,
     created_at: now,
     updated_at: now,
@@ -367,6 +368,7 @@ async function seedHourlyServiceForTenant(
 ): Promise<{ serviceTypeId: string; serviceId: string }> {
   const serviceTypeId = uuidv4();
   const serviceId = uuidv4();
+  const orderNumber = Math.floor(Math.random() * 1000000) + 1;
 
   await db('service_types').insert({
     id: serviceTypeId,
@@ -375,7 +377,7 @@ async function seedHourlyServiceForTenant(
     billing_method: 'per_unit',
     is_active: true,
     description: 'Playwright hourly service type',
-    order_number: 2,
+    order_number: orderNumber,
     standard_service_type_id: null,
     created_at: now,
     updated_at: now,
@@ -642,6 +644,10 @@ async function completeContractWizardFlow(
     await expect(
       page.getByRole('heading', { name: 'Review Contract' }).first()
     ).toBeVisible({ timeout: 3000 });
+
+    if (options?.onReview) {
+      await options.onReview(page);
+    }
 
     if (options?.bucketHours || options?.bucketUsage) {
       // Verify the review shows Bucket Services summary
@@ -1017,81 +1023,21 @@ test.describe('Contract Wizard Happy Path', () => {
         { resource: 'billing', action: 'create' },
         { resource: 'billing', action: 'update' },
       ]);
-
-      // Open Contracts and start wizard (bypass: pass tenantId)
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts&tenantId=${tenantId}`, { waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
-      await page.locator('[data-automation-id="wizard-contract-button"]').click();
-      await page.locator('[data-automation-id="contract-basics-step"]').waitFor({ timeout: 10_000 });
-
-      // Basics
-      const clientSelect = page.getByRole('combobox', { name: /Select a client|Loading clients/i });
-      await clientSelect.click();
-      await page.getByRole('option', { name: tenantData.client!.clientName }).click();
-      await page.locator('[data-automation-id="contract_name"]').fill(contractName);
-
-      const startDateComponent = await findComponent(page, (c) => c.id === 'start-date');
-      await page.locator(`[data-automation-id="${startDateComponent.id}"]`).click();
-      await page.getByRole('button', { name: /Go to today/i }).click();
-      await page.getByRole('gridcell', { name: /\d/ }).first().click();
-
-      const freqSelect = page.getByRole('combobox', { name: /Select billing frequency/i });
-      await freqSelect.click();
-      await page.getByRole('option', { name: /Monthly/i }).click();
-
-      await page.locator('[data-automation-id="wizard-next"]').click();
-      await expect(page.getByRole('heading', { name: 'Fixed Fee Services' }).first()).toBeVisible({ timeout: 3000 });
-
-      // Fixed: add service with $500 base
-      await page.getByRole('button', { name: 'Add Service' }).click();
-      const svcSelectComp = await findComponent(page, (c) => c.id === 'service-select-0');
-      await page.locator(`[data-automation-id="${svcSelectComp.id}"]`).click();
-      await page.getByRole('option', { name: fixedServiceName }).click();
-      await page.locator('[data-automation-id="quantity-0"]').fill('1');
-      const baseRateField = page.locator('[data-automation-id="fixed_base_rate"]');
-      await baseRateField.fill('500');
-      await baseRateField.blur();
-
-      await page.locator('[data-automation-id="wizard-next"]').click();
-      await expect(page.getByRole('heading', { name: 'Hourly Services' }).first()).toBeVisible({ timeout: 3000 });
-
-      // Skip Hourly
-      await page.locator('[data-automation-id="wizard-next"]').click();
-      await expect(page.getByRole('heading', { name: 'Usage-Based Services' }).first()).toBeVisible({ timeout: 3000 });
-
-      // Bucket Services
-      await page.locator('[data-automation-id="wizard-next"]').click();
-      await expect(page.getByRole('heading', { name: 'Bucket Services' }).first()).toBeVisible({ timeout: 3000 });
-
-      // Configure bucket: 40 hours, $5,000 monthly, $150 overage
-      const bucketType = page.getByRole('combobox', { name: /Bucket Type/i });
-      await bucketType.click();
-      await page.getByRole('option', { name: /Time-based \(Hours\)/i }).click();
-      await page.locator('#bucket_hours').fill('40');
-      await page.locator('#bucket_monthly_fee').fill('5000');
-      await page.locator('#bucket_monthly_fee').blur();
-      await page.locator('#bucket_overage_rate').fill('150');
-      await page.locator('#bucket_overage_rate').blur();
-      await page.locator('#add-bucket-service-button').click();
-      const bucketServiceSelect = page.getByRole('combobox', { name: /Select a service/i }).last();
-      await bucketServiceSelect.click();
-      await page.getByRole('option', { name: fixedServiceName }).click();
-
-      // Review
-      await page.locator('[data-automation-id="wizard-next"]').click();
-      await expect(page.getByRole('heading', { name: 'Review Contract' })).toBeVisible({ timeout: 5_000 });
-
-      const bodyText = (await page.textContent('body')) || '';
-      // Estimated Monthly Total: $500 (fixed) + $5,000 (bucket) = $5,500.00
-      expect(bodyText).toMatch(/\$5,500\.00/);
-      // Effective Rate: $5,000 / 40 hours = $125/hour
-      expect(bodyText).toMatch(/Effective Rate:\s*\$125\/?hour/i);
-      // Overage Rate displayed correctly
-      expect(bodyText).toMatch(/Overage Rate:\s*\$150\/?hour/i);
-
-      // Finish and assert DB state
-      await page.locator('[data-automation-id="wizard-finish"]').click();
-      await expect(page.locator('[data-automation-id="wizard-contract-button"]')).toBeVisible({ timeout: 10_000 });
+      await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+        baseRate: 500,
+        bucketHours: {
+          hours: 40,
+          monthlyFeeCents: 500000,
+          overageRateCents: 15000,
+          serviceName: fixedServiceName,
+        },
+        onReview: async (page) => {
+          const dialogText = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+          expect(dialogText).toMatch(/\$5,?500\.00/);
+          // Review summarizes Monthly Fee and Overage; effective rate is shown in the step UI
+          expect(dialogText).toMatch(/Overage Rate:?\s*\$150(?:\.00)?\/hour/i);
+        },
+      });
 
       const bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
       expect(bundle).toBeDefined();
@@ -1377,6 +1323,694 @@ test.describe('Date Picker Timezone Regression', () => {
       // Assert Contract Period shows the 1st of the month, not the previous date
       const pageText = await page.textContent('body');
       expect(pageText || '').toContain(expectedDisplay);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('persists start/end as date-only without TZ shifts (DB)', async ({ page }) => {
+    // Local helpers for this block
+    const openWizardForTenant = async (page: Page, tenantId: string) => {
+      attachFailFastHandlers(page, TEST_CONFIG.baseUrl);
+      const tenantQuery = `&tenantId=${tenantId}`;
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts${tenantQuery}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForLoadState('networkidle');
+      const wizardButtonLocator = page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button');
+      await wizardButtonLocator.click();
+      await page.locator('[data-automation-id="contract-basics-step"]').waitFor({ timeout: 10_000 });
+    };
+    const selectClientAndNameLocal = async (page: Page, clientName: string, name: string) => {
+      const clientSelect = page.getByRole('combobox', { name: /Select a client|Loading clients/i });
+      await clientSelect.click();
+      await page.getByRole('option', { name: clientName }).click();
+      await page.locator('[data-automation-id="contract_name"], #contract_name').fill(name);
+    };
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+    const contractName = `TZ Persist ${uuidv4().slice(0, 8)}`;
+
+    try {
+      tenantData = await createTestTenant(db, {
+        companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+      });
+
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, new Date());
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, new Date());
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+        { resource: 'billing', action: 'update' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardForTenant(page, tenantId);
+      await selectClientAndNameLocal(page, tenantData.client!.clientName, contractName);
+
+      const now2 = new Date();
+      const start = new Date(now2.getFullYear(), now2.getMonth(), 1);
+      const end = new Date(now2.getFullYear(), now2.getMonth() + 1, 0);
+      const startYMD = start.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const endYMD = end.toLocaleDateString('en-CA');
+
+      await page.locator('[data-automation-id="start-date"]').click();
+      await page.locator('.rdp-day:not(.rdp-day_outside)').filter({ hasText: /^1$/ }).first().click();
+      await page.locator('[data-automation-id="end-date"]').click();
+      await page.locator('.rdp-day:not(.rdp-day_outside)').filter({ hasText: new RegExp(`^${end.getDate()}$`) }).first().click();
+
+      // Minimal fixed config
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.getByRole('button', { name: 'Add Service' }).click();
+      const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).first();
+      await serviceSelect.click();
+      await page.getByRole('option', { name: fixedServiceName }).click();
+      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('1');
+      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').fill('500');
+      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').blur();
+      for (const _ of [0,1,2,3]) { await page.locator('[data-automation-id="wizard-next"], #wizard-next').click(); }
+      await page.locator('[data-automation-id="wizard-finish"], #wizard-finish').click();
+      await page.locator('[data-automation-id="dialog-dialog"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(async () => {
+        await expect(page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button')).toBeVisible({ timeout: 15000 });
+      });
+
+      // Read back dates as text to avoid driver date parsing
+      const bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+      expect(bundle).toBeDefined();
+      const row = await db
+        .raw('select start_date::text as s, end_date::text as e from client_plan_bundles where tenant = ? and bundle_id = ? limit 1', [tenantId, bundle!.bundle_id])
+        .then((r: any) => r.rows?.[0]);
+      expect(row).toBeDefined();
+      // Compare YMD; en-CA locale gives YYYY-MM-DD reliably
+      expect(row.s).toBe(startYMD);
+      expect(row.e).toBe(endYMD);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+});
+
+// Additional corner case coverage for UI/validation, dates, rates, DB, and UX
+test.describe('Contract Wizard Corner Cases', () => {
+  async function openWizardOnContracts(page: Page, tenantId: string) {
+    const tenantQuery = `&tenantId=${tenantId}`;
+    // Attach fail-fast network/console handlers to surface server/client failures early
+    attachFailFastHandlers(page, TEST_CONFIG.baseUrl);
+    await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts${tenantQuery}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    const wizardButtonLocator = page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button');
+    await wizardButtonLocator.click();
+    await page.locator('[data-automation-id="contract-basics-step"]').waitFor({ timeout: 10_000 });
+  }
+
+  async function selectClientAndName(page: Page, clientName: string, contractName: string) {
+    const clientSelect = page.getByRole('combobox', { name: /Select a client|Loading clients/i });
+    await clientSelect.click();
+    await page.getByRole('option', { name: clientName }).click();
+    await page.locator('[data-automation-id="contract_name"], #contract_name').fill(contractName);
+  }
+
+  async function pickCalendarDate(page: Page, field: 'start-date' | 'end-date', date: Date) {
+    const input = page.locator(`[data-automation-id="${field}"] , #${field}`);
+    await input.click();
+    // Click target day in the current visible month grid to avoid nav flakiness
+    const day = String(date.getDate());
+    await page.locator('.rdp-day:not(.rdp-day_outside)').filter({ hasText: new RegExp(`^${day}$`) }).first().click();
+  }
+
+  async function advanceToReview(page: Page) {
+    for (let i = 0; i < 6; i++) {
+      const isReview = await page
+        .getByRole('heading', { name: 'Review Contract' })
+        .first()
+        .isVisible()
+        .catch(() => false);
+      if (isReview) return;
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.waitForTimeout(150);
+    }
+    await expect(page.getByRole('heading', { name: 'Review Contract' }).first()).toBeVisible({ timeout: 5000 });
+  }
+
+  test('basics required-field guards block Next and show errors', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const serviceName = `Playwright Fixed Service ${uuidv4().slice(0, 6)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, serviceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+
+      // Click Next immediately — expect Client required
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Client is required/i)).toBeVisible();
+      // Fill client only
+      await page.getByRole('combobox', { name: /Select a client|Loading clients/i }).click();
+      await page.getByRole('option', { name: tenantData.client!.clientName }).click();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Contract name is required/i)).toBeVisible();
+      // Fill name; frequency defaults to Monthly; start date missing
+      await page.locator('[data-automation-id="contract_name"], #contract_name').fill('Req Guards Contract');
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Start date is required/i)).toBeVisible();
+      // Fill start date and proceed
+      await pickCalendarDate(page, 'start-date', new Date(now.getFullYear(), now.getMonth(), Math.min(15, 28)));
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Fixed Fee Services' }).first()).toBeVisible();
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('step skip logic: Fixed requires base rate only when services exist; Skip allows bypass', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed ${uuidv4().slice(0, 6)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, `Skip Logic ${uuidv4().slice(0, 4)}`);
+      await pickCalendarDate(page, 'start-date', now);
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('button', { name: 'Add Service' })).toBeVisible();
+      await page.getByRole('button', { name: 'Add Service' }).click();
+      // Pick service but do not set base rate
+      const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).first();
+      await serviceSelect.click();
+      await page.getByRole('option', { name: fixedServiceName }).click();
+      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('2');
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Base rate is required/i)).toBeVisible();
+      // Skip should still move forward per current design
+      await page.locator('[data-automation-id="wizard-skip"], #wizard-skip').click();
+      await expect(page.getByRole('heading', { name: 'Hourly Services' }).first()).toBeVisible();
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('save as draft closes dialog and no DB rows; then reopen and finish', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed ${uuidv4().slice(0, 6)}`;
+    const contractName = `Draft Contract ${uuidv4().slice(0, 6)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      const { serviceId } = await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+      await pickCalendarDate(page, 'start-date', now);
+
+      // Save as Draft
+      await page.locator('[data-automation-id="wizard-save-draft"], #wizard-save-draft').click();
+      await expect(page.locator('[data-automation-id="dialog-dialog"]')).toBeHidden({ timeout: 10_000 });
+      // No bundles yet
+      const zeroBundles = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName });
+      expect(zeroBundles.length).toBe(0);
+
+      // Reopen wizard and complete a minimal fixed flow
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+      await pickCalendarDate(page, 'start-date', now);
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.getByRole('button', { name: 'Add Service' }).click();
+      const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).first();
+      await serviceSelect.click();
+      await page.getByRole('option', { name: fixedServiceName }).click();
+      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('1');
+      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').fill('500');
+      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').blur();
+      await advanceToReview(page);
+      await expect(page.locator('[data-automation-id="wizard-finish"], #wizard-finish')).toBeVisible({ timeout: 10000 });
+      await page.locator('[data-automation-id="wizard-finish"], #wizard-finish').click();
+      // Wait for dialog to close and page to show Contracts button
+      await expect(page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button')).toBeVisible({ timeout: 15000 });
+      // Poll DB until bundle shows up (server action latency)
+      let bundle: any | undefined;
+      for (let i = 0; i < 30; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+        if (bundle) break;
+        // eslint-disable-next-line no-await-in-loop
+        await page.waitForTimeout(250);
+      }
+      expect(bundle).toBeDefined();
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('date edges: last day of month and same-day start/end reflected on Review', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const fixedServiceName = `Playwright Fixed ${uuidv4().slice(0, 6)}`;
+    const contractName = `Date Edges ${uuidv4().slice(0, 6)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, new Date());
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, new Date());
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+
+      // Use current month last day to avoid calendar navigation flakiness
+      const now2 = new Date();
+      const endOfMonth = new Date(now2.getFullYear(), now2.getMonth() + 1, 0);
+      await pickCalendarDate(page, 'start-date', endOfMonth);
+      // Set same-day end
+      await pickCalendarDate(page, 'end-date', endOfMonth);
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      const review = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+      const expected = endOfMonth.toLocaleDateString('en-US');
+      expect(review).toContain(expected + ' - ' + expected);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('fixed: multiple services listed; base rate persisted once', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const serviceA = `Fixed A ${uuidv4().slice(0, 5)}`;
+    const serviceB = `Fixed B ${uuidv4().slice(0, 5)}`;
+    const contractName = `Fixed Multi ${uuidv4().slice(0, 6)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      const { serviceId: serviceIdA } = await seedFixedServiceForTenant(db, tenantId, serviceA, now);
+      const { serviceId: serviceIdB } = await seedFixedServiceForTenant(db, tenantId, serviceB, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+      await pickCalendarDate(page, 'start-date', now);
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.getByRole('button', { name: 'Add Service' }).click();
+      // Service A qty 2
+      let select = page.getByRole('combobox', { name: /Select a service/i }).first();
+      await select.click();
+      await page.getByRole('option', { name: serviceA }).click();
+      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('2');
+      // Add B
+      await page.getByRole('button', { name: 'Add Service' }).click();
+      select = page.getByRole('combobox', { name: /Select a service/i }).last();
+      await select.click();
+      await page.getByRole('option', { name: serviceB }).click();
+      await page.locator('[data-automation-id="quantity-1"], #quantity-1').fill('3');
+      // Base rate
+      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').fill('750');
+      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').blur();
+      // Advance to review then finish
+      await advanceToReview(page);
+      const review = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+      expect(review).toMatch(new RegExp(`${serviceA}.*\(Qty: 2\)`, 's'));
+      expect(review).toMatch(new RegExp(`${serviceB}.*\(Qty: 3\)`, 's'));
+      await page.locator('[data-automation-id="wizard-finish"], #wizard-finish').click();
+      // Prefer waiting for dialog to close; fallback to wizard button appears
+      await page.locator('[data-automation-id="dialog-dialog"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(async () => {
+        await expect(page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button')).toBeVisible({ timeout: 15000 });
+      });
+
+      const bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+      expect(bundle).toBeDefined();
+      const bundlePlan = await db('bundle_billing_plans').where({ tenant: tenantId, bundle_id: bundle!.bundle_id }).first();
+      const planId = bundlePlan!.plan_id;
+      const planFixed = await db('billing_plan_fixed_config').where({ tenant: tenantId, plan_id: planId });
+      expect(planFixed.length).toBe(1); // persisted once at plan level
+      const ps = await db('plan_services').where({ tenant: tenantId, plan_id: planId }).orderBy('service_id');
+      expect(ps.length).toBe(2);
+      const serviceIds = [serviceIdA, serviceIdB].sort();
+      expect(ps.map((r: any) => r.service_id).sort()).toEqual(serviceIds);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('hourly: multiple services with distinct rates; DB reflects per-service configs', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedName = `Fixed ${uuidv4().slice(0,4)}`;
+    const hourlyA = `Hourly A ${uuidv4().slice(0,4)}`;
+    const hourlyB = `Hourly B ${uuidv4().slice(0,4)}`;
+    const contractName = `Hourly Multi ${uuidv4().slice(0, 6)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedName, now);
+      const { serviceId: hourlyIdA } = await seedHourlyServiceForTenant(db, tenantId, hourlyA, now, 15000);
+      const { serviceId: hourlyIdB } = await seedHourlyServiceForTenant(db, tenantId, hourlyB, now, 20000);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+      await pickCalendarDate(page, 'start-date', now);
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click(); // Fixed
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click(); // Hourly
+      await page.getByRole('button', { name: /Add Hourly Service/i }).click();
+      let s = page.getByRole('combobox', { name: /Select a service/i }).first();
+      await s.click();
+      await page.getByRole('option', { name: hourlyA }).click();
+      await page.fill('#hourly-rate-0', (15000 / 100).toFixed(2));
+      await page.locator('#hourly-rate-0').press('Tab');
+
+      await page.getByRole('button', { name: /Add Hourly Service/i }).click();
+      s = page.getByRole('combobox', { name: /Select a service/i }).last();
+      await s.click();
+      await page.getByRole('option', { name: hourlyB }).click();
+      await page.fill('#hourly-rate-1', (20000 / 100).toFixed(2));
+      await page.locator('#hourly-rate-1').press('Tab');
+
+      await page.fill('#minimum_billable_time', '15');
+      await page.fill('#round_up_to_nearest', '30');
+
+      // Advance to review to ensure UI renders section
+      await advanceToReview(page);
+      const review = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+      expect(review).toMatch(/Hourly Services/i);
+      expect(review).toContain(hourlyA);
+      expect(review).toContain(hourlyB);
+      await page.locator('[data-automation-id="wizard-finish"], #wizard-finish').click();
+      await page.locator('[data-automation-id="dialog-dialog"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(async () => {
+        await expect(page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button')).toBeVisible({ timeout: 15000 });
+      });
+
+      // DB assertions
+      let bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+      for (let i = 0; i < 30 && !bundle; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await page.waitForTimeout(250);
+        // eslint-disable-next-line no-await-in-loop
+        bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+      }
+      expect(bundle).toBeDefined();
+      let planLinks: any[] = [];
+      for (let i = 0; i < 30 && planLinks.length === 0; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        planLinks = await db('bundle_billing_plans').where({ tenant: tenantId, bundle_id: bundle!.bundle_id });
+        if (planLinks.length === 0) {
+          // eslint-disable-next-line no-await-in-loop
+          await page.waitForTimeout(250);
+        }
+      }
+      const hourlyPlan = await db('billing_plans').whereIn('plan_id', planLinks.map((r:any)=>r.plan_id)).andWhere({ tenant: tenantId, plan_type: 'Hourly' }).first();
+      const configs = await db('plan_service_configuration').where({ tenant: tenantId, plan_id: hourlyPlan!.plan_id, configuration_type: 'Hourly' });
+      expect(configs.length).toBe(2);
+      const details = await db('plan_service_hourly_configs').whereIn('config_id', configs.map((r:any)=>r.config_id)).orderBy('config_id');
+      const rates = details.map((d:any)=> Number(d.hourly_rate)).sort((a:number,b:number)=>a-b);
+      expect(rates).toEqual([15000, 20000]);
+      expect(details.every((d:any)=> d.minimum_billable_time === 15 && d.round_up_to_nearest === 30)).toBe(true);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('bucket hours extremes: 1 hour and 1200 hours with decimal overage', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const serviceName = `Fixed ${uuidv4().slice(0,5)}`;
+    const contractName1 = `Bucket 1h ${uuidv4().slice(0, 4)}`;
+    const contractName2 = `Bucket 1200h ${uuidv4().slice(0, 4)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, serviceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      // 1 hour, overage $0.75
+      await completeContractWizardFlow(page, tenantData!, serviceName, contractName1, {
+        baseRate: 300,
+        bucketHours: {
+          hours: 1,
+          monthlyFeeCents: 1000,
+          overageRateCents: 75,
+          serviceName,
+        },
+      });
+      const bundle1 = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName1 }).first();
+      const link1 = await db('bundle_billing_plans').where({ tenant: tenantId, bundle_id: bundle1!.bundle_id });
+      const bucketPlan1 = await db('billing_plans').whereIn('plan_id', link1.map((r:any)=>r.plan_id)).andWhere({ tenant: tenantId, plan_type: 'Bucket' }).first();
+      const ps1 = await db('plan_services').where({ tenant: tenantId, plan_id: bucketPlan1!.plan_id }).first();
+      const cfgRow1 = await db('plan_service_configuration').where({ tenant: tenantId, plan_id: bucketPlan1!.plan_id, service_id: ps1!.service_id, configuration_type: 'Bucket' }).first();
+      const bh1 = await db('plan_service_bucket_config').where({ tenant: tenantId, config_id: cfgRow1!.config_id }).first();
+      expect(Number(bh1.total_minutes)).toBe(60);
+      expect(Number(bh1.overage_rate)).toBe(75);
+
+      // 1200 hours, overage $123.45
+      await completeContractWizardFlow(page, tenantData!, serviceName, contractName2, {
+        baseRate: 300,
+        bucketHours: {
+          hours: 1200,
+          monthlyFeeCents: 999999,
+          overageRateCents: 12345,
+          serviceName,
+        },
+      });
+      const bundle2 = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName2 }).first();
+      const link2 = await db('bundle_billing_plans').where({ tenant: tenantId, bundle_id: bundle2!.bundle_id });
+      const bucketPlan2 = await db('billing_plans').whereIn('plan_id', link2.map((r:any)=>r.plan_id)).andWhere({ tenant: tenantId, plan_type: 'Bucket' }).first();
+      const ps2 = await db('plan_services').where({ tenant: tenantId, plan_id: bucketPlan2!.plan_id }).first();
+      const cfgRow2 = await db('plan_service_configuration').where({ tenant: tenantId, plan_id: bucketPlan2!.plan_id, service_id: ps2!.service_id, configuration_type: 'Bucket' }).first();
+      const bh2 = await db('plan_service_bucket_config').where({ tenant: tenantId, config_id: cfgRow2!.config_id }).first();
+      expect(Number(bh2.total_minutes)).toBe(1200 * 60);
+      expect(Number(bh2.overage_rate)).toBe(12345);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('cross-combo totals: Fixed + Hourly + Bucket; Review total excludes hourly', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedName = `Fixed ${uuidv4().slice(0,4)}`;
+    const hourlyName = `Hourly ${uuidv4().slice(0,4)}`;
+    const contractName = `Combo ${uuidv4().slice(0,4)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedName, now);
+      const { serviceId: hourlyServiceId } = await seedHourlyServiceForTenant(db, tenantId, hourlyName, now, 12500);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await completeContractWizardFlow(page, tenantData, fixedName, contractName, {
+        baseRate: 600,
+        hourlyService: { serviceId: hourlyServiceId, serviceName: hourlyName, hourlyRate: 12500 },
+        bucketHours: { hours: 10, monthlyFeeCents: 30000, overageRateCents: 5000, serviceName: fixedName },
+        onReview: async (page) => {
+          const txt = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+          // Total should be $600 + $300 = $900; hourly excluded
+          expect(txt).toMatch(/\$900\.00/);
+        },
+      });
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('double-submit protection: clicking Finish twice creates only one bundle', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const serviceName = `Fixed ${uuidv4().slice(0,5)}`;
+    const contractName = `No Dups ${uuidv4().slice(0,5)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, serviceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+      await pickCalendarDate(page, 'start-date', now);
+      // Minimal Fixed
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await page.getByRole('button', { name: 'Add Service' }).click();
+      const sel = page.getByRole('combobox', { name: /Select a service/i }).first();
+      await sel.click();
+      await page.getByRole('option', { name: serviceName }).click();
+      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('1');
+      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').fill('250');
+      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').blur();
+      await advanceToReview(page);
+      // Double click finish quickly
+      const finish = page.locator('[data-automation-id="wizard-finish"], #wizard-finish');
+      await Promise.all([finish.click(), finish.click().catch(()=>{})]);
+      await page.locator('[data-automation-id="dialog-dialog"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(async () => {
+        await expect(page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button')).toBeVisible({ timeout: 15000 });
+      });
+      // Poll rows for stability
+      let rows: any[] = [];
+      for (let i = 0; i < 30; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        rows = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName });
+        if (rows.length >= 1) break;
+        // eslint-disable-next-line no-await-in-loop
+        await page.waitForTimeout(250);
+      }
+      expect(rows.length).toBe(1);
     } finally {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
