@@ -28,7 +28,7 @@ type UIComponentNode = {
 };
 
 const TEST_CONFIG = {
-  baseUrl: process.env.EE_BASE_URL || 'http://localhost:3000',
+  baseUrl: process.env.EE_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000',
 };
 
 const EE_SERVER_PATH_SUFFIX = `${path.sep}ee${path.sep}server`;
@@ -395,8 +395,8 @@ async function completeContractWizardFlow(
     };
   }
 ): Promise<void> {
-  if (!tenantData.company) {
-    throw new Error('Tenant does not include a company, cannot complete wizard flow.');
+  if (!tenantData.client) {
+    throw new Error('Tenant does not include a client, cannot complete wizard flow.');
   }
 
   try {
@@ -424,26 +424,10 @@ async function completeContractWizardFlow(
       .waitFor({ state: 'attached', timeout: 10_000 });
     await waitForUIState(page);
 
-    const clientSelectComponent = await findComponent(
-      page,
-      (component) => component.id === 'company-select'
-    );
-
-    const clientSelectLocator = page.locator(`[data-automation-id="${clientSelectComponent.id}"]`);
-    await clientSelectLocator.waitFor({ timeout: 10_000 });
-    await page.waitForFunction(
-      (componentId) => {
-        const element = document.querySelector(
-          `[data-automation-id="${componentId}"]`
-        ) as HTMLElement | null;
-        if (!element) return false;
-        return !element.hasAttribute('data-disabled');
-      },
-      clientSelectComponent.id,
-      { timeout: 10_000 }
-    );
-    await clientSelectLocator.click();
-    await page.getByRole('option', { name: tenantData.company.companyName }).click();
+    const clientSelect = page.getByRole('combobox', { name: /Select a client|Loading clients/i });
+    await clientSelect.waitFor({ timeout: 10_000 });
+    await clientSelect.click();
+    await page.getByRole('option', { name: tenantData.client.clientName }).click();
 
     await page.locator('[data-automation-id="contract_name"]').fill(contractName);
 
@@ -454,6 +438,16 @@ async function completeContractWizardFlow(
 
     await page.locator(`[data-automation-id="${startDateComponent.id}"]`).click();
     await page.getByRole('gridcell', { name: /\d/ }).first().click();
+
+    // New required field: Billing Frequency
+    // Select a default frequency to satisfy validation
+    try {
+      const freqSelect = page.getByRole('combobox', { name: /Select billing frequency/i });
+      await freqSelect.click();
+      await page.getByRole('option', { name: /Monthly/i }).click();
+    } catch {
+      // If not found, proceed; some environments may default this
+    }
 
     const purchaseOrderOptions = options?.purchaseOrder;
     if (purchaseOrderOptions?.required) {
@@ -843,8 +837,8 @@ test.describe('Contract Wizard Happy Path', () => {
         { resource: 'billing', action: 'update' },
       ]);
 
-      if (!tenantData.company) {
-        throw new Error('Test tenant missing company data required for purchase order verification.');
+      if (!tenantData.client) {
+        throw new Error('Test tenant missing client data required for purchase order verification.');
       }
 
       await completeContractWizardFlow(page, tenantData, serviceName, contractName, {
@@ -864,7 +858,7 @@ test.describe('Contract Wizard Happy Path', () => {
       const companyBundle = await db('company_plan_bundles')
         .where({
           tenant: tenantId,
-          company_id: tenantData.company.companyId,
+          company_id: tenantData.client.clientId,
           bundle_id: bundle?.bundle_id,
         })
         .first();

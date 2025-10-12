@@ -68,7 +68,7 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
   const clientOptions = clients.map(client => ({ value: client.id, label: client.name }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-automation-id="contract-basics-step">
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Contract Basics</h3>
         <p className="text-sm text-gray-600">

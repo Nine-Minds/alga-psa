@@ -36,8 +36,10 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
 
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
+  /* Retry control: CI default 2, local default 0, override with PW_RETRIES */
+  retries: process.env.PW_RETRIES !== undefined
+    ? Number(process.env.PW_RETRIES)
+    : (process.env.CI ? 2 : 0),
   
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : 1, // Single worker for database isolation
@@ -109,9 +111,8 @@ export default defineConfig({
     // Reset DB once per session before starting the dev server.
     command: 'cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: 'http://localhost:3000',
-    // Ensure a fresh DB per Playwright run (session) by restarting the dev server
-    // and re-running the bootstrap script on each invocation.
-    reuseExistingServer: false,
+    // Fresh DB per run by default; allow override for local iteration
+    reuseExistingServer: process.env.PW_REUSE === 'true' ? true : false,
     timeout: 120000,
     stdout: 'pipe',
     stderr: 'pipe',
@@ -119,6 +120,7 @@ export default defineConfig({
       ...process.env,
       NEXT_PUBLIC_EDITION: 'enterprise',
       NEXTAUTH_URL: 'http://canonical.localhost:3000',
+      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'test-nextauth-secret',
       NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
       DB_HOST: process.env.DB_HOST,
       DB_PORT: process.env.DB_PORT,
