@@ -197,6 +197,23 @@ How It Works
   - Reads credentials from `server/.env` (override with `PLAYWRIGHT_DB_*`).
 - globalSetup applies Playwright DB env so the dev server connects to the right DB.
 
+Authentication in Playwright (avoiding login flakiness)
+- Problem: Interactive login during Playwright runs is slow and brittle (middleware redirects, cookie domain/host, edge-runtime session token decoding, etc.).
+- Solution: For UI automation we bypass interactive auth and keep routes accessible in test runs:
+  - Add a targeted bypass in middleware for MSP routes when `E2E_AUTH_BYPASS=true`.
+    - Code: `server/src/middleware.ts` guards `/msp/*` with `if (process.env.E2E_AUTH_BYPASS === 'true') return NextResponse.next()`.
+  - Enable the bypass only for Playwright’s dev server:
+    - `ee/server/playwright.config.ts` sets `env: { E2E_AUTH_BYPASS: 'true' }` in `webServer.env`.
+  - Keep prod/staging secure: do not set `E2E_AUTH_BYPASS` outside of test/dev.
+- Why this approach:
+  - Eliminates cookie/host mismatch issues between `localhost` vs. `canonical.localhost`.
+  - Avoids edge vs. node token decoding differences.
+  - Focuses Playwright on UI correctness instead of auth.
+
+Notes
+- If a specific test must exercise auth flows, disable bypass for that test run (unset `E2E_AUTH_BYPASS`) and use a test-only auth helper to seed a valid session cookie on the expected host.
+- For API E2E tests prefer `x-api-key` with per-test keys rather than browser sessions.
+
 Test File Pattern (seeded data; no DB writes)
 - Use an admin Knex connection to query seed data for test setup (bypasses RLS/ACL).
 - Do not create tenants/users in tests. Pick a seeded user and mint a valid Auth.js cookie.

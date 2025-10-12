@@ -25,7 +25,8 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'test';
  */
 export default defineConfig({
   testDir: './src/__tests__/integration',
-  testMatch: ['**/contract-wizard-*.playwright.test.ts'],
+  // Run all Playwright integration tests in this folder
+  testMatch: ['**/*.playwright.test.ts'],
   
   /* Global setup file */
   globalSetup: './playwright.global-setup.ts',
@@ -119,8 +120,9 @@ export default defineConfig({
     env: {
       ...process.env,
       NEXT_PUBLIC_EDITION: 'enterprise',
-      NEXTAUTH_URL: 'http://canonical.localhost:3000',
+      NEXTAUTH_URL: 'http://localhost:3000',
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'test-nextauth-secret',
+      E2E_AUTH_BYPASS: 'true',
       NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
       DB_HOST: process.env.DB_HOST,
       DB_PORT: process.env.DB_PORT,

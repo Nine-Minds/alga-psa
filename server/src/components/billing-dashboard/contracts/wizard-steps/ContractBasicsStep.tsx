@@ -12,6 +12,7 @@ import { ContractWizardData } from '../ContractWizard';
 import { getClients } from 'server/src/lib/actions/clientAction';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { Calendar, Building2, FileText, FileCheck, HelpCircle, Repeat, Info } from 'lucide-react';
+import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 
 interface ContractBasicsStepProps {
   data: ContractWizardData;
@@ -24,12 +25,14 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [poAmountInput, setPoAmountInput] = useState<string>('');
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    data.start_date ? new Date(data.start_date) : undefined
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(
-    data.end_date ? new Date(data.end_date) : undefined
-  );
+  const parseLocalYMD = (ymd?: string): Date | undefined => {
+    if (!ymd) return undefined;
+    const d = parseDateFns(ymd, 'yyyy-MM-dd', new Date());
+    return isNaN(d.getTime()) ? undefined : d;
+  };
+
+  const [startDate, setStartDate] = useState<Date | undefined>(parseLocalYMD(data.start_date));
+  const [endDate, setEndDate] = useState<Date | undefined>(parseLocalYMD(data.end_date));
 
   useEffect(() => {
     loadClients();
@@ -42,16 +45,8 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
   }, [data.po_amount]);
 
   useEffect(() => {
-    if (data.start_date) {
-      setStartDate(new Date(data.start_date));
-    } else {
-      setStartDate(undefined);
-    }
-    if (data.end_date) {
-      setEndDate(new Date(data.end_date));
-    } else {
-      setEndDate(undefined);
-    }
+    setStartDate(parseLocalYMD(data.start_date));
+    setEndDate(parseLocalYMD(data.end_date));
   }, [data.start_date, data.end_date]);
 
   const loadClients = async () => {
@@ -140,7 +135,8 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
           value={startDate}
           onChange={(date) => {
             setStartDate(date);
-            updateData({ start_date: date ? date.toISOString().split('T')[0] : '' });
+            // Store a local date-only string to avoid UTC timezone shifts
+            updateData({ start_date: date ? formatDateFns(date, 'yyyy-MM-dd') : '' });
           }}
           className="w-full"
         />
@@ -163,7 +159,8 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
           value={endDate}
           onChange={(date) => {
             setEndDate(date);
-            updateData({ end_date: date ? date.toISOString().split('T')[0] : undefined });
+            // Store a local date-only string to avoid UTC timezone shifts
+            updateData({ end_date: date ? formatDateFns(date, 'yyyy-MM-dd') : undefined });
           }}
           className="w-full"
           clearable
@@ -277,7 +274,7 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
             <p><strong>Client:</strong> {clientOptions.find(c => c.value === (data.client_id || data.company_id))?.label || 'Not selected'}</p>
             <p><strong>Contract:</strong> {data.contract_name}</p>
             <p><strong>Billing Frequency:</strong> {BILLING_FREQUENCY_OPTIONS.find(opt => opt.value === data.billing_frequency)?.label || data.billing_frequency}</p>
-            <p><strong>Period:</strong> {new Date(data.start_date).toLocaleDateString()}{data.end_date ? ` - ${new Date(data.end_date).toLocaleDateString()}` : ' (Ongoing)'}</p>
+            <p><strong>Period:</strong> {formatDateFns(parseLocalYMD(data.start_date)!, 'MM/dd/yyyy')}{data.end_date ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}` : ' (Ongoing)'}</p>
             {data.po_required && (
               <>
                 <p><strong>PO Required:</strong> Yes</p>

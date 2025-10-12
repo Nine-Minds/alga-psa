@@ -5,6 +5,7 @@ import { ContractWizardData } from '../ContractWizard';
 import { Card } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Building2, FileText, Calendar, DollarSign, Clock, Package, Droplet, Activity, CheckCircle2, FileCheck, Repeat } from 'lucide-react';
+import { parse } from 'date-fns';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { getClients } from 'server/src/lib/actions/clientAction';
 
@@ -40,9 +41,20 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     return `$${(cents / 100).toFixed(2)}`;
   };
 
+  const parseLocalYMD = (ymd: string): Date | null => {
+    // Parse a 'yyyy-MM-dd' string as a local date (no timezone shift)
+    try {
+      const d = parse(ymd, 'yyyy-MM-dd', new Date());
+      return isNaN(d.getTime()) ? null : d;
+    } catch {
+      return null;
+    }
+  };
+
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
+    const local = parseLocalYMD(dateString) ?? new Date(dateString);
+    return local.toLocaleDateString();
   };
 
   const calculateTotalMonthly = () => {

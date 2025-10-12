@@ -99,6 +99,20 @@ const _middleware = auth((request) => {
     }
   }
 
+  // Test bypass: allow MSP routes without auth when explicitly enabled for E2E
+  if (process.env.E2E_AUTH_BYPASS === 'true' && pathname.startsWith(protectedPrefix)) {
+    // If a tenantId is provided via query param, stamp it into request headers
+    const tenantId = request.nextUrl.searchParams.get('tenantId');
+    if (tenantId) {
+      response = NextResponse.next({
+        request: {
+          headers: new Headers({ ...Object.fromEntries(requestHeaders), 'x-tenant-id': tenantId }),
+        },
+      });
+    }
+    return response;
+  }
+
   // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {

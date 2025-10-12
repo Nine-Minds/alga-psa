@@ -27,6 +27,8 @@ type UIComponentNode = {
   children?: UIComponentNode[];
 };
 
+// Ensure a consistent host that matches the dev server's NEXTAUTH_URL
+process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const TEST_CONFIG = {
   baseUrl: process.env.EE_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000',
 };
@@ -38,6 +40,7 @@ const WORKSPACE_ROOT = process.cwd().endsWith(EE_SERVER_PATH_SUFFIX)
 
 applyPlaywrightDatabaseEnv();
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
+process.env.E2E_AUTH_BYPASS = process.env.E2E_AUTH_BYPASS || 'true';
 
 let adminDb: Knex | null = null;
 let databaseReadyPromise: Promise<void> | null = null;
@@ -68,12 +71,18 @@ async function setupAuthenticatedSession(
     throw new Error('NEXTAUTH_SECRET must be defined for Playwright auth mocking.');
   }
 
-  // Import encode from @auth/core/jwt to create a proper JWT
   const { encode } = await import('@auth/core/jwt');
-
   const cookieName = process.env.NODE_ENV === 'production'
     ? '__Secure-authjs.session-token'
     : 'authjs.session-token';
+  const isHttps = TEST_CONFIG.baseUrl.startsWith('https://');
+  const allCookieNames = [
+    cookieName,
+    'authjs.session-token',
+    'next-auth.session-token',
+    // only include __Secure-* variants when using HTTPS and secure cookies
+    ...(isHttps ? ['__Secure-authjs.session-token', '__Secure-next-auth.session-token'] : []),
+  ];
 
   const sessionUser = {
     id: tenantData.adminUser.userId,
@@ -105,17 +114,45 @@ async function setupAuthenticatedSession(
   const context = page.context();
 
   // Set the properly signed session cookie
-  await context.addCookies([
-    {
-      name: cookieName,
-      value: token,
-      url: TEST_CONFIG.baseUrl,
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-      expires: expiresAtSeconds,
-    },
+  // Add cookie for both localhost and canonical.localhost to survive redirects
+  const cookieHosts = new Set<string>([
+    TEST_CONFIG.baseUrl,
+    'http://localhost:3000',
+    'http://canonical.localhost:3000',
   ]);
+
+  const cookiesByUrl: any[] = [];
+  const cookiesByDomain: any[] = [];
+  for (const url of cookieHosts) {
+    for (const name of allCookieNames) {
+      cookiesByUrl.push({
+        name,
+        value: token,
+        url,
+        httpOnly: true,
+        secure: isHttps,
+        sameSite: 'Lax',
+        expires: expiresAtSeconds,
+      });
+    }
+  }
+  // Also set domain-scoped cookies for localhost/canonical.localhost
+  const domains = ['localhost', 'canonical.localhost'];
+  for (const domain of domains) {
+    for (const name of allCookieNames) {
+      cookiesByDomain.push({
+        name,
+        value: token,
+        domain,
+        path: '/',
+        httpOnly: true,
+        secure: isHttps,
+        sameSite: 'Lax',
+        expires: expiresAtSeconds,
+      });
+    }
+  }
+  await context.addCookies([...cookiesByUrl, ...cookiesByDomain]);
 
   console.log('[Playwright Auth] Valid session JWT cookie set');
 }
@@ -370,7 +407,7 @@ async function cleanupContractArtifacts(db: Knex, tenantId: string): Promise<voi
   await db('bundle_billing_plans').where({ tenant: tenantId }).del().catch(() => {});
   await db('billing_plans').where({ tenant: tenantId }).del().catch(() => {});
   await db('company_billing_plans').where({ tenant: tenantId }).del().catch(() => {});
-  await db('company_plan_bundles').where({ tenant: tenantId }).del().catch(() => {});
+  await db('client_plan_bundles').where({ tenant: tenantId }).del().catch(() => {});
   await db('plan_bundles').where({ tenant: tenantId }).del().catch(() => {});
 }
 
@@ -393,6 +430,19 @@ async function completeContractWizardFlow(
       minimumBillableTime?: number;
       roundUpToNearest?: number;
     };
+    bucketHours?: {
+      hours: number;
+      monthlyFeeCents: number;
+      overageRateCents: number;
+      serviceName?: string; // if omitted, will use the fixed service added earlier
+    };
+    bucketUsage?: {
+      units: number;
+      unitOfMeasure: string;
+      monthlyFeeCents: number;
+      overageRateCents: number;
+      serviceName?: string; // if omitted, will use the fixed service added earlier
+    };
   }
 ): Promise<void> {
   if (!tenantData.client) {
@@ -405,8 +455,31 @@ async function completeContractWizardFlow(
     // First, set up the authenticated session with a properly signed JWT
     await setupAuthenticatedSession(page, tenantData);
 
-    // Navigate directly to contracts page - we're already authenticated
-    await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts`, {
+    // Warm up on canonical host to ensure cookie domain matches before protected route
+    await page.goto(`${TEST_CONFIG.baseUrl}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 });
+
+    // Assert session is recognized by NextAuth; if not, surface a clear error
+    if (process.env.E2E_AUTH_BYPASS !== 'true') {
+      try {
+        await page.goto(`${TEST_CONFIG.baseUrl}/api/auth/session`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+        const sessionText = await page.textContent('body');
+        if (!sessionText || !/"user"\s*:\s*\{/.test(sessionText)) {
+          throw new Error('Session not established — NextAuth session endpoint returned no user');
+        }
+      } catch (e) {
+        throw new Error(`Auth session verification failed: ${(e as Error).message}`);
+      }
+    }
+
+    // Navigate to contracts page - under bypass, pass tenantId for server actions
+    const tenantQuery = process.env.E2E_AUTH_BYPASS === 'true' && tenantData?.tenant?.tenantId
+      ? `&tenantId=${tenantData.tenant.tenantId}`
+      : '';
+    await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts${tenantQuery}`, {
       waitUntil: 'domcontentloaded',
       timeout: 60_000,
     });
@@ -520,17 +593,64 @@ async function completeContractWizardFlow(
       }
     }
 
-    const remainingHeadings: Array<{ heading: string; buttonId: string }> = [
-      { heading: 'Usage-Based Services', buttonId: 'wizard-next' },
-      { heading: 'Bucket Services', buttonId: 'wizard-next' },
-      { heading: 'Review Contract', buttonId: 'wizard-next' },
-    ];
+    // Usage-Based Services step (skip)
+    await page.locator('[data-automation-id="wizard-next"]').click();
+    await expect(
+      page.getByRole('heading', { name: 'Usage-Based Services' }).first()
+    ).toBeVisible({ timeout: 3000 });
 
-    for (const { heading, buttonId } of remainingHeadings) {
-      await page.locator(`[data-automation-id="${buttonId}"]`).click();
-      await expect(
-        page.getByRole('heading', { name: heading }).first()
-      ).toBeVisible({ timeout: 3000 });
+    // Bucket Services step (configure if requested)
+    await page.locator('[data-automation-id="wizard-next"]').click();
+    await expect(
+      page.getByRole('heading', { name: 'Bucket Services' }).first()
+    ).toBeVisible({ timeout: 3000 });
+
+    if (options?.bucketHours || options?.bucketUsage) {
+      const bh = options.bucketHours;
+      // Select bucket type and fill form
+      const bucketType = page.getByRole('combobox', { name: /Bucket Type/i });
+      await bucketType.click();
+      if (options.bucketHours) {
+        await page.getByRole('option', { name: /Time-based \(Hours\)/i }).click();
+        await page.locator('#bucket_hours').fill(String(options.bucketHours.hours));
+      } else if (options.bucketUsage) {
+        await page.getByRole('option', { name: /Usage-based \(Units\)/i }).click();
+        await page.locator('#bucket_usage_units').fill(String(options.bucketUsage.units));
+        await page.locator('#bucket_unit_of_measure').fill(options.bucketUsage.unitOfMeasure);
+      }
+
+      const monthlyCents = options.bucketHours?.monthlyFeeCents ?? options.bucketUsage!.monthlyFeeCents;
+      const overageCents = options.bucketHours?.overageRateCents ?? options.bucketUsage!.overageRateCents;
+
+      await page.locator('#bucket_monthly_fee').fill((monthlyCents / 100).toFixed(2));
+      await page.locator('#bucket_monthly_fee').blur();
+      await page.locator('#bucket_overage_rate').fill((overageCents / 100).toFixed(2));
+      await page.locator('#bucket_overage_rate').blur();
+
+      // Add a service to the bucket
+      await page.locator('#add-bucket-service-button').click();
+
+      const serviceToPick = options.bucketHours?.serviceName || options.bucketUsage?.serviceName || serviceName;
+      const bucketServiceSelect = page.getByRole('combobox', { name: /Select a service/i }).last();
+      await bucketServiceSelect.click();
+      await expect(page.getByRole('option', { name: serviceToPick })).toBeVisible({ timeout: 10_000 });
+      await page.getByRole('option', { name: serviceToPick }).click();
+    }
+
+    // Review Contract step
+    await page.locator('[data-automation-id="wizard-next"]').click();
+    await expect(
+      page.getByRole('heading', { name: 'Review Contract' }).first()
+    ).toBeVisible({ timeout: 3000 });
+
+    if (options?.bucketHours || options?.bucketUsage) {
+      // Verify the review shows Bucket Services summary
+      await expect(page.getByRole('heading', { name: 'Bucket Services' }).first()).toBeVisible({ timeout: 3000 });
+      if (options.bucketHours) {
+        await expect(page.getByText(/hours\/month/i).first()).toBeVisible({ timeout: 3000 });
+      } else {
+        await expect(page.getByText(/units?\/month|\/month/i).first()).toBeVisible({ timeout: 3000 });
+      }
     }
 
     await expect(page.locator(`text=${serviceName}`).first()).toBeVisible({ timeout: 3000 });
@@ -855,20 +975,264 @@ test.describe('Contract Wizard Happy Path', () => {
         .first();
       expect(bundle).toBeDefined();
 
-      const companyBundle = await db('company_plan_bundles')
-        .where({
-          tenant: tenantId,
-          company_id: tenantData.client.clientId,
-          bundle_id: bundle?.bundle_id,
-        })
+      const bundleLink = await db('client_plan_bundles')
+        .where({ tenant: tenantId, client_id: tenantData.client.clientId, bundle_id: bundle?.bundle_id })
         .first();
 
-      console.log(companyBundle);
+      expect(bundleLink).toBeDefined();
+      expect(bundleLink.po_number).toBe(poNumber);
+      expect(bundleLink.po_required).toBe(true);
+      expect(Number(bundleLink.po_amount ?? 0)).toBe(poAmountCents);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
 
-      expect(companyBundle).toBeDefined();
-      expect(companyBundle?.po_number).toBe(poNumber);
-      expect(companyBundle?.po_required).toBe(true);
-      expect(Number(companyBundle?.po_amount ?? 0)).toBe(poAmountCents);
+  test('configures bucket hours and completes wizard', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+    const contractName = `Playwright Bucket Contract ${uuidv4().slice(0, 8)}`;
+
+    try {
+      tenantData = await createTestTenant(db, {
+        companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+      });
+
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+        { resource: 'billing', action: 'update' },
+      ]);
+
+      await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+        baseRate: 500,
+        bucketHours: {
+          hours: 40,
+          monthlyFeeCents: 500000, // $5,000.00
+          overageRateCents: 15000, // $150.00/hour
+          serviceName: fixedServiceName,
+        },
+      });
+
+      // Verify bundle + bucket plan created and configured
+      const bundle = await db('plan_bundles')
+        .where({ tenant: tenantId, bundle_name: contractName })
+        .first();
+      expect(bundle).toBeDefined();
+
+      const bundlePlans = await db('bundle_billing_plans')
+        .where({ tenant: tenantId, bundle_id: bundle!.bundle_id })
+        .orderBy('display_order', 'asc');
+      expect(bundlePlans.length).toBeGreaterThan(0);
+
+      const planIds = bundlePlans.map((bp: any) => bp.plan_id);
+      const bucketPlan = await db('billing_plans')
+        .whereIn('plan_id', planIds)
+        .andWhere({ tenant: tenantId, plan_type: 'Bucket' })
+        .first();
+      expect(bucketPlan).toBeDefined();
+
+      const bucketPlanId = bucketPlan!.plan_id;
+      // Should have the fixed service as a bucket service
+      const planService = await db('plan_services')
+        .where({ tenant: tenantId, plan_id: bucketPlanId })
+        .first();
+      expect(planService).toBeDefined();
+
+      const baseConfig = await db('plan_service_configuration')
+        .where({ tenant: tenantId, plan_id: bucketPlanId, service_id: planService!.service_id, configuration_type: 'Bucket' })
+        .first();
+      expect(baseConfig).toBeDefined();
+
+      const bucketConfig = await db('plan_service_bucket_config')
+        .where({ tenant: tenantId, config_id: baseConfig!.config_id })
+        .first();
+      expect(bucketConfig).toBeDefined();
+      expect(bucketConfig!.billing_period).toBe('monthly');
+      // Over 40 hours → 2400 minutes
+      expect(Number(bucketConfig!.total_minutes)).toBe(40 * 60);
+      expect(Number(bucketConfig!.overage_rate)).toBe(15000);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('configures usage-based bucket and completes wizard', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+    const contractName = `Playwright Usage Bucket Contract ${uuidv4().slice(0, 8)}`;
+
+    try {
+      tenantData = await createTestTenant(db, {
+        companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+      });
+
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+        { resource: 'billing', action: 'update' },
+      ]);
+
+      await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+        baseRate: 500,
+        bucketUsage: {
+          units: 1000,
+          unitOfMeasure: 'API calls',
+          monthlyFeeCents: 250000, // $2,500.00
+          overageRateCents: 50,    // $0.50 per unit
+          serviceName: fixedServiceName,
+        },
+      });
+
+      // Verify bundle + bucket plan created and configured (usage-based)
+      const bundle = await db('plan_bundles')
+        .where({ tenant: tenantId, bundle_name: contractName })
+        .first();
+      expect(bundle).toBeDefined();
+
+      const bundlePlans = await db('bundle_billing_plans')
+        .where({ tenant: tenantId, bundle_id: bundle!.bundle_id })
+        .orderBy('display_order', 'asc');
+      expect(bundlePlans.length).toBeGreaterThan(0);
+
+      const planIds = bundlePlans.map((bp: any) => bp.plan_id);
+      const bucketPlan = await db('billing_plans')
+        .whereIn('plan_id', planIds)
+        .andWhere({ tenant: tenantId, plan_type: 'Bucket' })
+        .first();
+      expect(bucketPlan).toBeDefined();
+
+      const bucketPlanId = bucketPlan!.plan_id;
+      // Should have the fixed service as a bucket service
+      const planService = await db('plan_services')
+        .where({ tenant: tenantId, plan_id: bucketPlanId })
+        .first();
+      expect(planService).toBeDefined();
+
+      const baseConfig = await db('plan_service_configuration')
+        .where({ tenant: tenantId, plan_id: bucketPlanId, service_id: planService!.service_id, configuration_type: 'Bucket' })
+        .first();
+      expect(baseConfig).toBeDefined();
+
+      const bucketConfig = await db('plan_service_bucket_config')
+        .where({ tenant: tenantId, config_id: baseConfig!.config_id })
+        .first();
+      expect(bucketConfig).toBeDefined();
+      expect(bucketConfig!.billing_period).toBe('monthly');
+      // For usage-based bucket we store units as total_minutes generic quantity
+      expect(Number(bucketConfig!.total_minutes)).toBe(1000);
+      expect(Number(bucketConfig!.overage_rate)).toBe(50);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+});
+
+test.describe('Date Picker Timezone Regression', () => {
+  test.use({ timezoneId: 'America/Los_Angeles', locale: 'en-US' });
+
+  test('selecting first of month should not shift to previous day in review', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+    const contractName = `TZ Regression Contract ${uuidv4().slice(0, 8)}`;
+
+    try {
+      tenantData = await createTestTenant(db, {
+        companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+      });
+
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+        { resource: 'billing', action: 'update' },
+      ]);
+
+      // Go to the Contracts tab and open the wizard
+      const tenantQuery2 = `&tenantId=${tenantData.tenant.tenantId}`;
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts${tenantQuery2}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForLoadState('networkidle');
+      const wizardButtonLocator = page.locator('[data-automation-id="wizard-contract-button"]');
+      await wizardButtonLocator.click();
+      await page.locator('[data-automation-id="contract-basics-step"]').waitFor({ timeout: 10_000 });
+
+      // Select client (already present from tenantData)
+      const clientSelect = page.getByRole('combobox', { name: /Select a client|Loading clients/i });
+      await clientSelect.click();
+      await page.getByRole('option', { name: tenantData.client!.clientName }).click();
+
+      // Set contract name
+      await page.locator('[data-automation-id="contract_name"]').fill(contractName + ' TZ');
+
+      // Open start-date picker and choose the 1st of the current month
+      const displayMonth = new Date();
+      const firstOfMonth = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), 1);
+      const expectedDisplay = firstOfMonth.toLocaleDateString('en-US');
+
+      await page.locator('[data-automation-id="start-date"]').click();
+      // Ensure we are at the current month: click Today button
+      await page.getByRole('button', { name: /Go to today/i }).click();
+      // Click day cell "1" for current month (exclude outside days)
+      await page.locator('.rdp-day:not(.rdp-day_outside)').filter({ hasText: /^1$/ }).first().click();
+
+      // Required: select Billing Frequency Monthly to pass validation on Basics
+      try {
+        const freqSelect = page.getByRole('combobox', { name: /Select billing frequency/i });
+        await freqSelect.click();
+        await page.getByRole('option', { name: /Monthly/i }).click();
+      } catch {}
+
+      // Move to Review, skipping through intermediate steps quickly
+      for (const _ of [0,1,2,3,4]) {
+        await page.locator('[data-automation-id="wizard-next"]').click();
+        await page.waitForTimeout(200); // small debounce for UI updates
+      }
+      await expect(page.getByRole('heading', { name: 'Review Contract' })).toBeVisible({ timeout: 5000 });
+
+      // Assert Contract Period shows the 1st of the month, not the previous date
+      const pageText = await page.textContent('body');
+      expect(pageText || '').toContain(expectedDisplay);
     } finally {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;

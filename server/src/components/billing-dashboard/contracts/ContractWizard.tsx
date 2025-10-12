@@ -301,6 +301,14 @@ export function ContractWizard({
         hourly_services: wizardData.hourly_services,
         minimum_billable_time: wizardData.minimum_billable_time,
         round_up_to_nearest: wizardData.round_up_to_nearest,
+        // Bucket fields
+        bucket_type: wizardData.bucket_type,
+        bucket_hours: wizardData.bucket_hours,
+        bucket_usage_units: wizardData.bucket_usage_units,
+        bucket_unit_of_measure: wizardData.bucket_unit_of_measure,
+        bucket_monthly_fee: wizardData.bucket_monthly_fee,
+        bucket_overage_rate: wizardData.bucket_overage_rate,
+        bucket_services: wizardData.bucket_services,
       });
 
       const completedData: ContractWizardData = {
