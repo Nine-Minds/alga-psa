@@ -527,8 +527,8 @@ async function completeContractWizardFlow(
     }
 
     const remainingHeadings: Array<{ heading: string; buttonId: string }> = [
-      { heading: 'Bucket Hours', buttonId: 'wizard-next' },
       { heading: 'Usage-Based Services', buttonId: 'wizard-next' },
+      { heading: 'Bucket Services', buttonId: 'wizard-next' },
       { heading: 'Review Contract', buttonId: 'wizard-next' },
     ];
 
