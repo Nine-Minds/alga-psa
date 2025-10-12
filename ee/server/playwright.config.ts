@@ -109,7 +109,9 @@ export default defineConfig({
     // Reset DB once per session before starting the dev server.
     command: 'cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: true,
+    // Ensure a fresh DB per Playwright run (session) by restarting the dev server
+    // and re-running the bootstrap script on each invocation.
+    reuseExistingServer: false,
     timeout: 120000,
     stdout: 'pipe',
     stderr: 'pipe',
