@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
 import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
 import { TestContext } from 'server/test-utils/testContext';
 import { dateHelpers } from 'server/test-utils/dateUtils';
@@ -10,8 +11,87 @@ import {
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 
-// Required for tests
-global.TextEncoder = TextEncoder as any;
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Client Billing Cycle Creation', () => {
   let context: TestContext;

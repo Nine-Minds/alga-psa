@@ -2,7 +2,7 @@ exports.seed = function (knex) {
     return knex('tenants').select('tenant').first()
         .then((tenant) => {
             if (!tenant) return;
-            return knex('plan_services').insert([
+            return knex('contract_line_services').insert([
                 {
                     tenant: tenant.tenant,
                     contract_line_id: knex('contract_lines').where({ tenant: tenant.tenant, contract_line_name: 'Wonderland Basic' }).select('contract_line_id').first(),

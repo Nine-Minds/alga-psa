@@ -247,7 +247,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
 
     const { planId } = await createFixedPlanAssignment(context, serviceA, {
       planName: 'Subtotal Plan',
-      baseRateCents: 5000,
+      baseRateCents: 22500, // Total of all services: 5000 + 7500 + 10000
       detailBaseRateCents: 5000,
       startDate: '2025-02-01'
     });

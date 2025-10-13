@@ -41,14 +41,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -157,7 +195,15 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
 
   describe('Usage-Based Plans', () => {
     it('should generate an invoice based on usage records', async () => {
-      // Arrange
+      // Arrange - Create usage-based service
+      const serviceId = await createTestService(context, {
+        service_name: 'Data Transfer',
+        billing_method: 'per_unit',
+        default_rate: 1000, // $10.00 per GB
+        unit_of_measure: 'GB',
+        tax_region: 'US-NY'
+      });
+
       const planId = await context.createEntity('contract_lines', {
         contract_line_name: 'Usage Plan',
         billing_frequency: 'monthly',
@@ -165,13 +211,16 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         contract_line_type: 'Usage'
       }, 'contract_line_id');
 
-      const serviceId = await context.createEntity('service_catalog', {
-        service_name: 'Data Transfer',
-        description: 'Test service: Data Transfer',
-        service_type: 'Usage',
-        default_rate: '10',
-        unit_of_measure: 'GB'
-      }, 'service_id');
+      const configId = uuidv4();
+
+      // Set up contract line service configuration for usage billing
+      await context.db('contract_line_service_configuration').insert({
+        config_id: configId,
+        contract_line_id: planId,
+        service_id: serviceId,
+        configuration_type: 'Usage',
+        tenant: context.tenantId
+      });
 
       await context.db('contract_line_services').insert({
         contract_line_id: planId,
@@ -260,21 +309,21 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
 
   describe('Bucket Plans', () => {
     it('should handle overage charges correctly', async () => {
-      // Arrange
-      const planId = await context.createEntity('contract_lines', {
-        contract_line_name: 'Bucket Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        contract_line_type: 'Bucket'
-      }, 'contract_line_id');
-
-      const serviceId = await context.createEntity('service_catalog', {
+      // Arrange - Create service for bucket plan
+      const serviceId = await createTestService(context, {
         service_name: 'Consulting Hours',
         billing_method: 'per_unit',
         default_rate: 7500, // $75.00 per hour overage
         unit_of_measure: 'hour',
         tax_region: 'US-NY'
       });
+
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Bucket Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Bucket'
+      }, 'contract_line_id');
 
       const bucketPlanId = await context.createEntity('bucket_plans', {
         contract_line_id: planId,
@@ -283,6 +332,16 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         overage_rate: 7500,
         tenant: context.tenantId
       }, 'bucket_contract_line_id');
+
+      // Set up contract line service configuration for bucket billing
+      const configId = uuidv4();
+      await context.db('contract_line_service_configuration').insert({
+        config_id: configId,
+        contract_line_id: planId,
+        service_id: serviceId,
+        configuration_type: 'Bucket',
+        tenant: context.tenantId
+      });
 
       // Create billing cycle and assign plan
       const billingCycleId = await context.createEntity('client_billing_cycles', {
@@ -349,13 +408,6 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
   describe('Invoice Finalization', () => {
     it('should finalize an invoice correctly', async () => {
       // Arrange
-      const planId = await context.createEntity('contract_lines', {
-        contract_line_name: 'Simple Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        contract_line_type: 'Fixed'
-      }, 'contract_line_id');
-
       const serviceId = await context.createEntity('service_catalog', {
         service_name: 'Basic Service',
         description: 'Test service: Basic Service',
@@ -363,13 +415,6 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         default_rate: 20000,
         unit_of_measure: 'unit'
       }, 'service_id');
-
-      await context.db('contract_line_services').insert({
-        contract_line_id: planId,
-        service_id: serviceId,
-        quantity: 1,
-        tenant: context.tenantId
-      });
 
       const { planId } = await createFixedPlanAssignment(context, serviceId, {
         planName: 'Simple Plan',

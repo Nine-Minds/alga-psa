@@ -4,13 +4,19 @@ import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
-import { TextEncoder } from 'util';
-import { TestContext } from '../../../test-utils/testContext';
-import { setupCommonMocks } from '../../../test-utils/testMocks';
-import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
-import { createTestDate, createTestDateISO, dateHelpers } from '../../../test-utils/dateUtils';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
+import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { runWithTenant } from 'server/src/lib/db';
+import {
+  createTestService,
+  createFixedPlanAssignment,
+  setupClientTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
@@ -38,14 +44,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))

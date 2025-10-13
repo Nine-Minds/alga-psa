@@ -27,14 +27,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -132,7 +170,7 @@ describe('Billing Invoice Edge Cases', () => {
       tax_region: 'US-NY'
     });
 
-    const { planId } = await createFixedPlanAssignment(context, creditServiceA, {
+    const { planId, billingCycleId } = await createFixedPlanAssignment(context, creditServiceA, {
       planName: 'Credit Plan',
       baseRateCents: -12500,
       detailBaseRateCents: 5000,
@@ -143,51 +181,8 @@ describe('Billing Invoice Edge Cases', () => {
       detailBaseRateCents: 7500
     });
 
-    // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Credit Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      contract_line_type: 'Fixed'
-    }, 'contract_line_id');
-
-    // Assign services to plan
-    await context.db('contract_line_services').insert([
-      {
-        contract_line_id: planId,
-        service_id: serviceA,
-        quantity: 1,
-        tenant: context.tenantId
-      },
-      {
-        contract_line_id: planId,
-        service_id: serviceB,
-        quantity: 1,
-        tenant: context.tenantId
-      }
-    ]);
-
-    // Create billing cycle
-    const billingCycle = await context.createEntity('client_billing_cycles', {
-      client_id: context.clientId,
-      billing_cycle: 'monthly',
-      effective_date: '2025-02-01',
-      period_start_date: '2025-02-01',
-      period_end_date: '2025-03-01'
-    }, 'billing_cycle_id');
-
-    // Assign plan to client
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: client_id,
-      contract_line_id: planId,
-      start_date: '2025-02-01',
-      is_active: true,
-      tenant: context.tenantId
-    });
-
     // Generate invoice
-    const invoice = await generateInvoice(billingCycle);
+    const invoice = await generateInvoice(billingCycleId);
 
     expect(invoice).toBeDefined();
     expect(invoice!.subtotal).toBe(-12500);
@@ -213,41 +208,17 @@ describe('Billing Invoice Edge Cases', () => {
       unit_of_measure: 'unit',
       tax_region: 'US-NY',
       is_taxable: true // Even though it's taxable, tax on $0 is $0
-    }, 'service_id');
-
-    // Create a contract line with the free service
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Free Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      contract_line_type: 'Fixed'
-    }, 'contract_line_id');
-
-    // Assign free service to plan
-    await context.db('contract_line_services').insert({
-      contract_line_id: planId,
-      service_id: freeService,
-      quantity: 1,
-      tenant: context.tenantId
     });
 
-    const billingCycle = await context.createEntity('client_billing_cycles', {
-      client_id: context.clientId,
-      billing_cycle: 'monthly',
-      effective_date: '2025-02-01',
-      period_start_date: '2025-02-01',
-      period_end_date: '2025-03-01'
-    }, 'billing_cycle_id');
-
-    // Assign plan to client
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: client_id,
-      contract_line_id: planId,
-      start_date: '2025-02-01',
-      is_active: true,
-      tenant: context.tenantId
+    const { billingCycleId } = await createFixedPlanAssignment(context, freeService, {
+      planName: 'Free Plan',
+      baseRateCents: 0,
+      detailBaseRateCents: 0,
+      startDate: '2025-02-01'
     });
+
+    // Generate invoice
+    const invoice = await generateInvoice(billingCycleId);
 
     expect(invoice).toBeDefined();
     expect(invoice!.subtotal).toBe(0);

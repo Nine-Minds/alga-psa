@@ -39,14 +39,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -185,7 +223,16 @@ describe('Billing Invoice Generation – Error Handling', () => {
   });
 
   it('should handle undefined service rates', async () => {
-    // Arrange
+    // Arrange - Create a service with no default rate
+    const serviceId = await createTestService(context, {
+      service_name: 'Service Without Rate',
+      billing_method: 'fixed',
+      default_rate: 0, // Set to 0 instead of undefined
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY'
+    });
+
+    // Manually create configuration without setting a rate in the config table
     const planId = await context.createEntity('contract_lines', {
       contract_line_name: 'Invalid Plan',
       billing_frequency: 'monthly',
@@ -193,19 +240,23 @@ describe('Billing Invoice Generation – Error Handling', () => {
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
-      service_name: 'Service Without Rate',
-      description: 'Test service: Service Without Rate',
-      service_type: 'Fixed',
-      unit_of_measure: 'unit'
-      // default_rate intentionally undefined
-    }, 'service_id');
+    const configId = uuidv4();
 
     await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: serviceId,
       tenant: context.tenantId
     });
+
+    await context.db('contract_line_service_configuration').insert({
+      config_id: configId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      tenant: context.tenantId
+    });
+
+    // Intentionally skip contract_line_service_fixed_config to test missing rate config
 
     // Create billing cycle
     const billingCycleId = await context.createEntity('client_billing_cycles', {
@@ -229,26 +280,22 @@ describe('Billing Invoice Generation – Error Handling', () => {
   });
 
   it('should throw error when regenerating for same period', async () => {
-    // Arrange
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Standard Fixed Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      contract_line_type: 'Fixed'
-    }, 'contract_line_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Arrange - Use helper to create proper fixed plan configuration
+    const serviceId = await createTestService(context, {
       service_name: 'Monthly Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY'
+    });
 
-    await context.db('contract_line_services').insert({
-      contract_line_id: planId,
-      service_id: serviceId,
+    const { planId } = await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Standard Fixed Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      detailBaseRateCents: 10000,
       quantity: 1,
-      tenant: context.tenantId
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Create billing cycle
@@ -259,15 +306,6 @@ describe('Billing Invoice Generation – Error Handling', () => {
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
-
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
-    });
 
     // Generate first invoice
     const firstInvoice = await generateInvoice(billingCycleId);

@@ -656,6 +656,37 @@ export async function addServiceToFixedPlan(
   const detailBaseRateCents = options.detailBaseRateCents ?? 0;
   const detailBaseRateDollars = detailBaseRateCents / 100;
 
+  // Insert into new contract line tables
+  await context.db('contract_line_service_configuration')
+    .insert({
+      config_id: configId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      custom_rate: null,
+      quantity,
+      tenant: context.tenantId
+    });
+
+  await context.db('contract_line_service_fixed_config')
+    .insert({
+      config_id: configId,
+      tenant: context.tenantId,
+      base_rate: detailBaseRateDollars
+    });
+
+  await context.db('contract_line_services')
+    .insert({
+      tenant: context.tenantId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: null
+    })
+    .onConflict(['tenant', 'service_id', 'contract_line_id'])
+    .merge({ quantity, custom_rate: null });
+
+  // Insert into legacy plan tables for compatibility
   await context.db('plan_service_configuration')
     .insert({
       config_id: configId,
@@ -673,6 +704,17 @@ export async function addServiceToFixedPlan(
       tenant: context.tenantId,
       base_rate: detailBaseRateDollars
     });
+
+  await context.db('plan_services')
+    .insert({
+      tenant: context.tenantId,
+      plan_id: planId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: null
+    })
+    .onConflict(['tenant', 'service_id', 'plan_id'])
+    .merge({ quantity, custom_rate: null });
 
   return configId;
 }
