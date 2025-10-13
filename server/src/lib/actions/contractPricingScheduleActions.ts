@@ -5,8 +5,8 @@ import { IContractPricingSchedule } from '../../interfaces/contract.interfaces';
 import { getCurrentUser } from './user-actions/userActions';
 
 /**
- * Get all pricing schedules for a bundle
- * @param bundleId The bundle ID
+ * Get all pricing schedules for a contract
+ * @param contractId The contract ID
  * @returns Array of pricing schedules
  */
 export async function getPricingSchedulesByContract(
@@ -21,7 +21,7 @@ export async function getPricingSchedulesByContract(
   const schedules = await knex('contract_pricing_schedules')
     .where({
       tenant,
-      bundle_id: contractId
+      contract_id: contractId
     })
     .orderBy('effective_date', 'asc')
     .select('*');
@@ -119,7 +119,7 @@ export async function createPricingSchedule(
   const overlapping = await knex('contract_pricing_schedules')
     .where({
       tenant,
-      bundle_id: scheduleData.bundle_id
+      contract_id: scheduleData.contract_id
     })
     .where(function() {
       this.where(function() {
@@ -206,7 +206,7 @@ export async function updatePricingSchedule(
   const overlapping = await knex('contract_pricing_schedules')
     .where({
       tenant,
-      bundle_id: existingSchedule.bundle_id
+      contract_id: existingSchedule.contract_id
     })
     .whereNot('schedule_id', scheduleId)
     .where(function() {
@@ -270,8 +270,8 @@ export async function deletePricingSchedule(scheduleId: string): Promise<void> {
 }
 
 /**
- * Get the active pricing schedule for a bundle at a specific date
- * @param bundleId The bundle ID
+ * Get the active pricing schedule for a contract at a specific date
+ * @param contractId The contract ID
  * @param date The date to check (defaults to current date)
  * @returns The active pricing schedule or null if none found
  */
@@ -290,7 +290,7 @@ export async function getActivePricingScheduleByContract(
   const schedule = await knex('contract_pricing_schedules')
     .where({
       tenant,
-      bundle_id: contractId
+      contract_id: contractId
     })
     .where('effective_date', '<=', checkDate.toISOString())
     .where(function() {

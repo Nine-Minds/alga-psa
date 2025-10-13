@@ -7,7 +7,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig';
+import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
+import ContractLine from 'server/src/lib/models/contractLine';
+import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
+import ClientContract from 'server/src/lib/models/clientContract';
 import { ContractLineServiceConfigurationService as ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 
 type FixedServiceInput = {
@@ -48,9 +51,9 @@ export type ContractWizardSubmission = {
 };
 
 export type ContractWizardResult = {
-  bundle_id: string;
-  plan_id?: string;
-  plan_ids?: string[];
+  contract_id: string;
+  contract_line_id?: string;
+  contract_line_ids?: string[];
 };
 
 function roundToTwo(value: number): number {
@@ -81,16 +84,16 @@ export async function createContractFromWizard(
     }
 
     const now = new Date();
-    const bundleId = uuidv4();
-
-    await trx('plan_bundles').insert({
+    const contractId = uuidv4();
+    await trx('contracts').insert({
       tenant,
-      bundle_id: bundleId,
-      bundle_name: submission.contract_name,
-      bundle_description: submission.description ?? null,
+      contract_id: contractId,
+      contract_name: submission.contract_name,
+      contract_description: submission.description ?? null,
+      billing_frequency: 'monthly',
       is_active: true,
-      created_at: now,
-      updated_at: now,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
     });
 
     let createdPlanId: string | undefined;
@@ -102,39 +105,46 @@ export async function createContractFromWizard(
       (service) => service?.service_id
     );
 
-    const createdPlanIds: string[] = [];
-    let primaryPlanId: string | undefined;
+    const createdContractLineIds: string[] = [];
+    let primaryContractLineId: string | undefined;
     let nextDisplayOrder = 0;
 
     if (filteredFixedServices.length > 0) {
-      const planId = uuidv4();
-      createdPlanIds.push(planId);
-      if (!primaryPlanId) {
-        primaryPlanId = planId;
+      // Create a contract line (Fixed)
+      const createdFixedLine = await ContractLine.create(trx, {
+        contract_line_name: `${submission.contract_name} - Fixed Fee`,
+        billing_frequency: 'monthly',
+        is_custom: true,
+        service_category: null as any,
+        contract_line_type: 'Fixed',
+        hourly_rate: null,
+        minimum_billable_time: null,
+        round_up_to_nearest: null,
+        enable_overtime: null,
+        overtime_rate: null,
+        overtime_threshold: null,
+        enable_after_hours_rate: null,
+        after_hours_multiplier: null,
+      } as any);
+      const planId = createdFixedLine.contract_line_id!;
+      createdContractLineIds.push(planId);
+      if (!primaryContractLineId) {
+        primaryContractLineId = planId;
       }
       createdPlanId = planId;
 
-      await trx('billing_plans').insert({
-        tenant,
-        plan_id: planId,
-        plan_name: `${submission.contract_name} - Fixed Fee`,
-        description: submission.description ?? null,
-        billing_frequency: 'monthly',
-        is_custom: true,
-        plan_type: 'Fixed',
-      });
-
-      const planFixedConfigModel = new BillingPlanFixedConfig(trx, tenant);
+      // Upsert fixed config (plan-level)
+      const planFixedConfigModel = new ContractLineFixedConfig(trx, tenant);
       const baseRateDollars = submission.fixed_base_rate
         ? submission.fixed_base_rate / 100
         : 0;
 
       await planFixedConfigModel.upsert({
-        plan_id: planId,
+        contract_line_id: planId,
         base_rate: baseRateDollars,
         enable_proration: submission.enable_proration,
         billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
-        tenant,
+        tenant: tenant,
       });
 
       const totalQuantity =
@@ -144,12 +154,11 @@ export async function createContractFromWizard(
 
       for (const [index, service] of filteredFixedServices.entries()) {
         const quantity = service.quantity ?? 1;
-        await trx('plan_services').insert({
+        // Link service to contract line
+        await trx('contract_line_services').insert({
           tenant,
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: service.service_id,
-          quantity,
-          custom_rate: null,
         });
 
         let serviceBaseRate = 0;
@@ -165,66 +174,49 @@ export async function createContractFromWizard(
           }
         }
 
-        const configId = uuidv4();
-        await trx('plan_service_configuration').insert({
-          config_id: configId,
-          plan_id: planId,
-          service_id: service.service_id,
-          configuration_type: 'Fixed',
-          custom_rate: null,
-          quantity,
-          tenant,
-          created_at: now,
-          updated_at: now,
-        });
-
-        await trx('plan_service_fixed_config').insert({
-          config_id: configId,
-          base_rate: serviceBaseRate,
-          tenant,
-          created_at: now,
-          updated_at: now,
-        });
+        // Create configuration + fixed type details
+        const configService = new ContractLineServiceConfigurationService(trx, tenant);
+        const configId = await configService.createConfiguration(
+          {
+            contract_line_id: planId,
+            service_id: service.service_id,
+            configuration_type: 'Fixed',
+            quantity,
+            tenant,
+            custom_rate: undefined,
+          },
+          { base_rate: serviceBaseRate }
+        );
       }
-
-      await trx('bundle_billing_plans').insert({
-        tenant,
-        bundle_id: bundleId,
-        plan_id: planId,
-        display_order: nextDisplayOrder++,
-        created_at: now,
-      });
+      // Map contract line to contract
+      await ContractLineMapping.addContractLine(contractId, planId, undefined);
+      nextDisplayOrder++;
     }
 
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
 
     if (filteredHourlyServices.length > 0) {
-      const hourlyPlanId = uuidv4();
-      createdPlanIds.push(hourlyPlanId);
-      if (!primaryPlanId) {
-        primaryPlanId = hourlyPlanId;
-      }
-
-      await trx('billing_plans').insert({
-        tenant,
-        plan_id: hourlyPlanId,
-        plan_name: `${submission.contract_name} - Hourly`,
-        description: submission.description ?? null,
+      const createdHourlyLine = await ContractLine.create(trx, {
+        contract_line_name: `${submission.contract_name} - Hourly`,
         billing_frequency: 'monthly',
         is_custom: true,
-        plan_type: 'Hourly',
-      });
+        service_category: null as any,
+        contract_line_type: 'Hourly',
+      } as any);
+      const hourlyPlanId = createdHourlyLine.contract_line_id!;
+      createdContractLineIds.push(hourlyPlanId);
+      if (!primaryContractLineId) {
+        primaryContractLineId = hourlyPlanId;
+      }
 
       const minimumBillable = submission.minimum_billable_time ?? 0;
       const roundUp = submission.round_up_to_nearest ?? 0;
 
       for (const service of filteredHourlyServices) {
-        await trx('plan_services').insert({
+        await trx('contract_line_services').insert({
           tenant,
-          plan_id: hourlyPlanId,
+          contract_line_id: hourlyPlanId,
           service_id: service.service_id,
-          quantity: 1,
-          custom_rate: null,
         });
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(
           hourlyPlanId,
@@ -237,34 +229,26 @@ export async function createContractFromWizard(
         );
       }
 
-      await trx('bundle_billing_plans').insert({
-        tenant,
-        bundle_id: bundleId,
-        plan_id: hourlyPlanId,
-        display_order: nextDisplayOrder++,
-        created_at: now,
-      });
+      await ContractLineMapping.addContractLine(contractId, hourlyPlanId, undefined);
+      nextDisplayOrder++;
     }
 
     // Bucket plan (hours or usage)
     const hasBucketServices = (submission.bucket_services || []).filter(s => s?.service_id).length > 0;
     const hasBucketConfig = submission.bucket_type && submission.bucket_overage_rate;
     if (hasBucketServices && hasBucketConfig) {
-      const bucketPlanId = uuidv4();
-      createdPlanIds.push(bucketPlanId);
-      if (!primaryPlanId) {
-        primaryPlanId = bucketPlanId;
-      }
-
-      await trx('billing_plans').insert({
-        tenant,
-        plan_id: bucketPlanId,
-        plan_name: `${submission.contract_name} - Bucket`,
-        description: submission.description ?? null,
+      const createdBucketLine = await ContractLine.create(trx, {
+        contract_line_name: `${submission.contract_name} - Bucket`,
         billing_frequency: 'monthly',
         is_custom: true,
-        plan_type: 'Bucket',
-      });
+        service_category: null as any,
+        contract_line_type: 'Bucket',
+      } as any);
+      const bucketPlanId = createdBucketLine.contract_line_id!;
+      createdContractLineIds.push(bucketPlanId);
+      if (!primaryContractLineId) {
+        primaryContractLineId = bucketPlanId;
+      }
 
       // Add selected services to bucket plan and configure bucket specifics
       const totalQuantity = submission.bucket_type === 'hours'
@@ -272,12 +256,10 @@ export async function createContractFromWizard(
         : (submission.bucket_usage_units ?? 0); // for usage, store units in total_minutes column as generic quantity
 
       for (const service of (submission.bucket_services || []).filter(s => s?.service_id)) {
-        await trx('plan_services').insert({
+        await trx('contract_line_services').insert({
           tenant,
-          plan_id: bucketPlanId,
+          contract_line_id: bucketPlanId,
           service_id: service.service_id,
-          quantity: null,
-          custom_rate: null,
         });
 
         await planServiceConfigService.upsertPlanServiceBucketConfiguration(
@@ -292,35 +274,22 @@ export async function createContractFromWizard(
         );
       }
 
-      await trx('bundle_billing_plans').insert({
-        tenant,
-        bundle_id: bundleId,
-        plan_id: bucketPlanId,
-        display_order: nextDisplayOrder++,
-        created_at: now,
-      });
+      await ContractLineMapping.addContractLine(contractId, bucketPlanId, undefined);
+      nextDisplayOrder++;
     }
 
-    // Assign bundle to client (company tables have been replaced by client tables)
-    await trx('client_plan_bundles').insert({
-      client_bundle_id: uuidv4(),
-      tenant,
-      client_id: submission.company_id,
-      bundle_id: bundleId,
-      start_date: normalizeDateOnly(submission.start_date),
-      end_date: normalizeDateOnly(submission.end_date) ?? null,
-      is_active: true,
-      po_number: submission.po_number ?? null,
-      po_amount: submission.po_amount ?? null,
-      po_required: submission.po_required ?? false,
-      created_at: now,
-      updated_at: now,
-    });
+    // Assign contract to client
+    await ClientContract.assignContractToClient(
+      submission.company_id,
+      contractId,
+      normalizeDateOnly(submission.start_date)!,
+      normalizeDateOnly(submission.end_date) ?? null
+    );
 
     return {
-      bundle_id: bundleId,
-      plan_id: primaryPlanId,
-      plan_ids: createdPlanIds,
+      contract_id: contractId,
+      contract_line_id: primaryContractLineId,
+      contract_line_ids: createdContractLineIds,
     };
   });
 }

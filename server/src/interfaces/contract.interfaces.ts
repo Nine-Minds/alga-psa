@@ -49,7 +49,7 @@ export interface IClientContract extends TenantEntity {
  */
 export interface IContractPricingSchedule extends TenantEntity {
   schedule_id: string;
-  bundle_id: string; // TODO: rename to contract_id once DB schema is updated
+  contract_id: string;
   effective_date: ISO8601String;
   end_date?: ISO8601String | null;
   duration_value?: number;

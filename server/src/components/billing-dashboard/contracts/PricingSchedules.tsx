@@ -24,10 +24,10 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
 interface PricingSchedulesProps {
-  bundleId: string;
+  contractId: string;
 }
 
-const PricingSchedules: React.FC<PricingSchedulesProps> = ({ bundleId }) => {
+const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
   const [schedules, setSchedules] = useState<IContractPricingSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,17 +35,17 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ bundleId }) => {
   const [showDialog, setShowDialog] = useState(false);
 
   useEffect(() => {
-    if (bundleId) {
+    if (contractId) {
       fetchSchedules();
     }
-  }, [bundleId]);
+  }, [contractId]);
 
   const fetchSchedules = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const data = await getPricingSchedulesByContract(bundleId);
+      const data = await getPricingSchedulesByContract(contractId);
       setSchedules(data);
     } catch (error) {
       console.error('Error fetching pricing schedules:', error);
@@ -249,12 +249,12 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ bundleId }) => {
       </Card>
 
       {showDialog && (
-        <PricingScheduleDialog
-          bundleId={bundleId}
-          schedule={editingSchedule}
-          onClose={handleDialogClose}
-          onSave={handleSaveSuccess}
-        />
+          <PricingScheduleDialog 
+            contractId={contractId}
+            schedule={editingSchedule}
+            onClose={handleDialogClose}
+            onSave={handleSaveSuccess}
+          />
       )}
     </>
   );

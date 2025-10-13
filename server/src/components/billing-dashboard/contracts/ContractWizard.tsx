@@ -77,7 +77,7 @@ export interface ContractWizardData {
   }>;
 
   // Internal tracking
-  bundle_id?: string; // Set after creation
+  contract_id?: string; // Set after creation
   is_draft?: boolean;
 }
 
@@ -313,7 +313,7 @@ export function ContractWizard({
 
       const completedData: ContractWizardData = {
         ...wizardData,
-        bundle_id: contractResult.bundle_id,
+        contract_id: contractResult.contract_id,
       };
 
       setWizardData(completedData);

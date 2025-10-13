@@ -17,14 +17,14 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface PricingScheduleDialogProps {
-  bundleId: string;
+  contractId: string;
   schedule?: IContractPricingSchedule | null;
   onClose: () => void;
   onSave: () => void;
 }
 
 export function PricingScheduleDialog({
-  bundleId,
+  contractId,
   schedule,
   onClose,
   onSave
@@ -113,7 +113,7 @@ export function PricingScheduleDialog({
 
     try {
       const scheduleData = {
-        bundle_id: bundleId,
+        contract_id: contractId,
         effective_date: effectiveDate.toISOString(),
         end_date: !useDuration && hasEndDate && endDate ? endDate.toISOString() : null,
         duration_value: useDuration ? parseInt(durationValue) : undefined,
