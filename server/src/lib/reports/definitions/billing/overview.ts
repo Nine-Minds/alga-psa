@@ -158,7 +158,7 @@ export const billingOverviewReport: ReportDefinition = {
         aggregation: 'count',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'approval_status', operator: 'eq', value: 'pending' }
+          { field: 'approval_status', operator: 'eq', value: 'SUBMITTED' }
         ]
       },
       formatting: {
