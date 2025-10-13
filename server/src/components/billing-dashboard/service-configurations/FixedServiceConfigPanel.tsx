@@ -5,13 +5,13 @@ import { Card } from 'server/src/components/ui/Card';
 import { Label } from 'server/src/components/ui/Label';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { IContractLineServiceFixedConfig as IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 
 interface FixedServiceConfigPanelProps {
-  configuration: Partial<IPlanServiceFixedConfig>;
+  configuration: Partial<IContractLineServiceFixedConfig>;
   planFixedConfig: Partial<IContractLineFixedConfig>;
-  onConfigurationChange: (updates: Partial<IPlanServiceFixedConfig>) => void;
+  onConfigurationChange: (updates: Partial<IContractLineServiceFixedConfig>) => void;
   onPlanFixedConfigChange: (updates: Partial<IContractLineFixedConfig>) => void;
   className?: string;
   disabled?: boolean;

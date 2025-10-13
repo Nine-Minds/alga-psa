@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { IContractLineServiceBucketConfig as IPlanServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { Input } from '../../ui/Input';
 import { Checkbox } from '../../ui/Checkbox';
 import { Label } from '../../ui/Label';
@@ -17,12 +17,12 @@ type FormErrors = {
 
 interface ServiceBucketConfigFormProps {
   serviceId: string; // Keep serviceId for context if needed, or for the callback
-  config: Partial<IPlanServiceBucketConfig>; // Current config state from parent
+  config: Partial<IContractLineServiceBucketConfig>; // Current config state from parent
   unit_of_measure: string; // Renamed from unitOfMeasure for consistency
   validationErrors: FormErrors; // Validation errors from parent
   saveAttempted: boolean; // Flag from parent indicating save attempt
   disabled: boolean; // Flag from parent to disable form during save
-  onConfigChange: (serviceId: string, field: keyof IPlanServiceBucketConfig, value: any) => void; // Callback to update parent state
+  onConfigChange: (serviceId: string, field: keyof IContractLineServiceBucketConfig, value: any) => void; // Callback to update parent state
 }
 
 export function ServiceBucketConfigForm({
@@ -52,7 +52,7 @@ export function ServiceBucketConfigForm({
   // --- Input Handlers ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
-    const field = name as keyof IPlanServiceBucketConfig;
+    const field = name as keyof IContractLineServiceBucketConfig;
     const isNumberInput = type === 'number';
     const processedValue = isNumberInput ? (value === '' ? null : parseFloat(value)) : value;
     onConfigChange(serviceId, field, processedValue);
@@ -60,7 +60,7 @@ export function ServiceBucketConfigForm({
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
-    const field = name as keyof IPlanServiceBucketConfig;
+    const field = name as keyof IContractLineServiceBucketConfig;
     onConfigChange(serviceId, field, checked);
   };
 

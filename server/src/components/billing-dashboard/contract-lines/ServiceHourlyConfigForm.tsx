@@ -6,7 +6,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button'; // Import Button
 import * as RadixTooltip from '@radix-ui/react-tooltip'; // Use Radix Tooltip directly
 import { Info, Trash2 } from 'lucide-react'; // Import Trash2
-import { IContractLineServiceHourlyConfig as IPlanServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect'; // Import CustomSelect
 
 // Define the structure for the configuration object (using imported interface)
@@ -29,11 +29,11 @@ export interface IServiceHourlyConfigValidationErrors {
 
 interface ServiceHourlyConfigFormProps {
   configId: string; // Make configId required
-  config: Partial<IPlanServiceHourlyConfig>; // Use imported interface
+  config: Partial<IContractLineServiceHourlyConfig>; // Use imported interface
   userTypeRates: IUserTypeRate[]; // Add user type rates prop
   validationErrors?: Partial<IServiceHourlyConfigValidationErrors>;
   disabled?: boolean;
-  onHourlyFieldChange: (field: keyof IPlanServiceHourlyConfig, value: number | null) => void; // Renamed prop
+  onHourlyFieldChange: (field: keyof IContractLineServiceHourlyConfig, value: number | null) => void; // Renamed prop
   onUserTypeRatesChange: (newUserTypeRates: IUserTypeRate[]) => void; // Add handler for rates array
   className?: string;
 }
@@ -105,7 +105,7 @@ export function ServiceHourlyConfigForm({
   }, [displayHourlyRate, onHourlyFieldChange]);
 
   // Generic handler for simple numeric fields (minutes)
-  const handleMinutesInputChange = useCallback((field: keyof IPlanServiceHourlyConfig) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMinutesInputChange = useCallback((field: keyof IContractLineServiceHourlyConfig) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const numericValue = value === '' ? null : parseInt(value, 10);
     // Allow only non-negative integers or null

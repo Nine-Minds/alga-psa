@@ -16,7 +16,7 @@ import { Tooltip } from 'server/src/components/ui/Tooltip'; // Corrected Tooltip
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
-import { IContractLineServiceConfiguration as IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import {
   getContractLineServices,
   addServiceToContractLine,
@@ -54,7 +54,7 @@ interface SimplePlanService extends IContractLineService {
 // Define the structure returned by getPlanServicesWithConfigurations
 type PlanServiceWithConfig = {
   service: IService & { service_type_name?: string };
-  configuration: IPlanServiceConfiguration;
+  configuration: IContractLineServiceConfiguration;
   typeConfig?: any;
 };
 const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, onServiceAdded }) => {

@@ -5,7 +5,7 @@ import { IContractLine, IContractLineFixedConfig } from 'server/src/interfaces/b
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex'; // Import Knex type
 import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
-import { IContractLineServiceFixedConfig as IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig'; // Added import for new model
 import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from './user-actions/userActions';
@@ -506,7 +506,7 @@ export async function updatePlanServiceFixedConfigRate(
                 console.log(`Updating fixed plan service configuration base_rate for plan ${planId}, service ${serviceId}`);
                 
                 // Prepare fixed config update data (only base_rate)
-                const fixedConfigData: Partial<IPlanServiceFixedConfig> = {
+                const fixedConfigData: Partial<IContractLineServiceFixedConfig> = {
                      base_rate: baseRate
                 };
                 
