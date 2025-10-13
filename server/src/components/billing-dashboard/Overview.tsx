@@ -250,7 +250,7 @@ const Overview = () => {
         <FeatureCard
           icon={FileSpreadsheet}
           title="Service Catalog"
-          description="Manage your service offerings, pricing, and service bundles"
+          description="Manage your service offerings, pricing, and contracts"
         />
       </div>
 

@@ -440,7 +440,17 @@ export class InvoiceService extends BaseService<IInvoice> {
           .where({ invoice_id: id, tenant: context.tenant })
           .del();
         
-        await this.createInvoiceLineItems(id, data.items, trx, context);
+      // Normalize header alias: prefer is_bundle_header, but accept is_contract_header
+      const normalizedItems = data.items.map((it: any) => {
+        if (it && typeof it === 'object') {
+          if (it.is_contract_header !== undefined && it.is_bundle_header === undefined) {
+            return { ...it, is_bundle_header: it.is_contract_header };
+          }
+        }
+        return it;
+      });
+
+      await this.createInvoiceLineItems(id, normalizedItems, trx, context);
       }
 
       // Audit log
@@ -1357,7 +1367,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       applies_to_service_id: item.applies_to_service_id,
       client_contract_id: item.client_contract_id,
       contract_name: item.contract_name,
-      is_bundle_header: item.is_bundle_header || false,
+      is_bundle_header: (item.is_bundle_header ?? item.is_contract_header) || false,
       parent_item_id: item.parent_item_id,
       rate: item.rate,
       tenant: context.tenant,

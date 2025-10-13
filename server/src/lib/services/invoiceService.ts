@@ -382,7 +382,7 @@ async function persistFixedInvoiceItems(
     } else {
       // --- Handle Contract-Level Fixed Price Charges (V1 - Old Behavior) ---
       // These are treated like simple manual items for persistence
-      const netAmount = charge.total; // Bundled rate is already calculated
+      const netAmount = charge.total; // Contract rate is already calculated
       const invoiceItem = {
         item_id: uuidv4(),
         invoice_id: invoiceId,

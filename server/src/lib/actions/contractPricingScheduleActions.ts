@@ -167,7 +167,7 @@ export async function createPricingSchedule(
  */
 export async function updatePricingSchedule(
   scheduleId: string,
-  scheduleData: Partial<Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'bundle_id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>>
+  scheduleData: Partial<Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'contract_id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>>
 ): Promise<IContractPricingSchedule> {
   const { knex, tenant } = await createTenantKnex();
 

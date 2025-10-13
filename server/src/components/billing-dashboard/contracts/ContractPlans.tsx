@@ -23,12 +23,12 @@ import { AlertCircle } from 'lucide-react';
 import { ContractPlanRateDialog } from './ContractPlanRateDialog';
 
 interface ContractPlansProps {
-  bundle: IContract;
+  contract: IContract;
 }
 
-// Using DetailedBundlePlan type from actions
+// Using contract line details from actions
 
-const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
+const ContractPlans: React.FC<ContractPlansProps> = ({ contract }) => {
   const [contractPlans, setContractPlans] = useState<any[]>([]);
   const [availablePlans, setAvailablePlans] = useState<IBillingPlan[]>([]);
   const [selectedPlanToAdd, setSelectedPlanToAdd] = useState<string | null>(null);
@@ -37,22 +37,22 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
   const [editingPlan, setEditingPlan] = useState<any | null>(null);
 
   useEffect(() => {
-    if (bundle.contract_id) {
+    if (contract.contract_id) {
       fetchData();
     }
-  }, [bundle.contract_id]);
+  }, [contract.contract_id]);
 
   const fetchData = async () => {
-    if (!bundle.contract_id) return;
+    if (!contract.contract_id) return;
     
     setIsLoading(true);
     setError(null);
     
     try {
-      // Get all billing plans and bundle plans
+      // Get all available plans and contract lines
       const [plans, detailedBundlePlans] = await Promise.all([
         getBillingPlans(),
-        getDetailedBundlePlans(bundle.contract_id)
+        getDetailedBundlePlans(contract.contract_id)
       ]);
       
       setContractPlans(detailedBundlePlans);
@@ -77,7 +77,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
   };
 
   const handleAddPlan = async () => {
-    if (!bundle.contract_id || !selectedPlanToAdd) return;
+    if (!contract.contract_id || !selectedPlanToAdd) return;
     
     try {
       const planToAdd = availablePlans.find(p => p.plan_id === selectedPlanToAdd);
@@ -85,7 +85,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
         // Pass undefined initially, indicating no custom rate is set
         const initialCustomRate = undefined;
         await addPlanToBundle(
-          bundle.contract_id,
+          contract.contract_id,
           selectedPlanToAdd,
           initialCustomRate // Pass undefined
         );
@@ -99,10 +99,10 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
   };
 
   const handleRemovePlan = async (planId: string) => {
-    if (!bundle.contract_id) return;
+    if (!contract.contract_id) return;
     
     try {
-      await removePlanFromBundle(bundle.contract_id, planId);
+      await removePlanFromBundle(contract.contract_id, planId);
       fetchData(); // Refresh data
     } catch (error) {
       console.error('Error removing plan from bundle:', error);
@@ -119,11 +119,11 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
   };
 
   const handlePlanUpdated = async (planId: string, customRate: number | undefined) => { // Allow undefined
-    if (!bundle.contract_id) return;
+    if (!contract.contract_id) return;
 
     try {
       // Pass the potentially undefined customRate to the action
-      await updatePlanInBundle(bundle.contract_id, planId, { custom_rate: customRate });
+      await updatePlanInBundle(contract.contract_id, planId, { custom_rate: customRate });
       fetchData(); // Refresh data
       setEditingPlan(null);
     } catch (error) {
@@ -242,7 +242,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
                 className="flex-grow"
               />
               <Button
-                id="add-plan-to-bundle-button"
+                id="add-contract-line-button"
                 onClick={handleAddPlan}
                 disabled={!selectedPlanToAdd || filteredAvailablePlans.length === 0}
               >

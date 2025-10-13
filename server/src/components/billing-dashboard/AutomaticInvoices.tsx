@@ -117,8 +117,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   useEffect(() => {
     if (previewState.data) {
       console.log("Preview data items:", previewState.data.items); // Use items
-      // Need to check item structure for bundle headers if needed, assuming 'description' for now
-      console.log("Bundle headers:", previewState.data.items.filter(item => item.description?.startsWith('Bundle:')));
+      // Need to check item structure for contract headers if needed, assuming 'description' for now
+      console.log("Contract headers:", previewState.data.items.filter(item => item.description?.startsWith('Contract:')));
     }
   }, [previewState.data]);
 
@@ -641,13 +641,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                   <tbody>
                     {/* Map over previewState.data.items */}
                     {previewState.data.items.map((item) => {
-                      // Check for bundle header based on description (adjust if needed)
-                      const isBundleHeader = item.description?.startsWith('Bundle:');
+                      // Check for contract header based on description (adjust if needed)
+                      const isContractHeader = item.description?.startsWith('Contract:');
                       // Check for detail line (assuming no quantity/unitPrice for now)
-                      const isDetailLine = !isBundleHeader && item.quantity === undefined && item.unitPrice === undefined;
+                      const isDetailLine = !isContractHeader && item.quantity === undefined && item.unitPrice === undefined;
 
-                      if (isBundleHeader) {
-                        // Render bundle header style
+                      if (isContractHeader) {
+                        // Render contract header style
                         return (
                           <tr key={item.id} className="border-b bg-muted/50 font-semibold">
                             <td className="py-2 px-2" colSpan={4}>{item.description}</td>

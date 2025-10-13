@@ -405,7 +405,7 @@ export class BillingEngine {
         'contract_lines.billing_frequency'
       );
 
-    // Get contract lines provided via contracts (formerly bundles)
+    // Get contract lines provided via contracts
     const contractLinkedLines = await this.knex('client_contracts as cc')
       .join('contract_line_mappings as clm', function () {
         this.on('cc.contract_id', '=', 'clm.contract_id')
@@ -632,7 +632,7 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    // --- Custom Rate Check (Bundled Plans) ---
+    // --- Custom Rate Check (Contracts) ---
     // Check if a custom rate is defined for this plan assignment (provided via contract association)
     // Ensure custom_rate is not null and not undefined before using it.
     if (clientContractLine.custom_rate !== null && clientContractLine.custom_rate !== undefined) {

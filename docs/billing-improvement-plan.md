@@ -1,22 +1,22 @@
-# Billing Feature Improvement Plan for Alga PSA
+# Billing Feature Improvement for Alga PSA
 
 ## Overview
-Transform Plan Bundles → Contracts and Billing Plans → Contract Lines to create an intuitive, MSP-standard billing experience.
+Completed rename: Plan Bundles → Contracts and Billing Plans → Contract Lines to create an intuitive, MSP-standard billing experience.
 
 ## Current State - Database & Code
 
-### Existing Tables (NO NEW TABLES NEEDED FOR FRONTEND):
-- `plan_bundles` - Will become "Contracts"
-- `bundle_billing_plans` - Links billing plans to bundles (has `custom_rate` field)
-- `company_plan_bundles` - Contract assignments to companies (has start_date, end_date)
-- `company_billing_plans` - Links to `company_bundle_id`
-- `billing_plans` - Will become "Contract Lines"
+### Existing Tables (Front End Uses)
+- `contracts` - Contract headers
+- `contract_line_mappings` - Links contract lines to contracts (has `custom_rate` field)
+- `company_contracts` - Contract assignments to companies (has start_date, end_date)
+- `company_contract_lines` - Contract line assignments to companies (via `company_contract_id`)
+- `contract_lines` - Contract line definitions
 
 ### Existing Code Patterns to Reuse:
 - Wizard pattern in `OnboardingWizard.tsx`
 - WizardProgress and WizardNavigation components
 - Custom UI components (Button, Card, Dialog, Input, CustomSelect)
-- Plan bundle CRUD actions
+- Contract CRUD actions
 - Billing engine (all billing types supported)
 
 ---
@@ -25,8 +25,8 @@ Transform Plan Bundles → Contracts and Billing Plans → Contract Lines to cre
 
 **Files to modify:**
 - `/server/src/components/billing-dashboard/BillingDashboard.tsx`
-- `/server/src/components/billing-dashboard/plan-bundles/` → rename to `contracts/`
-- Update all display text: "Plan Bundles" → "Contracts", "Billing Plans" → "Contract Lines"
+- `/server/src/components/billing-dashboard/contracts/`
+- Ensure display text consistently uses "Contracts" and "Contract Lines"
 
 **Changes:**
 1. Rename tabs: `['contracts', 'generate-invoices', 'invoices', 'invoice-templates', 'tax-rates', 'billing-cycles']`
@@ -179,7 +179,7 @@ Step 5: Review & Create
 ## Frontend Implementation Order
 
 ### Sprint 1 (Current): Core Structure
-1. Rename plan-bundles → contracts directory
+1. Rename `plan-bundles` → `contracts` directory (complete)
 2. Update BillingDashboard tabs and labels
 3. Create ContractWizard skeleton
 4. Create ContractList skeleton
@@ -212,9 +212,9 @@ Step 5: Review & Create
 ## Mock Data Strategy
 
 For frontend development, use mock data that matches existing interfaces:
-- Mock contracts (IPlanBundle)
-- Mock contract assignments (ICompanyPlanBundle)
-- Mock billing plans (IBillingPlan)
+- Mock contracts (IContract)
+- Mock contract assignments (ICompanyContract)
+- Mock contract lines (IContractLine)
 - Mock companies (ICompany)
 - Mock invoices (IInvoice)
 

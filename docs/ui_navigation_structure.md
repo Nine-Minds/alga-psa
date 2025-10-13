@@ -396,7 +396,7 @@ CompanyDetails
   - **Invoices**: `?tab=invoices`
   - **Invoice Templates**: `?tab=invoice-templates`
   - **Tax Rates**: `?tab=tax-rates`
-  - **Plans**: `?tab=plans`
+  - **Contract Lines**: `?tab=contract-lines`
   - **Contracts**: `?tab=contracts`
   - **Service Catalog**: `?tab=service-catalog`
   - **Billing Cycles**: `?tab=billing-cycles`

@@ -67,7 +67,7 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   applies_to_service_id: undefined,
   client_contract_id: undefined,
   contract_name: undefined,
-  is_bundle_header: undefined,
+  is_contract_header: undefined as any,
   parent_item_id: undefined,
 };
 
@@ -140,29 +140,37 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceViewModel | undefined>(invoice);
   // State specifically for the manual items being edited
   const [items, setItems] = useState<EditableInvoiceItem[]>(() => {
+    const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
+    const normalizeHeaderAlias = (it: any) => ({
+      ...it,
+      is_contract_header: it?.is_contract_header ?? (it as any)[LEGACY_HEADER_KEY]
+    });
     const initialManualItems = invoice?.invoice_items?.filter(item => item.is_manual) || [];
-    const mappedItems = initialManualItems.map((item): EditableInvoiceItem => ({
-      item_id: item.item_id,
-      invoice_id: item.invoice_id,
-      service_id: item.service_id || '',
-      quantity: item.quantity,
-      description: item.description,
-      rate: item.unit_price, // Use unit_price for editing rate
-      is_discount: !!item.is_discount,
-      discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
-      discount_percentage: item.discount_percentage,
-      applies_to_item_id: item.applies_to_item_id,
-      applies_to_service_id: item.applies_to_service_id,
-      client_contract_id: item.client_contract_id,
-      contract_name: item.contract_name,
-      is_bundle_header: item.is_bundle_header,
-      parent_item_id: item.parent_item_id,
-      is_manual: true,
-      is_taxable: item.is_taxable, // Include is_taxable from the item
-      // tax_rate_id: item.tax_rate_id || null, // Removed
-      isExisting: true,
-      isRemoved: false,
-    }));
+    const mappedItems = initialManualItems.map((item): EditableInvoiceItem => {
+      const i = normalizeHeaderAlias(item as any);
+      return ({
+        item_id: item.item_id,
+        invoice_id: item.invoice_id,
+        service_id: item.service_id || '',
+        quantity: item.quantity,
+        description: item.description,
+        rate: item.unit_price, // Use unit_price for editing rate
+        is_discount: !!item.is_discount,
+        discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+        discount_percentage: item.discount_percentage,
+        applies_to_item_id: item.applies_to_item_id,
+        applies_to_service_id: item.applies_to_service_id,
+        client_contract_id: item.client_contract_id,
+        contract_name: item.contract_name,
+        is_contract_header: (i as any).is_contract_header,
+        parent_item_id: item.parent_item_id,
+        is_manual: true,
+        is_taxable: item.is_taxable, // Include is_taxable from the item
+        // tax_rate_id: item.tax_rate_id || null, // Removed
+        isExisting: true,
+        isRemoved: false,
+      });
+    });
     // Ensure the default item gets a unique ID if added
     return mappedItems.length > 0 ? mappedItems : [{
       ...baseDefaultItem,
@@ -190,6 +198,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           console.log('[Effect] Fetching items for:', invoiceIdToFetch);
           setLoading(true);
           const fetchedItems = await getInvoiceLineItems(invoiceIdToFetch);
+          const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
+          const normalizeHeaderAlias = (it: any) => ({
+            ...it,
+            is_contract_header: it?.is_contract_header ?? (it as any)[LEGACY_HEADER_KEY]
+          });
           console.log('[Effect] Fetched items:', fetchedItems.length);
 
           // Update local state with fetched items
@@ -202,28 +215,30 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // Also update the manual items state based on the fetched data
           const manualItemsFromFetch = fetchedItems.filter(item => item.is_manual);
           console.log('[Effect] Setting manual items state from fetch:', manualItemsFromFetch.length);
-          const mappedManualItems = manualItemsFromFetch.map((item): EditableInvoiceItem => ({
-            item_id: item.item_id,
-            invoice_id: item.invoice_id,
-            service_id: item.service_id || '',
-            quantity: item.quantity,
-            description: item.description,
-            rate: item.unit_price,
-            is_discount: !!item.is_discount,
-            discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
-            discount_percentage: item.discount_percentage,
-            applies_to_item_id: item.applies_to_item_id,
-            applies_to_service_id: item.applies_to_service_id,
-            client_contract_id: item.client_contract_id,
-            contract_name: item.contract_name,
-            is_bundle_header: item.is_bundle_header,
-            parent_item_id: item.parent_item_id,
-            is_manual: true,
-            is_taxable: item.is_taxable, // Include is_taxable from the item
-            // tax_rate_id: item.tax_rate_id || null, // Removed
-            isExisting: true,
-            isRemoved: false,
-          }));
+          const mappedManualItems = manualItemsFromFetch.map((item): EditableInvoiceItem => {
+            const i = normalizeHeaderAlias(item as any);
+            return {
+              item_id: item.item_id,
+              invoice_id: item.invoice_id,
+              service_id: item.service_id || '',
+              quantity: item.quantity,
+              description: item.description,
+              rate: item.unit_price,
+              is_discount: !!item.is_discount,
+              discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+              discount_percentage: item.discount_percentage,
+              applies_to_item_id: item.applies_to_item_id,
+              applies_to_service_id: item.applies_to_service_id,
+              client_contract_id: item.client_contract_id,
+              contract_name: item.contract_name,
+              is_contract_header: (i as any).is_contract_header,
+              parent_item_id: item.parent_item_id,
+              is_manual: true,
+              is_taxable: item.is_taxable,
+              isExisting: true,
+              isRemoved: false,
+            };
+          });
           // Ensure the default item gets a unique ID if added after fetch
           setItems(mappedManualItems.length > 0 ? mappedManualItems : [{
             ...baseDefaultItem,
@@ -387,7 +402,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           applies_to_service_id: item.applies_to_service_id,
           client_contract_id: item.client_contract_id,
           contract_name: item.contract_name,
-          is_bundle_header: item.is_bundle_header,
+          is_contract_header: item.is_contract_header as any,
           parent_item_id: item.parent_item_id,
           rate: item.rate, // Add the missing rate property
           // Omit audit fields
@@ -455,7 +470,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             applies_to_service_id: item.applies_to_service_id,
             client_contract_id: item.client_contract_id,
             contract_name: item.contract_name,
-            is_bundle_header: item.is_bundle_header,
+            is_contract_header: item.is_contract_header as any,
             parent_item_id: item.parent_item_id,
             is_manual: true,
             is_taxable: item.is_taxable, // Include is_taxable from the item

@@ -12,7 +12,7 @@ The `BillingEngine` class is a central component of our billing system, responsi
 - Calculates fixed-price charges
 - Processes time-based charges
 - Handles usage-based billing
-- Implements bucket plan charges
+- Implements bucket contract line charges
 - Applies proration for partial billing periods
 - Manages rollover of unapproved time entries
 - Supports multiple billing cycles per company

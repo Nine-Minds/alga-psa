@@ -27,7 +27,7 @@ interface EligiblePlanUI {
   contract_line_type: string;
   start_date: ISO8601String; // Required for filtering
   end_date?: ISO8601String | null; // Required for filtering
-  contract_name?: string; // Contract/bundle name for display
+  contract_name?: string; // Contract name for display
 }
 
 const TimeEntryEditForm = memo(function TimeEntryEditForm({

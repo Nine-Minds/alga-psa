@@ -432,7 +432,9 @@ export const invoiceItemBaseSchema = z.object({
   applies_to_service_id: uuidSchema.optional(),
   client_contract_id: uuidSchema.optional(),
   contract_name: z.string().optional(),
+  // Accept legacy and new alias; default both to false
   is_bundle_header: z.boolean().optional().default(false),
+  is_contract_header: z.boolean().optional().default(false),
   parent_item_id: uuidSchema.optional(),
   created_by: uuidSchema.optional(),
   updated_by: uuidSchema.optional()

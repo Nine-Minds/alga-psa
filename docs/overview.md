@@ -8,7 +8,7 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Asset Management:** Manages asset lifecycle. Key files located under `server/src/models/asset.ts`, `server/src/lib/models/assetRelationship.ts`, and components under `server/src/components/assets`.
 
-* **Billing:** The Billing module handles complex billing scenarios, including fixed-price services, time-based billing, usage-based billing, bucket of hours/retainer plans, discounts, promotions, multi-currency, tax handling, bundling, contracts, refunds, and adjustments. It integrates with other modules like Projects, Time Management, and Documents to produce and store invoices.
+* **Billing:** The Billing module handles complex billing scenarios, including fixed-price contract lines, time-based billing, usage-based billing, bucket of hours/retainer contract lines, discounts, promotions, multi-currency, tax handling, contracts, refunds, and adjustments. It integrates with other modules like Projects, Time Management, and Documents to produce and store invoices.
 
   * Key Features:
     - Contract Lines: Assign multiple contract lines to a single client (company).

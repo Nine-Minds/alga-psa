@@ -334,19 +334,19 @@ This document outlines the comprehensive implementation plan for creating REST A
   - ✅ `GET /api/v1/contract-lines/{id}` - Get contract line details
   - ✅ `PUT /api/v1/contract-lines/{id}` - Update contract line
   - ✅ `DELETE /api/v1/contract-lines/{id}` - Delete contract line
-  - ✅ `GET /api/v1/contract-lines/{id}/services` - List plan services
-  - ✅ `POST /api/v1/contract-lines/{id}/services` - Add service to plan
+  - ✅ `GET /api/v1/contract-lines/{id}/services` - List contract line services
+  - ✅ `POST /api/v1/contract-lines/{id}/services` - Add service to contract line
   - ✅ `GET /api/v1/contract-lines/{planId}/services/{serviceId}` - Service config
   - ✅ `PUT /api/v1/contract-lines/{planId}/services/{serviceId}` - Update service config
   - ✅ `DELETE /api/v1/contract-lines/{planId}/services/{serviceId}` - Remove service
-  - ✅ `PUT /api/v1/contract-lines/{id}/activation` - Activate/deactivate plan
+  - ✅ `PUT /api/v1/contract-lines/{id}/activation` - Activate or deactivate a contract line
   - ✅ `POST /api/v1/contract-lines/{id}/copy` - Copy contract line
-  - ✅ `GET /api/v1/contract-lines/{id}/analytics` - Plan analytics
+  - ✅ `GET /api/v1/contract-lines/{id}/analytics` - Contract line analytics
   - ✅ `GET /api/v1/contract-lines/{id}/usage-metrics` - Usage metrics
   - ✅ `POST /api/v1/contract-lines/bulk` - Bulk operations
-  - ✅ `POST /api/v1/plan-templates` - Create plan template
+  - ✅ `POST /api/v1/contract-line-templates` - Create contract line template
   - ✅ `POST /api/v1/contracts` - Create contract
-  - ✅ `POST /api/v1/company-contract-lines` - Assign plan to company
+  - ✅ `POST /api/v1/company-contract-lines` - Assign contract line to company
   - ✅ `GET /api/v1/billing-analytics/overview` - Billing overview
 
 #### Week 10: Financial Management ✅

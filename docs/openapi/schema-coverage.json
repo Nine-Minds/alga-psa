@@ -2732,7 +2732,7 @@
     ]
   },
   {
-    "route_path": "/api/v1/plan-bundles",
+    "route_path": "/api/v1/contracts",
     "edition": "CE",
     "methods": [
       "GET",
@@ -2747,7 +2747,7 @@
     ]
   },
   {
-    "route_path": "/api/v1/plan-bundles/{bundleId}/plans",
+    "route_path": "/api/v1/contracts/{contractId}/contract-lines",
     "edition": "CE",
     "methods": [
       "POST"
@@ -2761,7 +2761,7 @@
     ]
   },
   {
-    "route_path": "/api/v1/plan-bundles/{bundleId}/plans/{planId}",
+    "route_path": "/api/v1/contracts/{contractId}/contract-lines/{contractLineId}",
     "edition": "CE",
     "methods": [
       "DELETE"
@@ -2775,7 +2775,7 @@
     ]
   },
   {
-    "route_path": "/api/v1/plan-templates",
+    "route_path": "/api/v1/contract-line-templates",
     "edition": "CE",
     "methods": [
       "POST"
@@ -2789,7 +2789,7 @@
     ]
   },
   {
-    "route_path": "/api/v1/plan-templates/{id}/create-plan",
+    "route_path": "/api/v1/contract-line-templates/{id}/create-contract-line",
     "edition": "CE",
     "methods": [
       "POST"

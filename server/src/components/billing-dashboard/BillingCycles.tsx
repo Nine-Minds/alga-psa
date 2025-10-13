@@ -14,8 +14,8 @@ import {
   createNextBillingCycle
 } from 'server/src/lib/actions/billingCycleActions';
 import { getAllClientsPaginated } from 'server/src/lib/actions/client-actions/clientActions';
-import { getClientContracts as getClientBundles } from 'server/src/lib/actions/client-actions/clientContractActions';
-import { getContracts as getPlanBundles } from 'server/src/lib/actions/contractActions';
+import { getClientContracts } from 'server/src/lib/actions/client-actions/clientContractActions';
+import { getContracts } from 'server/src/lib/actions/contractActions';
 import { BillingCycleType, IClient } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IClientContract, IContract } from 'server/src/interfaces/contract.interfaces';
@@ -86,7 +86,7 @@ const BillingCycles: React.FC = () => {
           sortBy,
           sortDirection
         }),
-        getPlanBundles()
+        getContracts()
       ]);
 
       setBillingCycles(cycles);
@@ -116,7 +116,7 @@ const BillingCycles: React.FC = () => {
         if (client.client_id) {
           // Fetch contract info
           try {
-            const clientAssignedContracts = await getClientBundles(client.client_id);
+            const clientAssignedContracts = await getClientContracts(client.client_id);
             // Get the active contract (if any)
             const active = (clientAssignedContracts as unknown as IClientContract[]).find(c => c.is_active);
             if (active && active.contract_id) {
