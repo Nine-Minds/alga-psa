@@ -9,39 +9,39 @@ import {
   IContractLineServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import PlanServiceConfiguration from 'server/src/lib/models/contractLineServiceConfiguration';
-import PlanServiceFixedConfig from 'server/src/lib/models/contractLineServiceFixedConfig';
-import PlanServiceHourlyConfig from 'server/src/lib/models/contractLineServiceHourlyConfig';
-import PlanServiceUsageConfig from 'server/src/lib/models/contractLineServiceUsageConfig';
-import PlanServiceBucketConfig from 'server/src/lib/models/contractLineServiceBucketConfig';
+import ContractLineServiceConfiguration from 'server/src/lib/models/contractLineServiceConfiguration';
+import ContractLineServiceFixedConfig from 'server/src/lib/models/contractLineServiceFixedConfig';
+import ContractLineServiceHourlyConfig from 'server/src/lib/models/contractLineServiceHourlyConfig';
+import ContractLineServiceUsageConfig from 'server/src/lib/models/contractLineServiceUsageConfig';
+import ContractLineServiceBucketConfig from 'server/src/lib/models/contractLineServiceBucketConfig';
 import ContractLine from 'server/src/lib/models/contractLine'; // Added import
 
 export class PlanServiceConfigurationService {
   private knex: Knex;
   private tenant: string;
-  private planServiceConfigModel: PlanServiceConfiguration;
-  private fixedConfigModel: PlanServiceFixedConfig;
-  private hourlyConfigModel: PlanServiceHourlyConfig;
-  private usageConfigModel: PlanServiceUsageConfig;
-  private bucketConfigModel: PlanServiceBucketConfig;
+  private planServiceConfigModel: ContractLineServiceConfiguration;
+  private fixedConfigModel: ContractLineServiceFixedConfig;
+  private hourlyConfigModel: ContractLineServiceHourlyConfig;
+  private usageConfigModel: ContractLineServiceUsageConfig;
+  private bucketConfigModel: ContractLineServiceBucketConfig;
   // Removed contractLineModel property
 
   constructor(knex?: Knex, tenant?: string) {
     this.knex = knex as Knex;
     this.tenant = tenant as string;
     if (knex) {
-      this.planServiceConfigModel = new PlanServiceConfiguration(knex, tenant);
-      this.fixedConfigModel = new PlanServiceFixedConfig(knex, tenant);
-      this.hourlyConfigModel = new PlanServiceHourlyConfig(knex);
-      this.usageConfigModel = new PlanServiceUsageConfig(knex);
-      this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
+      this.planServiceConfigModel = new ContractLineServiceConfiguration(knex, tenant);
+      this.fixedConfigModel = new ContractLineServiceFixedConfig(knex, tenant);
+      this.hourlyConfigModel = new ContractLineServiceHourlyConfig(knex);
+      this.usageConfigModel = new ContractLineServiceUsageConfig(knex);
+      this.bucketConfigModel = new ContractLineServiceBucketConfig(knex, tenant);
     } else {
       // These will be initialized in initKnex
-      this.planServiceConfigModel = {} as PlanServiceConfiguration;
-      this.fixedConfigModel = {} as PlanServiceFixedConfig;
-      this.hourlyConfigModel = {} as PlanServiceHourlyConfig;
-      this.usageConfigModel = {} as PlanServiceUsageConfig;
-      this.bucketConfigModel = {} as PlanServiceBucketConfig;
+      this.planServiceConfigModel = {} as ContractLineServiceConfiguration;
+      this.fixedConfigModel = {} as ContractLineServiceFixedConfig;
+      this.hourlyConfigModel = {} as ContractLineServiceHourlyConfig;
+      this.usageConfigModel = {} as ContractLineServiceUsageConfig;
+      this.bucketConfigModel = {} as ContractLineServiceBucketConfig;
     }
     // Removed contractLineModel initialization
   }
@@ -59,11 +59,11 @@ export class PlanServiceConfigurationService {
       this.tenant = tenant;
       
       // Initialize models with knex connection
-      this.planServiceConfigModel = new PlanServiceConfiguration(knex, tenant);
-      this.fixedConfigModel = new PlanServiceFixedConfig(knex, tenant);
-      this.hourlyConfigModel = new PlanServiceHourlyConfig(knex);
-      this.usageConfigModel = new PlanServiceUsageConfig(knex);
-      this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
+      this.planServiceConfigModel = new ContractLineServiceConfiguration(knex, tenant);
+      this.fixedConfigModel = new ContractLineServiceFixedConfig(knex, tenant);
+      this.hourlyConfigModel = new ContractLineServiceHourlyConfig(knex);
+      this.usageConfigModel = new ContractLineServiceUsageConfig(knex);
+      this.bucketConfigModel = new ContractLineServiceBucketConfig(knex, tenant);
       // Removed contractLineModel initialization
     }
   }
@@ -152,11 +152,11 @@ export class PlanServiceConfigurationService {
     // Use transaction to ensure all operations succeed or fail together
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
-      const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
-      const usageConfigModel = new PlanServiceUsageConfig(trx);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+      const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
+      const fixedConfigModel = new ContractLineServiceFixedConfig(trx, this.tenant);
+      const hourlyConfigModel = new ContractLineServiceHourlyConfig(trx);
+      const usageConfigModel = new ContractLineServiceUsageConfig(trx);
+      const bucketConfigModel = new ContractLineServiceBucketConfig(trx, this.tenant);
       
       // Create base configuration
       const configId = await planServiceConfigModel.create(baseConfig);
@@ -256,11 +256,11 @@ export class PlanServiceConfigurationService {
     // Use transaction to ensure all operations succeed or fail together
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
-      const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
-      const usageConfigModel = new PlanServiceUsageConfig(trx);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+      const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
+      const fixedConfigModel = new ContractLineServiceFixedConfig(trx, this.tenant);
+      const hourlyConfigModel = new ContractLineServiceHourlyConfig(trx);
+      const usageConfigModel = new ContractLineServiceUsageConfig(trx);
+      const bucketConfigModel = new ContractLineServiceBucketConfig(trx, this.tenant);
       
       // Update base configuration if provided
       if (baseConfig) {
@@ -347,11 +347,11 @@ export class PlanServiceConfigurationService {
     // Use transaction to ensure all operations succeed or fail together
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
-      const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
-      const usageConfigModel = new PlanServiceUsageConfig(trx);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+      const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
+      const fixedConfigModel = new ContractLineServiceFixedConfig(trx, this.tenant);
+      const hourlyConfigModel = new ContractLineServiceHourlyConfig(trx);
+      const usageConfigModel = new ContractLineServiceUsageConfig(trx);
+      const bucketConfigModel = new ContractLineServiceBucketConfig(trx, this.tenant);
 
       // Explicitly delete type-specific configuration first (no CASCADE)
       switch (currentConfig.configuration_type) {
@@ -410,8 +410,8 @@ export class PlanServiceConfigurationService {
 
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
-      const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+      const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
+      const bucketConfigModel = new ContractLineServiceBucketConfig(trx, this.tenant);
 
       // 1. Find existing base configuration
       let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
@@ -483,8 +483,8 @@ export class PlanServiceConfigurationService {
 
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
-      const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
+      const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
+      const hourlyConfigModel = new ContractLineServiceHourlyConfig(trx);
 
       // 1. Find existing base configuration
       let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
@@ -564,7 +564,7 @@ export class PlanServiceConfigurationService {
 
     await this.knex.transaction(async (trx) => {
       // Create model with transaction
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
+      const hourlyConfigModel = new ContractLineServiceHourlyConfig(trx);
 
       // 1. Delete existing rates for this config_id
       await hourlyConfigModel.deleteUserTypeRatesByConfigId(configId); // Assuming this method exists or will be added

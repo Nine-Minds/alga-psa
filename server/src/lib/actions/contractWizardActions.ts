@@ -8,7 +8,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig';
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
+import { ContractLineServiceConfigurationService as ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 
 type FixedServiceInput = {
   service_id: string;
@@ -196,7 +196,7 @@ export async function createContractFromWizard(
       });
     }
 
-    const planServiceConfigService = new PlanServiceConfigurationService(trx, tenant);
+    const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
 
     if (filteredHourlyServices.length > 0) {
       const hourlyPlanId = uuidv4();

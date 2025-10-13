@@ -3,7 +3,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { IContractLineServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
-export default class PlanServiceConfiguration {
+export default class ContractLineServiceConfiguration {
   private knex: Knex;
   private tenant: string;
 

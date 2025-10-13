@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
 import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
-import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 // Import schema types for validation
@@ -83,7 +83,7 @@ export interface PlanTemplate {
 }
 
 export class ContractLineService extends BaseService<IContractLine> {
-  private planServiceConfigService: PlanServiceConfigurationService;
+  private planServiceConfigService: ContractLineServiceConfigurationService;
 
   constructor() {
     super({
@@ -94,7 +94,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       defaultSort: 'contract_line_name',
       defaultOrder: 'asc'
     });
-    this.planServiceConfigService = new PlanServiceConfigurationService();
+    this.planServiceConfigService = new ContractLineServiceConfigurationService();
   }
 
 
@@ -493,7 +493,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     const planConfig = await this.getFixedPlanConfig(planId, context);
     
     // Get service-level config
-    this.planServiceConfigService = new PlanServiceConfigurationService(knex, context.tenant);
+    this.planServiceConfigService = new ContractLineServiceConfigurationService(knex, context.tenant);
     const serviceConfig = await this.planServiceConfigService.getConfigurationForService(planId, serviceId);
     
     return {
@@ -540,7 +540,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Create service configuration
-        this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
+        this.planServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
         
         const baseConfigData = {
           contract_line_id: planId,
@@ -585,7 +585,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
       
       // Use service to delete configuration and related data
-      this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
+      this.planServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
       await this.planServiceConfigService.deleteConfiguration(config.config_id);
     });
   }
@@ -614,7 +614,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Update service configuration
-        this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
+        this.planServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
         
         await this.planServiceConfigService.updateConfiguration(
           config.config_id,
@@ -655,7 +655,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     // Add configuration details for each service
     const servicesWithConfig = await Promise.all(
       services.map(async (service) => {
-        this.planServiceConfigService = new PlanServiceConfigurationService(knex, context.tenant);
+        this.planServiceConfigService = new ContractLineServiceConfigurationService(knex, context.tenant);
         const details = await this.planServiceConfigService.getConfigurationWithDetails(service.config_id);
         return {
           service: {
@@ -1531,7 +1531,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Delete each configuration (which should cascade to type-specific configs)
     for (const config of configs) {
-      this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
+      this.planServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
       await this.planServiceConfigService.deleteConfiguration(config.config_id);
     }
   }

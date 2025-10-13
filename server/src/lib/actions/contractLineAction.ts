@@ -4,7 +4,7 @@ import ContractLine from 'server/src/lib/models/contractLine';
 import { IContractLine, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces'; // Added IContractLineFixedConfig
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex'; // Import Knex type
-import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { IContractLineServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig'; // Added import for new model
 import { withTransaction } from '@alga-psa/shared/db';
@@ -319,7 +319,7 @@ export async function getCombinedFixedPlanConfiguration(
             // --- Fetch Service-Level Config ID (Optional, if needed elsewhere) ---
             // We no longer need service-level config to get the base rate for the combined view.
             // We might still need the config_id if the caller uses it.
-            const configService = new PlanServiceConfigurationService(trx, tenant);
+            const configService = new ContractLineServiceConfigurationService(trx, tenant);
             const serviceBaseConfig = await configService.getConfigurationForService(planId, serviceId);
             const config_id: string | undefined = serviceBaseConfig?.config_id;
 
@@ -478,7 +478,7 @@ export async function updatePlanServiceFixedConfigRate(
             }
 
             // Create configuration service
-            const configService = new PlanServiceConfigurationService(trx, tenant);
+            const configService = new ContractLineServiceConfigurationService(trx, tenant);
             
             // Get existing configuration for this plan and service
             let config = await configService.getConfigurationForService(planId, serviceId);

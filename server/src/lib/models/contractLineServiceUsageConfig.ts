@@ -3,7 +3,7 @@ import { getCurrentTenantId } from '../db';
 import { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '../../interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
-export default class PlanServiceUsageConfig {
+export default class ContractLineServiceUsageConfig {
   private knex: Knex | Knex.Transaction;
   private tenant?: string;
 

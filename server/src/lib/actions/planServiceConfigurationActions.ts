@@ -13,7 +13,7 @@ import {
   IContractLineServiceRateTierInput
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { getContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
@@ -30,7 +30,7 @@ export async function getConfigurationWithDetails(configId: string): Promise<{
 }> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
   // Get the configuration details
   const configDetails = await configService.getConfigurationWithDetails(configId);
@@ -66,7 +66,7 @@ export async function getConfigurationWithDetails(configId: string): Promise<{
 export async function getConfigurationsForPlan(contractLineId: string): Promise<IContractLineServiceConfiguration[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
     return await configService.getConfigurationsForPlan(contractLineId);
   });
@@ -78,7 +78,7 @@ export async function getConfigurationsForPlan(contractLineId: string): Promise<
 export async function getConfigurationForService(contractLineId: string, serviceId: string): Promise<IContractLineServiceConfiguration | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
     return await configService.getConfigurationForService(contractLineId, serviceId);
   });
@@ -95,7 +95,7 @@ export async function createConfiguration(
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
   // Ensure tenant is set
   baseConfig.tenant = tenant!;
@@ -115,7 +115,7 @@ export async function updateConfiguration(
 ): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
     return await configService.updateConfiguration(configId, baseConfig, typeConfig, rateTiers); // Pass rateTiers
   });
@@ -127,7 +127,7 @@ export async function updateConfiguration(
 export async function deleteConfiguration(configId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
     return await configService.deleteConfiguration(configId);
   });
@@ -255,7 +255,7 @@ export async function upsertUserTypeRatesForConfig(
 
   // Use the service, assuming it has a method for this bulk operation
   // If not, we'd implement the transaction logic here or add the method to the service.
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
 
   try {
     // Assuming a method like this exists or will be added to the service:
@@ -286,7 +286,7 @@ export interface IFullPlanServiceUsageConfiguration extends IContractLineService
 export async function getPlanServiceConfiguration(planId: string, serviceId: string): Promise<IFullPlanServiceUsageConfiguration | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
 
   // TODO: Implement logic using configService or direct queries
   // 1. Get base config using configService.getConfigurationForService(planId, serviceId)
@@ -426,7 +426,7 @@ function validatePlanServiceUsageConfigurationInput(input: IUpsertPlanServiceUsa
 export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUsageConfigurationInput): Promise<IFullPlanServiceUsageConfiguration> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!); // May not be fully used if direct transaction is needed
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!); // May not be fully used if direct transaction is needed
 
   // --- Validation (Phase 1 Task) ---
   try {
@@ -442,7 +442,7 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
 
   try {
     const updatedConfig = await trx.transaction(async (trxInner: Knex.Transaction) => {
-      const trxConfigService = new PlanServiceConfigurationService(trxInner, tenant!); // Use transaction knex
+      const trxConfigService = new ContractLineServiceConfigurationService(trxInner, tenant!); // Use transaction knex
 
       // 1. Upsert contract_line_service_configuration
       let baseConfig = await trxConfigService.getConfigurationForService(contractLineId, serviceId);
@@ -575,7 +575,7 @@ export async function upsertPlanServiceBucketConfigurationAction(
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
 
   const { contractLineId, serviceId, ...bucketConfigData } = input;
 
@@ -665,7 +665,7 @@ export async function upsertPlanServiceHourlyConfiguration(
   const validatedInput = validationResult.data;
   // --- End Validation ---
 
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
 
   try {
     // Prepare the hourly config data object, converting nulls to undefined

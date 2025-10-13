@@ -5,7 +5,7 @@ import { IContractLineServiceRateTier, IUserTypeRate, IContractLineServiceConfig
 import { IContractLineService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
  
-import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import * as planServiceConfigActions from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';

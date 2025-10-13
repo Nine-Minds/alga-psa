@@ -3,7 +3,7 @@ import { getCurrentTenantId } from '../db';
 import { IContractLineServiceHourlyConfig, IUserTypeRate } from '../../interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
-export default class PlanServiceHourlyConfig {
+export default class ContractLineServiceHourlyConfig {
   private knex: Knex | Knex.Transaction;
   private tenant?: string;
 
