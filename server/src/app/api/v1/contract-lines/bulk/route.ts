@@ -10,7 +10,7 @@ const controller = new ApiContractLineController();
 
 export async function POST(request: Request) {
   try {
-    return await controller.bulkCreatePlans()(request as any);
+    return await controller.bulkCreateContractLines()(request as any);
   } catch (error) {
     return handleApiError(error);
   }
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    return await controller.bulkUpdatePlans()(request as any);
+    return await controller.bulkUpdateContractLines()(request as any);
   } catch (error) {
     return handleApiError(error);
   }
@@ -26,7 +26,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    return await controller.bulkDeletePlans()(request as any);
+    return await controller.bulkDeleteContractLines()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

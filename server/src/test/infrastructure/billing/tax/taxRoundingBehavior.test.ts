@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { TaxService } from '../../lib/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
 import { IClient } from '../../interfaces/client.interfaces';

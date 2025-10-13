@@ -39,7 +39,7 @@ class ClientContractLine {
             query.whereNot('client_contract_line_id', excludeContractLineId);
         }
 
-        // If we're excluding a specific contract, don't consider plans from that contract
+        // If we're excluding a specific contract, don't consider contract lines from that contract
         if (excludeContractId) {
             query.where(function() {
                 this.whereNot('client_contract_id', excludeContractId)
@@ -47,10 +47,10 @@ class ClientContractLine {
             });
         }
 
-        // Get direct overlapping plans
-        const directOverlappingPlans = await query;
+        // Get direct overlapping contract lines
+        const directOverlappingContractLines = await query;
 
-        // Check for plans from contracts that overlap
+        // Check for contract lines from contracts that overlap
         const contractAssociationQuery = db('client_contracts as cc')
             .join('contract_line_mappings as clm', function() {
                 this.on('cc.contract_id', '=', 'clm.contract_id')
@@ -93,22 +93,22 @@ class ClientContractLine {
                 'clm.custom_rate'
             );
 
-        // Convert contract plans to client contract line format for consistent return
-        const formattedContractAssociations = contractAssociationResults.map((plan: any) => ({
-            client_contract_line_id: `contract-${plan.client_contract_id}-${plan.contract_line_id}`,
+        // Convert contract contract lines to client contract line format for consistent return
+        const formattedContractAssociations = contractAssociationResults.map((contractLine: any) => ({
+            client_contract_line_id: `contract-${contractLine.client_contract_id}-${contractLine.contract_line_id}`,
             client_id: clientId,
-            contract_line_id: plan.contract_line_id,
-            service_category: plan.service_category,
-            start_date: plan.start_date,
-            end_date: plan.end_date,
+            contract_line_id: contractLine.contract_line_id,
+            service_category: contractLine.service_category,
+            start_date: contractLine.start_date,
+            end_date: contractLine.end_date,
             is_active: true,
-            custom_rate: plan.custom_rate,
-            client_contract_id: plan.client_contract_id,
-            contract_line_name: plan.contract_line_name,
+            custom_rate: contractLine.custom_rate,
+            client_contract_id: contractLine.client_contract_id,
+            contract_line_name: contractLine.contract_line_name,
             tenant
         }));
 
-        return [...directOverlappingPlans, ...formattedContractAssociations];
+        return [...directOverlappingContractLines, ...formattedContractAssociations];
     }
 
     static async create(billingData: Omit<IClientContractLine, 'client_contract_line_id'>): Promise<IClientContractLine> {
@@ -171,7 +171,7 @@ class ClientContractLine {
         }
     }
 
-    static async getByClientId(clientId: string, includeContractPlans: boolean = true): Promise<IClientContractLine[]> {
+    static async getByClientId(clientId: string, includeContractContractLines: boolean = true): Promise<IClientContractLine[]> {
         const { knex: db, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('Tenant context is required for fetching client contract lines');
@@ -179,7 +179,7 @@ class ClientContractLine {
 
         try {
             // Get directly assigned contract lines
-            const directPlans = await db('client_contract_lines')
+            const directContractLines = await db('client_contract_lines')
                 .join('contract_lines', function() {
                     this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
                         .andOn('contract_lines.tenant', '=', 'client_contract_lines.tenant');
@@ -194,14 +194,14 @@ class ClientContractLine {
                     'contract_lines.billing_frequency'
                 );
 
-            // If we don't need contract plans, return just the direct plans
-            if (!includeContractPlans) {
-                console.log(`Retrieved ${directPlans.length} direct contract lines for client ${clientId}`);
-                return directPlans;
+            // If we don't need contract lines from contracts, return just the direct contract lines
+            if (!includeContractContractLines) {
+                console.log(`Retrieved ${directContractLines.length} direct contract lines for client ${clientId}`);
+                return directContractLines;
             }
 
-            // Get plans from contracts
-            const contractPlans = await db('client_contracts as cc')
+            // Get contract lines from contracts
+            const contractContractLines = await db('client_contracts as cc')
                 .join('contract_line_mappings as clm', function() {
                     this.on('cc.contract_id', '=', 'clm.contract_id')
                         .andOn('clm.tenant', '=', 'cc.tenant');
@@ -231,27 +231,27 @@ class ClientContractLine {
                     'c.contract_name'
                 );
 
-            // Convert contract plans to client contract line format
-            const formattedContractAssociations = contractPlans.map((plan: any) => ({
-                client_contract_line_id: `contract-${plan.client_contract_id}-${plan.contract_line_id}`,
+            // Convert contract contract lines to client contract line format
+            const formattedContractAssociations = contractContractLines.map((contractLine: any) => ({
+                client_contract_line_id: `contract-${contractLine.client_contract_id}-${contractLine.contract_line_id}`,
                 client_id: clientId,
-                contract_line_id: plan.contract_line_id,
-                service_category: plan.service_category,
-                start_date: plan.start_date,
-                end_date: plan.end_date,
+                contract_line_id: contractLine.contract_line_id,
+                service_category: contractLine.service_category,
+                start_date: contractLine.start_date,
+                end_date: contractLine.end_date,
                 is_active: true,
-                custom_rate: plan.custom_rate,
-                client_contract_id: plan.client_contract_id,
-                contract_line_name: plan.contract_line_name,
-                billing_frequency: plan.billing_frequency,
-                contract_name: plan.contract_name,
+                custom_rate: contractLine.custom_rate,
+                client_contract_id: contractLine.client_contract_id,
+                contract_line_name: contractLine.contract_line_name,
+                billing_frequency: contractLine.billing_frequency,
+                contract_name: contractLine.contract_name,
                 tenant
             }));
 
-            // Combine direct plans and contract plans
-            const allPlans = [...directPlans, ...formattedContractAssociations];
-            console.log(`Retrieved ${directPlans.length} direct plans and ${formattedContractAssociations.length} contract plans for client ${clientId}`);
-            return allPlans;
+            // Combine direct contract lines and contract contract lines
+            const allContractLines = [...directContractLines, ...formattedContractAssociations];
+            console.log(`Retrieved ${directContractLines.length} direct contract lines and ${formattedContractAssociations.length} contract contract lines for client ${clientId}`);
+            return allContractLines;
         } catch (error) {
             console.error(`Error fetching contract lines for client ${clientId}:`, error);
             throw error;

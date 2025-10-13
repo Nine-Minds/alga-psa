@@ -1,11 +1,11 @@
-export const PLAN_TYPE_DISPLAY: Record<string, string> = {
+export const CONTRACT_LINE_TYPE_DISPLAY: Record<string, string> = {
   'Fixed': 'Fixed',
   'Bucket': 'Bucket',
   'Hourly': 'Time Based',
   'Usage': 'Usage Based'
 };
 
-export const PLAN_TYPE_OPTIONS = Object.entries(PLAN_TYPE_DISPLAY).map(([value, label]) => ({
+export const CONTRACT_LINE_TYPE_OPTIONS = Object.entries(CONTRACT_LINE_TYPE_DISPLAY).map(([value, label]) => ({
   value,
   label
 }));

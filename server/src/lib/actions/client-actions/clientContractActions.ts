@@ -266,7 +266,7 @@ export async function getClientContractLines(clientContractId: string): Promise<
 
 /**
  * Apply a client's contract lines to the client
- * This creates client_contract_line entries for each plan in the contract
+ * This creates client_contract_line entries for each contract line in the contract
  */
 export async function applyContractToClient(clientContractId: string): Promise<void> {
   const session = await getSession();
@@ -295,26 +295,26 @@ export async function applyContractToClient(clientContractId: string): Promise<v
     // Start a transaction to ensure all client contract lines are created
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // For each contract line in the contract, create a client contract line
-      for (const plan of contractLines) {
-        // Check if the client already has this plan
-        const existingPlan = await trx('client_contract_lines')
-          .where({ 
+      for (const contractLine of contractLines) {
+        // Check if the client already has this contract line
+        const existingContractLine = await trx('client_contract_lines')
+          .where({
             client_id: clientContract.client_id,
-            contract_line_id: plan.contract_line_id,
+            contract_line_id: contractLine.contract_line_id,
             is_active: true,
-            tenant 
+            tenant
           })
           .first();
 
-        if (existingPlan) {
+        if (existingContractLine) {
           // If the contract line exists but isn't linked to this contract, update it
-          if (!existingPlan.client_contract_id) {
+          if (!existingContractLine.client_contract_id) {
             await trx('client_contract_lines')
-              .where({ 
-                client_contract_line_id: existingPlan.client_contract_line_id,
-                tenant 
+              .where({
+                client_contract_line_id: existingContractLine.client_contract_line_id,
+                tenant
               })
-              .update({ 
+              .update({
                 client_contract_id: clientContractId
               });
           }
@@ -323,7 +323,7 @@ export async function applyContractToClient(clientContractId: string): Promise<v
           await trx('client_contract_lines').insert({
             client_contract_line_id: trx.raw('gen_random_uuid()'),
             client_id: clientContract.client_id,
-            contract_line_id: plan.contract_line_id,
+            contract_line_id: contractLine.contract_line_id,
             start_date: clientContract.start_date,
             end_date: clientContract.end_date,
             is_active: true,

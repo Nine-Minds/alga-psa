@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getEligibleContractLinesForUI } from 'server/src/lib/utils/planDisambiguation';
+import { getEligibleContractLinesForUI } from 'server/src/lib/utils/contractLineDisambiguation';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
@@ -84,26 +84,26 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       }
 
       try {
-        const plans = await getEligibleContractLinesForUI(newUsage.client_id, newUsage.service_id);
-        setEligibleContractLines(plans);
+        const contractLines = await getEligibleContractLinesForUI(newUsage.client_id, newUsage.service_id);
+        setEligibleContractLines(contractLines);
 
         // Always show the contract line selector, but set a default when appropriate
         setShowContractLineSelector(true);
 
         // If no contract line is selected yet, try to set a default
         if (!newUsage.contract_line_id) {
-          if (plans.length === 1) {
+          if (contractLines.length === 1) {
             // If there's only one contract line, use it automatically
-            setNewUsage(prev => ({ ...prev, contract_line_id: plans[0].client_contract_line_id }));
-          } else if (plans.length > 1) {
+            setNewUsage(prev => ({ ...prev, contract_line_id: contractLines[0].client_contract_line_id }));
+          } else if (contractLines.length > 1) {
             // Check for bucket contract lines first
-            const bucketPlans = plans.filter(plan => plan.contract_line_type === 'Bucket');
-            if (bucketPlans.length === 1) {
+            const bucketContractLines = contractLines.filter(contractLine => contractLine.contract_line_type === 'Bucket');
+            if (bucketContractLines.length === 1) {
               // If there's only one bucket contract line, use it as default
-              setNewUsage(prev => ({ ...prev, contract_line_id: bucketPlans[0].client_contract_line_id }));
+              setNewUsage(prev => ({ ...prev, contract_line_id: bucketContractLines[0].client_contract_line_id }));
             }
           }
-        } else if (plans.length === 0) {
+        } else if (contractLines.length === 0) {
           // Clear any existing contract line selection if no contract lines are available
           setNewUsage(prev => ({ ...prev, contract_line_id: undefined }));
         }
@@ -525,9 +525,9 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                       : eligibleContractLines.length === 1
                         ? `Using ${eligibleContractLines[0].contract_line_name}`
                         : "Select a contract line"}
-                  options={eligibleContractLines.map(plan => ({
-                    value: plan.client_contract_line_id,
-                    label: `${plan.contract_line_name} (${plan.contract_line_type})`
+                  options={eligibleContractLines.map(contractLine => ({
+                    value: contractLine.client_contract_line_id,
+                    label: `${contractLine.contract_line_name} (${contractLine.contract_line_type})`
                   }))}
                 />
                 

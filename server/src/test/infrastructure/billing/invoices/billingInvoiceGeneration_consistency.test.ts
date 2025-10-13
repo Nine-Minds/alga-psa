@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
@@ -25,7 +25,7 @@ describe('Billing Invoice Consistency Checks', () => {
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_plans',
+        'bucket_contract_lines',
         'tax_rates',
         'client_tax_settings'
       ],
@@ -70,15 +70,15 @@ describe('Billing Invoice Consistency Checks', () => {
       }, 'billing_cycle_id');
 
       // Create and assign contract line
-      const planId = await context.createEntity('contract_lines', {
-        contract_line_name: 'Test Plan',
+      const contractLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Test Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
       await context.db('contract_line_services').insert({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceId,
         quantity: 1,
         tenant: context.tenantId
@@ -87,7 +87,7 @@ describe('Billing Invoice Consistency Checks', () => {
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         start_date: '2025-02-01',
         is_active: true,
         tenant: context.tenantId

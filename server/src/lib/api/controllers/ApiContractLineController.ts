@@ -5,17 +5,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ContractLineService, ContractLineServiceOptions } from '../services/ContractLineService';
-import { 
+import {
   // Core schemas
   createContractLineSchema,
   updateContractLineSchema,
   contractLineListQuerySchema,
-  createFixedPlanConfigSchema,
-  updateFixedPlanConfigSchema,
-  
+  createFixedContractLineConfigSchema,
+  updateFixedContractLineConfigSchema,
+
   // Service management schemas
-  addServiceToPlanSchema,
-  updatePlanServiceSchema,
+  addServiceToContractLineSchema,
+  updateContractLineServiceSchema,
   
   // Contract management schemas
   createContractSchema,
@@ -33,30 +33,30 @@ import {
   
   // Template and copying schemas
   copyContractLineSchema,
-  createPlanTemplateSchema,
-  createPlanFromTemplateSchema,
+  createContractLineTemplateSchema,
+  createContractLineFromTemplateSchema,
   
   // Activation schemas
-  planActivationSchema,
-  clientPlanActivationSchema,
-  
+  contractLineActivationSchema,
+  clientContractLineActivationSchema,
+
   // Bulk operation schemas
   bulkCreateContractLinesSchema,
   bulkUpdateContractLinesSchema,
   bulkDeleteContractLinesSchema,
-  bulkAddServicesToPlanSchema,
-  bulkRemoveServicesFromPlanSchema,
-  bulkAssignPlansToClientSchema,
-  bulkUnassignPlansFromClientSchema,
+  bulkAddServicesToContractLineSchema,
+  bulkRemoveServicesFromContractLineSchema,
+  bulkAssignContractLinesToClientSchema,
+  bulkUnassignContractLinesFromClientSchema,
   
   // Type exports
   CreateContractLineData,
   UpdateContractLineData,
   ContractLineResponse,
-  CreateFixedPlanConfigData,
-  UpdateFixedPlanConfigData,
-  AddServiceToPlanData,
-  UpdatePlanServiceData,
+  CreateFixedContractLineConfigData,
+  UpdateFixedContractLineConfigData,
+  AddServiceToContractLineData,
+  UpdateContractLineServiceData,
   CreateContractData,
   UpdateContractData,
   AddContractLineData,
@@ -66,17 +66,17 @@ import {
   CreateClientContractData,
   UpdateClientContractData,
   CopyContractLineData,
-  CreatePlanTemplateData,
-  CreatePlanFromTemplateData,
-  PlanActivationData,
-  ClientPlanActivationData,
+  CreateContractLineTemplateData,
+  CreateContractLineFromTemplateData,
+  ContractLineActivationData,
+  ClientContractLineActivationData,
   BulkCreateContractLinesData,
   BulkUpdateContractLinesData,
   BulkDeleteContractLinesData,
-  BulkAddServicesToPlanData,
-  BulkRemoveServicesFromPlanData,
-  BulkAssignPlansToClientData,
-  BulkUnassignPlansFromClientData
+  BulkAddServicesToContractLineData,
+  BulkRemoveServicesFromContractLineData,
+  BulkAssignContractLinesToClientData,
+  BulkUnassignContractLinesFromClientData
 } from '../schemas/contractLineSchemas';
 import { z } from 'zod';
 import { createApiResponse, createErrorResponse } from '../utils/response';
@@ -128,15 +128,15 @@ export class ApiContractLineController {
       };
       
       const result = await this.contractLineService.listWithOptions(listOptions, context, serviceOptions);
-      
-      // Add HATEOAS links to each plan
-      const plansWithLinks = result.data.map(plan => ({
-        ...plan,
-        _links: getHateoasLinks('contract-line', plan.contract_line_id!)
+
+      // Add HATEOAS links to each contract line
+      const contractLinesWithLinks = result.data.map(contractLine => ({
+        ...contractLine,
+        _links: getHateoasLinks('contract-line', contractLine.contract_line_id!)
       }));
 
       const response = createApiResponse({
-        data: plansWithLinks,
+        data: contractLinesWithLinks,
         pagination: {
           page: listOptions.page,
           limit: listOptions.limit,
@@ -170,16 +170,16 @@ export class ApiContractLineController {
         includeClients: url.searchParams.get('include_clients') === 'true'
       };
       
-      const plan = await this.contractLineService.getByIdWithOptions(params.id, requestContext, serviceOptions);
-      
-      if (!plan) {
+      const contractLine = await this.contractLineService.getByIdWithOptions(params.id, requestContext, serviceOptions);
+
+      if (!contractLine) {
         return createErrorResponse('Contract Line not found', 404);
       }
 
       const response = createApiResponse({
         data: {
-          ...plan,
-          _links: getHateoasLinks('contract-line', plan.contract_line_id!)
+          ...contractLine,
+          _links: getHateoasLinks('contract-line', contractLine.contract_line_id!)
         }
       });
 
@@ -201,12 +201,12 @@ export class ApiContractLineController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plan = await this.contractLineService.create(validation.data, context);
-      
+      const contractLine = await this.contractLineService.create(validation.data, context);
+
       const response = createApiResponse({
         data: {
-          ...plan,
-          _links: getHateoasLinks('contract-line', plan.contract_line_id!)
+          ...contractLine,
+          _links: getHateoasLinks('contract-line', contractLine.contract_line_id!)
         }
       }, 201);
 
@@ -229,12 +229,12 @@ export class ApiContractLineController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plan = await this.contractLineService.update(params.id, validation.data, requestContext);
-      
+      const contractLine = await this.contractLineService.update(params.id, validation.data, requestContext);
+
       const response = createApiResponse({
         data: {
-          ...plan,
-          _links: getHateoasLinks('contract-line', plan.contract_line_id!)
+          ...contractLine,
+          _links: getHateoasLinks('contract-line', contractLine.contract_line_id!)
         }
       });
 
@@ -257,14 +257,14 @@ export class ApiContractLineController {
   }
 
   /**
-   * GET /api/v2/contract-lines/{id}/services - Get plan services
+   * GET /api/v2/contract-lines/{id}/services - Get contract line services
    */
-  getPlanServices() {
+  getContractLineServices() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const requestContext = requireRequestContext(req);
       
-      const services = await this.contractLineService.getPlanServices(params.id, requestContext);
+      const services = await this.contractLineService.getContractLineServices(params.id, requestContext);
       
       const response = createApiResponse({
         data: services,
@@ -280,21 +280,21 @@ export class ApiContractLineController {
   }
 
   /**
-   * POST /api/v2/contract-lines/{id}/services - Add service to plan
+   * POST /api/v2/contract-lines/{id}/services - Add service to contract line
    */
-  addServiceToPlan() {
+  addServiceToContractLine() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const data = await req.json();
       const requestContext = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = addServiceToPlanSchema.safeParse(data);
+      const validation = addServiceToContractLineSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const serviceConfig = await this.contractLineService.addServiceToPlan(params.id, validation.data, requestContext);
+      const serviceConfig = await this.contractLineService.addServiceToContractLine(params.id, validation.data, requestContext);
       
       const response = createApiResponse({ data: serviceConfig }, 201);
       return NextResponse.json(response);
@@ -302,21 +302,21 @@ export class ApiContractLineController {
   }
 
   /**
-   * PUT /api/v2/contract-lines/{contractLineId}/services/{serviceId} - Update service in plan
+   * PUT /api/v2/contract-lines/{contractLineId}/services/{serviceId} - Update service in contract line
    */
-  updatePlanService() {
+  updateContractLineService() {
     return async (req: NextRequest, context: { params: Promise<{ contractLineId: string; serviceId: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const data = await req.json();
       const requestContext = requireRequestContext(req);
       
       // Validate request body
-      const validation = updatePlanServiceSchema.safeParse(data);
+      const validation = updateContractLineServiceSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const serviceConfig = await this.contractLineService.updatePlanService(params.contractLineId, params.serviceId, validation.data, requestContext);
+      const serviceConfig = await this.contractLineService.updateContractLineService(params.contractLineId, params.serviceId, validation.data, requestContext);
       
       const response = createApiResponse({ data: serviceConfig });
       return NextResponse.json(response);
@@ -324,31 +324,31 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/contract-lines/{contractLineId}/services/{serviceId} - Remove service from plan
+   * DELETE /api/v2/contract-lines/{contractLineId}/services/{serviceId} - Remove service from contract line
    */
-  removeServiceFromPlan() {
+  removeServiceFromContractLine() {
     return async (req: NextRequest, context: { params: Promise<{ contractLineId: string; serviceId: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const requestContext = requireRequestContext(req);
       
-      await this.contractLineService.removeServiceFromPlan(params.contractLineId, params.serviceId, requestContext);
+      await this.contractLineService.removeServiceFromContractLine(params.contractLineId, params.serviceId, requestContext);
       
       return NextResponse.json(createApiResponse(null, 204));
     };
   }
 
   /**
-   * GET /api/v2/contract-lines/{id}/fixed-config - Get fixed plan configuration
+   * GET /api/v2/contract-lines/{id}/fixed-config - Get fixed contract line configuration
    */
-  getFixedPlanConfig() {
+  getFixedContractLineConfig() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const requestContext = requireRequestContext(req);
-      
-      const config = await this.contractLineService.getFixedPlanConfig(params.id, requestContext);
-      
+
+      const config = await this.contractLineService.getFixedContractLineConfig(params.id, requestContext);
+
       if (!config) {
-        return createErrorResponse('Fixed plan configuration not found', 404);
+        return createErrorResponse('Fixed contract line configuration not found', 404);
       }
 
       const response = createApiResponse({ data: config });
@@ -357,21 +357,21 @@ export class ApiContractLineController {
   }
 
   /**
-   * PUT /api/v2/contract-lines/{id}/fixed-config - Update fixed plan configuration
+   * PUT /api/v2/contract-lines/{id}/fixed-config - Update fixed contract line configuration
    */
-  upsertFixedPlanConfig() {
+  upsertFixedContractLineConfig() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const data = await req.json();
       const requestContext = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = createFixedPlanConfigSchema.safeParse(data);
+      const validation = createFixedContractLineConfigSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const config = await this.contractLineService.upsertFixedPlanConfig(params.id, validation.data, requestContext);
+      const config = await this.contractLineService.upsertFixedContractLineConfig(params.id, validation.data, requestContext);
       
       const response = createApiResponse({ data: config });
       return NextResponse.json(response);
@@ -381,12 +381,12 @@ export class ApiContractLineController {
   /**
    * GET /api/v2/contract-lines/{contractLineId}/services/{serviceId}/config - Get combined configuration
    */
-  getCombinedFixedPlanConfig() {
+  getCombinedFixedContractLineConfig() {
     return async (req: NextRequest, context: { params: Promise<{ contractLineId: string; serviceId: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const requestContext = requireRequestContext(req);
-      
-      const config = await this.contractLineService.getCombinedFixedPlanConfig(params.contractLineId, params.serviceId, requestContext);
+
+      const config = await this.contractLineService.getCombinedFixedContractLineConfig(params.contractLineId, params.serviceId, requestContext);
       
       const response = createApiResponse({ data: config });
       return NextResponse.json(response);
@@ -394,48 +394,48 @@ export class ApiContractLineController {
   }
 
   /**
-   * PUT /api/v2/contract-lines/{id}/activation - Activate/deactivate plan
+   * PUT /api/v2/contract-lines/{id}/activation - Activate/deactivate contract line
    */
-  setPlanActivation() {
+  setContractLineActivation() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const data = await req.json();
       const requestContext = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = planActivationSchema.safeParse(data);
+      const validation = contractLineActivationSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plan = await this.contractLineService.setPlanActivation(params.id, validation.data, requestContext);
-      
-      const response = createApiResponse({ data: plan });
+      const contractLine = await this.contractLineService.setContractLineActivation(params.id, validation.data, requestContext);
+
+      const response = createApiResponse({ data: contractLine });
       return NextResponse.json(response);
     };
   }
 
   /**
-   * POST /api/v2/contract-lines/{id}/copy - Copy existing plan
+   * POST /api/v2/contract-lines/{id}/copy - Copy existing contract line
    */
-  copyPlan() {
+  copyContractLine() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const data = await req.json();
       const requestContext = requireRequestContext(req);
-      
+
       // Validate request body
       const validation = copyContractLineSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const newPlan = await this.contractLineService.copyPlan(validation.data, requestContext);
-      
+      const newContractLine = await this.contractLineService.copyContractLine(validation.data, requestContext);
+
       const response = createApiResponse({
         data: {
-          ...newPlan,
-          _links: getHateoasLinks('contract-line', newPlan.contract_line_id!)
+          ...newContractLine,
+          _links: getHateoasLinks('contract-line', newContractLine.contract_line_id!)
         }
       }, 201);
 
@@ -444,14 +444,14 @@ export class ApiContractLineController {
   }
 
   /**
-   * GET /api/v2/contract-lines/{id}/analytics - Get plan analytics
+   * GET /api/v2/contract-lines/{id}/analytics - Get contract line analytics
    */
-  getPlanAnalytics() {
+  getContractLineAnalytics() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const requestContext = requireRequestContext(req);
-      
-      const analytics = await this.contractLineService.getPlanAnalytics(params.id, requestContext);
+
+      const analytics = await this.contractLineService.getContractLineAnalytics(params.id, requestContext);
       
       const response = createApiResponse({ data: analytics });
       return NextResponse.json(response);
@@ -628,20 +628,20 @@ export class ApiContractLineController {
   }
 
   /**
-   * POST /api/v2/client-contract-lines - Assign plan to client
+   * POST /api/v2/client-contract-lines - Assign contract line to client
    */
-  assignPlanToClient() {
+  assignContractLineToClient() {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
-      
+
       // Validate request body
       const validation = createClientContractLineSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const assignment = await this.contractLineService.assignPlanToClient(validation.data, context);
+      const assignment = await this.contractLineService.assignContractLineToClient(validation.data, context);
       
       const response = createApiResponse({ data: assignment }, 201);
       return NextResponse.json(response);
@@ -649,21 +649,21 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/client-contract-lines/{id} - Unassign plan from client
+   * DELETE /api/v2/client-contract-lines/{id} - Unassign contract line from client
    */
-  unassignPlanFromClient() {
+  unassignContractLineFromClient() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const requestContext = requireRequestContext(req);
-      
-      await this.contractLineService.unassignPlanFromClient(params.id, requestContext);
+
+      await this.contractLineService.unassignContractLineFromClient(params.id, requestContext);
       
       return NextResponse.json(createApiResponse(null, 204));
     };
   }
 
   /**
-   * POST /api/v2/plan-templates - Create plan template
+   * POST /api/v2/contract-line-templates - Create contract line template
    */
   createTemplate() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -671,7 +671,7 @@ export class ApiContractLineController {
       const context = requireRequestContext(req);
       
       // Validate request body
-      const validation = createPlanTemplateSchema.safeParse(data);
+      const validation = createContractLineTemplateSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
@@ -684,26 +684,26 @@ export class ApiContractLineController {
   }
 
   /**
-   * POST /api/v2/plan-templates/{id}/create-plan - Create plan from template
+   * POST /api/v2/contract-line-templates/{id}/create-contract-line - Create contract line from template
    */
   createFromTemplate() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
       const params = await context.params;
       const data = await req.json();
       const requestContext = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = createPlanFromTemplateSchema.safeParse(data);
+      const validation = createContractLineFromTemplateSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plan = await this.contractLineService.createFromTemplate(validation.data, requestContext);
-      
+      const contractLine = await this.contractLineService.createFromTemplate(validation.data, requestContext);
+
       const response = createApiResponse({
         data: {
-          ...plan,
-          _links: getHateoasLinks('contract-line', plan.contract_line_id!)
+          ...contractLine,
+          _links: getHateoasLinks('contract-line', contractLine.contract_line_id!)
         }
       }, 201);
 
@@ -726,61 +726,61 @@ export class ApiContractLineController {
   }
 
   /**
-   * POST /api/v2/contract-lines/bulk/create - Bulk create plans
+   * POST /api/v2/contract-lines/bulk/create - Bulk create contract lines
    */
-  bulkCreatePlans() {
+  bulkCreateContractLines() {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
-      
+
       // Validate request body
       const validation = bulkCreateContractLinesSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plans = await this.contractLineService.bulkCreateContractLines(validation.data, context);
-      
-      const response = createApiResponse({ 
-        data: plans, 
-        count: plans.length 
+      const contractLines = await this.contractLineService.bulkCreateContractLines(validation.data, context);
+
+      const response = createApiResponse({
+        data: contractLines,
+        count: contractLines.length
       }, 201);
       return NextResponse.json(response);
     };
   }
 
   /**
-   * PUT /api/v2/contract-lines/bulk/update - Bulk update plans
+   * PUT /api/v2/contract-lines/bulk/update - Bulk update contract lines
    */
-  bulkUpdatePlans() {
+  bulkUpdateContractLines() {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
-      
+
       // Validate request body
       const validation = bulkUpdateContractLinesSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plans = await this.contractLineService.bulkUpdateContractLines(validation.data, context);
-      
-      const response = createApiResponse({ 
-        data: plans, 
-        count: plans.length 
+      const contractLines = await this.contractLineService.bulkUpdateContractLines(validation.data, context);
+
+      const response = createApiResponse({
+        data: contractLines,
+        count: contractLines.length
       });
       return NextResponse.json(response);
     };
   }
 
   /**
-   * DELETE /api/v2/contract-lines/bulk/delete - Bulk delete plans
+   * DELETE /api/v2/contract-lines/bulk/delete - Bulk delete contract lines
    */
-  bulkDeletePlans() {
+  bulkDeleteContractLines() {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
-      
+
       // Validate request body
       const validation = bulkDeleteContractLinesSchema.safeParse(data);
       if (!validation.success) {
@@ -788,25 +788,25 @@ export class ApiContractLineController {
       }
 
       await this.contractLineService.bulkDeleteContractLines(validation.data, context);
-      
-      const response = createApiResponse({ 
-        message: 'Plans deleted successfully', 
-        count: validation.data.contract_line_ids.length 
+
+      const response = createApiResponse({
+        message: 'Contract lines deleted successfully',
+        count: validation.data.contract_line_ids.length
       });
       return NextResponse.json(response);
     };
   }
 
   /**
-   * POST /api/v2/contract-lines/bulk/add-services - Bulk add services to plan
+   * POST /api/v2/contract-lines/bulk/add-services - Bulk add services to contract line
    */
-  bulkAddServicesToPlan() {
+  bulkAddServicesToContractLine() {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = bulkAddServicesToPlanSchema.safeParse(data);
+      const validation = bulkAddServicesToContractLineSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
@@ -814,7 +814,7 @@ export class ApiContractLineController {
       const results: { success: boolean; service_id: string; config?: any; error?: string }[] = [];
       for (const serviceData of validation.data.services) {
         try {
-          const serviceConfig = await this.contractLineService.addServiceToPlan(validation.data.contract_line_id, serviceData, context);
+          const serviceConfig = await this.contractLineService.addServiceToContractLine(validation.data.contract_line_id, serviceData, context);
           results.push({ success: true, service_id: serviceData.service_id, config: serviceConfig });
         } catch (error: any) {
           results.push({ success: false, service_id: serviceData.service_id, error: error.message });
@@ -827,15 +827,15 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/contract-lines/bulk/remove-services - Bulk remove services from plan
+   * DELETE /api/v2/contract-lines/bulk/remove-services - Bulk remove services from contract line
    */
-  bulkRemoveServicesFromPlan() {
+  bulkRemoveServicesFromContractLine() {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
-      
+
       // Validate request body
-      const validation = bulkRemoveServicesFromPlanSchema.safeParse(data);
+      const validation = bulkRemoveServicesFromContractLineSchema.safeParse(data);
       if (!validation.success) {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
@@ -843,7 +843,7 @@ export class ApiContractLineController {
       const results: { success: boolean; service_id: string; error?: string }[] = [];
       for (const serviceId of validation.data.service_ids) {
         try {
-          await this.contractLineService.removeServiceFromPlan(validation.data.contract_line_id, serviceId, context);
+          await this.contractLineService.removeServiceFromContractLine(validation.data.contract_line_id, serviceId, context);
           results.push({ success: true, service_id: serviceId });
         } catch (error: any) {
           results.push({ success: false, service_id: serviceId, error: error.message });

@@ -20,7 +20,7 @@ import {
 // ENUMS AND CONSTANTS
 // ============================================================================
 
-export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
+export const contractLineTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 export const billingFrequencySchema = z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']);
 export const configurationTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
@@ -32,18 +32,18 @@ export const billingMethodSchema = z.enum(['fixed', 'per_unit']);
 
 // Base contract line schema (without refinements)
 const baseContractLineSchema = z.object({
-  contract_line_name: z.string().min(1, 'Plan name is required').max(255),
+  contract_line_name: z.string().min(1, 'Contract Line name is required').max(255),
   billing_frequency: billingFrequencySchema,
   is_custom: z.boolean().optional().default(false),
   service_category: z.string().optional(),
-  contract_line_type: planTypeSchema,
+  contract_line_type: contractLineTypeSchema,
   
-  // Hourly plan specific fields (deprecated for Hourly type)
+  // Hourly contract line specific fields (deprecated for Hourly type)
   hourly_rate: z.number().min(0).optional(),
   minimum_billable_time: z.number().min(0).optional(),
   round_up_to_nearest: z.number().min(1).optional(),
-  
-  // Plan-wide overtime and after-hours settings
+
+  // Contract line-wide overtime and after-hours settings
   enable_overtime: z.boolean().optional(),
   overtime_rate: z.number().min(0).optional(),
   overtime_threshold: z.number().min(0).optional(),
@@ -80,7 +80,7 @@ export const contractLineResponseSchema = z.object({
   billing_frequency: billingFrequencySchema,
   is_custom: z.boolean(),
   service_category: z.string().nullable(),
-  contract_line_type: planTypeSchema,
+  contract_line_type: contractLineTypeSchema,
   hourly_rate: z.number().nullable(),
   minimum_billable_time: z.number().nullable(),
   round_up_to_nearest: z.number().nullable(),
@@ -97,7 +97,7 @@ export const contractLineResponseSchema = z.object({
   
   // Additional computed fields
   total_services: z.number().optional(),
-  clients_using_plan: z.number().optional(),
+  clients_using_contract_line: z.number().optional(),
   average_monthly_revenue: z.number().optional()
 });
 
@@ -105,16 +105,16 @@ export const contractLineResponseSchema = z.object({
 // CONTRACT LINE CONFIGURATION SCHEMAS
 // ============================================================================
 
-// Fixed plan configuration
-export const createFixedPlanConfigSchema = z.object({
+// Fixed contract line configuration
+export const createFixedContractLineConfigSchema = z.object({
   base_rate: z.number().min(0).optional(),
   enable_proration: z.boolean().default(false),
   billing_cycle_alignment: billingCycleAlignmentSchema.default('start')
 });
 
-export const updateFixedPlanConfigSchema = createUpdateSchema(createFixedPlanConfigSchema);
+export const updateFixedContractLineConfigSchema = createUpdateSchema(createFixedContractLineConfigSchema);
 
-export const fixedPlanConfigResponseSchema = z.object({
+export const fixedContractLineConfigResponseSchema = z.object({
   contract_line_id: uuidSchema,
   base_rate: z.number().nullable(),
   enable_proration: z.boolean(),
@@ -124,8 +124,8 @@ export const fixedPlanConfigResponseSchema = z.object({
   tenant: uuidSchema
 });
 
-// Combined fixed plan configuration (plan-level + service-level)
-export const combinedFixedPlanConfigResponseSchema = z.object({
+// Combined fixed contract line configuration (contract line-level + service-level)
+export const combinedFixedContractLineConfigResponseSchema = z.object({
   base_rate: z.number().nullable(),
   enable_proration: z.boolean(),
   billing_cycle_alignment: billingCycleAlignmentSchema,
@@ -137,7 +137,7 @@ export const combinedFixedPlanConfigResponseSchema = z.object({
 // ============================================================================
 
 // Base service configuration
-export const planServiceConfigurationSchema = z.object({
+export const contractLineServiceConfigurationSchema = z.object({
   config_id: uuidSchema,
   contract_line_id: uuidSchema,
   service_id: uuidSchema,
@@ -151,7 +151,7 @@ export const planServiceConfigurationSchema = z.object({
 });
 
 // Fixed service configuration
-export const planServiceFixedConfigSchema = z.object({
+export const contractLineServiceFixedConfigSchema = z.object({
   config_id: uuidSchema,
   base_rate: z.number().min(0).optional(),
   created_at: z.string().datetime(),
@@ -159,12 +159,12 @@ export const planServiceFixedConfigSchema = z.object({
   tenant: uuidSchema
 });
 
-export const createPlanServiceFixedConfigSchema = z.object({
+export const createContractLineServiceFixedConfigSchema = z.object({
   base_rate: z.number().min(0).optional()
 });
 
 // Hourly service configuration
-export const planServiceHourlyConfigSchema = z.object({
+export const contractLineServiceHourlyConfigSchema = z.object({
   config_id: uuidSchema,
   hourly_rate: z.number().min(0),
   minimum_billable_time: z.number().min(0),
@@ -174,14 +174,14 @@ export const planServiceHourlyConfigSchema = z.object({
   tenant: uuidSchema
 });
 
-export const createPlanServiceHourlyConfigSchema = z.object({
+export const createContractLineServiceHourlyConfigSchema = z.object({
   hourly_rate: z.number().min(0),
   minimum_billable_time: z.number().min(0).default(0),
   round_up_to_nearest: z.number().min(1).default(15)
 });
 
 // Usage service configuration
-export const planServiceUsageConfigSchema = z.object({
+export const contractLineServiceUsageConfigSchema = z.object({
   config_id: uuidSchema,
   unit_of_measure: z.string().min(1),
   enable_tiered_pricing: z.boolean(),
@@ -192,7 +192,7 @@ export const planServiceUsageConfigSchema = z.object({
   tenant: uuidSchema
 });
 
-export const createPlanServiceUsageConfigSchema = z.object({
+export const createContractLineServiceUsageConfigSchema = z.object({
   unit_of_measure: z.string().min(1),
   enable_tiered_pricing: z.boolean().default(false),
   minimum_usage: z.number().min(0).optional(),
@@ -200,7 +200,7 @@ export const createPlanServiceUsageConfigSchema = z.object({
 });
 
 // Bucket service configuration
-export const planServiceBucketConfigSchema = z.object({
+export const contractLineServiceBucketConfigSchema = z.object({
   config_id: uuidSchema,
   total_minutes: z.number().min(1),
   billing_period: z.string().min(1),
@@ -211,7 +211,7 @@ export const planServiceBucketConfigSchema = z.object({
   tenant: uuidSchema
 });
 
-export const createPlanServiceBucketConfigSchema = z.object({
+export const createContractLineServiceBucketConfigSchema = z.object({
   total_minutes: z.number().min(1),
   billing_period: z.string().min(1).default('monthly'),
   overage_rate: z.number().min(0),
@@ -263,36 +263,36 @@ export const createUserTypeRateSchema = z.object({
 // SERVICE MANAGEMENT SCHEMAS
 // ============================================================================
 
-// Add service to plan
-export const addServiceToPlanSchema = z.object({
+// Add service to contract line
+export const addServiceToContractLineSchema = z.object({
   service_id: uuidSchema,
   quantity: z.number().min(1).optional().default(1),
   custom_rate: z.number().min(0).optional(),
   configuration_type: configurationTypeSchema.optional(),
   type_config: z.union([
-    createPlanServiceFixedConfigSchema,
-    createPlanServiceHourlyConfigSchema,
-    createPlanServiceUsageConfigSchema,
-    createPlanServiceBucketConfigSchema
+    createContractLineServiceFixedConfigSchema,
+    createContractLineServiceHourlyConfigSchema,
+    createContractLineServiceUsageConfigSchema,
+    createContractLineServiceBucketConfigSchema
   ]).optional()
 });
 
-// Update service in plan
-export const updatePlanServiceSchema = z.object({
+// Update service in contract line
+export const updateContractLineServiceSchema = z.object({
   quantity: z.number().min(1).optional(),
   custom_rate: z.number().min(0).optional(),
   type_config: z.union([
-    createPlanServiceFixedConfigSchema.partial(),
-    createPlanServiceHourlyConfigSchema.partial(),
-    createPlanServiceUsageConfigSchema.partial(),
-    createPlanServiceBucketConfigSchema.partial()
+    createContractLineServiceFixedConfigSchema.partial(),
+    createContractLineServiceHourlyConfigSchema.partial(),
+    createContractLineServiceUsageConfigSchema.partial(),
+    createContractLineServiceBucketConfigSchema.partial()
   ]).optional(),
   rate_tiers: z.array(createRateTierSchema).optional(),
   user_type_rates: z.array(createUserTypeRateSchema).optional()
 });
 
 // Service with configuration response
-export const planServiceWithConfigResponseSchema = z.object({
+export const contractLineServiceWithConfigResponseSchema = z.object({
   service: z.object({
     service_id: uuidSchema,
     service_name: z.string(),
@@ -301,12 +301,12 @@ export const planServiceWithConfigResponseSchema = z.object({
     billing_method: billingMethodSchema,
     service_type_name: z.string().optional()
   }),
-  configuration: planServiceConfigurationSchema,
+  configuration: contractLineServiceConfigurationSchema,
   type_config: z.union([
-    planServiceFixedConfigSchema,
-    planServiceHourlyConfigSchema,
-    planServiceUsageConfigSchema,
-    planServiceBucketConfigSchema
+    contractLineServiceFixedConfigSchema,
+    contractLineServiceHourlyConfigSchema,
+    contractLineServiceUsageConfigSchema,
+    contractLineServiceBucketConfigSchema
   ]).nullable(),
   rate_tiers: z.array(rateTierSchema).optional(),
   user_type_rates: z.array(userTypeRateSchema).optional()
@@ -337,7 +337,7 @@ export const contractResponseSchema = z.object({
   tenant: uuidSchema,
   
   // Computed fields
-  total_plans: z.number().optional(),
+  total_contract_lines: z.number().optional(),
   clients_using_contract: z.number().optional()
 });
 
@@ -349,12 +349,12 @@ export const contractLineMappingResponseSchema = z.object({
   custom_rate: z.number().optional(),
   created_at: z.string().datetime(),
   tenant: uuidSchema,
-  
-  // Plan details
+
+  // Contract line details
   contract_line_name: z.string().optional(),
   billing_frequency: billingFrequencySchema.optional(),
   is_custom: z.boolean().optional(),
-  contract_line_type: planTypeSchema.optional()
+  contract_line_type: contractLineTypeSchema.optional()
 });
 
 // Associate contract line to contract
@@ -371,7 +371,7 @@ export const updateContractAssociationSchema = z.object({
 });
 
 // ============================================================================
-// COMPANY CONTRACT LINE ASSIGNMENT SCHEMAS
+// CLIENT CONTRACT LINE ASSIGNMENT SCHEMAS
 // ============================================================================
 
 // Client contract line assignment
@@ -410,7 +410,7 @@ export const clientContractLineResponseSchema = z.object({
   client_name: z.string().optional()
 });
 
-// Client plan contract assignment
+// Client contract assignment
 export const createClientContractSchema = z.object({
   client_id: uuidSchema,
   contract_id: uuidSchema,
@@ -435,7 +435,7 @@ export const clientContractResponseSchema = z.object({
   // Joined data
   contract_name: z.string().optional(),
   client_name: z.string().optional(),
-  total_plans: z.number().optional()
+  total_contract_lines: z.number().optional()
 });
 
 // ============================================================================
@@ -486,7 +486,7 @@ export const usageMetricsResponseSchema = z.object({
 // Contract Line filters
 export const contractLineFilterSchema = baseFilterSchema.extend({
   contract_line_name: z.string().optional(),
-  contract_line_type: planTypeSchema.optional(),
+  contract_line_type: contractLineTypeSchema.optional(),
   billing_frequency: billingFrequencySchema.optional(),
   is_custom: booleanTransform.optional(),
   is_active: booleanTransform.optional(),
@@ -502,7 +502,7 @@ export const contractLineFilterSchema = baseFilterSchema.extend({
 export const contractFilterSchema = baseFilterSchema.extend({
   contract_name: z.string().optional(),
   is_active: booleanTransform.optional(),
-  has_plans: booleanTransform.optional(),
+  has_contract_lines: booleanTransform.optional(),
   clients_count_min: numberTransform.optional(),
   clients_count_max: numberTransform.optional()
 });
@@ -530,11 +530,11 @@ export const clientContractLineListQuerySchema = createListQuerySchema(clientCon
 // ANALYTICS AND REPORTING SCHEMAS
 // ============================================================================
 
-// Plan analytics
-export const planAnalyticsResponseSchema = z.object({
+// Contract line analytics
+export const contractLineAnalyticsResponseSchema = z.object({
   contract_line_id: uuidSchema,
   contract_line_name: z.string(),
-  contract_line_type: planTypeSchema,
+  contract_line_type: contractLineTypeSchema,
   total_clients: z.number(),
   active_clients: z.number(),
   revenue: z.object({
@@ -563,7 +563,7 @@ export const planAnalyticsResponseSchema = z.object({
 export const contractAnalyticsResponseSchema = z.object({
   contract_id: uuidSchema,
   contract_name: z.string(),
-  total_plans: z.number(),
+  total_contract_lines: z.number(),
   total_clients: z.number(),
   active_clients: z.number(),
   revenue: z.object({
@@ -572,7 +572,7 @@ export const contractAnalyticsResponseSchema = z.object({
     yearly: z.number(),
     average_per_client: z.number()
   }),
-  plan_utilization: z.array(z.object({
+  contract_line_utilization: z.array(z.object({
     contract_line_id: uuidSchema,
     contract_line_name: z.string(),
     clients_using: z.number(),
@@ -582,14 +582,14 @@ export const contractAnalyticsResponseSchema = z.object({
 
 // Billing overview analytics
 export const billingOverviewAnalyticsSchema = z.object({
-  total_plans: z.number(),
+  total_contract_lines: z.number(),
   total_contracts: z.number(),
   total_assignments: z.number(),
-  plans_by_type: z.record(z.number()),
+  contract_lines_by_type: z.record(z.number()),
   revenue_summary: z.object({
     total_monthly_revenue: z.number(),
-    average_revenue_per_plan: z.number(),
-    top_revenue_plans: z.array(z.object({
+    average_revenue_per_contract_line: z.number(),
+    top_revenue_contract_lines: z.array(z.object({
       contract_line_id: uuidSchema,
       contract_line_name: z.string(),
       monthly_revenue: z.number()
@@ -597,7 +597,7 @@ export const billingOverviewAnalyticsSchema = z.object({
   }),
   usage_trends: z.object({
     most_popular_contract_line_types: z.array(z.object({
-      contract_line_type: planTypeSchema,
+      contract_line_type: contractLineTypeSchema,
       count: z.number(),
       percentage: z.number()
     })),
@@ -609,13 +609,13 @@ export const billingOverviewAnalyticsSchema = z.object({
 // BULK OPERATIONS SCHEMAS
 // ============================================================================
 
-// Bulk plan operations
+// Bulk contract line operations
 export const bulkCreateContractLinesSchema = z.object({
-  plans: z.array(createContractLineSchema).min(1).max(50)
+  contractLines: z.array(createContractLineSchema).min(1).max(50)
 });
 
 export const bulkUpdateContractLinesSchema = z.object({
-  plans: z.array(z.object({
+  contractLines: z.array(z.object({
     contract_line_id: uuidSchema,
     data: updateContractLineSchema
   })).min(1).max(50)
@@ -626,23 +626,23 @@ export const bulkDeleteContractLinesSchema = z.object({
 });
 
 // Bulk service operations
-export const bulkAddServicesToPlanSchema = z.object({
+export const bulkAddServicesToContractLineSchema = z.object({
   contract_line_id: uuidSchema,
-  services: z.array(addServiceToPlanSchema).min(1).max(20)
+  services: z.array(addServiceToContractLineSchema).min(1).max(20)
 });
 
-export const bulkRemoveServicesFromPlanSchema = z.object({
+export const bulkRemoveServicesFromContractLineSchema = z.object({
   contract_line_id: uuidSchema,
   service_ids: z.array(uuidSchema).min(1).max(20)
 });
 
 // Bulk client assignments
-export const bulkAssignPlansToClientSchema = z.object({
+export const bulkAssignContractLinesToClientSchema = z.object({
   client_id: uuidSchema,
   assignments: z.array(createClientContractLineSchema.omit({ client_id: true })).min(1).max(10)
 });
 
-export const bulkUnassignPlansFromClientSchema = z.object({
+export const bulkUnassignContractLinesFromClientSchema = z.object({
   client_id: uuidSchema,
   contract_line_ids: z.array(uuidSchema).min(1).max(10)
 });
@@ -651,7 +651,7 @@ export const bulkUnassignPlansFromClientSchema = z.object({
 // TEMPLATE AND COPYING SCHEMAS
 // ============================================================================
 
-// Copy plan
+// Copy contract line
 export const copyContractLineSchema = z.object({
   source_contract_line_id: uuidSchema,
   new_contract_line_name: z.string().min(1).max(255),
@@ -663,11 +663,11 @@ export const copyContractLineSchema = z.object({
   }).optional()
 });
 
-// Plan template
-export const createPlanTemplateSchema = z.object({
+// Contract line template
+export const createContractLineTemplateSchema = z.object({
   template_name: z.string().min(1).max(255),
   template_description: z.string().optional(),
-  contract_line_type: planTypeSchema,
+  contract_line_type: contractLineTypeSchema,
   billing_frequency: billingFrequencySchema,
   default_services: z.array(z.object({
     service_id: uuidSchema,
@@ -678,11 +678,11 @@ export const createPlanTemplateSchema = z.object({
   is_public: z.boolean().optional().default(false)
 });
 
-export const planTemplateResponseSchema = z.object({
+export const contractLineTemplateResponseSchema = z.object({
   template_id: uuidSchema,
   template_name: z.string(),
   template_description: z.string().nullable(),
-  contract_line_type: planTypeSchema,
+  contract_line_type: contractLineTypeSchema,
   billing_frequency: billingFrequencySchema,
   default_services: z.array(z.object({
     service_id: uuidSchema,
@@ -698,8 +698,8 @@ export const planTemplateResponseSchema = z.object({
   tenant: uuidSchema
 });
 
-// Create plan from template
-export const createPlanFromTemplateSchema = z.object({
+// Create contract line from template
+export const createContractLineFromTemplateSchema = z.object({
   template_id: uuidSchema,
   contract_line_name: z.string().min(1).max(255),
   modify_rates: z.object({
@@ -717,16 +717,16 @@ export const createPlanFromTemplateSchema = z.object({
 // ACTIVATION AND DEACTIVATION SCHEMAS
 // ============================================================================
 
-// Plan activation/deactivation
-export const planActivationSchema = z.object({
+// Contract line activation/deactivation
+export const contractLineActivationSchema = z.object({
   is_active: z.boolean(),
   effective_date: z.string().datetime().optional(),
   reason: z.string().optional(),
   notify_clients: z.boolean().optional().default(false)
 });
 
-// Client plan activation/deactivation
-export const clientPlanActivationSchema = z.object({
+// Client contract line activation/deactivation
+export const clientContractLineActivationSchema = z.object({
   client_contract_line_id: uuidSchema,
   is_active: z.boolean(),
   effective_date: z.string().datetime().optional(),
@@ -744,20 +744,20 @@ export type UpdateContractLineData = z.infer<typeof updateContractLineSchema>;
 export type ContractLineResponse = z.infer<typeof contractLineResponseSchema>;
 export type ContractLineFilterData = z.infer<typeof contractLineFilterSchema>;
 
-export type CreateFixedPlanConfigData = z.infer<typeof createFixedPlanConfigSchema>;
-export type UpdateFixedPlanConfigData = z.infer<typeof updateFixedPlanConfigSchema>;
-export type FixedPlanConfigResponse = z.infer<typeof fixedPlanConfigResponseSchema>;
-export type CombinedFixedPlanConfigResponse = z.infer<typeof combinedFixedPlanConfigResponseSchema>;
+export type CreateFixedContractLineConfigData = z.infer<typeof createFixedContractLineConfigSchema>;
+export type UpdateFixedContractLineConfigData = z.infer<typeof updateFixedContractLineConfigSchema>;
+export type FixedContractLineConfigResponse = z.infer<typeof fixedContractLineConfigResponseSchema>;
+export type CombinedFixedContractLineConfigResponse = z.infer<typeof combinedFixedContractLineConfigResponseSchema>;
 
-export type PlanServiceConfigurationResponse = z.infer<typeof planServiceConfigurationSchema>;
-export type CreatePlanServiceFixedConfigData = z.infer<typeof createPlanServiceFixedConfigSchema>;
-export type CreatePlanServiceHourlyConfigData = z.infer<typeof createPlanServiceHourlyConfigSchema>;
-export type CreatePlanServiceUsageConfigData = z.infer<typeof createPlanServiceUsageConfigSchema>;
-export type CreatePlanServiceBucketConfigData = z.infer<typeof createPlanServiceBucketConfigSchema>;
+export type ContractLineServiceConfigurationResponse = z.infer<typeof contractLineServiceConfigurationSchema>;
+export type CreateContractLineServiceFixedConfigData = z.infer<typeof createContractLineServiceFixedConfigSchema>;
+export type CreateContractLineServiceHourlyConfigData = z.infer<typeof createContractLineServiceHourlyConfigSchema>;
+export type CreateContractLineServiceUsageConfigData = z.infer<typeof createContractLineServiceUsageConfigSchema>;
+export type CreateContractLineServiceBucketConfigData = z.infer<typeof createContractLineServiceBucketConfigSchema>;
 
-export type AddServiceToPlanData = z.infer<typeof addServiceToPlanSchema>;
-export type UpdatePlanServiceData = z.infer<typeof updatePlanServiceSchema>;
-export type PlanServiceWithConfigResponse = z.infer<typeof planServiceWithConfigResponseSchema>;
+export type AddServiceToContractLineData = z.infer<typeof addServiceToContractLineSchema>;
+export type UpdateContractLineServiceData = z.infer<typeof updateContractLineServiceSchema>;
+export type ContractLineServiceWithConfigResponse = z.infer<typeof contractLineServiceWithConfigResponseSchema>;
 
 export type CreateRateTierData = z.infer<typeof createRateTierSchema>;
 export type RateTierResponse = z.infer<typeof rateTierSchema>;
@@ -784,22 +784,22 @@ export type UsageMetricsResponse = z.infer<typeof usageMetricsResponseSchema>;
 export type ContractFilterData = z.infer<typeof contractFilterSchema>;
 export type ClientContractLineFilterData = z.infer<typeof clientContractLineFilterSchema>;
 
-export type PlanAnalyticsResponse = z.infer<typeof planAnalyticsResponseSchema>;
+export type ContractLineAnalyticsResponse = z.infer<typeof contractLineAnalyticsResponseSchema>;
 export type ContractAnalyticsResponse = z.infer<typeof contractAnalyticsResponseSchema>;
 export type BillingOverviewAnalytics = z.infer<typeof billingOverviewAnalyticsSchema>;
 
 export type BulkCreateContractLinesData = z.infer<typeof bulkCreateContractLinesSchema>;
 export type BulkUpdateContractLinesData = z.infer<typeof bulkUpdateContractLinesSchema>;
 export type BulkDeleteContractLinesData = z.infer<typeof bulkDeleteContractLinesSchema>;
-export type BulkAddServicesToPlanData = z.infer<typeof bulkAddServicesToPlanSchema>;
-export type BulkRemoveServicesFromPlanData = z.infer<typeof bulkRemoveServicesFromPlanSchema>;
-export type BulkAssignPlansToClientData = z.infer<typeof bulkAssignPlansToClientSchema>;
-export type BulkUnassignPlansFromClientData = z.infer<typeof bulkUnassignPlansFromClientSchema>;
+export type BulkAddServicesToContractLineData = z.infer<typeof bulkAddServicesToContractLineSchema>;
+export type BulkRemoveServicesFromContractLineData = z.infer<typeof bulkRemoveServicesFromContractLineSchema>;
+export type BulkAssignContractLinesToClientData = z.infer<typeof bulkAssignContractLinesToClientSchema>;
+export type BulkUnassignContractLinesFromClientData = z.infer<typeof bulkUnassignContractLinesFromClientSchema>;
 
 export type CopyContractLineData = z.infer<typeof copyContractLineSchema>;
-export type CreatePlanTemplateData = z.infer<typeof createPlanTemplateSchema>;
-export type PlanTemplateResponse = z.infer<typeof planTemplateResponseSchema>;
-export type CreatePlanFromTemplateData = z.infer<typeof createPlanFromTemplateSchema>;
+export type CreateContractLineTemplateData = z.infer<typeof createContractLineTemplateSchema>;
+export type ContractLineTemplateResponse = z.infer<typeof contractLineTemplateResponseSchema>;
+export type CreateContractLineFromTemplateData = z.infer<typeof createContractLineFromTemplateSchema>;
 
-export type PlanActivationData = z.infer<typeof planActivationSchema>;
-export type ClientPlanActivationData = z.infer<typeof clientPlanActivationSchema>;
+export type ContractLineActivationData = z.infer<typeof contractLineActivationSchema>;
+export type ClientContractLineActivationData = z.infer<typeof clientContractLineActivationSchema>;

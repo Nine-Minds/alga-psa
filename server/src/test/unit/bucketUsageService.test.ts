@@ -15,7 +15,7 @@ import {
 const mockTenant = 'test-tenant';
 const mockClientId = 'client-uuid-123';
 const mockServiceId = 'service-uuid-456';
-const mockPlanId = 'plan-uuid-789';
+const mockContractLineId = 'contract-line-uuid-789';
 const mockUsageId = 'usage-uuid-abc';
 
 // Mock Knex transaction object
@@ -86,7 +86,7 @@ describe('BucketUsageService Unit Tests', () => {
       // Assert:
       // - The function returns the new mock record.
       // - The new record has minutes_used = 0, overage_minutes = 0, rolled_over_minutes = 0.
-      // - Correct period_start, period_end, contract_line_id, etc. are used in insert.
+      // - Correct period_start, period_end, client_contract_line_id, etc. are used in insert.
       expect(true).toBe(false); // Placeholder
     });
 

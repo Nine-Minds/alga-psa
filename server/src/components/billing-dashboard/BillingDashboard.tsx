@@ -19,7 +19,7 @@ import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
 import Contracts from './contracts/Contracts';
 import ContractDetail from './contracts/ContractDetail';
-import { PlanTypeRouter } from './contract-lines/ContractLineTypeRouter';
+import { ContractLineTypeRouter } from './contract-lines/ContractLineTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 
 interface BillingDashboardProps {
@@ -120,7 +120,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
                 &larr; Back to Contract Lines List {/* Using HTML entity for left arrow */}
               </BackNav>
               <div className="mt-4"> {/* Add margin top for spacing */}
-                <PlanTypeRouter contractLineId={searchParams.get('contractLineId')!} />
+                <ContractLineTypeRouter contractLineId={searchParams.get('contractLineId')!} />
               </div>
             </>
           ) : (

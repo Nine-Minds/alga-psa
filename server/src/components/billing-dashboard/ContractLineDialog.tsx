@@ -10,26 +10,26 @@ import { Input } from '../ui/Input';
 import { Checkbox } from '../ui/Checkbox';
 import { Switch } from '../ui/Switch';
 import { createContractLine, updateContractLine, updateContractLineFixedConfig, getContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
-import { IContractLine, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Removed IBucketPlan, IService
+import { IContractLine, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Removed IBucketContractLine, IService
 import { useTenant } from '../TenantProvider';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing'; // Removed PLAN_TYPE_OPTIONS
-import { PlanTypeSelector, PlanType } from './contract-lines/ContractLineTypeSelector'; // Import PlanTypeSelector again
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing'; // Removed CONTRACT_LINE_TYPE_OPTIONS
+import { ContractLineTypeSelector, ContractLineType } from './contract-lines/ContractLineTypeSelector';
 
 
 interface ContractLineDialogProps {
-  onPlanAdded: (newPlanId?: string) => void; // Modified to pass new plan ID
-  editingPlan?: IContractLine | null;
+  onContractLineAdded: (newContractLineId?: string) => void; // Modified to pass new contract line ID
+  editingContractLine?: IContractLine | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
   allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]; // Updated to match getServiceTypesForSelection return type
 }
 
-export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
+export function ContractLineDialog({ onContractLineAdded, editingContractLine, onClose, triggerButton }: ContractLineDialogProps) {
   const [open, setOpen] = useState(false);
-  const [planName, setPlanName] = useState('');
+  const [contractLineName, setContractLineName] = useState('');
   const [billingFrequency, setBillingFrequency] = useState('');
-  const [planType, setPlanType] = useState<PlanType>('Fixed');
+  const [contractLineType, setContractLineType] = useState<ContractLineType>('Fixed');
   const [isCustom, setIsCustom] = useState(false);
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [enableProration, setEnableProration] = useState<boolean>(false);
@@ -40,38 +40,38 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [isSaving, setIsSaving] = useState(false); // Added saving state
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
-  // Removed other plan type specific state variables (hourlyRate, totalHours, etc.)
+  // Removed other contract line type specific state variables (hourlyRate, totalHours, etc.)
   // Removed service selection state (selectedServices, availableServices, isLoading)
-  // Removed overlap check state (showOverlapWarning, overlappingServices, pendingPlanData)
+  // Removed overlap check state (showOverlapWarning, overlappingServices, pendingContractLineData)
 
-  // Update form when editingPlan changes or dialog opens
+  // Update form when editingContractLine changes or dialog opens
   useEffect(() => {
-    const loadFixedConfig = async (planId: string) => {
+    const loadFixedConfig = async (contractLineId: string) => {
         try {
-            const config = await getContractLineFixedConfig(planId);
+            const config = await getContractLineFixedConfig(contractLineId);
             setBaseRate(config?.base_rate ?? undefined);
             setEnableProration(config?.enable_proration ?? false);
             setBillingCycleAlignment(config?.billing_cycle_alignment ?? 'start');
         } catch (err) {
-            console.error('Error loading plan config:', err);
+            console.error('Error loading contract line config:', err);
         }
     };
 
     if (open) {
-        if (editingPlan) {
-            setPlanName(editingPlan.contract_line_name);
-            setBillingFrequency(editingPlan.billing_frequency);
-            setPlanType(editingPlan.contract_line_type as PlanType);
-            setIsCustom(editingPlan.is_custom);
-            if (editingPlan.contract_line_id && editingPlan.contract_line_type === 'Fixed') {
-                loadFixedConfig(editingPlan.contract_line_id);
+        if (editingContractLine) {
+            setContractLineName(editingContractLine.contract_line_name);
+            setBillingFrequency(editingContractLine.billing_frequency);
+            setContractLineType(editingContractLine.contract_line_type as ContractLineType);
+            setIsCustom(editingContractLine.is_custom);
+            if (editingContractLine.contract_line_id && editingContractLine.contract_line_type === 'Fixed') {
+                loadFixedConfig(editingContractLine.contract_line_id);
             }
         } else {
-            // Reset form for new plan when dialog opens without editingPlan
+            // Reset form for new contract line when dialog opens without editingContractLine
             resetForm();
         }
     }
-  }, [editingPlan, open]);
+  }, [editingContractLine, open]);
 
 
   const clearErrorIfSubmitted = () => {
@@ -83,9 +83,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   // Simplified validation
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract line name');
+    if (!contractLineName.trim()) errors.push('Contract line name');
     if (!billingFrequency) errors.push('Billing frequency');
-    if (planType === 'Fixed') {
+    if (contractLineType === 'Fixed') {
       if (baseRate === undefined || baseRate === null || isNaN(baseRate)) {
         errors.push('Base rate');
       }
@@ -104,39 +104,39 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     }
 
     // No overlap check needed here
-    await savePlan();
+    await saveContractLine();
   };
 
-  // Simplified savePlan
-  const savePlan = async () => {
+  // Simplified saveContractLine
+  const saveContractLine = async () => {
     setIsSaving(true); // Set saving state
     setValidationErrors([]); // Clear previous errors
 
     try {
-      const planData: Partial<IContractLine> = { // Use Partial for update
-        contract_line_name: planName,
+      const contractLineData: Partial<IContractLine> = { // Use Partial for update
+        contract_line_name: contractLineName,
         billing_frequency: billingFrequency,
         is_custom: isCustom,
-        contract_line_type: planType,
+        contract_line_type: contractLineType,
         tenant: tenant // Ensure tenant is included if required by backend actions
       };
 
-      let savedPlanId: string | undefined;
+      let savedContractLineId: string | undefined;
 
-      if (editingPlan?.contract_line_id) {
+      if (editingContractLine?.contract_line_id) {
         // Ensure contract_line_id is not in the update payload if backend prohibits it
-        const { contract_line_id, ...updateData } = planData;
-        const updatedPlan = await updateContractLine(editingPlan.contract_line_id, updateData);
-        savedPlanId = updatedPlan.contract_line_id;
+        const { contract_line_id, ...updateData } = contractLineData;
+        const updatedContractLine = await updateContractLine(editingContractLine.contract_line_id, updateData);
+        savedContractLineId = updatedContractLine.contract_line_id;
       } else {
         // Ensure createContractLine expects Omit<IContractLine, 'contract_line_id'> or similar
-        const { contract_line_id, ...createData } = planData;
-        const newPlan = await createContractLine(createData as Omit<IContractLine, 'contract_line_id'>); // Cast might be needed depending on exact types
-        savedPlanId = newPlan.contract_line_id;
+        const { contract_line_id, ...createData } = contractLineData;
+        const newContractLine = await createContractLine(createData as Omit<IContractLine, 'contract_line_id'>); // Cast might be needed depending on exact types
+        savedContractLineId = newContractLine.contract_line_id;
       }
 
-      if (savedPlanId && planType === 'Fixed') {
-        await updateContractLineFixedConfig(savedPlanId, {
+      if (savedContractLineId && contractLineType === 'Fixed') {
+        await updateContractLineFixedConfig(savedContractLineId, {
           base_rate: baseRate ?? null,
           enable_proration: enableProration,
           billing_cycle_alignment: enableProration ? billingCycleAlignment as 'start' | 'end' : 'start'
@@ -145,7 +145,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
       resetForm();
       setOpen(false); // Close the dialog after successful save
-      onPlanAdded(savedPlanId); // Pass the ID back
+      onContractLineAdded(savedContractLineId); // Pass the ID back
     } catch (error) {
       console.error('Error saving contract line:', error);
       setValidationErrors([`Failed to save contract line: ${error instanceof Error ? error.message : String(error)}`]);
@@ -155,9 +155,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   };
 
   const resetForm = () => {
-    setPlanName('');
+    setContractLineName('');
     setBillingFrequency('');
-    setPlanType('Fixed');
+    setContractLineType('Fixed');
     setIsCustom(false);
     setBaseRate(undefined);
     setEnableProration(false);
@@ -169,7 +169,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
   const handleClose = () => {
     // Don't reset form here if editing, only on successful save or explicit cancel/close without save
-    if (!editingPlan) {
+    if (!editingContractLine) {
         resetForm();
     }
     setOpen(false);
@@ -187,7 +187,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     <Dialog
       isOpen={open}
       onClose={handleClose}
-      title={editingPlan ? 'Edit Contract Line Basics' : 'Add New Contract Line'}
+      title={editingContractLine ? 'Edit Contract Line Basics' : 'Add New Contract Line'}
       className="max-w-2xl"
     >
       <DialogContent>
@@ -207,18 +207,18 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             {/* Removed Tabs - Only show basic info */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="plan-name">Contract Line Name *</Label>
+                <Label htmlFor="contract-line-name">Contract Line Name *</Label>
                 <Input
-                  id="plan-name"
+                  id="contract-line-name"
                   type="text"
-                  value={planName}
+                  value={contractLineName}
                   onChange={(e) => {
-                    setPlanName(e.target.value);
+                    setContractLineName(e.target.value);
                     clearErrorIfSubmitted();
                   }}
                   placeholder="Enter contract line name"
                   required
-                  className={hasAttemptedSubmit && !planName.trim() ? 'border-red-500' : ''}
+                  className={hasAttemptedSubmit && !contractLineName.trim() ? 'border-red-500' : ''}
                 />
               </div>
               <div>
@@ -237,17 +237,17 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 />
               </div>
               <div>
-                {/* Use PlanTypeSelector with cards */}
-                <PlanTypeSelector
-                   value={planType}
-                   onChange={setPlanType}
+                {/* Use ContractLineTypeSelector with cards */}
+                <ContractLineTypeSelector
+                   value={contractLineType}
+                   onChange={setContractLineType}
                    className="w-full"
                    showDescriptions={true} // Keep descriptions for clarity
                    showCards={true} // Enable card view
                 />
                 {/* Removed CustomSelect */}
               </div>
-              {planType === 'Fixed' && (
+              {contractLineType === 'Fixed' && (
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="base-rate">Base Rate *</Label>
@@ -293,7 +293,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         {billingCycleAlignment === 'start' && 'Proration is calculated based on the start date of the billing cycle.'}
                         {billingCycleAlignment === 'end' && 'Proration is calculated based on the end date of the billing cycle.'}
                         {billingCycleAlignment === 'calendar' && 'Proration aligns to the calendar month (e.g., the 1st of the month).'}
-                        {billingCycleAlignment === 'anniversary' && 'Proration aligns to the anniversary date of the subscription or plan start.'}
+                        {billingCycleAlignment === 'anniversary' && 'Proration aligns to the anniversary date of the subscription or contract line start.'}
                       </p>
                     </div>
                   )}
@@ -317,8 +317,8 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               >
                 Cancel
               </Button>
-              <Button id='save-contract-line-button' type="submit" disabled={isSaving} className={!planName.trim() || !billingFrequency ? 'opacity-50' : ''}>
-                {isSaving ? 'Saving...' : (editingPlan ? 'Update Contract Line Basics' : 'Save and Configure')}
+              <Button id='save-contract-line-button' type="submit" disabled={isSaving} className={!contractLineName.trim() || !billingFrequency ? 'opacity-50' : ''}>
+                {isSaving ? 'Saving...' : (editingContractLine ? 'Update Contract Line Basics' : 'Save and Configure')}
               </Button>
             </DialogFooter>
           </form>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import PlanPickerDialog from './PlanPickerDialog';
+import ContractLinePickerDialog from './ContractLinePickerDialog';
 import { IClient } from '../../interfaces/client.interfaces';
 import { IContact } from '../../interfaces/contact.interfaces';
 import { AlertDialog } from '@radix-ui/themes';
@@ -26,7 +26,7 @@ import ContractLines from './ContractLines';
 import ClientZeroDollarInvoiceSettings from './ClientZeroDollarInvoiceSettings';
 import ClientCreditExpirationSettings from './ClientCreditExpirationSettings';
 import ClientServiceOverlapMatrix from './ClientServiceOverlapMatrix';
-import ClientPlanDisambiguationGuide from './ClientPlanDisambiguationGuide';
+import ClienContractLineDisambiguationGuide from './ClientContractLineDisambiguationGuide';
 import ClientContractAssignment from './ClientContractAssignment'; // Added import
 import { IClientTaxRateAssociation } from 'server/src/interfaces/tax.interfaces';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
@@ -119,15 +119,15 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     useEffect(() => {
         const fetchData = async () => {
             const contractLines = await getClientContractLine(client.client_id);
-            const contractLinesWithStringDates: ClientContractLineWithStringDates[] = contractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
-                ...plan,
-                start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
+            const contractLinesWithStringDates: ClientContractLineWithStringDates[] = contractLines.map((contractLine: IClientContractLine): ClientContractLineWithStringDates => ({
+                ...contractLine,
+                start_date: formatStartDate(contractLine.start_date),
+                end_date: contractLine.end_date ? formatStartDate(contractLine.end_date) : null
             }));
             setClientContractLines(contractLinesWithStringDates);
 
-            const plans = await getContractLines();
-            setContractLines(plans);
+            const fetchedContractLines = await getContractLines();
+            setContractLines(fetchedContractLines);
 
             const categories = await getServiceCategories();
             setServiceCategories(categories);
@@ -214,14 +214,14 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         }
     };
 
-    const handleClientPlanChange = async (clientContractLineId: string, planId: string) => {
+    const handleClientContractLineChange = async (clientContractLineId: string, contractLineId: string) => {
         try {
-            await updateClientContractLine(clientContractLineId, { contract_line_id: planId });
+            await updateClientContractLine(clientContractLineId, { contract_line_id: contractLineId });
             const updatedContractLines = await getClientContractLine(client.client_id);
-            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
-                ...plan,
-                start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
+            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((contractLine: IClientContractLine): ClientContractLineWithStringDates => ({
+                ...contractLine,
+                start_date: formatStartDate(contractLine.start_date),
+                end_date: contractLine.end_date ? formatStartDate(contractLine.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
         } catch (error) {
@@ -233,10 +233,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         try {
             await updateClientContractLine(clientContractLineId, { service_category: categoryId === null ? undefined : categoryId });
             const updatedContractLines = await getClientContractLine(client.client_id);
-            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
-                ...plan,
-                start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
+            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((contractLine: IClientContractLine): ClientContractLineWithStringDates => ({
+                ...contractLine,
+                start_date: formatStartDate(contractLine.start_date),
+                end_date: contractLine.end_date ? formatStartDate(contractLine.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
         } catch (error) {
@@ -248,10 +248,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         try {
             await addClientContractLine(newContractLine);
             const updatedContractLines = await getClientContractLine(client.client_id);
-            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
-                ...plan,
-                start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
+            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((contractLine: IClientContractLine): ClientContractLineWithStringDates => ({
+                ...contractLine,
+                start_date: formatStartDate(contractLine.start_date),
+                end_date: contractLine.end_date ? formatStartDate(contractLine.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
         } catch (error: any) {
@@ -269,10 +269,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         try {
             await removeClientContractLine(contractLineToDelete);
             const updatedContractLines = await getClientContractLine(client.client_id);
-            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
-                ...plan,
-                start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
+            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((contractLine: IClientContractLine): ClientContractLineWithStringDates => ({
+                ...contractLine,
+                start_date: formatStartDate(contractLine.start_date),
+                end_date: contractLine.end_date ? formatStartDate(contractLine.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
         } catch (error: any) {
@@ -287,17 +287,17 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         setEditingContractLine({ ...billing });
     };
 
-    const handleSaveEditContractLine = async (planToSave: ClientContractLineWithStringDates) => {
-        if (planToSave) {
+    const handleSaveEditContractLine = async (contractLineToSave: ClientContractLineWithStringDates) => {
+        if (contractLineToSave) {
             try {
                 // Log the data being saved
-                console.log('Saving contract line with end_date:', planToSave.end_date);
+                console.log('Saving contract line with end_date:', contractLineToSave.end_date);
 
                 const updatedBilling: IClientContractLine = {
-                    ...planToSave,
-                    start_date: planToSave.start_date || '',
-                    // Explicitly set end_date to null if it's falsy to ensure ongoing plans are properly saved
-                    end_date: planToSave.end_date || null
+                    ...contractLineToSave,
+                    start_date: contractLineToSave.start_date || '',
+                    // Explicitly set end_date to null if it's falsy to ensure ongoing contract lines are properly saved
+                    end_date: contractLineToSave.end_date || null
                 };
 
                 // Log the data being sent to the server
@@ -305,10 +305,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 await editClientContractLine(updatedBilling.client_contract_line_id, updatedBilling);
 
                 const updatedContractLines = await getClientContractLine(client.client_id);
-                const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
-                    ...plan,
-                    start_date: formatStartDate(plan.start_date),
-                    end_date: plan.end_date ? formatStartDate(plan.end_date) : null
+                const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((contractLine: IClientContractLine): ClientContractLineWithStringDates => ({
+                    ...contractLine,
+                    start_date: formatStartDate(contractLine.start_date),
+                    end_date: contractLine.end_date ? formatStartDate(contractLine.end_date) : null
                 }));
                 setClientContractLines(updatedContractLinesWithStringDates);
                 setEditingContractLine(null);
@@ -498,7 +498,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="mb-4">
                     <TabsTrigger value="general">General</TabsTrigger>
-                    <TabsTrigger value="plans">Contract Lines</TabsTrigger>
+                    <TabsTrigger value="contract-lines">Contract Lines</TabsTrigger>
                     <TabsTrigger value="taxRates">Tax Rates</TabsTrigger>
                     <TabsTrigger value="overlaps">Contract Line Overlaps</TabsTrigger>
                 </TabsList>
@@ -529,7 +529,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                     </div>
                 </TabsContent>
 
-                <TabsContent value="plans" className="space-y-6"> {/* Added space-y for layout */}
+                <TabsContent value="contract-lines" className="space-y-6"> {/* Added space-y for layout */}
                     {/* Added ClientContractAssignment component */}
                     <ClientContractAssignment clientId={client.client_id} />
 
@@ -542,7 +542,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                         onEdit={handleEditContractLine}
                         onDelete={handleRemoveContractLine}
                         onAdd={handleAddContractLine}
-                        onClientPlanChange={handleClientPlanChange}
+                        onClientContractLineChange={handleClientContractLineChange}
                         onServiceCategoryChange={handleServiceCategoryChange}
                         formatDateForDisplay={formatDateForDisplay}
                     />
@@ -570,33 +570,33 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                             className="mb-6"
                         />
 
-                        <ClientPlanDisambiguationGuide className="mb-6" />
+                        <ClienContractLineDisambiguationGuide className="mb-6" />
                     </div>
                 </TabsContent>
             </Tabs>
 
             {editingContractLine && (
-                <PlanPickerDialog
+                <ContractLinePickerDialog
                     isOpen={!!editingContractLine}
                     onClose={() => setEditingContractLine(null)}
-                    onSelect={(plan: IContractLine, serviceCategory: string | undefined, startDate: string, endDate: string | null) => {
+                    onSelect={(contractLine: IContractLine, serviceCategory: string | undefined, startDate: string, endDate: string | null) => {
                         if (editingContractLine) {
-                            const updatedPlan = {
+                            const updatedContractLine = {
                                 ...editingContractLine,
-                                contract_line_id: plan.contract_line_id!,
+                                contract_line_id: contractLine.contract_line_id!,
                                 service_category: serviceCategory,
                                 start_date: startDate,
                                 end_date: endDate
                             };
                             // Don't update the state here, pass directly to save function
-                            // setEditingContractLine(updatedPlan);
-                            handleSaveEditContractLine(updatedPlan);
+                            // setEditingContractLine(updatedContractLine);
+                            handleSaveEditContractLine(updatedContractLine);
                         }
                     }}
-                    availablePlans={contractLines}
+                    availableContractLines={contractLines}
                     serviceCategories={serviceCategories}
                     initialValues={{
-                        planId: editingContractLine.contract_line_id,
+                        contractLineId: editingContractLine.contract_line_id,
                         categoryId: editingContractLine.service_category || '',
                         startDate: editingContractLine.start_date,
                         endDate: editingContractLine.end_date,

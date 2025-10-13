@@ -5,27 +5,27 @@ import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { IPlanService, IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineService, IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { updateContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig,
-  IPlanServiceRateTier,
+  IContractLineServiceConfiguration,
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IContractLineServiceBucketConfig,
+  IContractLineServiceRateTier,
   IUserTypeRate
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { updatePlanService } from 'server/src/lib/actions/planServiceActions';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { updateContractLineService } from 'server/src/lib/actions/contractLineServiceActions';
 import {
   getConfigurationForService,
   getConfigurationWithDetails
-} from 'server/src/lib/actions/planServiceConfigurationActions';
+} from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { useTenant } from 'server/src/components/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
 
 interface ContractLineServiceFormProps {
-  planService: IPlanService;
+  contractLineService: IContractLineService;
   services: IService[]; // services might need updating to include service_type_name if not already done
   // Removed serviceCategories prop
   onClose: () => void;
@@ -35,7 +35,7 @@ interface ContractLineServiceFormProps {
 // Removed IServiceCategory import
 
 const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
-  planService,
+  contractLineService,
   services,
   // Removed serviceCategories destructuring
   onClose,
@@ -46,7 +46,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const tenant = useTenant()!;
 
-  const service = services.find(s => s.service_id === planService.service_id);
+  const service = services.find(s => s.service_id === contractLineService.service_id);
 
   // Helper function to derive config type from service properties
   const getDerivedConfigType = (svc: IService | undefined): 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | undefined => {
@@ -66,31 +66,31 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   };
 
   // State for configuration
-  const [baseConfig, setBaseConfig] = useState<Partial<IPlanServiceConfiguration>>({
-    contract_line_id: planService.contract_line_id,
-    service_id: planService.service_id,
+  const [baseConfig, setBaseConfig] = useState<Partial<IContractLineServiceConfiguration>>({
+    contract_line_id: contractLineService.contract_line_id,
+    service_id: contractLineService.service_id,
     configuration_type: 'Fixed',
-    quantity: planService.quantity || 1,
-    custom_rate: planService.custom_rate
+    quantity: contractLineService.quantity || 1,
+    custom_rate: contractLineService.custom_rate
   });
 
-  const [typeConfig, setTypeConfig] = useState<Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig> | null>(null);
-  const [planFixedConfig, setPlanFixedConfig] = useState<Partial<IContractLineFixedConfig>>({
+  const [typeConfig, setTypeConfig] = useState<Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig> | null>(null);
+  const [contractLineFixedConfig, setContractLineFixedConfig] = useState<Partial<IContractLineFixedConfig>>({
     enable_proration: false,
     billing_cycle_alignment: 'start'
   });
-  const [rateTiers, setRateTiers] = useState<IPlanServiceRateTier[]>([]);
+  const [rateTiers, setRateTiers] = useState<IContractLineServiceRateTier[]>([]);
   const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
 
   // Load existing configuration if available
   useEffect(() => {
     const loadConfiguration = async () => {
-      if (!planService.contract_line_id || !planService.service_id) return;
+      if (!contractLineService.contract_line_id || !contractLineService.service_id) return;
 
       setIsLoading(true);
       try {
         // Check if configuration exists
-        const config = await getConfigurationForService(planService.contract_line_id, planService.service_id);
+        const config = await getConfigurationForService(contractLineService.contract_line_id, contractLineService.service_id);
 
         if (config) {
           // Load full configuration details
@@ -98,15 +98,15 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
           setBaseConfig({
             ...configDetails.baseConfig,
-            quantity: planService.quantity || configDetails.baseConfig.quantity,
-            custom_rate: planService.custom_rate !== undefined ? planService.custom_rate : configDetails.baseConfig.custom_rate
+            quantity: contractLineService.quantity || configDetails.baseConfig.quantity,
+            custom_rate: contractLineService.custom_rate !== undefined ? contractLineService.custom_rate : configDetails.baseConfig.custom_rate
           });
 
           setTypeConfig(configDetails.typeConfig);
 
-          // Set plan fixed config if available
-          if (configDetails.planFixedConfig) {
-            setPlanFixedConfig(configDetails.planFixedConfig);
+          // Set contract line fixed config if available
+          if (configDetails.contractLineFixedConfig) {
+            setContractLineFixedConfig(configDetails.contractLineFixedConfig);
           }
 
           if (configDetails.rateTiers) {
@@ -119,11 +119,11 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         } else {
           // No configuration exists, use defaults
           setBaseConfig({
-            contract_line_id: planService.contract_line_id,
-            service_id: planService.service_id,
+            contract_line_id: contractLineService.contract_line_id,
+            service_id: contractLineService.service_id,
             configuration_type: 'Fixed',
-            quantity: planService.quantity || 1,
-            custom_rate: planService.custom_rate
+            quantity: contractLineService.quantity || 1,
+            custom_rate: contractLineService.custom_rate
           });
 
           // Set default type config based on service billing_method and category (service_type)
@@ -161,24 +161,24 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     };
 
     loadConfiguration();
-  }, [planService, service]);
+  }, [contractLineService, service]);
 
-  const handleConfigurationChange = (updates: Partial<IPlanServiceConfiguration>) => {
+  const handleConfigurationChange = (updates: Partial<IContractLineServiceConfiguration>) => {
     setBaseConfig(prev => ({ ...prev, ...updates }));
   };
 
   const handleTypeConfigChange = (
     type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
-    config: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>
+    config: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
   ) => {
     setTypeConfig(config);
   };
 
-  const handlePlanFixedConfigChange = (updates: Partial<IContractLineFixedConfig>) => {
-    setPlanFixedConfig(prev => ({ ...prev, ...updates }));
+  const handleContractLineFixedConfigChange = (updates: Partial<IContractLineFixedConfig>) => {
+    setContractLineFixedConfig(prev => ({ ...prev, ...updates }));
   };
 
-  const handleRateTiersChange = (tiers: IPlanServiceRateTier[]) => {
+  const handleRateTiersChange = (tiers: IContractLineServiceRateTier[]) => {
     setRateTiers(tiers);
   };
 
@@ -187,8 +187,8 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!planService.contract_line_id || !planService.service_id) {
-      setError('Missing plan or service information');
+    if (!contractLineService.contract_line_id || !contractLineService.service_id) {
+      setError('Missing contract line or service information');
       return;
     }
 
@@ -196,10 +196,10 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     setError(null);
 
     try {
-      // Update the plan service with the new configuration
-      await updatePlanService(
-        planService.contract_line_id,
-        planService.service_id,
+      // Update the contract line service with the new configuration
+      await updateContractLineService(
+        contractLineService.contract_line_id,
+        contractLineService.service_id,
         {
           quantity: baseConfig.quantity,
           customRate: baseConfig.custom_rate,
@@ -208,11 +208,11 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         rateTiers // Pass the rateTiers state here
       );
 
-      // If this is a Fixed configuration, also update the plan fixed config
+      // If this is a Fixed configuration, also update the contract line fixed config
       if (baseConfig.configuration_type === 'Fixed') {
         await updateContractLineFixedConfig(
-          planService.contract_line_id,
-          planFixedConfig
+          contractLineService.contract_line_id,
+          contractLineFixedConfig
         );
       }
 
@@ -244,12 +244,12 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
               }}
               service={service}
               typeConfig={typeConfig}
-              planFixedConfig={planFixedConfig}
+              contractLineFixedConfig={contractLineFixedConfig}
               rateTiers={rateTiers}
               userTypeRates={userTypeRates}
               onConfigurationChange={handleConfigurationChange}
               onTypeConfigChange={handleTypeConfigChange}
-              onPlanFixedConfigChange={handlePlanFixedConfigChange}
+              onContractLineFixedConfigChange={handleContractLineFixedConfigChange}
               onRateTiersChange={handleRateTiersChange}
               onUserTypeRatesChange={handleUserTypeRatesChange}
               onSave={handleSubmit}

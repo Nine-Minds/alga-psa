@@ -6,12 +6,12 @@ import { Label } from 'server/src/components/ui/Label';
 import { Card } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { IPlanServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceBucketConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 
 interface BucketServiceConfigPanelProps {
-  configuration: Partial<IPlanServiceBucketConfig>;
-  onConfigurationChange: (updates: Partial<IPlanServiceBucketConfig>) => void;
+  configuration: Partial<IContractLineServiceBucketConfig>;
+  onConfigurationChange: (updates: Partial<IContractLineServiceBucketConfig>) => void;
   className?: string;
   disabled?: boolean;
 }
@@ -102,7 +102,7 @@ export function BucketServiceConfigPanel({
               <p className="text-sm text-red-500 mt-1">{validationErrors.totalMinutes}</p>
             ) : (
               <p className="text-sm text-gray-500 mt-1">
-                The total number of minutes included in this bucket plan
+                The total number of minutes included in this bucket contract line
               </p>
             )}
           </div>

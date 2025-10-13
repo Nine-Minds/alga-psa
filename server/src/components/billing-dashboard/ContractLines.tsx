@@ -14,15 +14,15 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { ContractLineDialog } from './ContractLineDialog';
 import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
+import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from 'server/src/lib/actions/contractLineServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
-import { IContractLine, IPlanService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
+import { IContractLine, IContractLineService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { toast } from 'react-hot-toast';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
+import { CONTRACT_LINE_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 import { add } from 'date-fns';
 
 interface ContractLinesProps {
@@ -32,12 +32,12 @@ interface ContractLinesProps {
 const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const router = useRouter();
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [planServices, setPlanServices] = useState<IPlanService[]>([]);
+  const [selectedContractLine, setSelectedContractLine] = useState<string | null>(null);
+  const [contractLineServices, setContractLineServices] = useState<IContractLineService[]>([]);
   const [selectedServiceToAdd, setSelectedServiceToAdd] = useState<string | null>(null);
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
-  const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
+  const [editingContractLine, setEditingContractLine] = useState<IContractLine | null>(null);
   // Add state for all service types (standard + tenant-specific)
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
   const tenant = useTenant();
@@ -64,24 +64,24 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   };
 
   useEffect(() => {
-    if (selectedPlan) {
-      fetchPlanServices(selectedPlan);
+    if (selectedContractLine) {
+      fetchContractLineServices(selectedContractLine);
     }
-  }, [selectedPlan]);
+  }, [selectedContractLine]);
 
   useEffect(() => {
-    const updatedAvailableServices = initialServices.filter(s => !planServices.some(ps => ps.service_id === s.service_id));
+    const updatedAvailableServices = initialServices.filter(s => !contractLineServices.some(ps => ps.service_id === s.service_id));
     setAvailableServices(updatedAvailableServices);
 
     if (!selectedServiceToAdd || !updatedAvailableServices.some(s => s.service_id === selectedServiceToAdd)) {
       setSelectedServiceToAdd(updatedAvailableServices[0]?.service_id || null);
     }
-  }, [planServices, initialServices, selectedServiceToAdd]);
+  }, [contractLineServices, initialServices, selectedServiceToAdd]);
 
   const fetchContractLines = async () => {
     try {
-      const plans = await getContractLines();
-      setContractLines(plans);
+      const contractLines = await getContractLines();
+      setContractLines(contractLines);
       setError(null);
     } catch (error) {
       console.error('Error fetching contract lines:', error);
@@ -89,66 +89,66 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     }
   };
 
-  const fetchPlanServices = async (planId: string) => {
+  const fetchContractLineServices = async (contractLineId: string) => {
     try {
-      const services = await getPlanServices(planId);
-      setPlanServices(services);
+      const services = await getContractLineServices(contractLineId);
+      setContractLineServices(services);
       setError(null);
     } catch (error) {
-      console.error('Error fetching plan services:', error);
-      setError('Failed to fetch plan services');
+      console.error('Error fetching contract line services:', error);
+      setError('Failed to fetch contract line services');
     }
   };
 
-  const handleAddPlanService = async (serviceId: string) => {
-    if (!selectedPlan) return;
+  const handleAddContractLineService = async (serviceId: string) => {
+    if (!selectedContractLine) return;
     try {
       const addedService = initialServices.find(s => s.service_id === serviceId);
       if (addedService) {
-        const newPlanService = {
-          contract_line_id: selectedPlan,
+        const newContractLineService = {
+          contract_line_id: selectedContractLine,
           service_id: serviceId,
           quantity: 1,
           custom_rate: addedService.default_rate,
           tenant: tenant!
         };
-        await addServiceToPlan(
-          selectedPlan,
+        await addServiceToContractLine(
+          selectedContractLine,
           serviceId,
-          newPlanService.quantity,
-          newPlanService.custom_rate
+          newContractLineService.quantity,
+          newContractLineService.custom_rate
         );
-        // setPlanServices(prevServices => [...prevServices, newPlanService]); // Remove optimistic update
-        fetchPlanServices(selectedPlan); // Re-fetch the list from the server
+        // setContractLineServices(prevServices => [...prevServices, newContractLineService]); // Remove optimistic update
+        fetchContractLineServices(selectedContractLine); // Re-fetch the list from the server
         setError(null);
       }
     } catch (error) {
-      console.error('Error adding plan service:', error);
-      setError('Failed to add plan service');
+      console.error('Error adding contract line service:', error);
+      setError('Failed to add contract line service');
     }
   };
 
-  const handleUpdatePlanService = async (serviceId: string, quantity: number, customRate: number | undefined) => {
-    if (!selectedPlan) return;
+  const handleUpdateContractLineService = async (serviceId: string, quantity: number, customRate: number | undefined) => {
+    if (!selectedContractLine) return;
     try {
-      await updatePlanService(selectedPlan, serviceId, { quantity, customRate });
-      fetchPlanServices(selectedPlan);
+      await updateContractLineService(selectedContractLine, serviceId, { quantity, customRate });
+      fetchContractLineServices(selectedContractLine);
       setError(null);
     } catch (error) {
-      console.error('Error updating plan service:', error);
-      setError('Failed to update plan service');
+      console.error('Error updating contract line service:', error);
+      setError('Failed to update contract line service');
     }
   };
 
-  const handleRemovePlanService = async (serviceId: string) => {
-    if (!selectedPlan) return;
+  const handleRemoveContractLineService = async (serviceId: string) => {
+    if (!selectedContractLine) return;
     try {
-      await removeServiceFromPlan(selectedPlan, serviceId);
-      fetchPlanServices(selectedPlan);
+      await removeServiceFromContractLine(selectedContractLine, serviceId);
+      fetchContractLineServices(selectedContractLine);
       setError(null);
     } catch (error) {
-      console.error('Error removing plan service:', error);
-      setError('Failed to remove plan service');
+      console.error('Error removing contract line service:', error);
+      setError('Failed to remove contract line service');
     }
   };
 
@@ -165,7 +165,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     {
       title: 'Contract Line Type',
       dataIndex: 'contract_line_type',
-      render: (value) => PLAN_TYPE_DISPLAY[value] || value,
+      render: (value) => CONTRACT_LINE_TYPE_DISPLAY[value] || value,
     },
     {
       title: 'Is Custom',
@@ -193,7 +193,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
               id="edit-contract-line-menu-item"
               onClick={(e) => {
                 e.stopPropagation();
-                setEditingPlan({...record});
+                setEditingContractLine({...record});
               }}
             >
               Edit
@@ -234,7 +234,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     },
   ];
 
-  const planServiceColumns: ColumnDefinition<IPlanService>[] = [
+  const contractLineServiceColumns: ColumnDefinition<IContractLineService>[] = [
     {
       title: 'Service Name',
       dataIndex: 'service_id',
@@ -254,7 +254,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         <Input
           type="number"
           value={value?.toString() || ''}
-          onChange={(e) => handleUpdatePlanService(record.service_id, Number(e.target.value), record.custom_rate)}
+          onChange={(e) => handleUpdateContractLineService(record.service_id, Number(e.target.value), record.custom_rate)}
           className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       ),
@@ -270,7 +270,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
             onChange={(value: string) => {
               if (service) {
                 // Update the service's unit of measure in the database
-                // This would typically update the service itself, not the plan-service relationship
+                // This would typically update the service itself, not the contract line-service relationship
                 console.log('Updating unit of measure for service:', service.service_id, 'to', value);
                 // In Phase 2, implement actual service update here
               }
@@ -288,7 +288,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
           value={value?.toString() || ''}
           onChange={(e) => {
             const newValue = e.target.value === '' ? undefined : Number(e.target.value);
-            handleUpdatePlanService(record.service_id, record.quantity || 0, newValue);
+            handleUpdateContractLineService(record.service_id, record.quantity || 0, newValue);
           }}
           className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
@@ -301,7 +301,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              id="plan-service-actions-menu"
+              id="contract-line-service-actions-menu"
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
@@ -312,11 +312,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              id="remove-plan-service-menu-item"
+              id="remove-contract-line-service-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={(e) => {
                 e.stopPropagation();
-                handleRemovePlanService(value);
+                handleRemoveContractLineService(value);
               }}
             >
               Remove
@@ -327,9 +327,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     },
   ];
 
-  const handleContractLineClick = (plan: IContractLine) => {
-    if (plan.contract_line_id) {
-      setSelectedPlan(plan.contract_line_id);
+  const handleContractLineClick = (contractLine: IContractLine) => {
+    if (contractLine.contract_line_id) {
+      setSelectedContractLine(contractLine.contract_line_id);
     }
   };
 
@@ -341,26 +341,26 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
             <Heading as="h3" size="4" mb="4">Contract Lines</Heading>
             <div className="mb-4">
               <ContractLineDialog
-                onPlanAdded={(newPlanId) => {
+                onContractLineAdded={(newContractLineId) => {
                   fetchContractLines().then(async () => {
-                    if (newPlanId) {
-                      setSelectedPlan(newPlanId);
+                    if (newContractLineId) {
+                      setSelectedContractLine(newContractLineId);
 
-                      // Fetch the newly created plan and navigate to its configuration page
+                      // Fetch the newly created contract line and navigate to its configuration page
                       try {
-                        const newPlan = await getContractLineById(newPlanId);
-                        if (newPlan) {
-                          // Navigate to the appropriate configuration page based on plan type
-                          router.push(`/msp/billing?tab=contract-lines&contractLineId=${newPlanId}`);
+                        const newContractLine = await getContractLineById(newContractLineId);
+                        if (newContractLine) {
+                          // Navigate to the appropriate configuration page based on contract line type
+                          router.push(`/msp/billing?tab=contract-lines&contractLineId=${newContractLineId}`);
                         }
                       } catch (error) {
-                        console.error('Error fetching new plan for configuration:', error);
+                        console.error('Error fetching new contract line for configuration:', error);
                       }
                     }
                   });
                 }}
-                editingPlan={editingPlan}
-                onClose={() => setEditingPlan(null)}
+                editingContractLine={editingContractLine}
+                onClose={() => setEditingContractLine(null)}
                 allServiceTypes={allServiceTypes} // Pass service types down
                 triggerButton={
                   <Button id='add-contract-line-button'>
@@ -371,7 +371,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
               />
             </div>
             <DataTable
-              data={contractLines.filter(plan => plan.contract_line_id !== undefined)}
+              data={contractLines.filter(contractLine => contractLine.contract_line_id !== undefined)}
               columns={contractLineColumns}
               pagination={false}
               onRowClick={handleContractLineClick}
@@ -380,16 +380,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         </Card>
         <Card size="2">
           <Box p="4">
-            <Heading as="h3" size="4" mb="4">Plan Services</Heading>
-            {selectedPlan ? (
+            <Heading as="h3" size="4" mb="4">Contract Line Services</Heading>
+            {selectedContractLine ? (
               <>
                 <div className="flex justify-between items-center mb-4">
-                  <h4>Services for {contractLines.find(p => p.contract_line_id === selectedPlan)?.contract_line_name}</h4>
+                  <h4>Services for {contractLines.find(cl => cl.contract_line_id === selectedContractLine)?.contract_line_name}</h4>
                 </div>
                 <div className="overflow-x-auto">
                   <DataTable
-                    data={planServices}
-                    columns={planServiceColumns}
+                    data={contractLineServices}
+                    columns={contractLineServiceColumns}
                     pagination={false}
                   />
                 </div>
@@ -407,7 +407,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                     id='add-button'
                     onClick={() => {
                       if (selectedServiceToAdd && selectedServiceToAdd !== 'unassigned') {
-                        handleAddPlanService(selectedServiceToAdd);
+                        handleAddContractLineService(selectedServiceToAdd);
                       }
                     }}
                     disabled={!selectedServiceToAdd || selectedServiceToAdd === 'unassigned' || availableServices.length === 0}

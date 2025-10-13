@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/contract-lines/BucketPlanConfiguration.tsx
+// server/src/components/billing-dashboard/contract-lines/BucketContractLineConfiguration.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -9,22 +9,22 @@ import { Button } from 'server/src/components/ui/Button';
 import { ContractLineDialog } from '../ContractLineDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions';
-import GenericPlanServicesList from './GenericContractLineServicesList';
+import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions';
+import GenericContractLineServicesList from './GenericContractLineServicesList';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces'; // Added IContractLine
-import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
+import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base contract line details
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceBucketConfig,
-  // Removed PlanServiceConfigType import
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+  IContractLineServiceConfiguration,
+  IContractLineServiceBucketConfig,
+  // Removed ContractLineServiceConfigType import
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import * as RadixAccordion from '@radix-ui/react-accordion';
 import { ServiceBucketConfigForm } from './ServiceBucketConfigForm';
-import { getConfigurationWithDetails, upsertPlanServiceBucketConfigurationAction } from 'server/src/lib/actions/planServiceConfigurationActions'; // Use upsertPlanServiceBucketConfigurationAction
+import { getConfigurationWithDetails, upsertContractLineServiceBucketConfigurationAction } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Use upsertContractLineServiceBucketConfigurationAction
 import { toast } from 'react-hot-toast'; // Use react-hot-toast
 // Type for the state holding configurations for all services
 type ServiceConfigsState = {
-  [serviceId: string]: Partial<IPlanServiceBucketConfig>;
+  [serviceId: string]: Partial<IContractLineServiceBucketConfig>;
 };
 
 // Type for validation errors
@@ -37,28 +37,28 @@ type ServiceValidationErrors = {
 };
 
 // Type for the combined service and configuration data used for rendering
-type PlanServiceWithDetails = {
+type ContractLineServiceWithDetails = {
   service: IService & { unit_of_measure?: string }; // Ensure unit_of_measure is available
-  configuration: IPlanServiceConfiguration; // Base configuration
+  configuration: IContractLineServiceConfiguration; // Base configuration
 };
 
-interface BucketPlanConfigurationProps {
+interface BucketContractLineConfigurationProps {
   contractLineId: string;
   className?: string;
 }
 
-const DEFAULT_BUCKET_CONFIG: Partial<IPlanServiceBucketConfig> = {
+const DEFAULT_BUCKET_CONFIG: Partial<IContractLineServiceBucketConfig> = {
   total_minutes: 0,
   overage_rate: undefined, // Use undefined to allow backend default
   allow_rollover: false,
 };
 
-export function BucketPlanConfiguration({
+export function BucketContractLineConfiguration({
   contractLineId,
   className = '',
-}: BucketPlanConfigurationProps) {
-  const [plan, setPlan] = useState<IContractLine | null>(null); // State for base plan details
-  const [planServices, setPlanServices] = useState<PlanServiceWithDetails[]>([]);
+}: BucketContractLineConfigurationProps) {
+  const [contractLine, setContractLine] = useState<IContractLine | null>(null); // State for base contract line details
+  const [contractLineServices, setContractLineServices] = useState<ContractLineServiceWithDetails[]>([]);
   const [serviceConfigs, setServiceConfigs] = useState<ServiceConfigsState>({});
   const [initialServiceConfigs, setInitialServiceConfigs] = useState<ServiceConfigsState>({});
   const [serviceValidationErrors, setServiceValidationErrors] = useState<ServiceValidationErrors>({});
@@ -70,31 +70,31 @@ export function BucketPlanConfiguration({
   const fetchAndInitializeConfigs = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setPlan(null); // Reset plan on fetch
+    setContractLine(null); // Reset contract line on fetch
     try {
-      // 0. Fetch base plan details first
-      const fetchedPlan = await getContractLineById(contractLineId);
-      if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Bucket') {
-        setError('Invalid plan type or plan not found.');
+      // 0. Fetch base contract line details first
+      const fetchedContractLine = await getContractLineById(contractLineId);
+      if (!fetchedContractLine || fetchedContractLine.contract_line_type !== 'Bucket') {
+        setError('Invalid contract line type or contract line not found.');
         setLoading(false);
         return;
       }
-      setPlan(fetchedPlan); // Store base plan details
+      setContractLine(fetchedContractLine); // Store base contract line details
 
-      // 1. Fetch services associated with the plan
-      const fetchedPlanServices = await getPlanServicesWithConfigurations(contractLineId);
-      setPlanServices(fetchedPlanServices); // Use all fetched services
+      // 1. Fetch services associated with the contract line
+      const fetchedContractLineServices = await getContractLineServicesWithConfigurations(contractLineId);
+      setContractLineServices(fetchedContractLineServices); // Use all fetched services
 
       const initialConfigs: ServiceConfigsState = {};
       const currentConfigs: ServiceConfigsState = {};
-      const fetchPromises = fetchedPlanServices.map(async (ps: PlanServiceWithDetails) => { // Use fetchedPlanServices and add type
+      const fetchPromises = fetchedContractLineServices.map(async (ps: ContractLineServiceWithDetails) => { // Use fetchedContractLineServices and add type
         const serviceId = ps.service.service_id;
         const configId = ps.configuration.config_id; // Corrected property access
 
         try {
           // Fetch detailed config
           const detailedResult = await getConfigurationWithDetails(configId);
-          const bucketConfig = detailedResult?.typeConfig as IPlanServiceBucketConfig | null; // Access typeConfig and cast
+          const bucketConfig = detailedResult?.typeConfig as IContractLineServiceBucketConfig | null; // Access typeConfig and cast
 
           const configData = bucketConfig
             ? {
@@ -123,9 +123,9 @@ export function BucketPlanConfiguration({
       setSaveAttempted(false);
 
     } catch (err) {
-      console.error('Error fetching plan services or configurations:', err);
+      console.error('Error fetching contract line services or configurations:', err);
       setError('Failed to load service configurations. Please try again.');
-      setPlanServices([]);
+      setContractLineServices([]);
       setInitialServiceConfigs({});
       setServiceConfigs({});
     } finally {
@@ -137,7 +137,7 @@ export function BucketPlanConfiguration({
     fetchAndInitializeConfigs();
   }, [fetchAndInitializeConfigs]);
 
-  const handleConfigChange = useCallback((serviceId: string, field: keyof IPlanServiceBucketConfig, value: any) => {
+  const handleConfigChange = useCallback((serviceId: string, field: keyof IContractLineServiceBucketConfig, value: any) => {
     setServiceConfigs(prev => ({
       ...prev,
       [serviceId]: {
@@ -157,7 +157,7 @@ export function BucketPlanConfiguration({
     });
   }, []);
 
-  const validateConfig = (config: Partial<IPlanServiceBucketConfig>): ServiceValidationErrors['string'] => {
+  const validateConfig = (config: Partial<IContractLineServiceBucketConfig>): ServiceValidationErrors['string'] => {
     const errors: ServiceValidationErrors['string'] = {};
     // Ensure values are treated as numbers, handling null/undefined from state
     const totalMinutes = config.total_minutes === null || config.total_minutes === undefined ? null : Number(config.total_minutes);
@@ -177,14 +177,14 @@ export function BucketPlanConfiguration({
     setSaving(true);
     setError(null);
 
-    const changedServices: { serviceId: string; configId: string; config: Partial<IPlanServiceBucketConfig> }[] = [];
+    const changedServices: { serviceId: string; configId: string; config: Partial<IContractLineServiceBucketConfig> }[] = [];
     const validationPromises: Promise<{ serviceId: string; errors: ServiceValidationErrors['string'] }>[] = [];
 
     for (const serviceId in serviceConfigs) {
-      const planServiceDetail = planServices.find(ps => ps.service.service_id === serviceId);
-      if (!planServiceDetail || !planServiceDetail.configuration) continue; // Skip if service details not found
+      const contractLineServiceDetail = contractLineServices.find(ps => ps.service.service_id === serviceId);
+      if (!contractLineServiceDetail || !contractLineServiceDetail.configuration) continue; // Skip if service details not found
 
-      const configId = planServiceDetail.configuration.config_id;
+      const configId = contractLineServiceDetail.configuration.config_id;
       const currentConfig = serviceConfigs[serviceId];
       const initialConfig = initialServiceConfigs[serviceId];
 
@@ -225,9 +225,9 @@ export function BucketPlanConfiguration({
       return;
     }
 
-    // Proceed with saving using upsertPlanServiceBucketConfigurationAction
+    // Proceed with saving using upsertContractLineServiceBucketConfigurationAction
     const savePromises = changedServices.map(({ serviceId, config }) => // Removed configId from destructuring
-      upsertPlanServiceBucketConfigurationAction({ // CALL CORRECT ACTION
+      upsertContractLineServiceBucketConfigurationAction({ // CALL CORRECT ACTION
         contractLineId, // Pass contractLineId
         serviceId, // Pass serviceId
         ...config // Spread the bucket config fields
@@ -244,7 +244,7 @@ export function BucketPlanConfiguration({
       const failedSaves = results.filter((r): r is { error: Error; serviceId: string } => r !== undefined && r !== null && typeof r === 'object' && 'error' in r); // Removed configId from type guard
 
       if (failedSaves.length > 0) {
-        const failedServiceNames = failedSaves.map(f => planServices.find(p => p.service.service_id === f.serviceId)?.service.service_name || f.serviceId).join(', '); // No change needed here, already using serviceId
+        const failedServiceNames = failedSaves.map(f => contractLineServices.find(p => p.service.service_id === f.serviceId)?.service.service_name || f.serviceId).join(', '); // No change needed here, already using serviceId
         setError(`Failed to save configurations for: ${failedServiceNames}. Please try again.`);
         toast.error(`Failed to save configurations for: ${failedServiceNames}.`);
         await fetchAndInitializeConfigs(); // Refetch to reset state
@@ -293,22 +293,22 @@ export function BucketPlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Bucket) - Service Configurations</CardTitle>
-          {plan && (
+          <CardTitle>Edit Contract Line: {contractLine?.contract_line_name || '...'} (Bucket) - Service Configurations</CardTitle>
+          {contractLine && (
             <ContractLineDialog
-              editingPlan={plan}
-              onPlanAdded={() => fetchAndInitializeConfigs()}
-              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+              editingContractLine={contractLine}
+              onContractLineAdded={() => fetchAndInitializeConfigs()}
+              triggerButton={<Button id="edit-contract-line-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
               allServiceTypes={[]}
             />
           )}
         </CardHeader>
         <CardContent>
-          {planServices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No services are currently configured for this bucket plan.</p>
+          {contractLineServices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No services are currently configured for this bucket contractLine.</p>
           ) : (
             <RadixAccordion.Root type="multiple" className="w-full space-y-2">
-              {planServices.map(({ service }) => {
+              {contractLineServices.map(({ service }) => {
                 const serviceId = service.service_id;
                 const config = serviceConfigs[serviceId] || DEFAULT_BUCKET_CONFIG;
                 const validationErrors = serviceValidationErrors[serviceId] || {};
@@ -340,7 +340,7 @@ export function BucketPlanConfiguration({
               })}
             </RadixAccordion.Root>
           )}
-          {planServices.length > 0 && (
+          {contractLineServices.length > 0 && (
              <div className="mt-6 flex justify-end">
                 {/* Added id and data-testid */}
                 <Button id="save-all-bucket-configs-button" data-testid="save-all-bucket-configs-button" onClick={handleSave} disabled={saving}>
@@ -354,10 +354,10 @@ export function BucketPlanConfiguration({
       {/* Services List */}
       <Card>
         <CardHeader>
-          <CardTitle>Services Included in Plan</CardTitle>
+          <CardTitle>Services Included in Contract Line</CardTitle>
         </CardHeader>
         <CardContent>
-          <GenericPlanServicesList
+          <GenericContractLineServicesList
             contractLineId={contractLineId}
             onServicesChanged={handleServicesChanged}
             disableEditing={true}

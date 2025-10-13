@@ -8,66 +8,66 @@ import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { X, Package } from 'lucide-react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
-interface PlanDetailsDialogProps {
-  plan: IClientContractLine | null;
+interface ContractLineDetailsDialogProps {
+  contractLine: IClientContractLine | null;
   isOpen: boolean;
   onClose: () => void;
   formatCurrency?: (amount: number) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
 };
 
-const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
-  plan,
+const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = React.memo(({
+  contractLine,
   isOpen,
   onClose,
   formatCurrency = (amount: number) => `$${amount.toFixed(2)}`,
   formatDate
 }) => {
   const { t } = useTranslation('clientPortal');
-  // Loading state when plan is null but dialog is open
-  const isLoading = isOpen && !plan;
+  // Loading state when contract line is null but dialog is open
+  const isLoading = isOpen && !contractLine;
 
-  // Memoize the plan details content to prevent unnecessary re-renders
-  const planContent = useMemo(() => {
-    if (!plan) return null;
+  // Memoize the contract line details content to prevent unnecessary re-renders
+  const contractLineContent = useMemo(() => {
+    if (!contractLine) return null;
     
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.name')}</p>
-            <p className="mt-1">{plan.contract_line_name}</p>
+            <p className="mt-1">{contractLine.contract_line_name}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.frequency')}</p>
-            <p className="mt-1">{t(`billing.frequency.${plan.billing_frequency?.toLowerCase() || 'monthly'}`, { defaultValue: plan.billing_frequency || 'Monthly' })}</p>
+            <p className="mt-1">{t(`billing.frequency.${contractLine.billing_frequency?.toLowerCase() || 'monthly'}`, { defaultValue: contractLine.billing_frequency || 'Monthly' })}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.startDate')}</p>
-            <p className="mt-1">{formatDate(plan.start_date)}</p>
+            <p className="mt-1">{formatDate(contractLine.start_date)}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.endDate')}</p>
-            <p className="mt-1">{plan.end_date ? formatDate(plan.end_date) : t('billing.contractLine.noEndDate')}</p>
+            <p className="mt-1">{contractLine.end_date ? formatDate(contractLine.end_date) : t('billing.contractLine.noEndDate')}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.status')}</p>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-              plan.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              contractLine.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
             }`}>
-              {plan.is_active ? t('common.active') : t('common.inactive')}
+              {contractLine.is_active ? t('common.active') : t('common.inactive')}
             </span>
           </div>
-          {plan.custom_rate !== undefined && (
+          {contractLine.custom_rate !== undefined && (
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.customRate')}</p>
-              <p className="mt-1">{formatCurrency(plan.custom_rate)}</p>
+              <p className="mt-1">{formatCurrency(contractLine.custom_rate)}</p>
             </div>
           )}
-          {(plan.service_category_name || plan.service_category) && (
+          {(contractLine.service_category_name || contractLine.service_category) && (
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.serviceCategory')}</p>
-              <p className="mt-1">{plan.service_category_name || plan.service_category}</p>
+              <p className="mt-1">{contractLine.service_category_name || contractLine.service_category}</p>
             </div>
           )}
         </div>
@@ -75,16 +75,16 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
         <div className="mt-4">
           <p className="text-sm text-gray-500">
             {t('billing.contractLine.statusDescription', {
-              status: plan.is_active ? t('common.active').toLowerCase() : t('common.inactive').toLowerCase(),
-              expiry: plan.end_date ? t('billing.contractLine.expiresOn', { date: formatDate(plan.end_date) }) : t('billing.contractLine.noExpiry')
+              status: contractLine.is_active ? t('common.active').toLowerCase() : t('common.inactive').toLowerCase(),
+              expiry: contractLine.end_date ? t('billing.contractLine.expiresOn', { date: formatDate(contractLine.end_date) }) : t('billing.contractLine.noExpiry')
             })}
           </p>
         </div>
       </div>
     );
-  }, [plan, formatCurrency, formatDate]);
+  }, [contractLine, formatCurrency, formatDate]);
 
-  // Loading skeleton for when plan is being fetched
+  // Loading skeleton for when contract line is being fetched
   const loadingSkeleton = (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -103,20 +103,19 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
   );
   
   return (
-    <Dialog 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title={t('billing.contractLine.detailsTitle')} 
-      data-automation-id="
-      plan-details-dialog"
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('billing.contractLine.detailsTitle')}
+      data-automation-id="contract-line-details-dialog"
     >
       <DialogContent>
-        <div data-automation-id="plan-details-content">
-          {isLoading ? loadingSkeleton : planContent}
+        <div data-automation-id="contract-line-details-content">
+          {isLoading ? loadingSkeleton : contractLineContent}
         </div>
       </DialogContent>
       <DialogFooter>
-        <Button id="close-plan-dialog-button" variant="outline" onClick={onClose}>
+        <Button id="close-contract-line-dialog-button" variant="outline" onClick={onClose}>
           <X className="mr-2 h-4 w-4" />
           {t('common.close')}
         </Button>
@@ -126,6 +125,6 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
 });
 
 // Add display name for debugging
-PlanDetailsDialog.displayName = 'PlanDetailsDialog';
+ContractLineDetailsDialog.displayName = 'ContractLineDetailsDialog';
 
-export default PlanDetailsDialog;
+export default ContractLineDetailsDialog;

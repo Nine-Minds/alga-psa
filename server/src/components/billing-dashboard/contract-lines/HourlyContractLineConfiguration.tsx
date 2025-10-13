@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/HourlyPlanConfiguration.tsx
+// server/src/components/billing-dashboard/HourlyContractLineConfiguration.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -17,22 +17,22 @@ import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from 'server/src/components/ui/Tooltip';
 import { getContractLineById, updateContractLine } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions'; // Corrected import path
-import GenericPlanServicesList from './GenericContractLineServicesList';
+import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Corrected import path
+import GenericContractLineServicesList from './GenericContractLineServicesList';
 import { IContractLine, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 import {
-    upsertPlanServiceHourlyConfiguration, // Correct action import
+    upsertContractLineServiceHourlyConfiguration, // Correct action import
     upsertUserTypeRatesForConfig // Added import for user type rates action
-} from 'server/src/lib/actions/planServiceConfigurationActions';
+} from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import {
-    IPlanServiceHourlyConfig, // Corrected interface name
-    IPlanServiceConfiguration, // Import base config type
+    IContractLineServiceHourlyConfig, // Corrected interface name
+    IContractLineServiceConfiguration, // Import base config type
     IUserTypeRate // Keep this one
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 // Removed incorrect import: import { IService } from 'server/src/interfaces/service.interfaces';
 // Removed incorrect import: import { isDeepStrictEqual } from 'util';
-// Removed incorrect import: import { validateServiceHourlyConfig } from 'server/src/lib/validators/planServiceConfigurationValidators';
+// Removed incorrect import: import { validateServiceHourlyConfig } from 'server/src/lib/validators/contractLineServiceConfigurationValidators';
 
 // --- Local Deep Equality Helper ---
 function isEqual(a: unknown, b: unknown): boolean {
@@ -72,17 +72,17 @@ function isEqual(a: unknown, b: unknown): boolean {
 // --- Local Type Definitions ---
 
 // Combined interface for state management - using config_id
-interface IPlanServiceWithHourlyConfig {
+interface IContractLineServiceWithHourlyConfig {
     config_id: string;       // ID of the specific configuration record
     service_id: string;      // ID of the service itself
     service?: IBillingService; // Use imported IService from billing.interfaces
-    hourly_config: IPlanServiceHourlyConfig | null; // Nullable initially - Null means not hourly configurable
+    hourly_config: IContractLineServiceHourlyConfig | null; // Nullable initially - Null means not hourly configurable
     user_type_rates?: IUserTypeRate[]; // Add user type rates here
     isHourlyConfigurable: boolean; // Flag to indicate if the service *should* be hourly
 }
 
-// Define the expected shape of the plan object returned by getContractLineById for Hourly
-type HourlyPlanData = IContractLine & {
+// Define the expected shape of the contract line object returned by getContractLineById for Hourly
+type HourlyContractLineData = IContractLine & {
     enable_overtime?: boolean;
     overtime_rate?: number;
     overtime_threshold?: number;
@@ -94,102 +94,102 @@ type HourlyPlanData = IContractLine & {
 
 // --- Component ---
 
-interface HourlyPlanConfigurationProps {
+interface HourlyContractLineConfigurationProps {
   contractLineId: string;
   className?: string;
 }
 
-export function HourlyPlanConfiguration({
+export function HourlyContractLineConfiguration({
   contractLineId,
   className = '',
-}: HourlyPlanConfigurationProps) {
-  // Plan-wide state
-  const [plan, setPlan] = useState<HourlyPlanData | null>(null);
-  const [initialPlanData, setInitialPlanData] = useState<Partial<HourlyPlanData>>({}); // For plan-wide change detection
+}: HourlyContractLineConfigurationProps) {
+  // Contract line-wide state
+  const [contractLine, setContractLine] = useState<HourlyContractLineData | null>(null);
+  const [initialContractLineData, setInitialContractLineData] = useState<Partial<HourlyContractLineData>>({}); // For contract line-wide change detection
   const [enableOvertime, setEnableOvertime] = useState<boolean>(false);
   const [overtimeRate, setOvertimeRate] = useState<number | undefined>(undefined);
   const [overtimeThreshold, setOvertimeThreshold] = useState<number | undefined>(40);
   const [enableAfterHoursRate, setEnableAfterHoursRate] = useState<boolean>(false);
   const [afterHoursMultiplier, setAfterHoursMultiplier] = useState<number | undefined>(1.5);
-  // Removed plan-wide userTypeRates state: const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
+  // Removed contract line-wide userTypeRates state: const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
 
   // Service-specific config state (using locally defined interface)
-  const [serviceConfigs, setServiceConfigs] = useState<IPlanServiceWithHourlyConfig[]>([]);
-  const [initialServiceConfigs, setInitialServiceConfigs] = useState<IPlanServiceWithHourlyConfig[]>([]);
+  const [serviceConfigs, setServiceConfigs] = useState<IContractLineServiceWithHourlyConfig[]>([]);
+  const [initialServiceConfigs, setInitialServiceConfigs] = useState<IContractLineServiceWithHourlyConfig[]>([]);
   const [serviceValidationErrors, setServiceValidationErrors] = useState<Record<string, Record<string, string>>>({}); // { config_id: { field: error } }
 
   // UI State
-  // Removed plan-wide user type rate UI state:
+  // Removed contract line-wide user type rate UI state:
   // const [newUserType, setNewUserType] = useState('');
   // const [newUserTypeRate, setNewUserTypeRate] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null); // General fetch error
   const [saveError, setSaveError] = useState<string | null>(null); // Save operation error
-  const [isPlanWideSettingsOpen, setIsPlanWideSettingsOpen] = useState(false); // State for collapsible section
+  const [isContractLineWideSettingsOpen, setIsContractLineWideSettingsOpen] = useState(false); // State for collapsible section
 
-  // Plan-wide validation errors
-  const [planValidationErrors, setPlanValidationErrors] = useState<{
+  // Contract line-wide validation errors
+  const [contractLineValidationErrors, setContractLineValidationErrors] = useState<{
     overtimeRate?: string;
     overtimeThreshold?: string;
     afterHoursMultiplier?: string;
     // Removed newUserTypeRate validation: newUserTypeRate?: string;
   }>({});
 
-  const fetchPlanData = useCallback(async () => {
+  const fetchContractLineData = useCallback(async () => {
     setLoading(true);
     setError(null);
     setSaveError(null);
     setServiceValidationErrors({});
-    setPlanValidationErrors({});
+    setContractLineValidationErrors({});
     try {
-      // Fetch base plan details
-      const fetchedPlan = await getContractLineById(contractLineId) as HourlyPlanData;
-      if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Hourly') {
-        setError('Invalid plan type or plan not found.');
+      // Fetch base contract line details
+      const fetchedContractLine = await getContractLineById(contractLineId) as HourlyContractLineData;
+      if (!fetchedContractLine || fetchedContractLine.contract_line_type !== 'Hourly') {
+        setError('Invalid contract line type or contract line not found.');
         setLoading(false);
         return;
       }
-      setPlan(fetchedPlan);
+      setContractLine(fetchedContractLine);
 
-      // Set initial plan-wide states
-      const initialData: Partial<HourlyPlanData> = {
-          enable_overtime: fetchedPlan.enable_overtime ?? false,
-          overtime_rate: fetchedPlan.overtime_rate,
-          overtime_threshold: fetchedPlan.overtime_threshold ?? 40,
-          enable_after_hours_rate: fetchedPlan.enable_after_hours_rate ?? false,
-          after_hours_multiplier: fetchedPlan.after_hours_multiplier ?? 1.5,
-          // user_type_rates are no longer fetched/set at the plan level
-          // user_type_rates: fetchedPlan.user_type_rates || [],
-          // Removed billing_period: fetchedPlan.billing_period,
+      // Set initial contract line-wide states
+      const initialData: Partial<HourlyContractLineData> = {
+          enable_overtime: fetchedContractLine.enable_overtime ?? false,
+          overtime_rate: fetchedContractLine.overtime_rate,
+          overtime_threshold: fetchedContractLine.overtime_threshold ?? 40,
+          enable_after_hours_rate: fetchedContractLine.enable_after_hours_rate ?? false,
+          after_hours_multiplier: fetchedContractLine.after_hours_multiplier ?? 1.5,
+          // user_type_rates are no longer fetched/set at the contract line level
+          // user_type_rates: fetchedContractLine.user_type_rates || [],
+          // Removed billing_period: fetchedContractLine.billing_period,
       };
-      setInitialPlanData(initialData);
+      setInitialContractLineData(initialData);
       setEnableOvertime(initialData.enable_overtime!);
       setOvertimeRate(initialData.overtime_rate);
       setOvertimeThreshold(initialData.overtime_threshold);
       setEnableAfterHoursRate(initialData.enable_after_hours_rate!);
       setAfterHoursMultiplier(initialData.after_hours_multiplier);
-      // Removed setting plan-wide userTypeRates state: setUserTypeRates(initialData.user_type_rates!);
+      // Removed setting contract line-wide userTypeRates state: setUserTypeRates(initialData.user_type_rates!);
 
       // Fetch services and their configurations using the correct action
-      const servicesWithConfigsResult = await getPlanServicesWithConfigurations(contractLineId);
+      const servicesWithConfigsResult = await getContractLineServicesWithConfigurations(contractLineId);
 
-      // Process results, mapping to IPlanServiceWithHourlyConfig
-      const processedConfigs: IPlanServiceWithHourlyConfig[] = servicesWithConfigsResult.map((item) => {
+      // Process results, mapping to IContractLineServiceWithHourlyConfig
+      const processedConfigs: IContractLineServiceWithHourlyConfig[] = servicesWithConfigsResult.map((item) => {
         // Determine if the service *should* be hourly configurable
         const isHourlyService =
           item.service.billing_method === 'per_unit' &&
           item.service.unit_of_measure?.toLowerCase().includes('hour');
         // Add || item.service.billing_method === 'hourly' if that method exists
 
-        let hourlyConfig: IPlanServiceHourlyConfig | null = null;
+        let hourlyConfig: IContractLineServiceHourlyConfig | null = null;
         let userTypeRatesForConfig: IUserTypeRate[] = []; // Initialize as empty array
 
         if (isHourlyService) {
           // If the service is hourly, check if existing config is hourly type
           if (item.configuration.configuration_type === 'Hourly' && item.typeConfig) {
-            hourlyConfig = item.typeConfig as IPlanServiceHourlyConfig;
-            // IMPORTANT: Assuming getPlanServicesWithConfigurations now returns userTypeRates
+            hourlyConfig = item.typeConfig as IContractLineServiceHourlyConfig;
+            // IMPORTANT: Assuming getContractLineServicesWithConfigurations now returns userTypeRates
             // nested within the item or typeConfig when type is Hourly. Adjust access as needed.
             // Example: userTypeRatesForConfig = item.userTypeRates || [];
             // Example: userTypeRatesForConfig = (item.typeConfig as any)?.userTypeRates || [];
@@ -228,8 +228,8 @@ export function HourlyPlanConfiguration({
       setInitialServiceConfigs(JSON.parse(JSON.stringify(processedConfigs))); // Deep copy
 
     } catch (err) {
-      console.error('Error fetching plan data:', err);
-      setError('Failed to load plan configuration. Please try again.');
+      console.error('Error fetching contract line data:', err);
+      setError('Failed to load contract line configuration. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -237,32 +237,32 @@ export function HourlyPlanConfiguration({
 
   // Callback to refresh data when services are added/removed
   const handleServicesChanged = useCallback(() => {
-    console.log('Services changed, refetching plan data...');
-    fetchPlanData();
-  }, [fetchPlanData]);
+    console.log('Services changed, refetching contract line data...');
+    fetchContractLineData();
+  }, [fetchContractLineData]);
 
   useEffect(() => {
-    fetchPlanData();
-  }, [fetchPlanData]);
+    fetchContractLineData();
+  }, [fetchContractLineData]);
 
-  // Validate PLAN-WIDE inputs
+  // Validate CONTRACT LINE-WIDE inputs
   useEffect(() => {
-    const newErrors: typeof planValidationErrors = {};
+    const newErrors: typeof contractLineValidationErrors = {};
     if (enableOvertime && overtimeRate !== undefined && overtimeRate < 0) newErrors.overtimeRate = 'Overtime rate cannot be negative';
     if (enableOvertime && overtimeThreshold !== undefined && overtimeThreshold < 0) newErrors.overtimeThreshold = 'Overtime threshold cannot be negative';
     if (enableAfterHoursRate && afterHoursMultiplier !== undefined && afterHoursMultiplier < 1) newErrors.afterHoursMultiplier = 'After hours multiplier must be at least 1';
     // Removed newUserTypeRate validation: if (newUserTypeRate !== undefined && newUserTypeRate < 0) newErrors.newUserTypeRate = 'User type rate cannot be negative';
 
     // Only update state if errors have actually changed
-    if (!isEqual(newErrors, planValidationErrors)) {
-        setPlanValidationErrors(newErrors);
+    if (!isEqual(newErrors, contractLineValidationErrors)) {
+        setContractLineValidationErrors(newErrors);
     }
-  }, [enableOvertime, overtimeRate, overtimeThreshold, enableAfterHoursRate, afterHoursMultiplier, planValidationErrors]); // Removed newUserTypeRate from deps
+  }, [enableOvertime, overtimeRate, overtimeThreshold, enableAfterHoursRate, afterHoursMultiplier, contractLineValidationErrors]); // Removed newUserTypeRate from deps
 
   // --- Updated Handlers for Service Config State ---
 
   // Handler for changes to hourly fields (rate, min time, rounding)
-  const handleHourlyFieldChange = useCallback((configId: string, field: keyof IPlanServiceHourlyConfig, value: any) => {
+  const handleHourlyFieldChange = useCallback((configId: string, field: keyof IContractLineServiceHourlyConfig, value: any) => {
     setServiceConfigs(prevConfigs =>
       prevConfigs.map(config => {
         if (config.config_id === configId && config.hourly_config) { // Ensure hourly_config exists
@@ -294,17 +294,17 @@ export function HourlyPlanConfiguration({
     setSaving(true);
     setSaveError(null);
     setServiceValidationErrors({}); // Clear previous service errors
-    let hasPlanErrors = Object.values(planValidationErrors).some(e => e);
+    let hasContractLineErrors = Object.values(contractLineValidationErrors).some(e => e);
     // Note: Service validation is now primarily handled within the upsert action via Zod.
 
-    if (hasPlanErrors) { // Only check plan errors client-side for now
-        setSaveError("Cannot save, plan-wide validation errors exist.");
+    if (hasContractLineErrors) { // Only check contract line errors client-side for now
+        setSaveError("Cannot save, contract line-wide validation errors exist.");
         setSaving(false);
         return;
     }
 
     // --- 1. Identify Changed Service Configs ---
-    const changedServiceConfigs: IPlanServiceWithHourlyConfig[] = [];
+    const changedServiceConfigs: IContractLineServiceWithHourlyConfig[] = [];
     serviceConfigs.forEach((currentConfig) => { // Removed index as it's not needed
         const initialConfig = initialServiceConfigs.find(ic => ic.config_id === currentConfig.config_id); // Find by config_id
         // Compare both hourly_config fields AND user_type_rates array
@@ -332,7 +332,7 @@ export function HourlyPlanConfiguration({
                         minimum_billable_time: config.hourly_config.minimum_billable_time ?? null,
                         round_up_to_nearest: config.hourly_config.round_up_to_nearest ?? null,
                     };
-                    await upsertPlanServiceHourlyConfiguration(upsertHourlyInput);
+                    await upsertContractLineServiceHourlyConfiguration(upsertHourlyInput);
                 }
             }
 
@@ -371,47 +371,47 @@ export function HourlyPlanConfiguration({
         return; // Stop if service saving failed
     }
 
-    // --- 3. Save Plan-Wide Settings ---
+    // --- 3. Save Contract Line-Wide Settings ---
     try {
-        const planUpdatePayload: Partial<HourlyPlanData> = {};
-        let planChanged = false;
+        const contractLineUpdatePayload: Partial<HourlyContractLineData> = {};
+        let contractLineChanged = false;
 
-        // Compare current state with initialPlanData
-        if (enableOvertime !== initialPlanData.enable_overtime) {
-            planUpdatePayload.enable_overtime = enableOvertime; planChanged = true;
+        // Compare current state with initialContractLineData
+        if (enableOvertime !== initialContractLineData.enable_overtime) {
+            contractLineUpdatePayload.enable_overtime = enableOvertime; contractLineChanged = true;
         }
-        if (enableOvertime && overtimeRate !== initialPlanData.overtime_rate) {
-            planUpdatePayload.overtime_rate = overtimeRate; planChanged = true;
+        if (enableOvertime && overtimeRate !== initialContractLineData.overtime_rate) {
+            contractLineUpdatePayload.overtime_rate = overtimeRate; contractLineChanged = true;
         }
-        if (enableOvertime && overtimeThreshold !== initialPlanData.overtime_threshold) {
-            planUpdatePayload.overtime_threshold = overtimeThreshold; planChanged = true;
+        if (enableOvertime && overtimeThreshold !== initialContractLineData.overtime_threshold) {
+            contractLineUpdatePayload.overtime_threshold = overtimeThreshold; contractLineChanged = true;
         }
-        if (!enableOvertime && initialPlanData.enable_overtime) {
-             planUpdatePayload.overtime_rate = undefined;
-             planUpdatePayload.overtime_threshold = undefined;
-             planChanged = true;
-        }
-
-        if (enableAfterHoursRate !== initialPlanData.enable_after_hours_rate) {
-            planUpdatePayload.enable_after_hours_rate = enableAfterHoursRate; planChanged = true;
-        }
-        if (enableAfterHoursRate && afterHoursMultiplier !== initialPlanData.after_hours_multiplier) {
-            planUpdatePayload.after_hours_multiplier = afterHoursMultiplier; planChanged = true;
-        }
-         if (!enableAfterHoursRate && initialPlanData.enable_after_hours_rate) {
-             planUpdatePayload.after_hours_multiplier = undefined;
-             planChanged = true;
+        if (!enableOvertime && initialContractLineData.enable_overtime) {
+             contractLineUpdatePayload.overtime_rate = undefined;
+             contractLineUpdatePayload.overtime_threshold = undefined;
+             contractLineChanged = true;
         }
 
-        // Removed check/addition of plan-wide userTypeRates
-        // if (!isEqual(userTypeRates, initialPlanData.user_type_rates)) {
-        //     planUpdatePayload.user_type_rates = userTypeRates; planChanged = true;
+        if (enableAfterHoursRate !== initialContractLineData.enable_after_hours_rate) {
+            contractLineUpdatePayload.enable_after_hours_rate = enableAfterHoursRate; contractLineChanged = true;
+        }
+        if (enableAfterHoursRate && afterHoursMultiplier !== initialContractLineData.after_hours_multiplier) {
+            contractLineUpdatePayload.after_hours_multiplier = afterHoursMultiplier; contractLineChanged = true;
+        }
+         if (!enableAfterHoursRate && initialContractLineData.enable_after_hours_rate) {
+             contractLineUpdatePayload.after_hours_multiplier = undefined;
+             contractLineChanged = true;
+        }
+
+        // Removed check/addition of contract line-wide userTypeRates
+        // if (!isEqual(userTypeRates, initialContractLineData.user_type_rates)) {
+        //     contractLineUpdatePayload.user_type_rates = userTypeRates; contractLineChanged = true;
         // }
 
-        if (planChanged) {
-            await updateContractLine(contractLineId, planUpdatePayload);
-            // Update initial plan data after successful save
-            setInitialPlanData(prev => ({ ...prev, ...planUpdatePayload }));
+        if (contractLineChanged) {
+            await updateContractLine(contractLineId, contractLineUpdatePayload);
+            // Update initial contract line data after successful save
+            setInitialContractLineData(prev => ({ ...prev, ...contractLineUpdatePayload }));
         }
 
         console.log("Configuration saved successfully!");
@@ -419,14 +419,14 @@ export function HourlyPlanConfiguration({
         setSaveError(null);
 
     } catch (err: any) {
-        console.error('Error saving plan-wide configuration:', err);
-        setSaveError(`Failed to save plan-wide configuration: ${err.message || 'Please try again.'}`);
+        console.error('Error saving contract line-wide configuration:', err);
+        setSaveError(`Failed to save contract line-wide configuration: ${err.message || 'Please try again.'}`);
     } finally {
         setSaving(false);
     }
   };
 
-  // Removed plan-wide user type rate handlers:
+  // Removed contract line-wide user type rate handlers:
   // const handleAddUserTypeRate = () => { ... };
   // const handleRemoveUserTypeRate = (index: number) => { ... };
 
@@ -447,7 +447,7 @@ export function HourlyPlanConfiguration({
     { value: 'admin', label: 'Administrator' }
   ];
 
-  if (loading && !plan) {
+  if (loading && !contractLine) {
     return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
 
@@ -460,21 +460,21 @@ export function HourlyPlanConfiguration({
     );
   }
 
-   if (!plan) {
-      return <div className="p-4">Plan not found or invalid type.</div>;
+   if (!contractLine) {
+      return <div className="p-4">Contract line not found or invalid type.</div>;
   }
 
-  const hasUnsavedPlanChanges = !isEqual(
-      // Removed user_type_rates from plan-wide change detection
+  const hasUnsavedContractLineChanges = !isEqual(
+      // Removed user_type_rates from contract line-wide change detection
       { enable_overtime: enableOvertime, overtime_rate: overtimeRate, overtime_threshold: overtimeThreshold, enable_after_hours_rate: enableAfterHoursRate, after_hours_multiplier: afterHoursMultiplier },
-      { enable_overtime: initialPlanData.enable_overtime, overtime_rate: initialPlanData.overtime_rate, overtime_threshold: initialPlanData.overtime_threshold, enable_after_hours_rate: initialPlanData.enable_after_hours_rate, after_hours_multiplier: initialPlanData.after_hours_multiplier }
+      { enable_overtime: initialContractLineData.enable_overtime, overtime_rate: initialContractLineData.overtime_rate, overtime_threshold: initialContractLineData.overtime_threshold, enable_after_hours_rate: initialContractLineData.enable_after_hours_rate, after_hours_multiplier: initialContractLineData.after_hours_multiplier }
   );
   // Include user_type_rates in service change detection
   const hasUnsavedServiceChanges = !isEqual(
       serviceConfigs.map(c => ({ hourly: c.hourly_config, rates: c.user_type_rates })),
       initialServiceConfigs.map(c => ({ hourly: c.hourly_config, rates: c.user_type_rates }))
   );
-  const hasUnsavedChanges = hasUnsavedPlanChanges || hasUnsavedServiceChanges;
+  const hasUnsavedChanges = hasUnsavedContractLineChanges || hasUnsavedServiceChanges;
 
   return (
     <Tooltip.Provider> {/* Use Radix Provider */}
@@ -486,12 +486,12 @@ export function HourlyPlanConfiguration({
                 </Alert>
             )}
 
-            {/* Plan Wide Settings (Overtime, After-Hours) */}
-            <Accordion.Root type="single" collapsible value={isPlanWideSettingsOpen ? "plan-wide-settings" : ""} onValueChange={(value) => setIsPlanWideSettingsOpen(value === "plan-wide-settings")}>
-                <Accordion.Item value="plan-wide-settings" className="border rounded-md overflow-hidden">
+            {/* Contract Line Wide Settings (Overtime, After-Hours) */}
+            <Accordion.Root type="single" collapsible value={isContractLineWideSettingsOpen ? "contract-line-wide-settings" : ""} onValueChange={(value) => setIsContractLineWideSettingsOpen(value === "contract-line-wide-settings")}>
+                <Accordion.Item value="contract-line-wide-settings" className="border rounded-md overflow-hidden">
                     <Accordion.Header className="flex">
                          <Accordion.Trigger className="flex flex-1 items-center justify-between p-4 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
-                            Plan-Wide Hourly Settings (Overtime, After-Hours)
+                            Contract Line-Wide Hourly Settings (Overtime, After-Hours)
                             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
                         </Accordion.Trigger>
                     </Accordion.Header>
@@ -512,7 +512,7 @@ export function HourlyPlanConfiguration({
                                             </Button>
                                         </Tooltip.Trigger>
                                          <Tooltip.Content side="top" className="max-w-xs bg-gray-800 text-white p-2 rounded shadow-lg text-sm z-50">
-                                            <p>Apply a different rate when total hours worked within the plan's billing period exceed a specified threshold.</p>
+                                            <p>Apply a different rate when total hours worked within the contract line's billing period exceed a specified threshold.</p>
                                         </Tooltip.Content>
                                     </Tooltip.Root>
                                 </Label>
@@ -526,10 +526,10 @@ export function HourlyPlanConfiguration({
                                         value={overtimeRate?.toString() || ''}
                                         onChange={handleNumberInputChange(setOvertimeRate)}
                                         placeholder="Enter overtime rate" disabled={saving} min={0} step={0.01}
-                                        className={planValidationErrors.overtimeRate ? 'border-red-500' : ''}
+                                        className={contractLineValidationErrors.overtimeRate ? 'border-red-500' : ''}
                                     />
-                                    {planValidationErrors.overtimeRate && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeRate}</p>}
-                                    {!planValidationErrors.overtimeRate && <p className="text-sm text-muted-foreground mt-1">Rate applied after threshold.</p>}
+                                    {contractLineValidationErrors.overtimeRate && <p className="text-sm text-red-500 mt-1">{contractLineValidationErrors.overtimeRate}</p>}
+                                    {!contractLineValidationErrors.overtimeRate && <p className="text-sm text-muted-foreground mt-1">Rate applied after threshold.</p>}
                                     </div>
                                     <div>
                                     <Label htmlFor="overtime-threshold">Overtime Threshold (hrs/period)</Label>
@@ -538,10 +538,10 @@ export function HourlyPlanConfiguration({
                                         value={overtimeThreshold?.toString() || ''}
                                         onChange={handleNumberInputChange(setOvertimeThreshold)}
                                         placeholder="40" disabled={saving} min={0} step={1}
-                                        className={planValidationErrors.overtimeThreshold ? 'border-red-500' : ''}
+                                        className={contractLineValidationErrors.overtimeThreshold ? 'border-red-500' : ''}
                                     />
-                                    {planValidationErrors.overtimeThreshold && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeThreshold}</p>}
-                                    {!planValidationErrors.overtimeThreshold && <p className="text-sm text-muted-foreground mt-1">Hours before OT applies.</p>}
+                                    {contractLineValidationErrors.overtimeThreshold && <p className="text-sm text-red-500 mt-1">{contractLineValidationErrors.overtimeThreshold}</p>}
+                                    {!contractLineValidationErrors.overtimeThreshold && <p className="text-sm text-muted-foreground mt-1">Hours before OT applies.</p>}
                                     </div>
                                 </div>
                                 )}
@@ -573,10 +573,10 @@ export function HourlyPlanConfiguration({
                                     value={afterHoursMultiplier?.toString() || ''}
                                     onChange={handleNumberInputChange(setAfterHoursMultiplier)}
                                     placeholder="1.5" disabled={saving} min={1} step={0.1}
-                                    className={`w-full md:w-1/2 ${planValidationErrors.afterHoursMultiplier ? 'border-red-500' : ''}`}
+                                    className={`w-full md:w-1/2 ${contractLineValidationErrors.afterHoursMultiplier ? 'border-red-500' : ''}`}
                                     />
-                                    {planValidationErrors.afterHoursMultiplier && <p className="text-sm text-red-500 mt-1">{planValidationErrors.afterHoursMultiplier}</p>}
-                                    {!planValidationErrors.afterHoursMultiplier && <p className="text-sm text-muted-foreground mt-1">Multiplier for non-business hours (e.g., 1.5x).</p>}
+                                    {contractLineValidationErrors.afterHoursMultiplier && <p className="text-sm text-red-500 mt-1">{contractLineValidationErrors.afterHoursMultiplier}</p>}
+                                    {!contractLineValidationErrors.afterHoursMultiplier && <p className="text-sm text-muted-foreground mt-1">Multiplier for non-business hours (e.g., 1.5x).</p>}
                                 </div>
                                 )}
                             </div>
@@ -588,12 +588,12 @@ export function HourlyPlanConfiguration({
             {/* Service Specific Settings */}
             <Card>
                 <CardHeader className="flex items-center justify-between">
-                    <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
-                    {plan && (
+                    <CardTitle>Edit Contract Line: {contractLine?.contract_line_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
+                    {contractLine && (
                         <ContractLineDialog
-                            editingPlan={plan}
-                            onPlanAdded={() => fetchPlanData()}
-                            triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+                            editingContractLine={contractLine}
+                            onContractLineAdded={() => fetchContractLineData()}
+                            triggerButton={<Button id="edit-contract-line-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
                             allServiceTypes={[]}
                         />
                     )}
@@ -619,14 +619,14 @@ export function HourlyPlanConfiguration({
                                                     configId={serviceConfig.config_id} // Pass the config_id
                                                     config={serviceConfig.hourly_config} // Pass hourly fields
                                                     userTypeRates={serviceConfig.user_type_rates || []} // Pass user type rates for this config
-                                                    onHourlyFieldChange={(field: keyof IPlanServiceHourlyConfig, value: any) => handleHourlyFieldChange(serviceConfig.config_id, field, value)} // Pass specific handler with types
+                                                    onHourlyFieldChange={(field: keyof IContractLineServiceHourlyConfig, value: any) => handleHourlyFieldChange(serviceConfig.config_id, field, value)} // Pass specific handler with types
                                                     onUserTypeRatesChange={(newRates: IUserTypeRate[]) => handleUserTypeRatesChange(serviceConfig.config_id, newRates)} // Pass handler for rates with types
                                                     validationErrors={serviceValidationErrors[serviceConfig.config_id] || {}}
                                                     disabled={saving}
                                                 />
                                             ) : (
                                                 <p className="text-muted-foreground text-sm">
-                                                    This service (Billing Method: {serviceConfig.service?.billing_method || 'N/A'}) cannot be configured with specific hourly rates on this plan.
+                                                    This service (Billing Method: {serviceConfig.service?.billing_method || 'N/A'}) cannot be configured with specific hourly rates on this contractLine.
                                                 </p>
                                             )}
                                         </div>
@@ -635,7 +635,7 @@ export function HourlyPlanConfiguration({
                             ))}
                         </Accordion.Root>
                     ) : (
-                        <p className="text-muted-foreground">No services are currently associated with this plan.</p>
+                        <p className="text-muted-foreground">No services are currently associated with this contractLine.</p>
                     )}
                 </CardContent>
             </Card>
@@ -644,20 +644,20 @@ export function HourlyPlanConfiguration({
                 <Button
                     id="save-hourly-config-button"
                     onClick={handleSave}
-                    // Disable save if saving, no changes, or plan-wide errors exist. Service errors handled by action.
-                    disabled={saving || !hasUnsavedChanges || Object.values(planValidationErrors).some(e => e)}
+                    // Disable save if saving, no changes, or contract line-wide errors exist. Service errors handled by action.
+                    disabled={saving || !hasUnsavedChanges || Object.values(contractLineValidationErrors).some(e => e)}
                 >
                 {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save Configuration" /> : "Save Configuration"}
                 </Button>
             </div>
 
-            {/* Add Services to Plan */}
+            {/* Add Services to Contract Line */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Plan Services</CardTitle>
+                    <CardTitle>Manage Contract Line Services</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />
+                    <GenericContractLineServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />
                 </CardContent>
             </Card>
         </div>

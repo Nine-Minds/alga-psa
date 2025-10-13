@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
+import '../../../../../test-utils/nextApiMock';
 import { getDueDate } from 'server/src/lib/actions/billingAndTax';
-import { TestContext } from '../../../test-utils/testContext';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
 import { setupCommonMocks } from 'server/test-utils/testMocks';
 

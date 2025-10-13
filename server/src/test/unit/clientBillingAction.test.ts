@@ -16,7 +16,7 @@ describe('Client Billing Actions', () => {
     it('should create a new client contract line when there are no overlaps', async () => {
       const newContractLine: Omit<IClientContractLine, 'client_contract_line_id'> = {
         client_id: 'client1',
-        contract_line_id: 'plan1',
+        contract_line_id: 'contractLine1',
         service_category: 'category1',
         start_date: '2023-01-01T00:00:00.000Z',
         end_date: '2024-01-01T00:00:00.000Z',
@@ -44,7 +44,7 @@ describe('Client Billing Actions', () => {
     it('should throw an error when there are overlapping billing entries', async () => {
       const newContractLine: Omit<IClientContractLine, 'client_contract_line_id'> = {
         client_id: 'client1',
-        contract_line_id: 'plan1',
+        contract_line_id: 'contractLine1',
         service_category: 'category1',
         start_date: '2023-01-01T00:00:00Z',
         end_date: '2024-01-01T00:00:00Z',
@@ -84,7 +84,7 @@ describe('Client Billing Actions', () => {
       const existingContractLine: IClientContractLine = {
         client_contract_line_id: contractLineId,
         client_id: 'client1',
-        contract_line_id: 'plan1',
+        contract_line_id: 'contractLine1',
         service_category: 'category1',
         start_date: '2023-01-01T00:00:00Z',
         end_date: '2024-01-01T00:00:00Z',
@@ -120,7 +120,7 @@ describe('Client Billing Actions', () => {
       const existingContractLine: IClientContractLine = {
         client_contract_line_id: contractLineId,
         client_id: 'client1',
-        contract_line_id: 'plan1',
+        contract_line_id: 'contractLine1',
         service_category: 'category1',
         start_date: '2023-01-01T00:00:00Z',
         end_date: '2024-01-01T00:00:00Z',
@@ -152,7 +152,7 @@ describe('Client Billing Actions', () => {
         {
           client_contract_line_id: 'billing1',
           client_id: clientId,
-          contract_line_id: 'plan1',
+          contract_line_id: 'contractLine1',
           service_category: 'category1',
           start_date: '2023-01-01T00:00:00Z',
           end_date: '2024-01-01T00:00:00Z',
@@ -162,7 +162,7 @@ describe('Client Billing Actions', () => {
         {
           client_contract_line_id: 'billing2',
           client_id: clientId,
-          contract_line_id: 'plan2',
+          contract_line_id: 'contractLine2',
           service_category: 'category2',
           start_date: '2023-01-01T00:00:00Z',
           end_date: null,
@@ -200,7 +200,7 @@ describe('Client Billing Actions', () => {
         {
           client_contract_line_id: 'billing2',
           client_id: clientId,
-          contract_line_id: 'plan2',
+          contract_line_id: 'contractLine2',
           service_category: serviceCategory,
           start_date: '2023-01-01T00:00:00Z',
           end_date: '2024-01-01T00:00:00Z',

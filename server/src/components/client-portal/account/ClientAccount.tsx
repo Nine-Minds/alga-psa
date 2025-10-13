@@ -43,14 +43,14 @@ export default function ClientAccount() {
     let mounted = true;
     const load = async () => {
       try {
-        const [clientData, plan] = await Promise.all([
+        const [clientData, contractLine] = await Promise.all([
           getClientClient(),
           getClientContractLine(),
         ]);
 
         if (!mounted) return;
         setClient(clientData);
-        setContractLine(plan);
+        setContractLine(contractLine);
 
         try {
           const inv = await getClientInvoices();
@@ -122,7 +122,7 @@ export default function ClientAccount() {
       {/* Contract Line */}
       <Card id="contract-line-card" className="bg-white">
         <CardHeader>
-          <CardTitle>{t('billing.currentPlan')}</CardTitle>
+          <CardTitle>{t('billing.currentContractLine')}</CardTitle>
         </CardHeader>
         <CardContent>
           {contractLine ? (

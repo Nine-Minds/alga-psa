@@ -27,14 +27,14 @@ export default class ContractLineFixedConfig {
   }
 
   /**
-   * Get a fixed plan configuration by plan ID
+   * Get a fixed contract line configuration by contract line ID
    */
-  async getByPlanId(planId: string): Promise<IContractLineFixedConfig | null> {
+  async getByContractLineId(contractLineId: string): Promise<IContractLineFixedConfig | null> {
     await this.initKnex();
     
     const config = await this.knex(this.tableName)
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant: this.tenant
       })
       .first();
@@ -43,7 +43,7 @@ export default class ContractLineFixedConfig {
   }
 
   /**
-   * Create a new fixed plan configuration
+   * Create a new fixed contract line configuration
    */
   async create(data: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
     await this.initKnex();
@@ -64,9 +64,9 @@ export default class ContractLineFixedConfig {
   }
 
   /**
-   * Update an existing fixed plan configuration by plan ID
+   * Update an existing fixed contract line configuration by contract line ID
    */
-  async update(planId: string, data: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at'>>): Promise<boolean> {
+  async update(contractLineId: string, data: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at'>>): Promise<boolean> {
     await this.initKnex();
     
     const updateData = {
@@ -76,7 +76,7 @@ export default class ContractLineFixedConfig {
     
     const result = await this.knex(this.tableName)
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant: this.tenant
       })
       .update(updateData);
@@ -85,12 +85,12 @@ export default class ContractLineFixedConfig {
   }
 
   /**
-   * Upsert a fixed plan configuration (create if not exists, update if exists)
+   * Upsert a fixed contract line configuration (create if not exists, update if exists)
    */
   async upsert(data: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
     await this.initKnex();
 
-    const existing = await this.getByPlanId(data.contract_line_id);
+    const existing = await this.getByContractLineId(data.contract_line_id);
 
     if (existing) {
       // Update existing record
@@ -103,14 +103,14 @@ export default class ContractLineFixedConfig {
   }
 
   /**
-   * Delete a fixed plan configuration by plan ID
+   * Delete a fixed contract line configuration by contract line ID
    */
-  async delete(planId: string): Promise<boolean> {
+  async delete(contractLineId: string): Promise<boolean> {
     await this.initKnex();
     
     const result = await this.knex(this.tableName)
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant: this.tenant
       })
       .delete();

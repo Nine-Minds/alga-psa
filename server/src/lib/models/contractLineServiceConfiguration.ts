@@ -1,9 +1,9 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
-import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
-export default class PlanServiceConfiguration {
+export default class ContractLineServiceConfiguration {
   private knex: Knex;
   private tenant: string;
 
@@ -27,9 +27,9 @@ export default class PlanServiceConfiguration {
   }
 
   /**
-   * Get a plan service configuration by ID
+   * Get a contract line service configuration by ID
    */
-  async getById(configId: string): Promise<IPlanServiceConfiguration | null> {
+  async getById(configId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
     
     const config = await this.knex('contract_line_service_configuration')
@@ -43,42 +43,42 @@ export default class PlanServiceConfiguration {
   }
 
   /**
-   * Get all configurations for a plan
+   * Get all configurations for a contract line
    */
-  async getByPlanId(planId: string): Promise<IPlanServiceConfiguration[]> {
+  async getByContractLineId(contractLineId: string): Promise<IContractLineServiceConfiguration[]> {
     await this.initKnex();
-    
+
     const configs = await this.knex('contract_line_service_configuration')
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant: this.tenant
       })
       .select('*');
-    
+
     return configs;
   }
 
   /**
-   * Get configuration for a specific service within a plan
+   * Get configuration for a specific service within a contract line
    */
-  async getByPlanAndServiceId(planId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
+  async getByContractLineIdAndServiceId(contractLineId: string, serviceId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
-    
+
     const config = await this.knex('contract_line_service_configuration')
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceId,
         tenant: this.tenant
       })
       .first();
-    
+
     return config || null;
   }
 
   /**
-   * Create a new plan service configuration
+   * Create a new contract line service configuration
    */
-  async create(data: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>): Promise<string> {
+  async create(data: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>): Promise<string> {
     await this.initKnex();
     
     const configId = uuidv4();
@@ -100,9 +100,9 @@ export default class PlanServiceConfiguration {
   }
 
   /**
-   * Update an existing plan service configuration
+   * Update an existing contract line service configuration
    */
-  async update(configId: string, data: Partial<IPlanServiceConfiguration>): Promise<boolean> {
+  async update(configId: string, data: Partial<IContractLineServiceConfiguration>): Promise<boolean> {
     await this.initKnex();
     
     const updateData = {
@@ -131,7 +131,7 @@ export default class PlanServiceConfiguration {
   }
 
   /**
-   * Delete a plan service configuration
+   * Delete a contract line service configuration
    */
   async delete(configId: string): Promise<boolean> {
     await this.initKnex();

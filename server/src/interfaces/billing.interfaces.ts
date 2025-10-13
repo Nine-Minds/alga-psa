@@ -17,7 +17,7 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   billing_cycle_alignment?: string;
   // New fields for detailed allocation tracking (V1)
   config_id?: string; // UUID from contract_line_service_configuration
-  base_rate?: number; // The plan's base rate (NUMERIC)
+  base_rate?: number; // The contract line's base rate (NUMERIC)
   fmv?: number; // Calculated FMV for allocation (INTEGER cents)
   proportion?: number; // Calculated proportion (NUMERIC)
   allocated_amount?: number; // Calculated allocated amount (INTEGER cents)
@@ -49,7 +49,7 @@ type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
   serviceId?: string;
-  client_contract_line_id?: string; // Link back to the specific plan assignment
+  client_contract_line_id?: string; // Link back to the specific contract line assignment
   serviceName: string;
   rate: number;
   total: number;
@@ -99,7 +99,7 @@ export interface IClientContractLine extends TenantEntity {
   // Added fields from join with contract_lines
   contract_line_name?: string;
   billing_frequency?: string;
-  contract_name?: string; // Contract name (added dynamically for contract-associated plans)
+  contract_name?: string; // Contract name (added dynamically for contract-associated contract lines)
 }
 
 export interface IClientContractLineCycle extends TenantEntity {
@@ -196,7 +196,7 @@ export interface IContractLine extends TenantEntity {
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
-  // Add other plan-wide fields that might exist (like overtime, etc.)
+  // Add other contract line-wide fields that might exist (like overtime, etc.)
   enable_overtime?: boolean | null;
   overtime_rate?: number | null;
   overtime_threshold?: number | null; // Assuming threshold is numeric
@@ -220,14 +220,14 @@ export interface IContractLineFixedConfig extends TenantEntity {
   updated_at: Date;
 }
 
-export interface IPlanService extends TenantEntity {
+export interface IContractLineService extends TenantEntity {
   contract_line_id: string;
   service_id: string;
   quantity?: number;
   custom_rate?: number;
 }
 
-export interface IBucketPlan extends TenantEntity {
+export interface IBucketContractLine extends TenantEntity {
   bucket_contract_line_id: string;
   contract_line_id: string;
   total_hours: number;

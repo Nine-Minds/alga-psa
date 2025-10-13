@@ -18,8 +18,8 @@ interface ContractMetrics {
   contractName: string;
   totalClients: number;
   activeClients: number;
-  totalPlans: number;
-  averagePlansPerClient: number;
+  totalContractLines: number;
+  averageContractLinesPerClient: number;
   totalRevenue: number;
   averageRevenuePerClient: number;
 }
@@ -93,13 +93,13 @@ const ContractPerformance: React.FC = () => {
         contractName: contract.contract_name,
         totalClients: clientsWithContract.length,
         activeClients: clientsWithContract.length,
-        totalPlans: contractLines.length,
-        averagePlansPerClient: clientsWithContract.length > 0 
-          ? contractLines.length / clientsWithContract.length 
+        totalContractLines: contractLines.length,
+        averageContractLinesPerClient: clientsWithContract.length > 0
+          ? contractLines.length / clientsWithContract.length
           : 0,
         totalRevenue: totalRevenue,
-        averageRevenuePerClient: clientsWithContract.length > 0 
-          ? totalRevenue / clientsWithContract.length 
+        averageRevenuePerClient: clientsWithContract.length > 0
+          ? totalRevenue / clientsWithContract.length
           : 0
       };
     } catch (error) {
@@ -109,8 +109,8 @@ const ContractPerformance: React.FC = () => {
         contractName: contract.contract_name,
         totalClients: 0,
         activeClients: 0,
-        totalPlans: 0,
-        averagePlansPerClient: 0,
+        totalContractLines: 0,
+        averageContractLinesPerClient: 0,
         totalRevenue: 0,
         averageRevenuePerClient: 0
       };
@@ -184,15 +184,15 @@ const ContractPerformance: React.FC = () => {
                 </div>
                 
                 <div className="bg-purple-50 p-4 rounded-md">
-                  <div className="text-sm text-purple-600">Total Plans</div>
-                  <div className="text-2xl font-bold">{selectedMetrics.totalPlans}</div>
+                  <div className="text-sm text-purple-600">Total Contract Lines</div>
+                  <div className="text-2xl font-bold">{selectedMetrics.totalContractLines}</div>
                 </div>
               </div>
               
               <div className="space-y-6">
                 <div className="bg-yellow-50 p-4 rounded-md">
-                  <div className="text-sm text-yellow-600">Avg. Plans Per Client</div>
-                  <div className="text-2xl font-bold">{selectedMetrics.averagePlansPerClient.toFixed(2)}</div>
+                  <div className="text-sm text-yellow-600">Avg. Contract Lines Per Client</div>
+                  <div className="text-2xl font-bold">{selectedMetrics.averageContractLinesPerClient.toFixed(2)}</div>
                 </div>
                 
                 <div className="bg-red-50 p-4 rounded-md">
@@ -222,7 +222,7 @@ const ContractPerformance: React.FC = () => {
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Clients</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Plans</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Lines</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
                   </tr>
                 </thead>
@@ -234,7 +234,7 @@ const ContractPerformance: React.FC = () => {
                     >
                       <td className="px-4 py-2 whitespace-nowrap">{metric.contractName}</td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">{metric.totalClients}</td>
-                      <td className="px-4 py-2 text-right whitespace-nowrap">{metric.totalPlans}</td>
+                      <td className="px-4 py-2 text-right whitespace-nowrap">{metric.totalContractLines}</td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">${(metric.totalRevenue / 100).toFixed(2)}</td>
                     </tr>
                   ))}

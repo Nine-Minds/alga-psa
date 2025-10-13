@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,7 +26,7 @@ describe('Billing Invoice Edge Cases', () => {
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_plans',
+        'bucket_contract_lines',
         'tax_rates',
         'client_tax_settings',
         'transactions'
@@ -97,23 +97,23 @@ describe('Billing Invoice Edge Cases', () => {
     }, 'service_id');
 
     // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Credit Plan',
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Contract Line',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    // Assign services to plan
+    // Assign services to contract line
     await context.db('contract_line_services').insert([
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceA,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceB,
         quantity: 1,
         tenant: context.tenantId
@@ -129,11 +129,11 @@ describe('Billing Invoice Edge Cases', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    // Assign plan to client
+    // Assign contract line to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
       client_id: client_id,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       start_date: '2025-02-01',
       is_active: true,
       tenant: context.tenantId
@@ -214,16 +214,16 @@ describe('Billing Invoice Edge Cases', () => {
     }, 'service_id');
 
     // Create a contract line with the free service
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Free Plan',
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Free Contract Line',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    // Assign free service to plan
+    // Assign free service to contract line
     await context.db('contract_line_services').insert({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       service_id: freeService,
       quantity: 1,
       tenant: context.tenantId
@@ -238,11 +238,11 @@ describe('Billing Invoice Edge Cases', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    // Assign plan to client
+    // Assign contract line to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
       client_id: client_id,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       start_date: '2025-02-01',
       is_active: true,
       tenant: context.tenantId

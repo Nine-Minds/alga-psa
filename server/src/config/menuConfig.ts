@@ -126,7 +126,7 @@ export const menuItems: MenuItem[] = [
       {
         name: 'Contract Lines',
         icon: Package,
-        href: '/msp/billing?tab=plans'
+        href: '/msp/billing?tab=contract-lines'
       },
       {
         name: 'Contracts',

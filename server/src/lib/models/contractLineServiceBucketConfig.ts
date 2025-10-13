@@ -1,8 +1,8 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
-import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceBucketConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 
-export default class PlanServiceFixedConfig {
+export default class ContractLineServiceBucketConfig {
   private knex: Knex;
   private tenant: string;
 
@@ -26,12 +26,12 @@ export default class PlanServiceFixedConfig {
   }
 
   /**
-   * Get a fixed price configuration by config ID
+   * Get a bucket configuration by config ID
    */
-  async getByConfigId(configId: string): Promise<IPlanServiceFixedConfig | null> {
+  async getByConfigId(configId: string): Promise<IContractLineServiceBucketConfig | null> {
     await this.initKnex();
     
-    const config = await this.knex('contract_line_service_fixed_config')
+    const config = await this.knex('contract_line_service_bucket_config')
       .where({
         config_id: configId,
         tenant: this.tenant
@@ -42,18 +42,19 @@ export default class PlanServiceFixedConfig {
   }
 
   /**
-   * Create a new fixed price configuration
+   * Create a new bucket configuration
    */
-  async create(data: Omit<IPlanServiceFixedConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
+  async create(data: Omit<IContractLineServiceBucketConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
     await this.initKnex();
     
     const now = new Date();
     
-    await this.knex('contract_line_service_fixed_config').insert({
+    await this.knex('contract_line_service_bucket_config').insert({
       config_id: data.config_id,
-      base_rate: data.base_rate,
-      // enable_proration: data.enable_proration, // Removed: Moved to contract_line_fixed_config
-      // billing_cycle_alignment: data.billing_cycle_alignment, // Removed: Moved to contract_line_fixed_config
+      total_minutes: data.total_minutes,
+      billing_period: data.billing_period,
+      overage_rate: data.overage_rate,
+      allow_rollover: data.allow_rollover,
       tenant: this.tenant,
       created_at: now,
       updated_at: now
@@ -63,9 +64,9 @@ export default class PlanServiceFixedConfig {
   }
 
   /**
-   * Update an existing fixed price configuration
+   * Update an existing bucket configuration
    */
-  async update(configId: string, data: Partial<IPlanServiceFixedConfig>): Promise<boolean> {
+  async update(configId: string, data: Partial<IContractLineServiceBucketConfig>): Promise<boolean> {
     await this.initKnex();
     
     const updateData = {
@@ -83,7 +84,7 @@ export default class PlanServiceFixedConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('contract_line_service_fixed_config')
+    const result = await this.knex('contract_line_service_bucket_config')
       .where({
         config_id: configId,
         tenant: this.tenant
@@ -94,12 +95,12 @@ export default class PlanServiceFixedConfig {
   }
 
   /**
-   * Delete a fixed price configuration
+   * Delete a bucket configuration
    */
   async delete(configId: string): Promise<boolean> {
     await this.initKnex();
     
-    const result = await this.knex('contract_line_service_fixed_config')
+    const result = await this.knex('contract_line_service_bucket_config')
       .where({
         config_id: configId,
         tenant: this.tenant

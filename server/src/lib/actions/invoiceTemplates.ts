@@ -225,7 +225,7 @@ export async function saveInvoiceTemplate(
 
 // --- Custom Fields, Conditional Rules, Annotations ---
 // These seem like placeholders in the original file.
-// Keeping them here as per the plan, but they might need actual implementation.
+// Keeping them here as per the contract line, but they might need actual implementation.
 
 export async function getCustomFields(): Promise<ICustomField[]> {
     // Implementation to fetch custom fields

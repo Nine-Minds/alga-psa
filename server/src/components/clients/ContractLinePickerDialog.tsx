@@ -2,18 +2,19 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { DatePicker } from 'server/src/components/ui/DatePicker';import { IContractLine, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { IContractLine, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 
-interface PlanPickerDialogProps {
+interface ContractLinePickerDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (plan: IContractLine, serviceCategory: string | undefined, startDate: string, endDate: string | null) => void;
-    availablePlans: IContractLine[];
+    onSelect: (contractLine: IContractLine, serviceCategory: string | undefined, startDate: string, endDate: string | null) => void;
+    availableContractLines: IContractLine[];
     serviceCategories: IServiceCategory[];
     initialValues?: {
-        planId?: string;
+        contractLineId?: string;
         categoryId?: string;
         startDate?: string;
         endDate?: string | null;
@@ -21,16 +22,16 @@ interface PlanPickerDialogProps {
     };
 }
 
-const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
+const ContractLinePickerDialog: React.FC<ContractLinePickerDialogProps> = ({
     isOpen,
     onClose,
     onSelect,
-    availablePlans,
+    availableContractLines,
     serviceCategories,
     initialValues
 }) => {
-    const [selectedPlan, setSelectedPlan] = useState<IContractLine | null>(
-        initialValues?.planId ? availablePlans.find(p => p.contract_line_id === initialValues.planId) || null : null
+    const [selectedContractLine, setSelectedContractLine] = useState<IContractLine | null>(
+        initialValues?.contractLineId ? availableContractLines.find(cl => cl.contract_line_id === initialValues.contractLineId) || null : null
     );
     const [selectedCategory, setSelectedCategory] = useState<string>(
         !initialValues?.categoryId ? 'none' : initialValues.categoryId
@@ -46,9 +47,9 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
     );
 
     const handleSubmit = () => {
-        if (selectedPlan) {
+        if (selectedContractLine) {
             onSelect(
-                selectedPlan, 
+                selectedContractLine,
                 selectedCategory === 'none' ? undefined : selectedCategory,
                 startDate,
                 endDate
@@ -71,14 +72,14 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                             Contract Line
                         </label>
                         <CustomSelect
-                            value={selectedPlan?.contract_line_id || ''}
-                            onValueChange={(planId) => {
-                                const plan = availablePlans.find(p => p.contract_line_id === planId);
-                                setSelectedPlan(plan || null);
+                            value={selectedContractLine?.contract_line_id || ''}
+                            onValueChange={(contractLineId) => {
+                                const contractLine = availableContractLines.find(cl => cl.contract_line_id === contractLineId);
+                                setSelectedContractLine(contractLine || null);
                             }}
-                            options={availablePlans.map((plan): { value: string; label: string } => ({
-                                value: plan.contract_line_id || '',
-                                label: plan.contract_line_name
+                            options={availableContractLines.map((contractLine): { value: string; label: string } => ({
+                                value: contractLine.contract_line_id || '',
+                                label: contractLine.contract_line_name
                             }))}
                             placeholder="Select contract line..."
                         />
@@ -102,7 +103,7 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                                 placeholder="Select category..."
                             />
                             <p className="mt-1 text-xs text-gray-500">
-                                Selecting 'All Categories' means this plan applies regardless of the service category.
+                                Selecting 'All Categories' means this contract line applies regardless of the service category.
                             </p>
                         </div>
                         <div>
@@ -155,19 +156,19 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
             </DialogContent>
             <DialogFooter>
                 <div className="flex justify-end space-x-2">
-                    <Button 
-                        id="plan-picker-cancel-btn"
-                        variant="outline" 
+                    <Button
+                        id="contract-line-picker-cancel-btn"
+                        variant="outline"
                         onClick={onClose}
                     >
                         Cancel
                     </Button>
-                    <Button 
-                        id="plan-picker-submit-btn"
+                    <Button
+                        id="contract-line-picker-submit-btn"
                         onClick={handleSubmit}
-                        disabled={!selectedPlan}
+                        disabled={!selectedContractLine}
                     >
-                        {initialValues ? 'Update Plan' : 'Add Plan'}
+                        {initialValues ? 'Update Contract Line' : 'Add Contract Line'}
                     </Button>
                 </div>
             </DialogFooter>
@@ -175,4 +176,4 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
     );
 };
 
-export default PlanPickerDialog;
+export default ContractLinePickerDialog;

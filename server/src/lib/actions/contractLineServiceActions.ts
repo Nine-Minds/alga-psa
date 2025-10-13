@@ -1,30 +1,30 @@
 'use server';
 
 import { withTransaction } from '@alga-psa/shared/db';
-import { IPlanServiceRateTier, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { IPlanService } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineServiceRateTier, IUserTypeRate } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { IContractLineService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
-import * as planServiceConfigActions from 'server/src/lib/actions/planServiceConfigurationActions';
+  IContractLineServiceConfiguration,
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IContractLineServiceBucketConfig
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import * as contractLineServiceConfigActions from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
 /**
- * Get all services for a plan
+ * Get all services for a contract line
  */
-export async function getPlanServices(planId: string): Promise<IPlanService[]> {
+export async function getContractLineServices(contractLineId: string): Promise<IContractLineService[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const services = await trx('contract_line_services')
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant
       })
       .select('*');
@@ -34,14 +34,14 @@ export async function getPlanServices(planId: string): Promise<IPlanService[]> {
 }
 
 /**
- * Get a specific service in a plan
+ * Get a specific service in a contract line
  */
-export async function getPlanService(planId: string, serviceId: string): Promise<IPlanService | null> {
+export async function getContractLineService(contractLineId: string, serviceId: string): Promise<IContractLineService | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const service = await trx('contract_line_services')
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceId,
         tenant
       })
@@ -52,15 +52,15 @@ export async function getPlanService(planId: string, serviceId: string): Promise
 }
 
 /**
- * Add a service to a plan with configuration
+ * Add a service to a contract line with configuration
  */
-export async function addServiceToPlan(
-  planId: string,
+export async function addServiceToContractLine(
+  contractLineId: string,
   serviceId: string,
   quantity?: number,
   customRate?: number,
   configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
-  typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>
+  typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -84,48 +84,48 @@ export async function addServiceToPlan(
   // Use serviceWithType which includes service_type_billing_method for logic below
   const service = serviceWithType; // Keep using 'service' variable name for compatibility with validation block
 
-  // Get plan details
-  const plan = await trx('contract_lines')
+  // Get contract line details
+  const contractLine = await trx('contract_lines')
     .where({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       tenant
     })
     .first();
 
-  if (!plan) {
-    throw new Error(`Plan ${planId} not found`);
+  if (!contractLine) {
+    throw new Error(`Contract line ${contractLineId} not found`);
   }
 
   // --- BEGIN SERVER-SIDE VALIDATION ---
-  if (plan.contract_line_type === 'Hourly' && service.billing_method === 'fixed') {
+  if (contractLine.contract_line_type === 'Hourly' && service.billing_method === 'fixed') {
     throw new Error(`Cannot add a fixed-price service (${service.service_name}) to an hourly contract line.`);
-  } else if (plan.contract_line_type === 'Usage' && service.billing_method === 'fixed') {
-    // Prevent adding fixed-price services to Usage-Based plans
+  } else if (contractLine.contract_line_type === 'Usage' && service.billing_method === 'fixed') {
+    // Prevent adding fixed-price services to Usage-Based contract lines
     throw new Error(`Cannot add a fixed-price service (${service.service_name}) to a usage-based contract line.`);
   }
-  // TODO: Add other validation rules as needed (e.g., prevent hourly services on fixed plans?)
+  // TODO: Add other validation rules as needed (e.g., prevent hourly services on fixed contract lines?)
   // --- END SERVER-SIDE VALIDATION ---
 
   // Determine configuration type based on standard service type's billing method, prioritizing explicit configType
   let determinedConfigType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket'; // Bucket might need separate logic
 
-  // Determine configuration type: Prioritize explicit param, then plan type, then service type
+  // Determine configuration type: Prioritize explicit param, then contract line type, then service type
   if (configType) {
     determinedConfigType = configType;
-  } else if (plan.contract_line_type === 'Bucket') { // Check if the plan itself is a Bucket plan
+  } else if (contractLine.contract_line_type === 'Bucket') { // Check if the contract line itself is a Bucket
     determinedConfigType = 'Bucket';
   } else if (serviceWithType?.service_type_billing_method === 'fixed') {
     determinedConfigType = 'Fixed';
   } else if (serviceWithType?.service_type_billing_method === 'per_unit') {
-    // Use the service's specific unit_of_measure for per_unit services on non-Bucket plans
+    // Use the service's specific unit_of_measure for per_unit services on non-Bucket contract lines
     if (serviceWithType.unit_of_measure?.toLowerCase().includes('hour')) {
        determinedConfigType = 'Hourly';
     } else {
        determinedConfigType = 'Usage'; // Default for other per_unit types
     }
   } else {
-    // Fallback for missing/unknown service billing method on non-Bucket plans
-    console.warn(`Could not determine standard billing method for service type of ${serviceId} on a non-Bucket plan. Defaulting configuration type to 'Fixed'.`);
+    // Fallback for missing/unknown service billing method on non-Bucket contract lines
+    console.warn(`Could not determine standard billing method for service type of ${serviceId} on a non-Bucket contract line. Defaulting configuration type to 'Fixed'.`);
     determinedConfigType = 'Fixed';
   }
 
@@ -134,31 +134,31 @@ export async function addServiceToPlan(
   // If this is a Bucket configuration and overage_rate is not provided, set it to the service's default_rate
   if (configurationType === 'Bucket') {
     typeConfig = typeConfig || {};
-    if ((typeConfig as Partial<IPlanServiceBucketConfig>)?.overage_rate === undefined) {
-      (typeConfig as Partial<IPlanServiceBucketConfig>).overage_rate = service.default_rate;
+    if ((typeConfig as Partial<IContractLineServiceBucketConfig>)?.overage_rate === undefined) {
+      (typeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate = service.default_rate;
     }
   }
 
-  // Check if the service is already in the plan
-  const existingPlanService = await getPlanService(planId, serviceId);
-  
+  // Check if the service is already in the contract line
+  const existingContractLineService = await getContractLineService(contractLineId, serviceId);
+
   // If not, add it to the contract_line_services table
-  if (!existingPlanService) {
+  if (!existingContractLineService) {
     await trx('contract_line_services').insert({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       service_id: serviceId,
       tenant: tenant
     });
   }
 
-  // Check if a configuration already exists for this plan-service combination
-  const existingConfig = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
+  // Check if a configuration already exists for this contract line-service combination
+  const existingConfig = await contractLineServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
   
   let configId: string;
   
   if (existingConfig) {
     // Update existing configuration instead of creating a new one
-    await planServiceConfigActions.updateConfiguration(
+    await contractLineServiceConfigActions.updateConfiguration(
       existingConfig.config_id,
       {
         configuration_type: configurationType,
@@ -170,9 +170,9 @@ export async function addServiceToPlan(
     configId = existingConfig.config_id;
   } else {
     // Create new configuration if one doesn't exist
-    configId = await planServiceConfigActions.createConfiguration(
+    configId = await contractLineServiceConfigActions.createConfiguration(
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceId,
         configuration_type: configurationType,
         custom_rate: customRate,
@@ -188,30 +188,30 @@ export async function addServiceToPlan(
 }
 
 /**
- * Update a service in a plan
+ * Update a service in a contract line
  */
-export async function updatePlanService(
-  planId: string,
+export async function updateContractLineService(
+  contractLineId: string,
   serviceId: string,
   updates: {
     quantity?: number;
     customRate?: number;
-    typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>;
+    typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>;
   },
-  rateTiers?: IPlanServiceRateTier[] // Add rateTiers here
+  rateTiers?: IContractLineServiceRateTier[] // Add rateTiers here
 ): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get configuration ID
-  const config = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
+  const config = await contractLineServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
 
   if (!config) {
-    throw new Error(`Configuration for service ${serviceId} in plan ${planId} not found`);
+    throw new Error(`Configuration for service ${serviceId} in contract line ${contractLineId} not found`);
   }
 
   // Update configuration
-  const baseUpdates: Partial<IPlanServiceConfiguration> = {};
+  const baseUpdates: Partial<IContractLineServiceConfiguration> = {};
   if (updates.quantity !== undefined) {
     baseUpdates.quantity = updates.quantity;
   }
@@ -219,7 +219,7 @@ export async function updatePlanService(
     baseUpdates.custom_rate = updates.customRate;
   }
 
-  await planServiceConfigActions.updateConfiguration(
+  await contractLineServiceConfigActions.updateConfiguration(
     config.config_id,
     Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined,
     updates.typeConfig,
@@ -232,24 +232,24 @@ export async function updatePlanService(
 }
 
 /**
- * Remove a service from a plan
+ * Remove a service from a contract line
  */
-export async function removeServiceFromPlan(planId: string, serviceId: string): Promise<boolean> {
+export async function removeServiceFromContractLine(contractLineId: string, serviceId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get configuration ID
-  const config = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
+  const config = await contractLineServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
 
   // Remove configuration if it exists
   if (config) {
-    await planServiceConfigActions.deleteConfiguration(config.config_id);
+    await contractLineServiceConfigActions.deleteConfiguration(config.config_id);
   }
 
   // Remove the service from the contract_line_services table
   await trx('contract_line_services')
     .where({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       service_id: serviceId,
       tenant
     })
@@ -260,22 +260,22 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
 }
 
 /**
- * Get all services in a plan with their configurations, service type name, and user type rates (for hourly).
+ * Get all services in a contract line with their configurations, service type name, and user type rates (for hourly).
  */
-export async function getPlanServicesWithConfigurations(planId: string): Promise<{
+export async function getContractLineServicesWithConfigurations(contractLineId: string): Promise<{
   service: IService & { service_type_name?: string };
-  configuration: IPlanServiceConfiguration;
-  typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
+  configuration: IContractLineServiceConfiguration;
+  typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
   userTypeRates?: IUserTypeRate[]; // Add userTypeRates to the return type
 }[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
-  // Get all configurations for the plan
-  const configurations = await planServiceConfigActions.getConfigurationsForPlan(planId);
+  // Get all configurations for the contract line
+  const configurations = await contractLineServiceConfigActions.getConfigurationsForContractLine(contractLineId);
 
   // Get service details including service type name for each configuration
-  const result: Array<{ service: IService & { service_type_name?: string }; configuration: IPlanServiceConfiguration; typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null; userTypeRates?: IUserTypeRate[] }> = [];
+  const result: Array<{ service: IService & { service_type_name?: string }; configuration: IContractLineServiceConfiguration; typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null; userTypeRates?: IUserTypeRate[] }> = [];
   for (const config of configurations) {
     // Join service_catalog with service_types to get the name
     const service = await trx('service_catalog as sc')
@@ -294,16 +294,16 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
       continue;
     }
 
-    const configDetails = await planServiceConfigActions.getConfigurationWithDetails(config.config_id);
+    const configDetails = await contractLineServiceConfigActions.getConfigurationWithDetails(config.config_id);
 
     let userTypeRates: IUserTypeRate[] | undefined = undefined;
 
     // If it's an hourly config, fetch user type rates
     if (config.configuration_type === 'Hourly') {
-      // Assuming PlanServiceHourlyConfig model is accessible or we use an action
+      // Assuming ContractLineServiceHourlyConfig model is accessible or we use an action
       // For simplicity, let's assume we can access the model instance via the service
       // This might need adjustment based on actual service/model structure
-      const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx);
+      const hourlyConfigModel = new (await import('server/src/lib/models/contractLineServiceHourlyConfig')).default(trx);
       userTypeRates = await hourlyConfigModel.getUserTypeRates(config.config_id);
     }
 

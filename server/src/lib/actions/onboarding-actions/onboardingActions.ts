@@ -53,7 +53,7 @@ export interface BillingData {
   serviceName: string;
   serviceDescription: string;
   servicePrice: string;
-  planName: string;
+  contractLineName: string;
   serviceTypeId?: string;
 }
 
@@ -702,7 +702,7 @@ export async function setupBilling(data: BillingData): Promise<OnboardingActionR
         serviceName: data.serviceName,
         serviceDescription: data.serviceDescription,
         servicePrice: data.servicePrice,
-        planName: data.planName
+        contractLineName: data.contractLineName
       });
     });
 

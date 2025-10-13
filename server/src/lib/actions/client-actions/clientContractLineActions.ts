@@ -11,21 +11,21 @@ import { getSession } from 'server/src/lib/auth/getSession';
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
   // First, get the client_id and contract_line_id associated with the clientContractLineId
-  const planInfo = await db('client_contract_lines')
+  const contractLineInfo = await db('client_contract_lines')
     .select('client_id', 'contract_line_id')
     .where({ client_contract_line_id: clientContractLineId, tenant: tenant })
     .first();
 
-  if (!planInfo) {
+  if (!contractLineInfo) {
     console.warn(`Client contract line ${clientContractLineId} not found for tenant ${tenant}`);
-    return null; // No plan assignment found
+    return null; // No contract line assignment found
   }
 
-  const { client_id, contract_line_id } = planInfo;
+  const { client_id, contract_line_id } = contractLineInfo;
 
   // We need to check two types of invoices:
-  // 1. Invoices with items linked to this plan through contract_line_services (traditional path)
-  // 2. Invoices with items linked to this plan through invoice_item_details and contract_line_service_configuration (fixed fee path)
+  // 1. Invoices with items linked to this contract line through contract_line_services (traditional path)
+  // 2. Invoices with items linked to this contract line through invoice_item_details and contract_line_service_configuration (fixed fee path)
 
   // Query 1: Check for invoices linked through contract_line_services (traditional path)
   const traditionalPathQuery = db('invoices as i')
@@ -93,7 +93,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
     }
     // Otherwise, fall back to invoice_date
     else if (latestInvoice.invoice_date) {
-      console.log(`Using invoice_date as fallback for plan ${contract_line_id} since billing_period_end is null`);
+      console.log(`Using invoice_date as fallback for contract line ${contract_line_id} since billing_period_end is null`);
       return new Date(latestInvoice.invoice_date);
     }
   }
@@ -249,7 +249,7 @@ export async function removeClientContractLine(clientContractLineId: string): Pr
 
         if (Temporal.PlainDate.compare(nowPlainDate, latestInvoicedPlainDate) < 0) {
             throw new Error(
-                `Cannot deactivate plan assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
+                `Cannot deactivate contract line assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
             );
         }
     }
@@ -321,14 +321,14 @@ export async function editClientContractLine(clientContractLineId: string, updat
         // If an end_date IS provided along with is_active=false, the end_date check below handles it.
         if (proposedIsActive === false && !proposedEndDate && Temporal.PlainDate.compare(nowPlainDate, latestInvoicedPlainDate) < 0) {
              throw new Error(
-                `Cannot deactivate plan assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date.`
+                `Cannot deactivate contract line assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date.`
               );
         }
 
         // Check if trying to set an end date before the latest invoice date
         if (proposedEndDate && Temporal.PlainDate.compare(proposedEndDate, latestInvoicedPlainDate) < 0) {
             throw new Error(
-            `Cannot set end date to ${proposedEndDate.toLocaleString()} as the plan has been invoiced through ${latestInvoicedPlainDate.toLocaleString()}. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
+            `Cannot set end date to ${proposedEndDate.toLocaleString()} as the contract line has been invoiced through ${latestInvoicedPlainDate.toLocaleString()}. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
             );
         }
     }

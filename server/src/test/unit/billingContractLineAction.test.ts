@@ -13,7 +13,7 @@ describe('Contract Line Actions', () => {
 
   describe('getContractLines', () => {
     it('should return all contract lines', async () => {
-      const mockPlans: IContractLine[] = [
+      const mockContractLines: IContractLine[] = [
         { 
           contract_line_id: '1', 
           contract_line_name: 'Basic', 
@@ -30,15 +30,15 @@ describe('Contract Line Actions', () => {
         },
       ];
 
-      (ContractLine.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(mockPlans);
+      (ContractLine.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(mockContractLines);
 
       const result = await getContractLines();
 
-      expect(result).toEqual(mockPlans);
+      expect(result).toEqual(mockContractLines);
       expect(ContractLine.getAll).toHaveBeenCalled();
     });
 
-    it('should throw an error if fetching plans fails', async () => {
+    it('should throw an error if fetching contract lines fails', async () => {
       (ContractLine.getAll as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
       await expect(getContractLines()).rejects.toThrow('Failed to fetch client contract lines');
@@ -47,26 +47,26 @@ describe('Contract Line Actions', () => {
 
   describe('createContractLine', () => {
     it('should create a new contract line', async () => {
-      const newPlan: Omit<IContractLine, 'contract_line_id'> = {
-        contract_line_name: 'New Plan',
+      const newContractLine: Omit<IContractLine, 'contract_line_id'> = {
+        contract_line_name: 'New Contract Line',
         billing_frequency: 'monthly',
         is_custom: true,
         contract_line_type: 'Fixed',
       };
 
-      const createdPlan: IContractLine = { ...newPlan, contract_line_id: '3' };
+      const createdContractLine: IContractLine = { ...newContractLine, contract_line_id: '3' };
 
-      (ContractLine.create as ReturnType<typeof vi.fn>).mockResolvedValue(createdPlan);
+      (ContractLine.create as ReturnType<typeof vi.fn>).mockResolvedValue(createdContractLine);
 
-      const result = await createContractLine(newPlan);
+      const result = await createContractLine(newContractLine);
 
-      expect(result).toEqual(createdPlan);
-      expect(ContractLine.create).toHaveBeenCalledWith(newPlan);
+      expect(result).toEqual(createdContractLine);
+      expect(ContractLine.create).toHaveBeenCalledWith(newContractLine);
     });
 
-    it('should throw an error if creating a plan fails', async () => {
-      const newPlan: Omit<IContractLine, 'contract_line_id'> = {
-        contract_line_name: 'New Plan',
+    it('should throw an error if creating a contract line fails', async () => {
+      const newContractLine: Omit<IContractLine, 'contract_line_id'> = {
+        contract_line_name: 'New Contract Line',
         billing_frequency: 'monthly',
         is_custom: true,
         contract_line_type: 'Fixed',
@@ -74,7 +74,7 @@ describe('Contract Line Actions', () => {
 
       (ContractLine.create as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
-      await expect(createContractLine(newPlan)).rejects.toThrow('Failed to create contract line');
+      await expect(createContractLine(newContractLine)).rejects.toThrow('Failed to create contract line');
     });
   });
 });

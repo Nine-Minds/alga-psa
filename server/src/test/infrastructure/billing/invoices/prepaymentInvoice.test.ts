@@ -3,13 +3,13 @@ import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
-import { TestContext } from '../../../test-utils/testContext';
-import { setupCommonMocks } from '../../../test-utils/testMocks';
-import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
-import { createTestDate, createTestDateISO, dateHelpers } from '../../../test-utils/dateUtils';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
+import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { runWithTenant } from 'server/src/lib/db';
-import '../../../test-utils/nextApiMock';
+import '../../../../../test-utils/nextApiMock';
 
 global.TextEncoder = TextEncoder;
 
@@ -28,7 +28,6 @@ beforeAll(async () => {
       'transactions',
       'client_billing_cycles',
       'client_contract_lines',
-      'bucket_plans',
       'bucket_usage'
     ]
   });
@@ -64,28 +63,28 @@ async function createTestService(overrides = {}) {
 }
 
 /**
- * Helper to create a test plan
+ * Helper to create a test contract line
  */
-async function createTestPlan(serviceId: string, overrides = {}) {
-  const planId = uuidv4();
-  const defaultPlan = {
-    contract_line_id: planId,
+async function createTestContractLine(serviceId: string, overrides = {}) {
+  const contractLineId = uuidv4();
+  const defaultContractLine = {
+    contract_line_id: contractLineId,
     tenant: context.tenantId,
-    contract_line_name: 'Test Plan',
+    contract_line_name: 'Test Contract Line',
     billing_frequency: 'monthly',
     is_custom: false,
     contract_line_type: 'Fixed'
   };
 
-  await context.db('contract_lines').insert({ ...defaultPlan, ...overrides });
+  await context.db('contract_lines').insert({ ...defaultContractLine, ...overrides });
   await context.db('contract_line_services').insert({
-    contract_line_id: planId,
+    contract_line_id: contractLineId,
     service_id: serviceId,
     tenant: context.tenantId,
     quantity: 1
   });
 
-  return planId;
+  return contractLineId;
 }
 
 /**
@@ -290,13 +289,13 @@ describe('Prepayment Invoice System', () => {
 
   describe('Credit Application in Billing', () => {
     let serviceId: string;
-    let planId: string;
+    let contractLineId: string;
     let billingCycleId: string;
 
     beforeEach(async () => {
       // Setup billing configuration
       serviceId = await createTestService();
-      planId = await createTestPlan(serviceId);
+      contractLineId = await createTestContractLine(serviceId);
       await setupTaxConfiguration();
 
       const now = createTestDate();
@@ -314,11 +313,11 @@ describe('Prepayment Invoice System', () => {
         effective_date: startDate
       });
 
-      // Link plan to client
+      // Link contract line to client
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
@@ -331,11 +330,11 @@ describe('Prepayment Invoice System', () => {
         tax_region: 'US-NY'
       });
 
-      // Create bucket plan
-      const bucketPlanId = uuidv4();
-      await context.db('bucket_plans').insert({
-        bucket_contract_line_id: bucketPlanId,
-        contract_line_id: planId,
+      // Create bucket contract line
+      const bucketContractLineId = uuidv4();
+      await context.db('bucket_contract_lines').insert({
+        bucket_contract_line_id: bucketContractLineId,
+        contract_line_id: contractLineId,
         total_hours: 40,
         billing_period: 'monthly',
         overage_rate: 150,
@@ -345,7 +344,7 @@ describe('Prepayment Invoice System', () => {
       // Create bucket usage
       await context.db('bucket_usage').insert({
         usage_id: uuidv4(),
-        bucket_contract_line_id: bucketPlanId,
+        bucket_contract_line_id: bucketContractLineId,
         client_id: context.clientId,
         period_start: startDate,
         period_end: dateHelpers.startOf(now, 'month'),
@@ -405,14 +404,14 @@ describe('Prepayment Invoice System', () => {
 
 describe('Multiple Credit Applications', () => {
   let serviceId: string;
-  let planId: string;
+  let contractLineId: string;
   let billingCycleId1: string;
   let billingCycleId2: string;
 
   beforeEach(async () => {
     // Setup billing configuration
     serviceId = await createTestService();
-    planId = await createTestPlan(serviceId);
+    contractLineId = await createTestContractLine(serviceId);
     await setupTaxConfiguration();
 
     const now = createTestDate();
@@ -443,12 +442,12 @@ describe('Multiple Credit Applications', () => {
       }
     ]);
 
-    // Link plan to client
+    // Link contract line to client
     await context.db('client_contract_lines').insert([
       {
         client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
@@ -462,11 +461,11 @@ describe('Multiple Credit Applications', () => {
       tax_region: 'US-NY'
     });
 
-    // Create bucket plan
-    const bucketPlanId = uuidv4();
-    await context.db('bucket_plans').insert({
-      bucket_contract_line_id: bucketPlanId,
-      contract_line_id: planId,
+    // Create bucket contract line
+    const bucketContractLineId = uuidv4();
+    await context.db('bucket_contract_lines').insert({
+      bucket_contract_line_id: bucketContractLineId,
+      contract_line_id: contractLineId,
       total_hours: 40,
       billing_period: 'monthly',
       overage_rate: 150,
@@ -477,7 +476,7 @@ describe('Multiple Credit Applications', () => {
     await context.db('bucket_usage').insert([
       {
         usage_id: uuidv4(),
-        bucket_contract_line_id: bucketPlanId,
+        bucket_contract_line_id: bucketContractLineId,
         client_id: context.clientId,
         period_start: dateHelpers.startOf(now, 'month'),
         period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
@@ -488,7 +487,7 @@ describe('Multiple Credit Applications', () => {
       },
       {
         usage_id: uuidv4(),
-        bucket_contract_line_id: bucketPlanId,
+        bucket_contract_line_id: bucketContractLineId,
         client_id: context.clientId,
         period_start: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
         period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month'),

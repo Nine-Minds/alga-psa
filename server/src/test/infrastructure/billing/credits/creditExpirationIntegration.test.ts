@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
-import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
+import { createTestDate, createTestDateISO } from '../../../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
@@ -39,7 +39,7 @@ describe('Credit Expiration Integration Tests', () => {
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_plans',
+        'bucket_contract_lines',
         'bucket_usage',
         'tax_rates',
         'client_tax_settings',
@@ -135,16 +135,16 @@ describe('Credit Expiration Integration Tests', () => {
     }, 'service_id');
 
     // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Credit Plan',
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Contract Line',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    // Assign service to plan
+    // Assign service to contract line
     await context.db('contract_line_services').insert({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       service_id: negativeService,
       quantity: 1,
       tenant: context.tenantId
@@ -163,11 +163,11 @@ describe('Credit Expiration Integration Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    // Assign plan to client
+    // Assign contract line to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
       client_id: client_id,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -287,16 +287,16 @@ describe('Credit Expiration Integration Tests', () => {
     }, 'service_id');
 
     // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Standard Plan',
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Contract Line',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    // Link service to plan
+    // Link service to contract line
     await context.db('contract_line_services').insert({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -315,11 +315,11 @@ describe('Credit Expiration Integration Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    // Link plan to client
+    // Link contract line to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
       client_id: client_id,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true

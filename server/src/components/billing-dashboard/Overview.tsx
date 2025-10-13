@@ -138,7 +138,7 @@ const Overview = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
           title="Active Contract Lines"
-          value={metrics.active_plans_count}
+          value={metrics.active_contract_lines_count}
           icon={FileSpreadsheet}
           loading={loading}
           error={hasError}

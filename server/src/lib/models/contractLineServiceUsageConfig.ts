@@ -1,9 +1,9 @@
 import { Knex } from 'knex';
 import { getCurrentTenantId } from '../db';
-import { IPlanServiceUsageConfig, IPlanServiceRateTier } from '../../interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '../../interfaces/contractLineServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
-export default class PlanServiceUsageConfig {
+export default class ContractLineServiceUsageConfig {
   private knex: Knex | Knex.Transaction;
   private tenant?: string;
 
@@ -28,7 +28,7 @@ export default class PlanServiceUsageConfig {
   /**
    * Get a usage configuration by config ID
    */
-  async getByConfigId(configId: string): Promise<IPlanServiceUsageConfig | null> {
+  async getByConfigId(configId: string): Promise<IContractLineServiceUsageConfig | null> {
     const tenant = await this.getTenant();
     
     const config = await this.knex('contract_line_service_usage_config')
@@ -44,7 +44,7 @@ export default class PlanServiceUsageConfig {
   /**
    * Create a new usage configuration
    */
-  async create(data: Omit<IPlanServiceUsageConfig, 'created_at' | 'updated_at' | 'tenant'>): Promise<boolean> {
+  async create(data: Omit<IContractLineServiceUsageConfig, 'created_at' | 'updated_at' | 'tenant'>): Promise<boolean> {
     const tenant = await this.getTenant();
     
     const now = new Date();
@@ -66,7 +66,7 @@ export default class PlanServiceUsageConfig {
   /**
    * Update an existing usage configuration
    */
-  async update(configId: string, data: Partial<IPlanServiceUsageConfig>): Promise<boolean> {
+  async update(configId: string, data: Partial<IContractLineServiceUsageConfig>): Promise<boolean> {
     const tenant = await this.getTenant();
     
     const updateData = {
@@ -113,7 +113,7 @@ export default class PlanServiceUsageConfig {
   /**
    * Get rate tiers for a usage configuration
    */
-  async getRateTiers(configId: string): Promise<IPlanServiceRateTier[]> {
+  async getRateTiers(configId: string): Promise<IContractLineServiceRateTier[]> {
     const tenant = await this.getTenant();
     
     const tiers = await this.knex('contract_line_service_rate_tiers')
@@ -130,7 +130,7 @@ export default class PlanServiceUsageConfig {
   /**
    * Add a rate tier to a usage configuration
    */
-  async addRateTier(data: Omit<IPlanServiceRateTier, 'tier_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<string> {
+  async addRateTier(data: Omit<IContractLineServiceRateTier, 'tier_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<string> {
     const tenant = await this.getTenant();
     
     const tierId = uuidv4();
@@ -153,7 +153,7 @@ export default class PlanServiceUsageConfig {
   /**
    * Update a rate tier
    */
-  async updateRateTier(tierId: string, data: Partial<IPlanServiceRateTier>): Promise<boolean> {
+  async updateRateTier(tierId: string, data: Partial<IContractLineServiceRateTier>): Promise<boolean> {
     const tenant = await this.getTenant();
     
     const updateData = {

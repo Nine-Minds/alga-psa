@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/FixedPlanServicesList.tsx
+// server/src/components/billing-dashboard/FixedContractLineServicesList.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -15,20 +15,20 @@ import {
 import { Tooltip } from 'server/src/components/ui/Tooltip'; // Corrected Tooltip import
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractLine, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
-import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
+import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import {
-  getPlanServices,
-  addServiceToPlan as addPlanService,
-  removeServiceFromPlan as removePlanService,
-  updatePlanService, // Added updatePlanService
-  getPlanServicesWithConfigurations
-} from 'server/src/lib/actions/planServiceActions';
+  getContractLineServices,
+  addServiceToContractLine as addContractLineService,
+  removeServiceFromContractLine as removeContractLineService,
+  updateContractLineService, // Added updateContractLineService
+  getContractLineServicesWithConfigurations
+} from 'server/src/lib/actions/contractLineServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { EditPlanServiceQuantityDialog } from './EditContractLineServiceQuantityDialog'; // Added dialog import
+import { EditContractLineServiceQuantityDialog } from './EditContractLineServiceQuantityDialog'; // Added dialog import
 // Removed ContractLineServiceForm import as 'Configure' is removed
 
 // Define billing method options
@@ -37,13 +37,13 @@ const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string
   { value: 'per_unit', label: 'Per Unit' }
 ];
 
-interface FixedPlanServicesListProps {
-  planId: string; // Changed from plan object to just planId
+interface FixedContractLineServicesListProps {
+  contractLineId: string; // Changed from contractLine object to just contractLineId
   onServiceAdded?: () => void; // Callback for when a service is added
 }
 
 // Simplified interface for display
-interface SimplePlanService extends IPlanService {
+interface SimpleContractLineService extends IContractLineService {
   service_name?: string;
   service_category?: string; // This will now hold the name
   billing_method?: 'fixed' | 'per_unit' | null; // Allow null to match IService
@@ -51,32 +51,32 @@ interface SimplePlanService extends IPlanService {
   quantity?: number; // Added quantity field
 }
 
-// Define the structure returned by getPlanServicesWithConfigurations
-type PlanServiceWithConfig = {
+// Define the structure returned by getContractLineServicesWithConfigurations
+type ContractLineServiceWithConfig = {
   service: IService & { service_type_name?: string };
-  configuration: IPlanServiceConfiguration;
+  configuration: IContractLineServiceConfiguration;
   typeConfig?: any;
 };
-const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, onServiceAdded }) => {
-  const [planServices, setPlanServices] = useState<SimplePlanService[]>([]);
+const FixedContractLineServicesList: React.FC<FixedContractLineServicesListProps> = ({ contractLineId, onServiceAdded }) => {
+  const [contractLineServices, setContractLineServices] = useState<SimpleContractLineService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]); // Added state for categories
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedService, setSelectedService] = useState<SimplePlanService | null>(null);
+  const [selectedService, setSelectedService] = useState<SimpleContractLineService | null>(null);
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   // Removed editingService state
 
   const fetchData = useCallback(async () => {
-    if (!planId) return;
+    if (!contractLineId) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
       // Fetch services with configurations to get service_type_name directly
-      const servicesWithConfigs = await getPlanServicesWithConfigurations(planId);
+      const servicesWithConfigs = await getContractLineServicesWithConfigurations(contractLineId);
       const servicesResponse = await getServices();
       // Extract the services array from the paginated response
       const allAvailableServices = Array.isArray(servicesResponse)
@@ -86,9 +86,9 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
       // No need to fetch categories separately as we get service_type_name directly
       
       // Enhance associated services with details for display
-      const enhancedServices: SimplePlanService[] = servicesWithConfigs.map((configInfo: PlanServiceWithConfig) => {
+      const enhancedServices: SimpleContractLineService[] = servicesWithConfigs.map((configInfo: ContractLineServiceWithConfig) => {
         return {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: configInfo.configuration.service_id,
           tenant: configInfo.configuration.tenant,
           created_at: configInfo.configuration.created_at,
@@ -101,7 +101,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
         };
       });
 
-      setPlanServices(enhancedServices);
+      setContractLineServices(enhancedServices);
       setAvailableServices(allAvailableServices);
       setSelectedServicesToAdd([]);
     } catch (error) {
@@ -110,7 +110,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     } finally {
       setIsLoading(false);
     }
-  }, [planId]);
+  }, [contractLineId]);
 
   useEffect(() => {
     fetchData();
@@ -118,16 +118,16 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
 
 
   const handleAddService = async () => {
-    if (!planId || selectedServicesToAdd.length === 0) return;
+    if (!contractLineId || selectedServicesToAdd.length === 0) return;
 
     try {
       for (const serviceId of selectedServicesToAdd) {
         const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
         if (serviceToAdd) {
-          // For fixed plans, all services share the same base rate configured at the plan level
+          // For fixed contract lines, all services share the same base rate configured at the contract line level
           // Here we just add the service with default values
-          await addPlanService(
-            planId,
+          await addContractLineService(
+            contractLineId,
             serviceId,
             1,
             serviceToAdd.default_rate
@@ -148,10 +148,10 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
   };
 
   const handleRemoveService = async (serviceId: string) => {
-    if (!planId) return;
+    if (!contractLineId) return;
 
     try {
-      await removePlanService(planId, serviceId);
+      await removeContractLineService(contractLineId, serviceId);
       fetchData();
       
       // Call the onServiceAdded callback if provided (also useful when removing services)
@@ -167,15 +167,15 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
   // Removed handleEditService and handleServiceUpdated
 
   // Add row click handler
-  const handleRowClick = (record: SimplePlanService) => {
+  const handleRowClick = (record: SimpleContractLineService) => {
     setSelectedService(record);
     setQuantityDialogOpen(true);
   };
 
   // Add handler for saving quantity
-  const handleSaveQuantity = async (planId: string, serviceId: string, newQuantity: number) => {
+  const handleSaveQuantity = async (contractLineId: string, serviceId: string, newQuantity: number) => {
     try {
-      await updatePlanService(planId, serviceId, { quantity: newQuantity });
+      await updateContractLineService(contractLineId, serviceId, { quantity: newQuantity });
       fetchData(); // Refresh the data
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -183,7 +183,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     }
   };
 
-  const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
+  const contractLineServiceColumns: ColumnDefinition<SimpleContractLineService>[] = [
     {
       title: 'Service Name',
       dataIndex: 'service_name',
@@ -206,7 +206,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     {
       title: ( // Use title prop for the header content
         <Tooltip content={ // Pass tooltip content to the 'content' prop
-          <p>Service's standard rate, used for internal value allocation and reporting within the fixed plan total. Not directly editable here.</p>
+          <p>Service's standard rate, used for internal value allocation and reporting within the fixed contract line total. Not directly editable here.</p>
         }>
           {/* Children are the trigger */}
           <span className="flex items-center cursor-help">
@@ -225,7 +225,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              id={`fixed-plan-service-actions-${value}`}
+              id={`fixed-contract-line-service-actions-${value}`}
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
@@ -237,7 +237,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
           <DropdownMenuContent align="end">
             {/* Removed Configure item */}
             <DropdownMenuItem
-              id={`edit-quantity-fixed-plan-service-${value}`}
+              id={`edit-quantity-fixed-contract-line-service-${value}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedService(record);
@@ -247,7 +247,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
               Edit Quantity
             </DropdownMenuItem>
             <DropdownMenuItem
-              id={`remove-fixed-plan-service-${value}`}
+              id={`remove-fixed-contract-line-service-${value}`}
               className="text-red-600 focus:text-red-600"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent row click
@@ -262,12 +262,12 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     },
   ];
 
-  // Filter out services already in the plan from the add list and only include services with 'fixed' billing method
+  // Filter out services already in the contract line from the add list and only include services with 'fixed' billing method
   const servicesAvailableToAdd = availableServices.filter(
     availService =>
-      // Check if service is not already added to the plan
-      !planServices.some(ps => ps.service_id === availService.service_id) &&
-      // Only include services with 'fixed' billing method for Fixed plans
+      // Check if service is not already added to the contract line
+      !contractLineServices.some(ps => ps.service_id === availService.service_id) &&
+      // Only include services with 'fixed' billing method for Fixed contract lines
       availService.billing_method === 'fixed'
   );
 
@@ -288,18 +288,18 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
         <>
           <div className="mb-4">
             <DataTable
-              data={planServices}
-              columns={planServiceColumns}
-              pagination={false} // Assuming pagination isn't needed for typical plan service lists
+              data={contractLineServices}
+              columns={contractLineServiceColumns}
+              pagination={false} // Assuming pagination isn't needed for typical contract line service lists
               onRowClick={handleRowClick} // Add row click handler
             />
-             {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this plan.</p>}
+             {contractLineServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line.</p>}
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Plan</h4>
+            <h4 className="text-md font-medium mb-2">Add Services to Contract Line</h4>
              {servicesAvailableToAdd.length === 0 ? (
-                 <p className="text-sm text-muted-foreground">All available services are already associated with this plan.</p>
+                 <p className="text-sm text-muted-foreground">All available services are already associated with this contract line.</p>
              ) : (
                  <>
                     <div className="mb-3">
@@ -338,7 +338,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
                         </div>
                     </div>
                     <Button
-                        id="add-fixed-plan-services-button"
+                        id="add-fixed-contract-line-services-button"
                         onClick={handleAddService}
                         disabled={selectedServicesToAdd.length === 0}
                         className="w-full sm:w-auto" // Adjust width
@@ -355,10 +355,10 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
 
       {/* Add the dialog component */}
       {selectedService && (
-        <EditPlanServiceQuantityDialog
+        <EditContractLineServiceQuantityDialog
           isOpen={quantityDialogOpen}
           onOpenChange={setQuantityDialogOpen}
-          planId={planId}
+          contractLineId={contractLineId}
           serviceId={selectedService.service_id}
           serviceName={selectedService.service_name || 'Unknown Service'}
           currentQuantity={selectedService.quantity || 1}
@@ -370,4 +370,4 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
   );
 };
 
-export default FixedPlanServicesList; // Use default export if preferred
+export default FixedContractLineServicesList; // Use default export if preferred

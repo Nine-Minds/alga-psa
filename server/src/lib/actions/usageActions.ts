@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex } from 'server/src/lib/db';
-import { determineDefaultContractLine } from 'server/src/lib/utils/planDisambiguation';
+import { determineDefaultContractLine } from 'server/src/lib/utils/contractLineDisambiguation';
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
@@ -45,7 +45,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
         service_id: data.service_id,
         quantity: data.quantity,
         usage_date: data.usage_date,
-        contract_line_id: contractLineId, // Use determined or provided plan ID
+        contract_line_id: contractLineId, // Use determined or provided contract line ID
       })
       .returning('*');
 
@@ -55,13 +55,13 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
 
     // --- Bucket Usage Update Logic ---
     if (record.service_id && record.client_id && record.contract_line_id) {
-      // Check if the plan is a 'Bucket' type plan
-      const plan = await trx('contract_lines')
+      // Check if the contract line is a 'Bucket' type contract line
+      const contractLine = await trx('contract_lines')
         .where({ contract_line_id: record.contract_line_id, tenant })
         .first('contract_line_type');
 
-      if (plan && plan.contract_line_type === 'Bucket') {
-        console.log(`Usage record ${record.usage_id} linked to Bucket plan ${record.contract_line_id}. Updating usage.`);
+      if (contractLine && contractLine.contract_line_type === 'Bucket') {
+        console.log(`Usage record ${record.usage_id} linked to Bucket contract line ${record.contract_line_id}. Updating usage.`);
 
         // Assuming 1 quantity = 1 hour/unit for buckets
         const hoursDelta = record.quantity || 0;
@@ -119,18 +119,18 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
 
     // 2. Determine the final contract line ID
     let finalContractLineId = data.contract_line_id;
-    // If plan ID is explicitly set to null/undefined OR not provided in update payload, try determining default
+    // If contract line ID is explicitly set to null/undefined OR not provided in update payload, try determining default
     if (finalContractLineId === null || finalContractLineId === undefined) {
-      const clientIdForPlan = data.client_id || originalRecord.client_id;
-      const serviceIdForPlan = data.service_id || originalRecord.service_id;
-      if (clientIdForPlan && serviceIdForPlan) {
+      const clientIdForContractLine = data.client_id || originalRecord.client_id;
+      const serviceIdForContractLine = data.service_id || originalRecord.service_id;
+      if (clientIdForContractLine && serviceIdForContractLine) {
         try {
-          const defaultPlanId = await determineDefaultContractLine(
-            clientIdForPlan,
-            serviceIdForPlan
+          const defaultContractLineId = await determineDefaultContractLine(
+            clientIdForContractLine,
+            serviceIdForContractLine
             // trx // Removed transaction argument
           );
-          finalContractLineId = defaultPlanId || undefined; // Use default or undefined if none found
+          finalContractLineId = defaultContractLineId || undefined; // Use default or undefined if none found
         } catch (error) {
           console.error('Error determining default contract line during update:', error);
           finalContractLineId = originalRecord.contract_line_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
@@ -147,7 +147,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
         ...(data.service_id !== undefined && { service_id: data.service_id }),
         ...(data.quantity !== undefined && { quantity: data.quantity }),
         ...(data.usage_date !== undefined && { usage_date: data.usage_date }),
-        contract_line_id: finalContractLineId, // Always update the plan ID based on determination logic
+        contract_line_id: finalContractLineId, // Always update the contract line ID based on determination logic
         // updated_at is likely handled by DB trigger/default, removed from payload
     };
 
@@ -162,17 +162,17 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
     }
 
     // --- Bucket Usage Update Logic ---
-    // We need to adjust bucket usage based on the change in quantity *if* the record is linked to a bucket plan *after* the update.
+    // We need to adjust bucket usage based on the change in quantity *if* the record is linked to a bucket contract line *after* the update.
     // This handles adding/removing quantity from a bucket-linked record, or changing a record to become bucket-linked.
-    // It currently DOES NOT handle removing quantity when a record is changed *away* from a bucket plan. That requires more complex logic checking the original plan type.
+    // It currently DOES NOT handle removing quantity when a record is changed *away* from a bucket contract line. That requires more complex logic checking the original contract line type.
 
     if (updatedRecord.service_id && updatedRecord.client_id && updatedRecord.contract_line_id) {
-      const plan = await trx('contract_lines')
+      const contractLine = await trx('contract_lines')
         .where({ contract_line_id: updatedRecord.contract_line_id, tenant })
         .first('contract_line_type');
 
-      if (plan && plan.contract_line_type === 'Bucket') {
-        console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket plan ${updatedRecord.contract_line_id}. Updating usage.`);
+      if (contractLine && contractLine.contract_line_type === 'Bucket') {
+        console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket contract line ${updatedRecord.contract_line_id}. Updating usage.`);
 
         const newQuantity = updatedRecord.quantity || 0;
         const quantityDelta = newQuantity - oldQuantity;
@@ -231,12 +231,12 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
 
     // --- Bucket Usage Update Logic (Before Delete) ---
     if (recordToDelete.service_id && recordToDelete.client_id && recordToDelete.contract_line_id) {
-      const plan = await trx('contract_lines')
+      const contractLine = await trx('contract_lines')
         .where({ contract_line_id: recordToDelete.contract_line_id, tenant })
         .first('contract_line_type');
 
-      if (plan && plan.contract_line_type === 'Bucket') {
-        console.log(`Usage record ${usageId} linked to Bucket plan ${recordToDelete.contract_line_id}. Updating usage before delete.`);
+      if (contractLine && contractLine.contract_line_type === 'Bucket') {
+        console.log(`Usage record ${usageId} linked to Bucket contract line ${recordToDelete.contract_line_id}. Updating usage before delete.`);
 
         const quantity = recordToDelete.quantity || 0;
         // Calculate NEGATIVE delta assuming 1 quantity = 1 hour/unit

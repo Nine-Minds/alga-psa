@@ -33,7 +33,7 @@ export async function getClientContractLine(): Promise<IClientContractLine | nul
   const knex = await getConnection(session.user.tenant);
   
   try {
-    const plan = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const contractLine = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('client_contract_lines')
         .select(
           'client_contract_lines.*',
@@ -57,7 +57,7 @@ export async function getClientContractLine(): Promise<IClientContractLine | nul
         .first();
     });
 
-    return plan || null;
+    return contractLine || null;
   } catch (error) {
     console.error('Error fetching client contract line:', error);
     throw new Error('Failed to fetch contract line');
@@ -330,7 +330,7 @@ export async function getCurrentUsage(): Promise<{
         .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
         .first();
 
-      // Get all services associated with the client's plan
+      // Get all services associated with the client's contract line
       const services = await trx('service_catalog')
         .select('service_catalog.*')
         .join('contract_line_services', function() {

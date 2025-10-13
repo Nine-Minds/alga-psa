@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/PlanTypeRouter.tsx
+// server/src/components/billing-dashboard/ContractLineTypeRouter.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -9,27 +9,27 @@ import { getContractLineById } from 'server/src/lib/actions/contractLineAction';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 
 // Import the specialized components
-import { FixedPlanConfiguration } from './FixedContractLineConfiguration';
-import { HourlyPlanConfiguration } from './HourlyContractLineConfiguration';
-import { UsagePlanConfiguration } from './UsagePlanConfiguration';
-import { BucketPlanConfiguration } from './BucketPlanConfiguration';
+import { FixedContractLineConfiguration } from './FixedContractLineConfiguration';
+import { HourlyContractLineConfiguration } from './HourlyContractLineConfiguration';
+import { UsageContractLineConfiguration } from './UsageContractLineConfiguration';
+import { BucketContractLineConfiguration } from './BucketContractLineConfiguration';
 
-interface PlanTypeRouterProps {
+interface ContractLineTypeRouterProps {
   contractLineId: string;
 }
 
-export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
-  const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null);
+export function ContractLineTypeRouter({ contractLineId }: ContractLineTypeRouterProps) {
+  const [contractLineType, setContractLineType] = useState<IContractLine['contract_line_type'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPlanType = useCallback(async () => {
+  const fetchContractLineType = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const plan = await getContractLineById(contractLineId);
-      if (plan) {
-        setPlanType(plan.contract_line_type);
+      const contractLine = await getContractLineById(contractLineId);
+      if (contractLine) {
+        setContractLineType(contractLine.contract_line_type);
       } else {
         setError(`Contract line with ID ${contractLineId} not found.`);
       }
@@ -42,8 +42,8 @@ export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
   }, [contractLineId]);
 
   useEffect(() => {
-    fetchPlanType();
-  }, [fetchPlanType]);
+    fetchContractLineType();
+  }, [fetchContractLineType]);
 
   if (loading) {
     return <div className="flex justify-center items-center p-8"><LoadingIndicator spinnerProps={{ size: "sm" }} text="Loading Contract Line..." /></div>;
@@ -58,20 +58,20 @@ export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
     );
   }
 
-  switch (planType) {
+  switch (contractLineType) {
     case 'Fixed':
-      return <FixedPlanConfiguration contractLineId={contractLineId} />;
+      return <FixedContractLineConfiguration contractLineId={contractLineId} />;
     case 'Hourly':
-      return <HourlyPlanConfiguration contractLineId={contractLineId} />;
+      return <HourlyContractLineConfiguration contractLineId={contractLineId} />;
     case 'Usage':
-      return <UsagePlanConfiguration contractLineId={contractLineId} />;
+      return <UsageContractLineConfiguration contractLineId={contractLineId} />;
     case 'Bucket':
-      return <BucketPlanConfiguration contractLineId={contractLineId} />;
+      return <BucketContractLineConfiguration contractLineId={contractLineId} />;
     default:
       return (
         <Alert variant="destructive" className="m-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Unknown or unsupported contract line type: {planType}</AlertDescription>
+          <AlertDescription>Unknown or unsupported contract line type: {contractLineType}</AlertDescription>
         </Alert>
       );
   }

@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/contract-lines/UsagePlanConfiguration.tsx
+// server/src/components/billing-dashboard/contract-lines/UsageContractLineConfiguration.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -13,27 +13,27 @@ import * as Accordion from '@radix-ui/react-accordion'; // Import Radix Accordio
 import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 
 // Import actions and types
-import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions'; // Get list of services
-import { getPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Get config per service
+import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Get list of services
+import { getContractLineServiceConfiguration } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
-import { IPlanServiceConfiguration, IPlanServiceUsageConfig, IPlanServiceRateTier, IService, IContractLine } from 'server/src/interfaces'; // Added IContractLine
-import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
-import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Import the upsert action
+import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLine } from 'server/src/interfaces'; // Added IContractLine
+import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base contract line details
+import { upsertContractLineServiceConfiguration } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Import the upsert action
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 
-// Keep GenericPlanServicesList for now, might remove in Phase 3
-import GenericPlanServicesList from './GenericContractLineServicesList';
-interface UsagePlanConfigurationProps {
+// Keep GenericContractLineServicesList for now, might remove in Phase 3
+import GenericContractLineServicesList from './GenericContractLineServicesList';
+interface UsageContractLineConfigurationProps {
   contractLineId: string;
   className?: string;
 }
 
-// Define the structure returned by getPlanServicesWithConfigurations locally
-// Based on its usage in GenericPlanServicesList.tsx and the action definition
-type PlanServiceWithConfig = {
+// Define the structure returned by getContractLineServicesWithConfigurations locally
+// Based on its usage in GenericContractLineServicesList.tsx and the action definition
+type ContractLineServiceWithConfig = {
   service: IService & { service_type_name?: string };
-  configuration: IPlanServiceConfiguration;
+  configuration: IContractLineServiceConfiguration;
   // typeConfig might also be present, but we primarily need service_id and service_name
 };
 
@@ -48,20 +48,20 @@ type AllServiceValidationErrors = {
   [serviceId: string]: ServiceValidationErrors;
 };
 
-// Define the expected result type for getPlanServiceConfiguration
+// Define the expected result type for getContractLineServiceConfiguration
 // Combining relevant fields from the interfaces file
-type FetchedServiceConfig = IPlanServiceConfiguration & IPlanServiceUsageConfig & {
-    tiers?: IPlanServiceRateTier[];
+type FetchedServiceConfig = IContractLineServiceConfiguration & IContractLineServiceUsageConfig & {
+    tiers?: IContractLineServiceRateTier[];
 };
 
-export function UsagePlanConfiguration({
+export function UsageContractLineConfiguration({
   contractLineId,
   className = '',
-}: UsagePlanConfigurationProps) {
-  // State for the base plan details
-  const [plan, setPlan] = useState<IContractLine | null>(null);
-  // State for the list of services associated with the plan
-  const [planServices, setPlanServices] = useState<PlanServiceWithConfig[]>([]);
+}: UsageContractLineConfigurationProps) {
+  // State for the base contract line details
+  const [contractLine, setContractLine] = useState<IContractLine | null>(null);
+  // State for the list of services associated with the contract line
+  const [contractLineServices, setContractLineServices] = useState<ContractLineServiceWithConfig[]>([]);
   // State to hold configuration for each service, keyed by serviceId (current state)
   const [serviceConfigs, setServiceConfigs] = useState<AllServiceConfigs>({});
   // State to hold the initial configuration fetched from the server
@@ -76,26 +76,26 @@ export function UsagePlanConfiguration({
   const [saveAttempted, setSaveAttempted] = useState<boolean>(false);
 
   // --- Data Fetching ---
-  const fetchPlanData = useCallback(async () => {
+  const fetchContractLineData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setPlan(null); // Reset plan on fetch
+    setContractLine(null); // Reset contract line on fetch
     setServiceConfigs({}); // Reset current configs on fetch
     setInitialServiceConfigs({}); // Reset initial configs on fetch
-    setPlanServices([]); // Reset services on fetch
+    setContractLineServices([]); // Reset services on fetch
     try {
-      // 0. Fetch base plan details first
-      const fetchedPlan = await getContractLineById(contractLineId);
-      if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Usage') {
-        setError('Invalid plan type or plan not found.');
+      // 0. Fetch base contract line details first
+      const fetchedContractLine = await getContractLineById(contractLineId);
+      if (!fetchedContractLine || fetchedContractLine.contract_line_type !== 'Usage') {
+        setError('Invalid contract line type or contract line not found.');
         setLoading(false);
         return;
       }
-      setPlan(fetchedPlan); // Store base plan details
+      setContractLine(fetchedContractLine); // Store base contract line details
 
-      // 1. Fetch the list of services associated with the plan
-      const servicesList = await getPlanServicesWithConfigurations(contractLineId);
-      setPlanServices(servicesList);
+      // 1. Fetch the list of services associated with the contract line
+      const servicesList = await getContractLineServicesWithConfigurations(contractLineId);
+      setContractLineServices(servicesList);
 
       if (servicesList.length === 0) {
         // Don't return early, we still want to show the empty state with the correct title
@@ -103,8 +103,8 @@ export function UsagePlanConfiguration({
 
       // 2. Fetch configuration for each service concurrently
       const configPromises = servicesList.map(service =>
-        // Use service.configuration.service_id as it's guaranteed by PlanServiceWithConfig type
-        getPlanServiceConfiguration(contractLineId, service.configuration.service_id)
+        // Use service.configuration.service_id as it's guaranteed by ContractLineServiceWithConfig type
+        getContractLineServiceConfiguration(contractLineId, service.configuration.service_id)
           .then(config => ({ serviceId: service.configuration.service_id, config: config as FetchedServiceConfig | null })) // Cast result
           .catch(err => {
             console.error(`Error fetching config for service ${service.configuration.service_id}:`, err);
@@ -153,16 +153,16 @@ export function UsagePlanConfiguration({
       setInitialServiceConfigs(JSON.parse(JSON.stringify(initialConfigs))); // Deep copy for initial state
 
     } catch (err) {
-      console.error('Error fetching plan services or configurations:', err);
-      setError('Failed to load plan services or configurations. Please try again.');
+      console.error('Error fetching contract line services or configurations:', err);
+      setError('Failed to load contract line services or configurations. Please try again.');
     } finally {
       setLoading(false);
     }
   }, [contractLineId]);
 
   useEffect(() => {
-    fetchPlanData();
-  }, [fetchPlanData]);
+    fetchContractLineData();
+  }, [fetchContractLineData]);
 
   // --- Event Handlers ---
   const handleConfigChange = useCallback((serviceId: string, field: keyof ServiceUsageConfig, value: any) => {
@@ -208,9 +208,9 @@ export function UsagePlanConfiguration({
 
   // Callback to refresh data when services are added/removed in the child component
   const handleServicesChanged = useCallback(() => {
-    console.log('Services changed, refetching plan data...');
-    fetchPlanData();
-  }, [fetchPlanData]);
+    console.log('Services changed, refetching contract line data...');
+    fetchContractLineData();
+  }, [fetchContractLineData]);
 
   // --- Validation ---
   const validateSingleServiceConfig = (config: ServiceUsageConfig): ServiceValidationErrors => {
@@ -357,7 +357,7 @@ export function UsagePlanConfiguration({
         };
 
         console.log(`Saving config for service ${serviceId}:`, payload);
-        return upsertPlanServiceConfiguration(payload);
+        return upsertContractLineServiceConfiguration(payload);
       });
 
       // Execute all save operations concurrently
@@ -401,25 +401,25 @@ export function UsagePlanConfiguration({
     );
   }
 
-  if (planServices.length === 0) {
+  if (contractLineServices.length === 0) {
       return (
           <div className={`space-y-6 ${className}`}>
               <Card>
                   <CardHeader className="flex items-center justify-between">
-                      <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Usage)</CardTitle>
-                      {plan && (
+                      <CardTitle>Edit Contract Line: {contractLine?.contract_line_name || '...'} (Usage)</CardTitle>
+                      {contractLine && (
                         <ContractLineDialog
-                          editingPlan={plan}
-                          onPlanAdded={() => fetchPlanData()}
-                          triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+                          editingContractLine={contractLine}
+                          onContractLineAdded={() => fetchContractLineData()}
+                          triggerButton={<Button id="edit-contract-line-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
                           allServiceTypes={[]}
                         />
                       )}
                   </CardHeader>
                   <CardContent>
-                      <p className="text-muted-foreground mb-4">No services are currently associated with this usage plan. Add services below to configure their pricing.</p>
-                      {/* Keep the GenericPlanServicesList to allow adding services */}
-                      <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} />
+                      <p className="text-muted-foreground mb-4">No services are currently associated with this usage contract line. Add services below to configure their pricing.</p>
+                      {/* Keep the GenericContractLineServicesList to allow adding services */}
+                      <GenericContractLineServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} />
                   </CardContent>
               </Card>
           </div>
@@ -430,12 +430,12 @@ export function UsagePlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Usage) - Service Pricing</CardTitle>
-          {plan && (
+          <CardTitle>Edit Contract Line: {contractLine?.contract_line_name || '...'} (Usage) - Service Pricing</CardTitle>
+          {contractLine && (
             <ContractLineDialog
-              editingPlan={plan}
-              onPlanAdded={() => fetchPlanData()}
-              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+              editingContractLine={contractLine}
+              onContractLineAdded={() => fetchContractLineData()}
+              triggerButton={<Button id="edit-contract-line-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
               allServiceTypes={[]}
             />
           )}
@@ -453,7 +453,7 @@ export function UsagePlanConfiguration({
             className="w-full space-y-2"
             // Consider managing open state if needed to auto-open on error
           >
-            {planServices.sort((a, b) => (a.service?.service_name || '').localeCompare(b.service?.service_name || '')).map((service, index) => ( // Add index
+            {contractLineServices.sort((a, b) => (a.service?.service_name || '').localeCompare(b.service?.service_name || '')).map((service, index) => ( // Add index
               // Use slate-100 for a subtle alternating background
               <Accordion.Item key={service.configuration.service_id} value={service.configuration.service_id} className="border rounded overflow-hidden odd:bg-slate-100">
                 <Accordion.Header className="flex">
@@ -518,10 +518,10 @@ export function UsagePlanConfiguration({
       {/* Keep Services List for adding/removing services */}
        <Card>
            <CardHeader>
-               <CardTitle>Manage Plan Services</CardTitle>
+               <CardTitle>Manage Contract Line Services</CardTitle>
            </CardHeader>
            <CardContent>
-               <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />
+               <GenericContractLineServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />
            </CardContent>
        </Card>
     </div>

@@ -2,5 +2,5 @@ import { ApiContractLineController } from '@/lib/api/controllers/ApiContractLine
 
 const controller = new ApiContractLineController();
 
-export const GET = controller.getPlanServices();
-export const POST = controller.addServiceToPlan();
+export const GET = controller.getContractLineServices();
+export const POST = controller.addServiceToContractLine();

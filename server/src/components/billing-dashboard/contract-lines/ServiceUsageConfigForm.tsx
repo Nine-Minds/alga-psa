@@ -82,14 +82,14 @@ export function ServiceUsageConfigForm({
             {/* Basic Usage Settings */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <Label htmlFor={`usage-plan-base-rate-${serviceId}`} className="inline-flex items-center">
+                    <Label htmlFor={`usage-contract-line-base-rate-${serviceId}`} className="inline-flex items-center">
                         Default Rate per Unit { !isTiered && <span className="text-destructive">*</span>}
                         <Tooltip content="Rate per unit (used if tiered pricing is off).">
                             <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
                         </Tooltip>
                     </Label>
                     <Input
-                        id={`usage-plan-base-rate-${serviceId}`}
+                        id={`usage-contract-line-base-rate-${serviceId}`}
                         type="number"
                         value={config.base_rate?.toString() || ''}
                         onChange={handleNumberInputChange('base_rate')}
@@ -101,7 +101,7 @@ export function ServiceUsageConfigForm({
                     {saveAttempted && validationErrors.base_rate && <p className="text-sm text-red-500 mt-1">{validationErrors.base_rate}</p>}
                 </div>
                 <div>
-                    <Label htmlFor={`usage-plan-unit-of-measure-${serviceId}`} className="inline-flex items-center">
+                    <Label htmlFor={`usage-contract-line-unit-of-measure-${serviceId}`} className="inline-flex items-center">
                         Unit of Measure <span className="text-destructive">*</span>
                         <Tooltip content="e.g., GB, User, Device.">
                             <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />

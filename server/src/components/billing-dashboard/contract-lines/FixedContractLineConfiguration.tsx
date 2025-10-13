@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/FixedPlanConfiguration.tsx
+// server/src/components/billing-dashboard/FixedContractLineConfiguration.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,34 +12,34 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import {
   getContractLineById
 } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
+import { getContractLineServices } from 'server/src/lib/actions/contractLineServiceActions';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces';
-import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
+import FixedContractLineServicesList from '../FixedContractLineServicesList'; // Import the actual component
 
-interface FixedPlanConfigurationProps {
+interface FixedContractLineConfigurationProps {
   contractLineId: string;
   className?: string;
 }
 
-export function FixedPlanConfiguration({
+export function FixedContractLineConfiguration({
   contractLineId,
   className = '',
-}: FixedPlanConfigurationProps) {
-  const [plan, setPlan] = useState<IContractLine | null>(null);
+}: FixedContractLineConfigurationProps) {
+  const [contractLine, setContractLine] = useState<IContractLine | null>(null);
 
   const [services, setServices] = useState<IService[]>([]);
-  const [planLoading, setPlanLoading] = useState(true);
+  const [contractLineLoading, setContractLineLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPlanData = useCallback(async () => {
-    setPlanLoading(true);
+  const fetchContractLineData = useCallback(async () => {
+    setContractLineLoading(true);
     setError(null);
     try {
       // Fetch the basic contract line data
-      const fetchedPlan = await getContractLineById(contractLineId);
-      if (fetchedPlan && fetchedPlan.contract_line_type === 'Fixed') {
-        setPlan(fetchedPlan);
+      const fetchedContractLine = await getContractLineById(contractLineId);
+      if (fetchedContractLine && fetchedContractLine.contract_line_type === 'Fixed') {
+        setContractLine(fetchedContractLine);
       } else {
         setError('Invalid contract line type or contract line not found.');
       }
@@ -47,16 +47,16 @@ export function FixedPlanConfiguration({
       console.error('Error fetching contract line data:', err);
       setError('Failed to load contract line configuration. Please try again.');
     } finally {
-      setPlanLoading(false);
+      setContractLineLoading(false);
     }
   }, [contractLineId]);
 
   useEffect(() => {
-    fetchPlanData();
-  }, [fetchPlanData]);
+    fetchContractLineData();
+  }, [fetchContractLineData]);
 
 
-  if (planLoading && !plan) {
+  if (contractLineLoading && !contractLine) {
     return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
 
@@ -69,7 +69,7 @@ export function FixedPlanConfiguration({
     );
   }
 
-  if (!plan) {
+  if (!contractLine) {
       return <div className="p-4">Contract line not found or invalid type.</div>; // Should not happen if error handling is correct
   }
 
@@ -77,12 +77,12 @@ export function FixedPlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Fixed)</CardTitle>
-          {plan && (
+          <CardTitle>Edit Contract Line: {contractLine?.contract_line_name || '...'} (Fixed)</CardTitle>
+          {contractLine && (
             <ContractLineDialog
-              editingPlan={plan}
-              onPlanAdded={() => fetchPlanData()}
-              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
+              editingContractLine={contractLine}
+              onContractLineAdded={() => fetchContractLineData()}
+              triggerButton={<Button id="edit-contract-line-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
               allServiceTypes={[]}
             />
           )}
@@ -100,11 +100,11 @@ export function FixedPlanConfiguration({
               <CardTitle>Associated Services</CardTitle>
           </CardHeader>
           <CardContent>
-              <FixedPlanServicesList
-                  planId={contractLineId}
+              <FixedContractLineServicesList
+                  contractLineId={contractLineId}
                   onServiceAdded={() => {
-                      // Refresh the plan data when a service is added
-                      fetchPlanData();
+                      // Refresh the contract line data when a service is added
+                      fetchContractLineData();
                   }}
               />
           </CardContent>

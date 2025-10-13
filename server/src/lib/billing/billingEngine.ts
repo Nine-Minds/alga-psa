@@ -5,7 +5,7 @@ import {
   IBillingResult,
   IBillingCharge,
   IClientContractLine,
-  IBucketPlan,
+  IBucketContractLine,
   IBucketUsage,
   IBucketCharge,
   IDiscount,
@@ -19,13 +19,13 @@ import {
   BillingCycleType
 } from 'server/src/interfaces/billing.interfaces';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig,
-  IPlanServiceRateTier
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+  IContractLineServiceConfiguration,
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IContractLineServiceBucketConfig,
+  IContractLineServiceRateTier
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
@@ -231,23 +231,23 @@ export class BillingEngine {
       let totalCharges: IBillingCharge[] = [];
 
       // Get contract lines and cycle
-      const plansResult = await this.getClientContractLinesAndCycle(clientId, billingPeriod);
+      const contractLinesResult = await this.getClientContractLinesAndCycle(clientId, billingPeriod);
 
       // Type assertion to include error property
-      const { clientContractLines, billingCycle: cycle, error: plansError } = plansResult as {
+      const { clientContractLines, billingCycle: cycle, error: contractLinesError } = contractLinesResult as {
         clientContractLines: IClientContractLine[];
         billingCycle: string;
         error?: string;
       };
 
-      if (plansError) {
+      if (contractLinesError) {
         return {
           charges: [],
           totalAmount: 0,
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          error: plansError
+          error: contractLinesError
         };
       }
 
@@ -271,14 +271,14 @@ export class BillingEngine {
           fixedPriceCharges,
           timeBasedCharges,
           usageBasedCharges,
-          bucketPlanCharges,
+          bucketContractLineCharges,
           productCharges,
           licenseCharges
         ] = await Promise.all([
           this.calculateFixedPriceCharges(clientId, billingPeriod, clientContractLine),
           this.calculateTimeBasedCharges(clientId, billingPeriod, clientContractLine),
           this.calculateUsageBasedCharges(clientId, billingPeriod, clientContractLine),
-          this.calculateBucketPlanCharges(clientId, billingPeriod, clientContractLine),
+          this.calculateBucketContractLineCharges(clientId, billingPeriod, clientContractLine),
           this.calculateProductCharges(clientId, billingPeriod, clientContractLine),
           this.calculateLicenseCharges(clientId, billingPeriod, clientContractLine)
         ]);
@@ -286,7 +286,7 @@ export class BillingEngine {
         console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
         console.log(`Time-based charges: ${timeBasedCharges.length}`);
         console.log(`Usage-based charges: ${usageBasedCharges.length}`);
-        console.log(`Bucket plan charges: ${bucketPlanCharges.length}`);
+        console.log(`Bucket contract line charges: ${bucketContractLineCharges.length}`);
         console.log(`Product charges: ${productCharges.length}`);
         console.log(`License charges: ${licenseCharges.length}`);
 
@@ -294,7 +294,7 @@ export class BillingEngine {
         console.log(`Total fixed charges before proration: $${(totalBeforeProration / 100).toFixed(2)} (${totalBeforeProration} cents)`);
 
         // Only prorate fixed price charges
-        const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, clientContractLine.start_date, clientContractLine.end_date, cycle);
+        const proratedFixedCharges = this.applyProrationToContractLine(fixedPriceCharges, billingPeriod, clientContractLine.start_date, clientContractLine.end_date, cycle);
 
         const totalAfterProration = proratedFixedCharges.reduce((sum: number, charge: IBillingCharge) => sum + charge.total, 0);
         console.log(`Total fixed charges after proration: $${(totalAfterProration / 100).toFixed(2)} (${totalAfterProration} cents)`);
@@ -304,7 +304,7 @@ export class BillingEngine {
           proratedFixedCharges,
           timeBasedCharges,
           usageBasedCharges,
-          bucketPlanCharges,
+          bucketContractLineCharges,
           productCharges,
           licenseCharges
         );
@@ -319,7 +319,7 @@ export class BillingEngine {
         usageBasedCharges.forEach((charge: IUsageBasedCharge) => {
           console.log(`usage - ${charge.serviceName}: $${charge.total}`);
         });
-        bucketPlanCharges.forEach((charge: IBucketCharge) => {
+        bucketContractLineCharges.forEach((charge: IBucketCharge) => {
           console.log(`bucket - ${charge.serviceName}: $${charge.total}`);
         });
         productCharges.forEach((charge: IProductCharge) => {
@@ -449,7 +449,7 @@ export class BillingEngine {
         'c.contract_name'
         // REMOVED: 'sc.service_id' - Not needed for contract-level custom rates
       )
-      // Group by necessary fields to handle potential multiple services per plan (though typically 1:1)
+      // Group by necessary fields to handle potential multiple services per contract line (though typically 1:1)
       .groupBy(
         'bbp.contract_line_id',
         'bp.contract_line_name',
@@ -463,23 +463,23 @@ export class BillingEngine {
       );
 
     // Convert contract-linked lines to a compatible structure, including computed IDs
-    const formattedContractLinkedLines = contractLinkedLines.map((plan: any) => {
+    const formattedContractLinkedLines = contractLinkedLines.map((contractLine: any) => {
       return {
-        client_contract_line_id: `contract-${plan.client_contract_id}-${plan.contract_line_id}`, // Generate a virtual ID
+        client_contract_line_id: `contract-${contractLine.client_contract_id}-${contractLine.contract_line_id}`, // Generate a virtual ID
         client_id: clientId,
-        contract_line_id: plan.contract_line_id,
+        contract_line_id: contractLine.contract_line_id,
         service_id: null, // Contract-level overrides are not tied to a specific service configuration
-        start_date: plan.start_date,
-        end_date: plan.end_date,
+        start_date: contractLine.start_date,
+        end_date: contractLine.end_date,
         is_active: true,
         // Convert custom_rate (dollar string or null from DB) to cents or null for downstream consumers
-        custom_rate: plan.custom_rate === null || plan.custom_rate === undefined
+        custom_rate: contractLine.custom_rate === null || contractLine.custom_rate === undefined
           ? null // Pass null through
-          : Math.round(parseFloat(plan.custom_rate) * 100), // Convert non-null string to cents
-        client_contract_id: plan.client_contract_id,
-        contract_line_name: plan.contract_line_name,
-        billing_frequency: plan.billing_frequency,
-        contract_name: plan.contract_name,
+          : Math.round(parseFloat(contractLine.custom_rate) * 100), // Convert non-null string to cents
+        client_contract_id: contractLine.client_contract_id,
+        contract_line_name: contractLine.contract_line_name,
+        billing_frequency: contractLine.billing_frequency,
+        contract_name: contractLine.contract_name,
         tenant: this.tenant
       };
     });
@@ -488,9 +488,9 @@ export class BillingEngine {
     const clientContractLines = [...directContractLines, ...formattedContractLinkedLines];
 
     // Convert dates from the DB into plain ISO strings using our date utilities
-    clientContractLines.forEach((plan: any) => {
-      plan.start_date = toISODate(toPlainDate(plan.start_date));
-      plan.end_date = plan.end_date ? toISODate(toPlainDate(plan.end_date)) : null;
+    clientContractLines.forEach((contractLine: any) => {
+      contractLine.start_date = toISODate(toPlainDate(contractLine.start_date));
+      contractLine.end_date = contractLine.end_date ? toISODate(toPlainDate(contractLine.end_date)) : null;
     });
 
     return { clientContractLines, billingCycle };
@@ -624,7 +624,7 @@ export class BillingEngine {
     }
   }
   private async calculateFixedPriceCharges(clientId: string, billingPeriod: IBillingPeriod, clientContractLine: IClientContractLine): Promise<IFixedPriceCharge[]> {
-    // Note: Fixed plan rates are stored as dollars (decimal) in the database,
+    // Note: Fixed contract line rates are stored as dollars (decimal) in the database,
     // but need to be converted to cents (integer) for consistency with other monetary values in the system.
     // Custom contract-level rates are assumed to be in cents already.
     await this.initKnex();
@@ -632,41 +632,41 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    // --- Custom Rate Check (Bundled Plans) ---
-    // Check if a custom rate is defined for this plan assignment (provided via contract association)
+    // --- Custom Rate Check (Contracts) ---
+    // Check if a custom rate is defined for this contract line assignment (provided via contract association)
     // Ensure custom_rate is not null and not undefined before using it.
     if (clientContractLine.custom_rate !== null && clientContractLine.custom_rate !== undefined) {
       // Assuming custom_rate is already in cents. Add logging to confirm.
-      console.log(`Using custom rate ${clientContractLine.custom_rate} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || 'N/A'}`);
+      console.log(`Using custom rate ${clientContractLine.custom_rate} cents for contract line ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || 'N/A'}`);
 
-      // If a custom rate exists, create a single charge item for the entire plan at that rate.
-      // This charge represents the entire plan when a custom contract-level rate is applied.
+      // If a custom rate exists, create a single charge item for the entire contract line at that rate.
+      // This charge represents the entire contract line when a custom contract-level rate is applied.
       const customCharge: IFixedPriceCharge = {
         // Properties from IFixedPriceCharge & IBillingCharge
         type: 'fixed',
         serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Bundle: ${clientContractLine.contract_name})` : ''}`,
-        quantity: 1, // Represents the single contract-level plan item
+        quantity: 1, // Represents the single contract-level contract line item
         rate: clientContractLine.custom_rate, // Use the custom rate (assumed cents)
         total: clientContractLine.custom_rate, // Total is the custom rate (assumed cents)
-        // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
-        client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
+        // contractLineId: clientContractLine.contract_line_id, // Removed - contractLineId not part of IFixedPriceCharge
+        client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the contract line assignment
         client_contract_id: clientContractLine.client_contract_id || undefined, // Use correct property name
         contract_name: clientContractLine.contract_name || undefined,
         // Tax properties (defaulting to 0/non-taxable for now, needs review)
         tax_amount: 0,
         tax_rate: 0,
         tax_region: undefined, // Tax region for consolidated fixed item determined later
-        // Note: serviceId is omitted as this charge represents the whole plan.
+        // Note: serviceId is omitted as this charge represents the whole contract line.
         // Other properties like enable_proration might need to be sourced if relevant for custom rates.
       };
-      // Return only this single charge for the plan
+      // Return only this single charge for the contract line
       return [customCharge];
     }
     // --- End Custom Rate Check ---
 
 
-    // If no custom rate, proceed with calculating based on individual services or plan's fixed rate
-    console.log(`No custom rate found for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}). Calculating based on services/plan rate.`);
+    // If no custom rate, proceed with calculating based on individual services or contract line's fixed rate
+    console.log(`No custom rate found for contract line ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}). Calculating based on services/contract line rate.`);
     const client = await this.knex('clients')
       .where({
         client_id: clientId,
@@ -682,7 +682,7 @@ export class BillingEngine {
 
     const tenant = this.tenant; // Capture tenant value for joins
 
-    // Get the contract line details to determine if this is a fixed fee plan
+    // Get the contract line details to determine if this is a fixed fee contract line
     const contractLineDetails = await this.knex('contract_lines')
       .where({
         'contract_line_id': clientContractLine.contract_line_id,
@@ -690,44 +690,44 @@ export class BillingEngine {
       })
       .first();
 
-    const isFixedFeePlan = contractLineDetails?.contract_line_type === 'Fixed';
+    const isFixedFeeContractLine = contractLineDetails?.contract_line_type === 'Fixed';
 
-    // --- Fetch Plan-Level Fixed Config (Base Rate, Proration, Alignment) ---
-    let planLevelBaseRate: number | null = null; // Store plan base rate in dollars
-    let planLevelEnableProration = false;
-    let planLevelBillingCycleAlignment: 'start' | 'end' | 'prorated' = 'start';
+    // --- Fetch Contract Line-Level Fixed Config (Base Rate, Proration, Alignment) ---
+    let contractLineLevelBaseRate: number | null = null; // Store contract line base rate in dollars
+    let contractLineLevelEnableProration = false;
+    let contractLineLevelBillingCycleAlignment: 'start' | 'end' | 'prorated' = 'start';
 
-    if (isFixedFeePlan) {
+    if (isFixedFeeContractLine) {
       // Fetch directly from the table as per the new schema feedback
-      const planConfig = await this.knex('contract_line_fixed_config')
+      const contractLineConfig = await this.knex('contract_line_fixed_config')
         .where({
           contract_line_id: clientContractLine.contract_line_id,
           tenant: tenant
         })
         .first();
 
-      if (planConfig) {
+      if (contractLineConfig) {
         // Assuming base_rate is added to contract_line_fixed_config as per feedback
-        planLevelBaseRate = planConfig.base_rate ? parseFloat(planConfig.base_rate) : null;
-        planLevelEnableProration = planConfig.enable_proration;
-        planLevelBillingCycleAlignment = planConfig.billing_cycle_alignment;
-        console.log(`[DEBUG] Plan ${clientContractLine.contract_line_id} - Fetched Plan Level Config: BaseRate=${planLevelBaseRate}, Proration=${planLevelEnableProration}, Alignment=${planLevelBillingCycleAlignment}`);
+        contractLineLevelBaseRate = contractLineConfig.base_rate ? parseFloat(contractLineConfig.base_rate) : null;
+        contractLineLevelEnableProration = contractLineConfig.enable_proration;
+        contractLineLevelBillingCycleAlignment = contractLineConfig.billing_cycle_alignment;
+        console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Fetched Contract Line Level Config: BaseRate=${contractLineLevelBaseRate}, Proration=${contractLineLevelEnableProration}, Alignment=${contractLineLevelBillingCycleAlignment}`);
       } else {
-        console.warn(`[DEBUG] Plan ${clientContractLine.contract_line_id} - Plan Level Fixed Config not found in contract_line_fixed_config. Cannot determine plan base rate or settings.`);
-        // If the config is missing, we cannot proceed with fixed plan calculation accurately.
+        console.warn(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Contract Line Level Fixed Config not found in contract_line_fixed_config. Cannot determine contract line base rate or settings.`);
+        // If the config is missing, we cannot proceed with fixed contract line calculation accurately.
         // Return empty or throw error? Returning empty for now.
         return [];
       }
 
-      // Validate planLevelBaseRate
-      if (planLevelBaseRate === null || isNaN(planLevelBaseRate)) {
-          console.error(`[DEBUG] Invalid or missing base_rate in contract_line_fixed_config for plan ${clientContractLine.contract_line_id}. Value: ${planConfig?.base_rate}`);
-          return []; // Cannot proceed without a valid plan base rate
+      // Validate contractLineLevelBaseRate
+      if (contractLineLevelBaseRate === null || isNaN(contractLineLevelBaseRate)) {
+          console.error(`[DEBUG] Invalid or missing base_rate in contract_line_fixed_config for contract line ${clientContractLine.contract_line_id}. Value: ${contractLineConfig?.base_rate}`);
+          return []; // Cannot proceed without a valid contract line base rate
       }
     }
-    // --- End Fetch Plan-Level Fixed Config ---
+    // --- End Fetch Contract Line-Level Fixed Config ---
     // Use the new contract_line_service_configuration tables
-    const planServices = await this.knex('contract_line_service_configuration') // Start from contract_line_service_configuration
+    const contractLineServices = await this.knex('contract_line_service_configuration') // Start from contract_line_service_configuration
       // Removed join to client_contract_lines
       .join('contract_line_service_fixed_config', function () {
         this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_fixed_config.config_id')
@@ -750,36 +750,36 @@ export class BillingEngine {
         'service_catalog.default_rate',
         'service_catalog.tax_rate_id', // Fetch the new ID
         'contract_line_service_configuration.quantity',
-        'contract_line_service_configuration.custom_rate', // This is plan-level custom rate
+        'contract_line_service_configuration.custom_rate', // This is contract line-level custom rate
         'contract_line_service_configuration.config_id',
-        'contract_line_service_fixed_config.base_rate' // This is the fixed plan rate
+        'contract_line_service_fixed_config.base_rate' // This is the fixed contract line rate
       );
 
-    if (planServices.length === 0) {
+    if (contractLineServices.length === 0) {
       return [];
     }
 
-    if (isFixedFeePlan) {
-      // For fixed fee plans, we want to create a single consolidated charge
+    if (isFixedFeeContractLine) {
+      // For fixed fee contract lines, we want to create a single consolidated charge
       // but internally allocate the tax based on FMV of each service
 
-      // Use the plan-level base rate fetched earlier
-      const baseRate = planLevelBaseRate!; // Assert non-null based on checks above
-      console.log(`[DEBUG] Plan ${clientContractLine.contract_line_id} - Using Plan Level Base Rate: ${baseRate}`);
+      // Use the contract line-level base rate fetched earlier
+      const baseRate = contractLineLevelBaseRate!; // Assert non-null based on checks above
+      console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Using Contract Line Level Base Rate: ${baseRate}`);
 
       // Calculate the total FMV (Fair Market Value) of all services
       // Calculate the total FMV (Fair Market Value) of all services in CENTS
-      const totalFMVCents = planServices.reduce((sum, service) => {
+      const totalFMVCents = contractLineServices.reduce((sum, service) => {
         // Assume service.default_rate is already in cents
         const serviceFMV = service.default_rate * (service.quantity || 1);
         // console.log(`[DEBUG] Service ${service.service_id} - FMV (cents): ${serviceFMV} (Rate: ${service.default_rate}, Qty: ${service.quantity || 1})`); // DEBUG LOG - Moved inside loop
         return sum + serviceFMV;
       }, 0);
-      console.log(`[DEBUG] Plan ${clientContractLine.contract_line_id} - Calculated totalFMVCents: ${totalFMVCents}`); // DEBUG LOG
+      console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Calculated totalFMVCents: ${totalFMVCents}`); // DEBUG LOG
 
       // If totalFMVCents is zero, we can't allocate properly
       if (totalFMVCents <= 0) {
-        console.log(`Total FMV (cents) for services in plan ${clientContractLine.contract_line_id} is zero or negative`);
+        console.log(`Total FMV (cents) for services in contract line ${clientContractLine.contract_line_id} is zero or negative`);
         return [];
       }
 
@@ -794,11 +794,11 @@ export class BillingEngine {
       const taxServiceInstance = new TaxService(); // Corrected instantiation
       // Fetch billing cycle once for proration calculation if needed
       const billingCycle = await this.getBillingCycle(clientId, billingPeriod.startDate);
-      const serviceAllocations = await Promise.all(planServices.map(async (service) => {
+      const serviceAllocations = await Promise.all(contractLineServices.map(async (service) => {
         // Calculate the FMV for this service in CENTS
-        // Use custom_rate from plan config if available (assume dollars), otherwise fallback to service default_rate (assume cents).
+        // Use custom_rate from contract line config if available (assume dollars), otherwise fallback to service default_rate (assume cents).
         console.log('[DEBUG] Processing service object:', JSON.stringify(service, null, 2)); // DEBUG LOG - Inspect the service object
-        // FMV should always be based on the service's default rate, not plan overrides.
+        // FMV should always be based on the service's default rate, not contract line overrides.
         // Assume service.default_rate is stored in cents.
         const rateForFMV = Number(service.default_rate || 0); // Ensure it's a number, default to 0 if null/undefined
         const serviceFMVCents = Math.round(rateForFMV * (service.quantity || 1)); // FMV is now correctly in cents
@@ -812,8 +812,8 @@ export class BillingEngine {
         let prorationFactor = 1.0;
         let effectiveBaseRateInCents = Math.round(baseRate * 100); // Start with full rate in cents
 
-        // Use the plan-level proration setting fetched earlier for fixed plans
-        if (planLevelEnableProration) {
+        // Use the contract line-level proration setting fetched earlier for fixed contract lines
+        if (contractLineLevelEnableProration) {
           prorationFactor = this._calculateProrationFactor(
             billingPeriod,
             clientContractLine.start_date,
@@ -882,7 +882,7 @@ export class BillingEngine {
       }));
 
       // Log the detailed allocation for audit purposes
-      console.log(`Fixed fee plan ${clientContractLine.contract_line_id} tax allocation:`, {
+      console.log(`Fixed fee contract line ${clientContractLine.contract_line_id} tax allocation:`, {
         baseRate: baseRate, // Dollar amount from database
         baseRateInCents: baseRate * 100, // Converted to cents for calculations
         totalFMVCents,
@@ -897,11 +897,11 @@ export class BillingEngine {
 
       // Iterate through the service allocations and create a detailed charge for each
       for (const allocation of serviceAllocations) {
-        // Find the corresponding planService data
-        const planService = planServices.find(ps => ps.service_id === allocation.serviceId);
+        // Find the corresponding contractLineService data
+        const contractLineService = contractLineServices.find(ps => ps.service_id === allocation.serviceId);
 
-        if (!planService) {
-          console.warn(`Could not find planService data for serviceId: ${allocation.serviceId} in plan ${clientContractLine.contract_line_id}`);
+        if (!contractLineService) {
+          console.warn(`Could not find contractLineService data for serviceId: ${allocation.serviceId} in contract line ${clientContractLine.contract_line_id}`);
           continue; // Skip this allocation if data is missing
         }
 
@@ -910,7 +910,7 @@ export class BillingEngine {
           type: 'fixed',
           serviceId: allocation.serviceId,
           serviceName: allocation.serviceName,
-          quantity: planService.quantity, // Use quantity directly from the fetched planService object for this service
+          quantity: contractLineService.quantity, // Use quantity directly from the fetched contractLineService object for this service
           rate: allocation.allocatedAmount, // Rate is the PRORATED allocated amount in cents
           total: allocation.allocatedAmount, // Total is the PRORATED allocated amount in cents
           tax_amount: allocation.taxAmount, // Per-allocation tax in cents
@@ -921,40 +921,40 @@ export class BillingEngine {
           // Let's re-fetch it here for clarity, although it was calculated during allocation.
           // Ideally, the allocation object would carry the derived taxRegion.
           // For now, re-derive:
-          tax_region: (await this.getTaxInfoFromService(planService)).taxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
-          // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
-          client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
+          tax_region: (await this.getTaxInfoFromService(contractLineService)).taxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
+          // contractLineId: clientContractLine.contract_line_id, // Removed - contractLineId not part of IFixedPriceCharge
+          client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the contract line assignment
           
-          // Add contract association information for all fixed charges when the plan is covered by a contract assignment
+          // Add contract association information for all fixed charges when the contract line is covered by a contract assignment
           client_contract_id: clientContractLine.client_contract_id || undefined,
           contract_name: clientContractLine.contract_name || undefined,
 
           // IFixedPriceCharge specific fields (newly added)
-          config_id: planService.config_id, // From the modified query
-          base_rate: Math.round(baseRate * 100), // Use the PLAN-LEVEL base rate (converted to cents) used for allocation
-          enable_proration: planLevelEnableProration, // Use plan-level setting
+          config_id: contractLineService.config_id, // From the modified query
+          base_rate: Math.round(baseRate * 100), // Use the CONTRACT LINE-LEVEL base rate (converted to cents) used for allocation
+          enable_proration: contractLineLevelEnableProration, // Use contract line-level setting
           fmv: allocation.fmv, // Use FMV directly from allocation (already in cents)
           proportion: allocation.proportion, // Numeric proportion
           allocated_amount: allocation.allocatedAmount, // PRORATED allocated amount in cents
 
           // Removed comment line
-          billing_cycle_alignment: planLevelBillingCycleAlignment, // Use plan-level setting
+          billing_cycle_alignment: contractLineLevelBillingCycleAlignment, // Use contract line-level setting
           // taxAllocationDetails: undefined, // Remove this property as details are now fields
         };
         detailedCharges.push(detailedCharge);
       }
 
-      console.log(`Detailed fixed price charges for client ${clientId}, plan ${clientContractLine.contract_line_id}:`, detailedCharges);
+      console.log(`Detailed fixed price charges for client ${clientId}, contract line ${clientContractLine.contract_line_id}:`, detailedCharges);
       return detailedCharges;
     } else {
-      // This block handles cases where the plan type isn't 'Fixed', but a service within it
+      // This block handles cases where the contract line type isn't 'Fixed', but a service within it
       // is configured as 'Fixed'. This might be legacy or an edge case.
-      // We should still use the plan-level proration/alignment settings if the plan *was* fixed.
-      // If the plan itself isn't fixed, proration likely doesn't apply anyway.
+      // We should still use the contract line-level proration/alignment settings if the contract line *was* fixed.
+      // If the contract line itself isn't fixed, proration likely doesn't apply anyway.
       // TODO: Review if this logic block is still necessary or correct after the refactor.
-      console.warn(`[BillingEngine] Processing fixed service config for a non-fixed plan type (${contractLineDetails?.contract_line_type}) for plan ${clientContractLine.contract_line_id}. Review this logic.`);
+      console.warn(`[BillingEngine] Processing fixed service config for a non-fixed contract line type (${contractLineDetails?.contract_line_type}) for contract line ${clientContractLine.contract_line_id}. Review this logic.`);
 
-      const fixedCharges: IFixedPriceCharge[] = await Promise.all(planServices.map(async (service: any): Promise<IFixedPriceCharge> => {
+      const fixedCharges: IFixedPriceCharge[] = await Promise.all(contractLineServices.map(async (service: any): Promise<IFixedPriceCharge> => {
         // Use base_rate from the fixed config, fallback to default_rate? Or throw error?
         // Current logic uses default_rate if base_rate is missing, which might be wrong for fixed configs.
         const rate = service.base_rate ?? service.default_rate; // Prefer base_rate from fixed config
@@ -975,14 +975,14 @@ export class BillingEngine {
           tax_rate: 0,
           tax_region: serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
           is_taxable: isTaxable, // Use derived value
-          // Use plan-level settings fetched earlier, even if plan type isn't strictly 'Fixed' now
-          // This maintains consistency if a plan type was changed.
-          enable_proration: planLevelEnableProration, // Use plan-level setting
-          billing_cycle_alignment: planLevelBillingCycleAlignment, // Use plan-level setting
+          // Use contract line-level settings fetched earlier, even if contract line type isn't strictly 'Fixed' now
+          // This maintains consistency if a contract line type was changed.
+          enable_proration: contractLineLevelEnableProration, // Use contract line-level setting
+          billing_cycle_alignment: contractLineLevelBillingCycleAlignment, // Use contract line-level setting
           // Add other relevant fields from IFixedPriceCharge if needed
           config_id: service.config_id,
           base_rate: service.base_rate, // Store the original base_rate
-          // FMV/Proportion/AllocatedAmount might not be relevant here if not a true fixed plan
+          // FMV/Proportion/AllocatedAmount might not be relevant here if not a true fixed contract line
         };
         // Recalculate tax based on derived info for this edge case
         if (!client.is_tax_exempt && charge.is_taxable) {
@@ -1024,21 +1024,21 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    // Fetch the contract line details to get plan-wide settings
-    const plan = await this.knex('contract_lines')
+    // Fetch the contract line details to get contract line-wide settings
+    const contractLineDetails = await this.knex('contract_lines')
       .where({
         contract_line_id: clientContractLine.contract_line_id,
         tenant: this.tenant
       })
       .first();
 
-    if (!plan) {
+    if (!contractLineDetails) {
       throw new Error(`Contract Line ${clientContractLine.contract_line_id} not found for client ${clientId}`);
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
 
-    // First get the hourly configurations for this plan
+    // First get the hourly configurations for this contract line
     const hourlyConfigs = await this.knex('contract_line_service_configuration')
       .join('contract_line_service_hourly_config', function () {
         this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_hourly_config.config_id')
@@ -1053,7 +1053,7 @@ export class BillingEngine {
 
     // Create a map of service IDs to their hourly configurations
     const serviceConfigMap = new Map<string, {
-      config: IPlanServiceConfiguration & IPlanServiceHourlyConfig,
+      config: IContractLineServiceConfiguration & IContractLineServiceHourlyConfig,
       userTypeRates: Map<string, number>
     }>();
 
@@ -1115,7 +1115,7 @@ export class BillingEngine {
       .where(function (this: Knex.QueryBuilder) {
         // Either the time entry has the specific contract line ID (use contract_line_id for contract associations)
         this.where('time_entries.contract_line_id', clientContractLine.contract_line_id) // Use contract_line_id here
-          // Or it has no contract line ID (for backward compatibility) and should be allocated to this plan
+          // Or it has no contract line ID (for backward compatibility) and should be allocated to this contract line
           .orWhere(function (this: Knex.QueryBuilder) {
             this.whereNull('time_entries.contract_line_id');
           });
@@ -1183,14 +1183,14 @@ export class BillingEngine {
 
       // Check for overtime if applicable
       let total = Math.round(duration * rate);
-      // Use plan-wide settings from the fetched 'plan' object
-      if (plan.enable_overtime &&
-        plan.overtime_threshold &&
-        duration > plan.overtime_threshold) {
-        const regularHours = plan.overtime_threshold;
+      // Use contract line-wide settings from the fetched 'contractLineDetails' object
+      if (contractLineDetails.enable_overtime &&
+        contractLineDetails.overtime_threshold &&
+        duration > contractLineDetails.overtime_threshold) {
+        const regularHours = contractLineDetails.overtime_threshold;
         const overtimeHours = duration - regularHours;
-        // Use plan's overtime_rate, fallback to 1.5x the calculated rate (user or service specific)
-        const overtimeRate = plan.overtime_rate || (rate * 1.5);
+        // Use contract line's overtime_rate, fallback to 1.5x the calculated rate (user or service specific)
+        const overtimeRate = contractLineDetails.overtime_rate || (rate * 1.5);
         total = Math.round((regularHours * rate) + (overtimeHours * overtimeRate));
       }
 
@@ -1230,7 +1230,7 @@ export class BillingEngine {
         tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         entryId: entry.entry_id,
         is_taxable: isTaxable, // Use derived value
-        // Add contract association information when the plan is covered by a contract assignment
+        // Add contract association information when the contract line is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined
       };
@@ -1259,7 +1259,7 @@ export class BillingEngine {
 
     const tenant = this.tenant; // Capture tenant value for joins
 
-    // First get the usage configurations for this plan
+    // First get the usage configurations for this contract line
     const usageConfigs = await this.knex('contract_line_service_configuration')
       .join('contract_line_service_usage_config', function () {
         this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_usage_config.config_id')
@@ -1274,13 +1274,13 @@ export class BillingEngine {
 
     // Create a map of service IDs to their usage configurations and rate tiers
     const serviceConfigMap = new Map<string, {
-      config: IPlanServiceConfiguration & IPlanServiceUsageConfig,
-      rateTiers: IPlanServiceRateTier[]
+      config: IContractLineServiceConfiguration & IContractLineServiceUsageConfig,
+      rateTiers: IContractLineServiceRateTier[]
     }>();
 
     for (const config of usageConfigs) {
       // Get rate tiers if tiered pricing is enabled
-      let rateTiers: IPlanServiceRateTier[] = [];
+      let rateTiers: IContractLineServiceRateTier[] = [];
       if (config.enable_tiered_pricing) {
         rateTiers = await this.knex('contract_line_service_rate_tiers')
           .where({
@@ -1312,7 +1312,7 @@ export class BillingEngine {
       .where(function (this: Knex.QueryBuilder) {
         // Either the usage record has the specific contract line ID (use contract_line_id for contract associations)
         this.where('usage_tracking.contract_line_id', clientContractLine.contract_line_id) // Use contract_line_id here
-          // Or it has no contract line ID (for backward compatibility) and should be allocated to this plan
+          // Or it has no contract line ID (for backward compatibility) and should be allocated to this contract line
           .orWhere(function (this: Knex.QueryBuilder) {
             this.whereNull('usage_tracking.contract_line_id');
           });
@@ -1394,7 +1394,7 @@ export class BillingEngine {
         tax_rate: taxRate,     // Set initial tax rate
         usageId: record.usage_id,
         is_taxable: isTaxable, // Use derived value
-        // Add contract association information when the plan is covered by a contract assignment
+        // Add contract association information when the contract line is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined
       };
@@ -1428,9 +1428,9 @@ export class BillingEngine {
     // This requires further investigation to determine the correct way to filter for hardware products.
     // For now, return an empty array to prevent errors.
     // TODO: Update this query to fetch license services correctly and include tax_rate_id
-    const planServices: any[] = []; // Placeholder
+    const contractLineServices: any[] = []; // Placeholder
 
-    const productChargesPromises = planServices.map(async (service: any): Promise<IProductCharge> => {
+    const productChargesPromises = contractLineServices.map(async (service: any): Promise<IProductCharge> => {
       // Determine tax info using the helper function
       const { taxRegion: serviceTaxRegion, isTaxable } = await this.getTaxInfoFromService({
         service_id: service.service_id,
@@ -1468,7 +1468,7 @@ export class BillingEngine {
         tax_rate: taxRate,
         tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         is_taxable: isTaxable,
-        // Add contract association information when the plan is covered by a contract assignment
+        // Add contract association information when the contract line is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined
       };
@@ -1500,9 +1500,9 @@ export class BillingEngine {
     // TODO: The service_catalog table doesn't have a service_type column.
     // This requires further investigation to determine the correct way to filter for software licenses.
     // For now, return an empty array to prevent errors.
-    const planServices: any[] = []; // Placeholder
+    const contractLineServices: any[] = []; // Placeholder
 
-    const licenseChargesPromises = planServices.map(async (service: any): Promise<ILicenseCharge> => {
+    const licenseChargesPromises = contractLineServices.map(async (service: any): Promise<ILicenseCharge> => {
       // Determine tax info using the helper function
       const { taxRegion: serviceTaxRegion, isTaxable } = await this.getTaxInfoFromService({
         service_id: service.service_id,
@@ -1542,7 +1542,7 @@ export class BillingEngine {
         period_start: billingPeriod.startDate,
         period_end: billingPeriod.endDate,
         is_taxable: isTaxable,
-        // Add contract association information when the plan is covered by a contract assignment
+        // Add contract association information when the contract line is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined
       };
@@ -1553,7 +1553,7 @@ export class BillingEngine {
     return licenseCharges;
   }
 
-  private async calculateBucketPlanCharges(clientId: string, period: IBillingPeriod, contractLine: IClientContractLine): Promise<IBucketCharge[]> {
+  private async calculateBucketContractLineCharges(clientId: string, period: IBillingPeriod, contractLine: IClientContractLine): Promise<IBucketCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -1569,7 +1569,7 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    // Get bucket configurations for this plan
+    // Get bucket configurations for this contract line
     const bucketConfigs = await this.knex('contract_line_service_configuration')
       .join('contract_line_service_bucket_config', function () {
         this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_bucket_config.config_id')
@@ -1661,7 +1661,7 @@ export class BillingEngine {
           serviceId: bucketConfig.service_id, // Common field
           tax_amount: taxAmount,
           is_taxable: isTaxable,
-          // Add contract association information when the plan is covered by a contract assignment
+          // Add contract association information when the contract line is covered by a contract assignment
           client_contract_id: contractLine.client_contract_id || undefined,
           contract_name: contractLine.contract_name || undefined
         };
@@ -1678,19 +1678,19 @@ export class BillingEngine {
 
 
   /**
-   * Calculates the proration factor based on the plan's active dates within the billing period.
+   * Calculates the proration factor based on the contract line's active dates within the billing period.
    * @returns Proration factor (0.0 to 1.0)
    */
-  private _calculateProrationFactor(billingPeriod: IBillingPeriod, planStartDate: ISO8601String, planEndDate: ISO8601String | null, billingCycle: string): number {
+  private _calculateProrationFactor(billingPeriod: IBillingPeriod, contractLineStartDate: ISO8601String, contractLineEndDate: ISO8601String | null, billingCycle: string): number {
     console.log('Billing period start:', billingPeriod.startDate);
     console.log('Billing period end:', billingPeriod.endDate);
-    console.log('Plan start date:', planStartDate);
-    console.log('Plan end date:', planEndDate);
+    console.log('Contract line start date:', contractLineStartDate);
+    console.log('Contract line end date:', contractLineEndDate);
 
     // Use our date utilities to handle the conversion
-    const planStart = toPlainDate(planStartDate);
+    const contractLineStart = toPlainDate(contractLineStartDate);
     const periodStart = toPlainDate(billingPeriod.startDate);
-    const effectiveStartDate = Temporal.PlainDate.compare(planStart, periodStart) > 0 ? planStart : periodStart;
+    const effectiveStartDate = Temporal.PlainDate.compare(contractLineStart, periodStart) > 0 ? contractLineStart : periodStart;
     console.log('Effective start:', toISODate(effectiveStartDate));
 
     let cycleLength: number;
@@ -1721,10 +1721,10 @@ export class BillingEngine {
       }
     }
 
-    // Determine the effective end date for proration: the earlier of the plan end date and the period end date
+    // Determine the effective end date for proration: the earlier of the contract line end date and the period end date
     const periodEnd = toPlainDate(billingPeriod.endDate);
-    const planEnd = planEndDate ? toPlainDate(planEndDate) : null;
-    const effectiveEndDate = planEnd && Temporal.PlainDate.compare(planEnd, periodEnd) < 0 ? planEnd : periodEnd;
+    const contractLineEnd = contractLineEndDate ? toPlainDate(contractLineEndDate) : null;
+    const effectiveEndDate = contractLineEnd && Temporal.PlainDate.compare(contractLineEnd, periodEnd) < 0 ? contractLineEnd : periodEnd;
     console.log('Effective end:', toISODate(effectiveEndDate));
 
     // Calculate the actual number of billable days INCLUSIVE of the end date
@@ -1752,15 +1752,15 @@ export class BillingEngine {
    * This function primarily handles proration for other potential future charge types if needed,
    * or acts as a fallback/consistency check.
    */
-  private applyProrationToPlan(charges: IBillingCharge[], billingPeriod: IBillingPeriod, planStartDate: ISO8601String, planEndDate: ISO8601String | null, billingCycle: string): IBillingCharge[] {
+  private applyProrationToContractLine(charges: IBillingCharge[], billingPeriod: IBillingPeriod, contractLineStartDate: ISO8601String, contractLineEndDate: ISO8601String | null, billingCycle: string): IBillingCharge[] {
 
     // Calculate the proration factor once
-    const prorationFactor = this._calculateProrationFactor(billingPeriod, planStartDate, planEndDate, billingCycle);
+    const prorationFactor = this._calculateProrationFactor(billingPeriod, contractLineStartDate, contractLineEndDate, billingCycle);
 
     return charges.map((charge: IBillingCharge): IBillingCharge => {
       // Proration for 'fixed' type is now handled earlier in calculateFixedPriceCharges
       if (charge.type === 'fixed') {
-        console.log(`Skipping proration in applyProrationToPlan for fixed charge: ${charge.serviceName} (handled earlier)`);
+        console.log(`Skipping proration in applyProrationToContractLine for fixed charge: ${charge.serviceName} (handled earlier)`);
         return charge; // Return charge as is
       }
 

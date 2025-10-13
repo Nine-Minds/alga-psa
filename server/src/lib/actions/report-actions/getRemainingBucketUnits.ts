@@ -8,13 +8,13 @@ import {
   IClientContractLine,
   IContractLine,
   IBucketUsage,
-  IPlanService,
+  IContractLineService,
   IService // Added IService for service_catalog join
 } from '../../../interfaces/billing.interfaces';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceBucketConfig
-} from '../../../interfaces/planServiceConfiguration.interfaces'; // Corrected import path
+  IContractLineServiceConfiguration,
+  IContractLineServiceBucketConfig
+} from '../../../interfaces/contractLineServiceConfiguration.interfaces'; // Corrected import path
 import { Knex } from 'knex'; // Import Knex type for query builder
 
 // Define the schema for the input parameters
@@ -41,11 +41,11 @@ export interface RemainingBucketUnitsResult {
 }
 
 /**
- * Server action to fetch remaining units (hours) for active bucket plans
+ * Server action to fetch remaining units (hours) for active bucket contract lines
  * associated with a specific client for the current period.
  *
  * @param input - Object containing clientId and currentDate.
- * @returns A promise that resolves to an array of bucket plan usage details.
+ * @returns A promise that resolves to an array of bucket contract line usage details.
  */
 export async function getRemainingBucketUnits(
   input: z.infer<typeof InputSchema>
@@ -74,7 +74,7 @@ export async function getRemainingBucketUnits(
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
       // Add joins for configuration structure
-      .join<IPlanService>('contract_line_services as ps', function() {
+      .join<IContractLineService>('contract_line_services as ps', function() {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })
@@ -83,12 +83,12 @@ export async function getRemainingBucketUnits(
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      .join<IPlanServiceConfiguration>('contract_line_service_configuration as psc', function() {
+      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() {
         this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
-      .join<IPlanServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
+      .join<IContractLineServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
         this.on('psc.config_id', '=', 'psbc.config_id')
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
@@ -147,8 +147,8 @@ export async function getRemainingBucketUnits(
         };
       });
     });
-      
-    console.log(`Found ${results.length} active bucket plans for client ${clientId}`);
+
+    console.log(`Found ${results.length} active bucket contract lines for client ${clientId}`);
     return results;
 
   } catch (error) {

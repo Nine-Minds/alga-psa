@@ -11,15 +11,15 @@ import {
   IClientContractLine,
   IContractLine,
   IBucketUsage,
-  IPlanService
+  IContractLineService
 } from 'server/src/interfaces/billing.interfaces';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { IProjectTask, IProject, IProjectPhase } from 'server/src/interfaces/project.interfaces';
 import { IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { 
-  IPlanServiceConfiguration,
-  IPlanServiceBucketConfig
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+  IContractLineServiceConfiguration,
+  IContractLineServiceBucketConfig
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { toPlainDate, formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import { getSession } from 'server/src/lib/auth/getSession';
@@ -384,7 +384,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      .join<IPlanService>('contract_line_services as ps', function() {
+      .join<IContractLineService>('contract_line_services as ps', function() {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })
@@ -392,12 +392,12 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      .join<IPlanServiceConfiguration>('contract_line_service_configuration as psc', function() { 
+      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() { 
         this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
-      .join<IPlanServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
+      .join<IContractLineServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
         this.on('psc.config_id', '=', 'psbc.config_id')
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
@@ -468,7 +468,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         };
       });
         
-      console.log(`Found ${results.length} active bucket plans for client client ${clientId}`);
+      console.log(`Found ${results.length} active bucket contract lines for client ${clientId}`);
       return results;
     });
 

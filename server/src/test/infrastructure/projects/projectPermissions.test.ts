@@ -3,29 +3,29 @@ import { v4 as uuidv4 } from 'uuid';
 import { IProject } from '../../interfaces/project.interfaces';
 import * as projectActions from '../../lib/actions/project-actions/projectActions';
 import * as userActions from '../../lib/actions/user-actions/userActions';
-import { TestContext } from '../../../test-utils/testContext';
+import { TestContext } from '../../../../test-utils/testContext';
 import {
   setupCommonMocks,
   mockNextHeaders,
   mockNextAuth,
   mockRBAC,
   createMockUser
-} from '../../../test-utils/testMocks';
+} from '../../../../test-utils/testMocks';
 import {
   createTenant,
   createClient,
   createUser,
   createTestEnvironment
-} from '../../../test-utils/testDataFactory';
+} from '../../../../test-utils/testDataFactory';
 import {
   resetDatabase,
   createCleanupHook,
   cleanupTables
-} from '../../../test-utils/dbReset';
+} from '../../../../test-utils/dbReset';
 import {
   expectPermissionDenied,
   expectError
-} from '../../../test-utils/errorUtils';
+} from '../../../../test-utils/errorUtils';
 
 describe('Project Permissions Infrastructure', () => {
   const context = new TestContext({

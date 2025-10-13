@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import PlanPickerDialog from './PlanPickerDialog';
+import ContractLinePickerDialog from './ContractLinePickerDialog';
 import { IClientContractLine, IContractLine, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -20,8 +20,8 @@ interface ContractLinesProps {
     clientId: string;
     onEdit: (billing: IClientContractLine) => void;
     onDelete: (clientContractLineId: string) => void;
-    onAdd: (selectedPlan: Omit<IClientContractLine, "client_contract_line_id" | "tenant">) => Promise<void>;
-    onClientPlanChange: (clientContractLineId: string, planId: string) => void;
+    onAdd: (selectedContractLine: Omit<IClientContractLine, "client_contract_line_id" | "tenant">) => Promise<void>;
+    onClientContractLineChange: (clientContractLineId: string, contractLineId: string) => void;
     onServiceCategoryChange: (clientContractLineId: string, categoryId: string) => void;
     formatDateForDisplay: (dateString: string | null) => string;
 }
@@ -33,18 +33,18 @@ const ContractLines: React.FC<ContractLinesProps> = ({
     onEdit,
     onDelete,
     onAdd,
-    onClientPlanChange,
+    onClientContractLineChange,
     formatDateForDisplay,
     clientId
 }) => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const columns: ColumnDefinition<IClientContractLine>[] = [
         {
-            title: 'Plan',
+            title: 'Contract Line',
             dataIndex: 'contract_line_id',
             render: (value) => {
-                const plan = contractLines.find(p => p.contract_line_id === value);
-                return plan ? plan.contract_line_name : 'Unknown Plan';
+                const contractLine = contractLines.find(cl => cl.contract_line_id === value);
+                return contractLine ? contractLine.contract_line_name : 'Unknown Contract Line';
             }
         },
         {
@@ -102,7 +102,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                                 onDelete(value);
                             }}
                         >
-                            Remove Plan
+                            Remove Contract Line
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -128,7 +128,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                     className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] flex items-center gap-2"
                 >
                     <Plus className="h-4 w-4" />
-                    Add New Plan
+                    Add New Contract Line
                 </Button>
             </div>
             <div className="rounded-lg border border-[rgb(var(--color-border-200))]">
@@ -138,13 +138,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                     onRowClick={onEdit} // Add row click handler
                 />
             </div>
-            <PlanPickerDialog
+            <ContractLinePickerDialog
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
-                onSelect={(plan, serviceCategory, startDate) => {
+                onSelect={(contractLine, serviceCategory, startDate) => {
                     const newContractLine: Omit<IClientContractLine, "client_contract_line_id" | "tenant"> = {
                         client_id: clientId,
-                        contract_line_id: plan.contract_line_id!,
+                        contract_line_id: contractLine.contract_line_id!,
                         service_category: serviceCategory,
                         start_date: startDate,
                         end_date: null,
@@ -152,7 +152,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                     };
                     onAdd(newContractLine);
                 }}
-                availablePlans={contractLines}
+                availableContractLines={contractLines}
                 serviceCategories={serviceCategories}
             />
         </div>

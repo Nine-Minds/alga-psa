@@ -8,12 +8,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 's
 import { Search, Plus, Check } from 'lucide-react';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { addServiceToPlan } from 'server/src/lib/actions/planServiceActions';
+import { addServiceToContractLine } from 'server/src/lib/actions/contractLineServiceActions';
 
 interface ServiceSelectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  planId: string;
+  contractLineId: string;
   onServiceAdded?: () => void;
   existingServiceIds?: string[];
 }
@@ -21,7 +21,7 @@ interface ServiceSelectionDialogProps {
 export function ServiceSelectionDialog({ 
   isOpen, 
   onClose, 
-  planId,
+  contractLineId,
   onServiceAdded,
   existingServiceIds = []
 }: ServiceSelectionDialogProps) {
@@ -50,7 +50,7 @@ export function ServiceSelectionDialog({
           ? servicesResponse
           : (servicesResponse.services || []);
         
-        // Filter out services that are already in the plan
+        // Filter out services that are already in the contract line
         const availableServices = servicesData.filter(
           service => !existingServiceIds.includes(service.service_id)
         );
@@ -126,10 +126,10 @@ export function ServiceSelectionDialog({
       setAdding(true);
       setError(null);
       
-      // Add each selected service to the plan
+      // Add each selected service to the contract line
       for (const serviceId of selectedServices) {
-        await addServiceToPlan(
-          planId,
+        await addServiceToContractLine(
+          contractLineId,
           serviceId
         );
       }
@@ -140,8 +140,8 @@ export function ServiceSelectionDialog({
       
       onClose();
     } catch (err) {
-      console.error('Error adding services to plan:', err);
-      setError('Failed to add services to plan');
+      console.error('Error adding services to contract line:', err);
+      setError('Failed to add services to contract line');
     } finally {
       setAdding(false);
     }
@@ -161,7 +161,7 @@ export function ServiceSelectionDialog({
       isOpen={isOpen} 
       onClose={onClose} 
       id="service-selection-dialog" 
-      title="Add Services to Plan"
+      title="Add Services to Contract Line"
     >
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
         

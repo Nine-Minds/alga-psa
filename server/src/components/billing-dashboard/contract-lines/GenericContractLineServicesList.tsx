@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/GenericPlanServicesList.tsx
+// server/src/components/billing-dashboard/GenericContractLineServicesList.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
@@ -15,23 +15,23 @@ import {
 // Removed CustomSelect import as it wasn't used
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractLine, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
+import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
 import {
-  getPlanServicesWithConfigurations
-} from 'server/src/lib/actions/planServiceActions';
+  getContractLineServicesWithConfigurations
+} from 'server/src/lib/actions/contractLineServiceActions';
 import {
-  addServiceToPlan as addPlanService,
-  removeServiceFromPlan as removePlanService
-} from 'server/src/lib/actions/planServiceActions';
+  addServiceToContractLine as addContractLineService,
+  removeServiceFromContractLine as removeContractLineService
+} from 'server/src/lib/actions/contractLineServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Import action to get plan details
+import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Import action to get contract line details
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import ContractLineServiceForm from './ContractLineServiceForm'; // Adjusted path
 import { Badge } from 'server/src/components/ui/Badge';
-import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 
 // Define billing method options
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string }> = [
@@ -39,15 +39,15 @@ const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string
   { value: 'per_unit', label: 'Per Unit' }
 ];
 
-interface GenericPlanServicesListProps {
-  planId: string; // Changed from plan object to just planId
+interface GenericContractLineServicesListProps {
+  contractLineId: string;
   onServicesChanged?: () => void; // Optional callback when services are added/removed
   disableEditing?: boolean; // New prop to disable edit actions
 }
 
 
-interface EnhancedPlanService extends IPlanService {
-  configuration?: IPlanServiceConfiguration;
+interface EnhancedContractLineService extends IContractLineService {
+  configuration?: IContractLineServiceConfiguration;
   configurationType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
   // Added fields for display consistency
   service_name?: string;
@@ -57,49 +57,49 @@ interface EnhancedPlanService extends IPlanService {
   default_rate?: number;
 }
 
-const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planId, onServicesChanged, disableEditing = false }) => {
-  const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
+const GenericContractLineServicesList: React.FC<GenericContractLineServicesListProps> = ({ contractLineId, onServicesChanged, disableEditing = false }) => {
+  const [contractLineServices, setContractLineServices] = useState<EnhancedContractLineService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   // Removed serviceCategories state
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingService, setEditingService] = useState<EnhancedPlanService | null>(null);
-  const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null); // State for plan type
+  const [editingService, setEditingService] = useState<EnhancedContractLineService | null>(null);
+  const [contractLineType, setContractLineType] = useState<IContractLine['contract_line_type'] | null>(null); // State for contract line type
   // Removed tenant state
 
   const fetchData = useCallback(async () => { // Added useCallback
-    if (!planId) return;
+    if (!contractLineId) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // Fetch plan details, services, and configurations
-      const [planDetails, servicesResponse, servicesWithConfigurations] = await Promise.all([
-        getContractLineById(planId), // Fetch the plan details
+      // Fetch contract line details, services, and configurations
+      const [contractLineDetails, servicesResponse, servicesWithConfigurations] = await Promise.all([
+        getContractLineById(contractLineId), // Fetch the contract line details
         getServices(),
-        getPlanServicesWithConfigurations(planId),
+        getContractLineServicesWithConfigurations(contractLineId),
       ]);
-      
+
       // Extract the services array from the paginated response
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
         : (servicesResponse.services || []);
 
-      if (!planDetails) {
-        throw new Error(`Contract line with ID ${planId} not found.`);
+      if (!contractLineDetails) {
+        throw new Error(`Contract line with ID ${contractLineId} not found.`);
       }
-      setPlanType(planDetails.contract_line_type); // Store the plan type
+      setContractLineType(contractLineDetails.contract_line_type); // Store the contract line type
 
       // Enhance services with details and configuration
-      const enhancedServices: EnhancedPlanService[] = servicesWithConfigurations.map(configInfo => {
+      const enhancedServices: EnhancedContractLineService[] = servicesWithConfigurations.map(configInfo => {
         // Find the corresponding full service details from the getServices() call
         // Note: configInfo.service already contains service_type_name from the updated action
         const fullServiceDetails = allAvailableServices.find(s => s.service_id === configInfo.configuration.service_id);
 
         return {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: configInfo.configuration.service_id,
           quantity: configInfo.configuration.quantity,
           custom_rate: configInfo.configuration.custom_rate,
@@ -116,7 +116,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         };
       });
 
-      setPlanServices(enhancedServices);
+      setContractLineServices(enhancedServices);
       setAvailableServices(allAvailableServices); // Keep this to know which services *can* be added
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -124,7 +124,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     } finally {
       setIsLoading(false);
     }
-  }, [planId]); // Added planId dependency
+  }, [contractLineId]); // Added contractLineId dependency
 
   useEffect(() => {
     fetchData();
@@ -132,14 +132,14 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
 
 
   const handleAddService = async () => {
-    if (!planId || selectedServicesToAdd.length === 0) return;
+    if (!contractLineId || selectedServicesToAdd.length === 0) return;
 
     try {
       for (const serviceId of selectedServicesToAdd) {
         const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
         if (serviceToAdd) {
-          await addPlanService(
-            planId,
+          await addContractLineService(
+            contractLineId,
             serviceId,
             1, // Default quantity
             serviceToAdd.default_rate // Default rate
@@ -156,10 +156,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
   };
 
   const handleRemoveService = async (serviceId: string) => {
-    if (!planId) return;
+    if (!contractLineId) return;
 
     try {
-      await removePlanService(planId, serviceId);
+      await removeContractLineService(contractLineId, serviceId);
       await fetchData(); // Ensure data is fetched before calling callback
       onServicesChanged?.(); // Call the callback if provided
     } catch (error) {
@@ -168,7 +168,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     }
   };
 
-  const handleEditService = (service: EnhancedPlanService) => {
+  const handleEditService = (service: EnhancedContractLineService) => {
     setEditingService(service);
   };
 
@@ -187,7 +187,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     }
   };
 
-  const planServiceColumns: ColumnDefinition<EnhancedPlanService>[] = [
+  const contractLineServiceColumns: ColumnDefinition<EnhancedContractLineService>[] = [
     { title: 'Service Name', dataIndex: 'service_name' },
     { title: 'Service Type', dataIndex: 'service_type_name' }, // Changed title and dataIndex
     {
@@ -226,7 +226,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     { title: 'Quantity', dataIndex: 'quantity', render: (value) => value ?? 1 }, // Default to 1 if null/undefined
     { title: 'Unit of Measure', dataIndex: 'unit_of_measure' },
     {
-      title: planType === 'Bucket' ? 'Service Rate' : 'Custom Rate',
+      title: contractLineType === 'Bucket' ? 'Service Rate' : 'Custom Rate',
       dataIndex: 'custom_rate',
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;
@@ -241,7 +241,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              id={`generic-plan-service-actions-${value}`}
+              id={`generic-contract-line-service-actions-${value}`}
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
@@ -253,7 +253,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
           <DropdownMenuContent align="end">
             {!disableEditing && ( // Conditionally render Configure item
               <DropdownMenuItem
-                id={`edit-generic-plan-service-${value}`}
+                id={`edit-generic-contract-line-service-${value}`}
                 onClick={() => handleEditService(record)}
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -261,7 +261,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
-              id={`remove-generic-plan-service-${value}`}
+              id={`remove-generic-contract-line-service-${value}`}
               className="text-red-600 focus:text-red-600"
               onClick={() => handleRemoveService(value)}
             >
@@ -273,29 +273,29 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     },
   ];
 
-  // Filter available services based on plan type and already added services
+  // Filter available services based on contract line type and already added services
   const servicesAvailableToAdd = availableServices.filter(availService => {
     // Check if service is already added
-    const isAlreadyAdded = planServices.some(ps => ps.service_id === availService.service_id);
+    const isAlreadyAdded = contractLineServices.some(ps => ps.service_id === availService.service_id);
     if (isAlreadyAdded) {
       return false;
     }
 
-    // Apply filtering logic based on plan type and the service's own billing_method
-    if (planType === 'Hourly') {
-      // For Hourly plans, exclude services with 'fixed' billing method directly from the service record
+    // Apply filtering logic based on contract line type and the service's own billing_method
+    if (contractLineType === 'Hourly') {
+      // For Hourly contract lines, exclude services with 'fixed' billing method directly from the service record
       return availService.billing_method !== 'fixed';
     }
-    else if (planType === 'Usage') {
-      // For Usage plans, exclude services with 'fixed' billing method
+    else if (contractLineType === 'Usage') {
+      // For Usage contract lines, exclude services with 'fixed' billing method
       return availService.billing_method !== 'fixed';
     }
-    else if (planType === 'Bucket') {
-      // For Bucket plans, exclude services with 'fixed' billing method
+    else if (contractLineType === 'Bucket') {
+      // For Bucket contract lines, exclude services with 'fixed' billing method
       return availService.billing_method !== 'fixed';
     }
-    else if (planType === 'Fixed') {
-      // For Fixed plans, only allow services with 'fixed' billing method
+    else if (contractLineType === 'Fixed') {
+      // For Fixed contract lines, only allow services with 'fixed' billing method
       return availService.billing_method === 'fixed';
     }
 
@@ -321,19 +321,19 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         <>
           <div className="mb-4">
             <DataTable
-              data={planServices}
-              columns={planServiceColumns}
+              data={contractLineServices}
+              columns={contractLineServiceColumns}
               pagination={false}
               // Conditionally disable row click
               onRowClick={!disableEditing ? (row) => handleEditService(row) : undefined}
             />
-            {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this plan.</p>}
+            {contractLineServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line.</p>}
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Plan</h4>
+            <h4 className="text-md font-medium mb-2">Add Services to Contract Line</h4>
             {servicesAvailableToAdd.length === 0 ? (
-              <p className="text-sm text-muted-foreground">All available services are already associated with this plan.</p>
+              <p className="text-sm text-muted-foreground">All available services are already associated with this contract line.</p>
             ) : (
               <>
                 <div className="mb-3">
@@ -372,7 +372,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
                   </div>
                 </div>
                 <Button
-                  id="add-generic-plan-services-button"
+                  id="add-generic-contract-line-services-button"
                   onClick={handleAddService}
                   disabled={selectedServicesToAdd.length === 0}
                   className="w-full sm:w-auto"
@@ -388,7 +388,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
 
       {editingService && (
         <ContractLineServiceForm
-          planService={editingService}
+          contractLineService={editingService}
           services={availableServices} // Pass all available services for context if needed by form
           // Removed serviceCategories prop
           onClose={() => setEditingService(null)}
@@ -399,4 +399,4 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
   );
 };
 
-export default GenericPlanServicesList; // Use default export
+export default GenericContractLineServicesList; // Use default export

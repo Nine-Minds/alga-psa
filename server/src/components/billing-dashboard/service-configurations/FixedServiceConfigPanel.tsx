@@ -5,45 +5,45 @@ import { Card } from 'server/src/components/ui/Card';
 import { Label } from 'server/src/components/ui/Label';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceFixedConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 
 interface FixedServiceConfigPanelProps {
-  configuration: Partial<IPlanServiceFixedConfig>;
-  planFixedConfig: Partial<IContractLineFixedConfig>;
-  onConfigurationChange: (updates: Partial<IPlanServiceFixedConfig>) => void;
-  onPlanFixedConfigChange: (updates: Partial<IContractLineFixedConfig>) => void;
+  configuration: Partial<IContractLineServiceFixedConfig>;
+  contractLineFixedConfig: Partial<IContractLineFixedConfig>;
+  onConfigurationChange: (updates: Partial<IContractLineServiceFixedConfig>) => void;
+  onContractLineFixedConfigChange: (updates: Partial<IContractLineFixedConfig>) => void;
   className?: string;
   disabled?: boolean;
 }
 
 export function FixedServiceConfigPanel({
   configuration,
-  planFixedConfig,
+  contractLineFixedConfig,
   onConfigurationChange,
-  onPlanFixedConfigChange,
+  onContractLineFixedConfigChange,
   className = '',
   disabled = false
 }: FixedServiceConfigPanelProps) {
-  const [enableProration, setEnableProration] = useState(planFixedConfig.enable_proration || false);
+  const [enableProration, setEnableProration] = useState(contractLineFixedConfig.enable_proration || false);
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<string>(
-    planFixedConfig.billing_cycle_alignment || 'start'
+    contractLineFixedConfig.billing_cycle_alignment || 'start'
   );
 
   // Update local state when props change
   useEffect(() => {
-    setEnableProration(planFixedConfig.enable_proration || false);
-    setBillingCycleAlignment(planFixedConfig.billing_cycle_alignment || 'start');
-  }, [planFixedConfig]);
+    setEnableProration(contractLineFixedConfig.enable_proration || false);
+    setBillingCycleAlignment(contractLineFixedConfig.billing_cycle_alignment || 'start');
+  }, [contractLineFixedConfig]);
 
   const handleEnableProrateChange = (checked: boolean) => {
     setEnableProration(checked);
-    onPlanFixedConfigChange({ enable_proration: checked });
+    onContractLineFixedConfigChange({ enable_proration: checked });
   };
 
   const handleBillingCycleAlignmentChange = (value: string) => {
     setBillingCycleAlignment(value);
-    onPlanFixedConfigChange({ billing_cycle_alignment: value as 'start' | 'end' | 'prorated' });
+    onContractLineFixedConfigChange({ billing_cycle_alignment: value as 'start' | 'end' | 'prorated' });
   };
 
   const alignmentOptions = [

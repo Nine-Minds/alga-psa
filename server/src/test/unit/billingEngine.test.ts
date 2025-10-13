@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { getConnection } from 'server/src/lib/db/db';
-import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, IClientContractLine, IDiscount, IFixedPriceCharge, IPlanService, ITimeBasedCharge, IBucketPlan, IBucketUsage, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
+import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, IClientContractLine, IDiscount, IFixedPriceCharge, IContractLineService, ITimeBasedCharge, IBucketContractLine, IBucketUsage, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
 import { ISO8601String } from '../../types/types.d';
 import { getClientTaxRate } from 'server/src/lib/actions/billingAndTax';
 
@@ -273,7 +273,7 @@ describe('BillingEngine', () => {
     });
 
 
-    it('should calculate billing correctly for multiple active plans', async () => {
+    it('should calculate billing correctly for multiple active contract lines', async () => {
       const mockClientContractLine: IClientContractLine[] = [
         {
           client_contract_line_id: 'billing_id_1',
@@ -297,7 +297,7 @@ describe('BillingEngine', () => {
         },
       ];
 
-      const mockPlanServices: IPlanService[] = [
+      const mockContractLineServices: IContractLineService[] = [
         { tenant: mockTenant, contract_line_id: 'contract_line_id_1', service_id: 'service1', quantity: 1 },
         { tenant: mockTenant, contract_line_id: 'contract_line_id_1', service_id: 'service3', quantity: 1 },
         { tenant: mockTenant, contract_line_id: 'contract_line_id_2', service_id: 'service2', quantity: 1 },
@@ -349,7 +349,7 @@ describe('BillingEngine', () => {
         .mockResolvedValueOnce(mockTimeCharges1)
         .mockResolvedValueOnce(mockTimeCharges2);
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue([]);
-      vi.spyOn(billingEngine as any, 'applyProrationToPlan').mockImplementation((charges) => charges);
+      vi.spyOn(billingEngine as any, 'applyProrationToContractLine').mockImplementation((charges) => charges);
 
       // Mock the knex query for contract_line_services
       (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
@@ -357,13 +357,13 @@ describe('BillingEngine', () => {
           return {
             join: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
-            select: vi.fn().mockResolvedValue(mockPlanServices),
+            select: vi.fn().mockResolvedValue(mockContractLineServices),
           };
         }
-        if (tableName === 'bucket_plans') {
+        if (tableName === 'bucket_contract_lines') {
           return {
             where: vi.fn().mockReturnThis(),
-            first: vi.fn().mockResolvedValue(null), // or mock a bucket plan if needed
+            first: vi.fn().mockResolvedValue(null), // or mock a bucket contract line if needed
           };
         }
         if (tableName === 'bucket_usage') {
@@ -510,7 +510,7 @@ describe('BillingEngine', () => {
     
 
 
-    it('should handle proration correctly for multiple plans with different start dates', async () => {
+    it('should handle proration correctly for multiple contract lines with different start dates', async () => {
       const mockClientContractLine: IClientContractLine[] = [
         {
           client_contract_line_id: 'billing_id_1',
@@ -534,7 +534,7 @@ describe('BillingEngine', () => {
         },
       ];
 
-      const mockPlanServices: IPlanService[] = [
+      const mockContractLineServices: IContractLineService[] = [
         { tenant: mockTenant, contract_line_id: 'contract_line_id_1', service_id: 'service1', quantity: 1 },
         { tenant: mockTenant, contract_line_id: 'contract_line_id_2', service_id: 'service2', quantity: 1 },
       ];
@@ -571,13 +571,13 @@ describe('BillingEngine', () => {
           return {
             join: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
-            select: vi.fn().mockResolvedValue(mockPlanServices),
+            select: vi.fn().mockResolvedValue(mockContractLineServices),
           };
         }
-        if (tableName === 'bucket_plans') {
+        if (tableName === 'bucket_contract_lines') {
           return {
             where: vi.fn().mockReturnThis(),
-            first: vi.fn().mockResolvedValue(null), // or mock a bucket plan if needed
+            first: vi.fn().mockResolvedValue(null), // or mock a bucket contract line if needed
           };
         }
         if (tableName === 'bucket_usage') {
@@ -597,16 +597,16 @@ describe('BillingEngine', () => {
 
       const result = await billingEngine.calculateBilling(mockClientId, mockStartDate, mockEndDate, mockBillingCycleId);
 
-      // Plan 1 should be charged for the full month
+      // Contract line 1 should be charged for the full month
       expect(result.charges[0].total).toBeCloseTo(100, 2);
 
-      // Plan 2 should be prorated for half the month (17 days out of 31)
+      // Contract line 2 should be prorated for half the month (17 days out of 31)
       expect(result.charges[1].total).toBeCloseTo(27.42, 2); // 50 * (17 / 31) ≈ 27.42
 
       expect(result.totalAmount).toBeCloseTo(127.42, 2);
       expect(result.finalAmount).toBeCloseTo(127.42, 2);
     });
-    it('should calculate billing correctly with bucket plan charges', async () => {
+    it('should calculate billing correctly with bucket contract line charges', async () => {
       const mockClientContractLine: IClientContractLine[] = [
         {
           client_contract_line_id: 'test_billing_id',
@@ -625,8 +625,8 @@ describe('BillingEngine', () => {
       ];
 
       const mockBucketCharges = [
-        { serviceId: 'bucket1', serviceName: 'Bucket Plan Hours', quantity: 40, rate: 0, total: 0, type: 'bucket' },
-        { serviceId: 'bucket1', serviceName: 'Bucket Plan Overage Hours', quantity: 5, rate: 50, total: 250, type: 'bucket' },
+        { serviceId: 'bucket1', serviceName: 'Bucket Contract Line Hours', quantity: 40, rate: 0, total: 0, type: 'bucket' },
+        { serviceId: 'bucket1', serviceName: 'Bucket Contract Line Overage Hours', quantity: 5, rate: 50, total: 250, type: 'bucket' },
       ];
 
       vi.spyOn(billingEngine as any, 'getClientContractLinesAndCycle').mockResolvedValue({
@@ -636,7 +636,7 @@ describe('BillingEngine', () => {
       vi.spyOn(billingEngine as any, 'calculateFixedPriceCharges').mockResolvedValue(mockFixedCharges);
       vi.spyOn(billingEngine as any, 'calculateTimeBasedCharges').mockResolvedValue([]);
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue([]);
-      vi.spyOn(billingEngine as any, 'calculateBucketPlanCharges').mockResolvedValue(mockBucketCharges);
+      vi.spyOn(billingEngine as any, 'calculateBucketContractLineCharges').mockResolvedValue(mockBucketCharges);
 
       const result = await billingEngine.calculateBilling(mockClientId, mockStartDate, mockEndDate, mockBillingCycleId);
 
@@ -654,10 +654,10 @@ describe('BillingEngine', () => {
   });
 
 
-  describe('calculateBucketPlanCharges', () => {
+  describe('calculateBucketContractLineCharges', () => {
 
 
-    it('should calculate bucket plan charges correctly', async () => {
+    it('should calculate bucket contract line charges correctly', async () => {
       const mockClient = {
         client_id: mockClientId,
         client_name: 'Test Client',
@@ -665,7 +665,7 @@ describe('BillingEngine', () => {
         // Add other necessary client fields here
       };
 
-      const mockBucketPlan: IBucketPlan = {
+      const mockBucketContractLine: IBucketContractLine = {
         bucket_contract_line_id: 'bucket1',
         contract_line_id: 'test_contract_line_id',
         total_hours: 40,
@@ -700,7 +700,7 @@ describe('BillingEngine', () => {
           whereBetween: vi.fn().mockReturnThis(),
           first: vi.fn().mockImplementation(() => {
             if (tableName === 'clients') return Promise.resolve(mockClient);
-            if (tableName === 'bucket_plans') return Promise.resolve(mockBucketPlan);
+            if (tableName === 'bucket_contract_lines') return Promise.resolve(mockBucketContractLine);
             if (tableName === 'bucket_usage') return Promise.resolve(mockBucketUsage);
             if (tableName === 'service_catalog') return Promise.resolve(mockServiceCatalog);
             return Promise.resolve(null);
@@ -712,7 +712,7 @@ describe('BillingEngine', () => {
       // Assign the mock knex function to the billingEngine
       (billingEngine as any).knex = mockKnex;
 
-      const result = await (billingEngine as any).calculateBucketPlanCharges(
+      const result = await (billingEngine as any).calculateBucketContractLineCharges(
         mockClientId,
         { startDate: mockStartDate, endDate: mockEndDate },
         { contract_line_id: 'test_contract_line_id' }
@@ -736,7 +736,7 @@ describe('BillingEngine', () => {
 
       // Verify that knex was called with the correct table names
       expect(mockKnex).toHaveBeenCalledWith('clients');
-      expect(mockKnex).toHaveBeenCalledWith('bucket_plans');
+      expect(mockKnex).toHaveBeenCalledWith('bucket_contract_lines');
       expect(mockKnex).toHaveBeenCalledWith('bucket_usage');
       expect(mockKnex).toHaveBeenCalledWith('service_catalog');
 
@@ -1012,7 +1012,7 @@ describe('BillingEngine', () => {
         const mockStartDate = '2023-01-17T00:00:00Z';
         const mockBillingCycle = 'monthly';
 
-        const proratedCharges = (billingEngine as any).applyProrationToPlan(charges, billingPeriod, mockStartDate, mockBillingCycle);
+        const proratedCharges = (billingEngine as any).applyProrationToContractLine(charges, billingPeriod, mockStartDate, mockBillingCycle);
 
         expect(proratedCharges[0].total).toBeCloseTo(48.39, 2); // 100 * (15 / 31) ≈ 48.39
       });

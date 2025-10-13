@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
-import { createTestDate } from '../../../test-utils/dateUtils';
+import { createTestDate } from '../../../../../test-utils/dateUtils';
 
 // Setup TestContext
 const testHelpers = TestContext.createHelpers();
@@ -27,7 +27,6 @@ describe('Negative Invoice Credit Tests', () => {
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_plans',
         'bucket_usage',
         'tax_rates',
         'client_tax_settings'
@@ -103,23 +102,23 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'service_id');
 
       // 5. Create a contract line
-      const planId = await context.createEntity('contract_lines', {
-        contract_line_name: 'Credit Plan',
+      const contractLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Credit Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
-      // 6. Assign services to plan
+      // 6. Assign services to contract line
       await context.db('contract_line_services').insert([
         {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: serviceA,
           quantity: 1,
           tenant: context.tenantId
         },
         {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: serviceB,
           quantity: 1,
           tenant: context.tenantId
@@ -139,11 +138,11 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate
       }, 'billing_cycle_id');
 
-      // 8. Assign plan to client
+      // 8. Assign contract line to client
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: client_id,
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
@@ -261,29 +260,29 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'service_id');
 
       // 5. Create a contract line
-      const planId = await context.createEntity('contract_lines', {
-        contract_line_name: 'Mixed Credit Plan',
+      const contractLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Mixed Credit Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
-      // 6. Assign services to plan
+      // 6. Assign services to contract line
       await context.db('contract_line_services').insert([
         {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: serviceA,
           quantity: 1,
           tenant: context.tenantId
         },
         {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: serviceB,
           quantity: 1,
           tenant: context.tenantId
         },
         {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: serviceC,
           quantity: 1,
           tenant: context.tenantId
@@ -303,11 +302,11 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate
       }, 'billing_cycle_id');
 
-      // 8. Assign plan to client
+      // 8. Assign contract line to client
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: client_id,
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
@@ -430,23 +429,23 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'service_id');
 
       // 5. Create a contract line for negative services
-      const planId1 = await context.createEntity('contract_lines', {
-        contract_line_name: 'Credit Plan',
+      const contractLineId1 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Credit Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
-      // 6. Assign negative services to plan
+      // 6. Assign negative services to contract line
       await context.db('contract_line_services').insert([
         {
-          contract_line_id: planId1,
+          contract_line_id: contractLineId1,
           service_id: negativeServiceA,
           quantity: 1,
           tenant: context.tenantId
         },
         {
-          contract_line_id: planId1,
+          contract_line_id: contractLineId1,
           service_id: negativeServiceB,
           quantity: 1,
           tenant: context.tenantId
@@ -466,12 +465,12 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate1
       }, 'billing_cycle_id');
 
-      // 8. Assign first plan to client
-      const firstPlanId = uuidv4();
+      // 8. Assign first contract line to client
+      const firstClientContractLineId = uuidv4();
       await context.db('client_contract_lines').insert({
-        client_contract_line_id: firstPlanId,
+        client_contract_line_id: firstClientContractLineId,
         client_id: client_id,
-        contract_line_id: planId1,
+        contract_line_id: contractLineId1,
         tenant: context.tenantId,
         start_date: startDate1,
         is_active: true
@@ -529,16 +528,16 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'service_id');
 
       // 15. Create a contract line for positive service
-      const planId2 = await context.createEntity('contract_lines', {
-        contract_line_name: 'Regular Plan',
+      const contractLineId2 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Regular Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
-      // 16. Assign positive service to second plan
+      // 16. Assign positive service to second contract line
       await context.db('contract_line_services').insert({
-        contract_line_id: planId2,
+        contract_line_id: contractLineId2,
         service_id: positiveService,
         quantity: 1,
         tenant: context.tenantId
@@ -556,15 +555,15 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate2
       }, 'billing_cycle_id');
 
-      // 18. Deactivate first plan and assign second plan to client
+      // 18. Deactivate first contract line and assign second contract line to client
       await context.db('client_contract_lines')
-        .where({ client_contract_line_id: firstPlanId })
+        .where({ client_contract_line_id: firstClientContractLineId })
         .update({ is_active: false });
-        
+
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: client_id,
-        contract_line_id: planId2,
+        contract_line_id: contractLineId2,
         tenant: context.tenantId,
         start_date: startDate2,
         is_active: true
@@ -658,16 +657,16 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'service_id');
 
       // 5. Create a contract line for negative services
-      const planId1 = await context.createEntity('contract_lines', {
-        contract_line_name: 'Small Credit Plan',
+      const contractLineId1 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Small Credit Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
-      // 6. Assign negative service to plan
+      // 6. Assign negative service to contract line
       await context.db('contract_line_services').insert({
-        contract_line_id: planId1,
+        contract_line_id: contractLineId1,
         service_id: negativeService,
         quantity: 1,
         tenant: context.tenantId
@@ -686,11 +685,11 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate1
       }, 'billing_cycle_id');
 
-      // 8. Assign first plan to client
+      // 8. Assign first contract line to client
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: client_id,
-        contract_line_id: planId1,
+        contract_line_id: contractLineId1,
         tenant: context.tenantId,
         start_date: startDate1,
         is_active: true
@@ -728,16 +727,16 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'service_id');
 
       // 14. Create a contract line for expensive service
-      const planId2 = await context.createEntity('contract_lines', {
-        contract_line_name: 'Expensive Plan',
+      const contractLineId2 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Expensive Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
-      // 15. Assign positive service to second plan
+      // 15. Assign positive service to second contract line
       await context.db('contract_line_services').insert({
-        contract_line_id: planId2,
+        contract_line_id: contractLineId2,
         service_id: expensiveService,
         quantity: 1,
         tenant: context.tenantId
@@ -755,11 +754,11 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate2
       }, 'billing_cycle_id');
 
-      // 17. Deactivate the first plan and assign second plan to client
+      // 17. Deactivate the first contract line and assign second contract line to client
       await context.db('client_contract_lines')
         .where({ 
           client_id: client_id,
-          contract_line_id: planId1,
+          contract_line_id: contractLineId1,
           tenant: context.tenantId
         })
         .update({ is_active: false });
@@ -767,7 +766,7 @@ describe('Negative Invoice Credit Tests', () => {
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: client_id,
-        contract_line_id: planId2,
+        contract_line_id: contractLineId2,
         tenant: context.tenantId,
         start_date: startDate2,
         is_active: true
@@ -861,16 +860,16 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'service_id');
 
       // 5. Create a contract line for negative service
-      const planId1 = await context.createEntity('contract_lines', {
-        contract_line_name: 'Large Credit Plan',
+      const contractLineId1 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Large Credit Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
-      // 6. Assign negative service to plan
+      // 6. Assign negative service to contract line
       await context.db('contract_line_services').insert({
-        contract_line_id: planId1,
+        contract_line_id: contractLineId1,
         service_id: largeNegativeService,
         quantity: 1,
         tenant: context.tenantId
@@ -889,11 +888,11 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate1
       }, 'billing_cycle_id');
 
-      // 8. Assign first plan to client
+      // 8. Assign first contract line to client
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: client_id,
-        contract_line_id: planId1,
+        contract_line_id: contractLineId1,
         tenant: context.tenantId,
         start_date: startDate1,
         is_active: true
@@ -931,16 +930,16 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'service_id');
 
       // 14. Create a contract line for small service
-      const planId2 = await context.createEntity('contract_lines', {
-        contract_line_name: 'Small Service Plan',
+      const contractLineId2 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Small Service Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
         contract_line_type: 'Fixed'
       }, 'contract_line_id');
 
-      // 15. Assign positive service to second plan
+      // 15. Assign positive service to second contract line
       await context.db('contract_line_services').insert({
-        contract_line_id: planId2,
+        contract_line_id: contractLineId2,
         service_id: smallService,
         quantity: 1,
         tenant: context.tenantId
@@ -958,11 +957,11 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate2
       }, 'billing_cycle_id');
 
-      // 17. Deactivate the first plan and assign second plan to client
+      // 17. Deactivate the first contract line and assign second contract line to client
       await context.db('client_contract_lines')
         .where({ 
           client_id: client_id,
-          contract_line_id: planId1,
+          contract_line_id: contractLineId1,
           tenant: context.tenantId
         })
         .update({ is_active: false });
@@ -970,7 +969,7 @@ describe('Negative Invoice Credit Tests', () => {
       await context.db('client_contract_lines').insert({
         client_contract_line_id: uuidv4(),
         client_id: client_id,
-        contract_line_id: planId2,
+        contract_line_id: contractLineId2,
         tenant: context.tenantId,
         start_date: startDate2,
         is_active: true

@@ -17,7 +17,7 @@ export const billingOverviewReport: ReportDefinition = {
   
   metrics: [
     {
-      id: 'active_plans_count',
+      id: 'active_contract_lines_count',
       name: 'Active Contract Lines',
       description: 'Count of currently active contract lines',
       type: 'count',

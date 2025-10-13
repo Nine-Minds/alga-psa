@@ -2,4 +2,4 @@ import { ApiContractLineController } from '@/lib/api/controllers/ApiContractLine
 
 const controller = new ApiContractLineController();
 
-export const GET = controller.getPlanAnalytics();
+export const GET = controller.getContractLineAnalytics();

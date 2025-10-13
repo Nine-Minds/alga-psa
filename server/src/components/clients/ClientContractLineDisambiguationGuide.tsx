@@ -6,14 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/
 import { AlertTriangle, Info, CheckCircle, HelpCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 
-interface ClientPlanDisambiguationGuideProps {
+interface ClienContractLineDisambiguationGuideProps {
   className?: string;
 }
 
-const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps> = ({
+const ClienContractLineDisambiguationGuide: React.FC<ClienContractLineDisambiguationGuideProps> = ({
   className = ''
 }) => {
-  // Reuse the existing PlanDisambiguationGuide component's implementation
+  // Reuse the existing ContractLineDisambiguationGuide component's implementation
   // but with client-specific context and examples
   
   const [activeTab, setActiveTab] = useState('overview');
@@ -60,7 +60,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                 </li>
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Default Plan:</strong> The system's automatic choice when a service appears in multiple contract lines for this client.</span>
+                  <span><strong>Default Contract Line:</strong> The system's automatic choice when a service appears in multiple contract lines for this client.</span>
                 </li>
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
@@ -162,7 +162,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                 className="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 text-left"
                 onClick={() => toggleSection('bp2')}
               >
-                <span className="font-medium">2. Use Clear Plan Naming Conventions</span>
+                <span className="font-medium">2. Use Clear Contract Line Naming Conventions</span>
                 {expandedSections['bp2'] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               {expandedSections['bp2'] && (
@@ -171,7 +171,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                     Name contract lines in a way that clearly indicates their purpose and scope for this client.
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
-                    <li>Include the contract line type in the name (e.g., "Monthly Support Bucket", "Project-Based Plan")</li>
+                    <li>Include the contract line type in the name (e.g., "Monthly Support Bucket", "Project-Based Contract Line")</li>
                     <li>Consider including dates or version numbers for contract lines that change over time</li>
                     <li>Use consistent naming patterns across all contract lines for this client</li>
                   </ul>
@@ -220,7 +220,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                 className="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 text-left"
                 onClick={() => toggleSection('sc1')}
               >
-                <span className="font-medium">Scenario 1: Bucket Plan + Standard Plan</span>
+                <span className="font-medium">Scenario 1: Bucket Contract Line + Standard Contract Line</span>
                 {expandedSections['sc1'] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               {expandedSections['sc1'] && (
@@ -243,7 +243,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                 className="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 text-left"
                 onClick={() => toggleSection('sc2')}
               >
-                <span className="font-medium">Scenario 2: Multiple Standard Plans</span>
+                <span className="font-medium">Scenario 2: Multiple Standard Contract Lines</span>
                 {expandedSections['sc2'] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               {expandedSections['sc2'] && (
@@ -266,7 +266,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                 className="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 text-left"
                 onClick={() => toggleSection('sc3')}
               >
-                <span className="font-medium">Scenario 3: Multiple Bucket Plans</span>
+                <span className="font-medium">Scenario 3: Multiple Bucket Contract Lines</span>
                 {expandedSections['sc3'] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               {expandedSections['sc3'] && (
@@ -303,7 +303,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                 className="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 text-left"
                 onClick={() => toggleSection('ts1')}
               >
-                <span className="font-medium">Issue: Time Entry Billed to Wrong Plan</span>
+                <span className="font-medium">Issue: Time Entry Billed to Wrong Contract Line</span>
                 {expandedSections['ts1'] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               {expandedSections['ts1'] && (
@@ -327,7 +327,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                 className="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 text-left"
                 onClick={() => toggleSection('ts2')}
               >
-                <span className="font-medium">Issue: Plan Selection Not Appearing</span>
+                <span className="font-medium">Issue: Contract Line Selection Not Appearing</span>
                 {expandedSections['ts2'] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               {expandedSections['ts2'] && (
@@ -374,4 +374,4 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
   );
 };
 
-export default ClientPlanDisambiguationGuide;
+export default ClienContractLineDisambiguationGuide;

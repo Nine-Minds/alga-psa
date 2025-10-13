@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { getEligibleContractLinesForUI, getClientIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
+import { getEligibleContractLinesForUI, getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -21,7 +21,7 @@ import { ISO8601String } from 'server/src/types/types.d';
 // Define the expected structure returned by getEligibleContractLinesForUI,
 // including the date fields needed for filtering.
 // Type matching the apparent return structure of getEligibleContractLinesForUI
-interface EligiblePlanUI {
+interface EligibleContractLineUI {
   client_contract_line_id: string;
   contract_line_name: string;
   contract_line_type: string;
@@ -94,7 +94,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   }>({});
 
   const [showErrors, setShowErrors] = useState(false);
-  const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[]>([]);
+  const [eligibleContractLines, setEligibleContractLines] = useState<EligibleContractLineUI[]>([]);
   const [showContractLineSelector, setShowContractLineSelector] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
   const prevServiceIdRef = useRef<string | undefined | null>();
@@ -165,13 +165,13 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // Tax details are now determined by the backend based on service_id's tax_rate_id
       // --- End Removed Logic ---
 
-      // Always show the plan selector
+      // Always show the contract line selector
       setShowContractLineSelector(true);
 
       let clientDetails: any | null = null;
-      let currentEligiblePlans: EligiblePlanUI[] = [];
+      let currentEligibleContractLines: EligibleContractLineUI[] = [];
 
-      // 1. Fetch Client Details (if clientId exists) - Still needed for plan logic
+      // 1. Fetch Client Details (if clientId exists) - Still needed for contract line logic
       if (clientId) {
         try {
           clientDetails = await getClientById(clientId);
@@ -192,47 +192,47 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         console.log('No client ID available, using default contract line logic (no specific lines loaded)');
         setEligibleContractLines([]);
       } else {
-        // Fetch and filter plans only if service and client are known
+        // Fetch and filter contract lines only if service and client are known
         try {
-          const plans = await getEligibleContractLinesForUI(clientId, entry.service_id) as EligiblePlanUI[];
+          const contractLines = await getEligibleContractLinesForUI(clientId, entry.service_id) as EligibleContractLineUI[];
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
-          const filteredPlans = plans.filter(plan => {
-            const start = new Date(plan.start_date as string);
-            const end = plan.end_date ? new Date(plan.end_date as string) : null;
+          const filteredContractLines = contractLines.filter(contractLine => {
+            const start = new Date(contractLine.start_date as string);
+            const end = contractLine.end_date ? new Date(contractLine.end_date as string) : null;
             // Ensure entryDate is valid before comparison
             return !isNaN(entryDate.getTime()) && start <= entryDate && (!end || end >= entryDate);
           });
 
-          currentEligiblePlans = filteredPlans;
-          setEligibleContractLines(currentEligiblePlans);
-          console.log('Eligible contract lines loaded:', currentEligiblePlans);
+          currentEligibleContractLines = filteredContractLines;
+          setEligibleContractLines(currentEligibleContractLines);
+          console.log('Eligible contract lines loaded:', currentEligibleContractLines);
 
           // 3. Set Default Contract Line (only if lines were loaded)
           const currentContractLineId = entry?.contract_line_id; // Use entry from closure
-          if (!currentContractLineId && currentEligiblePlans.length > 0) {
-            let defaultPlanId: string | null = null;
-            if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
-              console.log('Setting default contract line (only one eligible):', defaultPlanId);
+          if (!currentContractLineId && currentEligibleContractLines.length > 0) {
+            let defaultContractLineId: string | null = null;
+            if (currentEligibleContractLines.length === 1) {
+              defaultContractLineId = currentEligibleContractLines[0].client_contract_line_id;
+              console.log('Setting default contract line (only one eligible):', defaultContractLineId);
             } else {
-              const bucketPlans = currentEligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
-              if (bucketPlans.length === 1) {
-                defaultPlanId = bucketPlans[0].client_contract_line_id;
-                console.log('Setting default contract line (single bucket line):', defaultPlanId);
+              const bucketContractLines = currentEligibleContractLines.filter(contractLine => contractLine.contract_line_type === 'Bucket');
+              if (bucketContractLines.length === 1) {
+                defaultContractLineId = bucketContractLines[0].client_contract_line_id;
+                console.log('Setting default contract line (single bucket line):', defaultContractLineId);
               } else {
                 console.log('Multiple eligible contract lines, no single default determined.');
               }
             }
 
-            if (defaultPlanId) {
-              const entryWithUpdatedPlan = {
+            if (defaultContractLineId) {
+              const entryWithUpdatedContractLine = {
                 ...entry, // Includes tax updates already applied
-                contract_line_id: defaultPlanId
+                contract_line_id: defaultContractLineId
               };
-              onUpdateEntry(index, entryWithUpdatedPlan);
+              onUpdateEntry(index, entryWithUpdatedContractLine);
               // Update the 'entry' variable in this scope
-              entry = entryWithUpdatedPlan;
+              entry = entryWithUpdatedContractLine;
             }
           } else {
             console.log('Contract line already set or no eligible lines found, skipping default selection.');
@@ -244,65 +244,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         }
       }
 
-      // 2. Load Eligible Contract Lines (dependent on service and client)
-      if (!entry?.service_id) {
-        console.log('No service ID available, cannot load contract lines');
-        setEligibleContractLines([]);
-      } else if (!clientId) {
-        console.log('No client ID available, using default contract line logic (no specific lines loaded)');
-        setEligibleContractLines([]);
-      } else {
-        // Fetch and filter plans only if service and client are known
-        try {
-          const plans = await getEligibleContractLinesForUI(clientId, entry.service_id) as EligiblePlanUI[];
-          const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
-
-          const filteredPlans = plans.filter(plan => {
-            const start = new Date(plan.start_date as string);
-            const end = plan.end_date ? new Date(plan.end_date as string) : null;
-            // Ensure entryDate is valid before comparison
-            return !isNaN(entryDate.getTime()) && start <= entryDate && (!end || end >= entryDate);
-          });
-
-          currentEligiblePlans = filteredPlans;
-          setEligibleContractLines(currentEligiblePlans);
-          console.log('Eligible contract lines loaded:', currentEligiblePlans);
-
-          // 3. Set Default Contract Line (only if lines were loaded)
-          const currentContractLineId = entry?.contract_line_id; // Use entry from closure
-          if (!currentContractLineId && currentEligiblePlans.length > 0) {
-            let defaultPlanId: string | null = null;
-            if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
-              console.log('Setting default contract line (only one eligible):', defaultPlanId);
-            } else {
-              const bucketPlans = currentEligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
-              if (bucketPlans.length === 1) {
-                defaultPlanId = bucketPlans[0].client_contract_line_id;
-                console.log('Setting default contract line (single bucket line):', defaultPlanId);
-              } else {
-                console.log('Multiple eligible contract lines, no single default determined.');
-              }
-            }
-
-            if (defaultPlanId) {
-              const entryWithUpdatedPlan = {
-                ...entry, // Includes tax updates already applied
-                contract_line_id: defaultPlanId
-              };
-              onUpdateEntry(index, entryWithUpdatedPlan);
-              // Update the 'entry' variable in this scope
-              entry = entryWithUpdatedPlan;
-            }
-          } else {
-            console.log('Contract line already set or no eligible lines found, skipping default selection.');
-          }
-
-        } catch (error) {
-          console.error('Error loading eligible contract lines:', error);
-          setEligibleContractLines([]); // Reset on error
-        }
-      }
+      // This section was duplicated but is now removed
     }
 
     // Only run if entry exists
@@ -518,9 +460,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               }}
               disabled={!isEditable || !clientId || eligibleContractLines.length <= 1}
               className={`mt-1 w-full ${eligibleContractLines.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
-              options={eligibleContractLines.map(plan => ({
-                value: plan.client_contract_line_id,
-                label: `${plan.contract_line_name} (${plan.contract_line_type})` // Now contract_line_type exists on EligiblePlanUI
+              options={eligibleContractLines.map(contractLine => ({
+                value: contractLine.client_contract_line_id,
+                label: `${contractLine.contract_line_name} (${contractLine.contract_line_type})` // Now contract_line_type exists on EligibleContractLineUI
               }))}
               placeholder={!clientId
                 ? "Using default contract line"

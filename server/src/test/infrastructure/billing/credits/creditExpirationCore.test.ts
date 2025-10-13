@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
-import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
+import { createTestDate, createTestDateISO } from '../../../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 

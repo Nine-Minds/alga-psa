@@ -194,9 +194,9 @@
       "overview": "Overzicht",
       "invoices": "Facturen"
     },
-    "currentPlan": "Huidig abonnement",
+    "currentContractLine": "Huidig abonnement",
     "nextInvoice": "Volgende factuur",
-    "viewPlanDetails": "Abonnementsdetails bekijken",
+    "viewContractLineDetails": "Abonnementsdetails bekijken",
     "viewAllInvoices": "Alle facturen bekijken",
     "failedToLoad": "Facturen laden is mislukt. Probeer het opnieuw.",
     "invoices": "Facturen",
@@ -246,7 +246,7 @@
       "weekly": "Wekelijks",
       "biweekly": "Tweewekelijks"
     },
-    "plan": {
+    "contractLine": {
       "detailsTitle": "Abonnementsdetails",
       "name": "Naam abonnement",
       "frequency": "Facturatiefrequentie",
@@ -274,8 +274,8 @@
       "total": "Totaal uren",
       "usage": "Verbruik",
       "overage": "Overschrijding",
-      "noPlanTitle": "Geen urenbundels beschikbaar",
-      "noPlanDescription": "Er zijn geen actieve urenbundels voor je account."
+      "noContractLineTitle": "Geen urenbundels beschikbaar",
+      "noContractLineDescription": "Er zijn geen actieve urenbundels voor je account."
     },
     "messages": {
       "noInvoices": "Geen facturen gevonden",
@@ -522,7 +522,7 @@
   "account": {
     "services": {
       "loadError": "Services konden niet worden geladen",
-      "loadPlansError": "Serviceplannen konden niet worden geladen",
+      "loadContractLinesError": "Serviceplannen konden niet worden geladen",
       "updateError": "Service kon niet worden bijgewerkt",
       "loading": "Services worden geladen...",
       "activeTitle": "Actieve services",
@@ -531,7 +531,7 @@
         "service": "Service",
         "description": "Beschrijving",
         "status": "Status",
-        "currentPlan": "Huidig pakket",
+        "currentContractLine": "Huidig pakket",
         "nextBilling": "Volgende facturatie"
       },
       "actions": {
@@ -541,8 +541,8 @@
       },
       "manageTitle": "{{service}} beheren",
       "genericServiceLabel": "Service",
-      "currentPlan": "Huidig pakket",
-      "availablePlans": "Beschikbare pakketten",
+      "currentContractLine": "Huidig pakket",
+      "availableContractLines": "Beschikbare pakketten",
       "catalog": {
         "title": "Beschikbare services",
         "learnMore": "Meer info",

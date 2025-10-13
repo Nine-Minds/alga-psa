@@ -8,7 +8,7 @@ import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { withTransaction } from '@shared/db';
 import { IContractLine, IContractLineFixedConfig, IClientContractLine, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
 import { IContract, IContractLineMapping, IClientContract } from 'server/src/interfaces/contract.interfaces';
-import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
 import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 // Import schema types for validation
@@ -25,28 +25,28 @@ import {
   UpdateContractLineData,
   ContractLineResponse,
   ContractLineFilterData,
-  CreateFixedPlanConfigData,
-  UpdateFixedPlanConfigData,
+  CreateFixedContractLineConfigData,
+  UpdateFixedContractLineConfigData,
   CreateContractData,
   UpdateContractData,
   ContractResponse,
   CreateClientContractLineData,
   UpdateClientContractLineData,
   ClientContractLineResponse,
-  AddServiceToPlanData,
-  UpdatePlanServiceData,
+  AddServiceToContractLineData,
+  UpdateContractLineServiceData,
   CopyContractLineData,
-  CreatePlanTemplateData,
-  PlanTemplateResponse,
-  CreatePlanFromTemplateData,
-  PlanActivationData,
-  ClientPlanActivationData,
+  CreateContractLineTemplateData,
+  ContractLineTemplateResponse,
+  CreateContractLineFromTemplateData,
+  ContractLineActivationData,
+  ClientContractLineActivationData,
   BulkCreateContractLinesData,
   BulkUpdateContractLinesData,
   BulkDeleteContractLinesData,
-  BulkAddServicesToPlanData,
-  BulkRemoveServicesFromPlanData,
-  PlanAnalyticsResponse,
+  BulkAddServicesToContractLineData,
+  BulkRemoveServicesFromContractLineData,
+  ContractLineAnalyticsResponse,
   ContractAnalyticsResponse,
   BillingOverviewAnalytics,
   UsageMetricsResponse
@@ -62,7 +62,7 @@ export interface ContractLineServiceOptions {
   includeClients?: boolean;
 }
 
-export interface PlanTemplate {
+export interface ContractLineTemplate {
   template_id: string;
   template_name: string;
   template_description?: string;
@@ -83,7 +83,7 @@ export interface PlanTemplate {
 }
 
 export class ContractLineService extends BaseService<IContractLine> {
-  private planServiceConfigService: PlanServiceConfigurationService;
+  private contractLineServiceConfigService: ContractLineServiceConfigurationService;
 
   constructor() {
     super({
@@ -94,7 +94,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       defaultSort: 'contract_line_name',
       defaultOrder: 'asc'
     });
-    this.planServiceConfigService = new PlanServiceConfigurationService();
+    this.contractLineServiceConfigService = new ContractLineServiceConfigurationService();
   }
 
 
@@ -131,19 +131,19 @@ export class ContractLineService extends BaseService<IContractLine> {
       countQuery = this.applyContractLineFilters(countQuery, filters);
   
       // Execute queries
-      const [plans, [{ count }]] = await Promise.all([
+      const [contractLines, [{ count }]] = await Promise.all([
         dataQuery,
         countQuery.count('* as count')
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => ({
-        ...plan,
-        service_category: plan.service_category || undefined
+      const transformedContractLines = contractLines.map((contractLine: any) => ({
+        ...contractLine,
+        service_category: contractLine.service_category || undefined
       }));
   
       return {
-        data: transformedPlans as IContractLine[],
+        data: transformedContractLines as IContractLine[],
         total: parseInt(count as string)
       };
     }
@@ -175,24 +175,24 @@ export class ContractLineService extends BaseService<IContractLine> {
       countQuery = this.applyContractLineFilters(countQuery, filters);
   
       // Execute queries
-      const [plans, [{ count }]] = await Promise.all([
+      const [contractLines, [{ count }]] = await Promise.all([
         dataQuery,
         countQuery.count('* as count')
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => ({
-        ...plan,
-        service_category: plan.service_category || undefined
+      const transformedContractLines = contractLines.map((contractLine: any) => ({
+        ...contractLine,
+        service_category: contractLine.service_category || undefined
       }));
   
       // Add HATEOAS links
-      const plansWithLinks = transformedPlans.map((plan: any) => 
-        addHateoasLinks(plan, this.generatePlanLinks(plan.contract_line_id!, context))
+      const contractLinesWithLinks = transformedContractLines.map((contractLine: any) => 
+        addHateoasLinks(contractLine, this.generateContractLineLinks(contractLine.contract_line_id!, context))
       );
   
       return {
-        data: plansWithLinks as ContractLineResponse[],
+        data: contractLinesWithLinks as ContractLineResponse[],
         total: parseInt(count as string)
       };
     }
@@ -209,16 +209,16 @@ export class ContractLineService extends BaseService<IContractLine> {
         .where('contract_line_id', id)
         .first();
   
-      const plan = await query;
+      const contractLine = await query;
       
-      if (!plan) {
+      if (!contractLine) {
         return null;
       }
   
       // Transform null to undefined for compatibility
       return {
-        ...plan,
-        service_category: plan.service_category || undefined
+        ...contractLine,
+        service_category: contractLine.service_category || undefined
       } as IContractLine;
     }
   
@@ -236,20 +236,20 @@ export class ContractLineService extends BaseService<IContractLine> {
           .where('cl.contract_line_id', id)
           .first();
     
-        const plan = await query;
+        const contractLine = await query;
         
-        if (!plan) {
+        if (!contractLine) {
           return null;
         }
     
         // Transform null to undefined for compatibility
-        const transformedPlan = {
-          ...plan,
-          service_category: plan.service_category || undefined
+        const transformedContractLine = {
+        ...contractLine,
+          service_category: contractLine.service_category || undefined
         };
     
         // Add HATEOAS links
-        return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
+        return addHateoasLinks(transformedContractLine, this.generateContractLineLinks(id, context)) as ContractLineResponse;
       }
 
 
@@ -264,16 +264,16 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        const planData = this.addCreateAuditFields(data, context);
-        planData.contract_line_id = uuidv4();
+        const contractLineData = this.addCreateAuditFields(data, context);
+        contractLineData.contract_line_id = uuidv4();
         
         // Create the base contract line record
-        const [contractLine] = await trx('contract_lines').insert(planData).returning('*');
+        const [contractLine] = await trx('contract_lines').insert(contractLineData).returning('*');
         
-        // Create default fixed config if plan type is Fixed (handle base_rate if provided)
+        // Create default fixed config if contract line type is Fixed (handle base_rate if provided)
         if (data.contract_line_type === 'Fixed') {
           const fixedConfig = {
-            contract_line_id: planData.contract_line_id,
+            contract_line_id: contractLineData.contract_line_id,
             base_rate: (data as any).base_rate || 0,
             enable_proration: false,
             billing_cycle_alignment: 'start' as const,
@@ -309,35 +309,35 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        // Check if plan exists and get current state
-        const existingPlan = await this.getExistingPlan(id, context, trx);
+        // Check if contract line exists and get current state
+        const existingContractLine = await this.getExistingContractLine(id, context, trx);
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
         
-        // Handle plan type specific logic
-        if (existingPlan.contract_line_type === 'Hourly') {
-          // Remove per-service fields for hourly plans
+        // Handle contract line type specific logic
+        if (existingContractLine.contract_line_type === 'Hourly') {
+          // Remove per-service fields for hourly contract lines
           delete updateData.hourly_rate;
           delete updateData.minimum_billable_time;
           delete updateData.round_up_to_nearest;
         }
         
-        // Update the plan
-        const [updatedPlan] = await trx('contract_lines')
+        // Update the contract line
+        const [updatedContractLine] = await trx('contract_lines')
           .where('contract_line_id', id)
           .where('tenant', context.tenant)
           .update(updateData)
           .returning('*');
         
-        if (!updatedPlan) {
-          throw new Error('Plan not found or permission denied');
+        if (!updatedContractLine) {
+          throw new Error('Contract line not found or permission denied');
         }
         
         // Transform null to undefined for compatibility
         return {
-          ...updatedPlan,
-          service_category: updatedPlan.service_category || undefined
+          ...updatedContractLine,
+          service_category: updatedContractLine.service_category || undefined
         } as IContractLine;
       });
     }
@@ -345,7 +345,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     /**
      * Update contract line with enhanced features and response
      */
-    async updatePlan(
+    async updateContractLine(
       id: string, 
       data: UpdateContractLineData, 
       context: ServiceContext
@@ -353,41 +353,41 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        // Check if plan exists and get current state
-        const existingPlan = await this.getExistingPlan(id, context, trx);
+        // Check if contract line exists and get current state
+        const existingContractLine = await this.getExistingContractLine(id, context, trx);
         
         // Validate business rules
-        await this.validatePlanUpdate(id, data, existingPlan, context, trx);
+        await this.validateContractLineUpdate(id, data, existingContractLine, context, trx);
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
         
-        // Handle plan type specific logic
-        if (existingPlan.contract_line_type === 'Hourly') {
-          // Remove per-service fields for hourly plans
+        // Handle contract line type specific logic
+        if (existingContractLine.contract_line_type === 'Hourly') {
+          // Remove per-service fields for hourly contract lines
           delete updateData.hourly_rate;
           delete updateData.minimum_billable_time;
           delete updateData.round_up_to_nearest;
         }
         
-        // Update the plan
-        const [updatedPlan] = await trx('contract_lines')
+        // Update the contract line
+        const [updatedContractLine] = await trx('contract_lines')
           .where('contract_line_id', id)
           .where('tenant', context.tenant)
           .update(updateData)
           .returning('*');
         
-        if (!updatedPlan) {
-          throw new Error('Plan not found or permission denied');
+        if (!updatedContractLine) {
+          throw new Error('Contract line not found or permission denied');
         }
         
         // Transform null to undefined for compatibility
-        const transformedPlan = {
-          ...updatedPlan,
-          service_category: updatedPlan.service_category || undefined
+        const transformedContractLine = {
+          ...updatedContractLine,
+          service_category: updatedContractLine.service_category || undefined
         };
         
-        return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
+        return addHateoasLinks(transformedContractLine, this.generateContractLineLinks(id, context)) as ContractLineResponse;
       });
     }
 
@@ -399,45 +399,45 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      // Check if plan is in use
-      const isInUse = await this.isPlanInUse(id, context, trx);
+      // Check if contract line is in use
+      const isInUse = await this.isContractLineInUse(id, context, trx);
       if (isInUse.inUse) {
-        throw new Error(`Cannot delete plan: ${isInUse.reason}`);
+        throw new Error(`Cannot delete contract line: ${isInUse.reason}`);
       }
       
       // Remove associated services first
-      await this.removeAllServicesFromPlan(id, context, trx);
+      await this.removeAllServicesFromContractLine(id, context, trx);
       
       // Remove from any contracts
       await this.removeContractLineFromAllContracts(id, context, trx);
       
-      // Delete the plan
+      // Delete the contract line
       const deletedCount = await trx('contract_lines')
         .where('contract_line_id', id)
         .where('tenant', context.tenant)
         .delete();
       
       if (deletedCount === 0) {
-        throw new Error('Plan not found or permission denied');
+        throw new Error('Contract line not found or permission denied');
       }
     });
   }
 
   // ============================================================================
-  // PLAN CONFIGURATION MANAGEMENT
+  // CONTRACT LINE CONFIGURATION MANAGEMENT
   // ============================================================================
 
   /**
-   * Get fixed plan configuration
+   * Get fixed contract line configuration
    */
-  async getFixedPlanConfig(
-    planId: string, 
+  async getFixedContractLineConfig(
+    contractLineId: string, 
     context: ServiceContext
   ): Promise<IContractLineFixedConfig | null> {
     const { knex } = await this.getKnex();
     
     const config = await knex('contract_line_fixed_config')
-      .where('contract_line_id', planId)
+      .where('contract_line_id', contractLineId)
       .where('tenant', context.tenant)
       .first();
     
@@ -445,25 +445,25 @@ export class ContractLineService extends BaseService<IContractLine> {
   }
 
   /**
-   * Create or update fixed plan configuration
+   * Create or update fixed contract line configuration
    */
-  async upsertFixedPlanConfig(
-    planId: string,
-    data: CreateFixedPlanConfigData,
+  async upsertFixedContractLineConfig(
+    contractLineId: string,
+    data: CreateFixedContractLineConfigData,
     context: ServiceContext
   ): Promise<IContractLineFixedConfig> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      // Verify plan exists and is Fixed type
-      const plan = await this.getExistingPlan(planId, context, trx);
-      if (plan.contract_line_type !== 'Fixed') {
-        throw new Error('Can only add fixed configuration to Fixed type plans');
+      // Verify contract line exists and is Fixed type
+      const contractLine = await this.getExistingContractLine(contractLineId, context, trx);
+      if (contractLine.contract_line_type !== 'Fixed') {
+        throw new Error('Can only add fixed configuration to Fixed type contract lines');
       }
       
       // Upsert configuration
       const configData = {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         ...data,
         tenant: context.tenant,
         updated_at: new Date()
@@ -480,26 +480,26 @@ export class ContractLineService extends BaseService<IContractLine> {
   }
 
   /**
-   * Get combined fixed plan configuration (plan-level + service-level)
+   * Get combined fixed contract line configuration (contract line-level + service-level)
    */
-  async getCombinedFixedPlanConfig(
-    planId: string,
+  async getCombinedFixedContractLineConfig(
+    contractLineId: string,
     serviceId: string,
     context: ServiceContext
   ): Promise<any> {
     const { knex } = await this.getKnex();
     
-    // Get plan-level config
-    const planConfig = await this.getFixedPlanConfig(planId, context);
+    // Get contract line-level config
+    const contractLineConfig = await this.getFixedContractLineConfig(contractLineId, context);
     
     // Get service-level config
-    this.planServiceConfigService = new PlanServiceConfigurationService(knex, context.tenant);
-    const serviceConfig = await this.planServiceConfigService.getConfigurationForService(planId, serviceId);
+    this.contractLineServiceConfigService = new ContractLineServiceConfigurationService(knex, context.tenant);
+    const serviceConfig = await this.contractLineServiceConfigService.getConfigurationForService(contractLineId, serviceId);
     
     return {
-      base_rate: planConfig?.base_rate || null,
-      enable_proration: planConfig?.enable_proration || false,
-      billing_cycle_alignment: planConfig?.billing_cycle_alignment || 'start',
+      base_rate: contractLineConfig?.base_rate || null,
+      enable_proration: contractLineConfig?.enable_proration || false,
+      billing_cycle_alignment: contractLineConfig?.billing_cycle_alignment || 'start',
       config_id: serviceConfig?.config_id
     };
   }
@@ -511,16 +511,16 @@ export class ContractLineService extends BaseService<IContractLine> {
   /**
    * Add service to contract line
    */
-  async addServiceToPlan(
-      planId: string,
-      data: AddServiceToPlanData,
+  async addServiceToContractLine(
+      contractLineId: string,
+      data: AddServiceToContractLineData,
       context: ServiceContext
     ): Promise<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        // Validate plan exists
-        const plan = await this.getExistingPlan(planId, context, trx);
+        // Validate contract line exists
+        const contractLine = await this.getExistingContractLine(contractLineId, context, trx);
         
         // Validate service exists
         const service = await this.getServiceById(data.service_id, context, trx);
@@ -528,36 +528,36 @@ export class ContractLineService extends BaseService<IContractLine> {
           throw new Error('Service not found');
         }
         
-        // Check if service already exists in plan
+        // Check if service already exists in contract line
         const existingConfig = await trx('contract_line_service_configuration')
-          .where('contract_line_id', planId)
+          .where('contract_line_id', contractLineId)
           .where('service_id', data.service_id)
           .where('tenant', context.tenant)
           .first();
         
         if (existingConfig) {
-          throw new Error('Service already exists in this plan');
+          throw new Error('Service already exists in this contract line');
         }
         
         // Create service configuration
-        this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
+        this.contractLineServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
         
         const baseConfigData = {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: data.service_id,
-          configuration_type: data.configuration_type || plan.contract_line_type,
+          configuration_type: data.configuration_type || contractLine.contract_line_type,
           custom_rate: data.custom_rate,
           quantity: data.quantity || 1,
           tenant: context.tenant
         };
         
-        const configId = await this.planServiceConfigService.createConfiguration(
+        const configId = await this.contractLineServiceConfigService.createConfiguration(
           baseConfigData,
           data.type_config || {}
         );
         
         // Return the created configuration
-        return await this.planServiceConfigService.getConfigurationWithDetails(configId);
+        return await this.contractLineServiceConfigService.getConfigurationWithDetails(configId);
       });
     }
 
@@ -565,8 +565,8 @@ export class ContractLineService extends BaseService<IContractLine> {
   /**
    * Remove service from contract line
    */
-  async removeServiceFromPlan(
-    planId: string,
+  async removeServiceFromContractLine(
+    contractLineId: string,
     serviceId: string,
     context: ServiceContext
   ): Promise<void> {
@@ -575,28 +575,28 @@ export class ContractLineService extends BaseService<IContractLine> {
     return withTransaction(knex, async (trx) => {
       // Get configuration to delete
       const config = await trx('contract_line_service_configuration')
-        .where('contract_line_id', planId)
+        .where('contract_line_id', contractLineId)
         .where('service_id', serviceId)
         .where('tenant', context.tenant)
         .first();
       
       if (!config) {
-        throw new Error('Service configuration not found in plan');
+        throw new Error('Service configuration not found in contract line');
       }
       
       // Use service to delete configuration and related data
-      this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
-      await this.planServiceConfigService.deleteConfiguration(config.config_id);
+      this.contractLineServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
+      await this.contractLineServiceConfigService.deleteConfiguration(config.config_id);
     });
   }
 
   /**
-   * Update service configuration in plan
+   * Update service configuration in contract line
    */
-  async updatePlanService(
-      planId: string,
+  async updateContractLineService(
+      contractLineId: string,
       serviceId: string,
-      data: UpdatePlanServiceData,
+      data: UpdateContractLineServiceData,
       context: ServiceContext
     ): Promise<any> {
       const { knex } = await this.getKnex();
@@ -604,26 +604,26 @@ export class ContractLineService extends BaseService<IContractLine> {
       return withTransaction(knex, async (trx) => {
         // Get existing configuration
         const config = await trx('contract_line_service_configuration')
-          .where('contract_line_id', planId)
+          .where('contract_line_id', contractLineId)
           .where('service_id', serviceId)
           .where('tenant', context.tenant)
           .first();
         
         if (!config) {
-          throw new Error('Service configuration not found in plan');
+          throw new Error('Service configuration not found in contract line');
         }
         
         // Update service configuration
-        this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
+        this.contractLineServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
         
-        await this.planServiceConfigService.updateConfiguration(
+        await this.contractLineServiceConfigService.updateConfiguration(
           config.config_id,
           data,
           data.type_config || {}
         );
         
         // Return updated configuration
-        return await this.planServiceConfigService.getConfigurationWithDetails(config.config_id);
+        return await this.contractLineServiceConfigService.getConfigurationWithDetails(config.config_id);
       });
     }
 
@@ -631,8 +631,8 @@ export class ContractLineService extends BaseService<IContractLine> {
   /**
    * Get all services in a contract line
    */
-  async getPlanServices(
-    planId: string,
+  async getContractLineServices(
+    contractLineId: string,
     context: ServiceContext
   ): Promise<Array<any>> {
     const { knex } = await this.getKnex();
@@ -642,7 +642,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         this.on('psc.service_id', '=', 's.service_id')
             .andOn('psc.tenant', '=', 's.tenant');
       })
-      .where('psc.contract_line_id', planId)
+      .where('psc.contract_line_id', contractLineId)
       .where('psc.tenant', context.tenant)
       .select(
         'psc.*',
@@ -655,8 +655,8 @@ export class ContractLineService extends BaseService<IContractLine> {
     // Add configuration details for each service
     const servicesWithConfig = await Promise.all(
       services.map(async (service) => {
-        this.planServiceConfigService = new PlanServiceConfigurationService(knex, context.tenant);
-        const details = await this.planServiceConfigService.getConfigurationWithDetails(service.config_id);
+        this.contractLineServiceConfigService = new ContractLineServiceConfigurationService(knex, context.tenant);
+        const details = await this.contractLineServiceConfigService.getConfigurationWithDetails(service.config_id);
         return {
           service: {
             service_id: service.service_id,
@@ -717,7 +717,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     return withTransaction(knex, async (trx) => {
       await this.validateContractExists(contractId, context, trx);
-      await this.getExistingPlan(contractLineId, context, trx);
+      await this.getExistingContractLine(contractLineId, context, trx);
       
       const existing = await trx('contract_line_mappings')
         .where('contract_id', contractId)
@@ -785,16 +785,16 @@ export class ContractLineService extends BaseService<IContractLine> {
   /**
    * Assign contract line to client
    */
-  async assignPlanToClient(
+  async assignContractLineToClient(
     data: CreateClientContractLineData,
     context: ServiceContext
   ): Promise<ClientContractLineResponse> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      // Validate plan exists and is active
-      const plan = await this.getExistingPlan(data.contract_line_id, context, trx);
-      // Plan existence check is sufficient - active plans are in the table
+      // Validate contract line exists and is active
+      const contractLine = await this.getExistingContractLine(data.contract_line_id, context, trx);
+      // Contract line existence check is sufficient - active contract lines are in the table
       
       // Validate client exists
       await this.validateClientExists(data.client_id, context, trx);
@@ -812,14 +812,14 @@ export class ContractLineService extends BaseService<IContractLine> {
         .insert(assignmentData)
         .returning('*');
       
-      return addHateoasLinks(assignment, this.generateClientPlanLinks(assignment.client_contract_line_id, context)) as ClientContractLineResponse;
+      return addHateoasLinks(assignment, this.generateClientContractLineLinks(assignment.client_contract_line_id, context)) as ClientContractLineResponse;
     });
   }
 
   /**
    * Unassign contract line from client
    */
-  async unassignPlanFromClient(
+  async unassignContractLineFromClient(
     clientContractLineId: string,
     context: ServiceContext
   ): Promise<void> {
@@ -847,37 +847,37 @@ export class ContractLineService extends BaseService<IContractLine> {
   }
 
   // ============================================================================
-  // PLAN ACTIVATION AND LIFECYCLE
+  // CONTRACT LINE ACTIVATION AND LIFECYCLE
   // ============================================================================
 
   /**
    * Activate or deactivate contract line
    */
-  async setPlanActivation(
-    planId: string,
-    data: PlanActivationData,
+  async setContractLineActivation(
+    contractLineId: string,
+    data: ContractLineActivationData,
     context: ServiceContext
   ): Promise<ContractLineResponse> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const plan = await this.getExistingPlan(planId, context, trx);
+      const contractLine = await this.getExistingContractLine(contractLineId, context, trx);
       
       // Validate deactivation is safe
       if (!data.is_active) {
-        const usage = await this.isPlanInUse(planId, context, trx);
+        const usage = await this.isContractLineInUse(contractLineId, context, trx);
         if (usage.inUse && !data.reason) {
-          throw new Error('Cannot deactivate plan that is in use without providing a reason');
+          throw new Error('Cannot deactivate contract line that is in use without providing a reason');
         }
       }
       
-      // Update plan activation status
+      // Update contract line activation status
       const updateData = this.addUpdateAuditFields({
         is_active: data.is_active
       }, context);
       
-      const [updatedPlan] = await trx('contract_lines')
-        .where('contract_line_id', planId)
+      const [updatedContractLine] = await trx('contract_lines')
+        .where('contract_line_id', contractLineId)
         .where('tenant', context.tenant)
         .update(updateData)
         .returning('*');
@@ -885,7 +885,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       // If deactivating, also deactivate client assignments if requested
       if (!data.is_active && data.effective_date) {
         await trx('client_contract_lines')
-          .where('contract_line_id', planId)
+          .where('contract_line_id', contractLineId)
           .where('tenant', context.tenant)
           .where('is_active', true)
           .update({
@@ -896,7 +896,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           });
       }
       
-      return addHateoasLinks(updatedPlan, this.generatePlanLinks(planId, context)) as ContractLineResponse;
+      return addHateoasLinks(updatedContractLine, this.generateContractLineLinks(contractLineId, context)) as ContractLineResponse;
     });
   }
 
@@ -907,19 +907,19 @@ export class ContractLineService extends BaseService<IContractLine> {
   /**
    * Copy existing contract line
    */
-  async copyPlan(
+  async copyContractLine(
     data: CopyContractLineData,
     context: ServiceContext
   ): Promise<ContractLineResponse> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      // Get source plan
-      const sourcePlan = await this.getExistingPlan(data.source_contract_line_id, context, trx);
+      // Get source contract line
+      const sourceContractLine = await this.getExistingContractLine(data.source_contract_line_id, context, trx);
       
-      // Create new plan
-      const newPlanData = {
-        ...sourcePlan,
+      // Create new contract line
+      const newContractLineData = {
+        ...sourceContractLine,
         contract_line_id: uuidv4(),
         contract_line_name: data.new_contract_line_name,
         is_custom: true,
@@ -929,32 +929,32 @@ export class ContractLineService extends BaseService<IContractLine> {
         updated_by: context.userId
       };
       
-      delete newPlanData.tenant; // Will be set by addCreateAuditFields
-      const auditedData = this.addCreateAuditFields(newPlanData, context);
+      delete newContractLineData.tenant; // Will be set by addCreateAuditFields
+      const auditedData = this.addCreateAuditFields(newContractLineData, context);
       
-      const [newPlan] = await trx('contract_lines').insert(auditedData).returning('*');
+      const [newContractLine] = await trx('contract_lines').insert(auditedData).returning('*');
       
       // Copy services if requested
       if (data.copy_services) {
-        await this.copyPlanServices(data.source_contract_line_id, newPlan.contract_line_id, data.modify_rates, context, trx);
+        await this.copyContractLineServices(data.source_contract_line_id, newContractLine.contract_line_id, data.modify_rates, context, trx);
       }
       
       // Copy configurations if requested
       if (data.copy_configurations) {
-        await this.copyPlanConfigurations(data.source_contract_line_id, newPlan.contract_line_id, context, trx);
+        await this.copyContractLineConfigurations(data.source_contract_line_id, newContractLine.contract_line_id, context, trx);
       }
       
-      return addHateoasLinks(newPlan, this.generatePlanLinks(newPlan.contract_line_id, context)) as ContractLineResponse;
+      return addHateoasLinks(newContractLine, this.generateContractLineLinks(newContractLine.contract_line_id, context)) as ContractLineResponse;
     });
   }
 
   /**
-   * Create plan template
+   * Create contract line template
    */
   async createTemplate(
-    data: CreatePlanTemplateData,
+    data: CreateContractLineTemplateData,
     context: ServiceContext
-  ): Promise<PlanTemplateResponse> {
+  ): Promise<ContractLineTemplateResponse> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
@@ -981,15 +981,15 @@ export class ContractLineService extends BaseService<IContractLine> {
         await trx('template_services').insert(serviceData);
       }
       
-      return template as PlanTemplateResponse;
+      return template as ContractLineTemplateResponse;
     });
   }
 
   /**
-   * Create plan from template
+   * Create contract line from template
    */
   async createFromTemplate(
-    data: CreatePlanFromTemplateData,
+    data: CreateContractLineFromTemplateData,
     context: ServiceContext
   ): Promise<ContractLineResponse> {
     const { knex } = await this.getKnex();
@@ -1005,8 +1005,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         throw new Error('Template not found');
       }
       
-      // Create plan from template
-      const planData = this.addCreateAuditFields({
+      // Create contract line from template
+      const contractLineData = this.addCreateAuditFields({
         contract_line_id: uuidv4(),
         contract_line_name: data.contract_line_name,
         contract_line_type: template.contract_line_type,
@@ -1014,7 +1014,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         is_custom: true
       }, context);
       
-      const [newPlan] = await trx('contract_lines').insert(planData).returning('*');
+      const [newContractLine] = await trx('contract_lines').insert(contractLineData).returning('*');
       
       // Add template services
       const templateServices = await trx('template_services')
@@ -1040,8 +1040,8 @@ export class ContractLineService extends BaseService<IContractLine> {
           rate = override.custom_rate || rate;
         }
         
-        // Add service to plan
-        await this.addServiceToPlan(newPlan.contract_line_id, {
+        // Add service to contract line
+        await this.addServiceToContractLine(newContractLine.contract_line_id, {
           service_id: templateService.service_id,
           configuration_type: templateService.configuration_type,
           custom_rate: rate,
@@ -1049,7 +1049,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }, context);
       }
       
-      return addHateoasLinks(newPlan, this.generatePlanLinks(newPlan.contract_line_id, context)) as ContractLineResponse;
+      return addHateoasLinks(newContractLine, this.generateContractLineLinks(newContractLine.contract_line_id, context)) as ContractLineResponse;
     });
   }
 
@@ -1058,10 +1058,10 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Get usage metrics for a plan
+   * Get usage metrics for a contract line
    */
   async getUsageMetrics(
-    planId: string,
+    contractLineId: string,
     periodStart: Date,
     periodEnd: Date,
     context: ServiceContext
@@ -1070,7 +1070,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get bucket usage data
     const bucketUsage = await knex('bucket_usage')
-      .where('contract_line_id', planId)
+      .where('contract_line_id', contractLineId)
       .where('tenant', context.tenant)
       .whereBetween('period_start', [periodStart, periodEnd])
       .sum('minutes_used as total_usage')
@@ -1083,7 +1083,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         this.on('te.client_id', '=', 'ccl.client_id')
             .andOn('te.tenant', '=', 'ccl.tenant');
       })
-      .where('ccl.contract_line_id', planId)
+      .where('ccl.contract_line_id', contractLineId)
       .where('te.tenant', context.tenant)
       .whereBetween('te.start_time', [periodStart, periodEnd])
       .where('te.is_billable', true)
@@ -1101,7 +1101,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     });
     
     // Calculate costs (simplified - would need rate information)
-    const baseCost = 0; // Would calculate based on plan rates
+    const baseCost = 0; // Would calculate based on contract line rates
     const overageCost = (bucketUsage?.overage_usage || 0) * 1.5; // Example overage rate
     
     return {
@@ -1132,22 +1132,22 @@ export class ContractLineService extends BaseService<IContractLine> {
       context: ServiceContext
     ): Promise<ContractLineResponse[]> {
       const { knex } = await this.getKnex();
-      
+
       return withTransaction(knex, async (trx) => {
         const results: ContractLineResponse[] = [];
-        
-        for (const planData of data.plans) {
-          // Validate each plan
-          await this.validatePlanCreation(planData, context, trx);
+
+        for (const contractLineData of data.contractLines) {
+          // Validate each contract line
+          await this.validateContractLineCreation(contractLineData, context, trx);
           
-          // Create plan
+          // Create contract line
           const auditedData = this.addCreateAuditFields({
             contract_line_id: uuidv4(),
-            ...planData
+            ...contractLineData
           }, context);
           
-          const [plan] = await trx('contract_lines').insert(auditedData).returning('*');
-          results.push(addHateoasLinks(plan, this.generatePlanLinks(plan.contract_line_id, context)) as ContractLineResponse);
+          const [contractLine] = await trx('contract_lines').insert(auditedData).returning('*');
+          results.push(addHateoasLinks(contractLine, this.generateContractLineLinks(contractLine.contract_line_id, context)) as ContractLineResponse);
         }
         
         return results;
@@ -1163,13 +1163,13 @@ export class ContractLineService extends BaseService<IContractLine> {
       context: ServiceContext
     ): Promise<ContractLineResponse[]> {
       const { knex } = await this.getKnex();
-      
+
       return withTransaction(knex, async (trx) => {
         const results: ContractLineResponse[] = [];
-        
-        for (const update of data.plans) {
-          const updatedPlan = await this.updatePlan(update.contract_line_id, update.data, context);
-          results.push(updatedPlan);
+
+        for (const update of data.contractLines) {
+          const updatedContractLine = await this.updateContractLine(update.contract_line_id, update.data, context);
+          results.push(updatedContractLine);
         }
         
         return results;
@@ -1187,8 +1187,8 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        for (const planId of data.contract_line_ids) {
-          await this.delete(planId, context);
+        for (const contractLineId of data.contract_line_ids) {
+          await this.delete(contractLineId, context);
         }
       });
     }
@@ -1199,20 +1199,20 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Get plan analytics
+   * Get contract line analytics
    */
-  async getPlanAnalytics(
-    planId: string,
+  async getContractLineAnalytics(
+    contractLineId: string,
     context: ServiceContext
-  ): Promise<PlanAnalyticsResponse> {
+  ): Promise<ContractLineAnalyticsResponse> {
     const { knex } = await this.getKnex();
     
-    // Get basic plan info
-    const plan = await this.getExistingPlan(planId, context);
+    // Get basic contract line info
+    const contractLine = await this.getExistingContractLine(contractLineId, context);
     
     // Get client assignments
     const clientStats = await knex('client_contract_lines')
-      .where('contract_line_id', planId)
+      .where('contract_line_id', contractLineId)
       .where('tenant', context.tenant)
       .select(
         knex.raw('COUNT(*) as total_clients'),
@@ -1231,15 +1231,15 @@ export class ContractLineService extends BaseService<IContractLine> {
     // Get service usage stats
     const serviceStats = await knex('contract_line_service_configuration as psc')
       .join('services as s', 'psc.service_id', 's.service_id')
-      .where('psc.contract_line_id', planId)
+      .where('psc.contract_line_id', contractLineId)
       .where('psc.tenant', context.tenant)
       .select('s.service_name', 'psc.service_id')
       .count('* as usage_count');
     
     return {
-      contract_line_id: planId,
-      contract_line_name: plan.contract_line_name,
-      contract_line_type: plan.contract_line_type,
+      contract_line_id: contractLineId,
+      contract_line_name: contractLine.contract_line_name,
+      contract_line_type: contractLine.contract_line_type,
       total_clients: parseInt(clientStats?.total_clients || '0'),
       active_clients: parseInt(clientStats?.active_clients || '0'),
       revenue: revenueStats,
@@ -1267,22 +1267,22 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     // Get basic counts
-    const [planCount, contractCount, assignmentCount] = await Promise.all([
+    const [contractLineCount, contractCount, assignmentCount] = await Promise.all([
       knex('contract_lines').where('tenant', context.tenant).count('* as count').first(),
       knex('contracts').where('tenant', context.tenant).count('* as count').first(),
       knex('client_contract_lines').where('tenant', context.tenant).where('is_active', true).count('* as count').first()
     ]);
     
-    // Get plans by type
-    const plansByType = await knex('contract_lines')
+    // Get contract lines by type
+    const contractLinesByType = await knex('contract_lines')
       .where('tenant', context.tenant)
       .groupBy('contract_line_type')
       .select('contract_line_type')
       .count('* as count');
     
-    const planTypeDistribution: Record<string, number> = {};
-    plansByType.forEach((item: any) => {
-      planTypeDistribution[item.contract_line_type] = parseInt(String(item.count));
+    const contractLineTypeDistribution: Record<string, number> = {};
+    contractLinesByType.forEach((item: any) => {
+      contractLineTypeDistribution[item.contract_line_type] = parseInt(String(item.count));
     });
     
     // Get billing frequency distribution
@@ -1298,20 +1298,20 @@ export class ContractLineService extends BaseService<IContractLine> {
     });
     
     return {
-      total_plans: parseInt(String(planCount?.count || '0')),
+      total_contract_lines: parseInt(String(contractLineCount?.count || '0')),
       total_contracts: parseInt(String(contractCount?.count || '0')),
       total_assignments: parseInt(String(assignmentCount?.count || '0')),
-      plans_by_type: planTypeDistribution,
+      contract_lines_by_type: contractLineTypeDistribution,
       revenue_summary: {
         total_monthly_revenue: 0,
-        average_revenue_per_plan: 0,
-        top_revenue_plans: []
+        average_revenue_per_contract_line: 0,
+        top_revenue_contract_lines: []
       },
       usage_trends: {
-        most_popular_contract_line_types: Object.entries(planTypeDistribution).map(([type, count]) => ({
+        most_popular_contract_line_types: Object.entries(contractLineTypeDistribution).map(([type, count]) => ({
           contract_line_type: type as any,
           count,
-          percentage: (count / parseInt(String(planCount?.count || '1'))) * 100
+          percentage: (count / parseInt(String(contractLineCount?.count || '1'))) * 100
         })),
         billing_frequency_distribution: billingFrequencyDistribution
       }
@@ -1398,28 +1398,28 @@ export class ContractLineService extends BaseService<IContractLine> {
     return query;
   }
 
-  private async validatePlanCreation(
+  private async validateContractLineCreation(
       data: CreateContractLineData,
       context: ServiceContext,
       trx?: Knex.Transaction
     ): Promise<void> {
       const { knex } = trx ? { knex: trx } : await this.getKnex();
       
-      // Check for duplicate plan names
-      const existingPlan = await knex('contract_lines')
+      // Check for duplicate contract line names
+      const existingContractLine = await knex('contract_lines')
         .where('contract_line_name', data.contract_line_name)
         .where('tenant', context.tenant)
         .first();
       
-      if (existingPlan) {
-        throw new Error('A plan with this name already exists');
+      if (existingContractLine) {
+        throw new Error('A contract line with this name already exists');
       }
       
-      // Validate plan type specific requirements
+      // Validate contract line type specific requirements
       if (data.contract_line_type === 'Fixed') {
         const baseRate = (data as any).base_rate;
         if (baseRate !== undefined && baseRate < 0) {
-          throw new Error('Base rate must be non-negative for Fixed plans');
+          throw new Error('Base rate must be non-negative for Fixed contract lines');
         }
       }
       
@@ -1427,56 +1427,56 @@ export class ContractLineService extends BaseService<IContractLine> {
     }
 
 
-  private async validatePlanUpdate(
-    planId: string,
+  private async validateContractLineUpdate(
+    contractLineId: string,
     data: UpdateContractLineData,
-    existingPlan: IContractLine,
+    existingContractLine: IContractLine,
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    // Check if plan name conflicts (if changing)
-    if (data.contract_line_name && data.contract_line_name !== existingPlan.contract_line_name) {
-      const conflictingPlan = await trx('contract_lines')
+    // Check if contract line name conflicts (if changing)
+    if (data.contract_line_name && data.contract_line_name !== existingContractLine.contract_line_name) {
+      const conflictingContractLine = await trx('contract_lines')
         .where('contract_line_name', data.contract_line_name)
         .where('tenant', context.tenant)
-        .whereNot('contract_line_id', planId)
+        .whereNot('contract_line_id', contractLineId)
         .first();
       
-      if (conflictingPlan) {
-        throw new Error('A plan with this name already exists');
+      if (conflictingContractLine) {
+        throw new Error('A contract line with this name already exists');
       }
     }
     
-    // Validate plan type changes are not allowed if plan is in use
-    if (data.contract_line_type && data.contract_line_type !== existingPlan.contract_line_type) {
-      const usage = await this.isPlanInUse(planId, context, trx);
+    // Validate contract line type changes are not allowed if contract line is in use
+    if (data.contract_line_type && data.contract_line_type !== existingContractLine.contract_line_type) {
+      const usage = await this.isContractLineInUse(contractLineId, context, trx);
       if (usage.inUse) {
-        throw new Error('Cannot change plan type when plan is in use');
+        throw new Error('Cannot change contract line type when contract line is in use');
       }
     }
   }
 
-  private async getExistingPlan(
-    planId: string,
+  private async getExistingContractLine(
+    contractLineId: string,
     context: ServiceContext,
     trx?: Knex.Transaction
   ): Promise<IContractLine> {
     const { knex } = trx ? { knex: trx } : await this.getKnex();
     
-    const plan = await knex('contract_lines')
-      .where('contract_line_id', planId)
+    const contractLine = await knex('contract_lines')
+      .where('contract_line_id', contractLineId)
       .where('tenant', context.tenant)
       .first();
     
-    if (!plan) {
+    if (!contractLine) {
       throw new Error('Contract Line not found');
     }
     
-    return plan;
+    return contractLine;
   }
 
-  private async isPlanInUse(
-    planId: string,
+  private async isContractLineInUse(
+    contractLineId: string,
     context: ServiceContext,
     trx?: Knex.Transaction
   ): Promise<{ inUse: boolean; reason?: string }> {
@@ -1484,7 +1484,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Check client assignments
     const clientAssignments = await knex('client_contract_lines')
-      .where('contract_line_id', planId)
+      .where('contract_line_id', contractLineId)
       .where('tenant', context.tenant)
       .where('is_active', true)
       .count('* as count')
@@ -1494,14 +1494,14 @@ export class ContractLineService extends BaseService<IContractLine> {
     if (clientCount > 0) {
       return {
         inUse: true,
-        reason: `Plan is currently assigned to ${clientCount} ${clientCount === 1 ? 'client' : 'clients'}`
+        reason: `Contract line is currently assigned to ${clientCount} ${clientCount === 1 ? 'client' : 'clients'}`
       };
     }
     
-    // Check if plan is in contracts that are assigned to clients
+    // Check if contract line is in contracts that are assigned to clients
     const contractAssignments = await knex('contract_line_mappings as clm')
       .join('client_contracts as cc', 'clm.contract_id', 'cc.contract_id')
-      .where('clm.contract_line_id', planId)
+      .where('clm.contract_line_id', contractLineId)
       .where('clm.tenant', context.tenant)
       .where('cc.is_active', true)
       .count('* as count')
@@ -1511,28 +1511,28 @@ export class ContractLineService extends BaseService<IContractLine> {
     if (contractCount > 0) {
       return {
         inUse: true,
-        reason: `Plan is in contracts assigned to ${contractCount} ${contractCount === 1 ? 'client' : 'clients'}`
+        reason: `Contract line is in contracts assigned to ${contractCount} ${contractCount === 1 ? 'client' : 'clients'}`
       };
     }
     
     return { inUse: false };
   }
 
-  private async removeAllServicesFromPlan(
-    planId: string,
+  private async removeAllServicesFromContractLine(
+    contractLineId: string,
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    // Get all service configurations for the plan
+    // Get all service configurations for the contract line
     const configs = await trx('contract_line_service_configuration')
-      .where('contract_line_id', planId)
+      .where('contract_line_id', contractLineId)
       .where('tenant', context.tenant)
       .select('config_id');
     
     // Delete each configuration (which should cascade to type-specific configs)
     for (const config of configs) {
-      this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
-      await this.planServiceConfigService.deleteConfiguration(config.config_id);
+      this.contractLineServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
+      await this.contractLineServiceConfigService.deleteConfiguration(config.config_id);
     }
   }
 
@@ -1547,14 +1547,14 @@ export class ContractLineService extends BaseService<IContractLine> {
       .delete();
   }
 
-  private async createFixedPlanConfig(
-    planId: string,
-    data: CreateFixedPlanConfigData,
+  private async createFixedContractLineConfig(
+    contractLineId: string,
+    data: CreateFixedContractLineConfigData,
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<IContractLineFixedConfig> {
     const configData = {
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       ...data,
       tenant: context.tenant,
       created_at: new Date(),
@@ -1615,7 +1615,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .first();
     
     if (overlapping) {
-      throw new Error('Client already has an active assignment for this plan in the specified period');
+      throw new Error('Client already has an active assignment for this contract line in the specified period');
     }
   }
 
@@ -1633,7 +1633,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
       
       if (parseInt(String(pendingInvoices?.count || '0')) > 0) {
-        throw new Error('Cannot unassign plan: there are pending invoices');
+        throw new Error('Cannot unassign contract line: there are pending invoices');
       }
       
       // Check for active usage tracking
@@ -1648,7 +1648,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .first();
       
       if (parseInt(String(activeUsage?.count || '0')) > 0) {
-        throw new Error('Cannot unassign plan: there is active usage tracking');
+        throw new Error('Cannot unassign contract line: there is active usage tracking');
       }
     }
 
@@ -1666,16 +1666,16 @@ export class ContractLineService extends BaseService<IContractLine> {
     return service || null;
   }
 
-  private async copyPlanServices(
-    sourcePlanId: string,
-    targetPlanId: string,
+  private async copyContractLineServices(
+    sourceContractLineId: string,
+    targetContractLineId: string,
     modifyRates: CopyContractLineData['modify_rates'],
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    // Get source plan services
+    // Get source contract line services
     const sourceServices = await trx('contract_line_service_configuration')
-      .where('contract_line_id', sourcePlanId)
+      .where('contract_line_id', sourceContractLineId)
       .where('tenant', context.tenant);
     
     // Copy each service with modifications
@@ -1693,7 +1693,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
       
       // Create new service configuration
-      await this.addServiceToPlan(targetPlanId, {
+      await this.addServiceToContractLine(targetContractLineId, {
         service_id: sourceService.service_id,
         configuration_type: sourceService.configuration_type,
         custom_rate: customRate,
@@ -1702,20 +1702,20 @@ export class ContractLineService extends BaseService<IContractLine> {
     }
   }
 
-  private async copyPlanConfigurations(
-    sourcePlanId: string,
-    targetPlanId: string,
+  private async copyContractLineConfigurations(
+    sourceContractLineId: string,
+    targetContractLineId: string,
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    // Copy fixed plan configuration if exists
+    // Copy fixed contract line configuration if exists
     const fixedConfig = await trx('contract_line_fixed_config')
-      .where('contract_line_id', sourcePlanId)
+      .where('contract_line_id', sourceContractLineId)
       .where('tenant', context.tenant)
       .first();
     
     if (fixedConfig) {
-      await this.createFixedPlanConfig(targetPlanId, {
+      await this.createFixedContractLineConfig(targetContractLineId, {
         base_rate: fixedConfig.base_rate,
         enable_proration: fixedConfig.enable_proration,
         billing_cycle_alignment: fixedConfig.billing_cycle_alignment
@@ -1723,9 +1723,9 @@ export class ContractLineService extends BaseService<IContractLine> {
     }
   }
 
-  private generatePlanLinks(planId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
+  private generateContractLineLinks(contractLineId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
     const baseUrl = '/api/v1/contract-lines';
-    return generateResourceLinks('contract-lines', planId, baseUrl, ['read', 'update', 'delete']);
+    return generateResourceLinks('contract-lines', contractLineId, baseUrl, ['read', 'update', 'delete']);
   }
 
   private generateContractLinks(contractId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
@@ -1733,7 +1733,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     return generateResourceLinks('contracts', contractId, baseUrl, ['read', 'update', 'delete']);
   }
 
-  private generateClientPlanLinks(clientContractLineId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
+  private generateClientContractLineLinks(clientContractLineId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
     const baseUrl = '/api/v1/client-contract-lines';
     return generateResourceLinks('client-contract-lines', clientContractLineId, baseUrl, ['read', 'update', 'delete']);
   }

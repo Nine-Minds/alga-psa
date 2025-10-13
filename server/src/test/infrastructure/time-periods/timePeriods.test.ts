@@ -5,28 +5,28 @@ import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, crea
 import { TimePeriodSettings } from '../../lib/models/timePeriodSettings';
 import { ISO8601String } from '../../types/types.d';
 import * as tenantModule from '../../lib/tenant';
-import { TestContext } from '../../../test-utils/testContext';
+import { TestContext } from '../../../../test-utils/testContext';
 import {
   setupCommonMocks,
   mockNextHeaders,
   mockNextAuth,
   mockRBAC
-} from '../../../test-utils/testMocks';
+} from '../../../../test-utils/testMocks';
 import {
   resetDatabase,
   createCleanupHook,
   cleanupTables
-} from '../../../test-utils/dbReset';
+} from '../../../../test-utils/dbReset';
 import {
   expectError
-} from '../../../test-utils/errorUtils';
+} from '../../../../test-utils/errorUtils';
 import {
   createTestDate,
   createTestDateISO,
   freezeTime,
   unfreezeTime,
   dateHelpers
-} from '../../../test-utils/dateUtils';
+} from '../../../../test-utils/dateUtils';
 
 describe('Time Periods Infrastructure', () => {
   const context = new TestContext({

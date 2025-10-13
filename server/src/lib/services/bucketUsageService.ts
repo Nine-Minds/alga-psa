@@ -30,7 +30,7 @@ interface IBucketUsage {
 // Simplified interface for bucket config needed in this function
 // Local interface matching current DB schema.
 // Fields will be treated as minutes conceptually in calculations below.
-interface IPlanServiceBucketConfig {
+interface IContractLineServiceBucketConfig {
     config_id: string;
     contract_line_id: string;
     service_catalog_id: string;
@@ -51,7 +51,7 @@ interface UsageTrackingSum {
 interface PeriodInfo {
     periodStart: Temporal.PlainDate;
     periodEnd: Temporal.PlainDate;
-    planId: string;
+    contractLineId: string;
     billingFrequency: string; // e.g., 'monthly', 'quarterly', 'annually'
 }
 
@@ -62,9 +62,9 @@ interface PeriodInfo {
  * @param trx Knex transaction object.
  * @param tenant The tenant identifier.
  * @param clientId The ID of the client.
- * @param serviceCatalogId The ID of the service catalog item (used to ensure the plan covers this service).
+ * @param serviceCatalogId The ID of the service catalog item (used to ensure the contract line covers this service).
  * @param date The target date (ISO8601 string) for which to find the period.
- * @returns An object containing period start/end, plan ID, and frequency, or null if no suitable plan is found.
+ * @returns An object containing period start/end, contract line ID, and frequency, or null if no suitable contract line is found.
  */
 async function calculatePeriod(
     trx: Knex.Transaction,
@@ -80,7 +80,7 @@ async function calculatePeriod(
 
     // Find the active client contract line that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
-    const clientPlan = await trx('client_contract_lines as ccl')
+    const clientContractLine = await trx('client_contract_lines as ccl')
         .join('contract_lines as cl', function() {
             this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
                 .andOn('ccl.tenant', '=', 'cl.tenant');
@@ -97,53 +97,53 @@ async function calculatePeriod(
         .where('ccl.client_id', clientId)
         .andWhere('ccl.tenant', tenant)
         .andWhere('ccl.is_active', true)
-        .andWhere('ccl.start_date', '<=', targetDateISO) // Plan must start on or before the target date
+        .andWhere('ccl.start_date', '<=', targetDateISO) // Contract line must start on or before the target date
         .andWhere(function() {
-            // Plan must end on or after the target date, or have no end date
+            // Contract line must end on or after the target date, or have no end date
             this.where('ccl.end_date', '>=', targetDateISO)
                 .orWhereNull('ccl.end_date');
         })
         .select(
             'ccl.contract_line_id',
-            'ccl.start_date', // Use the client-specific plan start date as the anchor
+            'ccl.start_date', // Use the client-specific contract line start date as the anchor
             'cl.billing_frequency'
          )
-        .orderBy('ccl.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
+        .orderBy('ccl.start_date', 'desc') // Prefer the most recently started contract line if overlaps occur
         .first<{ contract_line_id: string; start_date: ISO8601String; billing_frequency: string } | undefined>();
 
-    if (!clientPlan) {
+    if (!clientContractLine) {
         console.warn(`[calculatePeriod] No active contract line with bucket config found. tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
         return null;
     }
 
-    console.debug(`[calculatePeriod] Found clientPlan: contract_line_id=${clientPlan.contract_line_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`);
+    console.debug(`[calculatePeriod] Found clientContractLine: contract_line_id=${clientContractLine.contract_line_id}, start_date=${clientContractLine.start_date}, billing_frequency=${clientContractLine.billing_frequency}`);
 
-    const planStartDate = toPlainDate(clientPlan.start_date);
-    const frequency = clientPlan.billing_frequency;
+    const contractLineStartDate = toPlainDate(clientContractLine.start_date);
+    const frequency = clientContractLine.billing_frequency;
 
     let periodStart: Temporal.PlainDate;
     let periodEnd: Temporal.PlainDate;
 
-    // Calculate period based on frequency, anchored to the plan's start date
+    // Calculate period based on frequency, anchored to the contract line's start date
     try {
         switch (frequency) {
             case 'monthly': {
-                // Find the number of full months between plan start and target date
-                const monthsDiff = targetDate.since(planStartDate, { largestUnit: 'month' }).months;
-                periodStart = planStartDate.add({ months: monthsDiff });
+                // Find the number of full months between contract line start and target date
+                const monthsDiff = targetDate.since(contractLineStartDate, { largestUnit: 'month' }).months;
+                periodStart = contractLineStartDate.add({ months: monthsDiff });
                 periodEnd = periodStart.add({ months: 1 }).subtract({ days: 1 });
                 break;
             }
             case 'quarterly': {
-                const monthsDiff = targetDate.since(planStartDate, { largestUnit: 'month' }).months;
+                const monthsDiff = targetDate.since(contractLineStartDate, { largestUnit: 'month' }).months;
                 const quartersDiff = Math.floor(monthsDiff / 3);
-                periodStart = planStartDate.add({ months: quartersDiff * 3 });
+                periodStart = contractLineStartDate.add({ months: quartersDiff * 3 });
                 periodEnd = periodStart.add({ months: 3 }).subtract({ days: 1 });
                 break;
             }
             case 'annually': {
-                const yearsDiff = targetDate.since(planStartDate, { largestUnit: 'year' }).years;
-                periodStart = planStartDate.add({ years: yearsDiff });
+                const yearsDiff = targetDate.since(contractLineStartDate, { largestUnit: 'year' }).years;
+                periodStart = contractLineStartDate.add({ years: yearsDiff });
                 periodEnd = periodStart.add({ years: 1 }).subtract({ days: 1 });
                 break;
             }
@@ -162,7 +162,7 @@ async function calculatePeriod(
     return {
         periodStart,
         periodEnd,
-        planId: clientPlan.contract_line_id,
+        contractLineId: clientContractLine.contract_line_id,
         billingFrequency: frequency,
     };
 }
@@ -196,15 +196,15 @@ export async function findOrCreateCurrentBucketUsageRecord(
          throw new Error("Tenant context could not be determined for bucket usage operation.");
      }
 
-    // 1. Determine Billing Period and Active Plan
+    // 1. Determine Billing Period and Active Contract Line
     const periodInfo = await calculatePeriod(trx, tenant, clientId, serviceCatalogId, date);
 
     if (!periodInfo) {
-        // If no period info, it means no suitable active plan was found.
+        // If no period info, it means no suitable active contract line was found.
         throw new Error(`Could not determine active contract line/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
     }
 
-    const { periodStart, periodEnd, planId, billingFrequency } = periodInfo;
+    const { periodStart, periodEnd, contractLineId, billingFrequency } = periodInfo;
     const periodStartISO = toISODate(periodStart);
     const periodEndISO = toISODate(periodEnd);
 
@@ -227,28 +227,28 @@ export async function findOrCreateCurrentBucketUsageRecord(
     // 3. Create New Record - Fetch Bucket Configuration
 
     // First, get the contract_line_service_configuration to find the config_id
-    const planServiceConfig = await trx('contract_line_service_configuration')
+    const contractLineServiceConfig = await trx('contract_line_service_configuration')
         .where({
             tenant: tenant,
-            contract_line_id: planId,
+            contract_line_id: contractLineId,
             service_id: serviceCatalogId,
         })
         .first<{ config_id: string }>();
 
-    if (!planServiceConfig) {
-        throw new Error(`Plan service configuration not found for plan ${planId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`);
+    if (!contractLineServiceConfig) {
+        throw new Error(`Contract line service configuration not found for contract line ${contractLineId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`);
     }
 
     const bucketConfig = await trx('contract_line_service_bucket_config')
         .where({
             tenant: tenant,
-            config_id: planServiceConfig.config_id,
+            config_id: contractLineServiceConfig.config_id,
         })
-        .first<IPlanServiceBucketConfig | undefined>();
+        .first<IContractLineServiceBucketConfig | undefined>();
 
     if (!bucketConfig) {
         // A bucket usage record cannot exist without its configuration.
-        throw new Error(`Bucket configuration not found for config_id ${planServiceConfig.config_id} (plan ${planId}, service ${serviceCatalogId}) in tenant ${tenant}. Cannot create usage record.`);
+        throw new Error(`Bucket configuration not found for config_id ${contractLineServiceConfig.config_id} (contract line ${contractLineId}, service ${serviceCatalogId}) in tenant ${tenant}. Cannot create usage record.`);
     }
 
     let rolledOverMinutes = 0;
@@ -313,7 +313,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
         // usage_id should be generated by DB (assuming UUID default or sequence)
         tenant: tenant,
         client_id: clientId,
-        contract_line_id: planId, // Link to the plan active in this period
+        contract_line_id: contractLineId, // Link to the contract line active in this period
         service_catalog_id: serviceCatalogId,
         period_start: periodStartISO,
         period_end: periodEndISO,

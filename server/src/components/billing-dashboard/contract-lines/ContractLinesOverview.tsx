@@ -18,11 +18,11 @@ import { IContractLine, IServiceType } from 'server/src/interfaces/billing.inter
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'; // Added import for fetching types
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
+import { CONTRACT_LINE_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 
 const ContractLinesOverview: React.FC = () => {
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
-  const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
+  const [editingContractLine, setEditingContractLine] = useState<IContractLine | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]); // Added state for service types
   const router = useRouter();
@@ -34,8 +34,8 @@ const ContractLinesOverview: React.FC = () => {
 
   const fetchContractLines = async () => {
     try {
-      const plans = await getContractLines();
-      setContractLines(plans);
+      const fetchedContractLines = await getContractLines();
+      setContractLines(fetchedContractLines);
       setError(null);
     } catch (error) {
       console.error('Error fetching contract lines:', error);
@@ -54,9 +54,9 @@ const ContractLinesOverview: React.FC = () => {
     }
   };
 
-  const handleDeletePlan = async (planId: string) => {
+  const handleDeleteContractLine = async (contractLineId: string) => {
     try {
-      await deleteContractLine(planId);
+      await deleteContractLine(contractLineId);
       fetchContractLines();
     } catch (error) {
       console.error('Error deleting contract line:', error); // Keep console log for debugging
@@ -91,7 +91,7 @@ const ContractLinesOverview: React.FC = () => {
     {
       title: 'Contract Line Type',
       dataIndex: 'contract_line_type',
-      render: (value) => PLAN_TYPE_DISPLAY[value] || value,
+      render: (value) => CONTRACT_LINE_TYPE_DISPLAY[value] || value,
     },
     {
       title: 'Is Custom',
@@ -132,7 +132,7 @@ const ContractLinesOverview: React.FC = () => {
               onClick={async (e) => {
                 e.stopPropagation();
                 if (record.contract_line_id) {
-                  handleDeletePlan(record.contract_line_id);
+                  handleDeleteContractLine(record.contract_line_id);
                 }
               }}
             >
@@ -144,9 +144,9 @@ const ContractLinesOverview: React.FC = () => {
     },
   ];
 
-  const handleContractLineClick = (plan: IContractLine) => {
-    if (plan.contract_line_id) {
-      router.push(`/msp/billing?tab=contract-lines&contractLineId=${plan.contract_line_id}`);
+  const handleContractLineClick = (contractLine: IContractLine) => {
+    if (contractLine.contract_line_id) {
+      router.push(`/msp/billing?tab=contract-lines&contractLineId=${contractLine.contract_line_id}`);
     }
   };
 
@@ -156,14 +156,14 @@ const ContractLinesOverview: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <Heading as="h3" size="4">Contract Lines</Heading>
           <ContractLineDialog
-            onPlanAdded={(newPlanId) => {
-              if (newPlanId) {
-                // Navigate directly. PlanTypeRouter will fetch the plan details.
-                router.push(`/msp/billing?tab=contract-lines&contractLineId=${newPlanId}`);
+            onContractLineAdded={(newContractLineId) => {
+              if (newContractLineId) {
+                // Navigate directly. ContractLineTypeRouter will fetch the contract line details.
+                router.push(`/msp/billing?tab=contract-lines&contractLineId=${newContractLineId}`);
               }
             }}
-            editingPlan={editingPlan}
-            onClose={() => setEditingPlan(null)}
+            editingContractLine={editingContractLine}
+            onClose={() => setEditingContractLine(null)}
             triggerButton={
               <Button id='add-contract-line-button'>
                 <Plus className="h-4 w-4 mr-2" />
@@ -181,7 +181,7 @@ const ContractLinesOverview: React.FC = () => {
         )}
         
         <DataTable
-          data={contractLines.filter(plan => plan.contract_line_id !== undefined)}
+          data={contractLines.filter(contractLine => contractLine.contract_line_id !== undefined)}
           columns={contractLineColumns}
           pagination={true}
           onRowClick={handleContractLineClick}

@@ -119,14 +119,14 @@ export default function BillingOverview() {
     const loadBillingData = async () => {
       try {
         // Load contract line and usage data for all users
-        const [plan, usageData] = await Promise.all([
+        const [contractLine, usageData] = await Promise.all([
           getClientContractLine(),
           getCurrentUsage()
         ]);
 
         if (!isMounted) return;
         
-        setContractLine(plan);
+        setContractLine(contractLine);
         setUsage(usageData);
         
         // Try to load invoices (will fail if user doesn't have permission)

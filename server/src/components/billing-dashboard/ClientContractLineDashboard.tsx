@@ -351,7 +351,7 @@ useEffect(() => {
              ))}
            </div>
          ) : (
-           <Text>No active bucket plans found.</Text>
+           <Text>No active bucket contract lines found.</Text>
          )}
         </CardContent>
       </Card>

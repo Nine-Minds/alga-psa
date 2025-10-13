@@ -300,7 +300,7 @@ async function persistFixedInvoiceItems(
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
-  const fixedPlanDetailsMap = new Map<string, { consolidatedItem: any; details: IFixedPriceCharge[] }>();
+  const fixedContractLineDetailsMap = new Map<string, { consolidatedItem: any; details: IFixedPriceCharge[] }>();
 
   for (const charge of fixedCharges) {
     // --- Handle Detailed Fixed Price Charges (V1 Scope) ---
@@ -318,8 +318,8 @@ async function persistFixedInvoiceItems(
         throw new Error("Internal error: Detailed fixed price charge must have a client_contract_line_id.");
       }
 
-      // Group by clientContractLineId instead of planId
-      if (!fixedPlanDetailsMap.has(clientContractLineId)) {
+      // Group by clientContractLineId
+      if (!fixedContractLineDetailsMap.has(clientContractLineId)) {
           if (charge.base_rate === undefined || charge.base_rate === null) {
               console.error("Detailed fixed price charge is missing base_rate:", charge);
               throw new Error("Internal error: Detailed fixed price charge must have a base_rate.");
@@ -327,33 +327,33 @@ async function persistFixedInvoiceItems(
 
           // --- Determine Consolidated Item Tax Region & Taxability (Derived from Charges) ---
           // Get all charges associated with this clientContractLineId to determine consolidated properties
-          const chargesForThisPlan = fixedCharges.filter(c => c.client_contract_line_id === clientContractLineId);
+          const chargesForThisContractLine = fixedCharges.filter(c => c.client_contract_line_id === clientContractLineId);
 
           // Determine if *any* charge in this group is taxable
-          const isAnyChargeTaxable = chargesForThisPlan.some(c => c.is_taxable);
+          const isAnyChargeTaxable = chargesForThisContractLine.some(c => c.is_taxable);
 
           // Determine the consolidated region
-          const distinctChargeRegions = [...new Set(chargesForThisPlan.map(c => c.tax_region).filter((r): r is string => r !== null && r !== undefined))];
+          const distinctChargeRegions = [...new Set(chargesForThisContractLine.map(c => c.tax_region).filter((r): r is string => r !== null && r !== undefined))];
           let consolidatedRegion: string | null = null;
           if (distinctChargeRegions.length === 1) {
             consolidatedRegion = distinctChargeRegions[0];
-            console.log(`[persistFixedInvoiceItems] Using consistent charge region '${consolidatedRegion}' for consolidated item of plan assignment ${clientContractLineId}`);
+            console.log(`[persistFixedInvoiceItems] Using consistent charge region '${consolidatedRegion}' for consolidated item of contract line assignment ${clientContractLineId}`);
           } else {
             // Fallback to client default if regions are inconsistent or all null/undefined
             consolidatedRegion = await getClientDefaultTaxRegionCode(client.client_id);
             if (distinctChargeRegions.length > 1) {
-              console.warn(`[persistFixedInvoiceItems] Multiple distinct tax regions found among charges for plan assignment ${clientContractLineId}. Using client default region '${consolidatedRegion}'.`);
+              console.warn(`[persistFixedInvoiceItems] Multiple distinct tax regions found among charges for contract line assignment ${clientContractLineId}. Using client default region '${consolidatedRegion}'.`);
             } else {
-              console.log(`[persistFixedInvoiceItems] No single charge region found for plan assignment ${clientContractLineId}. Using client default region '${consolidatedRegion}'.`);
+              console.log(`[persistFixedInvoiceItems] No single charge region found for contract line assignment ${clientContractLineId}. Using client default region '${consolidatedRegion}'.`);
             }
           }
           // --- End Determine Consolidated Item Tax Region & Taxability ---
 
-          fixedPlanDetailsMap.set(clientContractLineId, {
+          fixedContractLineDetailsMap.set(clientContractLineId, {
               consolidatedItem: {
                   invoice_id: invoiceId,
                   service_id: null,
-                  description: `Fixed Plan: ${charge.serviceName}`,
+                  description: `Fixed Contract Line: ${charge.serviceName}`,
                   quantity: 1,
                   unit_price: Math.round(charge.base_rate * 100),
                   net_amount: 0,
@@ -376,16 +376,16 @@ async function persistFixedInvoiceItems(
           });
       }
 
-      const planEntry = fixedPlanDetailsMap.get(clientContractLineId)!;
-      planEntry.details.push(charge);
-      // Update taxability based on *all* details encountered so far for this plan
-      planEntry.consolidatedItem.is_taxable = planEntry.details.some(d => d.is_taxable);
+      const contractLineEntry = fixedContractLineDetailsMap.get(clientContractLineId)!;
+      contractLineEntry.details.push(charge);
+      // Update taxability based on *all* details encountered so far for this contract line
+      contractLineEntry.consolidatedItem.is_taxable = contractLineEntry.details.some(d => d.is_taxable);
       // Ensure allocated_amount and tax_amount are numbers before adding
-      planEntry.consolidatedItem.net_amount += Number(charge.allocated_amount || 0);
-      planEntry.consolidatedItem.tax_amount += Number(charge.tax_amount || 0); // Sum tax from details
+      contractLineEntry.consolidatedItem.net_amount += Number(charge.allocated_amount || 0);
+      contractLineEntry.consolidatedItem.tax_amount += Number(charge.tax_amount || 0); // Sum tax from details
       // Update taxability if any detail is taxable?
       if (charge.is_taxable) {
-        planEntry.consolidatedItem.is_taxable = true;
+        contractLineEntry.consolidatedItem.is_taxable = true;
       }
       // Update tax region if details have different ones? Needs clarification from tax logic.
       // For now, assume client default or first item's region.
@@ -398,7 +398,7 @@ async function persistFixedInvoiceItems(
         item_id: uuidv4(),
         invoice_id: invoiceId,
         service_id: charge.serviceId || null, // Contract-level charges might not reference a single service ID
-        // contract_line_id: charge.planId ?? null, // Removed - planId not part of IFixedPriceCharge
+        // contract_line_id: charge.contractLineId ?? null, // Removed - contractLineId not part of IFixedPriceCharge
         // client_contract_line_id could be added here if needed for the DB schema, but invoice_items doesn't have it.
         description: charge.serviceName, // Use the name from the charge
         quantity: charge.quantity,
@@ -424,37 +424,37 @@ async function persistFixedInvoiceItems(
     }
   }
 
-  // --- Process Consolidated Fixed Plan Items and Details ---
+  // --- Process Consolidated Fixed Contract Line Items and Details ---
 
-  // Fetch plan details (name and fixed config base rate) for all consolidated items first
-  const clientPlanIds = Array.from(fixedPlanDetailsMap.keys());
+  // Fetch contract line details (name and fixed config base rate) for all consolidated items first
+  const clientContractLineIds = Array.from(fixedContractLineDetailsMap.keys());
   // Map: clientContractLineId -> { contract_line_name: string, contract_line_base_rate: number | null }
-  const planInfoMap = new Map<string, { contract_line_name: string; contract_line_base_rate: number | null }>();
+  const contractLineInfoMap = new Map<string, { contract_line_name: string; contract_line_base_rate: number | null }>();
 
   // Filter out virtual contract-association IDs that start with "contract-" as they're not real UUIDs in the database
-  const validDbPlanIds = clientPlanIds.filter(id => !id.startsWith('contract-'));
-  const contractLinkedPlanIds = clientPlanIds.filter(id => id.startsWith('contract-'));
-  
-  // Add default info for contract-associated plans that won't be found in the database
-  for (const linkedPlanId of contractLinkedPlanIds) {
-    planInfoMap.set(linkedPlanId, {
-      contract_line_name: 'Contract Plan',
+  const validDbContractLineIds = clientContractLineIds.filter(id => !id.startsWith('contract-'));
+  const contractLinkedContractLineIds = clientContractLineIds.filter(id => id.startsWith('contract-'));
+
+  // Add default info for contract-associated contract lines that won't be found in the database
+  for (const linkedContractLineId of contractLinkedContractLineIds) {
+    contractLineInfoMap.set(linkedContractLineId, {
+      contract_line_name: 'Contract Line',
       contract_line_base_rate: null
     });
   }
 
-  if (validDbPlanIds.length > 0) {
-    const planDetails = await tx('client_contract_lines as ccl')
+  if (validDbContractLineIds.length > 0) {
+    const contractLineDetails = await tx('client_contract_lines as ccl')
       .join('contract_lines as cl', function() {
         this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      // Join with the new fixed config table to get the plan-level base rate
+      // Join with the new fixed config table to get the contract line-level base rate
       .leftJoin('contract_line_fixed_config as clfc', function() {
         this.on('cl.contract_line_id', '=', 'clfc.contract_line_id')
             .andOn('cl.tenant', '=', 'clfc.tenant');
       })
-      .whereIn('ccl.client_contract_line_id', validDbPlanIds)
+      .whereIn('ccl.client_contract_line_id', validDbContractLineIds)
       .andWhere('ccl.tenant', tenant) // Ensure tenant match on ccl
       .select(
         'ccl.client_contract_line_id',
@@ -462,8 +462,8 @@ async function persistFixedInvoiceItems(
         'clfc.base_rate as contract_line_base_rate' // Select base_rate from the fixed config table
        );
 
-    for (const detail of planDetails) {
-      planInfoMap.set(detail.client_contract_line_id, {
+    for (const detail of contractLineDetails) {
+      contractLineInfoMap.set(detail.client_contract_line_id, {
         contract_line_name: detail.contract_line_name,
         // Parse the base_rate fetched from contract_line_fixed_config
         contract_line_base_rate: detail.contract_line_base_rate ? parseFloat(detail.contract_line_base_rate) : null
@@ -473,35 +473,35 @@ async function persistFixedInvoiceItems(
 
 
   // Iterate using clientContractLineId as the key
-  for (const [clientContractLineId, planEntry] of fixedPlanDetailsMap.entries()) {
-    const planInfo = planInfoMap.get(clientContractLineId);
-    if (!planInfo) {
-        console.error(`Could not find plan info for clientContractLineId: ${clientContractLineId}`);
-        // Decide how to handle missing plan info (skip? throw error?)
+  for (const [clientContractLineId, contractLineEntry] of fixedContractLineDetailsMap.entries()) {
+    const contractLineInfo = contractLineInfoMap.get(clientContractLineId);
+    if (!contractLineInfo) {
+        console.error(`Could not find contract line info for clientContractLineId: ${clientContractLineId}`);
+        // Decide how to handle missing contract line info (skip? throw error?)
         continue;
     }
 
     // Update the consolidated item's description and unit_price before insertion
-    planEntry.consolidatedItem.description = `Fixed Plan: ${planInfo.contract_line_name}`;
-    // Use the plan-level base_rate fetched from contract_line_fixed_config if available.
-    // Fallback to the unit_price derived from the first service charge if plan-level rate is missing (shouldn't happen ideally).
-    planEntry.consolidatedItem.unit_price = planInfo.contract_line_base_rate !== null
-        ? Math.round(planInfo.contract_line_base_rate * 100) // Use plan base rate in cents
-        : planEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
+    contractLineEntry.consolidatedItem.description = `Fixed Contract Line: ${contractLineInfo.contract_line_name}`;
+    // Use the contract line-level base_rate fetched from contract_line_fixed_config if available.
+    // Fallback to the unit_price derived from the first service charge if contract line-level rate is missing (shouldn't happen ideally).
+    contractLineEntry.consolidatedItem.unit_price = contractLineInfo.contract_line_base_rate !== null
+        ? Math.round(contractLineInfo.contract_line_base_rate * 100) // Use contract line base rate in cents
+        : contractLineEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
 
     const consolidatedItemId = uuidv4();
-    planEntry.consolidatedItem.item_id = consolidatedItemId;
+    contractLineEntry.consolidatedItem.item_id = consolidatedItemId;
     // Ensure amounts are numbers before calculating total_price
-    const consolidatedNet = Number(planEntry.consolidatedItem.net_amount || 0);
-    const consolidatedTax = Number(planEntry.consolidatedItem.tax_amount || 0);
-    planEntry.consolidatedItem.total_price = consolidatedNet + consolidatedTax; // Final total for consolidated item
+    const consolidatedNet = Number(contractLineEntry.consolidatedItem.net_amount || 0);
+    const consolidatedTax = Number(contractLineEntry.consolidatedItem.tax_amount || 0);
+    contractLineEntry.consolidatedItem.total_price = consolidatedNet + consolidatedTax; // Final total for consolidated item
 
     // Insert the consolidated invoice item (now with corrected description and unit_price)
-    await tx('invoice_items').insert(planEntry.consolidatedItem);
+    await tx('invoice_items').insert(contractLineEntry.consolidatedItem);
     fixedSubtotal += consolidatedNet; // Add net amount to overall subtotal
 
     // Insert details for each allocation (unchanged)
-    for (const detail of planEntry.details) {
+    for (const detail of contractLineEntry.details) {
       const detailId = uuidv4();
       const allocatedAmountCents = Number(detail.allocated_amount || 0);
       const taxAmountCents = Number(detail.tax_amount || 0);
@@ -587,9 +587,9 @@ export async function persistInvoiceItems(
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: charge.serviceId,
-      // Check if planId exists on the specific charge type if needed
-      // For non-fixed types, planId might not be relevant or available
-      // contract_line_id: ('planId' in charge ? (charge as any).planId : null), // Removed - planId not part of IFixedPriceCharge
+      // Check if contractLineId exists on the specific charge type if needed
+      // For non-fixed types, contractLineId might not be relevant or available
+      // contract_line_id: ('contractLineId' in charge ? (charge as any).contractLineId : null), // Removed - contractLineId not part of IFixedPriceCharge
       // Use client_contract_line_id if the schema requires it
       client_contract_line_id: charge.client_contract_line_id ?? null,
       description: charge.serviceName,

@@ -4,8 +4,8 @@ import ContractLine from 'server/src/lib/models/contractLine';
 import { IContractLine, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces'; // Added IContractLineFixedConfig
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex'; // Import Knex type
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
-import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { IContractLineServiceFixedConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig'; // Added import for new model
 import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from './user-actions/userActions';
@@ -30,8 +30,8 @@ export async function getContractLines(): Promise<IContractLine[]> {
                 throw new Error('Permission denied: Cannot read contract lines');
             }
 
-            const plans = await ContractLine.getAll(trx);
-            return plans;
+            const contractLines = await ContractLine.getAll(trx);
+            return contractLines;
         });
     } catch (error) {
         console.error('Error fetching contract lines:', error);
@@ -43,7 +43,7 @@ export async function getContractLines(): Promise<IContractLine[]> {
 }
 
 // New function to get a single contract line by ID
-export async function getContractLineById(planId: string): Promise<IContractLine | null> {
+export async function getContractLineById(contractLineId: string): Promise<IContractLine | null> {
     let tenant_copy: string = '';
     try {
         const currentUser = await getCurrentUser();
@@ -64,12 +64,12 @@ export async function getContractLineById(planId: string): Promise<IContractLine
 
             // Assuming the ContractLine model has a method like findById
             // This might need adjustment based on the actual model implementation
-            // It should ideally fetch the base plan and potentially join/fetch config details
-            const plan = await ContractLine.findById(trx, planId);
-            return plan; // The model method should return the plan with necessary fields
+            // It should ideally fetch the base contract line and potentially join/fetch config details
+            const contractLine = await ContractLine.findById(trx, contractLineId);
+            return contractLine; // The model method should return the contract line with necessary fields
         });
     } catch (error) {
-        console.error(`Error fetching contract line with ID ${planId}:`, error);
+        console.error(`Error fetching contract line with ID ${contractLineId}:`, error);
         if (error instanceof Error) {
             // Handle specific errors like 'not found' if the model throws them
             if (error.message.includes('not found')) { // Example check
@@ -77,12 +77,12 @@ export async function getContractLineById(planId: string): Promise<IContractLine
             }
             throw error;
         }
-        throw new Error(`Failed to fetch contract line ${planId} in tenant ${tenant_copy}: ${error}`);
+        throw new Error(`Failed to fetch contract line ${contractLineId} in tenant ${tenant_copy}: ${error}`);
     }
 }
 
 export async function createContractLine(
-    planData: Omit<IContractLine, 'contract_line_id'>
+    contractLineData: Omit<IContractLine, 'contract_line_id'>
 ): Promise<IContractLine> {
     try {
         const currentUser = await getCurrentUser();
@@ -100,21 +100,21 @@ export async function createContractLine(
                 throw new Error('Permission denied: Cannot create contract lines');
             }
 
-            // Remove tenant field if present in planData to prevent override
-            const { tenant: _, ...safePlanData } = planData;
-            const plan = await ContractLine.create(trx, safePlanData);
+            // Remove tenant field if present in contractLineData to prevent override
+            const { tenant: _, ...safeContractLineData } = contractLineData;
+            const contractLine = await ContractLine.create(trx, safeContractLineData);
 
             // Track analytics
             analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
-                contract_line_id: plan.contract_line_id,
-                contract_line_name: plan.contract_line_name,
-                contract_line_type: plan.contract_line_type,
-                hourly_rate: plan.hourly_rate,
-                minimum_billable_time: plan.minimum_billable_time,
-                is_sla_plan: (plan as any).is_sla_plan || false
+                contract_line_id: contractLine.contract_line_id,
+                contract_line_name: contractLine.contract_line_name,
+                contract_line_type: contractLine.contract_line_type,
+                hourly_rate: contractLine.hourly_rate,
+                minimum_billable_time: contractLine.minimum_billable_time,
+                is_sla_contract_line: (contractLine as any).is_sla_contract_line || false
             }, currentUser.user_id);
 
-            return plan;
+            return contractLine;
         });
     } catch (error) {
         console.error('Error creating contract line:', error);
@@ -126,7 +126,7 @@ export async function createContractLine(
 }
 
 export async function updateContractLine(
-    planId: string,
+    contractLineId: string,
     updateData: Partial<IContractLine>
 ): Promise<IContractLine> {
     try {
@@ -145,54 +145,54 @@ export async function updateContractLine(
                 throw new Error('Permission denied: Cannot update contract lines');
             }
 
-            // Fetch the existing plan to check its type
-            const existingPlan = await ContractLine.findById(trx, planId);
-            if (!existingPlan) {
-                // Handle case where plan is not found before update attempt
-                throw new Error(`Contract Line with ID ${planId} not found.`);
+            // Fetch the existing contract line to check its type
+            const existingContractLine = await ContractLine.findById(trx, contractLineId);
+            if (!existingContractLine) {
+                // Handle case where contract line is not found before update attempt
+                throw new Error(`Contract Line with ID ${contractLineId} not found.`);
             }
 
             // Remove tenant field if present in updateData to prevent override
             // Use Object.assign to create a mutable copy if needed, or rely on delete below
             const { tenant: _, ...safeUpdateData } = updateData;
 
-            // If the plan is hourly, remove the per-service fields from the update data
-            if (existingPlan.contract_line_type === 'Hourly') {
+            // If the contract line is hourly, remove the per-service fields from the update data
+            if (existingContractLine.contract_line_type === 'Hourly') {
                 delete safeUpdateData.hourly_rate;
                 delete safeUpdateData.minimum_billable_time;
                 delete safeUpdateData.round_up_to_nearest;
                 // Optional: Log that fields were removed for debugging
-                // console.log(`Hourly plan update: Removed per-service fields for plan ${planId}`);
+                // console.log(`Hourly contract line update: Removed per-service fields for contract line ${contractLineId}`);
             }
 
             // Proceed with the update using the potentially modified data
             // Ensure ContractLine.update handles empty updateData gracefully if all fields were removed
-            const plan = await ContractLine.update(trx, planId, safeUpdateData);
+            const contractLine = await ContractLine.update(trx, contractLineId, safeUpdateData);
 
             // Track analytics
             analytics.capture(AnalyticsEvents.BILLING_RULE_UPDATED, {
-                contract_line_id: plan.contract_line_id,
-                contract_line_name: plan.contract_line_name,
-                contract_line_type: plan.contract_line_type,
+                contract_line_id: contractLine.contract_line_id,
+                contract_line_name: contractLine.contract_line_name,
+                contract_line_type: contractLine.contract_line_type,
                 updated_fields: Object.keys(safeUpdateData)
             }, currentUser.user_id);
 
-            return plan;
+            return contractLine;
         });
     } catch (error) {
         console.error('Error updating contract line:', error);
         if (error instanceof Error) {
             // Re-throw specific errors like 'not found' if they weren't caught above
             if (error.message.includes('not found')) {
-                 throw new Error(`Contract Line with ID ${planId} not found during update.`);
+                 throw new Error(`Contract Line with ID ${contractLineId} not found during update.`);
             }
             throw error; // Preserve other specific error messages
         }
-        throw new Error(`Failed to update contract line ${planId}: ${error}`);
+        throw new Error(`Failed to update contract line ${contractLineId}: ${error}`);
     }
 }
 
-export async function deleteContractLine(planId: string): Promise<void> {
+export async function deleteContractLine(contractLineId: string): Promise<void> {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -209,38 +209,38 @@ export async function deleteContractLine(planId: string): Promise<void> {
                 throw new Error('Permission denied: Cannot delete contract lines');
             }
 
-            // Check if plan is in use by clients before attempting to delete
-            const isInUse = await ContractLine.isInUse(trx, planId); // This check might be redundant now, but keep for clarity or remove if desired
+            // Check if contract line is in use by clients before attempting to delete
+            const isInUse = await ContractLine.isInUse(trx, contractLineId); // This check might be redundant now, but keep for clarity or remove if desired
             if (isInUse) {
                  // This specific error might be superseded by the detailed one below if the FK constraint is hit
                  // Consider if this pre-check is still necessary or if relying on the DB error is sufficient
-                // throw new Error(`Cannot delete plan that is currently in use by clients in tenant ${tenant}`);
+                // throw new Error(`Cannot delete contract line that is currently in use by clients in tenant ${tenant}`);
             }
 
-            // Check if plan has associated services before attempting to delete
-            const hasServices = await ContractLine.hasAssociatedServices(trx, planId);
+            // Check if contract line has associated services before attempting to delete
+            const hasServices = await ContractLine.hasAssociatedServices(trx, contractLineId);
             if (hasServices) {
-                throw new Error(`Cannot delete plan that has associated services. Please remove all services from this plan before deleting.`);
+                throw new Error(`Cannot delete contract line that has associated services. Please remove all services from this contract line before deleting.`);
             }
 
-            await ContractLine.delete(trx, planId);
+            await ContractLine.delete(trx, contractLineId);
         });
     } catch (error) {
         console.error('Error deleting contract line:', error);
         if (error instanceof Error) {
             // Check for specific PostgreSQL foreign key violation error code (23503)
-            // This indicates the plan is likely referenced by another table (e.g., client_contract_lines)
+            // This indicates the contract line is likely referenced by another table (e.g., client_contract_lines)
             // We cast to 'any' to access potential driver-specific properties like 'code'
             if ((error as any).code === '23503') {
-                 // Fetch client IDs associated with the plan
+                 // Fetch client IDs associated with the contract line
                  const { knex: queryKnex, tenant: queryTenant } = await createTenantKnex();
-                 const clientPlanLinks = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
+                 const clientContractLineLinks = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
                      return await trx('client_contract_lines')
                          .select('client_id')
-                         .where({ contract_line_id: planId, tenant: queryTenant });
+                         .where({ contract_line_id: contractLineId, tenant: queryTenant });
                  });
 
-                 const clientIds = clientPlanLinks.map(link => link.client_id);
+                 const clientIds = clientContractLineLinks.map(link => link.client_id);
 
                  let clientNames: string[] = [];
                  if (clientIds.length > 0) {
@@ -279,11 +279,11 @@ export async function deleteContractLine(planId: string): Promise<void> {
 }
 
 /**
- * Gets the combined fixed plan configuration (plan-level and service-level)
+ * Gets the combined fixed contract line configuration (contract line-level and service-level)
  * Fetches proration/alignment from contract_line_fixed_config and base_rate from contract_line_service_fixed_config.
  */
-export async function getCombinedFixedPlanConfiguration(
-    planId: string,
+export async function getCombinedFixedContractLineConfiguration(
+    contractLineId: string,
     serviceId: string
 ): Promise<{
     base_rate?: number | null;
@@ -307,27 +307,27 @@ export async function getCombinedFixedPlanConfiguration(
                 throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
-            // --- Fetch Plan-Level Config (Base Rate, Proration, Alignment) ---
+            // --- Fetch Contract Line-Level Config (Base Rate, Proration, Alignment) ---
             // Use the existing getContractLineFixedConfig action which should now return base_rate
-            const planConfig = await getContractLineFixedConfig(planId);
+            const contractLineConfig = await getContractLineFixedConfig(contractLineId);
 
-            // Default values if plan-level config doesn't exist
-            const contract_line_base_rate = planConfig?.base_rate ?? null; // Get base_rate from plan config
-            const enable_proration = planConfig?.enable_proration ?? false;
-            const billing_cycle_alignment = planConfig?.billing_cycle_alignment ?? 'start';
+            // Default values if contract line-level config doesn't exist
+            const contract_line_base_rate = contractLineConfig?.base_rate ?? null; // Get base_rate from contract line config
+            const enable_proration = contractLineConfig?.enable_proration ?? false;
+            const billing_cycle_alignment = contractLineConfig?.billing_cycle_alignment ?? 'start';
 
             // --- Fetch Service-Level Config ID (Optional, if needed elsewhere) ---
             // We no longer need service-level config to get the base rate for the combined view.
             // We might still need the config_id if the caller uses it.
-            const configService = new PlanServiceConfigurationService(trx, tenant);
-            const serviceBaseConfig = await configService.getConfigurationForService(planId, serviceId);
+            const configService = new ContractLineServiceConfigurationService(trx, tenant);
+            const serviceBaseConfig = await configService.getConfigurationForService(contractLineId, serviceId);
             const config_id: string | undefined = serviceBaseConfig?.config_id;
 
-            // Base rate now comes from planConfig fetched above
+            // Base rate now comes from contractLineConfig fetched above
             const base_rate = contract_line_base_rate;
 
             // --- Combine Results ---
-            // Return null only if BOTH plan and service config are missing? Or just if service config is missing?
+            // Return null only if BOTH contract line and service config are missing? Or just if service config is missing?
             // Current logic: returns combined data even if service config (base_rate) is missing.
             // If serviceBaseConfig is required, uncomment the check below:
             // if (!serviceBaseConfig) {
@@ -343,18 +343,18 @@ export async function getCombinedFixedPlanConfiguration(
         });
 
     } catch (error) {
-        console.error('Error fetching combined fixed plan configuration:', error);
+        console.error('Error fetching combined fixed contract line configuration:', error);
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to fetch combined fixed plan configuration for plan ${planId}, service ${serviceId}: ${error}`);
+        throw new Error(`Failed to fetch combined fixed contract line configuration for contract line ${contractLineId}, service ${serviceId}: ${error}`);
     }
 }
 
 /**
- * Gets only the plan-level fixed configuration (proration, alignment)
+ * Gets only the contract line-level fixed configuration (proration, alignment)
  */
-export async function getContractLineFixedConfig(planId: string): Promise<IContractLineFixedConfig | null> {
+export async function getContractLineFixedConfig(contractLineId: string): Promise<IContractLineFixedConfig | null> {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -372,24 +372,24 @@ export async function getContractLineFixedConfig(planId: string): Promise<IContr
             }
 
             const model = new ContractLineFixedConfig(trx, tenant);
-            const config = await model.getByPlanId(planId);
+            const config = await model.getByContractLineId(contractLineId);
             return config;
         });
     } catch (error) {
-        console.error(`Error fetching contract_line_fixed_config for plan ${planId}:`, error);
+        console.error(`Error fetching contract_line_fixed_config for contract line ${contractLineId}:`, error);
         if (error instanceof Error) {
             throw error;
         }
-        throw new Error(`Failed to fetch contract_line_fixed_config for plan ${planId}: ${error}`);
+        throw new Error(`Failed to fetch contract_line_fixed_config for contract line ${contractLineId}: ${error}`);
     }
 }
 
 /**
- * Updates the plan-level fixed configuration (proration, alignment) in contract_line_fixed_config.
+ * Updates the contract line-level fixed configuration (proration, alignment) in contract_line_fixed_config.
  * Uses upsert logic: creates if not exists, updates if exists.
  */
 export async function updateContractLineFixedConfig(
-    planId: string,
+    contractLineId: string,
     configData: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'>>
 ): Promise<boolean> {
     try {
@@ -408,13 +408,13 @@ export async function updateContractLineFixedConfig(
                 throw new Error('Permission denied: Cannot update contract line configurations');
             }
 
-            // Fetch the existing plan to check its type
-            const existingPlan = await ContractLine.findById(trx, planId); // Use ContractLine model directly
-            if (!existingPlan) {
-                throw new Error(`Contract Line with ID ${planId} not found.`);
+            // Fetch the existing contract line to check its type
+            const existingContractLine = await ContractLine.findById(trx, contractLineId); // Use ContractLine model directly
+            if (!existingContractLine) {
+                throw new Error(`Contract Line with ID ${contractLineId} not found.`);
             }
-            if (existingPlan.contract_line_type !== 'Fixed') {
-                throw new Error(`Cannot update fixed plan configuration for non-fixed plan type: ${existingPlan.contract_line_type}`);
+            if (existingContractLine.contract_line_type !== 'Fixed') {
+                throw new Error(`Cannot update fixed contract line configuration for non-fixed contract line type: ${existingContractLine.contract_line_type}`);
             }
 
             const model = new ContractLineFixedConfig(trx, tenant);
@@ -422,7 +422,7 @@ export async function updateContractLineFixedConfig(
             // Prepare data for upsert, ensuring contract_line_id and tenant are included
             // Prepare data for upsert, ensuring contract_line_id, tenant, and base_rate are included
             const upsertData: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'> & { base_rate?: number | null } = {
-                contract_line_id: planId,
+                contract_line_id: contractLineId,
                 base_rate: configData.base_rate, // Include base_rate from input
                 enable_proration: configData.enable_proration ?? false, // Provide default if undefined
                 billing_cycle_alignment: configData.billing_cycle_alignment ?? 'start', // Provide default if undefined
@@ -433,22 +433,22 @@ export async function updateContractLineFixedConfig(
         });
 
     } catch (error) {
-        console.error(`Error upserting contract_line_fixed_config for plan ${planId}:`, error);
+        console.error(`Error upserting contract_line_fixed_config for contract line ${contractLineId}:`, error);
         if (error instanceof Error) {
             throw error;
         }
-        throw new Error(`Failed to upsert contract_line_fixed_config for plan ${planId}: ${error}`);
+        throw new Error(`Failed to upsert contract_line_fixed_config for contract line ${contractLineId}: ${error}`);
     }
 }
 
 
 /**
- * Updates only the base_rate for a specific service within a fixed plan.
+ * Updates only the base_rate for a specific service within a fixed contract line.
  * Interacts with contract_line_service_fixed_config.
- * Renamed from updateFixedPlanConfiguration.
+ * Renamed from updateFixedContractLineConfiguration.
  */
-export async function updatePlanServiceFixedConfigRate(
-    planId: string,
+export async function updateContractLineServiceFixedConfigRate(
+    contractLineId: string,
     serviceId: string,
     baseRate: number | null // Only accept base_rate
 ): Promise<boolean> {
@@ -468,28 +468,28 @@ export async function updatePlanServiceFixedConfigRate(
                 throw new Error('Permission denied: Cannot update contract line configurations');
             }
 
-            // Fetch the existing plan to check its type
-            const existingPlan = await ContractLine.findById(trx, planId); // Use ContractLine model directly
-            if (!existingPlan) {
-                throw new Error(`Contract Line with ID ${planId} not found.`);
+            // Fetch the existing contract line to check its type
+            const existingContractLine = await ContractLine.findById(trx, contractLineId); // Use ContractLine model directly
+            if (!existingContractLine) {
+                throw new Error(`Contract Line with ID ${contractLineId} not found.`);
             }
-            if (existingPlan.contract_line_type !== 'Fixed') {
-                throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.contract_line_type}`);
+            if (existingContractLine.contract_line_type !== 'Fixed') {
+                throw new Error(`Cannot update fixed service config rate for non-fixed contract line type: ${existingContractLine.contract_line_type}`);
             }
 
             // Create configuration service
-            const configService = new PlanServiceConfigurationService(trx, tenant);
+            const configService = new ContractLineServiceConfigurationService(trx, tenant);
             
-            // Get existing configuration for this plan and service
-            let config = await configService.getConfigurationForService(planId, serviceId);
-            
+            // Get existing configuration for this contract line and service
+            let config = await configService.getConfigurationForService(contractLineId, serviceId);
+
             if (!config) {
                 // If no configuration exists, create a new one with the provided base_rate
-                console.log(`Creating new fixed plan service configuration for plan ${planId}, service ${serviceId}`);
+                console.log(`Creating new fixed contract line service configuration for contract line ${contractLineId}, service ${serviceId}`);
                 
                 const configId = await configService.createConfiguration(
                     { // Base config data
-                        contract_line_id: planId,
+                        contract_line_id: contractLineId,
                         service_id: serviceId,
                         configuration_type: 'Fixed',
                         tenant
@@ -503,10 +503,10 @@ export async function updatePlanServiceFixedConfigRate(
                 return !!configId;
             } else {
                 // Update existing configuration's base_rate
-                console.log(`Updating fixed plan service configuration base_rate for plan ${planId}, service ${serviceId}`);
+                console.log(`Updating fixed contract line service configuration base_rate for contract line ${contractLineId}, service ${serviceId}`);
                 
                 // Prepare fixed config update data (only base_rate)
-                const fixedConfigData: Partial<IPlanServiceFixedConfig> = {
+                const fixedConfigData: Partial<IContractLineServiceFixedConfig> = {
                      base_rate: baseRate
                 };
                 
@@ -519,10 +519,10 @@ export async function updatePlanServiceFixedConfigRate(
             }
         });
     } catch (error) {
-        console.error('Error updating fixed plan service config rate:', error);
+        console.error('Error updating fixed contract line service config rate:', error);
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to update fixed plan service config rate for plan ${planId}, service ${serviceId}: ${error}`);
+        throw new Error(`Failed to update fixed contract line service config rate for contract line ${contractLineId}, service ${serviceId}: ${error}`);
     }
 }

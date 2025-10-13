@@ -487,7 +487,7 @@ export async function getActiveServices(): Promise<Service[]> {
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      // Removed old join to bucket_plans
+      // Removed old join to bucket_contract_lines
       .leftJoin('contract_line_service_configuration as psc', function(this: Knex.JoinClause) { // Added join for configurations
         this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
@@ -568,7 +568,7 @@ export async function getActiveServices(): Promise<Service[]> {
     contract_line_type: Service['billing']['type'];
     is_custom: boolean;
     billing_frequency: string;
-    plan_description: string | null;
+    contract_line_description: string | null;
     default_rate: number | null;
     custom_rate: number | null;
     quantity: number | null;
@@ -584,7 +584,7 @@ export async function getActiveServices(): Promise<Service[]> {
   }): Service => {
     const hasCustomRate = service.custom_rate !== null;
     const rate = hasCustomRate ? service.custom_rate : service.default_rate;
-    const isBucketPlan = service.contract_line_type === 'Bucket';
+    const isBucketContractLine = service.contract_line_type === 'Bucket';
 
     // Determine base status
     const status = determineServiceStatus(service.start_date, service.end_date);
@@ -625,7 +625,7 @@ export async function getActiveServices(): Promise<Service[]> {
         display: quantityDisplay
       } : undefined,
       // Update bucket object creation using new fields
-      bucket: isBucketPlan && service.psbc_total_hours ? { // Check new field
+      bucket: isBucketContractLine && service.psbc_total_hours ? { // Check new field
         totalHours: service.psbc_total_hours.toString(), // Use new field
         overageRate: service.psbc_overage_rate ? // Use new field
           `$${(service.psbc_overage_rate / 100).toFixed(2)}` :
@@ -641,7 +641,7 @@ export async function getActiveServices(): Promise<Service[]> {
         type: service.contract_line_type,
         frequency: service.billing_frequency,
         isCustom: service.is_custom,
-        description: service.plan_description || undefined,
+        description: service.contract_line_description || undefined,
         display: billingDisplay
       },
       serviceType: service.service_type,
@@ -662,7 +662,7 @@ export interface ServiceUpgrade {
   };
 }
 
-export interface ServicePlan {
+export interface ServiceContractLine {
   id: string;
   name: string;
   description: string;
@@ -670,10 +670,10 @@ export interface ServicePlan {
     amount: string;
     displayAmount: string;
   };
-  isCurrentPlan: boolean;
+  isCurrentContractLine: boolean;
 }
 
-export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan[]> {
+export async function getServiceUpgrades(serviceId: string): Promise<ServiceContractLine[]> {
   const session = await getSession();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
@@ -701,8 +701,8 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
 
   if (!currentService) throw new Error('Service not found');
 
-  // Get available plans for this service
-  const plans = await withTransaction(knex, async (trx: Knex.Transaction) => {
+  // Get available contract lines for this service
+  const contractLines = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('contract_lines as cl')
       .join('contract_line_services as ps', function(this: Knex.JoinClause) {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
@@ -725,19 +725,19 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
       );
   });
 
-  return plans.map((plan): ServicePlan => ({
-    id: plan.id,
-    name: plan.name,
-    description: plan.description || '',
+  return contractLines.map((contractLine): ServiceContractLine => ({
+    id: contractLine.id,
+    name: contractLine.name,
+    description: contractLine.description || '',
     rate: {
-      amount: plan.default_rate.toString(),
-      displayAmount: `$${(plan.default_rate / 100).toFixed(2)}/mo`
+      amount: contractLine.default_rate.toString(),
+      displayAmount: `$${(contractLine.default_rate / 100).toFixed(2)}/mo`
     },
-    isCurrentPlan: plan.id === currentService.contract_line_id
+    isCurrentContractLine: contractLine.id === currentService.contract_line_id
   }));
 }
 
-export async function upgradeService(serviceId: string, planId: string): Promise<{ success: boolean }> {
+export async function upgradeService(serviceId: string, contractLineId: string): Promise<{ success: boolean }> {
   const session = await getSession();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.clientId) throw new Error('No client associated with user');
@@ -746,13 +746,13 @@ export async function upgradeService(serviceId: string, planId: string): Promise
 
   // Start a transaction
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Get current service plan
-    const currentPlan = await trx('client_contract_lines as ccl')
+    // Get current service contract line
+    const currentContractLine = await trx('client_contract_lines as ccl')
       .join('contract_line_services as ps', function(this: Knex.JoinClause) {
         this.on('ccl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('ccl.tenant', '=', 'ps.tenant');
       })
-      .where({ 
+      .where({
         'ps.service_id': serviceId,
         'ccl.client_id': session.user.clientId,
         'ccl.tenant': session.user.tenant
@@ -760,27 +760,27 @@ export async function upgradeService(serviceId: string, planId: string): Promise
       .whereNull('ccl.end_date')
       .first();
 
-    if (!currentPlan) throw new Error('No active plan found for this service');
+    if (!currentContractLine) throw new Error('No active contract line found for this service');
 
     const now = new Date();
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
-    // End current plan at the end of the billing cycle
+
+    // End current contract line at the end of the billing cycle
     await trx('client_contract_lines')
-      .where({ 
-        client_contract_line_id: currentPlan.client_contract_line_id,
+      .where({
+        client_contract_line_id: currentContractLine.client_contract_line_id,
         tenant: session.user.tenant
       })
-      .update({ 
+      .update({
         end_date: endOfMonth.toISOString(),
         updated_at: now.toISOString()
       });
 
-    // Start new plan from the beginning of next month
+    // Start new contract line from the beginning of next month
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     return await trx('client_contract_lines').insert({
       client_id: session.user.clientId,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       tenant: session.user.tenant,
       start_date: startOfNextMonth.toISOString(),
       created_at: now.toISOString()
@@ -790,7 +790,7 @@ export async function upgradeService(serviceId: string, planId: string): Promise
   return { success: true };
 }
 
-export async function downgradeService(serviceId: string, planId: string): Promise<{ success: boolean }> {
+export async function downgradeService(serviceId: string, contractLineId: string): Promise<{ success: boolean }> {
   // Downgrade follows the same logic as upgrade
-  return upgradeService(serviceId, planId);
+  return upgradeService(serviceId, contractLineId);
 }

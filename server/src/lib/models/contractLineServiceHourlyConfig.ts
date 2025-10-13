@@ -1,9 +1,9 @@
 import { Knex } from 'knex';
 import { getCurrentTenantId } from '../db';
-import { IPlanServiceHourlyConfig, IUserTypeRate } from '../../interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceHourlyConfig, IUserTypeRate } from '../../interfaces/contractLineServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
-export default class PlanServiceHourlyConfig {
+export default class ContractLineServiceHourlyConfig {
   private knex: Knex | Knex.Transaction;
   private tenant?: string;
 
@@ -28,7 +28,7 @@ export default class PlanServiceHourlyConfig {
   /**
    * Get an hourly configuration by config ID
    */
-  async getByConfigId(configId: string): Promise<IPlanServiceHourlyConfig | null> {
+  async getByConfigId(configId: string): Promise<IContractLineServiceHourlyConfig | null> {
     const tenant = await this.getTenant();
     
     const config = await this.knex('contract_line_service_hourly_configs') // Corrected table name (plural)
@@ -44,7 +44,7 @@ export default class PlanServiceHourlyConfig {
   /**
    * Create a new hourly configuration
    */
-  async create(data: Omit<IPlanServiceHourlyConfig, 'created_at' | 'updated_at' | 'tenant'>): Promise<boolean> {
+  async create(data: Omit<IContractLineServiceHourlyConfig, 'created_at' | 'updated_at' | 'tenant'>): Promise<boolean> {
     const tenant = await this.getTenant();
     
     const now = new Date();
@@ -54,7 +54,7 @@ export default class PlanServiceHourlyConfig {
       hourly_rate: data.hourly_rate, // Add hourly_rate back
       minimum_billable_time: data.minimum_billable_time,
       round_up_to_nearest: data.round_up_to_nearest,
-      // Removed plan-wide fields that are now in contract_lines table:
+      // Removed contract line-wide fields that are now in contract_lines table:
       // enable_overtime: data.enable_overtime,
       // overtime_rate: data.overtime_rate,
       // overtime_threshold: data.overtime_threshold,
@@ -71,7 +71,7 @@ export default class PlanServiceHourlyConfig {
   /**
    * Update an existing hourly configuration
    */
-  async update(configId: string, data: Partial<IPlanServiceHourlyConfig>): Promise<boolean> {
+  async update(configId: string, data: Partial<IContractLineServiceHourlyConfig>): Promise<boolean> {
     const tenant = await this.getTenant();
     
     const updateData = {

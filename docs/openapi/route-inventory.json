@@ -2291,56 +2291,56 @@
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/plan-bundles",
+    "route_path": "/api/v1/contracts",
     "methods": [
       "GET",
       "POST"
     ],
-    "route_file": "server/src/app/api/v1/plan-bundles/route.ts",
+    "route_file": "server/src/app/api/v1/contracts/route.ts",
     "controller": "ApiContractLineController",
     "controller_import": "@/lib/api/controllers/ApiContractLineController",
     "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/plan-bundles/{bundleId}/plans",
+    "route_path": "/api/v1/contracts/{contractId}/contract-lines",
     "methods": [
       "POST"
     ],
-    "route_file": "server/src/app/api/v1/plan-bundles/[bundleId]/plans/route.ts",
+    "route_file": "server/src/app/api/v1/contracts/[bundleId]/contract-lines/route.ts",
     "controller": "ApiContractLineController",
     "controller_import": "@/lib/api/controllers/ApiContractLineController",
     "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/plan-bundles/{bundleId}/plans/{planId}",
+    "route_path": "/api/v1/contracts/{contractId}/contract-lines/{contractLineId}",
     "methods": [
       "DELETE"
     ],
-    "route_file": "server/src/app/api/v1/plan-bundles/[bundleId]/plans/[planId]/route.ts",
+    "route_file": "server/src/app/api/v1/contracts/[contractId]/contract-lines/[contractLineId]/route.ts",
     "controller": "ApiContractLineController",
     "controller_import": "@/lib/api/controllers/ApiContractLineController",
     "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/plan-templates",
+    "route_path": "/api/v1/contract-line-templates",
     "methods": [
       "POST"
     ],
-    "route_file": "server/src/app/api/v1/plan-templates/route.ts",
+    "route_file": "server/src/app/api/v1/contract-line-templates/route.ts",
     "controller": "ApiContractLineController",
     "controller_import": "@/lib/api/controllers/ApiContractLineController",
     "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/plan-templates/{id}/create-plan",
+    "route_path": "/api/v1/contract-line-templates/{id}/create-contract-line",
     "methods": [
       "POST"
     ],
-    "route_file": "server/src/app/api/v1/plan-templates/[id]/create-plan/route.ts",
+    "route_file": "server/src/app/api/v1/contract-line-templates/[id]/create-contract-line/route.ts",
     "controller": "ApiContractLineController",
     "controller_import": "@/lib/api/controllers/ApiContractLineController",
     "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts"

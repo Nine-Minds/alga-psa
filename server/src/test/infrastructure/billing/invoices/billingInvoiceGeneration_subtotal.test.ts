@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,7 +27,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_plans',
+        'bucket_contract_lines',
         'tax_rates',
         'client_tax_settings'
       ],
@@ -123,8 +123,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
     }, 'client_id');
 
     // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Test Plan',
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Contract Line',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
@@ -155,22 +155,22 @@ describe('Billing Invoice Subtotal Calculations', () => {
       unit_of_measure: 'unit'
     }, 'service_id');
 
-    // Assign services to plan
+    // Assign services to contract line
     await context.db('contract_line_services').insert([
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceA,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceB,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceC,
         quantity: 1,
         tenant: context.tenantId
@@ -186,11 +186,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
       period_end_date: '2023-02-01'
     }, 'billing_cycle_id');
 
-    // Assign plan to client
+    // Assign contract line to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
       client_id: client_id,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       start_date: '2023-01-01',
       is_active: true,
       tenant: context.tenantId
@@ -221,18 +221,18 @@ describe('Billing Invoice Subtotal Calculations', () => {
     }, 'client_id');
 
     // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Test Plan',
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Contract Line',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    // Assign plan to client
+    // Assign contract line to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
       client_id: client_id,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       start_date: '2023-01-01',
       is_active: true,
       tenant: context.tenantId
@@ -336,8 +336,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
     }, 'client_id');
 
     // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Test Plan',
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Contract Line',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
@@ -360,16 +360,16 @@ describe('Billing Invoice Subtotal Calculations', () => {
       unit_of_measure: 'unit'
     }, 'service_id');
 
-    // Assign services to plan
+    // Assign services to contract line
     await context.db('contract_line_services').insert([
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceA,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceB,
         quantity: 1,
         tenant: context.tenantId
@@ -385,11 +385,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
       period_end_date: '2023-02-01'
     }, 'billing_cycle_id');
 
-    // Assign plan to client
+    // Assign contract line to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
       client_id: client_id,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       start_date: '2023-01-01',
       is_active: true,
       tenant: context.tenantId

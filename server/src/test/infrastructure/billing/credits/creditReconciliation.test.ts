@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice, validateCreditBalance } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
-import { createTestDate } from '../../../test-utils/dateUtils';
+import { createTestDate } from '../../../../../test-utils/dateUtils';
 
 /**
  * Credit Reconciliation Tests
@@ -37,7 +37,7 @@ describe('Credit Reconciliation Tests', () => {
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_plans',
+        'bucket_contract_lines',
         'bucket_usage',
         'tax_rates',
         'client_tax_settings',
@@ -141,16 +141,16 @@ describe('Credit Reconciliation Tests', () => {
     }, 'service_id');
 
     // 8. Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Regular Plan',
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Regular Contract Line',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    // 9. Assign service to plan
+    // 9. Assign service to contract line
     await context.db('contract_line_services').insert({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       service_id: serviceId,
       quantity: 1,
       tenant: context.tenantId
@@ -169,11 +169,11 @@ describe('Credit Reconciliation Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    // 11. Assign plan to client
+    // 11. Assign contract line to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
       client_id: client_id,
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true

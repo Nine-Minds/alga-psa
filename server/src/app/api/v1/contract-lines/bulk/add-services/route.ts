@@ -2,4 +2,4 @@ import { ApiContractLineController } from '@/lib/api/controllers/ApiContractLine
 
 const controller = new ApiContractLineController();
 
-export const POST = controller.bulkAddServicesToPlan();
+export const POST = controller.bulkAddServicesToContractLine();

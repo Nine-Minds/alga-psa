@@ -228,7 +228,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract }) => {
 
       {editingLine && (
         <ContractLineRateDialog
-          plan={editingLine}
+          contractLine={editingLine}
           onClose={() => setEditingLine(null)}
           onSave={handleCustomRateSave}
         />

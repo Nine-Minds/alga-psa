@@ -11,7 +11,7 @@ import type {
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
-import PlanDetailsDialog from './PlanDetailsDialog';
+import ContractLineDetailsDialog from './ContractLineDetailsDialog';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 // Flag to control visibility of bucket usage metrics
@@ -39,15 +39,15 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
   onViewAllInvoices
 }) => {
   const { t } = useTranslation('clientPortal');
-  // State for plan details dialog
-  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
-  
-  // Memoize the plan card to prevent unnecessary re-renders
-  const planCard = useMemo(() => (
+  // State for contract line details dialog
+  const [isContractLineDialogOpen, setIsContractLineDialogOpen] = useState(false);
+
+  // Memoize the contract line card to prevent unnecessary re-renders
+  const contractLineCard = useMemo(() => (
     <Card className="p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-500">{t('billing.currentPlan')}</p>
+          <p className="text-sm font-medium text-gray-500">{t('billing.currentContractLine')}</p>
           {contractLine ? (
             <>
               <p className="mt-2 text-3xl font-semibold">{contractLine.contract_line_name}</p>
@@ -63,12 +63,12 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         <Package className="h-5 w-5 text-gray-400" />
       </div>
       <Button
-        id="view-plan-details-button"
+        id="view-contract-line-details-button"
         className="mt-4 w-full"
         variant="outline"
-        onClick={() => setIsPlanDialogOpen(true)}
+        onClick={() => setIsContractLineDialogOpen(true)}
       >
-        {t('billing.viewPlanDetails')}
+        {t('billing.viewContractLineDetails')}
       </Button>
     </Card>
   ), [contractLine]);
@@ -116,7 +116,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
     <>
       <div id="billing-overview-content" className="space-y-6 py-4">
         <div className="grid gap-6 md:grid-cols-2">
-          {planCard}
+          {contractLineCard}
           {invoiceCard}
         </div>
 
@@ -145,9 +145,9 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
                 <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.bucket.noPlanTitle')}</h3>
+                <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.bucket.noContractLineTitle')}</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {t('billing.bucket.noPlanDescription')}
+                  {t('billing.bucket.noContractLineDescription')}
                 </p>
               </div>
             </div>
@@ -163,11 +163,11 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         )}
       </div>
 
-      {/* Plan Details Dialog */}
-      <PlanDetailsDialog
-        plan={contractLine}
-        isOpen={isPlanDialogOpen}
-        onClose={() => setIsPlanDialogOpen(false)}
+      {/* Contract Line Details Dialog */}
+      <ContractLineDetailsDialog
+        contractLine={contractLine}
+        isOpen={isContractLineDialogOpen}
+        onClose={() => setIsContractLineDialogOpen(false)}
         formatCurrency={formatCurrency}
         formatDate={formatDate}
       />

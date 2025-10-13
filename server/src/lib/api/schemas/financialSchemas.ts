@@ -96,7 +96,7 @@ export const reconciliationStatusSchema = z.enum(['open', 'in_review', 'resolved
 
 export const taxTypeSchema = z.enum(['VAT', 'GST', 'Sales Tax']);
 
-export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
+export const contractLineTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 
 export const billingMethodSchema = z.enum(['fixed', 'per_unit']);
 
@@ -532,7 +532,7 @@ export const contractLineBaseSchema = z.object({
   billing_frequency: billingCycleTypeSchema,
   is_custom: z.boolean().default(false),
   service_category: z.string().optional(),
-  contract_line_type: planTypeSchema,
+  contract_line_type: contractLineTypeSchema,
   hourly_rate: z.number().nullable().optional(),
   minimum_billable_time: z.number().nullable().optional(),
   round_up_to_nearest: z.number().nullable().optional(),
@@ -552,7 +552,7 @@ export const updateContractLineSchema = contractLineBaseSchema.partial();
 export const contractLineResponseSchema = contractLineBaseSchema.merge(baseEntitySchema);
 
 export const contractLineListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
-  contract_line_type: planTypeSchema.optional(),
+  contract_line_type: contractLineTypeSchema.optional(),
   billing_frequency: billingCycleTypeSchema.optional(),
   is_custom: booleanTransform.optional(),
   service_category: z.string().optional()
@@ -823,10 +823,10 @@ export const serviceCategorySchema = z.object({
 }).merge(baseEntitySchema);
 
 // ============================================================================
-// BUCKET PLAN SCHEMAS
+// BUCKET CONTRACT LINE SCHEMAS
 // ============================================================================
 
-export const bucketPlanBaseSchema = z.object({
+export const bucketContractLineBaseSchema = z.object({
   bucket_contract_line_id: uuidSchema.optional(),
   contract_line_id: uuidSchema,
   total_hours: z.number(),
@@ -834,11 +834,11 @@ export const bucketPlanBaseSchema = z.object({
   overage_rate: z.number()
 });
 
-export const createBucketPlanSchema = bucketPlanBaseSchema.extend({
+export const createBucketContractLineSchema = bucketContractLineBaseSchema.extend({
   tenant: uuidSchema
 });
 
-export const bucketPlanResponseSchema = bucketPlanBaseSchema.merge(baseEntitySchema);
+export const bucketContractLineResponseSchema = bucketContractLineBaseSchema.merge(baseEntitySchema);
 
 export const bucketUsageSchema = z.object({
   usage_id: uuidSchema.optional(),
@@ -974,7 +974,7 @@ export type DiscountType = z.infer<typeof discountTypeSchema>;
 export type PaymentMethodType = z.infer<typeof paymentMethodTypeSchema>;
 export type ReconciliationStatus = z.infer<typeof reconciliationStatusSchema>;
 export type TaxType = z.infer<typeof taxTypeSchema>;
-export type PlanType = z.infer<typeof planTypeSchema>;
+export type ContractLineType = z.infer<typeof contractLineTypeSchema>;
 export type BillingMethod = z.infer<typeof billingMethodSchema>;
 
 export type CreateTransactionRequest = z.infer<typeof createTransactionSchema>;

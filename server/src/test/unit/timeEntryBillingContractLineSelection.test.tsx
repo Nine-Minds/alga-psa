@@ -4,10 +4,10 @@ import { TimeSheetStatus } from '../../interfaces/timeEntry.interfaces';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import TimeEntryEditForm from '../../components/time-management/time-entry/time-sheet/TimeEntryEditForm';
-import * as planDisambiguation from '../../lib/utils/planDisambiguation';
+import * as contractLineDisambiguation from '../../lib/utils/contractLineDisambiguation';
 
-// Mock the planDisambiguation module
-vi.mock('../../lib/utils/planDisambiguation', () => ({
+// Mock the contractLineDisambiguation module
+vi.mock('../../lib/utils/contractLineDisambiguation', () => ({
   getClientIdForWorkItem: vi.fn(),
   getEligibleContractLinesForUI: vi.fn()
 }));
@@ -50,15 +50,15 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
     vi.clearAllMocks();
   });
 
-  test('should display contract line selector with disabled dropdown when only one plan is available', async () => {
+  test('should display contract line selector with disabled dropdown when only one contract line is available', async () => {
     // Mock the getClientIdForWorkItem function to return a client ID
-    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
-    
-    // Mock the getEligibleContractLinesForUI function to return a single plan
-    vi.mocked(planDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
+    vi.mocked(contractLineDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
+
+    // Mock the getEligibleContractLinesForUI function to return a single contract line
+    vi.mocked(contractLineDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
       {
-        client_contract_line_id: 'test-plan-id',
-        contract_line_name: 'Test Plan',
+        client_contract_line_id: 'test-contract-line-id',
+        contract_line_name: 'Test Contract Line',
         contract_line_type: 'Fixed'
       }
     ]);
@@ -82,14 +82,14 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
 
     // Wait for the component to load and fetch data
     await waitFor(() => {
-      expect(planDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
+      expect(contractLineDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
         'test-work-item-id',
         'project_task'
       );
     });
 
     await waitFor(() => {
-      expect(planDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalledWith(
+      expect(contractLineDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalledWith(
         'test-client-id',
         'test-service-id'
       );
@@ -97,24 +97,24 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
 
     // The contract line selector should be visible
     expect(screen.getByText('Contract Line')).toBeInTheDocument();
-    
+
     // The dropdown should be disabled
     const selectElement = screen.getByLabelText('Contract Line (Optional)');
     expect(selectElement).toBeDisabled();
-    
+
     // There should be explanatory text
     expect(screen.getByText('This service is only available in one contract line.')).toBeInTheDocument();
 
     // The entry should be updated with the contract line ID
     expect(mockOnUpdateEntry).toHaveBeenCalledWith(0, {
       ...mockEntry,
-      contract_line_id: 'test-plan-id'
+      contract_line_id: 'test-contract-line-id'
     });
   });
 
   test('should display contract line selector with disabled dropdown when no client ID is available', async () => {
     // Mock the getClientIdForWorkItem function to return null (no client ID)
-    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue(null);
+    vi.mocked(contractLineDisambiguation.getClientIdForWorkItem).mockResolvedValue(null);
     
     render(
       <TimeEntryEditForm
@@ -135,7 +135,7 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
 
     // Wait for the component to load and fetch data
     await waitFor(() => {
-      expect(planDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
+      expect(contractLineDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
         'test-work-item-id',
         'project_task'
       );
@@ -143,29 +143,29 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
 
     // The contract line selector should be visible
     expect(screen.getByText('Contract Line')).toBeInTheDocument();
-    
+
     // The dropdown should be disabled
     const selectElement = screen.getByLabelText('Contract Line (Optional)');
     expect(selectElement).toBeDisabled();
-    
+
     // There should be explanatory text
     expect(screen.getByText('Client information not available. The system will use the default contract line.')).toBeInTheDocument();
   });
 
-  test('should display contract line selector when multiple plans are available', async () => {
+  test('should display contract line selector when multiple contract lines are available', async () => {
     // Mock the getClientIdForWorkItem function to return a client ID
-    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
-    
-    // Mock the getEligibleContractLinesForUI function to return multiple plans
-    vi.mocked(planDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
+    vi.mocked(contractLineDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
+
+    // Mock the getEligibleContractLinesForUI function to return multiple contract lines
+    vi.mocked(contractLineDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
       {
-        client_contract_line_id: 'plan-id-1',
-        contract_line_name: 'Fixed Plan',
+        client_contract_line_id: 'contract-line-id-1',
+        contract_line_name: 'Fixed Contract Line',
         contract_line_type: 'Fixed'
       },
       {
-        client_contract_line_id: 'plan-id-2',
-        contract_line_name: 'Bucket Plan',
+        client_contract_line_id: 'contract-line-id-2',
+        contract_line_name: 'Bucket Contract Line',
         contract_line_type: 'Bucket'
       }
     ]);
@@ -189,14 +189,14 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
 
     // Wait for the component to load and fetch data
     await waitFor(() => {
-      expect(planDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
+      expect(contractLineDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
         'test-work-item-id',
         'project_task'
       );
     });
 
     await waitFor(() => {
-      expect(planDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalledWith(
+      expect(contractLineDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalledWith(
         'test-client-id',
         'test-service-id'
       );
@@ -205,27 +205,27 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
     // The contract line selector should be visible
     expect(screen.getByText('Contract Line')).toBeInTheDocument();
 
-    // The entry should be updated with the bucket plan ID (default selection)
+    // The entry should be updated with the bucket contract line ID (default selection)
     expect(mockOnUpdateEntry).toHaveBeenCalledWith(0, {
       ...mockEntry,
-      contract_line_id: 'plan-id-2'
+      contract_line_id: 'contract-line-id-2'
     });
   });
 
   test('should allow saving without contract line selection', async () => {
     // Mock the getClientIdForWorkItem function to return a client ID
-    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
-    
-    // Mock the getEligibleContractLinesForUI function to return multiple plans
-    vi.mocked(planDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
+    vi.mocked(contractLineDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
+
+    // Mock the getEligibleContractLinesForUI function to return multiple contract lines
+    vi.mocked(contractLineDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
       {
-        client_contract_line_id: 'plan-id-1',
-        contract_line_name: 'Fixed Plan',
+        client_contract_line_id: 'contract-line-id-1',
+        contract_line_name: 'Fixed Contract Line',
         contract_line_type: 'Fixed'
       },
       {
-        client_contract_line_id: 'plan-id-2',
-        contract_line_name: 'Bucket Plan',
+        client_contract_line_id: 'contract-line-id-2',
+        contract_line_name: 'Bucket Contract Line',
         contract_line_type: 'Bucket'
       }
     ]);
@@ -255,14 +255,14 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
 
     // Wait for the component to load and fetch data
     await waitFor(() => {
-      expect(planDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalled();
+      expect(contractLineDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalled();
     });
 
     // Click the save button
     fireEvent.click(screen.getByText('Save'));
 
     // The form should NOT show a validation error for missing contract line
-    expect(screen.queryByText('Contract line is required when multiple plans are available')).not.toBeInTheDocument();
+    expect(screen.queryByText('Contract line is required when multiple contract lines are available')).not.toBeInTheDocument();
 
     // The onSave function should be called since contract line is no longer required
     expect(mockOnSave).toHaveBeenCalledWith(0);

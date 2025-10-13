@@ -22,28 +22,28 @@ export async function determineDefaultContractLine(
 
   try {
     // Get all contract lines for the client that include this service
-    const eligiblePlans = await getEligibleContractLines(knex, tenant, clientId, serviceId);
-    
-    // If only one plan exists, use it
-    if (eligiblePlans.length === 1) {
-      return eligiblePlans[0].client_contract_line_id;
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+
+    // If only one contract line exists, use it
+    if (eligibleContractLines.length === 1) {
+      return eligibleContractLines[0].client_contract_line_id;
     }
-    
-    // If no plans exist, return null
-    if (eligiblePlans.length === 0) {
+
+    // If no contract lines exist, return null
+    if (eligibleContractLines.length === 0) {
       return null;
     }
-    
-    // Check for bucket plans
-    const bucketPlans = eligiblePlans.filter(plan => 
-      plan.contract_line_type === 'Bucket'
+
+    // Check for bucket contract lines
+    const bucketContractLines = eligibleContractLines.filter(contractLine =>
+      contractLine.contract_line_type === 'Bucket'
     );
-    
-    if (bucketPlans.length === 1) {
-      return bucketPlans[0].client_contract_line_id;
+
+    if (bucketContractLines.length === 1) {
+      return bucketContractLines[0].client_contract_line_id;
     }
-    
-    // If we have multiple plans and no clear default, return null to require explicit selection
+
+    // If we have multiple contract lines and no clear default, return null to require explicit selection
     return null;
   } catch (error) {
     console.error('Error determining default contract line:', error);
@@ -103,18 +103,18 @@ export async function getEligibleContractLines(
   
   // Filter by service category if available
   if (serviceInfo.category_id) {
-    // Filter plans based on the service_category field in client_contract_lines
-    // This ensures we only get plans that are assigned to the same category as the service
+    // Filter contract lines based on the service_category field in client_contract_lines
+    // This ensures we only get contract lines that are assigned to the same category as the service
     query.where(function() {
       this.where('client_contract_lines.service_category', serviceInfo.category_id)
-          .orWhereNull('client_contract_lines.service_category'); // Also include plans with no category specified
+          .orWhereNull('client_contract_lines.service_category'); // Also include contract lines with no category specified
     });
   }
-  
+
   // Filter by service type to ensure compatibility
   // if (serviceInfo.service_type) {
-  //   // Make sure the plan type is compatible with the service type
-  //   // For example, Time services should only be used with Hourly or Bucket plans
+  //   // Make sure the contract line type is compatible with the service type
+  //   // For example, Time services should only be used with Hourly or Bucket contract lines
   //   if (serviceInfo.service_type === 'Time') {
   //     query.whereIn('contract_lines.contract_line_type', ['Hourly', 'Bucket']);
   //   } else if (serviceInfo.service_type === 'Fixed') {
@@ -153,8 +153,8 @@ export async function validateContractLineForService(
   }
 
   try {
-    const eligiblePlans = await getEligibleContractLines(knex, tenant, clientId, serviceId);
-    return eligiblePlans.some(plan => plan.client_contract_line_id === contractLineId);
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    return eligibleContractLines.some(contractLine => contractLine.client_contract_line_id === contractLineId);
   } catch (error) {
     console.error('Error validating contract line for service:', error);
     return false;
@@ -166,7 +166,7 @@ export async function validateContractLineForService(
  * @param clientId The client ID
  * @param serviceId The service ID
  * @param contractLineId The contract line ID to check against
- * @returns True if the unassigned entry should be allocated to this plan, false otherwise
+ * @returns True if the unassigned entry should be allocated to this contract line, false otherwise
  */
 export async function shouldAllocateUnassignedEntry(
   clientId: string,
@@ -174,26 +174,26 @@ export async function shouldAllocateUnassignedEntry(
   contractLineId: string
 ): Promise<boolean> {
   const { knex, tenant } = await createTenantKnex();
-  
+
   if (!tenant) {
     throw new Error("Tenant context not found");
   }
 
   try {
-    const eligiblePlans = await getEligibleContractLines(knex, tenant, clientId, serviceId);
-    
-    // If this is the only eligible plan, allocate to it
-    if (eligiblePlans.length === 1 && eligiblePlans[0].client_contract_line_id === contractLineId) {
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+
+    // If this is the only eligible contract line, allocate to it
+    if (eligibleContractLines.length === 1 && eligibleContractLines[0].client_contract_line_id === contractLineId) {
       return true;
     }
-    
-    // If there are multiple eligible plans, check if this is a bucket plan
-    const bucketPlans = eligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
-    if (bucketPlans.length === 1 && bucketPlans[0].client_contract_line_id === contractLineId) {
+
+    // If there are multiple eligible contract lines, check if this is a bucket contract line
+    const bucketContractLines = eligibleContractLines.filter(contractLine => contractLine.contract_line_type === 'Bucket');
+    if (bucketContractLines.length === 1 && bucketContractLines[0].client_contract_line_id === contractLineId) {
       return true;
     }
-    
-    // Otherwise, don't allocate unassigned entries to this plan
+
+    // Otherwise, don't allocate unassigned entries to this contract line
     return false;
   } catch (error) {
     console.error('Error determining if unassigned entry should be allocated:', error);
@@ -222,16 +222,16 @@ export async function getEligibleContractLinesForUI(
   }
 
   try {
-    const plans = await getEligibleContractLines(knex, tenant, clientId, serviceId);
-    
+    const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+
     // Transform to a simpler structure for UI
     // Transform to the structure expected by the UI, including dates
-    return plans.map(plan => ({
-      client_contract_line_id: plan.client_contract_line_id,
-      contract_line_name: plan.contract_line_name || 'Unnamed Plan',
-      contract_line_type: plan.contract_line_type,
-      start_date: plan.start_date, // Include start_date
-      end_date: plan.end_date // Include end_date
+    return contractLines.map(contractLine => ({
+      client_contract_line_id: contractLine.client_contract_line_id,
+      contract_line_name: contractLine.contract_line_name || 'Unnamed Contract Line',
+      contract_line_type: contractLine.contract_line_type,
+      start_date: contractLine.start_date, // Include start_date
+      end_date: contractLine.end_date // Include end_date
     }));
   } catch (error) {
     console.error('Error getting eligible contract lines for UI:', error);

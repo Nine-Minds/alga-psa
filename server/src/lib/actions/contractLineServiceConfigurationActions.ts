@@ -3,50 +3,50 @@
 import { z } from 'zod'; // Add Zod import
 import { withTransaction } from '@alga-psa/shared/db';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig,
-  IPlanServiceRateTier, // Import the rate tier interface
+  IContractLineServiceConfiguration,
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IContractLineServiceBucketConfig,
+  IContractLineServiceRateTier, // Import the rate tier interface
   IUserTypeRate, // Added comma
-  IPlanServiceRateTierInput
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+  IContractLineServiceRateTierInput
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { getContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
 /**
- * Get a plan service configuration with its type-specific configuration
+ * Get a contract line service configuration with its type-specific configuration
  */
 export async function getConfigurationWithDetails(configId: string): Promise<{
-  baseConfig: IPlanServiceConfiguration;
-  typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
-  planFixedConfig?: Partial<IContractLineFixedConfig>;
-  rateTiers?: IPlanServiceRateTier[];
+  baseConfig: IContractLineServiceConfiguration;
+  typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+  contractLineFixedConfig?: Partial<IContractLineFixedConfig>;
+  rateTiers?: IContractLineServiceRateTier[];
   userTypeRates?: IUserTypeRate[];
 }> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
   // Get the configuration details
   const configDetails = await configService.getConfigurationWithDetails(configId);
-  
-  // If this is a Fixed configuration, also fetch the plan fixed config
-  let planFixedConfig: Partial<IContractLineFixedConfig> | undefined;
+
+  // If this is a Fixed configuration, also fetch the contract line fixed config
+  let contractLineFixedConfig: Partial<IContractLineFixedConfig> | undefined;
   if (configDetails.baseConfig.configuration_type === 'Fixed') {
     try {
-      planFixedConfig = await getContractLineFixedConfig(configDetails.baseConfig.contract_line_id) || {
+      contractLineFixedConfig = await getContractLineFixedConfig(configDetails.baseConfig.contract_line_id) || {
         enable_proration: false,
         billing_cycle_alignment: 'start'
       };
     } catch (error) {
-      console.error(`Error fetching plan fixed config for plan ${configDetails.baseConfig.contract_line_id}:`, error);
-      // Provide default values if the plan fixed config couldn't be fetched
-      planFixedConfig = {
+      console.error(`Error fetching contract line fixed config for contract line ${configDetails.baseConfig.contract_line_id}:`, error);
+      // Provide default values if the contract line fixed config couldn't be fetched
+      contractLineFixedConfig = {
         enable_proration: false,
         billing_cycle_alignment: 'start'
       };
@@ -55,47 +55,47 @@ export async function getConfigurationWithDetails(configId: string): Promise<{
   
     return {
       ...configDetails,
-      planFixedConfig
+      contractLineFixedConfig
     };
   });
 }
 
 /**
- * Get all configurations for a plan
+ * Get all configurations for a contract line
  */
-export async function getConfigurationsForPlan(planId: string): Promise<IPlanServiceConfiguration[]> {
+export async function getConfigurationsForContractLine(contractLineId: string): Promise<IContractLineServiceConfiguration[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
-  
-    return await configService.getConfigurationsForPlan(planId);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
+
+    return await configService.getConfigurationsForContractLine(contractLineId);
   });
 }
 
 /**
- * Get configuration for a specific service within a plan
+ * Get configuration for a specific service within a contract line
  */
-export async function getConfigurationForService(planId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
+export async function getConfigurationForService(contractLineId: string, serviceId: string): Promise<IContractLineServiceConfiguration | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
-  
-    return await configService.getConfigurationForService(planId, serviceId);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
+
+    return await configService.getConfigurationForService(contractLineId, serviceId);
   });
 }
 
 /**
- * Create a new plan service configuration with its type-specific configuration
+ * Create a new contract line service configuration with its type-specific configuration
  */
 export async function createConfiguration(
-  baseConfig: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>,
-  typeConfig: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>,
-  rateTiers?: Omit<IPlanServiceRateTier, 'tier_id' | 'config_id' | 'created_at' | 'updated_at'>[],
+  baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>,
+  typeConfig: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>,
+  rateTiers?: Omit<IContractLineServiceRateTier, 'tier_id' | 'config_id' | 'created_at' | 'updated_at'>[],
   userTypeRates?: Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'created_at' | 'updated_at'>[]
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
   // Ensure tenant is set
   baseConfig.tenant = tenant!;
@@ -105,29 +105,29 @@ export async function createConfiguration(
 }
 
 /**
- * Update a plan service configuration with its type-specific configuration
+ * Update a contract line service configuration with its type-specific configuration
  */
 export async function updateConfiguration(
   configId: string,
-  baseConfig?: Partial<IPlanServiceConfiguration>,
-  typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>,
-  rateTiers?: IPlanServiceRateTier[] // Add rateTiers parameter
+  baseConfig?: Partial<IContractLineServiceConfiguration>,
+  typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>,
+  rateTiers?: IContractLineServiceRateTier[] // Add rateTiers parameter
 ): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
     return await configService.updateConfiguration(configId, baseConfig, typeConfig, rateTiers); // Pass rateTiers
   });
 }
 
 /**
- * Delete a plan service configuration and its type-specific configuration
+ * Delete a contract line service configuration and its type-specific configuration
  */
 export async function deleteConfiguration(configId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
   
     return await configService.deleteConfiguration(configId);
   });
@@ -138,11 +138,11 @@ export async function deleteConfiguration(configId: string): Promise<boolean> {
  */
 export async function addRateTier(
   configId: string,
-  tierData: Omit<IPlanServiceRateTier, 'tier_id' | 'config_id' | 'created_at' | 'updated_at' | 'tenant'>
+  tierData: Omit<IContractLineServiceRateTier, 'tier_id' | 'config_id' | 'created_at' | 'updated_at' | 'tenant'>
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx);
+  const usageConfigModel = new (await import('server/src/lib/models/contractLineServiceUsageConfig')).default(trx);
   
     return await usageConfigModel.addRateTier({
       ...tierData,
@@ -156,11 +156,11 @@ export async function addRateTier(
  */
 export async function updateRateTier(
   tierId: string,
-  tierData: Partial<Omit<IPlanServiceRateTier, 'tier_id' | 'tenant'>>
+  tierData: Partial<Omit<IContractLineServiceRateTier, 'tier_id' | 'tenant'>>
 ): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx);
+  const usageConfigModel = new (await import('server/src/lib/models/contractLineServiceUsageConfig')).default(trx);
   
     return await usageConfigModel.updateRateTier(tierId, tierData);
   });
@@ -172,7 +172,7 @@ export async function updateRateTier(
 export async function deleteRateTier(tierId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx);
+  const usageConfigModel = new (await import('server/src/lib/models/contractLineServiceUsageConfig')).default(trx);
   
     return await usageConfigModel.deleteRateTier(tierId);
   });
@@ -187,7 +187,7 @@ export async function addUserTypeRate(
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx);
+  const hourlyConfigModel = new (await import('server/src/lib/models/contractLineServiceHourlyConfig')).default(trx);
   
     return await hourlyConfigModel.addUserTypeRate({
       ...rateData,
@@ -205,7 +205,7 @@ export async function updateUserTypeRate(
 ): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx);
+  const hourlyConfigModel = new (await import('server/src/lib/models/contractLineServiceHourlyConfig')).default(trx);
   
     return await hourlyConfigModel.updateUserTypeRate(rateId, rateData);
   });
@@ -217,7 +217,7 @@ export async function updateUserTypeRate(
 export async function deleteUserTypeRate(rateId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx);
+  const hourlyConfigModel = new (await import('server/src/lib/models/contractLineServiceHourlyConfig')).default(trx);
   
     return await hourlyConfigModel.deleteUserTypeRate(rateId);
   });
@@ -255,7 +255,7 @@ export async function upsertUserTypeRatesForConfig(
 
   // Use the service, assuming it has a method for this bulk operation
   // If not, we'd implement the transaction logic here or add the method to the service.
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
 
   try {
     // Assuming a method like this exists or will be added to the service:
@@ -275,35 +275,35 @@ export async function upsertUserTypeRatesForConfig(
 /**
  * Interface combining base service config, usage config, and tiers.
  */
-export interface IFullPlanServiceUsageConfiguration extends IPlanServiceConfiguration, Omit<IPlanServiceUsageConfig, 'config_id' | 'created_at' | 'updated_at' | 'tenant'> {
-  tiers?: IPlanServiceRateTier[];
+export interface IFullContractLineServiceUsageConfiguration extends IContractLineServiceConfiguration, Omit<IContractLineServiceUsageConfig, 'config_id' | 'created_at' | 'updated_at' | 'tenant'> {
+  tiers?: IContractLineServiceRateTier[];
 }
 
 /**
- * Fetches the full service-level configuration (base, usage details, and tiers) for a specific service within a plan.
- * Corresponds to Phase 1 Task: Backend fetch action (`getPlanServiceConfiguration`)
+ * Fetches the full service-level configuration (base, usage details, and tiers) for a specific service within a contract line.
+ * Corresponds to Phase 1 Task: Backend fetch action (`getContractLineServiceConfiguration`)
  */
-export async function getPlanServiceConfiguration(planId: string, serviceId: string): Promise<IFullPlanServiceUsageConfiguration | null> {
+export async function getContractLineServiceConfiguration(contractLineId: string, serviceId: string): Promise<IFullContractLineServiceUsageConfiguration | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
 
   // TODO: Implement logic using configService or direct queries
-  // 1. Get base config using configService.getConfigurationForService(planId, serviceId)
+  // 1. Get base config using configService.getConfigurationForService(contractLineId, serviceId)
   // 2. If base config exists and is 'Usage' type:
   //    a. Get usage config using config_id
   //    b. If enable_tiered_pricing, get tiers using config_id
   // 3. Combine and return, ensuring tenant filtering
 
-  console.log(`Fetching config for planId: ${planId}, serviceId: ${serviceId}, tenant: ${tenant}`); // Placeholder
+  console.log(`Fetching config for contractLineId: ${contractLineId}, serviceId: ${serviceId}, tenant: ${tenant}`); // Placeholder
   // Placeholder implementation - replace with actual logic
-  const baseConfig = await configService.getConfigurationForService(planId, serviceId);
+  const baseConfig = await configService.getConfigurationForService(contractLineId, serviceId);
   if (!baseConfig || baseConfig.configuration_type !== 'Usage') {
     return null;
   }
 
   try {
-    const usageConfig = await trx<IPlanServiceUsageConfig>('contract_line_service_usage_config')
+    const usageConfig = await trx<IContractLineServiceUsageConfig>('contract_line_service_usage_config')
       .where({ config_id: baseConfig.config_id, tenant: tenant! })
       .first();
 
@@ -313,15 +313,15 @@ export async function getPlanServiceConfiguration(planId: string, serviceId: str
       return null; // Return null as the full configuration couldn't be retrieved
     }
 
-    let tiers: IPlanServiceRateTier[] = [];
+    let tiers: IContractLineServiceRateTier[] = [];
     if (usageConfig.enable_tiered_pricing) {
-      tiers = await trx<IPlanServiceRateTier>('contract_line_service_rate_tiers')
+      tiers = await trx<IContractLineServiceRateTier>('contract_line_service_rate_tiers')
         .where({ config_id: baseConfig.config_id, tenant: tenant! })
         .orderBy('min_quantity', 'asc');
     }
 
     // Combine results
-    const fullConfig: IFullPlanServiceUsageConfiguration = {
+    const fullConfig: IFullContractLineServiceUsageConfiguration = {
       ...baseConfig,
       unit_of_measure: usageConfig.unit_of_measure,
       minimum_usage: usageConfig.minimum_usage,
@@ -332,33 +332,33 @@ export async function getPlanServiceConfiguration(planId: string, serviceId: str
     return fullConfig;
 
   } catch (error) {
-      console.error("Error fetching plan service configuration details:", error);
-      throw new Error("Failed to fetch plan service configuration details.");
+      console.error("Error fetching contract line service configuration details:", error);
+      throw new Error("Failed to fetch contract line service configuration details.");
     }
   });
 }
 
 
 /**
- * Input type for upserting plan service usage configuration.
+ * Input type for upserting contract line service usage configuration.
  */
-export interface IUpsertPlanServiceUsageConfigurationInput {
-  planId: string;
+export interface IUpsertContractLineServiceUsageConfigurationInput {
+  contractLineId: string;
   serviceId: string;
-  // Fields from IPlanServiceUsageConfig (including base_rate)
+  // Fields from IContractLineServiceUsageConfig (including base_rate)
   unit_of_measure?: string | null;
   minimum_usage?: number | null;
   enable_tiered_pricing?: boolean;
   base_rate?: number | null; // Added base_rate
   // Tiers array (using input type)
-  tiers?: IPlanServiceRateTierInput[];
+  tiers?: IContractLineServiceRateTierInput[];
 }
 
 /**
- * Validates the input for upserting plan service usage configuration.
+ * Validates the input for upserting contract line service usage configuration.
  * Throws an error if validation fails.
  */
-function validatePlanServiceUsageConfigurationInput(input: IUpsertPlanServiceUsageConfigurationInput): void {
+function validateContractLineServiceUsageConfigurationInput(input: IUpsertContractLineServiceUsageConfigurationInput): void {
   const { base_rate, minimum_usage, enable_tiered_pricing, tiers } = input;
 
   if (base_rate !== undefined && base_rate !== null && base_rate < 0) {
@@ -416,36 +416,36 @@ function validatePlanServiceUsageConfigurationInput(input: IUpsertPlanServiceUsa
 
 
 /**
- * Upserts the service-level configuration (base, usage details, base rate, and tiers) for a specific service within a plan.
+ * Upserts the service-level configuration (base, usage details, base rate, and tiers) for a specific service within a contract line.
  * Handles creation or update within a transaction and includes validation.
  * Corresponds to Phase 1 Tasks:
- * - Backend upsert action (`upsertPlanServiceConfiguration`)
+ * - Backend upsert action (`upsertContractLineServiceConfiguration`)
  * - Backend validation within upsert
  * - Backend data type handling and tenant filtering
  */
-export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUsageConfigurationInput): Promise<IFullPlanServiceUsageConfiguration> {
+export async function upsertContractLineServiceConfiguration(input: IUpsertContractLineServiceUsageConfigurationInput): Promise<IFullContractLineServiceUsageConfiguration> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!); // May not be fully used if direct transaction is needed
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!); // May not be fully used if direct transaction is needed
 
   // --- Validation (Phase 1 Task) ---
   try {
-    validatePlanServiceUsageConfigurationInput(input);
+    validateContractLineServiceUsageConfigurationInput(input);
   } catch (validationError: any) {
-    console.error("Validation failed for upsertPlanServiceConfiguration:", validationError.message);
+    console.error("Validation failed for upsertContractLineServiceConfiguration:", validationError.message);
     // Re-throw or handle as a specific validation error response
     throw new Error(`Validation Error: ${validationError.message}`);
   }
   // --- End Validation ---
 
-  const { planId, serviceId, tiers, ...usageConfigInput } = input;
+  const { contractLineId, serviceId, tiers, ...usageConfigInput } = input;
 
   try {
     const updatedConfig = await trx.transaction(async (trxInner: Knex.Transaction) => {
-      const trxConfigService = new PlanServiceConfigurationService(trxInner, tenant!); // Use transaction knex
+      const trxConfigService = new ContractLineServiceConfigurationService(trxInner, tenant!); // Use transaction knex
 
       // 1. Upsert contract_line_service_configuration
-      let baseConfig = await trxConfigService.getConfigurationForService(planId, serviceId);
+      let baseConfig = await trxConfigService.getConfigurationForService(contractLineId, serviceId);
       let configId: string;
 
       if (baseConfig) {
@@ -457,8 +457,8 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
           .update({ configuration_type: 'Usage', updated_at: new Date() });
       } else {
         // Create if not exists
-        const newBaseConfig: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-          contract_line_id: planId,
+        const newBaseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+          contract_line_id: contractLineId,
           service_id: serviceId,
           configuration_type: 'Usage', // Explicitly set type
           tenant: tenant!,
@@ -509,27 +509,27 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
       }
 
       // Fetch the final combined configuration to return
-      // Re-use the logic from getPlanServiceConfiguration but with the transaction trx
-      const finalBaseConfig = await trxInner<IPlanServiceConfiguration>('contract_line_service_configuration')
+      // Re-use the logic from getContractLineServiceConfiguration but with the transaction trx
+      const finalBaseConfig = await trxInner<IContractLineServiceConfiguration>('contract_line_service_configuration')
         .where({ config_id: configId, tenant: tenant! })
         .first();
 
       if (!finalBaseConfig) throw new Error("Failed to retrieve base config after upsert"); // Should not happen
 
-      const finalUsageConfig = await trxInner<IPlanServiceUsageConfig>('contract_line_service_usage_config')
+      const finalUsageConfig = await trxInner<IContractLineServiceUsageConfig>('contract_line_service_usage_config')
         .where({ config_id: configId, tenant: tenant! })
         .first();
 
       if (!finalUsageConfig) throw new Error("Failed to retrieve usage config after upsert"); // Should not happen
 
-      let finalTiers: IPlanServiceRateTier[] = [];
+      let finalTiers: IContractLineServiceRateTier[] = [];
       if (finalUsageConfig.enable_tiered_pricing) {
-        finalTiers = await trxInner<IPlanServiceRateTier>('contract_line_service_rate_tiers')
+        finalTiers = await trxInner<IContractLineServiceRateTier>('contract_line_service_rate_tiers')
           .where({ config_id: configId, tenant: tenant! })
           .orderBy('min_quantity', 'asc');
       }
 
-      const result: IFullPlanServiceUsageConfiguration = {
+      const result: IFullContractLineServiceUsageConfiguration = {
         ...finalBaseConfig,
         unit_of_measure: finalUsageConfig.unit_of_measure,
         minimum_usage: finalUsageConfig.minimum_usage,
@@ -544,21 +544,21 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
     return updatedConfig;
 
   } catch (error) {
-      console.error("Error upserting plan service configuration:", error);
+      console.error("Error upserting contract line service configuration:", error);
       // TODO: Improve error handling, maybe return specific validation errors
-      throw new Error("Failed to upsert plan service configuration.");
+      throw new Error("Failed to upsert contract line service configuration.");
     }
   });
 }
 
 
 /**
- * Input type for upserting plan service bucket configuration.
+ * Input type for upserting contract line service bucket configuration.
  */
-export interface IUpsertPlanServiceBucketConfigurationInput {
-  planId: string;
+export interface IUpsertContractLineServiceBucketConfigurationInput {
+  contractLineId: string;
   serviceId: string;
-  // Fields from IPlanServiceBucketConfig (excluding generated/tenant/config_id)
+  // Fields from IContractLineServiceBucketConfig (excluding generated/tenant/config_id)
   total_minutes?: number | null;
   billing_period?: string | null;
   overage_rate?: number | null;
@@ -566,18 +566,18 @@ export interface IUpsertPlanServiceBucketConfigurationInput {
 }
 
 /**
- * Upserts the bucket-specific configuration for a service within a plan.
+ * Upserts the bucket-specific configuration for a service within a contract line.
  * This action ensures the base configuration exists and is set to type 'Bucket',
  * then creates or updates the associated bucket configuration record.
  */
-export async function upsertPlanServiceBucketConfigurationAction(
-  input: IUpsertPlanServiceBucketConfigurationInput
+export async function upsertContractLineServiceBucketConfigurationAction(
+  input: IUpsertContractLineServiceBucketConfigurationInput
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
 
-  const { planId, serviceId, ...bucketConfigData } = input;
+  const { contractLineId, serviceId, ...bucketConfigData } = input;
 
   // Get service details to access default_rate
   const service = await trx('service_catalog')
@@ -592,7 +592,7 @@ export async function upsertPlanServiceBucketConfigurationAction(
   }
 
   // Prepare the data, ensuring correct types and handling nulls if necessary
-  const dataForService: Partial<Omit<IPlanServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>> = {
+  const dataForService: Partial<Omit<IContractLineServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>> = {
       total_minutes: bucketConfigData.total_minutes !== undefined && bucketConfigData.total_minutes !== null ? Number(bucketConfigData.total_minutes) : undefined,
       billing_period: bucketConfigData.billing_period !== undefined && bucketConfigData.billing_period !== null ? String(bucketConfigData.billing_period) : undefined,
       // Use service's default_rate if overage_rate is not provided
@@ -602,16 +602,16 @@ export async function upsertPlanServiceBucketConfigurationAction(
   };
 
   try {
-    console.log(`Upserting bucket config for plan ${planId}, service ${serviceId} with data:`, dataForService);
-    const configId = await configService.upsertPlanServiceBucketConfiguration(
-      planId,
+    console.log(`Upserting bucket config for contract line ${contractLineId}, service ${serviceId} with data:`, dataForService);
+    const configId = await configService.upsertContractLineServiceBucketConfiguration(
+      contractLineId,
       serviceId,
       dataForService
     );
     console.log(`Upsert successful, configId: ${configId}`);
     return configId;
   } catch (error) {
-      console.error("Error in upsertPlanServiceBucketConfigurationAction:", error);
+      console.error("Error in upsertContractLineServiceBucketConfigurationAction:", error);
       // Consider more specific error handling/logging
       throw new Error("Failed to upsert bucket configuration.");
     }
@@ -622,8 +622,8 @@ export async function upsertPlanServiceBucketConfigurationAction(
 // --- Hourly Configuration Actions ---
 
 // Define Zod schema for input validation
-const UpsertPlanServiceHourlyConfigurationInputSchema = z.object({
-  planId: z.string().uuid({ message: "Invalid Plan ID format" }),
+const UpsertContractLineServiceHourlyConfigurationInputSchema = z.object({
+  contractLineId: z.string().uuid({ message: "Invalid Contract Line ID format" }),
   serviceId: z.string().uuid({ message: "Invalid Service ID format" }),
   hourly_rate: z.coerce.number({ invalid_type_error: "Hourly rate must be a number" }) // Coerce to number
                  .min(0, { message: "Hourly rate cannot be negative" })
@@ -639,25 +639,25 @@ const UpsertPlanServiceHourlyConfigurationInputSchema = z.object({
                          .optional(),
 });
 
-type UpsertPlanServiceHourlyConfigurationInput = z.infer<typeof UpsertPlanServiceHourlyConfigurationInputSchema>;
+type UpsertContractLineServiceHourlyConfigurationInput = z.infer<typeof UpsertContractLineServiceHourlyConfigurationInputSchema>;
 
 
 /**
  * Upserts the hourly configuration (hourly_rate, minimum_billable_time, round_up_to_nearest)
- * for a specific service within a plan. Creates the base contract_line_service_configuration
+ * for a specific service within a contract line. Creates the base contract_line_service_configuration
  * record with type 'Hourly' if it doesn't exist.
  * Returns the config_id of the upserted configuration.
  */
-export async function upsertPlanServiceHourlyConfiguration(
-  input: UpsertPlanServiceHourlyConfigurationInput
+export async function upsertContractLineServiceHourlyConfiguration(
+  input: UpsertContractLineServiceHourlyConfigurationInput
 ): Promise<string> { // Changed return type to string (config_id)
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // --- Validation ---
-  const validationResult = UpsertPlanServiceHourlyConfigurationInputSchema.safeParse(input);
+  const validationResult = UpsertContractLineServiceHourlyConfigurationInputSchema.safeParse(input);
   if (!validationResult.success) {
-    console.error("Validation failed for upsertPlanServiceHourlyConfiguration:", validationResult.error.errors);
+    console.error("Validation failed for upsertContractLineServiceHourlyConfiguration:", validationResult.error.errors);
     // Combine error messages for a clearer error
     const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.') || 'input'}: ${e.message}`).join('; ');
     throw new Error(`Validation Error: ${errorMessages}`);
@@ -665,29 +665,29 @@ export async function upsertPlanServiceHourlyConfiguration(
   const validatedInput = validationResult.data;
   // --- End Validation ---
 
-  const configService = new PlanServiceConfigurationService(trx, tenant!);
+  const configService = new ContractLineServiceConfigurationService(trx, tenant!);
 
   try {
     // Prepare the hourly config data object, converting nulls to undefined
-    const hourlyConfigData: Partial<IPlanServiceHourlyConfig> = {
+    const hourlyConfigData: Partial<IContractLineServiceHourlyConfig> = {
         hourly_rate: validatedInput.hourly_rate ?? undefined,
         minimum_billable_time: validatedInput.minimum_billable_time ?? undefined,
         round_up_to_nearest: validatedInput.round_up_to_nearest ?? undefined,
     };
 
     // Call the service method with separate arguments
-    const configId = await configService.upsertPlanServiceHourlyConfiguration(
-      validatedInput.planId,
+    const configId = await configService.upsertContractLineServiceHourlyConfiguration(
+      validatedInput.contractLineId,
       validatedInput.serviceId,
       hourlyConfigData
     );
     return configId; // Return the config_id
   } catch (error) {
-    console.error("Error upserting plan service hourly configuration:", error);
+    console.error("Error upserting contract line service hourly configuration:", error);
     if (error instanceof Error) {
-        throw new Error(`Failed to upsert plan service hourly configuration: ${error.message}`);
+        throw new Error(`Failed to upsert contract line service hourly configuration: ${error.message}`);
       } else {
-          throw new Error("An unknown error occurred while upserting plan service hourly configuration.");
+          throw new Error("An unknown error occurred while upserting contract line service hourly configuration.");
       }
     }
   });
