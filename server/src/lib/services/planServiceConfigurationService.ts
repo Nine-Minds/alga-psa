@@ -14,7 +14,7 @@ import PlanServiceFixedConfig from 'server/src/lib/models/planServiceFixedConfig
 import PlanServiceHourlyConfig from 'server/src/lib/models/planServiceHourlyConfig';
 import PlanServiceUsageConfig from 'server/src/lib/models/planServiceUsageConfig';
 import PlanServiceBucketConfig from 'server/src/lib/models/planServiceBucketConfig';
-import BillingPlan from 'server/src/lib/models/billingPlan'; // Added import
+import ContractLine from 'server/src/lib/models/contractLine'; // Added import
 
 export class PlanServiceConfigurationService {
   private knex: Knex;
@@ -24,7 +24,7 @@ export class PlanServiceConfigurationService {
   private hourlyConfigModel: PlanServiceHourlyConfig;
   private usageConfigModel: PlanServiceUsageConfig;
   private bucketConfigModel: PlanServiceBucketConfig;
-  // Removed billingPlanModel property
+  // Removed contractLineModel property
 
   constructor(knex?: Knex, tenant?: string) {
     this.knex = knex as Knex;
@@ -43,7 +43,7 @@ export class PlanServiceConfigurationService {
       this.usageConfigModel = {} as PlanServiceUsageConfig;
       this.bucketConfigModel = {} as PlanServiceBucketConfig;
     }
-    // Removed billingPlanModel initialization
+    // Removed contractLineModel initialization
   }
 
   /**
@@ -64,7 +64,7 @@ export class PlanServiceConfigurationService {
       this.hourlyConfigModel = new PlanServiceHourlyConfig(knex);
       this.usageConfigModel = new PlanServiceUsageConfig(knex);
       this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
-      // Removed billingPlanModel initialization
+      // Removed contractLineModel initialization
     }
   }
 
@@ -85,10 +85,10 @@ export class PlanServiceConfigurationService {
     }
 
     // Fetch the associated plan to check its type
-    const plan = await BillingPlan.findById(this.knex, baseConfig.plan_id);
+    const plan = await ContractLine.findById(this.knex, baseConfig.contract_line_id);
     if (!plan) {
       // This case should ideally not happen if baseConfig exists, but handle defensively
-      console.warn(`Plan with ID ${baseConfig.plan_id} not found for config ${configId}`);
+      console.warn(`Plan with ID ${baseConfig.contract_line_id} not found for config ${configId}`);
       // Proceed using the baseConfig.configuration_type as fallback
     }
     
@@ -97,7 +97,7 @@ export class PlanServiceConfigurationService {
     // let userTypeRates = undefined; // Removed
 
     // If the plan is a Bucket plan, always fetch from bucket config table
-    if (plan?.plan_type === 'Bucket') {
+    if (plan?.contract_line_type === 'Bucket') {
       typeConfig = await this.bucketConfigModel.getByConfigId(configId);
       // Note: Rate tiers and user type rates are not applicable to Bucket configs
     } else {
@@ -166,8 +166,8 @@ export class PlanServiceConfigurationService {
           await fixedConfigModel.create({
             config_id: configId,
             base_rate: (typeConfig as IPlanServiceFixedConfig)?.base_rate ?? null,
-            // enable_proration: (typeConfig as IPlanServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in billing_plan_fixed_config
-            // billing_cycle_alignment: (typeConfig as IPlanServiceFixedConfig)?.billing_cycle_alignment ?? 'start', // Removed: Handled in billing_plan_fixed_config
+            // enable_proration: (typeConfig as IPlanServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
+            // billing_cycle_alignment: (typeConfig as IPlanServiceFixedConfig)?.billing_cycle_alignment ?? 'start', // Removed: Handled in contract_line_fixed_config
             tenant: this.tenant
           });
           break;
@@ -359,7 +359,7 @@ export class PlanServiceConfigurationService {
           await fixedConfigModel.delete(configId);
           break;
         case 'Hourly':
-          // Explicitly delete from plan_service_hourly_configs first
+          // Explicitly delete from contract_line_service_hourly_configs first
           await hourlyConfigModel.delete(configId);
           break;
         case 'Usage':
@@ -421,7 +421,7 @@ export class PlanServiceConfigurationService {
         // 2. Create base configuration if it doesn't exist, force type to Bucket
         console.log(`No base config found for plan ${planId}, service ${serviceId}. Creating one with type Bucket.`);
         const newBaseConfigData: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: serviceId,
           configuration_type: 'Bucket', // Force type to Bucket
           // is_enabled: true, // Removed: Field does not exist on base config interface
@@ -494,7 +494,7 @@ export class PlanServiceConfigurationService {
         // 2. Create base configuration if it doesn't exist, force type to Hourly
         console.log(`No base config found for plan ${planId}, service ${serviceId}. Creating one with type Hourly.`);
         const newBaseConfigData: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: serviceId,
           configuration_type: 'Hourly', // Force type to Hourly
           tenant: this.tenant,

@@ -82,12 +82,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -174,8 +173,33 @@ describe('Billing Invoice Subtotal Calculations', () => {
     expect(invoice.subtotal).toBe(expectedSubtotal);
   });
 
-  it('totals multiple fixed-fee services within a plan', async () => {
-    const serviceA = await createTestService(context, {
+  it('should correctly calculate subtotal with multiple line items having different rates and quantities', async () => {
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Test Client 2',
+      billing_cycle: 'monthly',
+      client_id: uuidv4(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      is_inactive: false,
+      is_tax_exempt: false
+    }, 'client_id');
+
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Create services
+    const serviceA = await context.createEntity('service_catalog', {
       service_name: 'Service A',
       default_rate: 5000,
       tax_region: 'US-NY'
@@ -187,8 +211,51 @@ describe('Billing Invoice Subtotal Calculations', () => {
     });
     const serviceC = await createTestService(context, {
       service_name: 'Service C',
-      default_rate: 10000,
-      tax_region: 'US-NY'
+      description: 'Test service C',
+      service_type: 'Fixed',
+      default_rate: 10000, // $100.00
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    // Assign services to plan
+    await context.db('contract_line_services').insert([
+      {
+        contract_line_id: planId,
+        service_id: serviceA,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        contract_line_id: planId,
+        service_id: serviceB,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        contract_line_id: planId,
+        service_id: serviceC,
+        quantity: 1,
+        tenant: context.tenantId
+      }
+    ]);
+
+    // Create billing cycle without proration
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
+      billing_cycle: 'monthly',
+      effective_date: '2023-01-01',
+      period_start_date: '2023-01-01',
+      period_end_date: '2023-02-01'
+    }, 'billing_cycle_id');
+
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      start_date: '2023-01-01',
+      is_active: true,
+      tenant: context.tenantId
     });
 
     const { planId } = await createFixedPlanAssignment(context, serviceA, {
@@ -223,19 +290,39 @@ describe('Billing Invoice Subtotal Calculations', () => {
     expect(Number(items[0].net_amount)).toBe(22500);
   });
 
-  it('keeps subtotal zero when plan services carry zero quantity allocations', async () => {
-    const zeroQtyService = await createTestService(context, {
-      service_name: 'Zero Qty Service',
-      default_rate: 1000,
-      tax_region: 'US-NY'
-    });
+  it('should correctly calculate subtotal with line items having zero quantity', async () => {
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Test Client 3',
+      billing_cycle: 'monthly',
+      client_id: uuidv4(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      is_inactive: false,
+      is_tax_exempt: false
+    }, 'client_id');
 
-    const { planId } = await createFixedPlanAssignment(context, zeroQtyService, {
-      planName: 'Zero Quantity Plan',
-      baseRateCents: 0,
-      detailBaseRateCents: 0,
-      quantity: 0,
-      startDate: '2025-02-01'
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      start_date: '2023-01-01',
+      is_active: true,
+      tenant: context.tenantId
     });
 
     const billingCycle = await context.createEntity('client_billing_cycles', {
@@ -247,6 +334,154 @@ describe('Billing Invoice Subtotal Calculations', () => {
       tenant: context.tenantId
     }, 'billing_cycle_id');
 
+    // Create test services
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Consulting',
+      description: 'Professional consulting services',
+      service_type: 'Fixed',
+      default_rate: 5000, // $50.00
+      unit_of_measure: 'hour'
+    }, 'service_id');
+
+    const serviceB = await context.createEntity('service_catalog', {
+      service_name: 'Development',
+      description: 'Software development services',
+      service_type: 'Fixed',
+      default_rate: 7500, // $75.00
+      unit_of_measure: 'hour'
+    }, 'service_id');
+
+    const serviceC = await context.createEntity('service_catalog', {
+      service_name: 'Training',
+      description: 'Employee training services',
+      service_type: 'Fixed',
+      default_rate: 10000, // $100.00
+      unit_of_measure: 'session'
+    }, 'service_id');
+
+    // First create the invoice
+    const invoice = await context.createEntity('invoices', {
+      client_id: client_id,
+      invoice_number: 'INV-000001',
+      invoice_date: new Date(),
+      due_date: new Date(),
+      total_amount: 0,
+      status: 'DRAFT'
+    }, 'invoice_id');
+
+    // Create invoice items with zero quantity
+    await context.createEntity('invoice_items', {
+      invoice_id: invoice,
+      service_id: serviceA,
+      description: 'Consulting services',
+      unit_price: 5000, // $50.00
+      total_price: 0,
+      quantity: 0
+    }, 'item_id');
+
+    await context.createEntity('invoice_items', {
+      invoice_id: invoice,
+      service_id: serviceB,
+      description: 'Development services',
+      unit_price: 7500, // $75.00
+      total_price: 0,
+      quantity: 0,
+    }, 'item_id');
+
+    await context.createEntity('invoice_items', {
+      invoice_id: invoice,
+      service_id: serviceC,
+      description: 'Training services',
+      unit_price: 10000, // $100.00
+      total_price: 0,
+      quantity: 0,
+    }, 'item_id');
+
+    // Generate invoice totals
+    const updatedInvoice = await generateInvoice(billingCycle);
+
+    // Verify subtotal is zero
+    expect(updatedInvoice!.subtotal).toBe(0);
+  });
+
+  it('should correctly calculate subtotal with negative rates (credits)', async () => {
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Test Client 4',
+      billing_cycle: 'monthly',
+      client_id: uuidv4(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      is_inactive: false,
+      is_tax_exempt: false
+    }, 'client_id');
+
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Create services with negative rates
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Credit A',
+      description: 'Test credit A',
+      service_type: 'Fixed',
+      default_rate: -5000, // -$50.00
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    const serviceB = await context.createEntity('service_catalog', {
+      service_name: 'Credit B',
+      description: 'Test credit B',
+      service_type: 'Fixed',
+      default_rate: -7500, // -$75.00
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    // Assign services to plan
+    await context.db('contract_line_services').insert([
+      {
+        contract_line_id: planId,
+        service_id: serviceA,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        contract_line_id: planId,
+        service_id: serviceB,
+        quantity: 1,
+        tenant: context.tenantId
+      }
+    ]);
+
+    // Create billing cycle
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
+      billing_cycle: 'monthly',
+      effective_date: '2023-01-01',
+      period_start_date: '2023-01-01',
+      period_end_date: '2023-02-01'
+    }, 'billing_cycle_id');
+
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      start_date: '2023-01-01',
+      is_active: true,
+      tenant: context.tenantId
+    });
+
+    // Generate invoice
     const invoice = await generateInvoice(billingCycle);
 
     expect(invoice).not.toBeNull();

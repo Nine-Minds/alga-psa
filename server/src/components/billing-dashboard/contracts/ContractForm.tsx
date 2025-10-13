@@ -9,19 +9,20 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Save } from 'lucide-react';
-import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
-import { updatePlanBundle } from 'server/src/lib/actions/planBundleActions';
+import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { updateContract } from 'server/src/lib/actions/contractActions';
 import { useTenant } from 'server/src/components/TenantProvider';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface ContractFormProps {
-  bundle: IPlanBundle;
-  onBundleUpdated: () => void;
+  contract: IContract;
+  onContractUpdated: () => void;
 }
 
-const ContractForm: React.FC<ContractFormProps> = ({ bundle, onBundleUpdated }) => {
-  const [contractName, setContractName] = useState(bundle.bundle_name);
-  const [description, setDescription] = useState(bundle.bundle_description || '');
-  const [isActive, setIsActive] = useState<boolean>(bundle.is_active);
+const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated }) => {
+  const [contractName, setContractName] = useState(contract.contract_name);
+  const [description, setDescription] = useState(contract.contract_description ?? '');
+  const [isActive, setIsActive] = useState<boolean>(contract.is_active);
   const [isSaving, setIsSaving] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -51,14 +52,14 @@ const ContractForm: React.FC<ContractFormProps> = ({ bundle, onBundleUpdated }) 
     setIsSaving(true);
 
     try {
-      await updatePlanBundle(bundle.bundle_id, {
-        bundle_name: contractName,
-        bundle_description: description || undefined,
+      await updateContract(contract.contract_id, {
+        contract_name: contractName,
+        contract_description: description || undefined,
         is_active: isActive,
         tenant
       });
 
-      onBundleUpdated();
+      onContractUpdated();
     } catch (error) {
       console.error('Error updating contract:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update contract';

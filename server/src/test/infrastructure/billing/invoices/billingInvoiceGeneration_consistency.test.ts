@@ -75,10 +75,11 @@ async function ensureDefaultTaxConfiguration() {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_services',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings'
@@ -142,6 +143,30 @@ async function ensureDefaultTaxConfiguration() {
         period_start_date: '2025-02-01',
         period_end_date: '2025-03-01'
       }, 'billing_cycle_id');
+
+      // Create and assign contract line
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Test Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
+
+      await context.db('contract_line_services').insert({
+        contract_line_id: planId,
+        service_id: serviceId,
+        quantity: 1,
+        tenant: context.tenantId
+      });
+
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: '2025-02-01',
+        is_active: true,
+        tenant: context.tenantId
+      });
 
       // Generate automatic invoice
       const autoInvoice = await generateInvoice(billingCycle);

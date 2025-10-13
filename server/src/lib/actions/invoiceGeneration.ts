@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { Session } from 'next-auth';
 import {
   IInvoiceItem,
@@ -234,7 +234,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   }
 
   const { knex, tenant } = await createTenantKnex();
-  
+
   if (!tenant) {
     return {
       success: false,
@@ -291,39 +291,28 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     const client = await getClientDetails(knex, tenant, client_id);
     const due_date = await getDueDate(client_id, cycleEnd); // Uses temporary import
 
-    // Group charges by bundle if they have bundle information
-    const chargesByBundle: { [key: string]: IBillingCharge[] } = {};
-    const nonBundleCharges: IBillingCharge[] = [];
+    // Group charges by contract association if they have contract association information
+    const chargesByContractGroup: { [key: string]: IBillingCharge[] } = {};
+    const nonContractAssociatedCharges: IBillingCharge[] = [];
 
     for (const charge of billingResult.charges) {
-      if (charge.client_bundle_id && charge.bundle_name) {
-        // Use only the bundle_name as the key to avoid including the ID in the description
-        const bundleKey = charge.bundle_name;
-        if (!chargesByBundle[bundleKey]) {
-          chargesByBundle[bundleKey] = [];
+      if (charge.client_contract_id && charge.contract_name) {
+        // Use only the contract_name as the key to avoid including the ID in the description
+        const contractKey = charge.contract_name;
+        if (!chargesByContractGroup[contractKey]) {
+          chargesByContractGroup[contractKey] = [];
         }
-        chargesByBundle[bundleKey].push(charge);
+        chargesByContractGroup[contractKey].push(charge);
       } else {
-        nonBundleCharges.push(charge);
+        nonContractAssociatedCharges.push(charge);
       }
     }
 
     // Prepare invoice items
     const invoiceItems: IInvoiceItem[] = [];
 
-    // Add non-bundle charges
-    nonBundleCharges.forEach(charge => {
-      // Enhanced description for bucket charges
-      let description = charge.serviceName;
-      if (isBucketCharge(charge)) {
-        const hoursIncluded = charge.hoursUsed - charge.overageHours;
-        if (charge.overageHours > 0) {
-          description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ $${(charge.overageRate / 100).toFixed(2)}/hr)`;
-        } else {
-          description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
-        }
-      }
-
+    // Add non-contract-associated charges
+    nonContractAssociatedCharges.forEach(charge => {
       invoiceItems.push({
         item_id: 'preview-' + uuidv4(),
         invoice_id: 'preview-' + billing_cycle_id,
@@ -341,18 +330,18 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       });
     });
 
-    // Add bundle charges
-    for (const [bundleKey, charges] of Object.entries(chargesByBundle)) {
-      // Get the bundle name and client_bundle_id from the first charge
-      const bundleName = bundleKey; // Now bundleKey is just the bundle_name
-      const clientBundleId = charges[0].client_bundle_id; // Get client_bundle_id from the first charge
+    // Add contract-associated charges
+    for (const [contractKey, charges] of Object.entries(chargesByContractGroup)) {
+      // Determine the contract grouping label and client_contract_id from the first charge
+      const contractGroupName = contractKey; // Now contractKey is just the contract_name
+      const clientContractGroupId = charges[0].client_contract_id; // Get client_contract_id from the first charge
 
-      // Create a group header for the bundle
-      const bundleHeaderId = 'preview-' + uuidv4();
+      // Create a group header for the contract grouping
+      const contractGroupHeaderId = 'preview-' + uuidv4();
       invoiceItems.push({
-        item_id: bundleHeaderId,
+        item_id: contractGroupHeaderId,
         invoice_id: 'preview-' + billing_cycle_id,
-        description: `Bundle: ${bundleName}`, // Use only the bundle name, not the ID
+        description: `Contract: ${contractGroupName}`, // Use only the contract name, not the ID
         quantity: 1,
         unit_price: 0, // This is just a header, not a charged item
         total_price: 0,
@@ -361,12 +350,12 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         tax_rate: 0,
         is_manual: false,
         is_bundle_header: true,
-        client_bundle_id: clientBundleId,
-        bundle_name: bundleName,
+        client_contract_id: clientContractGroupId,
+        contract_name: contractGroupName,
         rate: 0
       });
 
-      // Add each charge in the bundle as a child item
+      // Add each charge in the contract group as a child item
       charges.forEach(charge => {
         // Enhanced description for bucket charges
         let description = charge.serviceName;
@@ -392,9 +381,9 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
           tax_region: charge.tax_region || '',
           net_amount: charge.total - (charge.tax_amount || 0),
           is_manual: false,
-          client_bundle_id: clientBundleId,
-          bundle_name: bundleName,
-          parent_item_id: bundleHeaderId,
+          client_contract_id: clientContractGroupId,
+          contract_name: contractGroupName,
+          parent_item_id: contractGroupHeaderId,
           rate: charge.rate,
         });
       });
@@ -496,7 +485,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   });
 
   if (existingInvoice) {
-    throw new Error('No active billing plans for this period');
+    throw new Error('No active contract lines for this period');
   }
 
   // Check for Purchase Order requirements
@@ -595,11 +584,11 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
 
   // Get the next billing date as a PlainDate string (YYYY-MM-DD)
   const nextBillingDateStr = await getNextBillingDate(client_id, cycleEnd); // Uses temporary import
-  
+
   // Convert the PlainDate string to a proper ISO 8601 timestamp for rolloverUnapprovedTime
   const nextBillingDate = toPlainDate(nextBillingDateStr);
   const nextBillingTimestamp = toISOTimestamp(nextBillingDate);
-  
+
   // Pass the ISO timestamp to rolloverUnapprovedTime
   await billingEngine.rolloverUnapprovedTime(client_id, cycleEnd, nextBillingTimestamp);
 
@@ -688,7 +677,7 @@ export async function createInvoiceFromBillingResult(
 
   const client = await getClientDetails(knex, tenant, clientId);
   let region_code = await getClientDefaultTaxRegionCode(clientId);
-  
+
   // --- Add Check for Client Default Tax Region ---
   if (!region_code) {
     console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code).`);
@@ -835,6 +824,141 @@ export async function createInvoiceFromBillingResult(
         invoice_id: newInvoice!.invoice_id,
         tenant
       })
+      .orderBy('net_amount', 'desc');
+
+    // Separate the consolidated fixed fee item (no service_id) if it exists and has tax
+    const consolidatedFixedFeeItem = items.find((item: IInvoiceItem) =>
+      item.service_id === null && // Consolidated fixed fee charges have null service_id
+      item.is_taxable &&
+      item.tax_amount > 0 // Check if it has pre-calculated tax
+    );
+
+    if (consolidatedFixedFeeItem) {
+      precalculatedFixedFeeTax = parseInt(consolidatedFixedFeeItem.tax_amount);
+      console.log(`Found pre-calculated fixed fee tax: ${precalculatedFixedFeeTax}`);
+    }
+
+    // Get other positive taxable items (excluding the consolidated fixed fee one)
+    const otherPositiveTaxableItems = items.filter((item: IInvoiceItem) =>
+      item.item_id !== consolidatedFixedFeeItem?.item_id && // Exclude the fixed fee item
+      item.is_taxable &&
+      item.net_amount > 0
+    );
+
+    // Calculate tax for each item based on its region, ignoring discounts
+    // Calculate tax for other items if any exist
+    let recalculatedTaxForOtherItems = 0;
+    if (otherPositiveTaxableItems.length > 0) {
+      // Group items by tax region
+      const regionTotals = new Map<string, number>();
+      // Group OTHER items by tax region
+      for (const item of otherPositiveTaxableItems) {
+        const region = item.tax_region || client.tax_region; // Use item's region or client default
+        const amount = parseInt(item.net_amount);
+        regionTotals.set(region, (regionTotals.get(region) || 0) + amount);
+      }
+
+      // Calculate tax for each region on full amounts (no discount factor)
+      for (const [region, amount] of regionTotals) {
+        const rawTaxResult = await taxService.calculateTax(
+          clientId,
+          amount,
+          cycleEnd,
+          region,
+          true
+        );
+        recalculatedTaxForOtherItems += rawTaxResult.taxAmount; // Accumulate tax for non-fixed items
+      }
+
+      // Distribute tax proportionally among items within each region
+
+      // Group items by region
+      // Group OTHER items by region for distribution
+      const itemsByRegion = new Map<string, typeof otherPositiveTaxableItems>();
+      for (const item of otherPositiveTaxableItems) {
+        const region = item.tax_region || client.tax_region;
+        if (!itemsByRegion.has(region)) {
+          itemsByRegion.set(region, []);
+        }
+        itemsByRegion.get(region)!.push(item);
+      }
+
+      // For each region, distribute the calculated tax among items
+      for (const [region, items] of itemsByRegion) {
+        // Calculate regional total from positive taxable items
+        // Calculate regional total from OTHER positive taxable items
+        const regionalTotal = items.reduce((sum: number, item: IInvoiceItem) => sum + item.net_amount, 0);
+
+        // Get tax rate and amount for this region
+        const regionalTaxResult = await taxService.calculateTax(
+          clientId,
+          regionalTotal,  // Use full amount before discounts
+          cycleEnd,
+          region,
+          true
+        );
+
+        // Distribute full tax amount proportionally
+        let remainingRegionalTax = regionalTaxResult.taxAmount;  // Use full tax amount
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const isLastItem = i === items.length - 1;
+          const itemTax = isLastItem
+            ? remainingRegionalTax
+            : Math.floor((parseInt(item.net_amount) / regionalTotal) * regionalTaxResult.taxAmount);
+
+          remainingRegionalTax -= itemTax;
+
+          await trx('invoice_items')
+            .where({ item_id: item.item_id })
+            .update({
+              tax_amount: itemTax,
+              tax_rate: regionalTaxResult.taxRate,
+              total_price: parseInt(item.net_amount) + itemTax
+            });
+        }
+      }
+
+      // Ensure all other items have zero tax
+      // Ensure all other items (non-taxable or discounts), EXCLUDING the fixed fee item, have zero tax
+      const itemsToZeroOut = items.filter((item: IInvoiceItem) =>
+        item.item_id !== consolidatedFixedFeeItem?.item_id && // Exclude fixed fee
+        !otherPositiveTaxableItems.find((taxable: IInvoiceItem) => taxable.item_id === item.item_id) // Exclude already processed taxable items
+      ).map((item: IInvoiceItem) => item.item_id);
+
+      if (itemsToZeroOut.length > 0) {
+        await trx('invoice_items')
+          .where({ invoice_id: newInvoice!.invoice_id, tenant })
+          .whereIn('item_id', itemsToZeroOut)
+          .update({
+            tax_amount: 0,
+            tax_rate: 0,
+            total_price: trx.raw('net_amount')
+          });
+      }
+    }
+
+    // Calculate final amounts
+    // Final total tax is the sum of pre-calculated and recalculated tax
+    totalTax = precalculatedFixedFeeTax + recalculatedTaxForOtherItems;
+    console.log(`Final total tax: ${totalTax} (Precalculated: ${precalculatedFixedFeeTax}, Recalculated: ${recalculatedTaxForOtherItems})`);
+
+    // Final total tax is the sum of pre-calculated and recalculated tax
+    totalTax = precalculatedFixedFeeTax + recalculatedTaxForOtherItems;
+    console.log(`[createInvoiceFromBillingResult] Final total tax: ${totalTax} (Precalculated: ${precalculatedFixedFeeTax}, Recalculated: ${recalculatedTaxForOtherItems})`);
+
+    // Use the subtotal calculated above
+    const totalAmount = subtotal + totalTax;
+    const availableCredit = await ClientContractLine.getClientCredit(clientId);
+    const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
+
+    // Update invoice with final totals, ensuring tax is properly stored
+    const finalTax = Math.ceil(totalTax);
+    const finalSubtotal = Math.ceil(subtotal);
+
+    // Update the invoice with subtotal, tax, and total amount
+    await trx('invoices')
+      .where({ invoice_id: newInvoice!.invoice_id })
       .update({
         subtotal: finalSubtotal,
         tax: finalTax,

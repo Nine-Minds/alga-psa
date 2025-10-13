@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getEligibleBillingPlansForUI } from 'server/src/lib/utils/planDisambiguation';
+import { getEligibleContractLinesForUI } from 'server/src/lib/utils/planDisambiguation';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
@@ -57,12 +57,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     quantity: 0,
     usage_date: new Date().toISOString(),
   });
-  const [eligibleBillingPlans, setEligibleBillingPlans] = useState<Array<{
-    client_billing_plan_id: string;
-    plan_name: string;
-    plan_type: string;
+  const [eligibleContractLines, setEligibleContractLines] = useState<Array<{
+    client_contract_line_id: string;
+    contract_line_name: string;
+    contract_line_type: string;
   }>>([]);
-  const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
+  const [showContractLineSelector, setShowContractLineSelector] = useState(false);
   const [bucketData, setBucketData] = useState<RemainingBucketUnitsResult[]>([]);
   const [loadingBuckets, setLoadingBuckets] = useState(false);
 
@@ -89,46 +89,46 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       setLoadingBuckets(false);
     }
   }, [selectedClient]);
-  
-  // Load eligible billing plans when client and service change in the form
+
+  // Load eligible contract lines when client and service change in the form
   useEffect(() => {
-    const loadEligibleBillingPlans = async () => {
+    const loadEligibleContractLines = async () => {
       if (!newUsage.client_id || !newUsage.service_id) {
-        setEligibleBillingPlans([]);
-        setShowBillingPlanSelector(false);
+        setEligibleContractLines([]);
+        setShowContractLineSelector(false);
         return;
       }
-      
+
       try {
-        const plans = await getEligibleBillingPlansForUI(newUsage.client_id, newUsage.service_id);
-        setEligibleBillingPlans(plans);
-        
-        // Always show the plan selector, but set a default when appropriate
-        setShowBillingPlanSelector(true);
-        
-        // If no plan is selected yet, try to set a default
-        if (!newUsage.billing_plan_id) {
+        const plans = await getEligibleContractLinesForUI(newUsage.client_id, newUsage.service_id);
+        setEligibleContractLines(plans);
+
+        // Always show the contract line selector, but set a default when appropriate
+        setShowContractLineSelector(true);
+
+        // If no contract line is selected yet, try to set a default
+        if (!newUsage.contract_line_id) {
           if (plans.length === 1) {
-            // If there's only one plan, use it automatically
-            setNewUsage(prev => ({ ...prev, billing_plan_id: plans[0].client_billing_plan_id }));
+            // If there's only one contract line, use it automatically
+            setNewUsage(prev => ({ ...prev, contract_line_id: plans[0].client_contract_line_id }));
           } else if (plans.length > 1) {
-            // Check for bucket plans first
-            const bucketPlans = plans.filter(plan => plan.plan_type === 'Bucket');
+            // Check for bucket contract lines first
+            const bucketPlans = plans.filter(plan => plan.contract_line_type === 'Bucket');
             if (bucketPlans.length === 1) {
-              // If there's only one bucket plan, use it as default
-              setNewUsage(prev => ({ ...prev, billing_plan_id: bucketPlans[0].client_billing_plan_id }));
+              // If there's only one bucket contract line, use it as default
+              setNewUsage(prev => ({ ...prev, contract_line_id: bucketPlans[0].client_contract_line_id }));
             }
           }
         } else if (plans.length === 0) {
-          // Clear any existing billing plan selection if no plans are available
-          setNewUsage(prev => ({ ...prev, billing_plan_id: undefined }));
+          // Clear any existing contract line selection if no contract lines are available
+          setNewUsage(prev => ({ ...prev, contract_line_id: undefined }));
         }
       } catch (error) {
-        console.error('Error loading eligible billing plans:', error);
+        console.error('Error loading eligible contract lines:', error);
       }
     };
-    
-    loadEligibleBillingPlans();
+
+    loadEligibleContractLines();
   }, [newUsage.client_id, newUsage.service_id]);
 
   const loadClients = async () => {
@@ -163,7 +163,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       const filter: IUsageFilter = {};
       if (selectedClient !== null && selectedClient !== 'all_clients') filter.client_id = selectedClient;
       if (selectedService && selectedService !== 'all_services') filter.service_id = selectedService;
-      
+
       const records = await getUsageRecords(filter);
       setUsageRecords(records);
     } catch (error) {
@@ -200,7 +200,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
   const handleEditUsage = async () => {
     if (!editingUsage) return;
-    
+
     try {
       setIsSaving(true);
       await updateUsageRecord({
@@ -259,11 +259,11 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       service_id: '',
       quantity: 0,
       usage_date: new Date().toISOString(),
-      billing_plan_id: undefined,
+      contract_line_id: undefined,
     });
     setEditingUsage(null);
-    setEligibleBillingPlans([]);
-    setShowBillingPlanSelector(false);
+    setEligibleContractLines([]);
+    setShowContractLineSelector(false);
   };
 
   const columns: ColumnDefinition<IUsageRecord>[] = [
@@ -285,12 +285,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       render: (value) => new Date(value).toLocaleDateString(),
     },
     {
-      title: 'Billing Plan',
-      dataIndex: 'billing_plan_id',
+      title: 'Contract Line',
+      dataIndex: 'contract_line_id',
       render: (value, record) => {
         // This would ideally be populated from a join in the backend
         // For now, we'll just show the ID or "Default"
-        return value ? `Plan: ${value.substring(0, 8)}...` : "Default Plan";
+        return value ? `Contract Line: ${value.substring(0, 8)}...` : "Default Contract Line";
       },
     },
     {
@@ -320,7 +320,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   service_id: record.service_id,
                   quantity: record.quantity,
                   usage_date: record.usage_date,
-                  billing_plan_id: record.billing_plan_id,
+                  contract_line_id: record.contract_line_id,
                 });
                 setIsAddModalOpen(true);
               }}
@@ -459,7 +459,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                     service_id: record.service_id,
                     quantity: record.quantity,
                     usage_date: record.usage_date,
-                    billing_plan_id: record.billing_plan_id,
+                    contract_line_id: record.contract_line_id,
                   });
                   setIsAddModalOpen(true);
                 }}
@@ -536,35 +536,35 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 onChange={(e) => setNewUsage({ ...newUsage, comments: e.target.value })}
               />
             </div>
-            
-            {/* Billing Plan Selector with enhanced guidance */}
-            {showBillingPlanSelector && (
+
+            {/* Contract Line Selector with enhanced guidance */}
+            {showContractLineSelector && (
               <div>
-                {eligibleBillingPlans.length > 1 && (
+                {eligibleContractLines.length > 1 && (
                   <div className="p-3 bg-blue-50 border border-blue-100 rounded-md mb-2">
                     <div className="flex items-center">
                       <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                       <p className="text-sm text-blue-700">
-                        This service appears in multiple billing plans. Please select which plan to bill against.
+                        This service appears in multiple contract lines. Please select which contract line to bill against.
                       </p>
                     </div>
                   </div>
                 )}
-                
+
                 <div className="flex items-center space-x-1">
-                  <label className={`block text-sm font-medium ${eligibleBillingPlans.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
-                    Billing Plan <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium ${eligibleContractLines.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
+                    Contract Line <span className="text-red-500">*</span>
                   </label>
                   <div className="relative inline-block">
                     <div
                       className="cursor-help"
                       title={!newUsage.client_id
-                        ? "Client information not available. The system will use the default billing plan."
-                        : eligibleBillingPlans.length > 1
-                          ? "This service appears in multiple billing plans. Please select which plan to use. Bucket plans are typically used first until depleted."
-                          : eligibleBillingPlans.length === 1
-                            ? `This usage will be billed under the "${eligibleBillingPlans[0].plan_name}" plan.`
-                            : "No eligible billing plans found for this service."}
+                        ? "Client information not available. The system will use the default contract line."
+                        : eligibleContractLines.length > 1
+                          ? "This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted."
+                          : eligibleContractLines.length === 1
+                            ? `This usage will be billed under the "${eligibleContractLines[0].contract_line_name}" contract line.`
+                            : "No eligible contract lines found for this service."}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-gray-500">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -573,56 +573,56 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                     </div>
                   </div>
                 </div>
-                
+
                 <CustomSelect
-                  id="billing-plan-select"
-                  value={newUsage.billing_plan_id || ''}
-                  onValueChange={(value: string) => setNewUsage({ ...newUsage, billing_plan_id: value })}
-                  disabled={!newUsage.client_id || eligibleBillingPlans.length <= 1}
-                  className={`${eligibleBillingPlans.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
+                  id="contract-line-select"
+                  value={newUsage.contract_line_id || ''}
+                  onValueChange={(value: string) => setNewUsage({ ...newUsage, contract_line_id: value })}
+                  disabled={!newUsage.client_id || eligibleContractLines.length <= 1}
+                  className={`${eligibleContractLines.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
                   placeholder={!newUsage.client_id
-                    ? "Using default billing plan"
-                    : eligibleBillingPlans.length === 0
-                      ? "No eligible plans"
-                      : eligibleBillingPlans.length === 1
-                        ? `Using ${eligibleBillingPlans[0].plan_name}`
-                        : "Select a billing plan"}
-                  options={eligibleBillingPlans.map(plan => ({
-                    value: plan.client_billing_plan_id,
-                    label: `${plan.plan_name} (${plan.plan_type})`
+                    ? "Using default contract line"
+                    : eligibleContractLines.length === 0
+                      ? "No eligible contract lines"
+                      : eligibleContractLines.length === 1
+                        ? `Using ${eligibleContractLines[0].contract_line_name}`
+                        : "Select a contract line"}
+                  options={eligibleContractLines.map(plan => ({
+                    value: plan.client_contract_line_id,
+                    label: `${plan.contract_line_name} (${plan.contract_line_type})`
                   }))}
                 />
-                
-                {eligibleBillingPlans.length > 1 && (
+
+                {eligibleContractLines.length > 1 && (
                   <div className="mt-1 text-xs text-gray-600">
                     <span className="flex items-center">
                       <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
-                      Selecting the wrong plan may result in incorrect billing
+                      Selecting the wrong contract line may result in incorrect billing
                     </span>
                   </div>
                 )}
-                
+
                 {!newUsage.client_id ? (
                   <small className="text-gray-500 mt-1">
-                    Client information not available. The system will use the default billing plan.
+                    Client information not available. The system will use the default contract line.
                   </small>
-                ) : eligibleBillingPlans.length === 0 ? (
+                ) : eligibleContractLines.length === 0 ? (
                   <small className="text-gray-500 mt-1">
-                    No eligible billing plans found for this service.
+                    No eligible contract lines found for this service.
                   </small>
                 ) : <></>}
               </div>
             )}
             <DialogFooter>
-              <Button 
+              <Button
                 id="cancel-usage-button"
-                variant="outline" 
+                variant="outline"
                 onClick={() => setIsAddModalOpen(false)}
                 disabled={isSaving}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 id="submit-usage-button"
                 onClick={editingUsage ? handleEditUsage : handleAddUsage}
                 disabled={isSaving}

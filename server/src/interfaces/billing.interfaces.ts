@@ -16,7 +16,7 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   enable_proration?: boolean;
   billing_cycle_alignment?: string;
   // New fields for detailed allocation tracking (V1)
-  config_id?: string; // UUID from plan_service_configuration
+  config_id?: string; // UUID from contract_line_service_configuration
   base_rate?: number; // The plan's base rate (NUMERIC)
   fmv?: number; // Calculated FMV for allocation (INTEGER cents)
   proportion?: number; // Calculated proportion (NUMERIC)
@@ -49,7 +49,7 @@ type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
   serviceId?: string;
-  client_billing_plan_id?: string; // Link back to the specific plan assignment
+  client_contract_line_id?: string; // Link back to the specific plan assignment
   serviceName: string;
   rate: number;
   total: number;
@@ -60,8 +60,8 @@ export interface IBillingCharge extends TenantEntity {
   tax_rate: number;
   tax_region?: string;
   is_taxable?: boolean;
-  client_bundle_id?: string; // Reference to the client plan bundle
-  bundle_name?: string; // Name of the bundle
+  client_contract_id?: string; // Reference to the client contract assignment
+  contract_name?: string; // Contract name
 }
 
 export interface IDiscount extends TenantEntity {
@@ -85,24 +85,24 @@ export interface IBillingResult extends TenantEntity {
   finalAmount: number;
 }
 
-export interface IClientBillingPlan extends TenantEntity {
-  client_billing_plan_id: string;
+export interface IClientContractLine extends TenantEntity {
+  client_contract_line_id: string;
   client_id: string;
-  plan_id: string;
+  contract_line_id: string;
   service_category?: string;
   service_category_name?: string; // Added field from join with service_categories
   start_date: ISO8601String;
   end_date: ISO8601String | null;
   is_active: boolean;
   custom_rate?: number;
-  client_bundle_id?: string; // Reference to the client plan bundle
-  // Added fields from join with billing_plans
-  plan_name?: string;
+  client_contract_id?: string; // Reference to the client contract assignment
+  // Added fields from join with contract_lines
+  contract_line_name?: string;
   billing_frequency?: string;
-  bundle_name?: string; // Name of the bundle (added dynamically for bundled plans)
+  contract_name?: string; // Contract name (added dynamically for contract-associated plans)
 }
 
-export interface IClientBillingCycle extends TenantEntity {
+export interface IClientContractLineCycle extends TenantEntity {
   billing_cycle_id?: string;
   client_id: string;
   billing_cycle: string;
@@ -185,13 +185,13 @@ export interface IServiceType extends TenantEntity {
   updated_at: ISO8601String;
 }
 
-export interface IBillingPlan extends TenantEntity {
-  plan_id?: string;
-  plan_name: string;
+export interface IContractLine extends TenantEntity {
+  contract_line_id?: string;
+  contract_line_name: string;
   billing_frequency: string;
   is_custom: boolean;
   service_category?: string;
-  plan_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+  contract_line_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
   // Add potentially existing hourly fields (to be deprecated for Hourly type)
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;
@@ -203,15 +203,15 @@ export interface IBillingPlan extends TenantEntity {
   enable_after_hours_rate?: boolean | null;
   after_hours_multiplier?: number | null;
   // user_type_rates might be handled differently (e.g., separate table/JSON)
-  // If it's a JSONB column in billing_plans, it could be:
+  // If it's a JSONB column in contract_lines, it could be:
   // user_type_rates?: Record<string, number> | null;
 }
 
 /**
- * Interface for the new billing_plan_fixed_config table
+ * Interface for the new contract_line_fixed_config table
  */
-export interface IBillingPlanFixedConfig extends TenantEntity {
-  plan_id: string;
+export interface IContractLineFixedConfig extends TenantEntity {
+  contract_line_id: string;
   base_rate?: number | null; // Add base_rate (optional, numeric)
   enable_proration: boolean;
   billing_cycle_alignment: 'start' | 'end' | 'prorated';
@@ -221,15 +221,15 @@ export interface IBillingPlanFixedConfig extends TenantEntity {
 }
 
 export interface IPlanService extends TenantEntity {
-  plan_id: string;
+  contract_line_id: string;
   service_id: string;
   quantity?: number;
   custom_rate?: number;
 }
 
 export interface IBucketPlan extends TenantEntity {
-  bucket_plan_id: string;
-  plan_id: string;
+  bucket_contract_line_id: string;
+  contract_line_id: string;
   total_hours: number;
   billing_period: string;
   overage_rate: number;
@@ -237,7 +237,7 @@ export interface IBucketPlan extends TenantEntity {
 
 export interface IBucketUsage extends TenantEntity {
   usage_id: string;
-  plan_id?: string;
+  contract_line_id?: string;
   client_id: string;
   period_start: ISO8601String;
   period_end: ISO8601String;
@@ -384,7 +384,7 @@ export interface IDefaultBillingSettings extends TenantEntity {
   updated_at: ISO8601String;
 }
 
-export interface IClientBillingSettings extends TenantEntity {
+export interface IClientContractLineSettings extends TenantEntity {
   client_id: string;
   zero_dollar_invoice_handling: 'normal' | 'finalized';
   suppress_zero_dollar_invoices: boolean;

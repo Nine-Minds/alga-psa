@@ -31,7 +31,7 @@ export default class PlanServiceHourlyConfig {
   async getByConfigId(configId: string): Promise<IPlanServiceHourlyConfig | null> {
     const tenant = await this.getTenant();
     
-    const config = await this.knex('plan_service_hourly_configs') // Corrected table name (plural)
+    const config = await this.knex('contract_line_service_hourly_configs') // Corrected table name (plural)
       .where({
         config_id: configId,
         tenant
@@ -49,12 +49,12 @@ export default class PlanServiceHourlyConfig {
     
     const now = new Date();
     
-    await this.knex('plan_service_hourly_configs').insert({ // Corrected table name (plural)
+    await this.knex('contract_line_service_hourly_configs').insert({ // Corrected table name (plural)
       config_id: data.config_id,
       hourly_rate: data.hourly_rate, // Add hourly_rate back
       minimum_billable_time: data.minimum_billable_time,
       round_up_to_nearest: data.round_up_to_nearest,
-      // Removed plan-wide fields that are now in billing_plans table:
+      // Removed plan-wide fields that are now in contract_lines table:
       // enable_overtime: data.enable_overtime,
       // overtime_rate: data.overtime_rate,
       // overtime_threshold: data.overtime_threshold,
@@ -89,7 +89,7 @@ export default class PlanServiceHourlyConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('plan_service_hourly_configs') // Corrected table name (plural)
+    const result = await this.knex('contract_line_service_hourly_configs') // Corrected table name (plural)
       .where({
         config_id: configId,
         tenant
@@ -105,7 +105,7 @@ export default class PlanServiceHourlyConfig {
   async delete(configId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('plan_service_hourly_configs') // Corrected table name (plural)
+    const result = await this.knex('contract_line_service_hourly_configs') // Corrected table name (plural)
       .where({
         config_id: configId,
         tenant

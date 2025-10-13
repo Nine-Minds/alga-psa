@@ -32,7 +32,7 @@ export default class PlanServiceConfiguration {
   async getById(configId: string): Promise<IPlanServiceConfiguration | null> {
     await this.initKnex();
     
-    const config = await this.knex('plan_service_configuration')
+    const config = await this.knex('contract_line_service_configuration')
       .where({
         config_id: configId,
         tenant: this.tenant
@@ -48,9 +48,9 @@ export default class PlanServiceConfiguration {
   async getByPlanId(planId: string): Promise<IPlanServiceConfiguration[]> {
     await this.initKnex();
     
-    const configs = await this.knex('plan_service_configuration')
+    const configs = await this.knex('contract_line_service_configuration')
       .where({
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: this.tenant
       })
       .select('*');
@@ -64,9 +64,9 @@ export default class PlanServiceConfiguration {
   async getByPlanAndServiceId(planId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
     await this.initKnex();
     
-    const config = await this.knex('plan_service_configuration')
+    const config = await this.knex('contract_line_service_configuration')
       .where({
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceId,
         tenant: this.tenant
       })
@@ -84,9 +84,9 @@ export default class PlanServiceConfiguration {
     const configId = uuidv4();
     const now = new Date();
     
-    await this.knex('plan_service_configuration').insert({
+    await this.knex('contract_line_service_configuration').insert({
       config_id: configId,
-      plan_id: data.plan_id,
+      contract_line_id: data.contract_line_id,
       service_id: data.service_id,
       configuration_type: data.configuration_type,
       custom_rate: data.custom_rate,
@@ -120,7 +120,7 @@ export default class PlanServiceConfiguration {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('plan_service_configuration')
+    const result = await this.knex('contract_line_service_configuration')
       .where({
         config_id: configId,
         tenant: this.tenant
@@ -148,7 +148,7 @@ export default class PlanServiceConfiguration {
         });
       
       // Then delete the configuration
-      const result = await trx('plan_service_configuration')
+      const result = await trx('contract_line_service_configuration')
         .where({
           config_id: configId,
           tenant: this.tenant

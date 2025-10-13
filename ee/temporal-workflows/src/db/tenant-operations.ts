@@ -117,7 +117,7 @@ export async function createTenantInDB(
 }
 
 /**
- * Set up initial tenant data (billing plans, default settings, etc.)
+ * Set up initial tenant data (contract lines, default settings, etc.)
  */
 export async function setupTenantDataInDB(
   input: SetupTenantDataActivityInput

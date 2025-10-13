@@ -83,6 +83,7 @@
     "axios": "^1.7.4",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
+    "clean": "^4.0.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "cross-spawn": "^7.0.3",

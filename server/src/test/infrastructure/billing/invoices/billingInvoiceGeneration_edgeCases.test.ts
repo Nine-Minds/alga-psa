@@ -74,10 +74,11 @@ describe('Billing Invoice Edge Cases', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_services',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -142,6 +143,31 @@ describe('Billing Invoice Edge Cases', () => {
       detailBaseRateCents: 7500
     });
 
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Assign services to plan
+    await context.db('contract_line_services').insert([
+      {
+        contract_line_id: planId,
+        service_id: serviceA,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        contract_line_id: planId,
+        service_id: serviceB,
+        quantity: 1,
+        tenant: context.tenantId
+      }
+    ]);
+
+    // Create billing cycle
     const billingCycle = await context.createEntity('client_billing_cycles', {
       client_id: context.clientId,
       billing_cycle: 'monthly',
@@ -150,6 +176,17 @@ describe('Billing Invoice Edge Cases', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      start_date: '2025-02-01',
+      is_active: true,
+      tenant: context.tenantId
+    });
+
+    // Generate invoice
     const invoice = await generateInvoice(billingCycle);
 
     expect(invoice).toBeDefined();
@@ -171,15 +208,27 @@ describe('Billing Invoice Edge Cases', () => {
   it('should properly handle true zero-value invoices through the entire workflow', async () => {
     const freeService = await createTestService(context, {
       service_name: 'Free Service',
-      default_rate: 1000,
-      tax_region: 'US-NY'
-    });
+      service_type: 'Fixed',
+      default_rate: 0, // $0.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true // Even though it's taxable, tax on $0 is $0
+    }, 'service_id');
 
-    const { planId } = await createFixedPlanAssignment(context, freeService, {
-      planName: 'Free Plan',
-      baseRateCents: 0,
-      detailBaseRateCents: 1000,
-      startDate: '2025-02-01'
+    // Create a contract line with the free service
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Free Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Assign free service to plan
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: freeService,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     const billingCycle = await context.createEntity('client_billing_cycles', {
@@ -190,7 +239,15 @@ describe('Billing Invoice Edge Cases', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    const invoice = await generateInvoice(billingCycle);
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      start_date: '2025-02-01',
+      is_active: true,
+      tenant: context.tenantId
+    });
 
     expect(invoice).toBeDefined();
     expect(invoice!.subtotal).toBe(0);

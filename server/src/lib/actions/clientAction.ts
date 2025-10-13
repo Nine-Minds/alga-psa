@@ -28,39 +28,41 @@ export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
         .select(
           'clients.client_id',
           'clients.client_name',
-          'billing_plans.plan_id',
-          'billing_plans.plan_name',
-          'billing_plans.billing_frequency',
-          'billing_plans.is_custom',
-          'billing_plans.plan_type'
+          'contract_lines.contract_line_id',
+          'contract_lines.contract_line_name',
+          'contract_lines.billing_frequency',
+          'contract_lines.is_custom',
+          'contract_lines.contract_line_type'
         )
-        .where('clients.tenant', tenant as string);
-
-      if (billingTable) {
-        // Join via alias so we can reference consistently
-        query = query
-          .leftJoin({ cb: billingTable }, function() {
-            this.on('clients.client_id', '=', 'cb.client_id')
-                .andOn('clients.tenant', '=', 'cb.tenant');
-          })
-          .leftJoin('billing_plans', function() {
-            this.on('cb.plan_id', '=', 'billing_plans.plan_id')
-                .andOn('cb.tenant', '=', 'billing_plans.tenant');
-          });
-      }
-
+        .where('clients.tenant', tenant)
+        .leftJoin('client_billing', function() {
+          this.on('clients.client_id', '=', 'client_billing.client_id')
+              .andOn('clients.tenant', '=', 'client_billing.tenant');
+        })
+        .leftJoin('contract_lines', function() {
+          this.on('client_billing.contract_line_id', '=', 'contract_lines.contract_line_id')
+              .andOn('client_billing.tenant', '=', 'contract_lines.tenant');
+        });
+        .leftJoin('client_billing', function() {
+          this.on('clients.client_id', '=', 'client_billing.client_id')
+              .andOn('clients.tenant', '=', 'client_billing.tenant');
+        })
+        .leftJoin('contract_lines', function() {
+          this.on('client_billing.contract_line_id', '=', 'contract_lines.contract_line_id')
+              .andOn('client_billing.tenant', '=', 'contract_lines.tenant');
+        });
       return await query;
     });
-    
+
     return clients.map((client): Omit<IClientSummary, "tenant"> => ({
       id: client.client_id,
       name: client.client_name,
-      billingPlan: client.plan_id ? {
-        plan_id: client.plan_id,
-        plan_name: client.plan_name,
+      contractLine: client.contract_line_id ? {
+        contract_line_id: client.contract_line_id,
+        contract_line_name: client.contract_line_name,
         billing_frequency: client.billing_frequency,
         is_custom: client.is_custom,
-        plan_type: client.plan_type
+        contract_line_type: client.contract_line_type
       } : undefined
     }));
   } catch (error) {

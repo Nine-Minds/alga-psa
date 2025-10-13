@@ -9,8 +9,8 @@ import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
 // Removed direct Radix imports:
 // TooltipTrigger,
-import { Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
-import { IClientBillingCycle } from '../../interfaces/billing.interfaces';
+import { Info, AlertTriangle, X, MoreVertical } from 'lucide-react'; // Changed to MoreVertical
+import { IClientContractLineCycle } from '../../interfaces/billing.interfaces';
 // Import PreviewInvoiceResponse (which uses the correct VM internally)
 import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
 // Import the InvoiceViewModel directly from the renderer types
@@ -33,7 +33,7 @@ import {
 // Use ConfirmationDialog instead of AlertDialog
 import { ConfirmationDialog } from '../ui/ConfirmationDialog'; // Corrected import
 interface AutomaticInvoicesProps {
-  periods: (IClientBillingCycle & {
+  periods: (IClientContractLineCycle & {
     client_name: string;
     can_generate: boolean;
     period_start_date: ISO8601String;
@@ -42,7 +42,7 @@ interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
 }
 
-interface Period extends IClientBillingCycle {
+interface Period extends IClientContractLineCycle {
   client_name: string;
   can_generate: boolean;
   billing_cycle_id?: string;

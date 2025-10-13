@@ -1,8 +1,7 @@
-import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
-import '../../../../../test-utils/nextApiMock';
-import { createClientBillingCycles } from 'server/src/lib/billing/createBillingCycles';
-import { TestContext } from '../../../../../test-utils/testContext';
-import { dateHelpers } from '../../../../../test-utils/dateUtils';
+import { describe, it, expect } from 'vitest';
+import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
+import { TestContext } from 'server/test-utils/testContext';
+import { dateHelpers } from 'server/test-utils/dateUtils';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -11,53 +10,8 @@ import {
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 
-// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
-process.env.DB_PORT = '5432';
-process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
-
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
-
-vi.mock('server/src/lib/auth/getSession', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
-
-vi.mock('server/src/lib/analytics/posthog', () => ({
-  analytics: {
-    capture: vi.fn(),
-    identify: vi.fn(),
-    trackPerformance: vi.fn(),
-    getClient: () => null
-  }
-}));
-
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
-
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn(() => Promise.resolve(true))
-}));
-
-const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
-globalForVitest.TextEncoder = NodeTextEncoder;
-
-const {
-  beforeAll: setupContext,
-  beforeEach: resetContext,
-  afterEach: rollbackContext,
-  afterAll: cleanupContext
-} = TestContext.createHelpers();
+// Required for tests
+global.TextEncoder = TextEncoder as any;
 
 describe('Client Billing Cycle Creation', () => {
   let context: TestContext;
@@ -134,7 +88,7 @@ describe('Client Billing Cycle Creation', () => {
     expect(initialCycles).toHaveLength(0);
 
     // Create billing cycles
-    await createClientBillingCycles(db, client);
+    await createClientContractLineCycles(db, client);
 
     // Verify cycles were created
     const cycles = await db('client_billing_cycles')

@@ -85,12 +85,11 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -162,12 +161,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create a service and plan using modern helpers
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoice
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     // Create billing cycles for two consecutive months
@@ -187,21 +200,25 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
     }, 'billing_cycle_id');
 
-    // Assign plan for first period
-    await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Basic Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
-    });
-
-    // Assign plan for second period (reuse same service/plan)
-    await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Basic Plan 2',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 2, day: 1 })
-    });
+    // Assign plan to client for both periods
+    await context.db('client_contract_lines').insert([
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      },
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      }
+    ]);
 
     // Generate invoices that will exceed padding length
     const invoice1 = await generateInvoice(billingCycle1);
@@ -232,12 +249,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 10
     });
 
-    // Create service and assign fixed plan
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoice
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     await createFixedPlanAssignment(context, serviceId, {
@@ -255,6 +286,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
+
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
+    });
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
@@ -323,19 +363,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 3
     });
 
-    // Create service and assign fixed plan
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoices
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       tax_region: 'US-NY'
     });
 
-    await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Basic Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     // Create billing cycles for three consecutive months
@@ -362,6 +409,34 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 4, day: 1 })
     }, 'billing_cycle_id');
+
+    // Assign plan to client for all periods
+    await context.db('client_contract_lines').insert([
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      },
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      },
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      }
+    ]);
 
     // 1. Query for the minimum invoice number.
     const minInvoiceNumber = await getMinimumInvoiceNumber();
@@ -435,19 +510,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create service and assign fixed plan
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoices
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       tax_region: 'US-NY'
     });
 
-    await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Basic Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     // Create multiple billing cycles to generate multiple invoices
@@ -474,6 +556,34 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 4, day: 1 })
     }, 'billing_cycle_id');
+
+    // Assign plan to client for all periods
+    await context.db('client_contract_lines').insert([
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      },
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      },
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      }
+    ]);
 
     // Generate invoices in sequence
     const invoice1 = await generateInvoice(billingCycle1);
@@ -519,12 +629,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create service and assign fixed plan
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoice
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     await createFixedPlanAssignment(context, serviceId, {
@@ -542,6 +666,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
+
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
+    });
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
@@ -567,12 +700,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create service and assign fixed plan
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoice
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     await createFixedPlanAssignment(context, serviceId, {
@@ -590,6 +737,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
+
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
+    });
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
@@ -617,12 +773,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create service and assign fixed plan
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoice
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     await createFixedPlanAssignment(context, serviceId, {
@@ -640,6 +810,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
+
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
+    });
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
@@ -665,12 +844,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create service and assign fixed plan
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoice
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     await createFixedPlanAssignment(context, serviceId, {
@@ -688,6 +881,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
+
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
+    });
 
     // Generate invoice with initial prefix
     const invoice1 = await generateInvoice(billingCycle1);
@@ -709,6 +911,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
+  
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      });
 
     // Generate invoice with new prefix
     const invoice2 = await generateInvoice(billingCycle2);
@@ -734,12 +945,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create service and assign fixed plan
-    const serviceId = await createTestService(context, {
+    // Create a contract line for generating invoice
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     await createFixedPlanAssignment(context, serviceId, {
@@ -757,6 +982,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
+
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
+    });
 
     // Generate invoice with initial prefix
     const invoice1 = await generateInvoice(billingCycle1);
@@ -778,6 +1012,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
+  
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      });      
 
     // Generate invoice with shorter prefix
     const invoice2 = await generateInvoice(billingCycle2);
@@ -799,6 +1042,15 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 4, day: 1 })
     }, 'billing_cycle_id');
+
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
+    });
 
     // Generate invoice with longer prefix
     const invoice3 = await generateInvoice(billingCycle3);

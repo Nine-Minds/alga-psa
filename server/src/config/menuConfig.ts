@@ -146,8 +146,8 @@ export const menuItems: MenuItem[] = [
 ];
 
 export const bottomMenuItems: MenuItem[] = [
-  { 
-    name: 'Settings', 
+  {
+    name: 'Settings',
     icon: Settings,
     subItems: [
       { name: 'General', icon: SlidersHorizontal, href: '/msp/settings' },

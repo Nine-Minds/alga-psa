@@ -87,12 +87,11 @@ describe('Billing Invoice Generation – Error Handling', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -155,7 +154,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     );
   });
 
-  it('should handle missing billing plans', async () => {
+  it('should handle missing contract lines', async () => {
     // Create client without plans
     const newClientId = await context.createEntity('clients', {
       client_name: 'Client Without Plans',
@@ -180,18 +179,32 @@ describe('Billing Invoice Generation – Error Handling', () => {
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        messagePattern: new RegExp(`No active billing plans found for client ${newClientId}`)
+        messagePattern: new RegExp(`No active contract lines found for client ${newClientId} in the given period`)
       }
     );
   });
 
   it('should handle undefined service rates', async () => {
-    // Create a service without a rate (rate = 0)
-    const serviceId = await createTestService(context, {
+    // Arrange
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Invalid Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Service Without Rate',
-      billing_method: 'fixed',
-      default_rate: 0,  // Invalid rate
-      tax_region: 'US-NY'
+      description: 'Test service: Service Without Rate',
+      service_type: 'Fixed',
+      unit_of_measure: 'unit'
+      // default_rate intentionally undefined
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      tenant: context.tenantId
     });
 
     // Create billing cycle
@@ -203,24 +216,39 @@ describe('Billing Invoice Generation – Error Handling', () => {
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    // Assign plan with invalid service
-    await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Invalid Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 0,  // Invalid rate
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
     });
 
     await expectError(() => generateInvoice(billingCycleId));
   });
 
   it('should throw error when regenerating for same period', async () => {
-    // Create a service
-    const serviceId = await createTestService(context, {
+    // Arrange
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Fixed Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Monthly Service',
       billing_method: 'fixed',
       default_rate: 10000,
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity: 1,
+      tenant: context.tenantId
     });
 
     // Create billing cycle
@@ -232,12 +260,13 @@ describe('Billing Invoice Generation – Error Handling', () => {
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    // Assign plan
-    await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Standard Fixed Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: context.clientId,
+      contract_line_id: planId,
+      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      is_active: true,
+      tenant: context.tenantId
     });
 
     // Generate first invoice
@@ -253,7 +282,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        message: 'No active billing plans for this period'
+        message: 'No active contract lines for this period'
       }
     );
   });

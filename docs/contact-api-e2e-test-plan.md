@@ -246,7 +246,7 @@ Controllers successfully migrated to V2:
 Controllers still using BaseController pattern:
 - ⏳ AssetController
 - ⏳ AutomationController
-- ⏳ BillingPlanController
+- ⏳ ContractLineController
 - ⏳ CategoryController
 - ⏳ FinancialController
 - ⏳ InvoiceController

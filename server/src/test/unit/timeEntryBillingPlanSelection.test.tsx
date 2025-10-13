@@ -9,10 +9,10 @@ import * as planDisambiguation from '../../lib/utils/planDisambiguation';
 // Mock the planDisambiguation module
 vi.mock('../../lib/utils/planDisambiguation', () => ({
   getClientIdForWorkItem: vi.fn(),
-  getEligibleBillingPlansForUI: vi.fn()
+  getEligibleContractLinesForUI: vi.fn()
 }));
 
-describe('TimeEntryEditForm with Billing Plan Selection', () => {
+describe('TimeEntryEditForm with Contract Line Selection', () => {
   const mockEntry = {
     client_id: 'test-client-id', // Add client ID to the mock entry
     entry_id: 'test-entry-id',
@@ -50,16 +50,16 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     vi.clearAllMocks();
   });
 
-  test('should display billing plan selector with disabled dropdown when only one plan is available', async () => {
+  test('should display contract line selector with disabled dropdown when only one plan is available', async () => {
     // Mock the getClientIdForWorkItem function to return a client ID
     vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
     
-    // Mock the getEligibleBillingPlansForUI function to return a single plan
-    vi.mocked(planDisambiguation.getEligibleBillingPlansForUI).mockResolvedValue([
+    // Mock the getEligibleContractLinesForUI function to return a single plan
+    vi.mocked(planDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
       {
-        client_billing_plan_id: 'test-plan-id',
-        plan_name: 'Test Plan',
-        plan_type: 'Fixed'
+        client_contract_line_id: 'test-plan-id',
+        contract_line_name: 'Test Plan',
+        contract_line_type: 'Fixed'
       }
     ]);
 
@@ -89,30 +89,30 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     });
 
     await waitFor(() => {
-      expect(planDisambiguation.getEligibleBillingPlansForUI).toHaveBeenCalledWith(
+      expect(planDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalledWith(
         'test-client-id',
         'test-service-id'
       );
     });
 
-    // The billing plan selector should be visible
-    expect(screen.getByText('Billing Plan')).toBeInTheDocument();
+    // The contract line selector should be visible
+    expect(screen.getByText('Contract Line')).toBeInTheDocument();
     
     // The dropdown should be disabled
-    const selectElement = screen.getByLabelText('Billing Plan (Optional)');
+    const selectElement = screen.getByLabelText('Contract Line (Optional)');
     expect(selectElement).toBeDisabled();
     
     // There should be explanatory text
-    expect(screen.getByText('This service is only available in one billing plan.')).toBeInTheDocument();
+    expect(screen.getByText('This service is only available in one contract line.')).toBeInTheDocument();
 
-    // The entry should be updated with the billing plan ID
+    // The entry should be updated with the contract line ID
     expect(mockOnUpdateEntry).toHaveBeenCalledWith(0, {
       ...mockEntry,
-      billing_plan_id: 'test-plan-id'
+      contract_line_id: 'test-plan-id'
     });
   });
 
-  test('should display billing plan selector with disabled dropdown when no client ID is available', async () => {
+  test('should display contract line selector with disabled dropdown when no client ID is available', async () => {
     // Mock the getClientIdForWorkItem function to return null (no client ID)
     vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue(null);
     
@@ -141,32 +141,32 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
       );
     });
 
-    // The billing plan selector should be visible
-    expect(screen.getByText('Billing Plan')).toBeInTheDocument();
+    // The contract line selector should be visible
+    expect(screen.getByText('Contract Line')).toBeInTheDocument();
     
     // The dropdown should be disabled
-    const selectElement = screen.getByLabelText('Billing Plan (Optional)');
+    const selectElement = screen.getByLabelText('Contract Line (Optional)');
     expect(selectElement).toBeDisabled();
     
     // There should be explanatory text
-    expect(screen.getByText('Client information not available. The system will use the default billing plan.')).toBeInTheDocument();
+    expect(screen.getByText('Client information not available. The system will use the default contract line.')).toBeInTheDocument();
   });
 
-  test('should display billing plan selector when multiple plans are available', async () => {
+  test('should display contract line selector when multiple plans are available', async () => {
     // Mock the getClientIdForWorkItem function to return a client ID
     vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
     
-    // Mock the getEligibleBillingPlansForUI function to return multiple plans
-    vi.mocked(planDisambiguation.getEligibleBillingPlansForUI).mockResolvedValue([
+    // Mock the getEligibleContractLinesForUI function to return multiple plans
+    vi.mocked(planDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
       {
-        client_billing_plan_id: 'plan-id-1',
-        plan_name: 'Fixed Plan',
-        plan_type: 'Fixed'
+        client_contract_line_id: 'plan-id-1',
+        contract_line_name: 'Fixed Plan',
+        contract_line_type: 'Fixed'
       },
       {
-        client_billing_plan_id: 'plan-id-2',
-        plan_name: 'Bucket Plan',
-        plan_type: 'Bucket'
+        client_contract_line_id: 'plan-id-2',
+        contract_line_name: 'Bucket Plan',
+        contract_line_type: 'Bucket'
       }
     ]);
 
@@ -196,50 +196,50 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     });
 
     await waitFor(() => {
-      expect(planDisambiguation.getEligibleBillingPlansForUI).toHaveBeenCalledWith(
+      expect(planDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalledWith(
         'test-client-id',
         'test-service-id'
       );
     });
 
-    // The billing plan selector should be visible
-    expect(screen.getByText('Billing Plan')).toBeInTheDocument();
+    // The contract line selector should be visible
+    expect(screen.getByText('Contract Line')).toBeInTheDocument();
 
     // The entry should be updated with the bucket plan ID (default selection)
     expect(mockOnUpdateEntry).toHaveBeenCalledWith(0, {
       ...mockEntry,
-      billing_plan_id: 'plan-id-2'
+      contract_line_id: 'plan-id-2'
     });
   });
 
-  test('should allow saving without billing plan selection', async () => {
+  test('should allow saving without contract line selection', async () => {
     // Mock the getClientIdForWorkItem function to return a client ID
     vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
     
-    // Mock the getEligibleBillingPlansForUI function to return multiple plans
-    vi.mocked(planDisambiguation.getEligibleBillingPlansForUI).mockResolvedValue([
+    // Mock the getEligibleContractLinesForUI function to return multiple plans
+    vi.mocked(planDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
       {
-        client_billing_plan_id: 'plan-id-1',
-        plan_name: 'Fixed Plan',
-        plan_type: 'Fixed'
+        client_contract_line_id: 'plan-id-1',
+        contract_line_name: 'Fixed Plan',
+        contract_line_type: 'Fixed'
       },
       {
-        client_billing_plan_id: 'plan-id-2',
-        plan_name: 'Bucket Plan',
-        plan_type: 'Bucket'
+        client_contract_line_id: 'plan-id-2',
+        contract_line_name: 'Bucket Plan',
+        contract_line_type: 'Bucket'
       }
     ]);
 
-    // Create a mock entry without a billing plan ID
-    const entryWithoutBillingPlan = {
+    // Create a mock entry without a contract line ID
+    const entryWithoutContractLine = {
       ...mockEntry,
-      billing_plan_id: undefined
+      contract_line_id: undefined
     };
 
     render(
       <TimeEntryEditForm
         id="test-form"
-        entry={entryWithoutBillingPlan}
+        entry={entryWithoutContractLine}
         index={0}
         isEditable={true}
         services={mockServices}
@@ -255,16 +255,16 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
 
     // Wait for the component to load and fetch data
     await waitFor(() => {
-      expect(planDisambiguation.getEligibleBillingPlansForUI).toHaveBeenCalled();
+      expect(planDisambiguation.getEligibleContractLinesForUI).toHaveBeenCalled();
     });
 
     // Click the save button
     fireEvent.click(screen.getByText('Save'));
 
-    // The form should NOT show a validation error for missing billing plan
-    expect(screen.queryByText('Billing plan is required when multiple plans are available')).not.toBeInTheDocument();
+    // The form should NOT show a validation error for missing contract line
+    expect(screen.queryByText('Contract line is required when multiple plans are available')).not.toBeInTheDocument();
 
-    // The onSave function should be called since billing plan is no longer required
+    // The onSave function should be called since contract line is no longer required
     expect(mockOnSave).toHaveBeenCalledWith(0);
   });
 });
