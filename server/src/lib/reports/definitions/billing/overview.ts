@@ -113,7 +113,7 @@ export const billingOverviewReport: ReportDefinition = {
       type: 'sum',
       query: {
         table: 'invoices',
-        fields: ['total_amount - COALESCE(credit_applied, 0) as outstanding'],
+        fields: ['total_amount - COALESCE(credit_applied, 0)'],
         aggregation: 'sum',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
