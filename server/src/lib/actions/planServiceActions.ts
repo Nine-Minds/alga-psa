@@ -297,7 +297,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
       // Assuming PlanServiceHourlyConfig model is accessible or we use an action
       // For simplicity, let's assume we can access the model instance via the service
       // This might need adjustment based on actual service/model structure
-      const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx);
+      const hourlyConfigModel = new (await import('server/src/lib/models/contractLineServiceHourlyConfig')).default(trx);
       userTypeRates = await hourlyConfigModel.getUserTypeRates(config.config_id);
     }
 

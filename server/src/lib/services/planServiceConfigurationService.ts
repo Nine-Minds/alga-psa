@@ -9,11 +9,11 @@ import {
   IContractLineServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import PlanServiceConfiguration from 'server/src/lib/models/planServiceConfiguration';
-import PlanServiceFixedConfig from 'server/src/lib/models/planServiceFixedConfig';
-import PlanServiceHourlyConfig from 'server/src/lib/models/planServiceHourlyConfig';
-import PlanServiceUsageConfig from 'server/src/lib/models/planServiceUsageConfig';
-import PlanServiceBucketConfig from 'server/src/lib/models/planServiceBucketConfig';
+import PlanServiceConfiguration from 'server/src/lib/models/contractLineServiceConfiguration';
+import PlanServiceFixedConfig from 'server/src/lib/models/contractLineServiceFixedConfig';
+import PlanServiceHourlyConfig from 'server/src/lib/models/contractLineServiceHourlyConfig';
+import PlanServiceUsageConfig from 'server/src/lib/models/contractLineServiceUsageConfig';
+import PlanServiceBucketConfig from 'server/src/lib/models/contractLineServiceBucketConfig';
 import ContractLine from 'server/src/lib/models/contractLine'; // Added import
 
 export class PlanServiceConfigurationService {

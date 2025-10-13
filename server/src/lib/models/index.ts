@@ -1,9 +1,9 @@
 // Export all models
-export { default as PlanServiceConfiguration } from './planServiceConfiguration';
-export { default as PlanServiceFixedConfig } from './planServiceFixedConfig';
-export { default as PlanServiceHourlyConfig } from './planServiceHourlyConfig';
-export { default as PlanServiceUsageConfig } from './planServiceUsageConfig';
-export { default as PlanServiceBucketConfig } from './planServiceBucketConfig';
+export { default as PlanServiceConfiguration } from './contractLineServiceConfiguration';
+export { default as PlanServiceFixedConfig } from './contractLineServiceFixedConfig';
+export { default as PlanServiceHourlyConfig } from './contractLineServiceHourlyConfig';
+export { default as PlanServiceUsageConfig } from './contractLineServiceUsageConfig';
+export { default as PlanServiceBucketConfig } from './contractLineServiceBucketConfig';
 export { default as Contract } from './contract';
 export { default as ClientContract } from './clientContract';
 export { default as ContractLine } from './contractLine';
