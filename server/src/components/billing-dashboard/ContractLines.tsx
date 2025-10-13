@@ -14,7 +14,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { ContractLineDialog } from './ContractLineDialog';
 import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
+import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/contractLineServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
 import { IContractLine, IPlanService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';

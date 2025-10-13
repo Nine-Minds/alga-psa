@@ -9,7 +9,7 @@ import { AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { IClientContractLine, IContractLine, IService } from 'server/src/interfaces/billing.interfaces';
 import { getContractLines } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
+import { getPlanServices } from 'server/src/lib/actions/contractLineServiceActions';
 import { PLAN_TYPE_DISPLAY } from 'server/src/constants/billing';
 
 interface ClientServiceOverlapMatrixProps {

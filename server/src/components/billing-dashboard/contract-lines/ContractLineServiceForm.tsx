@@ -16,7 +16,7 @@ import {
   IContractLineServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { updatePlanService } from 'server/src/lib/actions/planServiceActions';
+import { updatePlanService } from 'server/src/lib/actions/contractLineServiceActions';
 import {
   getConfigurationForService,
   getConfigurationWithDetails

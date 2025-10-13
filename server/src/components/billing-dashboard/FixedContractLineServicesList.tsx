@@ -23,7 +23,7 @@ import {
   removeServiceFromPlan as removePlanService,
   updatePlanService, // Added updatePlanService
   getPlanServicesWithConfigurations
-} from 'server/src/lib/actions/planServiceActions';
+} from 'server/src/lib/actions/contractLineServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';

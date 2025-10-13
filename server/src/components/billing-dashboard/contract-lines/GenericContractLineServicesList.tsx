@@ -18,11 +18,11 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractLine, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
 import {
   getPlanServicesWithConfigurations
-} from 'server/src/lib/actions/planServiceActions';
+} from 'server/src/lib/actions/contractLineServiceActions';
 import {
   addServiceToPlan as addPlanService,
   removeServiceFromPlan as removePlanService
-} from 'server/src/lib/actions/planServiceActions';
+} from 'server/src/lib/actions/contractLineServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Import action to get plan details
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
