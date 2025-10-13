@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { getConnection } from 'server/src/lib/db/db';
-import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, IClientContractLine, IDiscount, IFixedPriceCharge, IPlanService, ITimeBasedCharge, IBucketPlan, IBucketUsage, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
+import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, IClientContractLine, IDiscount, IFixedPriceCharge, IContractLineService, ITimeBasedCharge, IBucketPlan, IBucketUsage, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
 import { ISO8601String } from '../../types/types.d';
 import { TaxService } from 'server/src/lib/services/taxService';
 
@@ -288,7 +288,7 @@ describe('BillingEngine', () => {
         },
       ];
 
-      const mockPlanServices: IPlanService[] = [
+      const mockPlanServices: IContractLineService[] = [
         { tenant: mockTenant, contract_line_id: 'contract_line_id_1', service_id: 'service1', quantity: 1 },
         { tenant: mockTenant, contract_line_id: 'contract_line_id_1', service_id: 'service3', quantity: 1 },
         { tenant: mockTenant, contract_line_id: 'contract_line_id_2', service_id: 'service2', quantity: 1 },
@@ -512,7 +512,7 @@ describe('BillingEngine', () => {
         },
       ];
 
-      const mockPlanServices: IPlanService[] = [
+      const mockPlanServices: IContractLineService[] = [
         { tenant: mockTenant, contract_line_id: 'contract_line_id_1', service_id: 'service1', quantity: 1 },
         { tenant: mockTenant, contract_line_id: 'contract_line_id_2', service_id: 'service2', quantity: 1 },
       ];

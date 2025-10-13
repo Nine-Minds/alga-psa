@@ -13,7 +13,7 @@ import * as Accordion from '@radix-ui/react-accordion'; // Import Radix Accordio
 import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 
 // Import actions and types
-import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Get list of services
+import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Get list of services
 import { getPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
 import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLine } from 'server/src/interfaces';
@@ -94,7 +94,7 @@ export function UsagePlanConfiguration({
       setPlan(fetchedPlan); // Store base plan details
 
       // 1. Fetch the list of services associated with the plan
-      const servicesList = await getPlanServicesWithConfigurations(contractLineId);
+      const servicesList = await getContractLineServicesWithConfigurations(contractLineId);
       setPlanServices(servicesList);
 
       if (servicesList.length === 0) {

@@ -15,14 +15,14 @@ import {
 import { Tooltip } from 'server/src/components/ui/Tooltip'; // Corrected Tooltip import
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractLine, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
+import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import { IContractLineServiceConfiguration as IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import {
-  getPlanServices,
-  addServiceToPlan as addPlanService,
-  removeServiceFromPlan as removePlanService,
-  updatePlanService, // Added updatePlanService
-  getPlanServicesWithConfigurations
+  getContractLineServices,
+  addServiceToContractLine,
+  removeServiceFromContractLine,
+  updateContractLineService,
+  getContractLineServicesWithConfigurations
 } from 'server/src/lib/actions/contractLineServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
@@ -43,7 +43,7 @@ interface FixedPlanServicesListProps {
 }
 
 // Simplified interface for display
-interface SimplePlanService extends IPlanService {
+interface SimplePlanService extends IContractLineService {
   service_name?: string;
   service_category?: string; // This will now hold the name
   billing_method?: 'fixed' | 'per_unit' | null; // Allow null to match IService
@@ -76,7 +76,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
 
     try {
       // Fetch services with configurations to get service_type_name directly
-      const servicesWithConfigs = await getPlanServicesWithConfigurations(planId);
+      const servicesWithConfigs = await getContractLineServicesWithConfigurations(planId);
       const servicesResponse = await getServices();
       // Extract the services array from the paginated response
       const allAvailableServices = Array.isArray(servicesResponse)
@@ -126,7 +126,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
         if (serviceToAdd) {
           // For fixed plans, all services share the same base rate configured at the plan level
           // Here we just add the service with default values
-          await addPlanService(
+          await addServiceToContractLine(
             planId,
             serviceId,
             1,
@@ -151,7 +151,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     if (!planId) return;
 
     try {
-      await removePlanService(planId, serviceId);
+      await removeServiceFromContractLine(planId, serviceId);
       fetchData();
       
       // Call the onServiceAdded callback if provided (also useful when removing services)
@@ -175,7 +175,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
   // Add handler for saving quantity
   const handleSaveQuantity = async (planId: string, serviceId: string, newQuantity: number) => {
     try {
-      await updatePlanService(planId, serviceId, { quantity: newQuantity });
+      await updateContractLineService(planId, serviceId, { quantity: newQuantity });
       fetchData(); // Refresh the data
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -183,7 +183,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     }
   };
 
-  const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
+const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
     {
       title: 'Service Name',
       dataIndex: 'service_name',

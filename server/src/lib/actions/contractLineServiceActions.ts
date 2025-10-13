@@ -2,7 +2,7 @@
 
 import { withTransaction } from '@alga-psa/shared/db';
 import { IContractLineServiceRateTier, IUserTypeRate, IContractLineServiceConfiguration, IContractLineServiceFixedConfig, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig, IContractLineServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { IPlanService } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
  
 import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
@@ -13,12 +13,12 @@ import { Knex } from 'knex';
 /**
  * Get all services for a plan
  */
-export async function getPlanServices(planId: string): Promise<IPlanService[]> {
+export async function getContractLineServices(contractLineId: string): Promise<IContractLineService[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const services = await trx('contract_line_services')
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         tenant
       })
       .select('*');
@@ -30,12 +30,12 @@ export async function getPlanServices(planId: string): Promise<IPlanService[]> {
 /**
  * Get a specific service in a plan
  */
-export async function getPlanService(planId: string, serviceId: string): Promise<IPlanService | null> {
+export async function getContractLineService(contractLineId: string, serviceId: string): Promise<IContractLineService | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const service = await trx('contract_line_services')
       .where({
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceId,
         tenant
       })
@@ -48,8 +48,8 @@ export async function getPlanService(planId: string, serviceId: string): Promise
 /**
  * Add a service to a plan with configuration
  */
-export async function addServiceToPlan(
-  planId: string,
+export async function addServiceToContractLine(
+  contractLineId: string,
   serviceId: string,
   quantity?: number,
   customRate?: number,
@@ -81,13 +81,13 @@ export async function addServiceToPlan(
   // Get plan details
   const plan = await trx('contract_lines')
     .where({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       tenant
     })
     .first();
 
   if (!plan) {
-    throw new Error(`Plan ${planId} not found`);
+    throw new Error(`Contract line ${contractLineId} not found`);
   }
 
   // --- BEGIN SERVER-SIDE VALIDATION ---
@@ -134,19 +134,19 @@ export async function addServiceToPlan(
   }
 
   // Check if the service is already in the plan
-  const existingPlanService = await getPlanService(planId, serviceId);
+  const existingPlanService = await getContractLineService(contractLineId, serviceId);
   
   // If not, add it to the contract_line_services table
   if (!existingPlanService) {
     await trx('contract_line_services').insert({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       service_id: serviceId,
       tenant: tenant
     });
   }
 
   // Check if a configuration already exists for this plan-service combination
-  const existingConfig = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
+  const existingConfig = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
   
   let configId: string;
   
@@ -166,7 +166,7 @@ export async function addServiceToPlan(
     // Create new configuration if one doesn't exist
     configId = await planServiceConfigActions.createConfiguration(
       {
-        contract_line_id: planId,
+        contract_line_id: contractLineId,
         service_id: serviceId,
         configuration_type: configurationType,
         custom_rate: customRate,
@@ -184,8 +184,8 @@ export async function addServiceToPlan(
 /**
  * Update a service in a plan
  */
-export async function updatePlanService(
-  planId: string,
+export async function updateContractLineService(
+  contractLineId: string,
   serviceId: string,
   updates: {
     quantity?: number;
@@ -198,10 +198,10 @@ export async function updatePlanService(
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get configuration ID
-  const config = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
+  const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
 
   if (!config) {
-    throw new Error(`Configuration for service ${serviceId} in plan ${planId} not found`);
+    throw new Error(`Configuration for service ${serviceId} in contract line ${contractLineId} not found`);
   }
 
   // Update configuration
@@ -228,12 +228,12 @@ export async function updatePlanService(
 /**
  * Remove a service from a plan
  */
-export async function removeServiceFromPlan(planId: string, serviceId: string): Promise<boolean> {
+export async function removeServiceFromContractLine(contractLineId: string, serviceId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get configuration ID
-  const config = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
+  const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
 
   // Remove configuration if it exists
   if (config) {
@@ -243,7 +243,7 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
   // Remove the service from the contract_line_services table
   await trx('contract_line_services')
     .where({
-      contract_line_id: planId,
+      contract_line_id: contractLineId,
       service_id: serviceId,
       tenant
     })
@@ -256,7 +256,7 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
 /**
  * Get all services in a plan with their configurations, service type name, and user type rates (for hourly).
  */
-export async function getPlanServicesWithConfigurations(planId: string): Promise<{
+export async function getContractLineServicesWithConfigurations(contractLineId: string): Promise<{
   service: IService & { service_type_name?: string };
   configuration: IContractLineServiceConfiguration;
   typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
@@ -266,7 +266,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get all configurations for the plan
-  const configurations = await planServiceConfigActions.getConfigurationsForPlan(planId);
+  const configurations = await planServiceConfigActions.getConfigurationsForPlan(contractLineId);
 
   // Get service details including service type name for each configuration
   const result: Array<{ service: IService & { service_type_name?: string }; configuration: IContractLineServiceConfiguration; typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null; userTypeRates?: IUserTypeRate[] }> = [];

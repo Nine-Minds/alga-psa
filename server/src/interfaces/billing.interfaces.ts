@@ -220,7 +220,7 @@ export interface IContractLineFixedConfig extends TenantEntity {
   updated_at: Date;
 }
 
-export interface IPlanService extends TenantEntity {
+export interface IContractLineService extends TenantEntity {
   contract_line_id: string;
   service_id: string;
   quantity?: number;
@@ -413,4 +413,3 @@ export interface ICreditReconciliationReport extends TenantEntity {
   updated_at: ISO8601String;
   metadata?: Record<string, any>; // For storing additional information about the reconciliation issue
 }
-

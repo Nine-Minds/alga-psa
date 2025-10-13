@@ -15,14 +15,8 @@ import {
 // Removed CustomSelect import as it wasn't used
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractLine, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
-import {
-  getPlanServicesWithConfigurations
-} from 'server/src/lib/actions/contractLineServiceActions';
-import {
-  addServiceToPlan as addPlanService,
-  removeServiceFromPlan as removePlanService
-} from 'server/src/lib/actions/contractLineServiceActions';
+import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { getContractLineServicesWithConfigurations, addServiceToContractLine, removeServiceFromContractLine } from 'server/src/lib/actions/contractLineServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Import action to get plan details
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
@@ -46,7 +40,7 @@ interface GenericPlanServicesListProps {
 }
 
 
-interface EnhancedPlanService extends IPlanService {
+interface EnhancedPlanService extends IContractLineService {
   configuration?: IContractLineServiceConfiguration;
   configurationType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
   // Added fields for display consistency
@@ -79,7 +73,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       const [planDetails, servicesResponse, servicesWithConfigurations] = await Promise.all([
         getContractLineById(contractLineId), // Fetch the plan details
         getServices(),
-        getPlanServicesWithConfigurations(contractLineId),
+        getContractLineServicesWithConfigurations(contractLineId),
       ]);
       
       // Extract the services array from the paginated response
@@ -138,7 +132,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       for (const serviceId of selectedServicesToAdd) {
         const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
         if (serviceToAdd) {
-          await addPlanService(
+          await addServiceToContractLine(
             contractLineId,
             serviceId,
             1, // Default quantity
@@ -159,7 +153,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
     if (!contractLineId) return;
 
     try {
-      await removePlanService(contractLineId, serviceId);
+      await removeServiceFromContractLine(contractLineId, serviceId);
       await fetchData(); // Ensure data is fetched before calling callback
       onServicesChanged?.(); // Call the callback if provided
     } catch (error) {

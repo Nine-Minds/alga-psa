@@ -9,7 +9,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { ContractLineDialog } from '../ContractLineDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions';
+import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions';
 import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces'; // Added IContractLine
 import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
@@ -81,7 +81,7 @@ export function BucketPlanConfiguration({
       setPlan(fetchedPlan); // Store base plan details
 
       // 1. Fetch services associated with the plan
-      const fetchedPlanServices = await getPlanServicesWithConfigurations(contractLineId);
+      const fetchedPlanServices = await getContractLineServicesWithConfigurations(contractLineId);
       setPlanServices(fetchedPlanServices); // Use all fetched services
 
       const initialConfigs: ServiceConfigsState = {};

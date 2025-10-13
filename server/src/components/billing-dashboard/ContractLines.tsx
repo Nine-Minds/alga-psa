@@ -14,10 +14,10 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { ContractLineDialog } from './ContractLineDialog';
 import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/contractLineServiceActions';
+import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from 'server/src/lib/actions/contractLineServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
-import { IContractLine, IPlanService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
+import { IContractLine, IContractLineService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { toast } from 'react-hot-toast';
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -33,7 +33,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const router = useRouter();
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [planServices, setPlanServices] = useState<IPlanService[]>([]);
+  const [planServices, setPlanServices] = useState<IContractLineService[]>([]);
   const [selectedServiceToAdd, setSelectedServiceToAdd] = useState<string | null>(null);
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +91,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
 
   const fetchPlanServices = async (planId: string) => {
     try {
-      const services = await getPlanServices(planId);
+      const services = await getContractLineServices(planId);
       setPlanServices(services);
       setError(null);
     } catch (error) {
@@ -112,7 +112,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
           custom_rate: addedService.default_rate,
           tenant: tenant!
         };
-        await addServiceToPlan(
+        await addServiceToContractLine(
           selectedPlan,
           serviceId,
           newPlanService.quantity,
@@ -131,7 +131,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const handleUpdatePlanService = async (serviceId: string, quantity: number, customRate: number | undefined) => {
     if (!selectedPlan) return;
     try {
-      await updatePlanService(selectedPlan, serviceId, { quantity, customRate });
+      await updateContractLineService(selectedPlan, serviceId, { quantity, customRate });
       fetchPlanServices(selectedPlan);
       setError(null);
     } catch (error) {
@@ -143,7 +143,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const handleRemovePlanService = async (serviceId: string) => {
     if (!selectedPlan) return;
     try {
-      await removeServiceFromPlan(selectedPlan, serviceId);
+      await removeServiceFromContractLine(selectedPlan, serviceId);
       fetchPlanServices(selectedPlan);
       setError(null);
     } catch (error) {
@@ -234,7 +234,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     },
   ];
 
-  const planServiceColumns: ColumnDefinition<IPlanService>[] = [
+  const planServiceColumns: ColumnDefinition<IContractLineService>[] = [
     {
       title: 'Service Name',
       dataIndex: 'service_id',

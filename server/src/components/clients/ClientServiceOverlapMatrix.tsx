@@ -9,7 +9,7 @@ import { AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { IClientContractLine, IContractLine, IService } from 'server/src/interfaces/billing.interfaces';
 import { getContractLines } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServices } from 'server/src/lib/actions/contractLineServiceActions';
+import { getContractLineServices } from 'server/src/lib/actions/contractLineServiceActions';
 import { PLAN_TYPE_DISPLAY } from 'server/src/constants/billing';
 
 interface ClientServiceOverlapMatrixProps {
@@ -57,7 +57,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
         
         for (const clientPlan of clientContractLines) {
           if (clientPlan.contract_line_id) {
-            const planServicesList = await getPlanServices(clientPlan.contract_line_id);
+            const planServicesList = await getContractLineServices(clientPlan.contract_line_id);
             
             // Convert plan services to full service objects
             const fullServices = planServicesList.map(ps => 

@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { IPlanService, IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineService, IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { updateContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
 import {
   IContractLineServiceConfiguration,
@@ -16,7 +16,7 @@ import {
   IContractLineServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { updatePlanService } from 'server/src/lib/actions/contractLineServiceActions';
+import { updateContractLineService } from 'server/src/lib/actions/contractLineServiceActions';
 import {
   getConfigurationForService,
   getConfigurationWithDetails
@@ -25,7 +25,7 @@ import { useTenant } from 'server/src/components/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
 
 interface ContractLineServiceFormProps {
-  planService: IPlanService;
+  planService: IContractLineService;
   services: IService[]; // services might need updating to include service_type_name if not already done
   // Removed serviceCategories prop
   onClose: () => void;
@@ -197,7 +197,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
     try {
       // Update the plan service with the new configuration
-      await updatePlanService(
+      await updateContractLineService(
         planService.contract_line_id,
         planService.service_id,
         {

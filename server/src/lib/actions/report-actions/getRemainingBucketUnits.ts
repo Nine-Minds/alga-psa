@@ -8,7 +8,7 @@ import {
   IClientContractLine,
   IContractLine,
   IBucketUsage,
-  IPlanService,
+  IContractLineService,
   IService // Added IService for service_catalog join
 } from '../../../interfaces/billing.interfaces';
 import {
@@ -74,7 +74,7 @@ export async function getRemainingBucketUnits(
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
       // Add joins for configuration structure
-      .join<IPlanService>('contract_line_services as ps', function() {
+      .join<IContractLineService>('contract_line_services as ps', function() {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })

@@ -12,7 +12,6 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import {
   getContractLineById
 } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServices } from 'server/src/lib/actions/contractLineServiceActions';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces';
 import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
 

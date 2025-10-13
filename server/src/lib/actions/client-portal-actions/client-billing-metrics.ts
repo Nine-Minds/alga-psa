@@ -11,7 +11,7 @@ import {
   IClientContractLine,
   IContractLine,
   IBucketUsage,
-  IPlanService
+  IContractLineService
 } from 'server/src/interfaces/billing.interfaces';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { IProjectTask, IProject, IProjectPhase } from 'server/src/interfaces/project.interfaces';
@@ -492,7 +492,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      .join<IPlanService>('contract_line_services as ps', function() {
+      .join<IContractLineService>('contract_line_services as ps', function() {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })

@@ -17,7 +17,7 @@ import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from 'server/src/components/ui/Tooltip';
 import { getContractLineById, updateContractLine } from 'server/src/lib/actions/contractLineAction';
-import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Corrected import path
+import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Corrected import path
 import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IContractLine, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
@@ -172,7 +172,7 @@ export function HourlyPlanConfiguration({
       // Removed setting plan-wide userTypeRates state: setUserTypeRates(initialData.user_type_rates!);
 
       // Fetch services and their configurations using the correct action
-      const servicesWithConfigsResult = await getPlanServicesWithConfigurations(contractLineId);
+      const servicesWithConfigsResult = await getContractLineServicesWithConfigurations(contractLineId);
 
       // Process results, mapping to IPlanServiceWithHourlyConfig
       const processedConfigs: IPlanServiceWithHourlyConfig[] = servicesWithConfigsResult.map((item) => {
