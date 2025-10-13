@@ -328,7 +328,7 @@ export function HourlyPlanConfiguration({
                     const upsertHourlyInput = {
                         contractLineId: contractLineId,
                         serviceId: config.service_id,
-                        hourly_rate: config.hourly_config.hourly_rate ?? 0, // Default to 0 instead of null
+                        hourly_rate: config.hourly_config.hourly_rate ?? 0,
                         minimum_billable_time: config.hourly_config.minimum_billable_time ?? null,
                         round_up_to_nearest: config.hourly_config.round_up_to_nearest ?? null,
                     };

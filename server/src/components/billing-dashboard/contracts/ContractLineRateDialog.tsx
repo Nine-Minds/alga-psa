@@ -9,11 +9,7 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
-<<<<<<<< HEAD:server/src/components/billing-dashboard/contracts/ContractPlanRateDialog.tsx
-interface ContractPlanRateDialogProps {
-========
 interface ContractLineRateDialogProps {
->>>>>>>> billing_to_contracts_overhaul:server/src/components/billing-dashboard/contracts/ContractLineRateDialog.tsx
   plan: {
     contract_line_id: string;
     contract_line_name: string;
@@ -24,11 +20,7 @@ interface ContractLineRateDialogProps {
   onSave: (contractLineId: string, customRate: number | undefined) => void;
 }
 
-<<<<<<<< HEAD:server/src/components/billing-dashboard/contracts/ContractPlanRateDialog.tsx
-export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRateDialogProps) {
-========
 export function ContractLineRateDialog({ plan, onClose, onSave }: ContractLineRateDialogProps) {
->>>>>>>> billing_to_contracts_overhaul:server/src/components/billing-dashboard/contracts/ContractLineRateDialog.tsx
   const [customRate, setCustomRate] = useState<number>(
     plan.custom_rate !== undefined && plan.custom_rate !== null ? plan.custom_rate : (plan.default_rate || 0)
   );

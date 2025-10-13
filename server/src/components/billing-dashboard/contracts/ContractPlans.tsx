@@ -14,7 +14,8 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IPlanBundle, IBundleBillingPlan } from 'server/src/interfaces/planBundle.interfaces';
-import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import type { DetailedBundlePlan } from 'server/src/lib/actions/bundleBillingPlanActions';
+import type { IBillingPlan } from 'server/src/lib/actions/billingPlanAction';
 import { getBillingPlans } from 'server/src/lib/actions/billingPlanAction';
 import {
   getDetailedBundlePlans,
@@ -31,12 +32,7 @@ interface ContractPlansProps {
   bundle: IPlanBundle;
 }
 
-interface DetailedBundlePlan extends IBundleBillingPlan {
-  plan_name: string;
-  billing_frequency: string;
-  plan_type: string;
-  default_rate?: number;
-}
+// Using DetailedBundlePlan type from actions
 
 const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
   const [contractPlans, setContractPlans] = useState<DetailedBundlePlan[]>([]);
@@ -266,9 +262,13 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
       
       {editingPlan && (
         <ContractPlanRateDialog
-          plan={editingPlan}
+          plan={{
+            plan_id: editingPlan.plan_id,
+            plan_name: editingPlan.plan_name,
+            custom_rate: editingPlan.custom_rate ?? null,
+            default_rate: editingPlan.default_rate,
+          }}
           onClose={() => setEditingPlan(null)}
-          // Type assertion needed here as onSave now accepts number | undefined
           onSave={(customRate: number | undefined) => handlePlanUpdated(editingPlan.plan_id, customRate)}
         />
       )}

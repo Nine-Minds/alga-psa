@@ -9,7 +9,7 @@ import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
 // Removed direct Radix imports:
 // TooltipTrigger,
-import { Info, AlertTriangle, X, MoreVertical } from 'lucide-react'; // Changed to MoreVertical
+import { Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react'; // Changed to MoreVertical and added Eye icon
 import { IClientContractLineCycle } from '../../interfaces/billing.interfaces';
 // Import PreviewInvoiceResponse (which uses the correct VM internally)
 import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';

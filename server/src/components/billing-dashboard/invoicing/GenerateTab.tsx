@@ -6,7 +6,7 @@ import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import CustomSelect from '../../ui/CustomSelect';
 import { FileText, DollarSign, Receipt } from 'lucide-react';
-import { IService, IClientBillingCycle } from '../../../interfaces/billing.interfaces';
+import { IService, IClientContractLineCycle } from '../../../interfaces/billing.interfaces';
 import { IClient } from '../../../interfaces';
 import { getAvailableBillingPeriods } from '../../../lib/actions/billingAndTax';
 import { getAllClients } from '../../../lib/actions/client-actions/clientActions';
@@ -44,7 +44,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const router = useRouter();
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
   const [error, setError] = useState<string | null>(null);
-  const [periods, setPeriods] = useState<(IClientBillingCycle & {
+  const [periods, setPeriods] = useState<(IClientContractLineCycle & {
     client_name: string;
     can_generate: boolean;
     is_early?: boolean;

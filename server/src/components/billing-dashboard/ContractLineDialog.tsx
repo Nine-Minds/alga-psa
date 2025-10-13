@@ -261,10 +261,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
+              <Button id="contract-line-cancel" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSaving} className={!planName.trim() ? 'opacity-50' : ''}>
+              <Button id="contract-line-submit" type="submit" disabled={isSaving} className={!planName.trim() ? 'opacity-50' : ''}>
                 {editingPlan ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>

@@ -775,7 +775,7 @@ export class BillingEngine {
 
       if (hasServiceBaseRate) {
         planLevelBaseRate = derivedBaseRate;
-        console.log(`[DEBUG] Plan ${clientBillingPlan.plan_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`);
+        console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`);
       }
     }
 
@@ -788,12 +788,12 @@ export class BillingEngine {
 
       if (totalDefaultRateCents !== 0) {
         planLevelBaseRate = totalDefaultRateCents / 100;
-        console.log(`[DEBUG] Plan ${clientBillingPlan.plan_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`);
+        console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`);
       }
     }
 
     if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
-      console.error(`[DEBUG] Unable to determine base_rate for plan ${clientBillingPlan.plan_id}.`);
+      console.error(`[DEBUG] Unable to determine base_rate for contract line ${clientContractLine.contract_line_id}.`);
       return [];
     }
 
@@ -1027,9 +1027,6 @@ export class BillingEngine {
           // Add other relevant fields from IFixedPriceCharge if needed
           config_id: service.config_id,
           base_rate: baseRateInCents,
-          client_billing_plan_id: clientBillingPlan.client_billing_plan_id,
-          client_bundle_id: clientBillingPlan.client_bundle_id || undefined,
-          bundle_name: clientBillingPlan.bundle_name || undefined,
           // FMV/Proportion/AllocatedAmount might not be relevant here if not a true fixed plan
         };
         // Recalculate tax based on derived info for this edge case

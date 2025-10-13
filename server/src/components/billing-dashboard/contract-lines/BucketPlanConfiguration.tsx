@@ -226,11 +226,11 @@ export function BucketPlanConfiguration({
     }
 
     // Proceed with saving using upsertPlanServiceBucketConfigurationAction
-    const savePromises = changedServices.map(({ serviceId, config }) => // Removed configId from destructuring
-      upsertPlanServiceBucketConfigurationAction({ // CALL CORRECT ACTION
-        contractLineId, // Pass contractLineId
-        serviceId, // Pass serviceId
-        ...config // Spread the bucket config fields
+    const savePromises = changedServices.map(({ serviceId, config }) =>
+      upsertPlanServiceBucketConfigurationAction({
+        contractLineId,
+        serviceId,
+        ...config
       })
         .catch((err: Error) => { // Added type for err
           console.error(`Error saving config for service ${serviceId}:`, err); // Removed configId from log

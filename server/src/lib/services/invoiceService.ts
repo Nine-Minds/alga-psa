@@ -300,7 +300,7 @@ async function persistFixedInvoiceItems(
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
-  const fixedPlanDetailsMap = new Map<string, { details: IFixedPriceCharge[] }>();
+  const fixedPlanDetailsMap = new Map<string, { consolidatedItem: any; details: IFixedPriceCharge[] }>();
 
   for (const charge of fixedCharges) {
     // --- Handle Detailed Fixed Price Charges (V1 Scope) ---
@@ -505,7 +505,7 @@ async function persistFixedInvoiceItems(
       item_id: parentItemId,
       invoice_id: invoiceId,
       service_id: null,
-      description: planInfo.plan_name || 'Fixed Plan Charge',
+      description: planInfo.contract_line_name || 'Fixed Plan Charge',
       quantity: 1,
       unit_price: planNetTotal,
       net_amount: planNetTotal,

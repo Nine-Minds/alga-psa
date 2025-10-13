@@ -63,7 +63,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     contract_line_type: string;
   }>>([]);
   const [showContractLineSelector, setShowContractLineSelector] = useState(false);
-  const [bucketData, setBucketData] = useState<RemainingBucketUnitsResult[]>([]);
+  type BucketUsageData = RemainingBucketUnitsResult & { plan_id: string; plan_name: string };
+  const [bucketData, setBucketData] = useState<BucketUsageData[]>([]);
   const [loadingBuckets, setLoadingBuckets] = useState(false);
 
   const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -149,7 +150,13 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       setLoadingBuckets(true);
       const currentDate = new Date().toISOString().split('T')[0];
       const buckets = await getRemainingBucketUnits({ clientId, currentDate });
-      setBucketData(buckets);
+      // Map to chart's expected shape
+      const mapped: BucketUsageData[] = buckets.map(b => ({
+        ...b,
+        plan_id: b.contract_line_id,
+        plan_name: b.contract_line_name,
+      }));
+      setBucketData(mapped);
     } catch (error) {
       console.error('Error loading bucket usage:', error);
     } finally {

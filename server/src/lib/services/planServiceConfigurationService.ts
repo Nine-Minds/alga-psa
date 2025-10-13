@@ -382,19 +382,19 @@ export class PlanServiceConfigurationService {
   /**
    * Get all configurations for a plan
    */
-  async getConfigurationsForPlan(planId: string): Promise<IPlanServiceConfiguration[]> {
+  async getConfigurationsForPlan(contractLineId: string): Promise<IPlanServiceConfiguration[]> {
     await this.initKnex();
     
-    return await this.planServiceConfigModel.getByPlanId(planId);
+    return await this.planServiceConfigModel.getByPlanId(contractLineId);
   }
 
   /**
    * Get configuration for a specific service within a plan
    */
-  async getConfigurationForService(planId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
+  async getConfigurationForService(contractLineId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
     await this.initKnex();
     
-    return await this.planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
+    return await this.planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
   }
 
   /**
@@ -402,7 +402,7 @@ export class PlanServiceConfigurationService {
    * Ensures the base configuration exists and has type 'Bucket'.
    */
   async upsertPlanServiceBucketConfiguration(
-    planId: string,
+    contractLineId: string,
     serviceId: string,
     bucketConfigData: Partial<Omit<IPlanServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
   ): Promise<string> {
@@ -414,14 +414,14 @@ export class PlanServiceConfigurationService {
       const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
 
       // 1. Find existing base configuration
-      let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
+      let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
       let configId: string;
 
       if (!baseConfig) {
         // 2. Create base configuration if it doesn't exist, force type to Bucket
-        console.log(`No base config found for plan ${planId}, service ${serviceId}. Creating one with type Bucket.`);
+        console.log(`No base config found for contract line ${contractLineId}, service ${serviceId}. Creating one with type Bucket.`);
         const newBaseConfigData: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: serviceId,
           configuration_type: 'Bucket', // Force type to Bucket
           // is_enabled: true, // Removed: Field does not exist on base config interface
@@ -475,7 +475,7 @@ export class PlanServiceConfigurationService {
    * Ensures the base configuration exists and has type 'Hourly'.
    */
   async upsertPlanServiceHourlyConfiguration(
-    planId: string,
+    contractLineId: string,
     serviceId: string,
     hourlyConfigData: Partial<Omit<IPlanServiceHourlyConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
   ): Promise<string> {
@@ -487,14 +487,14 @@ export class PlanServiceConfigurationService {
       const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
 
       // 1. Find existing base configuration
-      let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
+      let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
       let configId: string;
 
       if (!baseConfig) {
         // 2. Create base configuration if it doesn't exist, force type to Hourly
-        console.log(`No base config found for plan ${planId}, service ${serviceId}. Creating one with type Hourly.`);
+        console.log(`No base config found for contract line ${contractLineId}, service ${serviceId}. Creating one with type Hourly.`);
         const newBaseConfigData: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: serviceId,
           configuration_type: 'Hourly', // Force type to Hourly
           tenant: this.tenant,

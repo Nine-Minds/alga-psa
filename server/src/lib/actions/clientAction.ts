@@ -35,22 +35,17 @@ export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
           'contract_lines.contract_line_type'
         )
         .where('clients.tenant', tenant)
-        .leftJoin('client_billing', function() {
-          this.on('clients.client_id', '=', 'client_billing.client_id')
-              .andOn('clients.tenant', '=', 'client_billing.tenant');
-        })
-        .leftJoin('contract_lines', function() {
-          this.on('client_billing.contract_line_id', '=', 'contract_lines.contract_line_id')
-              .andOn('client_billing.tenant', '=', 'contract_lines.tenant');
-        });
-        .leftJoin('client_billing', function() {
-          this.on('clients.client_id', '=', 'client_billing.client_id')
-              .andOn('clients.tenant', '=', 'client_billing.tenant');
-        })
-        .leftJoin('contract_lines', function() {
-          this.on('client_billing.contract_line_id', '=', 'contract_lines.contract_line_id')
-              .andOn('client_billing.tenant', '=', 'contract_lines.tenant');
-        });
+      if (billingTable) {
+        query = query
+          .leftJoin(billingTable, function(this: Knex.JoinClause) {
+            this.on('clients.client_id', '=', `${billingTable}.client_id`)
+                .andOn('clients.tenant', '=', `${billingTable}.tenant`);
+          })
+          .leftJoin('contract_lines', function(this: Knex.JoinClause) {
+            this.on(`${billingTable}.contract_line_id`, '=', 'contract_lines.contract_line_id')
+                .andOn(`${billingTable}.tenant`, '=', 'contract_lines.tenant');
+          });
+      }
       return await query;
     });
 

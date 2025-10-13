@@ -63,24 +63,24 @@ export async function getConfigurationWithDetails(configId: string): Promise<{
 /**
  * Get all configurations for a plan
  */
-export async function getConfigurationsForPlan(planId: string): Promise<IPlanServiceConfiguration[]> {
+export async function getConfigurationsForPlan(contractLineId: string): Promise<IPlanServiceConfiguration[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
   const configService = new PlanServiceConfigurationService(trx, tenant!);
   
-    return await configService.getConfigurationsForPlan(planId);
+    return await configService.getConfigurationsForPlan(contractLineId);
   });
 }
 
 /**
  * Get configuration for a specific service within a plan
  */
-export async function getConfigurationForService(planId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
+export async function getConfigurationForService(contractLineId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
   const configService = new PlanServiceConfigurationService(trx, tenant!);
   
-    return await configService.getConfigurationForService(planId, serviceId);
+    return await configService.getConfigurationForService(contractLineId, serviceId);
   });
 }
 
@@ -343,7 +343,7 @@ export async function getPlanServiceConfiguration(planId: string, serviceId: str
  * Input type for upserting plan service usage configuration.
  */
 export interface IUpsertPlanServiceUsageConfigurationInput {
-  planId: string;
+  contractLineId: string;
   serviceId: string;
   // Fields from IPlanServiceUsageConfig (including base_rate)
   unit_of_measure?: string | null;
@@ -438,14 +438,14 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
   }
   // --- End Validation ---
 
-  const { planId, serviceId, tiers, ...usageConfigInput } = input;
+  const { contractLineId, serviceId, tiers, ...usageConfigInput } = input;
 
   try {
     const updatedConfig = await trx.transaction(async (trxInner: Knex.Transaction) => {
       const trxConfigService = new PlanServiceConfigurationService(trxInner, tenant!); // Use transaction knex
 
       // 1. Upsert contract_line_service_configuration
-      let baseConfig = await trxConfigService.getConfigurationForService(planId, serviceId);
+      let baseConfig = await trxConfigService.getConfigurationForService(contractLineId, serviceId);
       let configId: string;
 
       if (baseConfig) {
@@ -458,7 +458,7 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
       } else {
         // Create if not exists
         const newBaseConfig: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: serviceId,
           configuration_type: 'Usage', // Explicitly set type
           tenant: tenant!,
@@ -556,7 +556,7 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
  * Input type for upserting plan service bucket configuration.
  */
 export interface IUpsertPlanServiceBucketConfigurationInput {
-  planId: string;
+  contractLineId: string;
   serviceId: string;
   // Fields from IPlanServiceBucketConfig (excluding generated/tenant/config_id)
   total_minutes?: number | null;
@@ -577,7 +577,7 @@ export async function upsertPlanServiceBucketConfigurationAction(
   return withTransaction(db, async (trx: Knex.Transaction) => {
   const configService = new PlanServiceConfigurationService(trx, tenant!);
 
-  const { planId, serviceId, ...bucketConfigData } = input;
+  const { contractLineId, serviceId, ...bucketConfigData } = input;
 
   // Get service details to access default_rate
   const service = await trx('service_catalog')
@@ -602,9 +602,9 @@ export async function upsertPlanServiceBucketConfigurationAction(
   };
 
   try {
-    console.log(`Upserting bucket config for plan ${planId}, service ${serviceId} with data:`, dataForService);
+    console.log(`Upserting bucket config for contract line ${contractLineId}, service ${serviceId} with data:`, dataForService);
     const configId = await configService.upsertPlanServiceBucketConfiguration(
-      planId,
+      contractLineId,
       serviceId,
       dataForService
     );
@@ -623,7 +623,7 @@ export async function upsertPlanServiceBucketConfigurationAction(
 
 // Define Zod schema for input validation
 const UpsertPlanServiceHourlyConfigurationInputSchema = z.object({
-  planId: z.string().uuid({ message: "Invalid Plan ID format" }),
+  contractLineId: z.string().uuid({ message: "Invalid Contract Line ID format" }),
   serviceId: z.string().uuid({ message: "Invalid Service ID format" }),
   hourly_rate: z.coerce.number({ invalid_type_error: "Hourly rate must be a number" }) // Coerce to number
                  .min(0, { message: "Hourly rate cannot be negative" })
@@ -677,7 +677,7 @@ export async function upsertPlanServiceHourlyConfiguration(
 
     // Call the service method with separate arguments
     const configId = await configService.upsertPlanServiceHourlyConfiguration(
-      validatedInput.planId,
+      validatedInput.contractLineId,
       validatedInput.serviceId,
       hourlyConfigData
     );

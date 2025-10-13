@@ -40,7 +40,7 @@ const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string
 ];
 
 interface GenericPlanServicesListProps {
-  planId: string; // Changed from plan object to just planId
+  contractLineId: string;
   onServicesChanged?: () => void; // Optional callback when services are added/removed
   disableEditing?: boolean; // New prop to disable edit actions
 }
@@ -57,7 +57,7 @@ interface EnhancedPlanService extends IPlanService {
   default_rate?: number;
 }
 
-const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planId, onServicesChanged, disableEditing = false }) => {
+const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contractLineId, onServicesChanged, disableEditing = false }) => {
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   // Removed serviceCategories state
@@ -69,7 +69,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
   // Removed tenant state
 
   const fetchData = useCallback(async () => { // Added useCallback
-    if (!planId) return;
+    if (!contractLineId) return;
 
     setIsLoading(true);
     setError(null);
@@ -77,9 +77,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     try {
       // Fetch plan details, services, and configurations
       const [planDetails, servicesResponse, servicesWithConfigurations] = await Promise.all([
-        getContractLineById(planId), // Fetch the plan details
+        getContractLineById(contractLineId), // Fetch the plan details
         getServices(),
-        getPlanServicesWithConfigurations(planId),
+        getPlanServicesWithConfigurations(contractLineId),
       ]);
       
       // Extract the services array from the paginated response
@@ -88,7 +88,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         : (servicesResponse.services || []);
 
       if (!planDetails) {
-        throw new Error(`Contract line with ID ${planId} not found.`);
+        throw new Error(`Contract line with ID ${contractLineId} not found.`);
       }
       setPlanType(planDetails.contract_line_type); // Store the plan type
 
@@ -99,7 +99,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         const fullServiceDetails = allAvailableServices.find(s => s.service_id === configInfo.configuration.service_id);
 
         return {
-          contract_line_id: planId,
+          contract_line_id: contractLineId,
           service_id: configInfo.configuration.service_id,
           quantity: configInfo.configuration.quantity,
           custom_rate: configInfo.configuration.custom_rate,
@@ -124,7 +124,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     } finally {
       setIsLoading(false);
     }
-  }, [planId]); // Added planId dependency
+  }, [contractLineId]);
 
   useEffect(() => {
     fetchData();
@@ -132,14 +132,14 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
 
 
   const handleAddService = async () => {
-    if (!planId || selectedServicesToAdd.length === 0) return;
+    if (!contractLineId || selectedServicesToAdd.length === 0) return;
 
     try {
       for (const serviceId of selectedServicesToAdd) {
         const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
         if (serviceToAdd) {
           await addPlanService(
-            planId,
+            contractLineId,
             serviceId,
             1, // Default quantity
             serviceToAdd.default_rate // Default rate
@@ -156,10 +156,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
   };
 
   const handleRemoveService = async (serviceId: string) => {
-    if (!planId) return;
+    if (!contractLineId) return;
 
     try {
-      await removePlanService(planId, serviceId);
+      await removePlanService(contractLineId, serviceId);
       await fetchData(); // Ensure data is fetched before calling callback
       onServicesChanged?.(); // Call the callback if provided
     } catch (error) {

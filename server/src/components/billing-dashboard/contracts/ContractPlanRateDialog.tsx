@@ -9,26 +9,18 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
-<<<<<<<< HEAD:server/src/components/billing-dashboard/contracts/ContractPlanRateDialog.tsx
 interface ContractPlanRateDialogProps {
-========
-interface ContractLineRateDialogProps {
->>>>>>>> billing_to_contracts_overhaul:server/src/components/billing-dashboard/contracts/ContractLineRateDialog.tsx
   plan: {
-    contract_line_id: string;
-    contract_line_name: string;
-    custom_rate?: number;
+    plan_id: string;
+    plan_name: string;
+    custom_rate?: number | null;
     default_rate?: number;
   };
   onClose: () => void;
-  onSave: (contractLineId: string, customRate: number | undefined) => void;
+  onSave: (customRate: number | undefined) => void;
 }
 
-<<<<<<<< HEAD:server/src/components/billing-dashboard/contracts/ContractPlanRateDialog.tsx
 export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRateDialogProps) {
-========
-export function ContractLineRateDialog({ plan, onClose, onSave }: ContractLineRateDialogProps) {
->>>>>>>> billing_to_contracts_overhaul:server/src/components/billing-dashboard/contracts/ContractLineRateDialog.tsx
   const [customRate, setCustomRate] = useState<number>(
     plan.custom_rate !== undefined && plan.custom_rate !== null ? plan.custom_rate : (plan.default_rate || 0)
   );
@@ -45,14 +37,14 @@ export function ContractLineRateDialog({ plan, onClose, onSave }: ContractLineRa
 
     // If using default rate, pass undefined to reset to default (will be saved as NULL)
     // Otherwise pass the custom rate
-    onSave(plan.contract_line_id, useDefaultRate ? undefined : customRate);
+    onSave(useDefaultRate ? undefined : customRate);
   };
 
   return (
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title={`Set Custom Rate for ${plan.contract_line_name}`}
+      title={`Set Custom Rate for ${plan.plan_name}`}
       className="max-w-md"
     >
       <DialogContent>
