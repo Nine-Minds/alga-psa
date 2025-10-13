@@ -644,7 +644,7 @@ export class BillingEngine {
       const customCharge: IFixedPriceCharge = {
         // Properties from IFixedPriceCharge & IBillingCharge
         type: 'fixed',
-        serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Bundle: ${clientContractLine.contract_name})` : ''}`,
+        serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Contract: ${clientContractLine.contract_name})` : ''}`,
         quantity: 1, // Represents the single contract-level plan item
         rate: clientContractLine.custom_rate, // Use the custom rate (assumed cents)
         total: clientContractLine.custom_rate, // Total is the custom rate (assumed cents)

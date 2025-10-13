@@ -8,7 +8,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { IContractPricingSchedule } from 'server/src/interfaces/planBundle.interfaces';
+import { IContractPricingSchedule } from 'server/src/interfaces/contract.interfaces';
 import {
   createPricingSchedule,
   updatePricingSchedule

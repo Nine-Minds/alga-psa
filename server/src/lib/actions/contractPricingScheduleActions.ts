@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../db';
-import { IContractPricingSchedule } from '../../interfaces/planBundle.interfaces';
+import { IContractPricingSchedule } from '../../interfaces/contract.interfaces';
 import { getCurrentUser } from './user-actions/userActions';
 
 /**
@@ -9,8 +9,8 @@ import { getCurrentUser } from './user-actions/userActions';
  * @param bundleId The bundle ID
  * @returns Array of pricing schedules
  */
-export async function getPricingSchedulesByBundle(
-  bundleId: string
+export async function getPricingSchedulesByContract(
+  contractId: string
 ): Promise<IContractPricingSchedule[]> {
   const { knex, tenant } = await createTenantKnex();
 
@@ -21,7 +21,7 @@ export async function getPricingSchedulesByBundle(
   const schedules = await knex('contract_pricing_schedules')
     .where({
       tenant,
-      bundle_id: bundleId
+      bundle_id: contractId
     })
     .orderBy('effective_date', 'asc')
     .select('*');
@@ -275,8 +275,8 @@ export async function deletePricingSchedule(scheduleId: string): Promise<void> {
  * @param date The date to check (defaults to current date)
  * @returns The active pricing schedule or null if none found
  */
-export async function getActivePricingSchedule(
-  bundleId: string,
+export async function getActivePricingScheduleByContract(
+  contractId: string,
   date?: Date
 ): Promise<IContractPricingSchedule | null> {
   const { knex, tenant } = await createTenantKnex();
@@ -290,7 +290,7 @@ export async function getActivePricingSchedule(
   const schedule = await knex('contract_pricing_schedules')
     .where({
       tenant,
-      bundle_id: bundleId
+      bundle_id: contractId
     })
     .where('effective_date', '<=', checkDate.toISOString())
     .where(function() {

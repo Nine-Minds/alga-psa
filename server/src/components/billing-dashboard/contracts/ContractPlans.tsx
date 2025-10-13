@@ -13,43 +13,37 @@ import {
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IPlanBundle, IBundleBillingPlan } from 'server/src/interfaces/planBundle.interfaces';
-import type { DetailedBundlePlan } from 'server/src/lib/actions/bundleBillingPlanActions';
+import { IContract } from 'server/src/interfaces/contract.interfaces';
 import type { IBillingPlan } from 'server/src/lib/actions/billingPlanAction';
 import { getBillingPlans } from 'server/src/lib/actions/billingPlanAction';
-import {
-  getDetailedBundlePlans,
-  addPlanToBundle,
-  removePlanFromBundle,
-  updatePlanInBundle
-} from 'server/src/lib/actions/bundleBillingPlanActions';
-import { getBundlePlans } from 'server/src/lib/actions/planBundleActions';
+import { getDetailedContractLines as getDetailedBundlePlans, addContractLine as addPlanToBundle, removeContractLine as removePlanFromBundle, updateContractLineAssociation as updatePlanInBundle } from 'server/src/lib/actions/contractLineMappingActions';
+import { getContracts as getBundlePlans } from 'server/src/lib/actions/contractActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { ContractPlanRateDialog } from './ContractPlanRateDialog';
 
 interface ContractPlansProps {
-  bundle: IPlanBundle;
+  bundle: IContract;
 }
 
 // Using DetailedBundlePlan type from actions
 
 const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
-  const [contractPlans, setContractPlans] = useState<DetailedBundlePlan[]>([]);
+  const [contractPlans, setContractPlans] = useState<any[]>([]);
   const [availablePlans, setAvailablePlans] = useState<IBillingPlan[]>([]);
   const [selectedPlanToAdd, setSelectedPlanToAdd] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingPlan, setEditingPlan] = useState<DetailedBundlePlan | null>(null);
+  const [editingPlan, setEditingPlan] = useState<any | null>(null);
 
   useEffect(() => {
-    if (bundle.bundle_id) {
+    if (bundle.contract_id) {
       fetchData();
     }
-  }, [bundle.bundle_id]);
+  }, [bundle.contract_id]);
 
   const fetchData = async () => {
-    if (!bundle.bundle_id) return;
+    if (!bundle.contract_id) return;
     
     setIsLoading(true);
     setError(null);
@@ -58,7 +52,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
       // Get all billing plans and bundle plans
       const [plans, detailedBundlePlans] = await Promise.all([
         getBillingPlans(),
-        getDetailedBundlePlans(bundle.bundle_id)
+        getDetailedBundlePlans(bundle.contract_id)
       ]);
       
       setContractPlans(detailedBundlePlans);
@@ -83,7 +77,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
   };
 
   const handleAddPlan = async () => {
-    if (!bundle.bundle_id || !selectedPlanToAdd) return;
+    if (!bundle.contract_id || !selectedPlanToAdd) return;
     
     try {
       const planToAdd = availablePlans.find(p => p.plan_id === selectedPlanToAdd);
@@ -91,7 +85,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
         // Pass undefined initially, indicating no custom rate is set
         const initialCustomRate = undefined;
         await addPlanToBundle(
-          bundle.bundle_id,
+          bundle.contract_id,
           selectedPlanToAdd,
           initialCustomRate // Pass undefined
         );
@@ -105,10 +99,10 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
   };
 
   const handleRemovePlan = async (planId: string) => {
-    if (!bundle.bundle_id) return;
+    if (!bundle.contract_id) return;
     
     try {
-      await removePlanFromBundle(bundle.bundle_id, planId);
+      await removePlanFromBundle(bundle.contract_id, planId);
       fetchData(); // Refresh data
     } catch (error) {
       console.error('Error removing plan from bundle:', error);
@@ -120,16 +114,16 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
     }
   };
 
-  const handleEditPlan = (plan: DetailedBundlePlan) => {
+  const handleEditPlan = (plan: any) => {
     setEditingPlan(plan);
   };
 
   const handlePlanUpdated = async (planId: string, customRate: number | undefined) => { // Allow undefined
-    if (!bundle.bundle_id) return;
+    if (!bundle.contract_id) return;
 
     try {
       // Pass the potentially undefined customRate to the action
-      await updatePlanInBundle(bundle.bundle_id, planId, { custom_rate: customRate });
+      await updatePlanInBundle(bundle.contract_id, planId, { custom_rate: customRate });
       fetchData(); // Refresh data
       setEditingPlan(null);
     } catch (error) {
@@ -138,7 +132,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
     }
   };
 
-  const serviceLineColumns: ColumnDefinition<DetailedBundlePlan>[] = [
+  const serviceLineColumns: ColumnDefinition<any>[] = [
     {
       title: 'Plan Name',
       dataIndex: 'plan_name',

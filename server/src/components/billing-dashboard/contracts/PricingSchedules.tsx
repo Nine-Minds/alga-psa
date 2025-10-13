@@ -12,9 +12,9 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractPricingSchedule } from 'server/src/interfaces/planBundle.interfaces';
+import { IContractPricingSchedule } from 'server/src/interfaces/contract.interfaces';
 import {
-  getPricingSchedulesByBundle,
+  getPricingSchedulesByContract,
   deletePricingSchedule
 } from 'server/src/lib/actions/contractPricingScheduleActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
@@ -45,7 +45,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ bundleId }) => {
     setError(null);
 
     try {
-      const data = await getPricingSchedulesByBundle(bundleId);
+      const data = await getPricingSchedulesByContract(bundleId);
       setSchedules(data);
     } catch (error) {
       console.error('Error fetching pricing schedules:', error);

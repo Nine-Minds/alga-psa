@@ -42,3 +42,22 @@ export interface IClientContract extends TenantEntity {
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
+
+/**
+ * Interface for contract pricing schedules
+ * Represents time-based pricing changes for a contract
+ */
+export interface IContractPricingSchedule extends TenantEntity {
+  schedule_id: string;
+  bundle_id: string; // TODO: rename to contract_id once DB schema is updated
+  effective_date: ISO8601String;
+  end_date?: ISO8601String | null;
+  duration_value?: number;
+  duration_unit?: 'days' | 'weeks' | 'months' | 'years';
+  custom_rate?: number;
+  notes?: string;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+  created_by?: string;
+  updated_by?: string;
+}

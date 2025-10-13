@@ -14,11 +14,11 @@ import {
   createNextBillingCycle
 } from 'server/src/lib/actions/billingCycleActions';
 import { getAllClientsPaginated } from 'server/src/lib/actions/client-actions/clientActions';
-import { getClientBundles } from 'server/src/lib/actions/client-actions/clientPlanBundleActions';
-import { getPlanBundles } from 'server/src/lib/actions/planBundleActions';
+import { getClientContracts as getClientBundles } from 'server/src/lib/actions/client-actions/clientContractActions';
+import { getContracts as getPlanBundles } from 'server/src/lib/actions/contractActions';
 import { BillingCycleType, IClient } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IClientPlanBundle, IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
+import { IClientContract, IContract } from 'server/src/interfaces/contract.interfaces';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
@@ -56,7 +56,7 @@ const BillingCycles: React.FC = () => {
     error?: string;
   } | null>(null);
   const [clientContracts, setClientContracts] = useState<{ [clientId: string]: string }>({});
-  const [contracts, setContracts] = useState<{ [bundleId: string]: IPlanBundle }>({});
+  const [contracts, setContracts] = useState<{ [contractId: string]: IContract }>({});
 
   // Debounce search term
   useEffect(() => {
@@ -93,11 +93,11 @@ const BillingCycles: React.FC = () => {
       setClients(clientsResponse.clients);
       setTotalCount(clientsResponse.totalCount);
 
-      // Create a map of contracts by bundle_id
-      const contractsMap: { [bundleId: string]: IPlanBundle } = {};
-      allContracts.forEach(contract => {
-        if (contract.bundle_id) {
-          contractsMap[contract.bundle_id] = contract;
+      // Create a map of contracts by contract_id
+      const contractsMap: { [contractId: string]: IContract } = {};
+      (allContracts as unknown as IContract[]).forEach(contract => {
+        if (contract.contract_id) {
+          contractsMap[contract.contract_id] = contract;
         }
       });
       setContracts(contractsMap);
@@ -116,11 +116,11 @@ const BillingCycles: React.FC = () => {
         if (client.client_id) {
           // Fetch contract info
           try {
-            const clientBundles = await getClientBundles(client.client_id);
+            const clientAssignedContracts = await getClientBundles(client.client_id);
             // Get the active contract (if any)
-            const activeBundle = clientBundles.find(bundle => bundle.is_active);
-            if (activeBundle && activeBundle.bundle_id) {
-              clientContractsMap[client.client_id] = activeBundle.bundle_id;
+            const active = (clientAssignedContracts as unknown as IClientContract[]).find(c => c.is_active);
+            if (active && active.contract_id) {
+              clientContractsMap[client.client_id] = active.contract_id;
             }
           } catch (error) {
             console.error(`Error fetching contracts for client ${client.client_id}:`, error);
@@ -205,10 +205,10 @@ const BillingCycles: React.FC = () => {
       title: 'Contract',
       dataIndex: 'client_id',
       render: (value: string) => {
-        const bundleId = clientContracts[value];
-        if (!bundleId) return <span className="text-gray-400">No active contract</span>;
-        const contract = contracts[bundleId];
-        return contract?.bundle_name || <span className="text-gray-400">Unknown</span>;
+        const contractId = clientContracts[value];
+        if (!contractId) return <span className="text-gray-400">No active contract</span>;
+        const contract = contracts[contractId];
+        return contract?.contract_name || <span className="text-gray-400">Unknown</span>;
       },
     },
     {
