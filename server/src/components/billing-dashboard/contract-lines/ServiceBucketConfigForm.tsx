@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { IPlanServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceBucketConfig as IPlanServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { Input } from '../../ui/Input';
 import { Checkbox } from '../../ui/Checkbox';
 import { Label } from '../../ui/Label';

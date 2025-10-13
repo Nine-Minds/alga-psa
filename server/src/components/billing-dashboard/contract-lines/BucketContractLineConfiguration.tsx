@@ -14,9 +14,8 @@ import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces'; // Added IContractLine
 import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceBucketConfig,
-  // Removed PlanServiceConfigType import
+  IContractLineServiceConfiguration,
+  IContractLineServiceBucketConfig,
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import * as RadixAccordion from '@radix-ui/react-accordion';
 import { ServiceBucketConfigForm } from './ServiceBucketConfigForm';
@@ -24,7 +23,7 @@ import { getConfigurationWithDetails, upsertPlanServiceBucketConfigurationAction
 import { toast } from 'react-hot-toast'; // Use react-hot-toast
 // Type for the state holding configurations for all services
 type ServiceConfigsState = {
-  [serviceId: string]: Partial<IPlanServiceBucketConfig>;
+  [serviceId: string]: Partial<IContractLineServiceBucketConfig>;
 };
 
 // Type for validation errors
@@ -39,7 +38,7 @@ type ServiceValidationErrors = {
 // Type for the combined service and configuration data used for rendering
 type PlanServiceWithDetails = {
   service: IService & { unit_of_measure?: string }; // Ensure unit_of_measure is available
-  configuration: IPlanServiceConfiguration; // Base configuration
+  configuration: IContractLineServiceConfiguration; // Base configuration
 };
 
 interface BucketPlanConfigurationProps {
@@ -47,7 +46,7 @@ interface BucketPlanConfigurationProps {
   className?: string;
 }
 
-const DEFAULT_BUCKET_CONFIG: Partial<IPlanServiceBucketConfig> = {
+const DEFAULT_BUCKET_CONFIG: Partial<IContractLineServiceBucketConfig> = {
   total_minutes: 0,
   overage_rate: undefined, // Use undefined to allow backend default
   allow_rollover: false,
@@ -94,7 +93,7 @@ export function BucketPlanConfiguration({
         try {
           // Fetch detailed config
           const detailedResult = await getConfigurationWithDetails(configId);
-          const bucketConfig = detailedResult?.typeConfig as IPlanServiceBucketConfig | null; // Access typeConfig and cast
+          const bucketConfig = detailedResult?.typeConfig as IContractLineServiceBucketConfig | null; // Access typeConfig and cast
 
           const configData = bucketConfig
             ? {
@@ -137,7 +136,7 @@ export function BucketPlanConfiguration({
     fetchAndInitializeConfigs();
   }, [fetchAndInitializeConfigs]);
 
-  const handleConfigChange = useCallback((serviceId: string, field: keyof IPlanServiceBucketConfig, value: any) => {
+  const handleConfigChange = useCallback((serviceId: string, field: keyof IContractLineServiceBucketConfig, value: any) => {
     setServiceConfigs(prev => ({
       ...prev,
       [serviceId]: {
@@ -157,7 +156,7 @@ export function BucketPlanConfiguration({
     });
   }, []);
 
-  const validateConfig = (config: Partial<IPlanServiceBucketConfig>): ServiceValidationErrors['string'] => {
+  const validateConfig = (config: Partial<IContractLineServiceBucketConfig>): ServiceValidationErrors['string'] => {
     const errors: ServiceValidationErrors['string'] = {};
     // Ensure values are treated as numbers, handling null/undefined from state
     const totalMinutes = config.total_minutes === null || config.total_minutes === undefined ? null : Number(config.total_minutes);
@@ -177,7 +176,7 @@ export function BucketPlanConfiguration({
     setSaving(true);
     setError(null);
 
-    const changedServices: { serviceId: string; configId: string; config: Partial<IPlanServiceBucketConfig> }[] = [];
+    const changedServices: { serviceId: string; configId: string; config: Partial<IContractLineServiceBucketConfig> }[] = [];
     const validationPromises: Promise<{ serviceId: string; errors: ServiceValidationErrors['string'] }>[] = [];
 
     for (const serviceId in serviceConfigs) {

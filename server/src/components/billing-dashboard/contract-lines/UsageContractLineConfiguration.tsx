@@ -16,7 +16,7 @@ import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions'; // Get list of services
 import { getPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
-import { IPlanServiceConfiguration, IPlanServiceUsageConfig, IPlanServiceRateTier, IService, IContractLine } from 'server/src/interfaces'; // Added IContractLine
+import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLine } from 'server/src/interfaces';
 import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
 import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Import the upsert action
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
@@ -33,7 +33,7 @@ interface UsagePlanConfigurationProps {
 // Based on its usage in GenericPlanServicesList.tsx and the action definition
 type PlanServiceWithConfig = {
   service: IService & { service_type_name?: string };
-  configuration: IPlanServiceConfiguration;
+  configuration: IContractLineServiceConfiguration;
   // typeConfig might also be present, but we primarily need service_id and service_name
 };
 
@@ -50,8 +50,8 @@ type AllServiceValidationErrors = {
 
 // Define the expected result type for getPlanServiceConfiguration
 // Combining relevant fields from the interfaces file
-type FetchedServiceConfig = IPlanServiceConfiguration & IPlanServiceUsageConfig & {
-    tiers?: IPlanServiceRateTier[];
+type FetchedServiceConfig = IContractLineServiceConfiguration & IContractLineServiceUsageConfig & {
+    tiers?: IContractLineServiceRateTier[];
 };
 
 export function UsagePlanConfiguration({

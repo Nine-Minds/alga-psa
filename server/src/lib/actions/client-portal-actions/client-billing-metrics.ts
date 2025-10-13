@@ -17,8 +17,8 @@ import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { IProjectTask, IProject, IProjectPhase } from 'server/src/interfaces/project.interfaces';
 import { IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { 
-  IPlanServiceConfiguration,
-  IPlanServiceBucketConfig
+  IContractLineServiceConfiguration,
+  IContractLineServiceBucketConfig
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { toPlainDate, formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
@@ -500,12 +500,12 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      .join<IPlanServiceConfiguration>('contract_line_service_configuration as psc', function() { 
+      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() { 
         this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
-      .join<IPlanServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
+      .join<IContractLineServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
         this.on('psc.config_id', '=', 'psbc.config_id')
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })

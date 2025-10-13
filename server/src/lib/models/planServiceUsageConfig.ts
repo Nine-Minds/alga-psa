@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { getCurrentTenantId } from '../db';
-import { IPlanServiceUsageConfig, IPlanServiceRateTier } from '../../interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceUsageConfig as IPlanServiceUsageConfig, IContractLineServiceRateTier as IPlanServiceRateTier } from '../../interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class PlanServiceUsageConfig {

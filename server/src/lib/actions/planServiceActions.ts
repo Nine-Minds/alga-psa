@@ -1,16 +1,10 @@
 'use server';
 
 import { withTransaction } from '@alga-psa/shared/db';
-import { IPlanServiceRateTier, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceRateTier, IUserTypeRate, IContractLineServiceConfiguration, IContractLineServiceFixedConfig, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig, IContractLineServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IPlanService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
-import {
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+ 
 import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import * as planServiceConfigActions from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { createTenantKnex } from 'server/src/lib/db';
@@ -60,7 +54,7 @@ export async function addServiceToPlan(
   quantity?: number,
   customRate?: number,
   configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
-  typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>
+  typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -134,8 +128,8 @@ export async function addServiceToPlan(
   // If this is a Bucket configuration and overage_rate is not provided, set it to the service's default_rate
   if (configurationType === 'Bucket') {
     typeConfig = typeConfig || {};
-    if ((typeConfig as Partial<IPlanServiceBucketConfig>)?.overage_rate === undefined) {
-      (typeConfig as Partial<IPlanServiceBucketConfig>).overage_rate = service.default_rate;
+    if ((typeConfig as Partial<IContractLineServiceBucketConfig>)?.overage_rate === undefined) {
+      (typeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate = service.default_rate;
     }
   }
 
@@ -196,9 +190,9 @@ export async function updatePlanService(
   updates: {
     quantity?: number;
     customRate?: number;
-    typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>;
+    typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>;
   },
-  rateTiers?: IPlanServiceRateTier[] // Add rateTiers here
+  rateTiers?: IContractLineServiceRateTier[] // Add rateTiers here
 ): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -211,7 +205,7 @@ export async function updatePlanService(
   }
 
   // Update configuration
-  const baseUpdates: Partial<IPlanServiceConfiguration> = {};
+  const baseUpdates: Partial<IContractLineServiceConfiguration> = {};
   if (updates.quantity !== undefined) {
     baseUpdates.quantity = updates.quantity;
   }
@@ -264,8 +258,8 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
  */
 export async function getPlanServicesWithConfigurations(planId: string): Promise<{
   service: IService & { service_type_name?: string };
-  configuration: IPlanServiceConfiguration;
-  typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
+  configuration: IContractLineServiceConfiguration;
+  typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
   userTypeRates?: IUserTypeRate[]; // Add userTypeRates to the return type
 }[]> {
   const { knex: db, tenant } = await createTenantKnex();
@@ -275,7 +269,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   const configurations = await planServiceConfigActions.getConfigurationsForPlan(planId);
 
   // Get service details including service type name for each configuration
-  const result: Array<{ service: IService & { service_type_name?: string }; configuration: IPlanServiceConfiguration; typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null; userTypeRates?: IUserTypeRate[] }> = [];
+  const result: Array<{ service: IService & { service_type_name?: string }; configuration: IContractLineServiceConfiguration; typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null; userTypeRates?: IUserTypeRate[] }> = [];
   for (const config of configurations) {
     // Join service_catalog with service_types to get the name
     const service = await trx('service_catalog as sc')

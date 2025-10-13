@@ -26,9 +26,9 @@ import {
     upsertUserTypeRatesForConfig // Added import for user type rates action
 } from 'server/src/lib/actions/planServiceConfigurationActions';
 import {
-    IPlanServiceHourlyConfig, // Corrected interface name
-    IPlanServiceConfiguration, // Import base config type
-    IUserTypeRate // Keep this one
+    IContractLineServiceHourlyConfig,
+    IContractLineServiceConfiguration,
+    IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 // Removed incorrect import: import { IService } from 'server/src/interfaces/service.interfaces';
 // Removed incorrect import: import { isDeepStrictEqual } from 'util';
@@ -76,7 +76,7 @@ interface IPlanServiceWithHourlyConfig {
     config_id: string;       // ID of the specific configuration record
     service_id: string;      // ID of the service itself
     service?: IBillingService; // Use imported IService from billing.interfaces
-    hourly_config: IPlanServiceHourlyConfig | null; // Nullable initially - Null means not hourly configurable
+    hourly_config: IContractLineServiceHourlyConfig | null; // Nullable initially - Null means not hourly configurable
     user_type_rates?: IUserTypeRate[]; // Add user type rates here
     isHourlyConfigurable: boolean; // Flag to indicate if the service *should* be hourly
 }
@@ -182,13 +182,13 @@ export function HourlyPlanConfiguration({
           item.service.unit_of_measure?.toLowerCase().includes('hour');
         // Add || item.service.billing_method === 'hourly' if that method exists
 
-        let hourlyConfig: IPlanServiceHourlyConfig | null = null;
+        let hourlyConfig: IContractLineServiceHourlyConfig | null = null;
         let userTypeRatesForConfig: IUserTypeRate[] = []; // Initialize as empty array
 
         if (isHourlyService) {
           // If the service is hourly, check if existing config is hourly type
           if (item.configuration.configuration_type === 'Hourly' && item.typeConfig) {
-            hourlyConfig = item.typeConfig as IPlanServiceHourlyConfig;
+            hourlyConfig = item.typeConfig as IContractLineServiceHourlyConfig;
             // IMPORTANT: Assuming getPlanServicesWithConfigurations now returns userTypeRates
             // nested within the item or typeConfig when type is Hourly. Adjust access as needed.
             // Example: userTypeRatesForConfig = item.userTypeRates || [];
@@ -262,7 +262,7 @@ export function HourlyPlanConfiguration({
   // --- Updated Handlers for Service Config State ---
 
   // Handler for changes to hourly fields (rate, min time, rounding)
-  const handleHourlyFieldChange = useCallback((configId: string, field: keyof IPlanServiceHourlyConfig, value: any) => {
+  const handleHourlyFieldChange = useCallback((configId: string, field: keyof IContractLineServiceHourlyConfig, value: any) => {
     setServiceConfigs(prevConfigs =>
       prevConfigs.map(config => {
         if (config.config_id === configId && config.hourly_config) { // Ensure hourly_config exists
@@ -619,7 +619,7 @@ export function HourlyPlanConfiguration({
                                                     configId={serviceConfig.config_id} // Pass the config_id
                                                     config={serviceConfig.hourly_config} // Pass hourly fields
                                                     userTypeRates={serviceConfig.user_type_rates || []} // Pass user type rates for this config
-                                                    onHourlyFieldChange={(field: keyof IPlanServiceHourlyConfig, value: any) => handleHourlyFieldChange(serviceConfig.config_id, field, value)} // Pass specific handler with types
+                                                    onHourlyFieldChange={(field: keyof IContractLineServiceHourlyConfig, value: any) => handleHourlyFieldChange(serviceConfig.config_id, field, value)}
                                                     onUserTypeRatesChange={(newRates: IUserTypeRate[]) => handleUserTypeRatesChange(serviceConfig.config_id, newRates)} // Pass handler for rates with types
                                                     validationErrors={serviceValidationErrors[serviceConfig.config_id] || {}}
                                                     disabled={saving}

@@ -1,12 +1,12 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig,
-  IPlanServiceRateTier,
+  IContractLineServiceConfiguration,
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IContractLineServiceBucketConfig,
+  IContractLineServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import PlanServiceConfiguration from 'server/src/lib/models/planServiceConfiguration';
@@ -72,9 +72,9 @@ export class PlanServiceConfigurationService {
    * Get a plan service configuration with its type-specific configuration
    */
   async getConfigurationWithDetails(configId: string): Promise<{
-    baseConfig: IPlanServiceConfiguration;
-    typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
-    rateTiers?: IPlanServiceRateTier[];
+    baseConfig: IContractLineServiceConfiguration;
+    typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+    rateTiers?: IContractLineServiceRateTier[];
     // userTypeRates removed as they are plan-wide for Hourly plans now
   }> {
     await this.initKnex();
@@ -92,8 +92,8 @@ export class PlanServiceConfigurationService {
       // Proceed using the baseConfig.configuration_type as fallback
     }
     
-    let typeConfig: IPlanServiceBucketConfig | IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | null = null;
-    let rateTiers: IPlanServiceRateTier[] | undefined = undefined;
+    let typeConfig: IContractLineServiceBucketConfig | IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null = null;
+    let rateTiers: IContractLineServiceRateTier[] | undefined = undefined;
     // let userTypeRates = undefined; // Removed
 
     // If the plan is a Bucket plan, always fetch from bucket config table
@@ -117,7 +117,7 @@ export class PlanServiceConfigurationService {
           
         case 'Usage':
           typeConfig = await this.usageConfigModel.getByConfigId(configId);
-          if (typeConfig && (typeConfig as IPlanServiceUsageConfig).enable_tiered_pricing) {
+          if (typeConfig && (typeConfig as IContractLineServiceUsageConfig).enable_tiered_pricing) {
             rateTiers = await this.usageConfigModel.getRateTiers(configId);
           }
           break;
@@ -142,9 +142,9 @@ export class PlanServiceConfigurationService {
    * Create a new plan service configuration with its type-specific configuration
    */
   async createConfiguration(
-    baseConfig: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>,
-    typeConfig: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>,
-    rateTiers?: Omit<IPlanServiceRateTier, 'tier_id' | 'config_id' | 'created_at' | 'updated_at'>[],
+    baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>,
+    typeConfig: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>,
+    rateTiers?: Omit<IContractLineServiceRateTier, 'tier_id' | 'config_id' | 'created_at' | 'updated_at'>[],
     userTypeRates?: Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'created_at' | 'updated_at'>[]
   ): Promise<string> {
     await this.initKnex();
@@ -165,16 +165,16 @@ export class PlanServiceConfigurationService {
         case 'Fixed':
           await fixedConfigModel.create({
             config_id: configId,
-            base_rate: (typeConfig as IPlanServiceFixedConfig)?.base_rate ?? null,
-            // enable_proration: (typeConfig as IPlanServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
-            // billing_cycle_alignment: (typeConfig as IPlanServiceFixedConfig)?.billing_cycle_alignment ?? 'start', // Removed: Handled in contract_line_fixed_config
+            base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+            // enable_proration: (typeConfig as IContractLineServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
+            // billing_cycle_alignment: (typeConfig as IContractLineServiceFixedConfig)?.billing_cycle_alignment ?? 'start', // Removed: Handled in contract_line_fixed_config
             tenant: this.tenant
           });
           break;
           
         case 'Hourly':
           // Ensure typeConfig has the required fields for the new hourly structure
-          const hourlyData = typeConfig as Partial<IPlanServiceHourlyConfig>;
+          const hourlyData = typeConfig as Partial<IContractLineServiceHourlyConfig>;
           if (!hourlyData || typeof hourlyData.hourly_rate === 'undefined') {
              throw new Error('Hourly rate is required for Hourly configuration type.');
           }
@@ -193,9 +193,9 @@ export class PlanServiceConfigurationService {
         case 'Usage':
           await usageConfigModel.create({
             config_id: configId,
-            unit_of_measure: (typeConfig as IPlanServiceUsageConfig)?.unit_of_measure ?? 'Unit',
-            enable_tiered_pricing: (typeConfig as IPlanServiceUsageConfig)?.enable_tiered_pricing ?? false,
-            minimum_usage: (typeConfig as IPlanServiceUsageConfig)?.minimum_usage ?? 0
+            unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? 'Unit',
+            enable_tiered_pricing: (typeConfig as IContractLineServiceUsageConfig)?.enable_tiered_pricing ?? false,
+            minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0
           });
           
           // Add rate tiers if provided
@@ -221,11 +221,11 @@ export class PlanServiceConfigurationService {
 
           await bucketConfigModel.create({
             config_id: configId,
-            total_minutes: (typeConfig as IPlanServiceBucketConfig)?.total_minutes ?? 0,
-            billing_period: (typeConfig as IPlanServiceBucketConfig)?.billing_period ?? 'monthly',
+            total_minutes: (typeConfig as IContractLineServiceBucketConfig)?.total_minutes ?? 0,
+            billing_period: (typeConfig as IContractLineServiceBucketConfig)?.billing_period ?? 'monthly',
             // Use provided rate, else service default, else 0
-            overage_rate: (typeConfig as IPlanServiceBucketConfig)?.overage_rate ?? serviceDefaultRate ?? 0,
-            allow_rollover: (typeConfig as IPlanServiceBucketConfig)?.allow_rollover ?? false,
+            overage_rate: (typeConfig as IContractLineServiceBucketConfig)?.overage_rate ?? serviceDefaultRate ?? 0,
+            allow_rollover: (typeConfig as IContractLineServiceBucketConfig)?.allow_rollover ?? false,
             tenant: this.tenant
           });
           break;
@@ -240,9 +240,9 @@ export class PlanServiceConfigurationService {
    */
   async updateConfiguration(
     configId: string,
-    baseConfig?: Partial<IPlanServiceConfiguration>,
-    typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>,
-    rateTiers?: IPlanServiceRateTier[], // Add rateTiers parameter
+    baseConfig?: Partial<IContractLineServiceConfiguration>,
+    typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>,
+    rateTiers?: IContractLineServiceRateTier[], // Add rateTiers parameter
     // userTypeRates parameter removed as it's not used for hourly updates here
   ): Promise<boolean> {
     await this.initKnex();
@@ -271,9 +271,9 @@ export class PlanServiceConfigurationService {
       if (typeConfig) {
         switch (currentConfig.configuration_type) {
           case 'Fixed':
-            // Proration and alignment fields are no longer part of IPlanServiceFixedConfig
+            // Proration and alignment fields are no longer part of IContractLineServiceFixedConfig
             // The typeConfig passed in should already only contain allowed fields (like base_rate)
-            const fixedUpdateData = { ...typeConfig } as Partial<IPlanServiceFixedConfig>;
+            const fixedUpdateData = { ...typeConfig } as Partial<IContractLineServiceFixedConfig>;
             // delete fixedUpdateData.enable_proration; // Removed as property no longer exists
             // delete fixedUpdateData.billing_cycle_alignment; // Removed as property no longer exists
             // Only update if there are other fields left (e.g., base_rate)
@@ -284,8 +284,8 @@ export class PlanServiceConfigurationService {
             
           case 'Hourly':
             // Ensure only hourly-specific fields from the new schema are passed
-            const hourlyUpdateData = typeConfig as Partial<IPlanServiceHourlyConfig>;
-            const updatePayload: Partial<IPlanServiceHourlyConfig> = {};
+            const hourlyUpdateData = typeConfig as Partial<IContractLineServiceHourlyConfig>;
+            const updatePayload: Partial<IContractLineServiceHourlyConfig> = {};
             if (typeof hourlyUpdateData.hourly_rate !== 'undefined') {
               updatePayload.hourly_rate = hourlyUpdateData.hourly_rate;
             }
@@ -302,11 +302,11 @@ export class PlanServiceConfigurationService {
             break;
             
           case 'Usage':
-            await usageConfigModel.update(configId, typeConfig as Partial<IPlanServiceUsageConfig>);
+            await usageConfigModel.update(configId, typeConfig as Partial<IContractLineServiceUsageConfig>);
             break;
             
           case 'Bucket':
-            await bucketConfigModel.update(configId, typeConfig as Partial<IPlanServiceBucketConfig>);
+            await bucketConfigModel.update(configId, typeConfig as Partial<IContractLineServiceBucketConfig>);
             break;
         }
       }
@@ -382,7 +382,7 @@ export class PlanServiceConfigurationService {
   /**
    * Get all configurations for a plan
    */
-  async getConfigurationsForPlan(contractLineId: string): Promise<IPlanServiceConfiguration[]> {
+  async getConfigurationsForPlan(contractLineId: string): Promise<IContractLineServiceConfiguration[]> {
     await this.initKnex();
     
     return await this.planServiceConfigModel.getByPlanId(contractLineId);
@@ -391,7 +391,7 @@ export class PlanServiceConfigurationService {
   /**
    * Get configuration for a specific service within a plan
    */
-  async getConfigurationForService(contractLineId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
+  async getConfigurationForService(contractLineId: string, serviceId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
     
     return await this.planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
@@ -404,7 +404,7 @@ export class PlanServiceConfigurationService {
   async upsertPlanServiceBucketConfiguration(
     contractLineId: string,
     serviceId: string,
-    bucketConfigData: Partial<Omit<IPlanServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
+    bucketConfigData: Partial<Omit<IContractLineServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
   ): Promise<string> {
     await this.initKnex();
 
@@ -420,7 +420,7 @@ export class PlanServiceConfigurationService {
       if (!baseConfig) {
         // 2. Create base configuration if it doesn't exist, force type to Bucket
         console.log(`No base config found for contract line ${contractLineId}, service ${serviceId}. Creating one with type Bucket.`);
-        const newBaseConfigData: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+        const newBaseConfigData: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
           contract_line_id: contractLineId,
           service_id: serviceId,
           configuration_type: 'Bucket', // Force type to Bucket
@@ -452,7 +452,7 @@ export class PlanServiceConfigurationService {
         // If update didn't affect any rows (meaning it didn't exist), create it
         console.log(`No existing bucket config for ${configId}. Creating.`);
         // Ensure all required fields for creation are present, potentially using defaults
-        const createData: Omit<IPlanServiceBucketConfig, 'created_at' | 'updated_at'> = {
+        const createData: Omit<IContractLineServiceBucketConfig, 'created_at' | 'updated_at'> = {
             config_id: configId,
             total_minutes: bucketConfigData.total_minutes ?? 0, // Provide defaults if needed
             billing_period: bucketConfigData.billing_period ?? 'monthly',
@@ -477,7 +477,7 @@ export class PlanServiceConfigurationService {
   async upsertPlanServiceHourlyConfiguration(
     contractLineId: string,
     serviceId: string,
-    hourlyConfigData: Partial<Omit<IPlanServiceHourlyConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
+    hourlyConfigData: Partial<Omit<IContractLineServiceHourlyConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
   ): Promise<string> {
     await this.initKnex();
 
@@ -493,7 +493,7 @@ export class PlanServiceConfigurationService {
       if (!baseConfig) {
         // 2. Create base configuration if it doesn't exist, force type to Hourly
         console.log(`No base config found for contract line ${contractLineId}, service ${serviceId}. Creating one with type Hourly.`);
-        const newBaseConfigData: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+        const newBaseConfigData: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
           contract_line_id: contractLineId,
           service_id: serviceId,
           configuration_type: 'Hourly', // Force type to Hourly
@@ -527,7 +527,7 @@ export class PlanServiceConfigurationService {
         if (typeof hourlyConfigData.hourly_rate === 'undefined') {
           throw new Error('Hourly rate is required when creating hourly configuration.');
         }
-        const createData: Omit<IPlanServiceHourlyConfig, 'created_at' | 'updated_at'> = {
+        const createData: Omit<IContractLineServiceHourlyConfig, 'created_at' | 'updated_at'> = {
             config_id: configId,
             hourly_rate: hourlyConfigData.hourly_rate,
             minimum_billable_time: hourlyConfigData.minimum_billable_time ?? 15, // Provide defaults

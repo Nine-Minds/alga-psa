@@ -7,12 +7,12 @@ import { HourlyServiceConfigPanel } from './HourlyServiceConfigPanel';
 import { UsageServiceConfigPanel } from './UsageServiceConfigPanel';
 import { BucketServiceConfigPanel } from './BucketServiceConfigPanel';
 import { 
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig,
-  IPlanServiceRateTier,
+  IContractLineServiceConfiguration as IPlanServiceConfiguration,
+  IContractLineServiceFixedConfig as IPlanServiceFixedConfig,
+  IContractLineServiceHourlyConfig as IPlanServiceHourlyConfig,
+  IContractLineServiceUsageConfig as IPlanServiceUsageConfig,
+  IContractLineServiceBucketConfig as IPlanServiceBucketConfig,
+  IContractLineServiceRateTier as IPlanServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';

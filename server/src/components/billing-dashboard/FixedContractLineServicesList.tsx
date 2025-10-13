@@ -16,7 +16,7 @@ import { Tooltip } from 'server/src/components/ui/Tooltip'; // Corrected Tooltip
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractLine, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
-import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceConfiguration as IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import {
   getPlanServices,
   addServiceToPlan as addPlanService,

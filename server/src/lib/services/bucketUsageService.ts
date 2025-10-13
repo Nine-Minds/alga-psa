@@ -30,7 +30,7 @@ interface IBucketUsage {
 // Simplified interface for bucket config needed in this function
 // Local interface matching current DB schema.
 // Fields will be treated as minutes conceptually in calculations below.
-interface IPlanServiceBucketConfig {
+interface IContractLineServiceBucketConfigLocal {
     config_id: string;
     contract_line_id: string;
     service_catalog_id: string;
@@ -244,7 +244,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
             tenant: tenant,
             config_id: planServiceConfig.config_id,
         })
-        .first<IPlanServiceBucketConfig | undefined>();
+        .first<IContractLineServiceBucketConfigLocal | undefined>();
 
     if (!bucketConfig) {
         // A bucket usage record cannot exist without its configuration.

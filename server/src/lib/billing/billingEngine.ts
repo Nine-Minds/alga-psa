@@ -19,12 +19,12 @@ import {
   BillingCycleType
 } from 'server/src/interfaces/billing.interfaces';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig,
-  IPlanServiceRateTier
+  IContractLineServiceConfiguration,
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IContractLineServiceBucketConfig,
+  IContractLineServiceRateTier
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
@@ -1098,7 +1098,7 @@ export class BillingEngine {
 
     // Create a map of service IDs to their hourly configurations
     const serviceConfigMap = new Map<string, {
-      config: IPlanServiceConfiguration & IPlanServiceHourlyConfig,
+      config: IContractLineServiceConfiguration & IContractLineServiceHourlyConfig,
       userTypeRates: Map<string, number>
     }>();
 
@@ -1320,13 +1320,13 @@ export class BillingEngine {
 
     // Create a map of service IDs to their usage configurations and rate tiers
     const serviceConfigMap = new Map<string, {
-      config: IPlanServiceConfiguration & IPlanServiceUsageConfig,
-      rateTiers: IPlanServiceRateTier[]
+      config: IContractLineServiceConfiguration & IContractLineServiceUsageConfig,
+      rateTiers: IContractLineServiceRateTier[]
     }>();
 
     for (const config of usageConfigs) {
       // Get rate tiers if tiered pricing is enabled
-      let rateTiers: IPlanServiceRateTier[] = [];
+      let rateTiers: IContractLineServiceRateTier[] = [];
       if (config.enable_tiered_pricing) {
         rateTiers = await this.knex('contract_line_service_rate_tiers')
           .where({

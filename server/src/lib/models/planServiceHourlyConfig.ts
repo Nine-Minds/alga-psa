@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { getCurrentTenantId } from '../db';
-import { IPlanServiceHourlyConfig, IUserTypeRate } from '../../interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceHourlyConfig, IUserTypeRate } from '../../interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class PlanServiceHourlyConfig {
@@ -28,7 +28,7 @@ export default class PlanServiceHourlyConfig {
   /**
    * Get an hourly configuration by config ID
    */
-  async getByConfigId(configId: string): Promise<IPlanServiceHourlyConfig | null> {
+  async getByConfigId(configId: string): Promise<IContractLineServiceHourlyConfig | null> {
     const tenant = await this.getTenant();
     
     const config = await this.knex('contract_line_service_hourly_configs') // Corrected table name (plural)
@@ -44,7 +44,7 @@ export default class PlanServiceHourlyConfig {
   /**
    * Create a new hourly configuration
    */
-  async create(data: Omit<IPlanServiceHourlyConfig, 'created_at' | 'updated_at' | 'tenant'>): Promise<boolean> {
+  async create(data: Omit<IContractLineServiceHourlyConfig, 'created_at' | 'updated_at' | 'tenant'>): Promise<boolean> {
     const tenant = await this.getTenant();
     
     const now = new Date();
@@ -71,7 +71,7 @@ export default class PlanServiceHourlyConfig {
   /**
    * Update an existing hourly configuration
    */
-  async update(configId: string, data: Partial<IPlanServiceHourlyConfig>): Promise<boolean> {
+  async update(configId: string, data: Partial<IContractLineServiceHourlyConfig>): Promise<boolean> {
     const tenant = await this.getTenant();
     
     const updateData = {

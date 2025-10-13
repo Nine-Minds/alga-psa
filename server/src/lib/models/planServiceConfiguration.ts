@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
-import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class PlanServiceConfiguration {
@@ -29,7 +29,7 @@ export default class PlanServiceConfiguration {
   /**
    * Get a plan service configuration by ID
    */
-  async getById(configId: string): Promise<IPlanServiceConfiguration | null> {
+  async getById(configId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
     
     const config = await this.knex('contract_line_service_configuration')
@@ -45,7 +45,7 @@ export default class PlanServiceConfiguration {
   /**
    * Get all configurations for a plan
    */
-  async getByPlanId(planId: string): Promise<IPlanServiceConfiguration[]> {
+  async getByPlanId(planId: string): Promise<IContractLineServiceConfiguration[]> {
     await this.initKnex();
     
     const configs = await this.knex('contract_line_service_configuration')
@@ -61,7 +61,7 @@ export default class PlanServiceConfiguration {
   /**
    * Get configuration for a specific service within a plan
    */
-  async getByPlanAndServiceId(planId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
+  async getByPlanAndServiceId(planId: string, serviceId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
     
     const config = await this.knex('contract_line_service_configuration')
@@ -78,7 +78,7 @@ export default class PlanServiceConfiguration {
   /**
    * Create a new plan service configuration
    */
-  async create(data: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>): Promise<string> {
+  async create(data: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'>): Promise<string> {
     await this.initKnex();
     
     const configId = uuidv4();
@@ -102,7 +102,7 @@ export default class PlanServiceConfiguration {
   /**
    * Update an existing plan service configuration
    */
-  async update(configId: string, data: Partial<IPlanServiceConfiguration>): Promise<boolean> {
+  async update(configId: string, data: Partial<IContractLineServiceConfiguration>): Promise<boolean> {
     await this.initKnex();
     
     const updateData = {

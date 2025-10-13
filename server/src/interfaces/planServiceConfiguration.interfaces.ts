@@ -4,7 +4,7 @@ import { ISO8601String } from '../types/types.d';
 /**
  * Base interface for all plan service configurations
  */
-export interface IPlanServiceConfiguration extends TenantEntity {
+export interface IContractLineServiceConfiguration extends TenantEntity {
   config_id: string;
   contract_line_id: string;
   service_id: string;
@@ -20,7 +20,7 @@ export interface IPlanServiceConfiguration extends TenantEntity {
 /**
  * Interface for fixed price service configuration
  */
-export interface IPlanServiceFixedConfig extends TenantEntity {
+export interface IContractLineServiceFixedConfig extends TenantEntity {
   config_id: string;
   base_rate?: number | null; // Added base_rate field
   // enable_proration: boolean; // Removed: Moved to contract_line_fixed_config
@@ -33,7 +33,7 @@ export interface IPlanServiceFixedConfig extends TenantEntity {
 /**
  * Interface for hourly service configuration
  */
-export interface IPlanServiceHourlyConfig extends TenantEntity {
+export interface IContractLineServiceHourlyConfig extends TenantEntity {
   config_id: string;
   hourly_rate: number; // Added
   minimum_billable_time: number;
@@ -47,7 +47,7 @@ export interface IPlanServiceHourlyConfig extends TenantEntity {
 /**
  * Interface for usage-based service configuration
  */
-export interface IPlanServiceUsageConfig extends TenantEntity {
+export interface IContractLineServiceUsageConfig extends TenantEntity {
   config_id: string;
   unit_of_measure: string;
   enable_tiered_pricing: boolean;
@@ -61,7 +61,7 @@ export interface IPlanServiceUsageConfig extends TenantEntity {
 /**
  * Interface for bucket service configuration
  */
-export interface IPlanServiceBucketConfig extends TenantEntity {
+export interface IContractLineServiceBucketConfig extends TenantEntity {
   config_id: string;
   total_minutes: number;
   billing_period: string;
@@ -75,7 +75,7 @@ export interface IPlanServiceBucketConfig extends TenantEntity {
 /**
  * Interface for rate tiers used in tiered pricing
  */
-export interface IPlanServiceRateTier extends TenantEntity {
+export interface IContractLineServiceRateTier extends TenantEntity {
   tier_id: string;
   config_id: string;
   min_quantity: number;
@@ -89,7 +89,7 @@ export interface IPlanServiceRateTier extends TenantEntity {
 /**
  * Input interface for creating/updating rate tiers (omits DB-generated fields)
  */
-export interface IPlanServiceRateTierInput {
+export interface IContractLineServiceRateTierInput {
   min_quantity: number;
   max_quantity?: number | null; // Allow null for the last tier
   rate: number;
@@ -107,3 +107,8 @@ export interface IUserTypeRate extends TenantEntity {
   created_at: Date;
   updated_at: Date;
 }
+
+// -------------------------------------------------------------
+// Back-compat aliases (prefer IContractLineService* going forward)
+// -------------------------------------------------------------
+// (Old IPlanService* names retired.)

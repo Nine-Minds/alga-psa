@@ -9,7 +9,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Trash2, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { IPlanServiceUsageConfig, IPlanServiceRateTier } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceUsageConfig as IPlanServiceUsageConfig, IContractLineServiceRateTier as IPlanServiceRateTier } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 
 interface UsageServiceConfigPanelProps {
   configuration: Partial<IPlanServiceUsageConfig>;

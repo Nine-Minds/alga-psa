@@ -7,7 +7,7 @@ import { Card } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
-import { IPlanServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceHourlyConfig as IPlanServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { Trash2 } from 'lucide-react';
 
 interface HourlyServiceConfigPanelProps {

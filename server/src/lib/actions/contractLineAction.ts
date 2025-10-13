@@ -5,7 +5,7 @@ import { IContractLine, IContractLineFixedConfig } from 'server/src/interfaces/b
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex'; // Import Knex type
 import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
-import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
+import { IContractLineServiceFixedConfig as IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig'; // Added import for new model
 import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from './user-actions/userActions';

@@ -8,12 +8,12 @@ import { AlertCircle } from 'lucide-react';
 import { IPlanService, IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { updateContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig,
-  IPlanServiceRateTier,
+  IContractLineServiceConfiguration,
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IContractLineServiceBucketConfig,
+  IContractLineServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { updatePlanService } from 'server/src/lib/actions/planServiceActions';
@@ -66,7 +66,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   };
 
   // State for configuration
-  const [baseConfig, setBaseConfig] = useState<Partial<IPlanServiceConfiguration>>({
+  const [baseConfig, setBaseConfig] = useState<Partial<IContractLineServiceConfiguration>>({
     contract_line_id: planService.contract_line_id,
     service_id: planService.service_id,
     configuration_type: 'Fixed',
@@ -74,12 +74,12 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     custom_rate: planService.custom_rate
   });
 
-  const [typeConfig, setTypeConfig] = useState<Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig> | null>(null);
+  const [typeConfig, setTypeConfig] = useState<Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig> | null>(null);
   const [planFixedConfig, setPlanFixedConfig] = useState<Partial<IContractLineFixedConfig>>({
     enable_proration: false,
     billing_cycle_alignment: 'start'
   });
-  const [rateTiers, setRateTiers] = useState<IPlanServiceRateTier[]>([]);
+  const [rateTiers, setRateTiers] = useState<IContractLineServiceRateTier[]>([]);
   const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
 
   // Load existing configuration if available
@@ -163,13 +163,13 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     loadConfiguration();
   }, [planService, service]);
 
-  const handleConfigurationChange = (updates: Partial<IPlanServiceConfiguration>) => {
+  const handleConfigurationChange = (updates: Partial<IContractLineServiceConfiguration>) => {
     setBaseConfig(prev => ({ ...prev, ...updates }));
   };
 
   const handleTypeConfigChange = (
     type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
-    config: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>
+    config: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
   ) => {
     setTypeConfig(config);
   };
@@ -178,7 +178,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     setPlanFixedConfig(prev => ({ ...prev, ...updates }));
   };
 
-  const handleRateTiersChange = (tiers: IPlanServiceRateTier[]) => {
+  const handleRateTiersChange = (tiers: IContractLineServiceRateTier[]) => {
     setRateTiers(tiers);
   };
 

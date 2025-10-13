@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
-import { IPlanServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 
 export default class PlanServiceBucketConfig {
   private knex: Knex;
@@ -28,7 +28,7 @@ export default class PlanServiceBucketConfig {
   /**
    * Get a bucket configuration by config ID
    */
-  async getByConfigId(configId: string): Promise<IPlanServiceBucketConfig | null> {
+  async getByConfigId(configId: string): Promise<IContractLineServiceBucketConfig | null> {
     await this.initKnex();
     
     const config = await this.knex('contract_line_service_bucket_config')
@@ -44,7 +44,7 @@ export default class PlanServiceBucketConfig {
   /**
    * Create a new bucket configuration
    */
-  async create(data: Omit<IPlanServiceBucketConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
+  async create(data: Omit<IContractLineServiceBucketConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
     await this.initKnex();
     
     const now = new Date();
@@ -66,7 +66,7 @@ export default class PlanServiceBucketConfig {
   /**
    * Update an existing bucket configuration
    */
-  async update(configId: string, data: Partial<IPlanServiceBucketConfig>): Promise<boolean> {
+  async update(configId: string, data: Partial<IContractLineServiceBucketConfig>): Promise<boolean> {
     await this.initKnex();
     
     const updateData = {

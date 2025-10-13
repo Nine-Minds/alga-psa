@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
-import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 
 export default class PlanServiceFixedConfig {
   private knex: Knex;
@@ -28,7 +28,7 @@ export default class PlanServiceFixedConfig {
   /**
    * Get a fixed price configuration by config ID
    */
-  async getByConfigId(configId: string): Promise<IPlanServiceFixedConfig | null> {
+  async getByConfigId(configId: string): Promise<IContractLineServiceFixedConfig | null> {
     await this.initKnex();
     
     const config = await this.knex('contract_line_service_fixed_config')
@@ -44,7 +44,7 @@ export default class PlanServiceFixedConfig {
   /**
    * Create a new fixed price configuration
    */
-  async create(data: Omit<IPlanServiceFixedConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
+  async create(data: Omit<IContractLineServiceFixedConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
     await this.initKnex();
     
     const now = new Date();
@@ -65,7 +65,7 @@ export default class PlanServiceFixedConfig {
   /**
    * Update an existing fixed price configuration
    */
-  async update(configId: string, data: Partial<IPlanServiceFixedConfig>): Promise<boolean> {
+  async update(configId: string, data: Partial<IContractLineServiceFixedConfig>): Promise<boolean> {
     await this.initKnex();
     
     const updateData = {
