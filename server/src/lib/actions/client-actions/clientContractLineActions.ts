@@ -18,7 +18,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
 
   if (!planInfo) {
     console.warn(`Client contract line ${clientContractLineId} not found for tenant ${tenant}`);
-    return null; // No plan assignment found
+    return null; // No contract line assignment found
   }
 
   const { client_id, contract_line_id } = planInfo;
@@ -249,7 +249,7 @@ export async function removeClientContractLine(clientContractLineId: string): Pr
 
         if (Temporal.PlainDate.compare(nowPlainDate, latestInvoicedPlainDate) < 0) {
             throw new Error(
-                `Cannot deactivate plan assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
+                `Cannot deactivate contract line assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
             );
         }
     }
@@ -321,14 +321,14 @@ export async function editClientContractLine(clientContractLineId: string, updat
         // If an end_date IS provided along with is_active=false, the end_date check below handles it.
         if (proposedIsActive === false && !proposedEndDate && Temporal.PlainDate.compare(nowPlainDate, latestInvoicedPlainDate) < 0) {
              throw new Error(
-                `Cannot deactivate plan assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date.`
+                `Cannot deactivate contract line assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date.`
               );
         }
 
         // Check if trying to set an end date before the latest invoice date
         if (proposedEndDate && Temporal.PlainDate.compare(proposedEndDate, latestInvoicedPlainDate) < 0) {
             throw new Error(
-            `Cannot set end date to ${proposedEndDate.toLocaleString()} as the plan has been invoiced through ${latestInvoicedPlainDate.toLocaleString()}. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
+            `Cannot set end date to ${proposedEndDate.toLocaleString()} as the contract line has been invoiced through ${latestInvoicedPlainDate.toLocaleString()}. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
             );
         }
     }

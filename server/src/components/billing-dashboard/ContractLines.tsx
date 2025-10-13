@@ -95,8 +95,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       setPlanServices(services);
       setError(null);
     } catch (error) {
-      console.error('Error fetching plan services:', error);
-      setError('Failed to fetch plan services');
+      console.error('Error fetching contract line services:', error);
+      setError('Failed to fetch contract line services');
     }
   };
 
@@ -123,8 +123,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         setError(null);
       }
     } catch (error) {
-      console.error('Error adding plan service:', error);
-      setError('Failed to add plan service');
+      console.error('Error adding contract line service:', error);
+      setError('Failed to add contract line service');
     }
   };
 
@@ -135,8 +135,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       fetchPlanServices(selectedPlan);
       setError(null);
     } catch (error) {
-      console.error('Error updating plan service:', error);
-      setError('Failed to update plan service');
+      console.error('Error updating contract line service:', error);
+      setError('Failed to update contract line service');
     }
   };
 
@@ -147,8 +147,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       fetchPlanServices(selectedPlan);
       setError(null);
     } catch (error) {
-      console.error('Error removing plan service:', error);
-      setError('Failed to remove plan service');
+      console.error('Error removing contract line service:', error);
+      setError('Failed to remove contract line service');
     }
   };
 

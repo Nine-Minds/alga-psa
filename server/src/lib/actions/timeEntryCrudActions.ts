@@ -552,7 +552,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
             .first('cl.contract_line_type'); // Select contract_line_type from contract_lines table
 
           if (planInfo && planInfo.contract_line_type === 'Bucket') {
-            console.log(`Time entry ${resultingEntry.entry_id} linked to Bucket plan ${currentPlanId}. Updating usage.`);
+            console.log(`Time entry ${resultingEntry.entry_id} linked to Bucket contract line ${currentPlanId}. Updating usage.`);
 
             const newDuration = resultingEntry.billable_duration || 0;
             // Calculate delta in MINUTES first
@@ -805,7 +805,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
             .first('cl.contract_line_type');
 
           if (planInfo && planInfo.contract_line_type === 'Bucket') {
-            console.log(`Time entry ${entryId} linked to Bucket plan ${currentPlanId}. Decrementing usage.`);
+            console.log(`Time entry ${entryId} linked to Bucket contract line ${currentPlanId}. Decrementing usage.`);
             const minutesDelta = -(timeEntry.billable_duration || 0); // Negative delta
 
             if (minutesDelta !== 0) {

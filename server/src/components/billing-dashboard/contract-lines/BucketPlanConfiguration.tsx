@@ -293,19 +293,19 @@ export function BucketPlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Bucket) - Service Configurations</CardTitle>
+          <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Bucket) - Service Configurations</CardTitle>
           {plan && (
             <ContractLineDialog
               editingPlan={plan}
               onPlanAdded={() => fetchAndInitializeConfigs()}
-              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
               allServiceTypes={[]}
             />
           )}
         </CardHeader>
         <CardContent>
           {planServices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No services are currently configured for this bucket plan.</p>
+            <p className="text-sm text-muted-foreground">No services are currently configured for this bucket contract line.</p>
           ) : (
             <RadixAccordion.Root type="multiple" className="w-full space-y-2">
               {planServices.map(({ service }) => {
@@ -354,7 +354,7 @@ export function BucketPlanConfiguration({
       {/* Services List */}
       <Card>
         <CardHeader>
-          <CardTitle>Services Included in Plan</CardTitle>
+          <CardTitle>Services Included in Contract Line</CardTitle>
         </CardHeader>
         <CardContent>
           <GenericPlanServicesList

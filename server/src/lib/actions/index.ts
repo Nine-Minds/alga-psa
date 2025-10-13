@@ -1,5 +1,5 @@
 // Export all actions
-export * from './planServiceConfigurationActions';
+export * from './contractLineServiceConfigurationActions';
 export * from './planServiceActions';
 export * from './contractActions';
 export * from './contractLineAction';

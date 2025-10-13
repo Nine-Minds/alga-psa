@@ -18,7 +18,7 @@ interface PlanTypeSelectorProps {
 }
 
 const PLAN_TYPE_DESCRIPTIONS: Record<PlanType, string> = {
-  'Fixed': 'A fixed-price plan with consistent billing regardless of usage. Ideal for predictable services.',
+  'Fixed': 'A fixed-price contract line with consistent billing regardless of usage. Ideal for predictable services.',
   'Bucket': 'Pre-purchased hours that can be used over time. Good for clients who need flexibility with a budget cap.',
   'Hourly': 'Time-based billing with configurable rates. Best for variable workloads billed by time spent.',
   'Usage': 'Usage-based billing with tiered pricing options. Perfect for services measured by consumption.'
@@ -54,7 +54,7 @@ export function PlanTypeSelector({
   if (showCards) {
     return (
       <div className={className}>
-        <label className="block mb-2 text-sm font-medium text-gray-700">Plan Type</label>
+        <label className="block mb-2 text-sm font-medium text-gray-700">Contract Line Type</label>
         <div className="grid grid-cols-2 gap-4 mt-2"> {/* Use gap-4 like the original proposal */}
           {(Object.keys(PLAN_TYPE_DESCRIPTIONS) as PlanType[]).map((planType) => {
             const IconComponent = PLAN_TYPE_ICONS[planType];
@@ -106,7 +106,7 @@ export function PlanTypeSelector({
   // Otherwise, render the dropdown selector
   return (
     <div className={className}>
-      <label className="block mb-2 text-sm font-medium text-gray-700">Plan Type</label>
+      <label className="block mb-2 text-sm font-medium text-gray-700">Contract Line Type</label>
       <CustomSelect
         id="plan-type-selector"
         options={PLAN_TYPE_OPTIONS.map(option => ({
@@ -117,7 +117,7 @@ export function PlanTypeSelector({
         }))}
         onValueChange={handlePlanTypeChange}
         value={value}
-        placeholder="Select plan type"
+        placeholder="Select contract line type"
         className="w-full"
         disabled={disabled}
       />

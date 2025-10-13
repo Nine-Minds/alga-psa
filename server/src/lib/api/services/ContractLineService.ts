@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
 import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
+import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 // Import schema types for validation

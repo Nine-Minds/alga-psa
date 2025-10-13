@@ -298,7 +298,7 @@ export function HourlyPlanConfiguration({
     // Note: Service validation is now primarily handled within the upsert action via Zod.
 
     if (hasPlanErrors) { // Only check plan errors client-side for now
-        setSaveError("Cannot save, plan-wide validation errors exist.");
+        setSaveError("Cannot save, contract line-wide validation errors exist.");
         setSaving(false);
         return;
     }
@@ -461,7 +461,7 @@ export function HourlyPlanConfiguration({
   }
 
    if (!plan) {
-      return <div className="p-4">Plan not found or invalid type.</div>;
+      return <div className="p-4">Contract line not found or invalid type.</div>;
   }
 
   const hasUnsavedPlanChanges = !isEqual(
@@ -486,12 +486,12 @@ export function HourlyPlanConfiguration({
                 </Alert>
             )}
 
-            {/* Plan Wide Settings (Overtime, After-Hours) */}
+            {/* Contract Line Wide Settings (Overtime, After-Hours) */}
             <Accordion.Root type="single" collapsible value={isPlanWideSettingsOpen ? "plan-wide-settings" : ""} onValueChange={(value) => setIsPlanWideSettingsOpen(value === "plan-wide-settings")}>
                 <Accordion.Item value="plan-wide-settings" className="border rounded-md overflow-hidden">
                     <Accordion.Header className="flex">
                          <Accordion.Trigger className="flex flex-1 items-center justify-between p-4 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
-                            Plan-Wide Hourly Settings (Overtime, After-Hours)
+                            Contract Line Hourly Settings (Overtime, After-Hours)
                             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
                         </Accordion.Trigger>
                     </Accordion.Header>
@@ -512,7 +512,7 @@ export function HourlyPlanConfiguration({
                                             </Button>
                                         </Tooltip.Trigger>
                                          <Tooltip.Content side="top" className="max-w-xs bg-gray-800 text-white p-2 rounded shadow-lg text-sm z-50">
-                                            <p>Apply a different rate when total hours worked within the plan's billing period exceed a specified threshold.</p>
+                                            <p>Apply a different rate when total hours worked within the contract line's billing period exceed a specified threshold.</p>
                                         </Tooltip.Content>
                                     </Tooltip.Root>
                                 </Label>
@@ -588,12 +588,12 @@ export function HourlyPlanConfiguration({
             {/* Service Specific Settings */}
             <Card>
                 <CardHeader className="flex items-center justify-between">
-                    <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
+                    <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
                     {plan && (
                         <ContractLineDialog
                             editingPlan={plan}
                             onPlanAdded={() => fetchPlanData()}
-                            triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+                            triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
                             allServiceTypes={[]}
                         />
                     )}
@@ -635,7 +635,7 @@ export function HourlyPlanConfiguration({
                             ))}
                         </Accordion.Root>
                     ) : (
-                        <p className="text-muted-foreground">No services are currently associated with this plan.</p>
+                        <p className="text-muted-foreground">No services are currently associated with this contract line.</p>
                     )}
                 </CardContent>
             </Card>
@@ -651,10 +651,10 @@ export function HourlyPlanConfiguration({
                 </Button>
             </div>
 
-            {/* Add Services to Plan */}
+            {/* Add Services to Contract Line */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Plan Services</CardTitle>
+                    <CardTitle>Manage Contract Line Services</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />

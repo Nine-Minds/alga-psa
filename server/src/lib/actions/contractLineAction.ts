@@ -4,7 +4,7 @@ import ContractLine from 'server/src/lib/models/contractLine';
 import { IContractLine, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces'; // Added IContractLineFixedConfig
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex'; // Import Knex type
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
+import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig'; // Added import for new model
 import { withTransaction } from '@alga-psa/shared/db';

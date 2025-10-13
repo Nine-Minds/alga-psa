@@ -11,8 +11,8 @@ import {
   IPlanServiceUsageConfig,
   IPlanServiceBucketConfig
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
-import * as planServiceConfigActions from 'server/src/lib/actions/planServiceConfigurationActions';
+import { ContractLineServiceConfigurationService as PlanServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import * as planServiceConfigActions from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 

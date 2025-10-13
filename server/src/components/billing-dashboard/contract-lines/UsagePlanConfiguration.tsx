@@ -406,18 +406,18 @@ export function UsagePlanConfiguration({
           <div className={`space-y-6 ${className}`}>
               <Card>
                   <CardHeader className="flex items-center justify-between">
-                      <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Usage)</CardTitle>
+                      <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Usage)</CardTitle>
                       {plan && (
                         <ContractLineDialog
                           editingPlan={plan}
                           onPlanAdded={() => fetchPlanData()}
-                          triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+                          triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
                           allServiceTypes={[]}
                         />
                       )}
                   </CardHeader>
                   <CardContent>
-                      <p className="text-muted-foreground mb-4">No services are currently associated with this usage plan. Add services below to configure their pricing.</p>
+                      <p className="text-muted-foreground mb-4">No services are currently associated with this contract line. Add services below to configure their pricing.</p>
                       {/* Keep the GenericPlanServicesList to allow adding services */}
                       <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} />
                   </CardContent>
@@ -430,12 +430,12 @@ export function UsagePlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Usage) - Service Pricing</CardTitle>
+          <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Usage) - Service Pricing</CardTitle>
           {plan && (
             <ContractLineDialog
               editingPlan={plan}
               onPlanAdded={() => fetchPlanData()}
-              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
               allServiceTypes={[]}
             />
           )}
@@ -518,7 +518,7 @@ export function UsagePlanConfiguration({
       {/* Keep Services List for adding/removing services */}
        <Card>
            <CardHeader>
-               <CardTitle>Manage Plan Services</CardTitle>
+            <CardTitle>Manage Contract Line Services</CardTitle>
            </CardHeader>
            <CardContent>
                <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />

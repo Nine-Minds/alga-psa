@@ -61,7 +61,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
         .first('contract_line_type');
 
       if (plan && plan.contract_line_type === 'Bucket') {
-        console.log(`Usage record ${record.usage_id} linked to Bucket plan ${record.contract_line_id}. Updating usage.`);
+        console.log(`Usage record ${record.usage_id} linked to Bucket contract line ${record.contract_line_id}. Updating usage.`);
 
         // Assuming 1 quantity = 1 hour/unit for buckets
         const hoursDelta = record.quantity || 0;
@@ -172,7 +172,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
         .first('contract_line_type');
 
       if (plan && plan.contract_line_type === 'Bucket') {
-        console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket plan ${updatedRecord.contract_line_id}. Updating usage.`);
+        console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket contract line ${updatedRecord.contract_line_id}. Updating usage.`);
 
         const newQuantity = updatedRecord.quantity || 0;
         const quantityDelta = newQuantity - oldQuantity;
@@ -236,7 +236,7 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
         .first('contract_line_type');
 
       if (plan && plan.contract_line_type === 'Bucket') {
-        console.log(`Usage record ${usageId} linked to Bucket plan ${recordToDelete.contract_line_id}. Updating usage before delete.`);
+        console.log(`Usage record ${usageId} linked to Bucket contract line ${recordToDelete.contract_line_id}. Updating usage before delete.`);
 
         const quantity = recordToDelete.quantity || 0;
         // Calculate NEGATIVE delta assuming 1 quantity = 1 hour/unit

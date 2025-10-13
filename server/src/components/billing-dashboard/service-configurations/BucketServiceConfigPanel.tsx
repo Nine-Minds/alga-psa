@@ -102,7 +102,7 @@ export function BucketServiceConfigPanel({
               <p className="text-sm text-red-500 mt-1">{validationErrors.totalMinutes}</p>
             ) : (
               <p className="text-sm text-gray-500 mt-1">
-                The total number of minutes included in this bucket plan
+                The total number of minutes included in this bucket contract line
               </p>
             )}
           </div>
