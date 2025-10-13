@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/contract-lines/BucketPlanConfiguration.tsx
+// server/src/components/billing-dashboard/contract-lines/BucketContractLineConfiguration.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';

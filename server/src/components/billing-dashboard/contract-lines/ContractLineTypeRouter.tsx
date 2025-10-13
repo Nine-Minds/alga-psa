@@ -11,8 +11,8 @@ import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 // Import the specialized components
 import { FixedPlanConfiguration } from './FixedContractLineConfiguration';
 import { HourlyPlanConfiguration } from './HourlyContractLineConfiguration';
-import { UsagePlanConfiguration } from './UsagePlanConfiguration';
-import { BucketPlanConfiguration } from './BucketPlanConfiguration';
+import { UsagePlanConfiguration } from './UsageContractLineConfiguration';
+import { BucketPlanConfiguration } from './BucketContractLineConfiguration';
 
 interface PlanTypeRouterProps {
   contractLineId: string;
