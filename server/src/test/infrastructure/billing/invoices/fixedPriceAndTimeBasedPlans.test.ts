@@ -31,7 +31,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Contract Lin
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_plans',
+        'bucket_contract_lines',
         'tax_rates',
         'client_tax_settings',
         'next_number'

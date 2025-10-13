@@ -6,7 +6,7 @@ import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
-import type { IClient } from '../../interfaces/client.interfaces';
+import type { IClient } from '../../../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { createTestDate, createTestDateISO } from '../../../../../test-utils/dateUtils';
@@ -40,7 +40,7 @@ describe('Credit Expiration Effects Tests', () => {
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_plans',
+        'bucket_contract_lines',
         'bucket_usage',
         'tax_rates',
         'client_tax_settings',
