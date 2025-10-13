@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { getCurrentTenantId } from '../db';
-import { IContractLineServiceHourlyConfig, IUserTypeRate } from '../../interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceHourlyConfig, IUserTypeRate } from '../../interfaces/contractLineServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class ContractLineServiceHourlyConfig {
@@ -54,7 +54,7 @@ export default class ContractLineServiceHourlyConfig {
       hourly_rate: data.hourly_rate, // Add hourly_rate back
       minimum_billable_time: data.minimum_billable_time,
       round_up_to_nearest: data.round_up_to_nearest,
-      // Removed plan-wide fields that are now in contract_lines table:
+      // Removed contract line-wide fields that are now in contract_lines table:
       // enable_overtime: data.enable_overtime,
       // overtime_rate: data.overtime_rate,
       // overtime_threshold: data.overtime_threshold,

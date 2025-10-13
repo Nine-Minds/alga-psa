@@ -19,7 +19,7 @@ import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
 import Contracts from './contracts/Contracts';
 import ContractDetail from './contracts/ContractDetail';
-import { PlanTypeRouter } from './contract-lines/ContractLineTypeRouter';
+import { ContractLineTypeRouter } from './contract-lines/ContractLineTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
@@ -57,7 +57,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
       // Don't include subtab in URL for non-invoicing tabs
     }
 
-    router.push(`/msp/billing?${params.toString()}`);
+    // If we're on a contract line detail page and switching tabs, go back to the main billing dashboard
+    if (searchParams?.has('contractLineId')) {
+      router.push(`/msp/billing?${params.toString()}`);
+    } else {
+      router.push(`/msp/billing?${params.toString()}`);
+    }
   };
 
   // Get current tab from URL or default to overview
@@ -127,7 +132,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
                 &larr; Back to Contract Lines List {/* Using HTML entity for left arrow */}
               </BackNav>
               <div className="mt-4"> {/* Add margin top for spacing */}
-                <PlanTypeRouter contractLineId={searchParams.get('contractLineId')!} />
+                <ContractLineTypeRouter contractLineId={searchParams.get('contractLineId')!} />
               </div>
             </>
           ) : (

@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
-import { IContractLineServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceBucketConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 
 export default class ContractLineServiceBucketConfig {
   private knex: Knex;

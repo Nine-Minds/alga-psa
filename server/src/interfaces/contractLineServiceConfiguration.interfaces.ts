@@ -2,7 +2,7 @@ import { TenantEntity } from './index';
 import { ISO8601String } from '../types/types.d';
 
 /**
- * Base interface for all plan service configurations
+ * Base interface for all contract line service configurations
  */
 export interface IContractLineServiceConfiguration extends TenantEntity {
   config_id: string;
@@ -38,7 +38,7 @@ export interface IContractLineServiceHourlyConfig extends TenantEntity {
   hourly_rate: number; // Added
   minimum_billable_time: number;
   round_up_to_nearest: number;
-  // Removed plan-wide fields: enable_overtime, overtime_rate, overtime_threshold, enable_after_hours_rate, after_hours_multiplier
+  // Removed contract-line-wide fields: enable_overtime, overtime_rate, overtime_threshold, enable_after_hours_rate, after_hours_multiplier
   tenant: string;
   created_at: Date;
   updated_at: Date;

@@ -9,25 +9,25 @@ import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
-export interface EditPlanServiceQuantityDialogProps {
+export interface EditContractLineServiceQuantityDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  planId: string;
+  contractLineId: string;
   serviceId: string;
   serviceName: string;
   currentQuantity: number;
-  onSave: (planId: string, serviceId: string, newQuantity: number) => Promise<void>;
+  onSave: (contractLineId: string, serviceId: string, newQuantity: number) => Promise<void>;
 }
 
-export function EditPlanServiceQuantityDialog({
+export function EditContractLineServiceQuantityDialog({
   isOpen,
   onOpenChange,
-  planId,
+  contractLineId,
   serviceId,
   serviceName,
   currentQuantity,
   onSave,
-}: EditPlanServiceQuantityDialogProps) {
+}: EditContractLineServiceQuantityDialogProps) {
   const [quantity, setQuantity] = useState<string>(String(currentQuantity));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +86,7 @@ export function EditPlanServiceQuantityDialog({
 
     setIsSaving(true);
     try {
-      await onSave(planId, serviceId, validatedQuantity);
+      await onSave(contractLineId, serviceId, validatedQuantity);
       onOpenChange(false); // Close dialog on successful save
     } catch (err: any) {
       console.error('Error saving quantity:', err);
@@ -109,7 +109,7 @@ export function EditPlanServiceQuantityDialog({
     <Dialog
       isOpen={isOpen} 
       onClose={handleDialogClose} 
-      id="edit-plan-service-quantity-dialog" 
+      id="edit-contract-line-service-quantity-dialog" 
       className="sm:max-w-[425px]" 
       title={`Edit Quantity for ${serviceName}`}
     >

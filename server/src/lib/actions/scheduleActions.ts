@@ -32,7 +32,7 @@ export async function getScheduleEntries(
     // Check for basic read permission
     const canRead = userPermissions.includes('user_schedule:read');
     if (!canRead) {
-        // Return empty list if no read permission, as per plan implication
+        // Return empty list if no read permission, as per contract line implication
         console.warn(`User ${currentUser.user_id} lacks user_schedule:read permission.`);
         return { success: true, entries: [] };
         // Alternative: return { success: false, error: 'Permission denied to view schedule entries.' };

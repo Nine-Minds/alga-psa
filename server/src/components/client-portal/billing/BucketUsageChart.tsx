@@ -57,7 +57,7 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
           </p>
         </div>
         <div className="flex items-center">
-          <span className="text-sm text-gray-500 mr-1">Bucket Plan</span>
+          <span className="text-sm text-gray-500 mr-1">Bucket Contract Line</span>
           <Info className="h-4 w-4 text-gray-400" />
         </div>
       </div>

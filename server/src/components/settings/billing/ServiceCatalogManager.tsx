@@ -30,7 +30,7 @@ import {
 
 // Removed old SERVICE_TYPE_OPTIONS
 
-// Define billing method options (as per plan)
+// Define billing method options (as per contract line)
 const BILLING_METHOD_OPTIONS = [
   { value: 'fixed', label: 'Fixed Price' },
   { value: 'per_unit', label: 'Per Unit' }

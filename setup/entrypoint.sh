@@ -27,9 +27,26 @@ wait_for_postgres() {
     # Fall back to DB_HOST if not set, then to 'postgres'
     local PG_ADMIN_HOST=${DB_HOST_ADMIN:-${DB_HOST:-postgres}}
     local PG_ADMIN_PORT=${DB_PORT_ADMIN:-${DB_PORT:-5432}}
+    # If host points at PgBouncer, prefer talking to Postgres directly for setup
+    if [ "$PG_ADMIN_HOST" = "pgbouncer" ]; then
+        log "Detected DB_HOST pointing to PgBouncer; using direct Postgres for admin ops"
+        PG_ADMIN_HOST=postgres
+        PG_ADMIN_PORT=5432
+        export DB_HOST_ADMIN=$PG_ADMIN_HOST
+        export DB_PORT_ADMIN=$PG_ADMIN_PORT
+    fi
     local PG_PASSWORD=$(cat /run/secrets/postgres_password | tr -d '[:space:]')
     set +e  # Temporarily disable exit on error for the until loop
     until PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -c '\q' 2>/dev/null; do
+        # Try direct Postgres as a smart fallback if PgBouncer is the target and not responding
+        if [ "$PG_ADMIN_HOST" != "postgres" ] && PGPASSWORD="${PG_PASSWORD}" pg_isready -h postgres -p 5432 -U postgres >/dev/null 2>&1; then
+            log "PgBouncer not ready but Postgres is reachable; switching admin host to Postgres"
+            PG_ADMIN_HOST=postgres
+            PG_ADMIN_PORT=5432
+            export DB_HOST_ADMIN=$PG_ADMIN_HOST
+            export DB_PORT_ADMIN=$PG_ADMIN_PORT
+            continue
+        fi
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done

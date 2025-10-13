@@ -107,7 +107,7 @@
       "name": "contracts"
     },
     {
-      "name": "plan-templates"
+      "name": "contract-line-templates"
     },
     {
       "name": "projects"
@@ -13978,7 +13978,7 @@
         }
       }
     },
-    "/api/v1/contracts/{bundleId}/plans": {
+    "/api/v1/contracts/{contractId}/contract-lines": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
@@ -14035,7 +14035,7 @@
         }
       }
     },
-    "/api/v1/contracts/{bundleId}/plans/{planId}": {
+    "/api/v1/contracts/{contractId}/contract-lines/{contractLineId}": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
@@ -14080,12 +14080,12 @@
         }
       }
     },
-    "/api/v1/plan-templates": {
+    "/api/v1/contract-lines-templates": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "plan-templates"
+          "contract-lines-templates"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -14137,12 +14137,12 @@
         }
       }
     },
-    "/api/v1/plan-templates/{id}/create-plan": {
+    "/api/v1/contract-line-templates/{id}/create-contract-line": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "plan-templates"
+          "contract-line-templates"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",

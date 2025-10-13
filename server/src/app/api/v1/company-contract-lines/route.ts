@@ -1,7 +1,7 @@
 /**
  * Client Contract Lines API Routes (DEPRECATED)
  * GET /api/v1/client-contract-lines - List client contract lines
- * POST /api/v1/client-contract-lines - Assign plan to client
+ * POST /api/v1/client-contract-lines - Assign contract line to client
  *
  * @deprecated This endpoint is deprecated. Use /api/v1/client-contract-lines instead.
  *
@@ -16,4 +16,4 @@ export const dynamic = 'force-dynamic';
 const controller = new ApiContractLineController();
 
 export const GET = controller.listClientContractLines();
-export const POST = controller.assignPlanToClient();
+export const POST = controller.assignContractLineToClient();

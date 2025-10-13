@@ -20,14 +20,10 @@ tags:
   - name: contract-lines
   - name: categories
   - name: chat
-<<<<<<< HEAD
-  - name: clients
-  - name: client-billing-plans
-  - name: clients
-=======
   - name: companies
   - name: client-contract-lines
->>>>>>> billing_to_contracts_overhaul
+  - name: companies
+  - name: client-contract-lines
   - name: contacts
   - name: documents
   - name: email
@@ -47,7 +43,7 @@ tags:
   - name: permission-checks
   - name: permissions
   - name: contracts
-  - name: plan-templates
+  - name: contract-line-templates
   - name: projects
   - name: provisioning
   - name: quickbooks
@@ -3833,12 +3829,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -3868,12 +3860,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -3912,12 +3900,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -3947,12 +3931,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -3990,12 +3970,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4034,12 +4010,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4078,12 +4050,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4122,12 +4090,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4158,12 +4122,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4194,12 +4154,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4230,11 +4186,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/billing-plans/{id}":
-=======
   /api/v1/contract-lines/{id}:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contract-lines/{id}:
     delete:
       summary: DELETE v1
       description: This operation was generated automatically from the route
@@ -4242,12 +4195,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4277,12 +4226,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4312,12 +4257,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4348,11 +4289,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/billing-plans/{id}/activation":
-=======
   /api/v1/contract-lines/{id}/activation:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contract-lines/{id}/activation:
     put:
       summary: PUT v1
       description: This operation was generated automatically from the route
@@ -4360,12 +4298,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4396,11 +4330,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/billing-plans/{id}/analytics":
-=======
   /api/v1/contract-lines/{id}/analytics:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contract-lines/{id}/analytics:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
@@ -4408,12 +4339,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4436,11 +4363,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/billing-plans/{id}/copy":
-=======
   /api/v1/contract-lines/{id}/copy:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contract-lines/{id}/copy:
     post:
       summary: POST v1
       description: This operation was generated automatically from the route
@@ -4448,12 +4372,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4484,11 +4404,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/billing-plans/{id}/fixed-config":
-=======
   /api/v1/contract-lines/{id}/fixed-config:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contract-lines/{id}/fixed-config:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
@@ -4496,12 +4413,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4531,12 +4444,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4567,11 +4476,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/billing-plans/{id}/services":
-=======
   /api/v1/contract-lines/{id}/services:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contract-lines/{id}/services:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
@@ -4579,12 +4485,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4614,12 +4516,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4650,11 +4548,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/billing-plans/{id}/services/{serviceId}":
-=======
   /api/v1/contract-lines/{id}/services/{serviceId}:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contract-lines/{id}/services/{serviceId}:
     delete:
       summary: DELETE v1
       description: This operation was generated automatically from the route
@@ -4662,12 +4557,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4697,12 +4588,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4732,12 +4619,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4768,11 +4651,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/billing-plans/{id}/usage-metrics":
-=======
   /api/v1/contract-lines/{id}/usage-metrics:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contract-lines/{id}/usage-metrics:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
@@ -4780,12 +4660,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - billing-plans
-      security: null
-=======
         - contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -5598,12 +5474,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - client-billing-plans
-      security: null
-=======
         - client-contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - client-contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -5633,12 +5505,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - client-billing-plans
-      security: null
-=======
         - client-contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - client-contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -5669,11 +5537,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/client-billing-plans/{id}":
-=======
   /api/v1/client-contract-lines/{id}:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/client-contract-lines/{id}:
     delete:
       summary: DELETE v1
       description: This operation was generated automatically from the route
@@ -5681,12 +5546,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - client-billing-plans
-      security: null
-=======
         - client-contract-lines
->>>>>>> billing_to_contracts_overhaul
+        - client-contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -10157,12 +10018,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - plan-bundles
-      security: null
-=======
         - contracts
->>>>>>> billing_to_contracts_overhaul
+        - contracts
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -10192,12 +10049,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - plan-bundles
-      security: null
-=======
         - contracts
->>>>>>> billing_to_contracts_overhaul
+        - contracts
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -10228,11 +10081,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/plan-bundles/{bundleId}/plans":
-=======
   /api/v1/contracts/{bundleId}/plans:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contracts/{contractId}/contract-lines:
     post:
       summary: POST v1
       description: This operation was generated automatically from the route
@@ -10240,12 +10090,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - plan-bundles
-      security: null
-=======
         - contracts
->>>>>>> billing_to_contracts_overhaul
+        - contracts
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -10276,11 +10122,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-<<<<<<< HEAD
-  "/api/v1/plan-bundles/{bundleId}/plans/{planId}":
-=======
   /api/v1/contracts/{bundleId}/plans/{planId}:
->>>>>>> billing_to_contracts_overhaul
+  /api/v1/contracts/{contractId}/contract-lines/{contractLineId}:
     delete:
       summary: DELETE v1
       description: This operation was generated automatically from the route
@@ -10288,12 +10131,8 @@ paths:
       operationId: null
       deprecated: null
       tags:
-<<<<<<< HEAD
-        - plan-bundles
-      security: null
-=======
         - contracts
->>>>>>> billing_to_contracts_overhaul
+        - contracts
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -10316,7 +10155,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/plan-templates:
+  /api/v1/contract-line-templates:
     post:
       summary: POST v1
       description: This operation was generated automatically from the route
@@ -10324,8 +10163,7 @@ paths:
       operationId: null
       deprecated: null
       tags:
-        - plan-templates
-      security: null
+        - contract-line-templates
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -10356,7 +10194,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  "/api/v1/plan-templates/{id}/create-plan":
+  /api/v1/contract-line-templates/{id}/create-contract-line:
     post:
       summary: POST v1
       description: This operation was generated automatically from the route
@@ -10364,8 +10202,7 @@ paths:
       operationId: null
       deprecated: null
       tags:
-        - plan-templates
-      security: null
+        - contract-line-templates
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true

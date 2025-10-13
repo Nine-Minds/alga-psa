@@ -9,22 +9,22 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
-interface ContractPlanRateDialogProps {
-  plan: {
-    plan_id: string;
-    plan_name: string;
-    custom_rate?: number | null;
+interface ContractLineRateDialogProps {
+  contractLine: {
+    contract_line_id: string;
+    contract_line_name: string;
+    custom_rate?: number;
     default_rate?: number;
   };
   onClose: () => void;
-  onSave: (customRate: number | undefined) => void;
+  onSave: (contractLineId: string, customRate: number | undefined) => void;
 }
 
-export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRateDialogProps) {
+export function ContractLineRateDialog({ contractLine, onClose, onSave }: ContractLineRateDialogProps) {
   const [customRate, setCustomRate] = useState<number>(
-    plan.custom_rate !== undefined && plan.custom_rate !== null ? plan.custom_rate : (plan.default_rate || 0)
+    contractLine.custom_rate !== undefined && contractLine.custom_rate !== null ? contractLine.custom_rate : (contractLine.default_rate || 0)
   );
-  const [useDefaultRate, setUseDefaultRate] = useState<boolean>(false);
+  const [useDefaultRate, setUseDefaultRate] = useState<boolean>(contractLine.custom_rate === undefined || contractLine.custom_rate === null);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -37,14 +37,14 @@ export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRa
 
     // If using default rate, pass undefined to reset to default (will be saved as NULL)
     // Otherwise pass the custom rate
-    onSave(useDefaultRate ? undefined : customRate);
+    onSave(contractLine.contract_line_id, useDefaultRate ? undefined : customRate);
   };
 
   return (
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title={`Set Custom Rate for ${plan.plan_name}`}
+      title={`Set Custom Rate for ${contractLine.contract_line_name}`}
       className="max-w-md"
     >
       <DialogContent>
@@ -59,12 +59,12 @@ export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRa
             
             <div className="flex items-center space-x-2 mb-4">
               <SwitchWithLabel
-                label={`Use default rate${plan.default_rate !== undefined ? ` ($${plan.default_rate.toFixed(2)})` : ''}`}
+                label={`Use default rate${contractLine.default_rate !== undefined ? ` ($${contractLine.default_rate.toFixed(2)})` : ''}`}
                 checked={useDefaultRate}
                 onCheckedChange={(checked) => {
                   setUseDefaultRate(checked);
                   if (checked) {
-                    setCustomRate(plan.default_rate || 0);
+                    setCustomRate(contractLine.default_rate || 0);
                   }
                 }}
               />

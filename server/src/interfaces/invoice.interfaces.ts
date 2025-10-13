@@ -50,8 +50,7 @@ export interface IInvoiceItem extends TenantEntity, NetAmountItem {
   applies_to_service_id?: string; // Reference a service instead of an item
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
-  is_bundle_header?: boolean; // Whether this item is a contract group header (legacy name)
-  is_contract_header?: boolean; // Alias for is_bundle_header; preferred going forward
+  is_bundle_header?: boolean; // Whether this item is a contract group header
   parent_item_id?: string; // Reference to the parent contract group header item
   created_by?: string;
   updated_by?: string;

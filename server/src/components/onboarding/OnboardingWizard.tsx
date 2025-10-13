@@ -73,7 +73,7 @@ export function OnboardingWizard({
     serviceName: '',
     serviceDescription: '',
     servicePrice: '',
-    planName: 'hourly',
+    contractLineName: 'hourly',
 
     // Ticketing
     boardName: '',
@@ -196,7 +196,7 @@ export function OnboardingWizard({
                 serviceName: wizardData.serviceName,
                 serviceDescription: wizardData.serviceDescription,
                 servicePrice: wizardData.servicePrice,
-                planName: wizardData.planName,
+                contractLineName: wizardData.contractLineName,
                 serviceTypeId: wizardData.serviceTypeId
               });
               if (!billingResult.success) {

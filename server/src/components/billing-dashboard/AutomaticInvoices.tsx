@@ -278,7 +278,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   // Removed company drawer handler (migrated to client-only flow)
 
   return (
-    // Removed TooltipProvider wrapper
+  // Removed TooltipProvider wrapper
       <>
       <div className="space-y-8">
         <div>
@@ -740,7 +740,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         id="delete-billing-cycle-confirmation" // Added an ID for consistency
       />
       </>
-    // Removed TooltipProvider closing tag
+  // Removed TooltipProvider closing tag
   );
 };
 
