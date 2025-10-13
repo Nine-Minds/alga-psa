@@ -1253,6 +1253,225 @@ test.describe('Contract Wizard Happy Path', () => {
   });
 });
 
+// Invalid numeric inputs coverage: zero values should be rejected or coerced appropriately
+test.describe('Contract Wizard Invalid Numeric Inputs', () => {
+  async function openWizardOnContracts(page: Page, tenantId: string) {
+    const tenantQuery = `&tenantId=${tenantId}`;
+    attachFailFastHandlers(page, TEST_CONFIG.baseUrl);
+    await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts${tenantQuery}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    const wizardButtonLocator = page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button');
+    await wizardButtonLocator.click();
+    await page.locator('[data-automation-id="contract-basics-step"]').waitFor({ timeout: 10_000 });
+  }
+
+  async function selectClientAndName(page: Page, clientName: string, contractName: string) {
+    const clientSelect = page.getByRole('combobox', { name: /Select a client|Loading clients/i });
+    await clientSelect.click();
+    await page.getByRole('option', { name: clientName }).click();
+    await page.locator('[data-automation-id="contract_name"], #contract_name').fill(contractName);
+  }
+
+  async function pickCalendarDate(page: Page, field: 'start-date' | 'end-date', date: Date) {
+    const input = page.locator(`[data-automation-id="${field}"] , #${field}`);
+    await input.click();
+    const day = String(date.getDate());
+    await page.locator('.rdp-day:not(.rdp-day_outside)').filter({ hasText: new RegExp(`^${day}$`) }).first().click();
+  }
+
+  test('fixed base rate of 0 shows validation error; quantity 0 coerces to 1', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed ${uuidv4().slice(0, 6)}`;
+    const contractName = `Invalid Fixed Zero ${uuidv4().slice(0, 6)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+      await pickCalendarDate(page, 'start-date', now);
+
+      // Next to Fixed Fee step
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('button', { name: 'Add Service' })).toBeVisible();
+      await page.getByRole('button', { name: 'Add Service' }).click();
+
+      // Select a fixed service
+      const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).first();
+      await serviceSelect.click();
+      await page.getByRole('option', { name: fixedServiceName }).click();
+
+      // Set quantity to 0; UI coerces to 1
+      const qty = page.locator('[data-automation-id="quantity-0"], #quantity-0');
+      await qty.fill('0');
+      await expect(qty).toHaveValue('1', { timeout: 2000 });
+
+      // Set base rate to 0 and attempt Next -> expect validation error
+      const baseRate = page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate');
+      await baseRate.fill('0');
+      await baseRate.blur();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Base rate is required/i)).toBeVisible();
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('bucket (hours) with 0 hours and zero fees shows appropriate errors', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed ${uuidv4().slice(0, 6)}`;
+    const contractName = `Invalid Bucket Hours ${uuidv4().slice(0, 4)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+      await pickCalendarDate(page, 'start-date', now);
+
+      // Skip to Bucket step
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Fixed Fee Services' }).first()).toBeVisible({ timeout: 5000 });
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Hourly Services' }).first()).toBeVisible({ timeout: 5000 });
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Usage-Based Services' }).first()).toBeVisible({ timeout: 5000 });
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Bucket Services' }).first()).toBeVisible({ timeout: 5000 });
+
+      // Select hours type and set 0 hours
+      const bucketType = page.getByRole('combobox', { name: /Bucket Type/i });
+      await bucketType.click();
+      await page.getByRole('option', { name: /Time-based \(Hours\)/i }).click();
+      await page.locator('#bucket_hours').fill('0');
+
+      // Set monthly fee zero and overage normal, then Next -> expect "Bucket hours are required"
+      await page.locator('#bucket_monthly_fee').fill('0');
+      await page.locator('#bucket_monthly_fee').blur();
+      await page.locator('#bucket_overage_rate').fill('150');
+      await page.locator('#bucket_overage_rate').blur();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Bucket hours are required/i)).toBeVisible();
+
+      // Now set hours valid, monthly zero, overage valid -> expect "Monthly fee is required"
+      await page.locator('#bucket_hours').fill('40');
+      await page.locator('#bucket_monthly_fee').fill('0');
+      await page.locator('#bucket_monthly_fee').blur();
+      await page.locator('#bucket_overage_rate').fill('150');
+      await page.locator('#bucket_overage_rate').blur();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Monthly fee is required/i)).toBeVisible();
+
+      // Set monthly valid, overage zero -> expect "Overage rate is required"
+      await page.locator('#bucket_monthly_fee').fill('5000');
+      await page.locator('#bucket_monthly_fee').blur();
+      await page.locator('#bucket_overage_rate').fill('0');
+      await page.locator('#bucket_overage_rate').blur();
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Overage rate is required/i)).toBeVisible();
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('bucket (usage) with 0 units shows usage-units required error', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed ${uuidv4().slice(0, 6)}`;
+    const contractName = `Invalid Bucket Units ${uuidv4().slice(0, 4)}`;
+
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+      ]);
+
+      await setupAuthenticatedSession(page, tenantData);
+      await openWizardOnContracts(page, tenantId);
+      await selectClientAndName(page, tenantData.client!.clientName, contractName);
+      await pickCalendarDate(page, 'start-date', now);
+
+      // Skip to Bucket step
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Fixed Fee Services' }).first()).toBeVisible({ timeout: 5000 });
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Hourly Services' }).first()).toBeVisible({ timeout: 5000 });
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Usage-Based Services' }).first()).toBeVisible({ timeout: 5000 });
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByRole('heading', { name: 'Bucket Services' }).first()).toBeVisible({ timeout: 5000 });
+
+      // Select usage type and set 0 units
+      const bucketType = page.getByRole('combobox', { name: /Bucket Type/i });
+      await bucketType.click();
+      await page.getByRole('option', { name: /Usage-based \(Units\)/i }).click();
+      await page.locator('#bucket_usage_units').fill('0');
+      await page.locator('#bucket_unit_of_measure').fill('API calls');
+      await page.locator('#bucket_monthly_fee').fill('5000');
+      await page.locator('#bucket_monthly_fee').blur();
+      await page.locator('#bucket_overage_rate').fill('25');
+      await page.locator('#bucket_overage_rate').blur();
+
+      await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
+      await expect(page.getByText(/Usage units are required/i)).toBeVisible();
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+});
+
 test.describe('Date Picker Timezone Regression', () => {
   test.use({ timezoneId: 'America/Los_Angeles', locale: 'en-US' });
 

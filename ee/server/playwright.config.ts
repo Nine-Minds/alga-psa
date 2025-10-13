@@ -27,13 +27,13 @@ export default defineConfig({
   testDir: './src/__tests__/integration',
   // Run all Playwright integration tests in this folder
   testMatch: ['**/*.playwright.test.ts'],
-  
+
   /* Global setup file */
   globalSetup: './playwright.global-setup.ts',
-  
+
   /* Run tests in files in parallel */
   fullyParallel: false, // Disabled for database isolation
-  
+
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
 
@@ -41,30 +41,31 @@ export default defineConfig({
   retries: process.env.PW_RETRIES !== undefined
     ? Number(process.env.PW_RETRIES)
     : (process.env.CI ? 2 : 0),
-  
+
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : 1, // Single worker for database isolation
-  
+
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['html'],
-    ['json', { outputFile: 'playwright-report/results.json' }]
+    ['list'],
+    ['json', { outputFile: 'playwright-report/results.json' }],
+    ['html', { open: 'never' }]
   ],
-  
+
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: 'http://localhost:3000',
-    
+
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-    
+
     /* Take screenshot on failure */
     screenshot: 'only-on-failure',
-    
+
     /* Record video on failure */
     video: 'retain-on-failure',
-    
+
     /* Global test timeout */
     actionTimeout: 15000,
     navigationTimeout: 30000,
