@@ -4,19 +4,52 @@ import { describe, it, expect, beforeEach, vi, MockedFunction } from 'vitest';
 import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '../../lib/actions/billingCycleActions';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { Knex } from 'knex';
-import { createTenantKnex } from '../../lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 
 // Mock session helper
 vi.mock('server/src/lib/auth/getSession', () => ({
   getSession: vi.fn(),
 }));
 
-// Mock the db/db module
-vi.mock('../../lib/db/db', () => {
-  return {
-    getConnection: vi.fn(),
-  };
-});
+// Mock shared db transaction helper used within actions
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: async (_knex: any, fn: any) => {
+    // Execute callback immediately with the provided knex mock
+    return await fn(_knex);
+  },
+}));
+
+// Mock shared logger used by various model/action imports pulled into module graph
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+// Mock secret provider used by config/storage
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async (_k: string) => undefined,
+    setSecret: async (_k: string, _v: string) => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+// Some server actions import from '@alga-psa/shared/core'; provide the same stub
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async (_k: string) => undefined,
+    setSecret: async (_k: string, _v: string) => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+// (obsolete) previous db/db mock removed; actions import from server/src/lib/db
 
 // Create mock knex instance factory
 function createMockKnex(): Knex {
@@ -28,13 +61,16 @@ function createMockKnex(): Knex {
   (mockKnex as any).insert = vi.fn().mockReturnThis();
   (mockKnex as any).onConflict = vi.fn().mockReturnThis();
   (mockKnex as any).merge = vi.fn().mockReturnThis();
-  (mockKnex as any).select = vi.fn();
+  (mockKnex as any).update = vi.fn().mockReturnThis();
+  (mockKnex as any).orderBy = vi.fn().mockReturnThis();
+  (mockKnex as any).del = vi.fn().mockReturnThis();
+  (mockKnex as any).select = vi.fn().mockReturnThis();
 
   return mockKnex;
 }
 
 // Mock the root db module
-vi.mock('../../lib/db', () => {
+vi.mock('server/src/lib/db', () => {
   const mock = vi.fn().mockImplementation(async () => {
     return { knex: createMockKnex(), tenant: 'test-tenant' };
   });
@@ -58,7 +94,7 @@ describe('Billing Cycle Actions', () => {
 
       const result = await getBillingCycle('client-1');
       expect(result).toBe('monthly');
-      expect((mockKnex as any).where).toHaveBeenCalledWith('client_id', 'client-1');
+      expect((mockKnex as any).where).toHaveBeenCalledWith({ client_id: 'client-1', tenant: 'test-tenant' });
     });
 
     it('should return "monthly" if no billing cycle is set', async () => {
@@ -84,9 +120,8 @@ describe('Billing Cycle Actions', () => {
 
       await updateBillingCycle('client-1', 'quarterly');
 
-      expect((mockKnex as any).insert).toHaveBeenCalledWith({ client_id: 'client-1', billing_cycle: 'quarterly' });
-      expect((mockKnex as any).onConflict).toHaveBeenCalledWith('client_id');
-      expect((mockKnex as any).merge).toHaveBeenCalled();
+      expect((mockKnex as any).where).toHaveBeenCalledWith({ client_id: 'client-1', tenant: 'test-tenant' });
+      expect((mockKnex as any).update).toHaveBeenCalled();
     });
 
     it('should throw an error if user is not authenticated', async () => {

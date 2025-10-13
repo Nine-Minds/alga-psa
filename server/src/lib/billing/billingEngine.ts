@@ -451,14 +451,14 @@ export class BillingEngine {
       )
       // Group by necessary fields to handle potential multiple services per plan (though typically 1:1)
       .groupBy(
-        'bbp.contract_line_id',
-        'bp.contract_line_name',
-        'bp.billing_frequency',
-        'bbp.custom_rate',
-        'cpb.start_date',
-        'cpb.end_date',
-        'cpb.client_contract_id',
-        'pb.contract_name'
+        'clm.contract_line_id',
+        'cl.contract_line_name',
+        'cl.billing_frequency',
+        'clm.custom_rate',
+        'cc.start_date',
+        'cc.end_date',
+        'cc.client_contract_id',
+        'c.contract_name'
         // REMOVED: 'sc.service_id' - Grouping by service_id caused duplicates
       );
 

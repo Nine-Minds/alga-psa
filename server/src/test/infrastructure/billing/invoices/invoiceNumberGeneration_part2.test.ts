@@ -2,13 +2,15 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { TextEncoder as NodeTextEncoder } from 'util';
+import { v4 as uuidv4 } from 'uuid';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   createTestService,
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  ensureDefaultBillingSettings
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
@@ -37,14 +39,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {}
+  })
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {}
+  })
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn()
+  }
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn()
+  }),
+  toStreamEvent: (event: unknown) => event
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -71,12 +111,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       startDate: '2020-01-01T00:00:00.000Z',
       taxPercentage: 8.875
     });
-    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: false });
   }
 
   beforeAll(async () => {
     context = await setupContext({
-      runSeeds: true,
+      runSeeds: false,
       cleanupTables: [
         'invoice_items',
         'invoices',
@@ -110,6 +150,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
+    await ensureDefaultBillingSettings(context);
   }, 120000);
 
   beforeEach(async () => {
@@ -135,6 +176,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     await context.db('next_number').insert(nextNumberRecord);
 
     await configureDefaultTax();
+    await ensureDefaultBillingSettings(context);
   }, 30000);
 
   afterEach(async () => {
@@ -169,12 +211,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       unit_of_measure: 'unit'
-    }, 'service_id');
+    });
 
     await context.db('contract_line_services').insert({
       contract_line_id: planId,
@@ -257,12 +299,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       unit_of_measure: 'unit'
-    }, 'service_id');
+    });
 
     await context.db('contract_line_services').insert({
       contract_line_id: planId,
@@ -371,7 +413,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
@@ -518,7 +560,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
@@ -637,12 +679,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       unit_of_measure: 'unit'
-    }, 'service_id');
+    });
 
     await context.db('contract_line_services').insert({
       contract_line_id: planId,
@@ -708,12 +750,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       unit_of_measure: 'unit'
-    }, 'service_id');
+    });
 
     await context.db('contract_line_services').insert({
       contract_line_id: planId,
@@ -781,12 +823,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       unit_of_measure: 'unit'
-    }, 'service_id');
+    });
 
     await context.db('contract_line_services').insert({
       contract_line_id: planId,
@@ -852,12 +894,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       unit_of_measure: 'unit'
-    }, 'service_id');
+    });
 
     await context.db('contract_line_services').insert({
       contract_line_id: planId,
@@ -953,12 +995,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       contract_line_type: 'Fixed'
     }, 'contract_line_id');
 
-    const serviceId = await context.createEntity('service_catalog', {
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
       billing_method: 'fixed',
       default_rate: 10000,
       unit_of_measure: 'unit'
-    }, 'service_id');
+    });
 
     await context.db('contract_line_services').insert({
       contract_line_id: planId,

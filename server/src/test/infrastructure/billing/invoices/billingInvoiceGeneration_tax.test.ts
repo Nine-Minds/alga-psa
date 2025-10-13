@@ -6,11 +6,16 @@ import {
   createFixedPlanAssignment,
   addServiceToFixedPlan,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  ensureDefaultBillingSettings
 } from '../../../../../test-utils/billingTestHelpers';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { TextEncoder as NodeTextEncoder } from 'util';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { v4 as uuidv4 } from 'uuid';
+import { Temporal } from '@js-temporal/polyfill';
+import type { IClient } from 'server/src/interfaces/client.interfaces';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
@@ -33,26 +38,55 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {}
+  })
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {}
+  })
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn()
+  }
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn()
+  }),
+  toStreamEvent: (event: unknown) => event
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
-}));
-
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
-  getCurrentUser: vi.fn(async () => ({
-    user_id: mockedUserId,
-    tenant: mockedTenantId,
-    user_type: 'internal',
-    roles: []
-  }))
 }));
 
 const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
@@ -76,12 +110,12 @@ describe('Billing Invoice Tax Calculations', () => {
       startDate: '2025-01-01T00:00:00.000Z',
       taxPercentage: 10 // easier math for tests
     });
-    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: false });
   }
 
   beforeAll(async () => {
     context = await setupContext({
-      runSeeds: true,
+      runSeeds: false,
       cleanupTables: [
         'invoice_items',
         'invoices',
@@ -104,16 +138,32 @@ describe('Billing Invoice Tax Calculations', () => {
       userType: 'internal'
     });
 
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
     await ensureDefaultTax();
+    await ensureDefaultBillingSettings(context);
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
     await ensureDefaultTax();
+    await ensureDefaultBillingSettings(context);
   }, 30000);
 
   afterEach(async () => {
