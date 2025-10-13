@@ -93,7 +93,7 @@ const {
 } = TestContext.createHelpers();
 
 let context: TestContext;
-const serviceTypeCache: Record<string, string> = {};
+let serviceTypeCache: Record<string, string> = {};
 let clientTaxSettingsColumns: Record<string, unknown> | null = null;
 let clientTaxRatesColumns: Record<string, unknown> | null = null;
 
@@ -128,6 +128,10 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   context = await resetContext();
+
+  // Clear service type cache when context is reset to prevent using stale IDs from previous tenant
+  serviceTypeCache = {};
+
   const mockContext = setupCommonMocks({
     tenantId: context.tenantId,
     userId: context.userId,

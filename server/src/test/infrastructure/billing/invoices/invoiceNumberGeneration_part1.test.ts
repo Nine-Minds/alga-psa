@@ -11,7 +11,8 @@ import {
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
-  ensureDefaultBillingSettings
+  ensureDefaultBillingSettings,
+  clearServiceTypeCache
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
@@ -129,9 +130,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         'client_billing_cycles',
         'client_contract_lines',
         'contract_line_services',
-        'service_catalog',
         'contract_lines',
-        'bucket_plans',
+        'bucket_contract_lines',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -157,6 +157,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
 
   beforeEach(async () => {
     context = await resetContext();
+
+    // Clear the service type cache to prevent stale IDs from being reused
+    clearServiceTypeCache();
 
     const mockContext = setupCommonMocks({
       tenantId: context.tenantId,

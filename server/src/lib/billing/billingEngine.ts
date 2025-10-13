@@ -815,9 +815,10 @@ export class BillingEngine {
       }, 0);
       console.log(`[DEBUG] Plan ${clientContractLine.contract_line_id} - Calculated totalFMVCents: ${totalFMVCents}`); // DEBUG LOG
 
-      // If totalFMVCents is zero, we can't allocate properly
-      if (totalFMVCents <= 0) {
-        console.log(`Total FMV (cents) for services in plan ${clientContractLine.contract_line_id} is zero or negative`);
+      // If totalFMVCents is exactly zero, we can't allocate properly
+      // Note: Negative FMV is valid for credit-generating services and should be processed
+      if (totalFMVCents === 0) {
+        console.log(`Total FMV (cents) for services in plan ${clientContractLine.contract_line_id} is zero`);
         return [];
       }
 

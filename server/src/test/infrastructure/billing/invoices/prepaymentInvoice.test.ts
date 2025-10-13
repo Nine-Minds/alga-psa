@@ -113,103 +113,7 @@ function parseInvoiceTotals(invoice: Record<string, unknown>) {
 }
 
 // Create test context helpers
-const { beforeAll: setupContext, beforeEach: resetContext, afterAll: cleanupContext } = TestContext.createHelpers();
-
-let context: TestContext;
-
-beforeAll(async () => {
-  // Initialize test context and set up mocks
-  context = await setupContext({
-    cleanupTables: [
-      'service_catalog',
-      'tax_rates',
-      'client_tax_settings',
-      'transactions',
-      'client_billing_cycles',
-      'client_contract_lines',
-      'bucket_plans',
-      'bucket_usage'
-    ]
-  });
-  setupCommonMocks({ tenantId: context.tenantId });
-});
-
-beforeEach(async () => {
-  await resetContext();
-});
-
-afterAll(async () => {
-  await cleanupContext();
-});
-
-/**
- * Helper to create a test service
- */
-async function createTestService(overrides = {}) {
-  const serviceId = uuidv4();
-  const defaultService = {
-    service_id: serviceId,
-    tenant: context.tenantId,
-    service_name: 'Test Service',
-    service_type: 'Fixed',
-    default_rate: 1000,
-    unit_of_measure: 'each',
-    is_taxable: true,
-    tax_region: 'US-NY'
-  };
-
-  await context.db('service_catalog').insert({ ...defaultService, ...overrides });
-  return serviceId;
-}
-
-/**
- * Helper to create a test plan
- */
-async function createTestPlan(serviceId: string, overrides = {}) {
-  const planId = uuidv4();
-  const defaultPlan = {
-    contract_line_id: planId,
-    tenant: context.tenantId,
-    contract_line_name: 'Test Plan',
-    billing_frequency: 'monthly',
-    is_custom: false,
-    contract_line_type: 'Fixed'
-  };
-
-  await context.db('contract_lines').insert({ ...defaultPlan, ...overrides });
-  await context.db('contract_line_services').insert({
-    contract_line_id: planId,
-    service_id: serviceId,
-    tenant: context.tenantId,
-    quantity: 1
-  });
-
-  return planId;
-}
-
-/**
- * Helper to set up tax configuration
- */
-async function setupTaxConfiguration() {
-  const taxRateId = uuidv4();
-  await context.db('tax_rates').insert({
-    tax_rate_id: taxRateId,
-    tenant: context.tenantId,
-    region: 'US-NY',
-    tax_percentage: 8.875,
-    description: 'NY State + City Tax',
-    start_date: createTestDateISO()
-  });
-
-  await context.db('client_tax_settings').insert({
-    client_id: context.clientId,
-    tenant: context.tenantId,
-    tax_rate_id: taxRateId,
-    is_reverse_charge_applicable: false
-  });
-
-  return taxRateId;
-}
+const { beforeAll: setupContext, beforeEach: resetContext, afterEach: rollbackContext, afterAll: cleanupContext } = TestContext.createHelpers();
 
 describe('Prepayment Invoice System', () => {
   let context: TestContext;
@@ -246,6 +150,7 @@ describe('Prepayment Invoice System', () => {
         'service_catalog',
         'billing_plan_fixed_config',
         'billing_plans',
+        'bucket_contract_lines',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -510,9 +415,9 @@ describe('Prepayment Invoice System', () => {
         client_id: context.clientId,
         tenant: context.tenantId,
         billing_cycle: 'monthly',
-        period_start_date: startDate,
-        period_end_date: dateHelpers.startOf(now, 'month'),
-        effective_date: startDate
+        period_start_date: startDate.toInstant().toString(),
+        period_end_date: dateHelpers.startOf(now, 'month').toInstant().toString(),
+        effective_date: startDate.toInstant().toString()
       });
 
       // Link plan to client
@@ -521,39 +426,8 @@ describe('Prepayment Invoice System', () => {
         client_id: context.clientId,
         contract_line_id: planId,
         tenant: context.tenantId,
-        start_date: startDate,
+        start_date: startDate.toInstant().toString(),
         is_active: true
-      });
-
-      // Create a service for bucket usage
-      const bucketServiceId = await createTestService(context, {
-        billing_method: 'time',
-        service_name: 'Bucket Service',
-        tax_region: 'US-NY'
-      });
-
-      // Create bucket plan
-      const bucketPlanId = uuidv4();
-      await context.db('bucket_plans').insert({
-        bucket_contract_line_id: bucketPlanId,
-        contract_line_id: planId,
-        total_hours: 40,
-        billing_period: 'monthly',
-        overage_rate: 150,
-        tenant: context.tenantId
-      });
-
-      // Create bucket usage
-      await context.db('bucket_usage').insert({
-        usage_id: uuidv4(),
-        bucket_contract_line_id: bucketPlanId,
-        client_id: context.clientId,
-        period_start: startDate,
-        period_end: dateHelpers.startOf(now, 'month'),
-        minutes_used: 45,
-        overage_minutes: 5,
-        service_catalog_id: bucketServiceId,
-        tenant: context.tenantId
       });
     });
 
@@ -654,6 +528,7 @@ describe('Multiple Credit Applications', () => {
         'service_catalog',
         'billing_plan_fixed_config',
         'billing_plans',
+        'bucket_contract_lines',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -728,9 +603,9 @@ describe('Multiple Credit Applications', () => {
         client_id: context.clientId,
         tenant: context.tenantId,
         billing_cycle: 'monthly',
-        period_start_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
-        period_end_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month'),
-        effective_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month')
+        period_start_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString(),
+        period_end_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month').toInstant().toString(),
+        effective_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString()
       }
     ]);
 
@@ -741,52 +616,8 @@ describe('Multiple Credit Applications', () => {
         client_id: context.clientId,
         contract_line_id: planId,
         tenant: context.tenantId,
-        start_date: startDate,
+        start_date: startDate.toInstant().toString(),
         is_active: true
-      }
-    ]);
-
-    // Create a service for bucket usage
-    const bucketServiceId = await createTestService(context, {
-      billing_method: 'time',
-      service_name: 'Bucket Service',
-      tax_region: 'US-NY'
-    });
-
-    // Create bucket plan
-    const bucketPlanId = uuidv4();
-    await context.db('bucket_plans').insert({
-      bucket_contract_line_id: bucketPlanId,
-      contract_line_id: planId,
-      total_hours: 40,
-      billing_period: 'monthly',
-      overage_rate: 150,
-      tenant: context.tenantId
-    });
-
-    // Create bucket usage for both billing cycles
-    await context.db('bucket_usage').insert([
-      {
-        usage_id: uuidv4(),
-        bucket_contract_line_id: bucketPlanId,
-        client_id: context.clientId,
-        period_start: dateHelpers.startOf(now, 'month'),
-        period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
-        minutes_used: 45,
-        overage_minutes: 5,
-        service_catalog_id: bucketServiceId,
-        tenant: context.tenantId
-      },
-      {
-        usage_id: uuidv4(),
-        bucket_contract_line_id: bucketPlanId,
-        client_id: context.clientId,
-        period_start: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
-        period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month'),
-        minutes_used: 50,
-        overage_minutes: 10,
-        service_catalog_id: bucketServiceId,
-        tenant: context.tenantId
       }
     ]);
   }, 30000);

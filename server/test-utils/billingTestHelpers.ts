@@ -18,6 +18,14 @@ let clientTaxSettingsColumnsCache: Record<string, unknown> | null | undefined;
 let clientTaxRatesColumnsCache: Record<string, unknown> | null | undefined;
 const serviceTypeCache = new Map<string, string>();
 
+/**
+ * Clears the service type cache. Useful when tests reset their context/tenant
+ * and need to ensure stale service type IDs aren't reused.
+ */
+export function clearServiceTypeCache(): void {
+  serviceTypeCache.clear();
+}
+
 interface BillingSettingsOptions {
   zeroDollarInvoiceHandling?: 'normal' | 'finalized';
   suppressZeroDollarInvoices?: boolean;

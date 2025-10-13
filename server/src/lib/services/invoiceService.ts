@@ -616,7 +616,7 @@ export async function persistInvoiceItems(
       // For non-fixed types, planId might not be relevant or available
       // contract_line_id: ('planId' in charge ? (charge as any).planId : null), // Removed - planId not part of IFixedPriceCharge
       // Use client_contract_line_id if the schema requires it
-      client_contract_line_id: charge.client_contract_line_id ?? null,
+      // client_contract_line_id: charge.client_contract_line_id ?? null,
       description: charge.serviceName,
       quantity: charge.quantity ?? 1,
       unit_price: charge.rate ?? 0,
