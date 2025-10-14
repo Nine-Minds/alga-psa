@@ -17,7 +17,11 @@ const columnExists = async (knex, tableName, columnName) => {
 };
 
 const getExistingBundleTable = async (knex) => {
-  // Prefer company_* if it still exists (pre-cleanup); otherwise use client_*
+  // Check for new terminology first (post-rename migration)
+  const hasClientContracts = await knex.schema.hasTable('client_contracts');
+  if (hasClientContracts) return 'client_contracts';
+
+  // Fallback to legacy names if they still exist (pre-rename migration)
   const hasCompany = await knex.schema.hasTable('company_plan_bundles');
   if (hasCompany) return 'company_plan_bundles';
   const hasClient = await knex.schema.hasTable('client_plan_bundles');
@@ -30,7 +34,7 @@ exports.up = async function up(knex) {
 
   const tableName = await getExistingBundleTable(knex);
   if (!tableName) {
-    console.log('⊘ Skipping PO field addition: no plan bundles table found (company_ or client_)');
+    console.log('⊘ Skipping PO field addition: no contracts table found (client_contracts or legacy bundle tables)');
     return;
   }
 
@@ -94,7 +98,7 @@ exports.down = async function down(knex) {
   await ensureSequentialMode(knex);
 
   // Determine which table has the PO columns to remove
-  const tables = ['company_plan_bundles', 'client_plan_bundles'];
+  const tables = ['client_contracts', 'company_plan_bundles', 'client_plan_bundles'];
   let tableName = null;
   for (const t of tables) {
     const exists = await knex.schema.hasTable(t);
@@ -106,7 +110,7 @@ exports.down = async function down(knex) {
   }
 
   if (!tableName) {
-    console.log('⊘ No PO fields found on plan bundles tables, nothing to roll back');
+    console.log('⊘ No PO fields found on contracts tables, nothing to roll back');
     return;
   }
 

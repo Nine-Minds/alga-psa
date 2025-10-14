@@ -9,17 +9,20 @@ exports.up = async function up(knex) {
   if (!exists) {
     await knex.schema.createTable('contract_pricing_schedules', (table) => {
       // Primary key
-      table.uuid('schedule_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('schedule_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
 
       // Tenant for multi-tenancy
       table.uuid('tenant').notNullable();
 
-      // Foreign key to plan_bundles (contract/bundle)
-      table.uuid('bundle_id').notNullable();
+      // Composite primary key for Citus compatibility
+      table.primary(['tenant', 'schedule_id']);
+
+      // Foreign key to contracts
+      table.uuid('contract_id').notNullable();
 
       // Date range for the pricing schedule
-      table.timestamp('effective_date', { useTz: true }).notNullable();
-      table.timestamp('end_date', { useTz: true });
+      table.date('effective_date').notNullable();
+      table.date('end_date');
 
       // Duration-based end date (alternative to explicit end_date)
       table.integer('duration_value'); // e.g., 6 for "6 months"
@@ -32,22 +35,22 @@ exports.up = async function up(knex) {
       table.text('notes');
 
       // Audit columns
-      table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
-      table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
+      table.timestamp('created_at').defaultTo(knex.fn.now());
+      table.timestamp('updated_at').defaultTo(knex.fn.now());
       table.uuid('created_by');
       table.uuid('updated_by');
 
       // Indexes
-      table.index(['tenant', 'bundle_id'], 'idx_contract_pricing_schedules_bundle');
+      table.index(['tenant', 'contract_id'], 'idx_contract_pricing_schedules_contract');
       table.index(['tenant', 'effective_date'], 'idx_contract_pricing_schedules_effective_date');
     });
 
-    // Add foreign key constraint to plan_bundles
+    // Add foreign key constraint to contracts
     await knex.raw(`
       ALTER TABLE contract_pricing_schedules
-      ADD CONSTRAINT fk_contract_pricing_schedules_bundle
-      FOREIGN KEY (tenant, bundle_id)
-      REFERENCES plan_bundles (tenant, bundle_id)
+      ADD CONSTRAINT fk_contract_pricing_schedules_contract
+      FOREIGN KEY (tenant, contract_id)
+      REFERENCES contracts (tenant, contract_id)
       ON DELETE CASCADE;
     `);
 
