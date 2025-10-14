@@ -133,7 +133,7 @@ export default function AccountManagement() {
                   {licenseInfo?.plan_name} Plan
                 </p>
               </div>
-              <Badge variant="default" className="text-sm">
+              <Badge className="bg-green-100 text-green-800">
                 Active
               </Badge>
             </div>
@@ -243,7 +243,7 @@ export default function AccountManagement() {
           <div className="rounded-lg border p-4 bg-muted/50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Subscription Status</h3>
-              <Badge variant={subscriptionInfo?.status === 'active' ? 'default' : 'secondary'}>
+              <Badge className={subscriptionInfo?.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                 {subscriptionInfo?.status ? subscriptionInfo.status.charAt(0).toUpperCase() + subscriptionInfo.status.slice(1) : 'Unknown'}
               </Badge>
             </div>
