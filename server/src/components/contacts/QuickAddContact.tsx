@@ -13,7 +13,7 @@ import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { getAllCountries, ICountry } from 'server/src/lib/actions/company-actions/countryActions';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
 import {
   validateContactName,
   validateEmailAddress,

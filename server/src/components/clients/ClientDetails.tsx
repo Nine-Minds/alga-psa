@@ -15,12 +15,12 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
-import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateCompanyName } from 'server/src/lib/utils/clientFormValidation';
-import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
+import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from 'server/src/lib/utils/clientFormValidation';
+import ClientContactsList from 'server/src/components/contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById, deleteCompany } from 'server/src/lib/actions/company-actions/companyActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { useToast } from 'server/src/hooks/use-toast';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -225,14 +225,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { toast } = useToast();
 
 
-  const handleDeleteCompany = () => {
+  const handleDeleteClient = () => {
     setDeleteError(null);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
     try {
-      await deleteCompany(editedCompany.company_id);
+      await deleteClient(editedClient.client_id);
 
       setIsDeleteDialogOpen(false);
 
@@ -248,7 +248,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         router.push('/msp/companies');
       }
     } catch (error: any) {
-      console.error('Failed to delete company:', error);
+      console.error('Failed to delete client:', error);
       setDeleteError(error.message || 'Failed to delete client. Please try again.');
     }
   };
@@ -454,7 +454,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
     // Professional PSA validation pattern: Check required fields
     const requiredFields = {
-      company_name: editedCompany.company_name?.trim() || ''
+      client_name: editedClient.client_name?.trim() || ''
     };
 
     // Clear previous errors and validate required fields
@@ -462,8 +462,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     let hasValidationErrors = false;
 
     Object.entries(requiredFields).forEach(([field, value]) => {
-      if (field === 'company_name') {
-        const error = validateCompanyName(value);
+      if (field === 'client_name') {
+        const error = validateClientName(value);
         if (error) {
           newErrors[field] = error;
           hasValidationErrors = true;
@@ -489,12 +489,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         ...restOfEditedClient,
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
         account_manager_id: editedClient.account_manager_id === '' ? null : editedClient.account_manager_id,
-        ...restOfEditedCompany
-      } = editedCompany;
-      const dataToUpdate: Partial<Omit<ICompany, 'account_manager_full_name'>> = {
-        ...restOfEditedCompany,
-        properties: restOfEditedCompany.properties ? { ...restOfEditedCompany.properties } : {},
-        account_manager_id: editedCompany.account_manager_id === '' ? null : editedCompany.account_manager_id,
+        ...restOfEditedClient
+      } = editedClient;
+      const dataToUpdate: Partial<Omit<IClient, 'account_manager_full_name'>> = {
+        ...restOfEditedClient,
+        properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
+        account_manager_id: editedClient.account_manager_id === '' ? null : editedClient.account_manager_id,
       };
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
       // Assuming updateClient returns the full updated client object matching IClient
@@ -622,7 +622,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 value={editedClient.client_name}
                 onEdit={(value) => handleFieldChange('client_name', value)}
                 automationId="client-name-field"
-                validate={validateCompanyName}
+                validate={validateClientName}
               />
                            
               <FieldContainer
@@ -1063,8 +1063,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <Button
-            id={`${id}-delete-company-button`}
-            onClick={handleDeleteCompany}
+            id={`${id}-delete-client-button`}
+            onClick={handleDeleteClient}
             variant="destructive"
             size="sm"
             className="flex items-center mr-8"
@@ -1111,7 +1111,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
         {/* Delete Confirmation Dialog */}
         <ConfirmationDialog
-          id="delete-company-dialog"
+          id="delete-client-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={() => {
             setIsDeleteDialogOpen(false);

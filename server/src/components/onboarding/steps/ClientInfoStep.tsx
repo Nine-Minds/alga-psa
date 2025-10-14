@@ -5,7 +5,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { StepProps } from '../types';
-import { validateEmailAddress, validateContactName, validateCompanyName } from 'server/src/lib/utils/clientFormValidation';
+import { validateEmailAddress, validateContactName, validateClientName } from 'server/src/lib/utils/clientFormValidation';
 
 export function ClientInfoStep({ data, updateData }: StepProps) {
   const [showNewPassword, setShowNewPassword] = useState(false);

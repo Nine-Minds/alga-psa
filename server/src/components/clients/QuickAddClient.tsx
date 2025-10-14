@@ -202,7 +202,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     // Handle spaces-only input for all fields
     if (/^\s+$/.test(value)) {
       const fieldDisplayNames: Record<string, string> = {
-        'company_name': 'Company name',
+        'client_name': 'Client name',
         'url': 'Website URL',
         'industry': 'Industry',
         'location_email': 'Email address',
@@ -227,8 +227,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
     // If field is empty, only validate required fields
     if (!trimmedValue) {
-      if (fieldName === 'company_name' && isSubmitting) {
-        error = 'Company name is required';
+      if (fieldName === 'client_name' && isSubmitting) {
+        error = 'Client name is required';
     
     // If field is empty, only validate if it's a required field
     if (!value || !value.trim()) {
@@ -549,8 +549,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
   // Comprehensive form validation check for submit button state
   const isFormValid = () => {
-    // Required field: Company name
-    if (!formData.company_name || !formData.company_name.trim()) {
+    // Required field: Client name
+    if (!formData.client_name || !formData.client_name.trim()) {
       return false;
     }
 
@@ -560,8 +560,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     }
 
     // Validate all fields real-time without showing errors
-    const companyNameError = validateField('company_name', formData.company_name, undefined, false);
-    if (companyNameError) return false;
+    const clientNameError = validateField('client_name', formData.client_name, undefined, false);
+    if (clientNameError) return false;
 
     // Optional field validations - only if they have content
     if (formData.url && formData.url.trim()) {

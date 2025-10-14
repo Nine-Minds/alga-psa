@@ -6,7 +6,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { PhoneInput } from 'server/src/components/ui/PhoneInput';
-import { getAllCountries, ICountry } from 'server/src/lib/actions/company-actions/countryActions';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
