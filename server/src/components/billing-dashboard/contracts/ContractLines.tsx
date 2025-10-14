@@ -28,6 +28,7 @@ import { ContractLineRateDialog } from './ContractLineRateDialog';
 
 interface ContractLinesProps {
   contract: IContract;
+  onContractLinesChanged?: () => void;
 }
 
 interface DetailedContractLineMapping extends IContractLineMapping {
@@ -37,7 +38,7 @@ interface DetailedContractLineMapping extends IContractLineMapping {
   default_rate?: number;
 }
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged }) => {
   const [contractLines, setContractLines] = useState<DetailedContractLineMapping[]>([]);
   const [availableContractLines, setAvailableContractLines] = useState<IContractLine[]>([]);
   const [selectedLineToAdd, setSelectedLineToAdd] = useState<string | null>(null);
@@ -85,6 +86,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract }) => {
     try {
       await addContractLine(contract.contract_id, selectedLineToAdd, undefined);
       await fetchData();
+      onContractLinesChanged?.();
     } catch (err) {
       console.error('Error adding contract line:', err);
       setError('Failed to add contract line');
@@ -97,6 +99,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract }) => {
     try {
       await removeContractLine(contract.contract_id, contractLineId);
       await fetchData();
+      onContractLinesChanged?.();
     } catch (err) {
       console.error('Error removing contract line:', err);
       setError(err instanceof Error ? err.message : 'Failed to remove contract line');
@@ -110,6 +113,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract }) => {
       await updateContractLineAssociation(contract.contract_id, contractLineId, { custom_rate: customRate });
       await fetchData();
       setEditingLine(null);
+      onContractLinesChanged?.();
     } catch (err) {
       console.error('Error updating contract line rate:', err);
       setError('Failed to update contract line rate');

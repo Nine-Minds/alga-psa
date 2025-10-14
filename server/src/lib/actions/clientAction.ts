@@ -13,6 +13,7 @@ export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
     }
 
     const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
+
       const hasClientContractLines = await trx.schema.hasTable('client_contract_lines');
       if (!hasClientContractLines) {
         throw new Error('client_contract_lines table not found. Run the latest contract migrations.');
