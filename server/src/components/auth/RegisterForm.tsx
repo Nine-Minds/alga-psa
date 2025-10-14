@@ -262,6 +262,7 @@ export default function RegisterForm() {
               aria-describedby="password-requirements"
             />
             <button
+              id="toggle-password-visibility"
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
@@ -315,7 +316,7 @@ export default function RegisterForm() {
         type="submit"
         disabled={isLoading}
         className={`w-full ${
-          !email.trim() || emailStatus !== 'valid' || validatePassword(password)
+          !email.trim() || emailStatus !== 'valid' || !!validatePassword(password)
             ? 'opacity-50' : ''
         }`}
       >

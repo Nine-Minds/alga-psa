@@ -73,6 +73,8 @@ const TextDetailItem: React.FC<{
   automationId?: string;
   validate?: (value: string) => string | null;
 }> = ({ label, value, onEdit, automationId, validate }) => {
+  // Generate deterministic ID if automationId not provided
+  const fieldId = automationId || `text-detail-${label.toLowerCase().replace(/\s+/g, '-')}`;
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +102,7 @@ const TextDetailItem: React.FC<{
     <div className="space-y-2">
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
+        id={fieldId}
         type="text"
         value={localValue}
         onChange={handleChange}
