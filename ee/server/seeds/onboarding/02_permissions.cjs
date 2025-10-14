@@ -162,7 +162,12 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'billing_settings', action: 'read', msp: true, client: false, description: 'View billing settings' },
         { resource: 'billing_settings', action: 'update', msp: true, client: false, description: 'Update billing settings' },
         { resource: 'billing_settings', action: 'delete', msp: true, client: false, description: 'Delete billing settings' },
-        
+
+        // Account Management permissions - MSP Admin only
+        { resource: 'account_management', action: 'read', msp: true, client: false, description: 'View account and subscription details' },
+        { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Manage account and subscription settings' },
+        { resource: 'account_management', action: 'delete', msp: true, client: false, description: 'Cancel subscription and delete account' },
+
         // Client Portal Permissions
         { resource: 'billing', action: 'read', msp: false, client: true, description: 'View billing information in client portal' },
         { resource: 'billing', action: 'create', msp: false, client: true, description: 'Create billing entries in client portal' },

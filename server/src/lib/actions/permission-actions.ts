@@ -35,3 +35,17 @@ export async function getContactPortalPermissions() {
     };
   }
 }
+
+export async function checkAccountManagementPermission() {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return false;
+    }
+
+    return await hasPermission(currentUser, 'account_management', 'read');
+  } catch (error) {
+    console.error('Error checking account management permission:', error);
+    return false;
+  }
+}

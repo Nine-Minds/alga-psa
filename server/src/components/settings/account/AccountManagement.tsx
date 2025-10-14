@@ -9,6 +9,8 @@ import { toast } from 'react-hot-toast';
 import { IdCardIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
+import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
+import { useRouter } from 'next/navigation';
 
 // Placeholder data - will be replaced with actual API calls later
 interface LicenseInfo {
@@ -40,11 +42,23 @@ export default function AccountManagement() {
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo | null>(null);
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
+  const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
+  const router = useRouter();
 
   useEffect(() => {
     const init = async () => {
       try {
         setLoading(true);
+
+        // Check permission first
+        const hasPermission = await checkAccountManagementPermission();
+        setCanManageAccount(hasPermission);
+
+        if (!hasPermission) {
+          toast.error('You do not have permission to access Account Management');
+          router.push('/msp');
+          return;
+        }
 
         // Fetch real license usage data
         const licenseResult = await getLicenseUsageAction();
@@ -88,16 +102,23 @@ export default function AccountManagement() {
   }, []);
 
   const handleBuyMoreLicenses = () => {
-    // TODO: Implement license purchase flow
-    toast.success('License purchase flow - Coming soon!');
+    window.location.href = '/msp/licenses/purchase';
   };
 
   const handleUpdatePaymentMethod = () => {
+    if (!canManageAccount) {
+      toast.error('You do not have permission to update payment methods');
+      return;
+    }
     // TODO: Implement payment method update flow
     toast.success('Update payment method - Coming soon!');
   };
 
   const handleCancelSubscription = () => {
+    if (!canManageAccount) {
+      toast.error('You do not have permission to cancel subscription');
+      return;
+    }
     // TODO: Implement cancellation flow with confirmation
     toast.error('Cancel subscription flow - Coming soon!');
   };
