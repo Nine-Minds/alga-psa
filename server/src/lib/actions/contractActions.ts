@@ -175,9 +175,10 @@ export async function getContractSummary(contractId: string): Promise<IContractS
       throw new Error('tenant context not found');
     }
 
-    const [{ count: lineCountRaw }] = await knex('contract_line_mappings')
+    const result = await knex('contract_line_mappings')
       .where({ contract_id: contractId, tenant })
       .count<{ count: string }>('* as count');
+    const lineCountRaw = result[0]?.count;
 
     const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
     const hasPoNumber = await knex.schema.hasColumn('client_contracts', 'po_number');

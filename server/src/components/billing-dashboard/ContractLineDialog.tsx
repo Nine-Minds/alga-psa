@@ -37,7 +37,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [isCustom, setIsCustom] = useState(false);
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [enableProration, setEnableProration] = useState<boolean>(false);
-  const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'calendar' | 'anniversary'>('start');
+  const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'prorated'>('start');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -354,12 +354,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         <CustomSelect
                           id="alignment"
                           value={billingCycleAlignment}
-                          onValueChange={(value: string) => setBillingCycleAlignment(value as any)}
+                          onValueChange={(value: string) => setBillingCycleAlignment(value as 'start' | 'end' | 'prorated')}
                           options={[
                             { value: 'start', label: 'Start of Billing Cycle' },
                             { value: 'end', label: 'End of Billing Cycle' },
-                            { value: 'calendar', label: 'Calendar Month' },
-                            { value: 'anniversary', label: 'Anniversary Date' },
+                            { value: 'prorated', label: 'Prorated' },
                           ]}
                           placeholder="Select alignment"
                         />
