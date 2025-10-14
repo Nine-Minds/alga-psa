@@ -24,20 +24,20 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
   canHandle(document: IDocument): boolean {
     const docTypeName = document.type_name?.toLowerCase();
     const docMimeType = document.mime_type?.toLowerCase();
-    
+
     // If type_name or mime_type match, it's a BlockNote document
     const typeMatch = (
       (BlockNoteDocumentHandler.BLOCKNOTE_TYPE_NAMES.includes(docTypeName || '') ||
        BlockNoteDocumentHandler.BLOCKNOTE_TYPE_NAMES.includes(docMimeType || '')) &&
       !document.file_id // In-app document (not a file)
     );
-    
+
     // If no type information but it's an in-app document, we'll check for block content in generatePreview
-    const potentialBlockNote = !document.file_id &&
-                              !document.type_id &&
-                              !document.type_name &&
-                              !document.mime_type;
-    
+    // Also handle any in-app document that's not explicitly text or markdown
+    const hasNoTypeInfo = !document.type_id && !document.shared_type_id && !document.type_name && !document.mime_type;
+    const hasCustomType = !!document.type_name && !BlockNoteDocumentHandler.BLOCKNOTE_TYPE_NAMES.includes(docTypeName || '');
+    const potentialBlockNote = !document.file_id && (hasNoTypeInfo || hasCustomType);
+
     return typeMatch || potentialBlockNote;
   }
 
@@ -63,6 +63,7 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
           .first();
       });
 
+      // If no block content found and this was a potential match, pass to next handler
       if (!blockContent || !blockContent.block_data) {
         return {
           success: false,

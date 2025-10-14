@@ -172,7 +172,7 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
     if (document.mime_type?.startsWith('video/')) {
       return true;
     }
-    
+
     // Also handle based on file extension
     const extension = this.getFileExtension(document.document_name || '');
     const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm', 'ogg', 'm4v', '3gp', 'flv'];

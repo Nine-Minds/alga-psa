@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -116,29 +116,30 @@ interface VideoModalProps {
 
 function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
     const { t } = useTranslation('clientPortal');
-    const [canPlay, setCanPlay] = useState<boolean | null>(null);
+    const [videoError, setVideoError] = useState(false);
+    const videoRef = React.useRef<HTMLVideoElement>(null);
 
-    useEffect(() => {
-        // Check if browser can play this video format
-        const video = document.createElement('video');
-        const canPlayResult = video.canPlayType(mimeType);
-        setCanPlay(canPlayResult === 'probably' || canPlayResult === 'maybe');
-    }, [mimeType]);
+    // Handle source error - check if video element can play this format
+    const handleSourceError = () => {
+        if (videoRef.current) {
+            const canPlayType = videoRef.current.canPlayType(mimeType);
+            if (canPlayType === '') {
+                setVideoError(true);
+            } else {
+                // Format is supported but source failed - might be a network issue
+                // Give it a moment and then show error
+                setTimeout(() => {
+                    if (videoRef.current && videoRef.current.readyState === 0) {
+                        setVideoError(true);
+                    }
+                }, 1000);
+            }
+        }
+    };
 
-    // Browser-supported video formats (common ones)
-    // QuickTime/MOV is supported on Safari and most modern browsers
-    // AVI support varies by browser and codec
-    const isBrowserSupported = mimeType === 'video/mp4' ||
-                               mimeType === 'video/webm' ||
-                               mimeType === 'video/ogg' ||
-                               mimeType === 'video/quicktime' ||
-                               mimeType === 'video/x-msvideo' ||
-                               mimeType === 'video/avi';
-
-    // If we have a thumbnail and it's a potentially supported format, try to play it
-    // Even if canPlayType is uncertain, let the video tag handle it
-    if (!isBrowserSupported || (canPlay === false && !thumbnailUrl)) {
-        // Show download option for unsupported formats
+    // Show video player by default - let the browser determine if it can play
+    // Only show download fallback if video actually fails to load
+    if (videoError) {
         return (
             <div className="text-center p-8">
                 <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -146,7 +147,10 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                     {fileName}
                 </p>
                 <p className="text-[rgb(var(--color-text-500))] mb-4 text-sm">
-                    {t('documents.videoUnsupported', 'Video format ({{mimeType}}) not supported for browser playback', { mimeType })}
+                    {t('documents.videoPlaybackFailed', 'Unable to play this video in the browser')}
+                </p>
+                <p className="text-xs text-[rgb(var(--color-text-500))] mb-4">
+                    Chrome may not support this video codec. Try downloading or use Safari/Edge.
                 </p>
                 <Button
                     id={`download-video-${fileId}`}
@@ -154,7 +158,6 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                         const downloadUrl = getDocumentDownloadUrl(documentId);
                         const filename = fileName || 'download';
                         try {
-                            // Try using File System Access API for modern browsers
                             await downloadDocument(downloadUrl, filename, true);
                         } catch (error) {
                             console.error('Download failed:', error);
@@ -172,18 +175,22 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
         );
     }
 
-    // Show native video player for supported formats
+    // Try to play the video - the browser will handle compatibility
     return (
         <div>
             <video
+                ref={videoRef}
                 className="max-w-full max-h-[70vh] object-contain"
                 controls
                 autoPlay={false}
-                onError={() => {
-                    console.error('Video failed to load, showing download option');
-                }}
+                preload="metadata"
+                onError={() => setVideoError(true)}
             >
-                <source src={`/api/documents/view/${fileId}`} type={mimeType} />
+                <source
+                    src={`/api/documents/view/${fileId}`}
+                    type={mimeType}
+                    onError={handleSourceError}
+                />
                 {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
             </video>
             <div className="text-center mt-4">
@@ -551,7 +558,8 @@ function DocumentStorageCardComponent({
                         </div>
                     ) : (
                         <div className="mt-4 preview-container">
-                            {document.mime_type?.startsWith('video/') ? (
+                            {/* For videos, show FFmpeg thumbnail if available, otherwise show video preview */}
+                            {document.mime_type?.startsWith('video/') && !previewContent.previewImage ? (
                                 <VideoPreviewComponent
                                     fileId={document.file_id || ''}
                                     mimeType={document.mime_type || ''}
