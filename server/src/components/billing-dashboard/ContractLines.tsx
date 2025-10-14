@@ -12,7 +12,6 @@ import {
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { ContractLineDialog } from './ContractLineDialog';
-import { ContractWizard } from './contracts/ContractWizard';
 import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
 import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from 'server/src/lib/actions/contractLineServiceActions';
@@ -39,7 +38,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
   // Add state for all service types (standard + tenant-specific)
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
   const tenant = useTenant();
@@ -342,14 +340,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
           <Box p="4">
             <Heading as="h3" size="4" mb="4">Contract Lines</Heading>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button
-                id="wizard-contract-button"
-                data-automation-id="wizard-contract-button"
-                variant="primary"
-                onClick={() => setIsWizardOpen(true)}
-              >
-                Start Contract Wizard
-              </Button>
               <ContractLineDialog
                 onPlanAdded={(newPlanId) => {
                   fetchContractLines().then(async () => {
@@ -432,14 +422,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
           </Box>
         </Card>
       </div>
-      <ContractWizard
-        open={isWizardOpen}
-        onOpenChange={(open) => setIsWizardOpen(open)}
-        onComplete={() => {
-          setIsWizardOpen(false);
-          fetchContractLines();
-        }}
-      />
     </div>
   );
 };

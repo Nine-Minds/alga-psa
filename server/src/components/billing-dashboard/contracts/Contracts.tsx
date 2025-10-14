@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { MoreVertical, Plus } from 'lucide-react';
+import { MoreVertical, Plus, Wand2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,7 @@ import { ContractWizard } from './ContractWizard';
 const Contracts: React.FC = () => {
   const [contracts, setContracts] = useState<IContract[]>([]);
   const [editingContract, setEditingContract] = useState<IContract | null>(null);
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -34,8 +34,8 @@ const Contracts: React.FC = () => {
       const fetchedContracts = await getContracts();
       setContracts(fetchedContracts);
       setError(null);
-    } catch (error) {
-      console.error('Error fetching contracts:', error);
+    } catch (err) {
+      console.error('Error fetching contracts:', err);
       setError('Failed to fetch contracts');
     }
   };
@@ -44,12 +44,9 @@ const Contracts: React.FC = () => {
     try {
       await deleteContract(contractId);
       fetchContracts();
-    } catch (error) {
-      if (error instanceof Error) {
-        alert(error.message);
-      } else {
-        alert('Failed to delete contract');
-      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete contract';
+      alert(message);
     }
   };
 
@@ -61,12 +58,12 @@ const Contracts: React.FC = () => {
     {
       title: 'Description',
       dataIndex: 'contract_description',
-      render: (value) => value ?? 'No description',
+      render: (value) => value || 'No description',
     },
     {
       title: 'Status',
       dataIndex: 'is_active',
-      render: (value) => value ? 'Active' : 'Inactive',
+      render: (value) => (value ? 'Active' : 'Inactive'),
     },
     {
       title: 'Actions',
@@ -78,7 +75,7 @@ const Contracts: React.FC = () => {
               id="contract-actions-menu"
               variant="ghost"
               className="h-8 w-8 p-0"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
             >
               <span className="sr-only">Open menu</span>
               <MoreVertical className="h-4 w-4" />
@@ -87,8 +84,8 @@ const Contracts: React.FC = () => {
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               id="edit-contract-menu-item"
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(event) => {
+                event.stopPropagation();
                 setEditingContract({ ...record });
               }}
             >
@@ -97,9 +94,11 @@ const Contracts: React.FC = () => {
             <DropdownMenuItem
               id="delete-contract-menu-item"
               className="text-red-600 focus:text-red-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteContract(record.contract_id!);
+              onClick={(event) => {
+                event.stopPropagation();
+                if (record.contract_id) {
+                  handleDeleteContract(record.contract_id);
+                }
               }}
             >
               Delete
@@ -117,56 +116,62 @@ const Contracts: React.FC = () => {
   };
 
   return (
-    <Card size="2">
-      <Box p="4">
-        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
-          <Heading as="h3" size="4">Contracts</Heading>
-          <div className="flex items-center gap-2">
-            <Button
-              id="wizard-contract-button"
-              data-automation-id="wizard-contract-button"
-              variant="primary"
-              onClick={() => setIsWizardOpen(true)}
-            >
-              Start Contract Wizard
-            </Button>
-            <ContractDialog
-              onContractSaved={fetchContracts}
-              editingContract={editingContract}
-              onClose={() => setEditingContract(null)}
-              triggerButton={
-                <Button id='add-contract-button'>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Contract
-                </Button>
-              }
-            />
+    <>
+      <Card size="2">
+        <Box p="4">
+          <div className="flex justify-between items-center mb-4">
+            <Heading as="h3" size="4">
+              Contracts
+            </Heading>
+            <div className="flex gap-2">
+              <Button
+                id="wizard-contract-button"
+                data-automation-id="wizard-contract-button"
+                onClick={() => setShowWizard(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                Create with Wizard
+              </Button>
+              <ContractDialog
+                onContractSaved={fetchContracts}
+                editingContract={editingContract}
+                onClose={() => setEditingContract(null)}
+                triggerButton={
+                  <Button id="add-contract-button" variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Quick Add
+                  </Button>
+                }
+              />
+            </div>
           </div>
-        </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
 
-        <DataTable
-          data={contracts.filter((contract) => contract.contract_id !== undefined)}
-          columns={contractColumns}
-          pagination={true}
-          onRowClick={handleContractClick}
-          rowClassName={() => "cursor-pointer"}
-        />
-      </Box>
+          <DataTable
+            data={contracts.filter((contract) => contract.contract_id !== undefined)}
+            columns={contractColumns}
+            pagination={true}
+            onRowClick={handleContractClick}
+            rowClassName={() => 'cursor-pointer'}
+          />
+        </Box>
+      </Card>
+
       <ContractWizard
-        open={isWizardOpen}
-        onOpenChange={(open) => setIsWizardOpen(open)}
+        open={showWizard}
+        onOpenChange={setShowWizard}
         onComplete={() => {
-          setIsWizardOpen(false);
+          setShowWizard(false);
           fetchContracts();
         }}
       />
-    </Card>
+    </>
   );
 };
 
