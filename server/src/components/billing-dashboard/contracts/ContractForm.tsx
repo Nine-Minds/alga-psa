@@ -13,6 +13,7 @@ import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { updateContract } from 'server/src/lib/actions/contractActions';
 import { useTenant } from 'server/src/components/TenantProvider';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 
 interface ContractFormProps {
   contract: IContract;
@@ -23,6 +24,7 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
   const [contractName, setContractName] = useState(contract.contract_name);
   const [description, setDescription] = useState(contract.contract_description ?? '');
   const [isActive, setIsActive] = useState<boolean>(contract.is_active);
+  const [billingFrequency, setBillingFrequency] = useState(contract.billing_frequency);
   const [isSaving, setIsSaving] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -42,6 +44,9 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
     if (!contractName.trim()) {
       errors.push('Contract name');
     }
+    if (!billingFrequency) {
+      errors.push('Billing frequency');
+    }
 
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -55,6 +60,7 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
       await updateContract(contract.contract_id, {
         contract_name: contractName,
         contract_description: description || undefined,
+        billing_frequency: billingFrequency,
         is_active: isActive,
         tenant
       });
@@ -114,6 +120,21 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
             />
           </div>
 
+          <div>
+            <Label htmlFor="billing-frequency">Billing Frequency *</Label>
+            <CustomSelect
+              id="billing-frequency"
+              value={billingFrequency}
+              onValueChange={(value) => {
+                setBillingFrequency(value);
+                clearErrorIfSubmitted();
+              }}
+              options={BILLING_FREQUENCY_OPTIONS}
+              placeholder="Select billing frequency"
+              className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
+            />
+          </div>
+
           <div className="flex items-center space-x-2">
             <Checkbox
               id="is-active"
@@ -128,7 +149,7 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
               id="save-contract-details-btn"
               type="submit"
               disabled={isSaving}
-              className={!contractName.trim() ? 'opacity-50' : ''}
+              className={!contractName.trim() || !billingFrequency ? 'opacity-50' : ''}
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
               {!isSaving && <Save className="ml-2 h-4 w-4" />}

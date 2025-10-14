@@ -203,6 +203,35 @@ const ContractDetail: React.FC = () => {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Layers3 className="h-4 w-4 text-emerald-600" />
+                    Client Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-gray-700">
+                  <div className="flex items-center justify-between">
+                    <span>Assigned Clients</span>
+                    <span className="font-semibold">{formatCount(totalAssignments)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Active Assignments</span>
+                    <span className="font-semibold text-green-700">{formatCount(activeAssignments.length)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Earliest Start</span>
+                    <span className="font-medium">{formatDate(summary?.earliestStartDate)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Latest End</span>
+                    <span className="font-medium">
+                      {summary?.latestEndDate ? formatDate(summary.latestEndDate) : totalAssignments > 0 ? 'Ongoing' : '—'}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Users className="h-4 w-4 text-indigo-600" />
                     Client Assignments
                   </CardTitle>
@@ -255,6 +284,20 @@ const ContractDetail: React.FC = () => {
                       <p className="text-gray-500">No purchase orders recorded.</p>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Package className="h-4 w-4 text-amber-600" />
+                    Revenue Snapshot
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-gray-700">
+                  <p className="text-gray-500">
+                    Detailed revenue metrics are coming soon. This section will summarize recurring charges and billing totals once reporting hooks are in place.
+                  </p>
                 </CardContent>
               </Card>
             </div>
