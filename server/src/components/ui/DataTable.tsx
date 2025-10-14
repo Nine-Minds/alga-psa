@@ -85,8 +85,13 @@ const caseInsensitiveSort: SortingFn<any> = (rowA, rowB, columnId) => {
   const b = rowB.getValue(columnId);
 
   // Try to parse as dates - if both are valid dates, compare as timestamps
-  const aDate = a ? new Date(a) : null;
-  const bDate = b ? new Date(b) : null;
+  // Type guard: ensure values are string, number, or Date before passing to Date constructor
+  const isValidDateInput = (value: unknown): value is string | number | Date => {
+    return typeof value === 'string' || typeof value === 'number' || value instanceof Date;
+  };
+
+  const aDate = (a && isValidDateInput(a)) ? new Date(a) : null;
+  const bDate = (b && isValidDateInput(b)) ? new Date(b) : null;
 
   if (aDate && !isNaN(aDate.getTime()) && bDate && !isNaN(bDate.getTime())) {
     return aDate.getTime() - bDate.getTime();
@@ -172,53 +177,53 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
     columns.map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex)
   );
-  
+
   // Function to calculate which columns should be visible based on available width
   const updateVisibleColumns = () => {
     if (!tableContainerRef.current) return;
-    
+
     const containerWidth = tableContainerRef.current.clientWidth;
     const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
-    
+
     // Check if the last column is 'Actions' or 'Action' with interactive elements
     const lastColumnIndex = columns.length - 1;
     const lastColumn = columns[lastColumnIndex];
-    const isActionsColumn = lastColumn && 
-      (lastColumn.title === 'Actions' || lastColumn.title === 'Action') && 
+    const isActionsColumn = lastColumn &&
+      (lastColumn.title === 'Actions' || lastColumn.title === 'Action') &&
       lastColumn.render !== undefined;
-    
+
     const prioritizedColumns = [...columns].sort((a, b) => {
       // Always prioritize Actions column if it's the last column
       if (isActionsColumn) {
         if (a === lastColumn) return -1;
         if (b === lastColumn) return 1;
       }
-      
+
       // Keep ID column and any columns with explicit width as highest priority
       const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
       const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
-      
+
       if (aIsId && !bIsId) return -1;
       if (!aIsId && bIsId) return 1;
-      
+
       // Then prioritize columns with explicit width
       if (a.width && !b.width) return -1;
       if (!a.width && b.width) return 1;
-      
+
       return 0;
     });
-    
+
     // Calculate how many columns we can fit
     const maxColumns = Math.max(1, Math.floor(containerWidth / minColumnWidth));
-    
+
     // Get the IDs of columns that should be visible
     const newVisibleColumnIds = prioritizedColumns
       .slice(0, maxColumns)
       .map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex);
-    
+
     setVisibleColumnIds(newVisibleColumnIds);
   };
-  
+
   // Add resize event listener
   useEffect(() => {
     // Define updateVisibleColumns inside the effect to properly capture the columns dependency
