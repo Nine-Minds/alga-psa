@@ -830,6 +830,9 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
                   onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
                   countryCode={formData.country_code}
                   phoneCode={countries.find(c => c.code === formData.country_code)?.phone_code}
+                  countries={countries}
+                  onCountryChange={(countryCode) => setFormData(prev => ({ ...prev, country_code: countryCode }))}
+                  allowExtensions={true}
                   data-automation-id="phone-input"
                 />
               </div>
