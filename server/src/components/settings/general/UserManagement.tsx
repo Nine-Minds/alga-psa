@@ -451,25 +451,14 @@ const fetchContacts = async (): Promise<void> => {
             <div className="flex items-center gap-2">
               <Info size={16} className="text-blue-600" />
               <span className="text-sm text-blue-900">
-                {licenseUsage.limit !== null ? (
-                  <>
-                    MSP licenses: {licenseUsage.used} of {licenseUsage.limit} used
-                    {licenseUsage.remaining === 0 && (
-                      <> - To add a new user you must purchase additional licenses</>
-                    )}
-                  </>
-                ) : (
-                  <>MSP users: {licenseUsage.used} (No limit)</>
-                )}
+                MSP users: {licenseUsage.used}
+                {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licenses used` : ' (No limit)'}
               </span>
             </div>
             {licenseUsage.limit !== null && licenseUsage.remaining === 0 && (
-              <a
-                href="/msp/licenses/purchase"
-                className="text-sm text-blue-700 hover:text-blue-900 font-medium underline"
-              >
-                Purchase Licenses
-              </a>
+              <span className="text-sm text-blue-700">
+                To add a new user you must purchase additional licenses
+              </span>
             )}
           </div>
         )}
@@ -511,24 +500,12 @@ const fetchContacts = async (): Promise<void> => {
             )}
           </div>
           {!showNewUserForm && (
-            <>
-              {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0 ? (
-                <Button
-                  id="add-license-btn"
-                  onClick={() => window.location.href = '/msp/licenses/purchase'}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Add License
-                </Button>
-              ) : (
-                <Button
-                  id={`create-new-${portalType}-user-btn`}
-                  onClick={() => setShowNewUserForm(true)}
-                >
-                  Create New {portalType === 'msp' ? 'User' : 'Client User'}
-                </Button>
-              )}
-            </>
+            <Button
+              id={`create-new-${portalType}-user-btn`}
+              onClick={() => setShowNewUserForm(true)}
+            >
+              Create New {portalType === 'msp' ? 'User' : 'Client User'}
+            </Button>
           )}
         </div>
         {showNewUserForm && (
@@ -710,7 +687,7 @@ const fetchContacts = async (): Promise<void> => {
                   </div>
                 </div>
               </div>
-<div className="flex gap-2 justify-end">
+              <div className="flex gap-2 justify-end">
                 <Button
                   id={`submit-new-${portalType}-user-btn`}
                   variant={
@@ -720,10 +697,7 @@ const fetchContacts = async (): Promise<void> => {
                   }
                   onClick={
                     portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
-                      ? () => {
-                          // Placeholder for adding licenses
-                          toast('Add license functionality coming soon', { icon: 'ℹ️', duration: 3000 });
-                        }
+                      ? () => window.location.href = '/msp/licenses/purchase'
                       : handleCreateUser
                   }
                   disabled={portalType === 'client' && !newUser.password && !!contactValidationError}
