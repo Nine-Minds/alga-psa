@@ -835,231 +835,231 @@
     "methods": [
       "GET"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans",
+    "route_path": "/api/v1/contract-lines",
     "edition": "CE",
     "methods": [
       "GET",
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/bulk",
+    "route_path": "/api/v1/contract-lines/bulk",
     "edition": "CE",
     "methods": [
       "DELETE",
       "POST",
       "PUT"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/bulk/add-services",
+    "route_path": "/api/v1/contract-lines/bulk/add-services",
     "edition": "CE",
     "methods": [
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/bulk/create",
+    "route_path": "/api/v1/contract-lines/bulk/create",
     "edition": "CE",
     "methods": [
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/bulk/delete",
+    "route_path": "/api/v1/contract-lines/bulk/delete",
     "edition": "CE",
     "methods": [
       "DELETE"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/bulk/remove-services",
+    "route_path": "/api/v1/contract-lines/bulk/remove-services",
     "edition": "CE",
     "methods": [
       "DELETE"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/bulk/update",
+    "route_path": "/api/v1/contract-lines/bulk/update",
     "edition": "CE",
     "methods": [
       "PUT"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/{id}",
+    "route_path": "/api/v1/contract-lines/{id}",
     "edition": "CE",
     "methods": [
       "DELETE",
       "GET",
       "PUT"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/{id}/activation",
+    "route_path": "/api/v1/contract-lines/{id}/activation",
     "edition": "CE",
     "methods": [
       "PUT"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/{id}/analytics",
+    "route_path": "/api/v1/contract-lines/{id}/analytics",
     "edition": "CE",
     "methods": [
       "GET"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/{id}/copy",
+    "route_path": "/api/v1/contract-lines/{id}/copy",
     "edition": "CE",
     "methods": [
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/{id}/fixed-config",
+    "route_path": "/api/v1/contract-lines/{id}/fixed-config",
     "edition": "CE",
     "methods": [
       "GET",
       "PUT"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/{id}/services",
+    "route_path": "/api/v1/contract-lines/{id}/services",
     "edition": "CE",
     "methods": [
       "GET",
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/{id}/services/{serviceId}",
+    "route_path": "/api/v1/contract-lines/{id}/services/{serviceId}",
     "edition": "CE",
     "methods": [
       "DELETE",
       "GET",
       "PUT"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/billing-plans/{id}/usage-metrics",
+    "route_path": "/api/v1/contract-lines/{id}/usage-metrics",
     "edition": "CE",
     "methods": [
       "GET"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
@@ -1283,32 +1283,32 @@
     ]
   },
   {
-    "route_path": "/api/v1/client-billing-plans",
+    "route_path": "/api/v1/client-contract-lines",
     "edition": "CE",
     "methods": [
       "GET",
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/client-billing-plans/{id}",
+    "route_path": "/api/v1/client-contract-lines/{id}",
     "edition": "CE",
     "methods": [
       "DELETE"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
@@ -2732,74 +2732,74 @@
     ]
   },
   {
-    "route_path": "/api/v1/plan-bundles",
+    "route_path": "/api/v1/contracts",
     "edition": "CE",
     "methods": [
       "GET",
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/plan-bundles/{bundleId}/plans",
+    "route_path": "/api/v1/contracts/{contractId}/contract-lines",
     "edition": "CE",
     "methods": [
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/plan-bundles/{bundleId}/plans/{planId}",
+    "route_path": "/api/v1/contracts/{contractId}/contract-lines/{contractLineId}",
     "edition": "CE",
     "methods": [
       "DELETE"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/plan-templates",
+    "route_path": "/api/v1/contract-line-templates",
     "edition": "CE",
     "methods": [
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {
-    "route_path": "/api/v1/plan-templates/{id}/create-plan",
+    "route_path": "/api/v1/contract-line-templates/{id}/create-contract-line",
     "edition": "CE",
     "methods": [
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+      "server/src/lib/api/schemas/contractLineSchemas.ts"
     ]
   },
   {

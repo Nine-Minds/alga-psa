@@ -8,6 +8,9 @@ import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
+import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
@@ -128,13 +131,11 @@ describe('Credit Creation and Dates Tests', () => {
         'transactions',
         'credit_tracking',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
-        'plan_service_bucket_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'bucket_usage',
         'tax_rates',
         'tax_regions',

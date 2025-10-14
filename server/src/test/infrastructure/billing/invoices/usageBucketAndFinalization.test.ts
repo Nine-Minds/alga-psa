@@ -11,7 +11,7 @@ import {
   assignServiceTaxRate,
   createTestService,
   createFixedPlanAssignment,
-  createBucketPlanAssignment,
+  createBucketOverlayForPlan,
   createBucketUsageRecord
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -41,14 +41,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -66,7 +104,7 @@ vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
 const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
 globalForVitest.TextEncoder = NodeTextEncoder;
 
-describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization', () => {
+describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Finalization', () => {
   const {
     beforeAll: setupContext,
     beforeEach: resetContext,
@@ -98,14 +136,10 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_services',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
-        'plan_service_bucket_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -158,9 +192,9 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
     await cleanupContext();
   }, 30000);
 
-  describe('Usage-Based Plans', () => {
+  describe('Usage-Based Contract Lines', () => {
     it('should generate an invoice based on usage records', async () => {
-      // Arrange - Create service with usage-based billing
+      // Arrange - Create usage-based service
       const serviceId = await createTestService(context, {
         service_name: 'Data Transfer',
         billing_method: 'per_unit',
@@ -169,20 +203,31 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         tax_region: 'US-NY'
       });
 
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Usage Plan',
+      const contractLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Usage Contract Line',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Usage'
-      }, 'plan_id');
+        contract_line_type: 'Usage'
+      }, 'contract_line_id');
 
-      await context.db('plan_services').insert({
-        plan_id: planId,
+      const configId = uuidv4();
+
+      // Set up contract line service configuration for usage billing
+      await context.db('contract_line_service_configuration').insert({
+        config_id: configId,
+        contract_line_id: contractLineId,
+        service_id: serviceId,
+        configuration_type: 'Usage',
+        tenant: context.tenantId
+      });
+
+      await context.db('contract_line_services').insert({
+        contract_line_id: contractLineId,
         service_id: serviceId,
         tenant: context.tenantId
       });
 
-      // Create billing cycle and assign plan
+      // Create billing cycle and assign contract line
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: context.clientId,
         billing_cycle: 'monthly',
@@ -191,10 +236,10 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: contractLineId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
@@ -261,9 +306,9 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
     });
   });
 
-  describe('Bucket Plans', () => {
+  describe('Bucket Contract Lines', () => {
     it('should handle overage charges correctly', async () => {
-      // Arrange - Create service for bucket plan
+      // Arrange - Create service for bucket overlay contract line
       const serviceId = await createTestService(context, {
         service_name: 'Consulting Hours',
         billing_method: 'per_unit',
@@ -272,16 +317,23 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         tax_region: 'US-NY'
       });
 
-      const { planId } = await createBucketPlanAssignment(context, serviceId, {
-        planName: 'Bucket Plan',
+      const { contractLineId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Bucket Contract Line',
+        baseRateCents: 0,
+        detailBaseRateCents: 0,
         billingFrequency: 'monthly',
-        totalHours: 40,
-        overageRateCents: 7500,
-        billingPeriod: 'monthly',
         startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
 
-      // Create billing cycle and assign plan
+      await createBucketOverlayForPlan(context, contractLineId, {
+        serviceId,
+        totalHours: 40,
+        overageRateCents: 7500,
+        allowRollover: false,
+        billingPeriod: 'monthly'
+      });
+
+      // Create billing cycle covering the target period
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: context.clientId,
         billing_cycle: 'monthly',
@@ -290,9 +342,9 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      // Create bucket usage with overage
+      // Record bucket usage for the period (45 hours consumed, 5 hours overage)
       await createBucketUsageRecord(context, {
-        planId,
+        contractLineId,
         serviceId,
         clientId: context.clientId,
         periodStart: '2023-01-01',
@@ -333,18 +385,18 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
   });
 
   describe('Invoice Finalization', () => {
-    it('should finalize an invoice correctly with proper tax calculations', async () => {
-      // Arrange - Create fixed service
-      const serviceId = await createTestService(context, {
+    it('should finalize an invoice correctly', async () => {
+      // Arrange
+      const serviceId = await context.createEntity('service_catalog', {
         service_name: 'Basic Service',
-        billing_method: 'fixed',
-        default_rate: 20000, // $200.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY'
-      });
+        description: 'Test service: Basic Service',
+        service_type: 'Fixed',
+        default_rate: 20000,
+        unit_of_measure: 'unit'
+      }, 'service_id');
 
-      const { planId } = await createFixedPlanAssignment(context, serviceId, {
-        planName: 'Simple Plan',
+      const { planId: contractLineId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Simple Contract Line',
         billingFrequency: 'monthly',
         baseRateCents: 20000,
         detailBaseRateCents: 20000,
@@ -360,6 +412,15 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
+
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: contractLineId,
+        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      });
 
       // Generate draft invoice
       let invoice = await generateInvoice(billingCycleId);
@@ -384,7 +445,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
 
       expect(invoiceItemsBeforeFinalization).toHaveLength(1);
       expect(invoiceItemsBeforeFinalization[0]).toMatchObject({
-        description: expect.stringContaining('Simple Plan'),
+        description: expect.stringContaining('Simple Contract Line'),
         net_amount: '20000'
       });
 
@@ -412,7 +473,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
 
       expect(invoiceItemsAfterFinalization).toHaveLength(1);
       expect(invoiceItemsAfterFinalization[0]).toMatchObject({
-        description: expect.stringContaining('Simple Plan'),
+        description: expect.stringContaining('Simple Contract Line'),
         net_amount: '20000'
       });
     });

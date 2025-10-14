@@ -38,7 +38,7 @@
       "name": "billing-analytics"
     },
     {
-      "name": "billing-plans"
+      "name": "contract-lines"
     },
     {
       "name": "categories"
@@ -50,7 +50,7 @@
       "name": "clients"
     },
     {
-      "name": "client-billing-plans"
+      "name": "client-contract-lines"
     },
     {
       "name": "contacts"
@@ -104,10 +104,10 @@
       "name": "permissions"
     },
     {
-      "name": "plan-bundles"
+      "name": "contracts"
     },
     {
-      "name": "plan-templates"
+      "name": "contract-line-templates"
     },
     {
       "name": "projects"
@@ -5138,12 +5138,12 @@
         }
       }
     },
-    "/api/v1/billing-plans": {
+    "/api/v1/contract-lines": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5186,7 +5186,7 @@
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5238,12 +5238,12 @@
         }
       }
     },
-    "/api/v1/billing-plans/bulk": {
+    "/api/v1/contract-lines/bulk": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5286,7 +5286,7 @@
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5341,7 +5341,7 @@
         "summary": "PUT v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5393,12 +5393,12 @@
         }
       }
     },
-    "/api/v1/billing-plans/bulk/add-services": {
+    "/api/v1/contract-lines/bulk/add-services": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5450,12 +5450,12 @@
         }
       }
     },
-    "/api/v1/billing-plans/bulk/create": {
+    "/api/v1/contract-lines/bulk/create": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5507,12 +5507,12 @@
         }
       }
     },
-    "/api/v1/billing-plans/bulk/delete": {
+    "/api/v1/contract-lines/bulk/delete": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5552,12 +5552,12 @@
         }
       }
     },
-    "/api/v1/billing-plans/bulk/remove-services": {
+    "/api/v1/contract-lines/bulk/remove-services": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5597,12 +5597,12 @@
         }
       }
     },
-    "/api/v1/billing-plans/bulk/update": {
+    "/api/v1/contract-lines/bulk/update": {
       "put": {
         "summary": "PUT v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -5654,514 +5654,12 @@
         }
       }
     },
-    "/api/v1/billing-plans/{id}": {
+    "/api/v1/contract-lines/{id}": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/billing-plans/{id}/activation": {
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/billing-plans/{id}/analytics": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/billing-plans/{id}/copy": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/billing-plans/{id}/fixed-config": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/billing-plans/{id}/services": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/billing-plans/{id}/services/{serviceId}": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -6204,7 +5702,7 @@
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -6247,7 +5745,7 @@
         "summary": "PUT v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -6299,12 +5797,514 @@
         }
       }
     },
-    "/api/v1/billing-plans/{id}/usage-metrics": {
+    "/api/v1/contract-lines/{id}/activation": {
+      "put": {
+        "summary": "PUT v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/analytics": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "billing-plans"
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/copy": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/fixed-config": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "PUT v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/services": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/services/{serviceId}": {
+      "delete": {
+        "summary": "DELETE v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "204": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "PUT v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/usage-metrics": {
+      "get": {
+        "summary": "GET v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7457,12 +7457,12 @@
         }
       }
     },
-    "/api/v1/client-billing-plans": {
+    "/api/v1/client-contract-lines": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "client-billing-plans"
+          "client-contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7505,7 +7505,7 @@
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "client-billing-plans"
+          "client-contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -7557,12 +7557,12 @@
         }
       }
     },
-    "/api/v1/client-billing-plans/{id}": {
+    "/api/v1/client-contract-lines/{id}": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "client-billing-plans"
+          "client-contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -13878,12 +13878,12 @@
         }
       }
     },
-    "/api/v1/plan-bundles": {
+    "/api/v1/contracts": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "plan-bundles"
+          "contracts"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -13926,7 +13926,7 @@
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "plan-bundles"
+          "contracts"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -13978,12 +13978,12 @@
         }
       }
     },
-    "/api/v1/plan-bundles/{bundleId}/plans": {
+    "/api/v1/contracts/{contractId}/contract-lines": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "plan-bundles"
+          "contracts"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -14035,12 +14035,12 @@
         }
       }
     },
-    "/api/v1/plan-bundles/{bundleId}/plans/{planId}": {
+    "/api/v1/contracts/{contractId}/contract-lines/{contractLineId}": {
       "delete": {
         "summary": "DELETE v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "plan-bundles"
+          "contracts"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -14080,12 +14080,12 @@
         }
       }
     },
-    "/api/v1/plan-templates": {
+    "/api/v1/contract-lines-templates": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "plan-templates"
+          "contract-lines-templates"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -14137,12 +14137,12 @@
         }
       }
     },
-    "/api/v1/plan-templates/{id}/create-plan": {
+    "/api/v1/contract-line-templates/{id}/create-contract-line": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "plan-templates"
+          "contract-line-templates"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",

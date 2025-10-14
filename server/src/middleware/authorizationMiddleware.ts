@@ -12,7 +12,7 @@ interface CustomToken extends JWT {
 
 export async function authorizationMiddleware(req: NextRequest) {
   const secretProvider = await getSecretProviderInstance();
-  const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+  const nextAuthSecret = (await secretProvider.getAppSecret('NEXTAUTH_SECRET')) || process.env.NEXTAUTH_SECRET || '';
   const token = await getToken({ req, secret: nextAuthSecret }) as CustomToken;
 
   if (!token) {

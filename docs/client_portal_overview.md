@@ -152,7 +152,7 @@ if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
 **Billing & Invoices:**
 - Invoice viewing and download
 - Payment history
-- Billing plan details
+- Contract Line details
 - Usage metrics
 
 **Project Management:**

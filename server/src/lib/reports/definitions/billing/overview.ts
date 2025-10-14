@@ -18,11 +18,11 @@ export const billingOverviewReport: ReportDefinition = {
   metrics: [
     {
       id: 'active_plans_count',
-      name: 'Active Billing Plans',
-      description: 'Count of currently active billing plans',
+      name: 'Active Contract Lines',
+      description: 'Count of currently active contract lines',
       type: 'count',
       query: {
-        table: 'billing_plans',
+        table: 'contract_lines',
         aggregation: 'count',
         filters: [
           { field: 'is_active', operator: 'eq', value: true },
@@ -38,24 +38,24 @@ export const billingOverviewReport: ReportDefinition = {
     {
       id: 'active_clients_count',
       name: 'Active Billing Clients',
-      description: 'Count of clients with active billing plans',
+      description: 'Count of clients with active contract lines',
       type: 'count',
       query: {
         table: 'clients',
         joins: [
           {
             type: 'inner',
-            table: 'client_billing_plans',
+            table: 'client_contract_lines',
             on: [
-              { left: 'clients.client_id', right: 'client_billing_plans.client_id' },
-              { left: 'clients.tenant', right: 'client_billing_plans.tenant' }
+              { left: 'clients.client_id', right: 'client_contract_lines.client_id' },
+              { left: 'clients.tenant', right: 'client_contract_lines.tenant' }
             ]
           }
         ],
         aggregation: 'count_distinct',
         fields: ['clients.client_id'],
         filters: [
-          { field: 'client_billing_plans.is_active', operator: 'eq', value: true },
+          { field: 'client_contract_lines.is_active', operator: 'eq', value: true },
           { field: 'clients.tenant', operator: 'eq', value: '{{tenant}}' }
         ]
       },
@@ -113,7 +113,7 @@ export const billingOverviewReport: ReportDefinition = {
       type: 'sum',
       query: {
         table: 'invoices',
-        fields: ['total_amount - COALESCE(credit_applied, 0) as outstanding'],
+        fields: ['total_amount - COALESCE(credit_applied, 0)'],
         aggregation: 'sum',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
@@ -158,7 +158,7 @@ export const billingOverviewReport: ReportDefinition = {
         aggregation: 'count',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'approval_status', operator: 'eq', value: 'pending' }
+          { field: 'approval_status', operator: 'eq', value: 'SUBMITTED' }
         ]
       },
       formatting: {
@@ -194,6 +194,6 @@ export const billingOverviewReport: ReportDefinition = {
   caching: {
     ttl: 300, // 5 minutes
     key: 'billing.overview.{{tenant}}',
-    invalidateOn: ['invoice.created', 'invoice.updated', 'billing_plan.updated']
+    invalidateOn: ['invoice.created', 'invoice.updated', 'contract_line.updated']
   }
 };

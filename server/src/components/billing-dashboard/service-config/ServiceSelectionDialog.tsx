@@ -8,7 +8,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 's
 import { Search, Plus, Check } from 'lucide-react';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { addServiceToPlan } from 'server/src/lib/actions/planServiceActions';
+import { addServiceToContractLine } from 'server/src/lib/actions/contractLineServiceActions';
 
 interface ServiceSelectionDialogProps {
   isOpen: boolean;
@@ -128,7 +128,7 @@ export function ServiceSelectionDialog({
       
       // Add each selected service to the plan
       for (const serviceId of selectedServices) {
-        await addServiceToPlan(
+        await addServiceToContractLine(
           planId,
           serviceId
         );

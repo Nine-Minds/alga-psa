@@ -5,7 +5,7 @@ import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { TaxRegion } from 'server/src/types/types.d';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
-import { getClientIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
+import { getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 
@@ -20,7 +20,7 @@ interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isNew?: boolean;
   isDirty?: boolean;
   tempId?: string;
-  client_id?: string; // Added for billing plan selection
+  client_id?: string; // Added for contract line selection
   tax_rate_id?: string | null; // ID of the applied tax rate
   tax_percentage?: number | null; // Percentage of the applied tax rate
 }

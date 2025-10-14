@@ -62,12 +62,15 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
 }));
 
-const { requestPortalDomainRegistrationAction } = await import('@/lib/actions/tenant-actions/portalDomainActions');
+type PortalDomainActionsModule = typeof import('@/lib/actions/tenant-actions/portalDomainActions');
+let requestPortalDomainRegistrationAction: PortalDomainActionsModule['requestPortalDomainRegistrationAction'];
 
 describe('Portal domain actions – DB integration', () => {
   const HOOK_TIMEOUT = 120_000;
 
   beforeAll(async () => {
+    ({ requestPortalDomainRegistrationAction } =
+      await import('@/lib/actions/tenant-actions/portalDomainActions'));
     db = await createTestDbConnection();
     await runMigrationsAndSeeds(db);
     tenantId = await ensureTenant(db);

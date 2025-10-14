@@ -117,7 +117,7 @@ export async function createTenantInDB(
 }
 
 /**
- * Set up initial tenant data (billing plans, default settings, etc.)
+ * Set up initial tenant data (contract lines, default settings, etc.)
  */
 export async function setupTenantDataInDB(
   input: SetupTenantDataActivityInput
@@ -134,15 +134,20 @@ export async function setupTenantDataInDB(
       try {
         await trx('tenant_email_settings')
           .insert({
-            tenant_id: input.tenantId,
+            tenant: input.tenantId,
             email_provider: 'resend',
             fallback_enabled: true,
             tracking_enabled: false
           });
         setupSteps.push('email_settings');
+        log.info('Tenant email settings created successfully', { tenantId: input.tenantId });
       } catch (error) {
-        // If it already exists, that's fine
-        log.info('Tenant email settings already exist, skipping', { tenantId: input.tenantId });
+        // If it already exists, that's fine - log but don't block tenant creation
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        log.warn('Failed to create tenant email settings (non-blocking)', {
+          tenantId: input.tenantId,
+          error: errorMessage
+        });
       }
 
       // Initialize tenant settings with onboarding flags set to false
@@ -158,9 +163,14 @@ export async function setupTenantDataInDB(
             updated_at: knex.fn.now()
           });
         setupSteps.push('tenant_settings');
+        log.info('Tenant settings created successfully', { tenantId: input.tenantId });
       } catch (error) {
-        // If it already exists, that's fine
-        log.info('Tenant settings already exist, skipping', { tenantId: input.tenantId });
+        // If it already exists, that's fine - log but don't block tenant creation
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        log.warn('Failed to create tenant settings (non-blocking)', {
+          tenantId: input.tenantId,
+          error: errorMessage
+        });
       }
 
       // Create tenant-client association if we have a client/company id
@@ -173,9 +183,15 @@ export async function setupTenantDataInDB(
               is_default: true
             });
           setupSteps.push('tenant_client_association');
+          log.info('Tenant-client association created successfully', { tenantId: input.tenantId, clientId: input.clientId });
         } catch (error) {
-          // If it already exists, that's fine
-          log.info('Tenant-client association already exists, skipping', { tenantId: input.tenantId, clientId: input.clientId });
+          // If it already exists, that's fine - log but don't block tenant creation
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          log.warn('Failed to create tenant-client association (non-blocking)', {
+            tenantId: input.tenantId,
+            clientId: input.clientId,
+            error: errorMessage
+          });
         }
       }
 

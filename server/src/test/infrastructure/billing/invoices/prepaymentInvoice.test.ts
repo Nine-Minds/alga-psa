@@ -9,16 +9,14 @@ import { TestContext } from '../../../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { runWithTenant } from 'server/src/lib/db';
 import {
   createTestService,
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
-  assignServiceTaxRate,
-  createBucketPlanAssignment,
-  createBucketUsageRecord
+  assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { runWithTenant } from 'server/src/lib/db';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
@@ -46,14 +44,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -77,12 +113,7 @@ function parseInvoiceTotals(invoice: Record<string, unknown>) {
 }
 
 // Create test context helpers
-const {
-  beforeAll: setupContext,
-  beforeEach: resetContext,
-  afterEach: rollbackContext,
-  afterAll: cleanupContext
-} = TestContext.createHelpers();
+const { beforeAll: setupContext, beforeEach: resetContext, afterEach: rollbackContext, afterAll: cleanupContext } = TestContext.createHelpers();
 
 describe('Prepayment Invoice System', () => {
   let context: TestContext;
@@ -345,7 +376,7 @@ describe('Prepayment Invoice System', () => {
       expect(parseFloat(creditTransaction.amount)).toBe(prepaymentAmount);
 
       const creditBalance = await runWithTenant(context.tenantId, async () => {
-        return await ClientBillingPlan.getClientCredit(context.clientId);
+        return await ClientContractLine.getClientCredit(context.clientId);
       });
       expect(parseInt(creditBalance+'')).toBe(prepaymentAmount);
     });
@@ -388,33 +419,14 @@ describe('Prepayment Invoice System', () => {
         effective_date: startDate.toInstant().toString()
       });
 
-      // Create a service for bucket usage
-      const bucketServiceId = await createTestService(context, {
-        billing_method: 'time',
-        service_name: 'Bucket Service',
-        tax_region: 'US-NY'
-      });
-
-      // Create bucket configuration tied to the plan
-      await createBucketPlanAssignment(context, bucketServiceId, {
-        planId,
-        planName: 'Test Plan',
-        billingFrequency: 'monthly',
-        totalHours: 40,
-        overageRateCents: 150,
-        billingPeriod: 'monthly',
-        startDate: startDate.toInstant().toString()
-      });
-
-      // Create bucket usage
-      await createBucketUsageRecord(context, {
-        planId,
-        serviceId: bucketServiceId,
-        clientId: context.clientId,
-        periodStart: startDate.toInstant().toString(),
-        periodEnd: dateHelpers.startOf(now, 'month').toInstant().toString(),
-        minutesUsed: 45 * 60,
-        overageMinutes: 5 * 60
+      // Link plan to client
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        tenant: context.tenantId,
+        start_date: startDate.toInstant().toString(),
+        is_active: true
       });
     });
 
@@ -430,7 +442,7 @@ describe('Prepayment Invoice System', () => {
       });
 
       const initialCredit = await runWithTenant(context.tenantId, async () => {
-        return await ClientBillingPlan.getClientCredit(context.clientId);
+        return await ClientContractLine.getClientCredit(context.clientId);
       });
       expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
@@ -457,7 +469,7 @@ describe('Prepayment Invoice System', () => {
 
       // Verify credit balance update
       const finalCredit = await runWithTenant(context.tenantId, async () => {
-        return await ClientBillingPlan.getClientCredit(context.clientId);
+        return await ClientContractLine.getClientCredit(context.clientId);
       });
       expect(parseInt(finalCredit+'')).toBe(prepaymentAmount - totals.creditApplied);
 
@@ -595,44 +607,16 @@ describe('Multiple Credit Applications', () => {
       }
     ]);
 
-    // Create a service for bucket usage
-    const bucketServiceId = await createTestService(context, {
-      billing_method: 'time',
-      service_name: 'Bucket Service',
-      tax_region: 'US-NY'
-    });
-
-    // Create bucket configuration tied to the plan
-    await createBucketPlanAssignment(context, bucketServiceId, {
-      planId,
-      planName: 'Test Plan',
-      billingFrequency: 'monthly',
-      totalHours: 40,
-      overageRateCents: 150,
-      billingPeriod: 'monthly',
-      startDate: startDate.toInstant().toString()
-    });
-
-    // Create bucket usage for both billing cycles
-    await Promise.all([
-      createBucketUsageRecord(context, {
-        planId,
-        serviceId: bucketServiceId,
-        clientId: context.clientId,
-        periodStart: dateHelpers.startOf(now, 'month').toInstant().toString(),
-        periodEnd: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString(),
-        minutesUsed: 45 * 60,
-        overageMinutes: 5 * 60
-      }),
-      createBucketUsageRecord(context, {
-        planId,
-        serviceId: bucketServiceId,
-        clientId: context.clientId,
-        periodStart: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString(),
-        periodEnd: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month').toInstant().toString(),
-        minutesUsed: 50 * 60,
-        overageMinutes: 10 * 60
-      })
+    // Link plan to client
+    await context.db('client_contract_lines').insert([
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: context.clientId,
+        contract_line_id: planId,
+        tenant: context.tenantId,
+        start_date: startDate.toInstant().toString(),
+        is_active: true
+      }
     ]);
   }, 30000);
 
@@ -666,7 +650,7 @@ describe('Multiple Credit Applications', () => {
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
@@ -693,7 +677,7 @@ describe('Multiple Credit Applications', () => {
 
     // Verify credit balance update
     const finalCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - totals.creditApplied);
 
@@ -732,7 +716,7 @@ describe('Multiple Credit Applications', () => {
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
@@ -777,7 +761,7 @@ describe('Multiple Credit Applications', () => {
 
     // Verify final credit balance
     const finalCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - totalCreditApplied);
   });
@@ -804,7 +788,7 @@ describe('Multiple Credit Applications', () => {
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
@@ -832,7 +816,7 @@ describe('Multiple Credit Applications', () => {
 
     // Verify final credit balance
     const finalCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - creditApplied);
   });
@@ -863,7 +847,7 @@ describe('Multiple Credit Applications', () => {
     });
 
     const initialCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
@@ -892,7 +876,7 @@ describe('Multiple Credit Applications', () => {
 
     // Verify final credit balance
     const finalCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(finalCredit+'')).toBe(0);
   });

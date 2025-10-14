@@ -85,7 +85,7 @@ Based on database query, the following permissions are currently defined:
 - Invoice generation, modification, queries - ❌ Complete financial exposure
 - Credit management and reconciliation - ❌ Financial transaction risk
 - Tax rate and settings management - ❌ Tax compliance risk
-- Billing plans and cycles - ❌ Revenue configuration exposure
+- Contract Lines and cycles - ❌ Revenue configuration exposure
 
 ### 🚨 CRITICAL PRIORITY - Time Entry Actions
 **Files**: All time-entry files completely unprotected (40+ functions)  
@@ -178,7 +178,7 @@ The following new permissions need to be added to the database:
 #### Company Permissions
 - `company:create` - Create new companies
 - `company:read` - Read company information
-- `company:update` - Update company information, locations, billing plans, tax rates
+- `company:update` - Update company information, locations, contract lines, tax rates
 - `company:delete` - Delete companies
 
 #### Document Permissions
@@ -194,10 +194,10 @@ The following new permissions need to be added to the database:
 - `asset:delete` - Delete assets and maintenance schedules
 
 #### Billing & Financial Permissions
-- `billing:create` - Create billing plans, cycles, settings
+- `billing:create` - Create contract lines, cycles, settings
 - `billing:read` - View billing information
-- `billing:update` - Modify billing plans, cycles, settings
-- `billing:delete` - Delete billing plans, cycles
+- `billing:update` - Modify contract lines, cycles, settings
+- `billing:delete` - Delete contract lines, cycles
 - `invoice:create` - Create new invoices
 - `invoice:read` - View invoices and invoice data
 - `invoice:update` - Modify existing invoices
@@ -337,7 +337,7 @@ This section provides a systematic approach to implementing all security fixes i
 - [x] **2B.1** Fix invoice generation functions - Add `invoice:generate` permission checks ✅
 - [x] **2B.2** Fix invoice modification functions - Add `invoice:update`, `invoice:finalize` permission checks ✅
 - [x] **2B.3** Fix credit management functions - Add `credit:*` permission checks ✅
-- [x] **2B.4** Fix billing plan functions - Add `billing:*` permission checks ✅
+- [x] **2B.4** Fix contract line functions - Add `billing:*` permission checks ✅
 - [x] **2B.5** Fix tax management functions - Add `tax:*` permission checks ✅
 - [x] **2B.6** Test financial functions thoroughly ✅
 - [x] **2B.7** Deploy financial system fixes ✅
@@ -358,7 +358,7 @@ server/src/lib/actions/user-actions/registrationActions.ts
 server/src/lib/actions/invoiceGeneration.ts
 server/src/lib/actions/invoiceModification.ts
 server/src/lib/actions/creditActions.ts
-server/src/lib/actions/billingPlanAction.ts
+server/src/lib/actions/contractLineAction.ts
 server/src/lib/actions/taxRateActions.ts
 server/src/lib/actions/timeEntryCrudActions.ts
 server/src/lib/actions/timeSheetActions.ts
@@ -373,7 +373,7 @@ server/src/lib/actions/timePeriodsActions.ts
 
 #### Sub-Phase 3A: Company Management ✅ **COMPLETED**
 - [x] **3A.1** Fix company CRUD operations - Add `company:*` permission checks ✅
-- [x] **3A.2** Fix company billing plan functions - Upgrade to specific permissions ✅
+- [x] **3A.2** Fix company contract line functions - Upgrade to specific permissions ✅
 - [x] **3A.3** Fix company location functions - Upgrade to specific permissions ✅
 - [x] **3A.4** Test company management functions ✅
 - [x] **3A.5** Deploy company management fixes ✅
@@ -408,7 +408,7 @@ server/src/lib/actions/timePeriodsActions.ts
 ```
 server/src/lib/actions/company-actions/companyActions.ts
 server/src/lib/actions/company-actions/companyTaxRateActions.ts
-server/src/lib/actions/company-actions/companyBillingPlanActions.ts
+server/src/lib/actions/company-actions/companyContractLineActions.ts
 server/src/lib/actions/company-actions/companyLocationActions.ts
 server/src/lib/actions/document-actions/documentActions.ts
 server/src/lib/actions/document-actions/documentContentActions.ts

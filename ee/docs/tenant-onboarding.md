@@ -129,7 +129,7 @@ const result = await client.workflow.start('tenantCreationWorkflow', {
       email: 'john.doe@acme.com'
     },
     companyName: 'Acme Corporation',
-    billingPlan: 'professional'
+    contractLine: 'professional'
   }]
 });
 
@@ -150,7 +150,7 @@ interface TenantCreationInput {
     email: string;                 // Admin user email (also used for tenant)
   };
   companyName?: string;            // Optional company name
-  billingPlan?: string;            // Optional billing plan (default: 'basic')
+  contractLine?: string;            // Optional contract line (default: 'basic')
 }
 ```
 
@@ -226,7 +226,7 @@ await handle.signal('cancel', {
 
 // Update workflow parameters
 await handle.signal('update', {
-  field: 'billingPlan',
+  field: 'contractLine',
   value: 'enterprise'
 });
 ```

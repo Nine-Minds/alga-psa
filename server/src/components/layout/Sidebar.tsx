@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import * as RadixIcons from '@radix-ui/react-icons';
 import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
@@ -30,9 +30,33 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): JSX.Element => {
   const appVersion = getAppVersion();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (!path) {
+      return false;
+    }
+
+    const [targetPath, queryString] = path.split('?');
+
+    if (pathname !== targetPath) {
+      return false;
+    }
+
+    if (!queryString) {
+      return true;
+    }
+
+    const targetParams = new URLSearchParams(queryString);
+    const targetTab = targetParams.get('tab');
+
+    if (!targetTab) {
+      return true;
+    }
+
+    return searchParams?.get('tab') === targetTab;
+  };
 
   const toggleSubmenu = (name: string) => {
     setOpenSubmenu(openSubmenu === name ? null : name);

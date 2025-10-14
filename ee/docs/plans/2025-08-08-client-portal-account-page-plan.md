@@ -2,15 +2,15 @@ Title: Client Portal – Account Page Plan
 Date: 2025-08-08
 
 Intro and Background / Rationale
-- Goal: Add a first-class “Account” destination in the client portal where a client user can see their company details, current billing plan, and invoices. Include a “Cancel Subscription” button stub (no backend wiring yet).
+- Goal: Add a first-class “Account” destination in the client portal where a client user can see their company details, current contract line, and invoices. Include a “Cancel Subscription” button stub (no backend wiring yet).
 - Why: Today, billing info lives under Billing and company details under Company Settings. A concise Account page surfaced from the profile menu improves discoverability for end users and consolidates the most common read-only account tasks in one place.
-- Scope: UI changes only. Read-only data fetch for company details, billing plan, and invoices. Add a non-functional cancel subscription button stub for future wiring.
+- Scope: UI changes only. Read-only data fetch for company details, contract line, and invoices. Add a non-functional cancel subscription button stub for future wiring.
 
 Phased To‑Do List (Dependent Order)
 1) Add “Account” to profile dropdown
 2) Scaffold `client-portal/account` route and page
 3) Fetch and display company details (read-only)
-4) Fetch and display billing plan (+ cancel subscription stub)
+4) Fetch and display contract line (+ cancel subscription stub)
 5) Fetch and display invoices list
 6) Handle permissions, empty, and loading states
 7) Final UX polish, instrumentation IDs, and docs
@@ -27,7 +27,7 @@ New Route and Page
 - Add: `server/src/app/client-portal/account/page.tsx`
   - Client component that renders a new `ClientAccount` composite component (see below).
   - Title: “Account”.
-  - Sections: Company Details, Billing Plan, Invoices.
+  - Sections: Company Details, Contract Line, Invoices.
   - Keep page simple and fast: render minimal, high-signal information. Defer heavier interactions to their dedicated pages (e.g., Billing).
 
 Data Sources (Server Actions already present)
@@ -38,8 +38,8 @@ Data Sources (Server Actions already present)
     - `server/src/lib/actions/company-actions/companyActions.ts` (getCompanyById)
   - Permissions: `getCompanyById` enforces `client.read` permission; handle “no permission” with a friendly message.
 
-- Billing Plan
-  - Use: `getClientBillingPlan()` from `server/src/lib/actions/client-portal-actions/client-billing.ts`
+- Contract Line
+  - Use: `getClientContractLine()` from `server/src/lib/actions/client-portal-actions/client-billing.ts`
   - Displays: plan name, billing frequency, service category if present. If none, show “No active plan”.
 
 - Invoices
@@ -55,7 +55,7 @@ ClientAccount Component (new)
 - Location: `server/src/components/client-portal/account/ClientAccount.tsx`
 - Responsibilities:
   - Read-only Company Details card: company name, website (properties.website/url), possibly logo if readily available via `getCompanyById` (returns `logoUrl`).
-  - Billing Plan card: plan name, billing frequency, service category (if any), and a “Cancel Subscription” button stub.
+  - Contract Line card: plan name, billing frequency, service category (if any), and a “Cancel Subscription” button stub.
     - Button ID: `cancel-subscription-button` (no-op for now; show toast “Not implemented”).
   - Invoices table: invoice number, invoice date, total, status. Provide “View in Billing” link to `/client-portal/billing` for details.
 - Loading/Empty/Error:
@@ -76,7 +76,7 @@ UI / Implementation Notes
   - Use our custom Dialog if/when needed.
   - Keep accessible labels and sensible empty states.
 - Permissions:
-  - Company details require `client.read` (enforced by action). Invoices list requires `billing.read` for client portal (enforced by action). Billing plan fetch is allowed for all authenticated client users.
+  - Company details require `client.read` (enforced by action). Invoices list requires `billing.read` for client portal (enforced by action). Contract Line fetch is allowed for all authenticated client users.
   - Gracefully handle lack of permissions with non-blocking messaging.
 - Performance:
   - Minimal queries on initial render; sequential fetch with `useEffect` is acceptable (pattern used by existing components). Avoid large charts or heavy usage aggregations here.
@@ -92,7 +92,7 @@ Acceptance Criteria
 - Profile dropdown shows “Account” and navigates to `/client-portal/account`.
 - Account page renders for an authenticated client user.
 - Company details card shows company name and website when available (and logo if present in `getCompanyById`).
-- Billing plan card shows current plan or a clear empty state; includes a visible, non-functional “Cancel Subscription” button.
+- Contract Line card shows current plan or a clear empty state; includes a visible, non-functional “Cancel Subscription” button.
 - Invoices table appears when the user has invoice access; otherwise, it’s hidden or shows a friendly note.
 - All interactive elements have stable IDs; errors and loading states are handled cleanly.
 

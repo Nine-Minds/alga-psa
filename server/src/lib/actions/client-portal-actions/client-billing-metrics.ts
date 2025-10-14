@@ -8,18 +8,18 @@ import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
 import { 
   IService, 
   IServiceType, 
-  IClientBillingPlan,
-  IBillingPlan,
+  IClientContractLine,
+  IContractLine,
   IBucketUsage,
-  IPlanService
+  IContractLineService
 } from 'server/src/interfaces/billing.interfaces';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { IProjectTask, IProject, IProjectPhase } from 'server/src/interfaces/project.interfaces';
 import { IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { 
-  IPlanServiceConfiguration,
-  IPlanServiceBucketConfig
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+  IContractLineServiceConfiguration,
+  IContractLineServiceBucketConfig
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { toPlainDate, formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import { getSession } from 'server/src/lib/auth/getSession';
@@ -310,8 +310,8 @@ export async function getClientUsageMetrics(
 
 // Define the structure for the bucket usage returned data
 export interface ClientBucketUsageResult {
-  plan_id: string;
-  plan_name: string;
+  contract_line_id: string;
+  contract_line_name: string;
   service_id: string;
   service_name: string;
   display_label: string;
@@ -329,7 +329,119 @@ export interface ClientBucketUsageResult {
 }
 
 /**
- * Server action to fetch enhanced bucket usage details for the client's client.
+ * Server action to fetch historical bucket usage across multiple periods for the client's account.
+ *
+ * @param serviceId - Optional service ID to filter by specific service
+ * @returns Array of historical bucket usage data grouped by service
+ */
+export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
+  service_id: string;
+  service_name: string;
+  history: Array<{
+    period_start: string;
+    period_end: string;
+    percentage_used: number;
+    hours_used: number;
+    hours_total: number;
+  }>;
+}[]> {
+  const session = await getSession();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant context is required.');
+  }
+
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const user = await trx('users').where({ user_id: session.user.id, tenant }).first();
+      if (!user?.contact_id) throw new Error('User not associated with a contact');
+
+      const contact = await trx('contacts').where({ contact_name_id: user.contact_id, tenant }).first();
+      if (!contact?.client_id) throw new Error('Contact not associated with a client');
+
+      const clientId = contact.client_id;
+
+      let query: any = trx('bucket_usage as bu')
+        .join('contract_line_service_configuration as clsc', function(this: any) {
+          this.on('bu.contract_line_id', '=', 'clsc.contract_line_id')
+            .andOn('bu.service_catalog_id', '=', 'clsc.service_id')
+            .andOn('bu.tenant', '=', 'clsc.tenant')
+            .andOnVal('clsc.configuration_type', 'Bucket');
+        })
+        .join('contract_line_service_bucket_config as clsb', function(this: any) {
+          this.on('clsc.config_id', '=', 'clsb.config_id')
+            .andOn('clsc.tenant', '=', 'clsb.tenant');
+        })
+        .join('contract_lines as cl', function(this: any) {
+          this.on('cl.contract_line_id', '=', 'clsc.contract_line_id')
+            .andOn('cl.tenant', '=', 'clsc.tenant');
+        })
+        .join('service_catalog as sc', function(this: any) {
+          this.on('clsc.service_id', '=', 'sc.service_id')
+            .andOn('clsc.tenant', '=', 'sc.tenant');
+        })
+        .where('bu.client_id', clientId)
+        .andWhere('bu.tenant', tenant);
+
+      if (serviceId) {
+        query = query.andWhere('clsc.service_id', serviceId);
+      }
+
+      query = query
+        .select(
+          'clsc.service_id',
+          'sc.service_name',
+          'cl.contract_line_id',
+          'cl.contract_line_name',
+          'bu.period_start',
+          'bu.period_end',
+          'bu.minutes_used',
+          'bu.rolled_over_minutes',
+          'clsb.total_minutes'
+        )
+        .orderBy('clsc.service_id')
+        .orderBy('bu.period_start', 'desc');
+
+      const rawResults: any[] = await query;
+
+      const serviceMap = new Map<string, { service_id: string; service_name: string; history: Array<{ period_start: string; period_end: string; percentage_used: number; hours_used: number; hours_total: number; }>; }>();
+
+      rawResults.forEach(row => {
+        const totalMinutes = typeof row.total_minutes === 'string' ? parseFloat(row.total_minutes) : row.total_minutes;
+        const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
+        const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
+        const totalWithRollover = totalMinutes + rolledOverMinutes;
+        const percentageUsed = totalWithRollover > 0 ? (minutesUsed / totalWithRollover) * 100 : 0;
+        const hoursUsed = minutesUsed / 60;
+        const hoursTotal = totalWithRollover / 60;
+
+        if (!serviceMap.has(row.service_id)) {
+          serviceMap.set(row.service_id, { service_id: row.service_id, service_name: row.service_name, history: [] });
+        }
+
+        serviceMap.get(row.service_id)!.history.push({
+          period_start: row.period_start.toISOString().split('T')[0],
+          period_end: row.period_end.toISOString().split('T')[0],
+          percentage_used: Math.round(percentageUsed * 100) / 100,
+          hours_used: Math.round(hoursUsed * 100) / 100,
+          hours_total: Math.round(hoursTotal * 100) / 100,
+        });
+      });
+
+      return Array.from(serviceMap.values());
+    });
+
+    return result;
+  } catch (error) {
+    console.error(`Error fetching bucket usage history in tenant ${tenant}:`, error);
+    throw new Error(`Failed to fetch bucket usage history: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+/**
  * This provides more detailed information than the basic getCurrentUsage function.
  *
  * @returns A promise that resolves to an array of detailed bucket usage information.
@@ -379,47 +491,46 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
       console.log(`Fetching bucket usage for client client ${clientId} in tenant ${tenant} as of ${currentDate}`);
 
-      const query = trx<IClientBillingPlan>('client_billing_plans as cbp')
-      .join<IBillingPlan>('billing_plans as bp', function() {
-        this.on('cbp.plan_id', '=', 'bp.plan_id')
-            .andOn('cbp.tenant', '=', 'bp.tenant');
+      const query = trx<IClientContractLine>('client_contract_lines as ccl')
+      .join<IContractLine>('contract_lines as cl', function() {
+        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      .join<IPlanService>('plan_services as ps', function() {
-        this.on('bp.plan_id', '=', 'ps.plan_id')
-            .andOn('bp.tenant', '=', 'ps.tenant');
+      .join<IContractLineService>('contract_line_services as ps', function() {
+        this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
+            .andOn('cl.tenant', '=', 'ps.tenant');
       })
       .join<IService>('service_catalog as sc', function() {
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      .join<IPlanServiceConfiguration>('plan_service_configuration as psc', function() { 
-        this.on('ps.plan_id', '=', 'psc.plan_id')
+      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() { 
+        this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
-      .join<IPlanServiceBucketConfig>('plan_service_bucket_config as psbc', function() {
+      .join<IContractLineServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
         this.on('psc.config_id', '=', 'psbc.config_id')
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
       .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
-        this.on('bp.plan_id', '=', 'bu.plan_id')
-            .andOn('cbp.client_id', '=', 'bu.client_id')
-            .andOn('cbp.tenant', '=', 'bu.tenant')
+        this.on('cl.contract_line_id', '=', 'bu.contract_line_id')
+            .andOn('ccl.client_id', '=', 'bu.client_id')
+            .andOn('ccl.tenant', '=', 'bu.tenant')
             .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
             .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
       })
-      .where('cbp.client_id', clientId)
-      .andWhere('cbp.tenant', tenant)
-      .andWhere('bp.plan_type', 'Bucket')
-      .andWhere('cbp.is_active', true)
-        .andWhere('cbp.start_date', '<=', trx.raw('?', [currentDate]))
+      .where('ccl.client_id', clientId)
+      .andWhere('ccl.tenant', tenant)
+      .andWhere('ccl.is_active', true)
+        .andWhere('ccl.start_date', '<=', trx.raw('?', [currentDate]))
         .andWhere(function() {
-          this.whereNull('cbp.end_date')
-              .orWhere('cbp.end_date', '>', trx.raw('?', [currentDate]));
+          this.whereNull('ccl.end_date')
+              .orWhere('ccl.end_date', '>', trx.raw('?', [currentDate]));
         })
         .select(
-          'bp.plan_id',
-          'bp.plan_name',
+          'cl.contract_line_id',
+          'cl.contract_line_name',
           'ps.service_id',
           'sc.service_name',
           'psbc.total_minutes',
@@ -436,7 +547,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
       const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
       const remainingMinutes = totalMinutes + rolledOverMinutes - minutesUsed;
-      const displayLabel = `${row.plan_name} - ${row.service_name}`;
+      const displayLabel = `${row.contract_line_name} - ${row.service_name}`;
       
       // Calculate additional metrics for enhanced display
       const totalWithRollover = totalMinutes + rolledOverMinutes;
@@ -449,8 +560,8 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       const hoursRemaining = remainingMinutes / 60;
       
         return {
-          plan_id: row.plan_id,
-          plan_name: row.plan_name,
+          contract_line_id: row.contract_line_id,
+          contract_line_name: row.contract_line_name,
           service_id: row.service_id,
           service_name: row.service_name,
           display_label: displayLabel,

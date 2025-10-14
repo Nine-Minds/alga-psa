@@ -10,7 +10,7 @@ export interface TenantCreationInput {
   };
   companyName?: string;
   clientName?: string;
-  billingPlan?: string;
+  contractLine?: string;
   licenseCount?: number; // Number of licenses for the tenant
   checkoutSessionId?: string; // Stripe checkout session ID for status updates
 }
@@ -59,7 +59,7 @@ export interface SetupTenantDataActivityInput {
   tenantId: string;
   adminUserId: string;
   clientId?: string;
-  billingPlan?: string;
+  contractLine?: string;
 }
 
 export interface SetupTenantDataActivityResult {

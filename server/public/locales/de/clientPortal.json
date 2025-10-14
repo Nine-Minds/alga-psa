@@ -194,9 +194,9 @@
       "overview": "Übersicht",
       "invoices": "Rechnungen"
     },
-    "currentPlan": "Aktueller Tarif",
+    "currentContractLine": "Aktueller Tarif",
     "nextInvoice": "Nächste Rechnung",
-    "viewPlanDetails": "Tarifdetails anzeigen",
+    "viewContractLineDetails": "Tarifdetails anzeigen",
     "viewAllInvoices": "Alle Rechnungen anzeigen",
     "failedToLoad": "Rechnungen konnten nicht geladen werden. Bitte versuche es erneut.",
     "invoices": "Rechnungen",
@@ -246,7 +246,7 @@
       "weekly": "Wöchentlich",
       "biweekly": "Zweiwöchentlich"
     },
-    "plan": {
+    "contractLine": {
       "detailsTitle": "Tarifdetails",
       "name": "Name des Tarifs",
       "frequency": "Abrechnungshäufigkeit",
@@ -274,8 +274,8 @@
       "total": "Gesamtstunden",
       "usage": "Nutzung",
       "overage": "Überschreitung",
-      "noPlanTitle": "Keine Stundenpläne verfügbar",
-      "noPlanDescription": "Für dein Konto sind keine aktiven Stundenpläne vorhanden."
+      "noContractLineTitle": "Keine Stundenpläne verfügbar",
+      "noContractLineDescription": "Für dein Konto sind keine aktiven Stundenpläne vorhanden."
     },
     "messages": {
       "noInvoices": "Keine Rechnungen gefunden",
@@ -522,7 +522,7 @@
   "account": {
     "services": {
       "loadError": "Dienste konnten nicht geladen werden",
-      "loadPlansError": "Servicepläne konnten nicht geladen werden",
+      "loadContractLinesError": "Servicepläne konnten nicht geladen werden",
       "updateError": "Service konnte nicht aktualisiert werden",
       "loading": "Dienste werden geladen...",
       "activeTitle": "Aktive Dienste",
@@ -531,7 +531,7 @@
         "service": "Dienst",
         "description": "Beschreibung",
         "status": "Status",
-        "currentPlan": "Aktueller Plan",
+        "currentContractLine": "Aktuelle Vertragslinie",
         "nextBilling": "Nächste Abrechnung"
       },
       "actions": {
@@ -541,8 +541,8 @@
       },
       "manageTitle": "Dienst {{service}} verwalten",
       "genericServiceLabel": "Dienst",
-      "currentPlan": "Aktueller Plan",
-      "availablePlans": "Verfügbare Pläne",
+      "currentContractLine": "Aktuelle Vertragslinie",
+      "availableContractLines": "Verfügbare Pläne",
       "catalog": {
         "title": "Verfügbare Dienste",
         "learnMore": "Mehr erfahren",

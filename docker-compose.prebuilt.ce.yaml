@@ -89,6 +89,9 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
+      # Prefer direct Postgres for admin operations even if DB_HOST points to PgBouncer
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}

@@ -28,7 +28,7 @@ export interface WizardData {
   serviceName: string;
   serviceDescription: string;
   servicePrice: string;
-  planName: string;
+  contractLineName: string;
   serviceTypeId?: string; // Selected service type
   serviceId?: string; // Track created service
 

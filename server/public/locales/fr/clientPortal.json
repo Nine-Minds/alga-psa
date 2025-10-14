@@ -194,9 +194,9 @@
       "overview": "Aperçu",
       "invoices": "Factures"
     },
-    "currentPlan": "Forfait actuel",
+    "currentContractLine": "Forfait actuel",
     "nextInvoice": "Prochaine facture",
-    "viewPlanDetails": "Voir les détails du forfait",
+    "viewContractLineDetails": "Voir les détails du forfait",
     "viewAllInvoices": "Voir toutes les factures",
     "failedToLoad": "Échec du chargement des factures. Veuillez réessayer.",
     "invoices": "Factures",
@@ -246,7 +246,7 @@
       "weekly": "Hebdomadaire",
       "biweekly": "Bihebdomadaire"
     },
-    "plan": {
+    "contractLine": {
       "detailsTitle": "Détails du forfait",
       "name": "Nom du forfait",
       "frequency": "Fréquence de facturation",
@@ -274,8 +274,8 @@
       "total": "Total d'heures",
       "usage": "Utilisation",
       "overage": "Dépassement",
-      "noPlanTitle": "Aucune banque d'heures disponible",
-      "noPlanDescription": "Aucun forfait d'heures actif pour votre compte."
+      "noContractLineTitle": "Aucune banque d'heures disponible",
+      "noContractLineDescription": "Aucun forfait d'heures actif pour votre compte."
     },
     "messages": {
       "noInvoices": "Aucune facture trouvée",
@@ -522,7 +522,7 @@
   "account": {
     "services": {
       "loadError": "Échec du chargement des services",
-      "loadPlansError": "Échec du chargement des plans de service",
+      "loadContractLinesError": "Échec du chargement des plans de service",
       "updateError": "Échec de la mise à jour du service",
       "loading": "Chargement des services...",
       "activeTitle": "Services actifs",
@@ -531,7 +531,7 @@
         "service": "Service",
         "description": "Description",
         "status": "Statut",
-        "currentPlan": "Plan actuel",
+        "currentContractLine": "Ligne contractuelle actuelle",
         "nextBilling": "Prochaine facturation"
       },
       "actions": {
@@ -541,8 +541,8 @@
       },
       "manageTitle": "Gérer {{service}}",
       "genericServiceLabel": "Service",
-      "currentPlan": "Plan actuel",
-      "availablePlans": "Plans disponibles",
+      "currentContractLine": "Ligne contractuelle actuelle",
+      "availableContractLines": "Plans disponibles",
       "catalog": {
         "title": "Services disponibles",
         "learnMore": "En savoir plus",

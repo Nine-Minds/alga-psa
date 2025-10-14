@@ -33,9 +33,18 @@ export class QueryBuilder {
       
       // Add field selection
       if (queryDef.fields && queryDef.fields.length > 0) {
-        query = query.select(queryDef.fields);
+        if (queryDef.aggregation) {
+          // Handle aggregation with specific field(s)
+          const aggregationField = this.buildAggregationField(
+            queryDef.aggregation,
+            queryDef.fields[0]
+          );
+          query = query.select(trx.raw(aggregationField));
+        } else {
+          query = query.select(queryDef.fields);
+        }
       } else if (queryDef.aggregation) {
-        // Handle aggregation queries
+        // Handle aggregation queries without specific fields
         const aggregationField = this.buildAggregationField(queryDef.aggregation);
         query = query.select(trx.raw(aggregationField));
       } else {
@@ -171,22 +180,24 @@ export class QueryBuilder {
   /**
    * Build aggregation field expression
    */
-  private static buildAggregationField(aggregationType: string): string {
+  private static buildAggregationField(aggregationType: string, field?: string): string {
+    const targetField = field || '*';
+
     switch (aggregationType) {
       case 'count':
-        return 'COUNT(*) as count';
+        return `COUNT(${targetField}) as count`;
       case 'count_distinct':
-        return 'COUNT(DISTINCT *) as count_distinct';
+        return `COUNT(DISTINCT ${targetField}) as count_distinct`;
       case 'sum':
-        return 'SUM(*) as sum';
+        return `SUM(${targetField}) as sum`;
       case 'avg':
-        return 'AVG(*) as avg';
+        return `AVG(${targetField}) as avg`;
       case 'min':
-        return 'MIN(*) as min';
+        return `MIN(${targetField}) as min`;
       case 'max':
-        return 'MAX(*) as max';
+        return `MAX(${targetField}) as max`;
       default:
-        return `${aggregationType.toUpperCase()}(*) as ${aggregationType}`;
+        return `${aggregationType.toUpperCase()}(${targetField}) as ${aggregationType}`;
     }
   }
   
