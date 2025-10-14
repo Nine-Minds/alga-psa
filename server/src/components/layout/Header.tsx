@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useId } from 'react';
 import { signOut } from "next-auth/react";
 import Link from 'next/link';
-import { ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
+import { ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon, RocketIcon, GearIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
@@ -108,8 +108,10 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const pathname = usePathname();
-  const breadcrumbItems = getBreadcrumbItems(pathname);  
+  const breadcrumbItems = getBreadcrumbItems(pathname);
 
+  // Check if user is admin
+  const isAdmin = userData?.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? false;
 
   return (
     <header className="bg-transparent py-4 flex items-center justify-between border-b border-main-300 shadow-[0_5px_10px_rgba(0,0,0,0.1)] p-2">
@@ -182,6 +184,15 @@ const Header: React.FC<HeaderProps> = ({
                 <PersonIcon className="mr-2 h-3.5 w-3.5" />
                 <span>Profile</span>
               </DropdownMenu.Item>
+              {isAdmin && (
+                <DropdownMenu.Item
+                  className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
+                  onSelect={() => router.push('/msp/account')}
+                >
+                  <GearIcon className="mr-2 h-3.5 w-3.5" />
+                  <span>Account</span>
+                </DropdownMenu.Item>
+              )}
               <DropdownMenu.Item
                 className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                 onSelect={handleSignOut}
