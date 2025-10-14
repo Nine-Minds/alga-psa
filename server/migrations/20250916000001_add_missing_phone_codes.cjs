@@ -43,6 +43,7 @@ exports.up = async function(knex) {
   ];
 
   // Update countries with missing phone codes
+  // Note: countries is a reference table (shared across all tenants), so no tenant filter needed
   for (const [countryCode, phoneCode] of missingPhoneCodeUpdates) {
     await knex('countries')
       .where('code', countryCode)
@@ -64,6 +65,7 @@ exports.down = async function(knex) {
     'GS', 'TL'
   ];
 
+  // Note: countries is a reference table (shared across all tenants), so no tenant filter needed
   for (const countryCode of countriesToClear) {
     await knex('countries')
       .where('code', countryCode)

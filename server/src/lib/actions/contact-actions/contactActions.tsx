@@ -429,21 +429,58 @@ export async function getAllClients(): Promise<IClient[]> {
   }
 
   try {
-    // Fetch all clients with proper ordering
-    const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .select(
-          'clients.*'
-        )
-        .where('clients.tenant', tenant)
-        .orderBy('clients.client_name', 'asc'); // Add consistent ordering
-    });
+    console.log('[getAllClients] Fetching clients for tenant:', tenant);
 
-    // Return empty array if no clients found (don't throw error)
-    return clients;
+    // Start with basic clients query and fallback gracefully
+    let clients: any[] = [];
+    try {
+      clients = await db('clients')
+        .select('*')
+        .where('tenant', tenant)
+        .orderBy('client_name', 'asc');
+
+      console.log('[getAllClients] Found', clients.length, 'clients');
+    } catch (dbErr: any) {
+      console.error('[getAllClients] Database error:', dbErr);
+
+      if (dbErr.message && (
+        dbErr.message.includes('relation') ||
+        dbErr.message.includes('does not exist') ||
+        dbErr.message.includes('table')
+      )) {
+        // Try fallback to companies table for company→client migration
+        console.log('[getAllClients] Clients table not found, trying companies table fallback...');
+        try {
+          const companies = await db('companies')
+            .select('*')
+            .where('tenant', tenant)
+            .orderBy('company_name', 'asc');
+
+          console.log('[getAllClients] Found', companies.length, 'companies, mapping to client structure');
+
+          // Map companies to client structure
+          clients = companies.map(company => ({
+            ...company,
+            client_id: company.company_id || company.id,
+            client_name: company.company_name || company.name,
+          }));
+        } catch (companiesErr) {
+          console.error('[getAllClients] Companies table also failed:', companiesErr);
+          // Return empty array instead of throwing error for this function
+          console.warn('[getAllClients] Returning empty array due to database schema issues');
+          return [];
+        }
+      } else {
+        // Return empty array instead of throwing error for this function
+        console.warn('[getAllClients] Returning empty array due to database error');
+        return [];
+      }
+    }
+
+    return clients as IClient[];
   } catch (err) {
     // Log the error for debugging
-    console.error('Error fetching all clients:', err);
+    console.error('[getAllClients] Error fetching all clients:', err);
 
     // Handle known error types
     if (err instanceof Error) {

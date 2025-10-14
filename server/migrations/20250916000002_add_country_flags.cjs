@@ -311,6 +311,7 @@ exports.up = async function(knex) {
   ];
 
   // Update countries with flag emojis
+  // Note: countries is a reference table (shared across all tenants), so no tenant filter needed
   for (const [countryCode, flagEmoji] of flagUpdates) {
     await knex('countries')
       .where('code', countryCode)

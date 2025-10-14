@@ -5,6 +5,7 @@ import { getDocumentByClientId } from 'server/src/lib/actions/document-actions/d
 import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { notFound } from 'next/navigation';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 
 const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const resolvedParams = await params;
@@ -26,7 +27,11 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
 
     return (
       <div className="mx-auto px-4">
-       <div>Client details functionality has been moved to contacts</div>
+        <ClientDetails
+          client={client}
+          documents={documents}
+          contacts={contacts}
+        />
       </div>
     );
   } catch (error) {

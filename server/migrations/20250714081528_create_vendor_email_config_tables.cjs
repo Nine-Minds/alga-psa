@@ -34,6 +34,8 @@ exports.up = async function(knex) {
     table.primary(['email_provider_id', 'tenant']);
     
      //Foreign keys
+    // Note: This FK between distributed tables is handled during Citus distribution
+    // The foreign key constraints are captured and recreated by the distribution migration
     table.foreign(['email_provider_id', 'tenant'])
       .references(['id', 'tenant'])
       .inTable('email_providers')
@@ -80,6 +82,8 @@ exports.up = async function(knex) {
     table.primary(['email_provider_id', 'tenant']);
     
      //Foreign keys
+    // Note: This FK between distributed tables is handled during Citus distribution
+    // The foreign key constraints are captured and recreated by the distribution migration
     table.foreign(['email_provider_id', 'tenant'])
       .references(['id', 'tenant'])
       .inTable('email_providers')

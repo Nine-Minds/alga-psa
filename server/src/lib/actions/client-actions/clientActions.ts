@@ -499,61 +499,75 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
   }
 
   try {
-    console.log('Fetching clients for tenant:', tenant);
+    console.log('[getAllClients] Fetching clients for tenant:', tenant, 'includeInactive:', includeInactive);
 
-    // Check if clients table exists
-    const hasClientsTable = await db.schema.hasTable('clients');
-    console.log('Clients table exists:', hasClientsTable);
+    // Start with basic clients query and fallback gracefully
+    let clients: any[] = [];
+    try {
+      clients = await db('clients')
+        .select('*')
+        .where('tenant', tenant);
 
-    if (!hasClientsTable) {
-      console.log('Clients table does not exist, checking for companies table...');
-      const hasCompaniesTable = await db.schema.hasTable('companies');
-      console.log('Companies table exists:', hasCompaniesTable);
+      console.log('[getAllClients] Found', clients.length, 'clients');
+    } catch (dbErr: any) {
+      console.error('[getAllClients] Database error:', dbErr);
 
-      if (hasCompaniesTable) {
-        console.log('Using companies table instead of clients table');
-        const companies = await db('companies')
-          .select('*')
-          .where({ tenant });
+      if (dbErr.message && (
+        dbErr.message.includes('relation') ||
+        dbErr.message.includes('does not exist') ||
+        dbErr.message.includes('table')
+      )) {
+        // Try fallback to companies table for company→client migration
+        console.log('[getAllClients] Clients table not found, trying companies table fallback...');
+        try {
+          const companies = await db('companies')
+            .select('*')
+            .where('tenant', tenant);
 
-        // Map companies to client structure
-        const mappedClients = companies.map(company => ({
-          ...company,
-          client_id: company.company_id,
-          client_name: company.company_name,
-        }));
+          console.log('[getAllClients] Found', companies.length, 'companies, mapping to client structure');
 
-        if (!includeInactive) {
-          return mappedClients.filter(client => !client.is_inactive);
+          // Map companies to client structure
+          clients = companies.map(company => ({
+            ...company,
+            client_id: company.company_id || company.id,
+            client_name: company.company_name || company.name,
+          }));
+        } catch (companiesErr) {
+          console.error('[getAllClients] Companies table also failed:', companiesErr);
+          throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
         }
-
-        return mappedClients as IClient[];
       } else {
-        throw new Error('Neither clients nor companies table exists');
+        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
 
-    // Use clients table
-    const clients = await db('clients')
-      .select('*')
-      .where({ tenant });
-
-    console.log('Found clients:', clients.length);
-
+    // Filter inactive clients if requested
     if (!includeInactive) {
-      return clients.filter(client => !client.is_inactive);
+      clients = clients.filter(client => !client.is_inactive);
     }
 
+    console.log('[getAllClients] Returning', clients.length, 'clients (filtered for inactive:', !includeInactive, ')');
     return clients as IClient[];
-  } catch (error) {
-    console.error('Error fetching all clients:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      tenant,
-      includeInactive
-    });
-    throw new Error(`Failed to fetch all clients: ${error.message}`);
+  } catch (error: any) {
+    console.error('[getAllClients] Error fetching all clients:', error);
+
+    // Handle known error types
+    if (error instanceof Error) {
+      const message = error.message;
+
+      // If it's already one of our formatted errors, rethrow it
+      if (message.includes('SYSTEM_ERROR:')) {
+        throw error;
+      }
+
+      // Handle database-specific errors
+      if (message.includes('relation') && message.includes('does not exist')) {
+        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+      }
+    }
+
+    // For unexpected errors, throw a generic system error
+    throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
   }
 }
 

@@ -181,10 +181,10 @@ export default function RegisterForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-2">
-        <Label htmlFor="email">Email address *</Label>
+        <Label htmlFor="registration-email-input">Email address *</Label>
         <div className="relative">
           <Input
-            id="email"
+            id="registration-email-input"
             name="email"
             type="email"
             autoComplete="email"
@@ -238,10 +238,10 @@ export default function RegisterForm() {
       </div>
 
       <div className="space-y-2">
-          <Label htmlFor="password">Password *</Label>
+          <Label htmlFor="registration-password-input">Password *</Label>
           <div className="relative">
             <Input
-              id="password"
+              id="registration-password-input"
               name="password"
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
