@@ -204,8 +204,6 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
             derivedType = 'Usage';
           }
         }
-        // Note: 'Bucket' type might need different logic if applicable
-
         // Determine display text, defaulting to 'Default' if derivedType is undefined
         const displayText = derivedType || 'Default';
 
@@ -220,7 +218,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
     { title: 'Quantity', dataIndex: 'quantity', render: (value) => value ?? 1 }, // Default to 1 if null/undefined
     { title: 'Unit of Measure', dataIndex: 'unit_of_measure' },
     {
-      title: planType === 'Bucket' ? 'Service Rate' : 'Custom Rate',
+      title: 'Custom Rate',
       dataIndex: 'custom_rate',
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;
@@ -282,10 +280,6 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
     }
     else if (planType === 'Usage') {
       // For Usage plans, exclude services with 'fixed' billing method
-      return availService.billing_method !== 'fixed';
-    }
-    else if (planType === 'Bucket') {
-      // For Bucket plans, exclude services with 'fixed' billing method
       return availService.billing_method !== 'fixed';
     }
     else if (planType === 'Fixed') {

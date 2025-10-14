@@ -140,7 +140,6 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_contract_lines',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',

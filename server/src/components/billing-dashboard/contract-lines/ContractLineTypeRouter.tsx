@@ -12,7 +12,6 @@ import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { FixedPlanConfiguration } from './FixedContractLineConfiguration';
 import { HourlyPlanConfiguration } from './HourlyContractLineConfiguration';
 import { UsagePlanConfiguration } from './UsageContractLineConfiguration';
-import { BucketPlanConfiguration } from './BucketContractLineConfiguration';
 
 interface PlanTypeRouterProps {
   contractLineId: string;
@@ -65,8 +64,6 @@ export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
       return <HourlyPlanConfiguration contractLineId={contractLineId} />;
     case 'Usage':
       return <UsagePlanConfiguration contractLineId={contractLineId} />;
-    case 'Bucket':
-      return <BucketPlanConfiguration contractLineId={contractLineId} />;
     default:
       return (
         <Alert variant="destructive" className="m-4">

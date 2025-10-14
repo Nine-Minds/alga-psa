@@ -13,16 +13,33 @@ import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
 import ClientContract from 'server/src/lib/models/clientContract';
 import { ContractLineServiceConfigurationService as ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 
+type BucketOverlayInput = {
+  total_minutes?: number;
+  overage_rate?: number;
+  allow_rollover?: boolean;
+  billing_period?: 'monthly' | 'weekly';
+};
+
 type FixedServiceInput = {
   service_id: string;
   service_name?: string;
   quantity?: number;
+  bucket_overlay?: BucketOverlayInput | null;
 };
 
 type HourlyServiceInput = {
   service_id: string;
   service_name?: string;
   hourly_rate?: number; // cents
+  bucket_overlay?: BucketOverlayInput | null;
+};
+
+type UsageServiceInput = {
+  service_id: string;
+  service_name?: string;
+  unit_rate?: number;
+  unit_of_measure?: string;
+  bucket_overlay?: BucketOverlayInput | null;
 };
 
 export type ContractWizardSubmission = {
@@ -38,16 +55,9 @@ export type ContractWizardSubmission = {
   enable_proration: boolean;
   fixed_services: FixedServiceInput[];
   hourly_services?: HourlyServiceInput[];
+  usage_services?: UsageServiceInput[];
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
-  // Bucket services
-  bucket_type?: 'hours' | 'usage';
-  bucket_hours?: number; // for hours-type bucket
-  bucket_usage_units?: number; // for usage-type bucket
-  bucket_unit_of_measure?: string | undefined; // currently not persisted
-  bucket_monthly_fee?: number; // cents, currently not persisted
-  bucket_overage_rate?: number; // cents
-  bucket_services?: Array<{ service_id: string; service_name?: string }>;
 };
 
 export type ContractWizardResult = {
@@ -58,6 +68,83 @@ export type ContractWizardResult = {
 
 function roundToTwo(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+async function upsertBucketOverlay(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  serviceId: string,
+  overlay: BucketOverlayInput,
+  quantity?: number | null,
+  customRate?: number | null
+) {
+  if (overlay.total_minutes == null || overlay.overage_rate == null) {
+    return;
+  }
+
+  const normalizedTotal = Math.max(0, Math.round(overlay.total_minutes));
+  const normalizedOverage = Math.max(0, Math.round(overlay.overage_rate));
+  const billingPeriod = overlay.billing_period ?? 'monthly';
+
+  const existing = await trx('contract_line_service_configuration')
+    .where({
+      tenant,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: 'Bucket'
+    })
+    .first('config_id');
+
+  const configId = existing?.config_id ?? uuidv4();
+
+  await trx('contract_line_services')
+    .insert({
+      tenant,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      quantity: quantity ?? null,
+      custom_rate: customRate ?? null
+    })
+    .onConflict(['tenant', 'contract_line_id', 'service_id'])
+    .merge({
+      quantity: quantity ?? null,
+      custom_rate: customRate ?? null
+    });
+
+  await trx('contract_line_service_configuration')
+    .insert({
+      tenant,
+      config_id: configId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: 'Bucket',
+      custom_rate: null,
+      quantity: null
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: 'Bucket'
+    });
+
+  await trx('contract_line_service_bucket_config')
+    .insert({
+      tenant,
+      config_id: configId,
+      billing_period: billingPeriod,
+      total_minutes: normalizedTotal,
+      overage_rate: normalizedOverage,
+      allow_rollover: overlay.allow_rollover ?? false
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      billing_period: billingPeriod,
+      total_minutes: normalizedTotal,
+      overage_rate: normalizedOverage,
+      allow_rollover: overlay.allow_rollover ?? false
+    });
 }
 
 export async function createContractFromWizard(
@@ -108,6 +195,7 @@ export async function createContractFromWizard(
     const createdContractLineIds: string[] = [];
     let primaryContractLineId: string | undefined;
     let nextDisplayOrder = 0;
+    const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
 
     if (filteredFixedServices.length > 0) {
       // Create a contract line (Fixed)
@@ -175,8 +263,7 @@ export async function createContractFromWizard(
         }
 
         // Create configuration + fixed type details
-        const configService = new ContractLineServiceConfigurationService(trx, tenant);
-        const configId = await configService.createConfiguration(
+        await planServiceConfigService.createConfiguration(
           {
             contract_line_id: planId,
             service_id: service.service_id,
@@ -187,13 +274,23 @@ export async function createContractFromWizard(
           },
           { base_rate: serviceBaseRate }
         );
+
+        if (service.bucket_overlay) {
+          await upsertBucketOverlay(
+            trx,
+            tenant,
+            planId,
+            service.service_id,
+            service.bucket_overlay,
+            quantity ?? null,
+            null
+          );
+        }
       }
       // Map contract line to contract
       await ContractLineMapping.addContractLine(contractId, planId, undefined);
       nextDisplayOrder++;
     }
-
-    const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
 
     if (filteredHourlyServices.length > 0) {
       const createdHourlyLine = await ContractLine.create(trx, {
@@ -227,85 +324,23 @@ export async function createContractFromWizard(
             round_up_to_nearest: roundUp,
           }
         );
+
+        if (service.bucket_overlay) {
+          await upsertBucketOverlay(
+            trx,
+            tenant,
+            hourlyPlanId,
+            service.service_id,
+            service.bucket_overlay,
+            null,
+            null
+          );
+        }
       }
 
       await ContractLineMapping.addContractLine(contractId, hourlyPlanId, undefined);
       nextDisplayOrder++;
     }
-
-    // Bucket overlay (hours or usage)
-    const bucketServices = (submission.bucket_services || []).filter(s => s?.service_id);
-    const hasBucketConfig = submission.bucket_type && submission.bucket_overage_rate;
-    if (bucketServices.length > 0 && hasBucketConfig) {
-      let bucketPlanId = createdPlanId ?? primaryContractLineId;
-
-      if (!bucketPlanId) {
-        // No fixed line exists yet; create a base fixed line to host the overlay
-        const fallbackLine = await ContractLine.create(trx, {
-          contract_line_name: `${submission.contract_name} - Services`,
-          billing_frequency: 'monthly',
-          is_custom: true,
-          service_category: null as any,
-          contract_line_type: 'Fixed',
-          hourly_rate: null,
-          minimum_billable_time: null,
-          round_up_to_nearest: null,
-          enable_overtime: null,
-          overtime_rate: null,
-          overtime_threshold: null,
-          enable_after_hours_rate: null,
-          after_hours_multiplier: null,
-        } as any);
-        bucketPlanId = fallbackLine.contract_line_id!;
-        createdContractLineIds.push(bucketPlanId);
-        if (!primaryContractLineId) {
-          primaryContractLineId = bucketPlanId;
-        }
-        if (!createdPlanId) {
-          createdPlanId = bucketPlanId;
-        }
-
-        const planFixedConfigModel = new ContractLineFixedConfig(trx, tenant);
-        await planFixedConfigModel.upsert({
-          contract_line_id: bucketPlanId,
-          base_rate: 0,
-          enable_proration: submission.enable_proration,
-          billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
-          tenant,
-        });
-
-        await ContractLineMapping.addContractLine(contractId, bucketPlanId, undefined);
-        nextDisplayOrder++;
-      }
-
-      // Add selected services (if missing) and configure bucket overlay
-      const totalQuantity = submission.bucket_type === 'hours'
-        ? (submission.bucket_hours ?? 0) * 60 // minutes
-        : (submission.bucket_usage_units ?? 0); // usage units stored as minutes-equivalent
-
-      for (const service of bucketServices) {
-        await trx('contract_line_services')
-          .insert({
-            tenant,
-            contract_line_id: bucketPlanId,
-            service_id: service.service_id,
-          })
-          .onConflict(['tenant', 'contract_line_id', 'service_id'])
-          .ignore();
-
-        await planServiceConfigService.upsertPlanServiceBucketConfiguration(
-          bucketPlanId,
-          service.service_id,
-          {
-            total_minutes: totalQuantity,
-            billing_period: 'monthly',
-            overage_rate: submission.bucket_overage_rate ?? 0,
-            allow_rollover: false,
-          }
-        );
-      }
-    }
-
     // Assign contract to client
     await ClientContract.assignContractToClient(
       submission.company_id,

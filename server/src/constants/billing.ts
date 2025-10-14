@@ -1,8 +1,7 @@
 export const CONTRACT_LINE_TYPE_DISPLAY: Record<string, string> = {
-  'Fixed': 'Fixed',
-  'Bucket': 'Bucket',
-  'Hourly': 'Time Based',
-  'Usage': 'Usage Based'
+  Fixed: 'Fixed',
+  Hourly: 'Time Based',
+  Usage: 'Usage Based'
 };
 
 export const CONTRACT_LINE_TYPE_OPTIONS = Object.entries(CONTRACT_LINE_TYPE_DISPLAY).map(([value, label]) => ({

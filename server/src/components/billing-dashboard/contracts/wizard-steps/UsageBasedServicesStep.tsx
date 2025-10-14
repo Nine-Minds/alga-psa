@@ -5,10 +5,12 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { ContractWizardData } from '../ContractWizard';
+import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Plus, X, Activity, DollarSign } from 'lucide-react';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { BucketOverlayFields } from '../BucketOverlayFields';
 
 interface UsageBasedServicesStepProps {
   data: ContractWizardData;
@@ -97,6 +99,41 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
   const formatCurrency = (cents: number | undefined) => {
     if (!cents) return '$0.00';
     return `$${(cents / 100).toFixed(2)}`;
+  };
+
+  const defaultOverlay = (): BucketOverlayInput => ({
+    total_minutes: undefined,
+    overage_rate: undefined,
+    allow_rollover: false,
+    billing_period: 'monthly'
+  });
+
+  const toggleBucketOverlay = (index: number, enabled: boolean) => {
+    const services = data.usage_services || [];
+    const newServices = [...services];
+    if (enabled) {
+      const existing = newServices[index]?.bucket_overlay;
+      newServices[index] = {
+        ...newServices[index],
+        bucket_overlay: existing ? { ...existing } : defaultOverlay()
+      };
+    } else {
+      newServices[index] = {
+        ...newServices[index],
+        bucket_overlay: undefined
+      };
+    }
+    updateData({ usage_services: newServices });
+  };
+
+  const updateBucketOverlay = (index: number, overlay: BucketOverlayInput) => {
+    const services = data.usage_services || [];
+    const newServices = [...services];
+    newServices[index] = {
+      ...newServices[index],
+      bucket_overlay: { ...overlay }
+    };
+    updateData({ usage_services: newServices });
   };
 
   return (
@@ -197,6 +234,23 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                     e.g., GB, API call, transaction
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
+                <SwitchWithLabel
+                  label="Include bucket allocation"
+                  checked={Boolean(service.bucket_overlay)}
+                  onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
+                />
+                {service.bucket_overlay && (
+                  <BucketOverlayFields
+                    mode="usage"
+                    unitLabel={service.unit_of_measure}
+                    value={service.bucket_overlay ?? defaultOverlay()}
+                    onChange={(next) => updateBucketOverlay(index, next)}
+                    automationId={`usage-bucket-${index}`}
+                  />
+                )}
               </div>
             </div>
 

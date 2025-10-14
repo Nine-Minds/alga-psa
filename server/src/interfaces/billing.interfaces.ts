@@ -191,7 +191,7 @@ export interface IContractLine extends TenantEntity {
   billing_frequency: string;
   is_custom: boolean;
   service_category?: string;
-  contract_line_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+  contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   // Add potentially existing hourly fields (to be deprecated for Hourly type)
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;

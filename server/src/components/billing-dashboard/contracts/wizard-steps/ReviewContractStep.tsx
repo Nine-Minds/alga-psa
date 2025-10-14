@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ContractWizardData } from '../ContractWizard';
+import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { Card } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
-import { Building2, FileText, Calendar, DollarSign, Clock, Package, Droplet, Activity, CheckCircle2, FileCheck, Repeat } from 'lucide-react';
+import { Building2, FileText, Calendar, DollarSign, Clock, Package, Activity, CheckCircle2, FileCheck, Repeat } from 'lucide-react';
 import { parse } from 'date-fns';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { getClients } from 'server/src/lib/actions/clientAction';
@@ -41,6 +41,35 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     return `$${(cents / 100).toFixed(2)}`;
   };
 
+  const formatBucketSummary = (
+    overlay: BucketOverlayInput | null | undefined,
+    mode: 'hours' | 'usage',
+    unitLabel?: string
+  ): string | null => {
+    if (!overlay || overlay.total_minutes == null) {
+      return null;
+    }
+
+    const included =
+      mode === 'hours'
+        ? overlay.total_minutes / 60
+        : overlay.total_minutes;
+
+    const formattedIncluded =
+      mode === 'hours'
+        ? `${included.toLocaleString(undefined, { maximumFractionDigits: 2 })} hours`
+        : `${included.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unitLabel || 'units'}`;
+
+    const overage =
+      overlay.overage_rate != null
+        ? `${formatCurrency(overlay.overage_rate)}/${mode === 'hours' ? 'hour' : unitLabel || 'unit'}`
+        : null;
+
+    const rollover = overlay.allow_rollover ? 'rollover enabled' : 'no rollover';
+
+    return `${formattedIncluded}${overage ? `, ${overage} overage` : ''}, ${rollover}`;
+  };
+
   const parseLocalYMD = (ymd: string): Date | null => {
     // Parse a 'yyyy-MM-dd' string as a local date (no timezone shift)
     try {
@@ -57,21 +86,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     return local.toLocaleDateString();
   };
 
-  const calculateTotalMonthly = () => {
-    let total = 0;
-    if (data.fixed_base_rate) total += data.fixed_base_rate;
-    if (data.bucket_monthly_fee) total += data.bucket_monthly_fee;
-    return total;
-  };
+  const calculateTotalMonthly = () => data.fixed_base_rate ?? 0;
 
   const hasFixedServices = data.fixed_services.length > 0;
   const hasHourlyServices = data.hourly_services.length > 0;
-  const hasBucketServices = !!(
-    data.bucket_type &&
-    ((data.bucket_type === 'hours' && data.bucket_hours) || (data.bucket_type === 'usage' && data.bucket_usage_units)) &&
-    data.bucket_monthly_fee &&
-    data.bucket_overage_rate
-  );
   const hasUsageServices = !!(data.usage_services && data.usage_services.length > 0);
 
   return (
@@ -171,7 +189,16 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               <p className="text-gray-600 mb-1">Services ({data.fixed_services.length})</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 {data.fixed_services.map((service, idx) => (
-                  <li key={idx} className="font-medium">{service.service_name || service.service_id} (Qty: {service.quantity})</li>
+                  <li key={idx} className="space-y-1">
+                    <p className="font-medium">
+                      {service.service_name || service.service_id} (Qty: {service.quantity})
+                    </p>
+                    {formatBucketSummary(service.bucket_overlay, 'hours') && (
+                      <p className="text-xs text-blue-700 pl-4">
+                        Bucket: {formatBucketSummary(service.bucket_overlay, 'hours')}
+                      </p>
+                    )}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -197,7 +224,16 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               <p className="text-gray-600 mb-1">Services & Rates</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 {data.hourly_services.map((service, idx) => (
-                  <li key={idx} className="font-medium">{service.service_name || service.service_id} - {formatCurrency(service.hourly_rate)}/hour</li>
+                  <li key={idx} className="space-y-1">
+                    <p className="font-medium">
+                      {service.service_name || service.service_id} - {formatCurrency(service.hourly_rate)}/hour
+                    </p>
+                    {formatBucketSummary(service.bucket_overlay, 'hours') && (
+                      <p className="text-xs text-blue-700 pl-4">
+                        Bucket: {formatBucketSummary(service.bucket_overlay, 'hours')}
+                      </p>
+                    )}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -215,46 +251,35 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         </Card>
       )}
 
-      {hasBucketServices && (
+      {hasUsageServices && (
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Droplet className="h-5 w-5 text-blue-600" />
-              <h4 className="font-semibold">Bucket Services</h4>
+              <Activity className="h-5 w-5 text-indigo-600" />
+              <h4 className="font-semibold">Usage-Based Services</h4>
             </div>
-            <Badge variant="default" className="bg-blue-100 text-blue-800">
-              {data.bucket_type === 'hours' ? `${data.bucket_hours} hours/month` : `${data.bucket_usage_units} ${data.bucket_unit_of_measure || 'units'}/month`}
+            <Badge variant="default" className="bg-indigo-100 text-indigo-800">
+              {(data.usage_services?.length ?? 0)} services
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
-            <div className="mb-2">
-              <p className="text-gray-600 text-xs">Type</p>
-              <p className="font-medium">{data.bucket_type === 'hours' ? 'Time-based (Hours)' : `Usage-based (${data.bucket_unit_of_measure || 'Units'})`}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-600">Monthly Fee</p>
-                <p className="font-medium text-lg">{formatCurrency(data.bucket_monthly_fee)}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Overage Rate</p>
-                <p className="font-medium text-lg">{formatCurrency(data.bucket_overage_rate)}/{data.bucket_type === 'hours' ? 'hour' : data.bucket_unit_of_measure || 'unit'}</p>
-              </div>
-            </div>
-            {data.bucket_services.length > 0 && (
-              <div className="pt-2 border-t">
-                <p className="text-gray-600 mb-1">Included Services ({data.bucket_services.length})</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  {data.bucket_services.map((service, idx) => (
-                    <li key={idx} className="font-medium">{service.service_name || service.service_id}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              {(data.usage_services || []).map((service, idx) => (
+                <li key={idx} className="space-y-1">
+                  <p className="font-medium">
+                    {service.service_name || service.service_id} - {formatCurrency(service.unit_rate)}/{service.unit_of_measure || 'unit'}
+                  </p>
+                  {formatBucketSummary(service.bucket_overlay, 'usage', service.unit_of_measure) && (
+                    <p className="text-xs text-blue-700 pl-4">
+                      Bucket: {formatBucketSummary(service.bucket_overlay, 'usage', service.unit_of_measure)}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         </Card>
       )}
-
       <Card className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
         <div className="flex items-center justify-between">
           <div>

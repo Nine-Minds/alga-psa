@@ -131,7 +131,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         'client_contract_lines',
         'contract_line_services',
         'contract_lines',
-        'bucket_contract_lines',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',

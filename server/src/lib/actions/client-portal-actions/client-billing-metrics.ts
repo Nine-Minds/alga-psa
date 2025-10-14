@@ -522,7 +522,6 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       })
       .where('ccl.client_id', clientId)
       .andWhere('ccl.tenant', tenant)
-      .andWhere('cl.contract_line_type', 'Bucket')
       .andWhere('ccl.is_active', true)
         .andWhere('ccl.start_date', '<=', trx.raw('?', [currentDate]))
         .andWhere(function() {

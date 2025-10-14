@@ -5,10 +5,12 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { ContractWizardData } from '../ContractWizard';
+import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Plus, X, Clock, DollarSign } from 'lucide-react';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { BucketOverlayFields } from '../BucketOverlayFields';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -85,6 +87,39 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
   const formatCurrency = (cents: number | undefined) => {
     if (!cents) return '$0.00';
     return `$${(cents / 100).toFixed(2)}`;
+  };
+
+  const defaultOverlay = (): BucketOverlayInput => ({
+    total_minutes: undefined,
+    overage_rate: undefined,
+    allow_rollover: false,
+    billing_period: 'monthly'
+  });
+
+  const toggleBucketOverlay = (index: number, enabled: boolean) => {
+    const newServices = [...data.hourly_services];
+    if (enabled) {
+      const existing = newServices[index].bucket_overlay;
+      newServices[index] = {
+        ...newServices[index],
+        bucket_overlay: existing ? { ...existing } : defaultOverlay()
+      };
+    } else {
+      newServices[index] = {
+        ...newServices[index],
+        bucket_overlay: undefined
+      };
+    }
+    updateData({ hourly_services: newServices });
+  };
+
+  const updateBucketOverlay = (index: number, overlay: BucketOverlayInput) => {
+    const newServices = [...data.hourly_services];
+    newServices[index] = {
+      ...newServices[index],
+      bucket_overlay: { ...overlay }
+    };
+    updateData({ hourly_services: newServices });
   };
 
   return (
@@ -213,6 +248,22 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 <p className="text-xs text-gray-500">
                   {service.hourly_rate ? `${formatCurrency(service.hourly_rate)}/hour` : 'Enter hourly rate'}
                 </p>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
+                <SwitchWithLabel
+                  label="Include bucket of hours"
+                  checked={Boolean(service.bucket_overlay)}
+                  onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
+                />
+                {service.bucket_overlay && (
+                  <BucketOverlayFields
+                    mode="hours"
+                    value={service.bucket_overlay ?? defaultOverlay()}
+                    onChange={(next) => updateBucketOverlay(index, next)}
+                    automationId={`hourly-bucket-${index}`}
+                  />
+                )}
               </div>
             </div>
 

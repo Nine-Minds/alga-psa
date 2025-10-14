@@ -102,7 +102,6 @@ export async function getRemainingBucketUnits(
       })
       .where('ccl.client_id', clientId)
       .andWhere('ccl.tenant', tenant)
-      .andWhere('cl.contract_line_type', 'Bucket')
       .andWhere('ccl.is_active', true)
       .andWhere('ccl.start_date', '<=', knex.raw('?', [currentDate]))
       .andWhere(function() {

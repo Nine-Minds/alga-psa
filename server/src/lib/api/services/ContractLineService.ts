@@ -66,7 +66,7 @@ export interface PlanTemplate {
   template_id: string;
   template_name: string;
   template_description?: string;
-  contract_line_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+  contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   billing_frequency: string;
   default_services?: Array<{
     service_id: string;

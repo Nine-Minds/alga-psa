@@ -50,15 +50,6 @@ export async function determineDefaultContractLine(
       return overlayContractLines[0].client_contract_line_id;
     }
 
-    // Fallback: check for legacy bucket contract lines (during migration)
-    const bucketContractLines = eligibleContractLines.filter(contractLine =>
-      contractLine.contract_line_type === 'Bucket'
-    );
-
-    if (bucketContractLines.length === 1) {
-      return bucketContractLines[0].client_contract_line_id;
-    }
-
     // If we have multiple contract lines and no clear default, return null to require explicit selection
     return null;
   } catch (error) {
@@ -138,13 +129,13 @@ export async function getEligibleContractLines(
   // Filter by service type to ensure compatibility
   // if (serviceInfo.service_type) {
   //   // Make sure the contract line type is compatible with the service type
-  //   // For example, Time services should only be used with Hourly or Bucket contract lines
+  //   // For example, Time services should only be used with Hourly contract lines; Bucket overlays ride on top of existing lines.
   //   if (serviceInfo.service_type === 'Time') {
-  //     query.whereIn('contract_lines.contract_line_type', ['Hourly', 'Bucket']);
+  //     query.where('contract_lines.contract_line_type', 'Hourly');
   //   } else if (serviceInfo.service_type === 'Fixed') {
-  //     query.whereIn('contract_lines.contract_line_type', ['Fixed', 'Bucket']);
+  //     query.where('contract_lines.contract_line_type', 'Fixed');
   //   } else if (serviceInfo.service_type === 'Usage') {
-  //     query.whereIn('contract_lines.contract_line_type', ['Usage', 'Bucket']);
+  //     query.where('contract_lines.contract_line_type', 'Usage');
   //   }
   // }
 
@@ -242,12 +233,6 @@ export async function shouldAllocateUnassignedEntry(
     // If there are multiple eligible contract lines, prefer ones with bucket overlays
     const overlayContractLines = eligibleContractLines.filter(contractLine => contractLine.bucket_overlay?.config_id);
     if (overlayContractLines.length === 1 && overlayContractLines[0].client_contract_line_id === contractLineId) {
-      return true;
-    }
-
-    // Fallback legacy behavior for bucket contract lines
-    const bucketContractLines = eligibleContractLines.filter(contractLine => contractLine.contract_line_type === 'Bucket');
-    if (bucketContractLines.length === 1 && bucketContractLines[0].client_contract_line_id === contractLineId) {
       return true;
     }
 

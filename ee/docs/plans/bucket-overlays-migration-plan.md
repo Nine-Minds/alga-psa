@@ -51,14 +51,29 @@ Tasks
   - `server/src/test/unit/contractLineDisambiguation.test.ts`: remove bucket-plan special cases; add overlay preference tests (prefer lines with active bucket balance).
   - `server/src/test/unit/timeEntryBillingPlanSelection.test.tsx`: mock overlay presence (not plan type) and assert default selection preference.
   - `server/src/test/unit/billingPlanSelection.test.ts`: same as above.
-  - `server/src/test/unit/billingEngine.test.ts`: replace “calculateBucketPlanCharges” expectations with overlay consumption assertions (time/usage paths).
-  - `server/src/test/unit/bucketUsageService.test.ts`: confirm logic still works with overlays.
+- `server/src/test/unit/billingEngine.test.ts`: replace “calculateBucketPlanCharges” expectations with overlay consumption assertions (time/usage paths).
+- `server/src/test/unit/bucketUsageService.test.ts`: confirm logic still works with overlays.
 - Progress (2025-02-14):
   - Helper rewritten as `createBucketOverlayForPlan` and wired to both contract-line and legacy plan tables; usage helper now records `contract_line_id`.
   - Invoice infrastructure test (`usageBucketAndFinalization`) migrated to build overlays on top of fixed lines and seed usage via overlay helper.
   - Selector/disambiguation unit tests now mock `has_bucket_overlay` metadata instead of `contract_line_type === 'Bucket'`; pending updates to the production disambiguation logic and remaining billing engine/unit suites.
   - Billing engine unit coverage updated to treat overlays as the source for bucket charges (`calculateBucketPlanCharges` test now stubs overlay rows and bucket usage, and `calculateBilling` aggregates the overlay charge).
   - UI/service layers now consume overlay metadata: contract-line selectors prefer overlays, usage/time-entry actions update bucket usage when overlays exist (rather than relying on `contract_line_type`), and API imports point at `contractLineDisambiguation`.
+- Follow-up work to finish ripping out bucket plans
+  1. **Contract wizard + Playwright flows**
+     - Update `contractWizardActions` so bucket configuration toggles add overlays to the existing fixed contract line (never create a `contract_line_type = 'Bucket'` row).
+     - Remove bucket-plan assertions from the Playwright suite (`ee/server/src/__tests__/integration/contract-wizard-happy-path.playwright.test.ts`) and replace them with overlay verifications (`contract_line_service_configuration` + `contract_line_service_bucket_config` joins).
+     - Adjust wizard helpers/seeders to account for overlay toggles and ensure monthly-fee behaviour still covered.
+     - Drop `bucket_contract_lines` from test cleanup lists once the wizard no longer creates them.
+  2. **Reporting/analytics surfaces**
+     - Switch `getRemainingBucketUnits`, client-portal billing metrics, and account dashboards to join `contract_line_service_configuration` + bucket overlays (remove `.where(plan_type = 'Bucket')` or `contract_line_type === 'Bucket'` filters).
+     - Update any UI components (e.g. `BucketContractLineConfiguration`) that guard on plan type so they inspect overlay metadata instead.
+  3. **Service APIs & helpers**
+     - Finish migrating remaining server actions and utilities that still query `contract_line_type` (search codebase for `'Bucket'` checks) – specifically `ContractLineServiceConfigurationService`, report actions, constants, and interfaces in `billing.interfaces.ts`.
+     - Update TypeScript enums/interfaces to drop `'Bucket'` from `contract_line_type` once overlay consumers are in place.
+  4. **Database/tests cleanup**
+     - Remove dependencies on the `bucket_contract_lines` table from tests; plan a follow-up migration to archive/drop the table after the data migration script (Phase 8) runs.
+     - Sweep remaining tests/integration helpers that reference legacy plan tables (e.g. `bundle_billing_plans` lookups) and ensure they validate overlays instead.
 
 Acceptance
 - Unit tests compile and run; bucket assertions are overlay-based.
@@ -79,13 +94,9 @@ Tasks
     - Update `STEPS` to drop “Bucket Services” and adjust navigation/validation.
     - Update `validateStep` logic to stop validating the removed step.
 - Introduce per-line bucket overlay in:
-  - `HourlyServicesStep.tsx`: Add a toggle and fields per service:
-    - Included hours per period (store as minutes), Monthly fee (cents, optional), Overage rate (cents), Rollover toggle, Expiration policy (optional)
-  - `UsageBasedServicesStep.tsx`: Similar per service:
-    - Included units per period, Monthly fee (cents, optional), Overage rate (cents), Rollover toggle, Expiration policy (optional)
-- Extract a reusable `BucketOverlayEditor` component from the current `BucketHoursStep.tsx`:
-  - Props: mode: `'hours' | 'usage'`, current value, onChange, unit label derivation, copy blocks/tooltips (reuse).
-  - Use this editor within each service row in Hourly/Usage steps.
+  - `FixedFeeServicesStep.tsx` and `HourlyServicesStep.tsx`: Add a toggle and fields per service for included hours (stored as minutes), overage rate (cents), and rollover support.
+  - `UsageBasedServicesStep.tsx`: Provide the same overlay toggle with included units (stored as generic minutes), overage rate, and rollover toggle.
+- Create a reusable `BucketOverlayFields` component that renders the shared overlay inputs and automation hooks; reuse it across the fixed, hourly, and usage steps.
 - Update the review step to summarize overlays under each line item.
 
 Acceptance
@@ -103,18 +114,11 @@ Goals
 - Persist per-line overlays instead of creating a `Bucket` plan.
 
 Tasks
-- Update `ContractWizardData` and submission payload to include `bucket` object per hourly/usage service line with fields:
-  - Hours: `{ included_minutes: number, monthly_fee_cents?: number, overage_rate_cents: number, allow_rollover?: boolean, expiration_policy?: 'none'|'eom'|'n_months', expiration_months?: number }`
-  - Usage: `{ included_units: number, monthly_fee_cents?: number, overage_rate_cents: number, allow_rollover?: boolean, expiration_policy?: 'none'|'eom'|'n_months', expiration_months?: number }`
+- Update `ContractWizardData` and the submission payload to capture a `bucket_overlay` object per fixed/hourly/usage service with fields:
+  - `{ total_minutes?: number, overage_rate?: number, allow_rollover?: boolean, billing_period?: 'monthly' | 'weekly' }`
 - Modify `server/src/lib/actions/contractWizardActions.ts`:
   - Remove creation of a dedicated `Bucket` plan.
-  - After inserting Hourly/Usage plan lines, if a service has `bucket`:
-    - Ensure a `plan_service_configuration` row (or upsert) for `configuration_type='Bucket'` tied to the same plan_id + service_id.
-    - Insert into `plan_service_bucket_config`:
-      - Hours: `total_minutes = included_minutes`
-      - Usage: `total_minutes = included_units` (generic quantity convention)
-      - `billing_period = 'monthly'`, `overage_rate = overage_rate_cents`, `allow_rollover`
-      - Optional: If monthly fee must be billed, see decision below.
+  - After creating each contract-line service configuration, upsert a matching `contract_line_service_configuration` + `contract_line_service_bucket_config` row when `bucket_overlay` is provided, using a shared helper to insert/update the overlay metadata.
 - Monthly fee handling (decision):
   - Option A (preferred for now): bill the “bucket monthly fee” by adding/allocating a Fixed Fee line scoped to that service (documented on the plan). No schema change needed; engine already handles fixed fees.
   - Option B (future): add `monthly_fee` to `plan_service_bucket_config` (requires migration and engine update). Leave as a future enhancement.
@@ -220,15 +224,26 @@ Goals
 - Remove `Bucket` from `plan_type` usages in code after the feature is stable and migration is complete.
 
 Tasks
-- Remove bucket plan special-cases across code and tests.
-- Update enum/documentation to drop `Bucket` as a plan type.
-- Delete legacy UI step/components that are no longer referenced.
+- Remove bucket plan special-cases across code and tests so overlays are the sole bucket source:
+  - `server/src/lib/actions/contractWizardActions.ts`: collapse the “bucket plan” branch so the wizard only ever mutates the fixed/usage line and appends overlay configuration rows; purge any fallbacks that still create a `contract_line_type = 'Bucket'`.
+  - `ee/server/src/__tests__/integration/contract-wizard-happy-path.playwright.test.ts`: update assertions/helper flows to verify overlay persistence (`contract_line_service_configuration` + `contract_line_service_bucket_config`) and stop expecting a bucket contract line or plan type string.
+  - Reporting and analytics callers (`server/src/lib/actions/client-portal-actions/client-billing-metrics.ts`, `server/src/lib/actions/report-actions/getRemainingBucketUnits.ts`, CSV/BI exports) need to replace `contract_line_type === 'Bucket'` filters with overlay joins and expose overlay metadata to the UI.
+  - Billing/usage helpers (`server/src/lib/utils/contractLineDisambiguation.ts`, `server/src/lib/services/contractLineServiceConfigurationService.ts`, `server/src/lib/billing/billingEngine.ts`, `server/src/lib/services/bucketUsageService.ts`) should look up overlays via `contract_line_service_configuration` and never branch on plan type.
+  - Test + seed utilities (`server/test-utils/billingTestHelpers.ts`, infrastructure invoice suites, nightly cleanup scripts) must drop `bucket_contract_lines` cleanup and rely solely on overlay tables.
+- Update enum/documentation to drop `Bucket` as a plan type once callers above run overlay-only logic (e.g. `server/src/interfaces/billing.interfaces.ts`, `server/src/constants/billing.ts`, API surface types).
+- Delete legacy UI step/components that are no longer referenced (wizard bucket step, bucket-plan filters, etc.).
+- Add guardrails: introduce an automated check (`rg "contract_line_type.*Bucket"`) in CI or lint scripts so new plan-type branches cannot be reintroduced.
 
 Acceptance
 - Repository compiles and tests green without any `plan_type='Bucket'` coupling.
 
 Rollout
 - N/A
+
+Verification
+- `rg "contract_line_type.*'Bucket'"` and `rg "plan_type.*Bucket"` return no results in TypeScript/TSX sources (excluding documentation).
+- Playwright contract wizard regression passes while persisting overlays.
+- Billing smoke tests confirm bucket invoices derive from overlay rows only.
 
 ---
 

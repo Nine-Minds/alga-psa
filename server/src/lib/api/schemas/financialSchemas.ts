@@ -96,7 +96,7 @@ export const reconciliationStatusSchema = z.enum(['open', 'in_review', 'resolved
 
 export const taxTypeSchema = z.enum(['VAT', 'GST', 'Sales Tax']);
 
-export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
+export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage']);
 
 export const billingMethodSchema = z.enum(['fixed', 'per_unit']);
 
@@ -823,24 +823,6 @@ export const serviceCategorySchema = z.object({
   category_name: z.string(),
   description: z.string().optional()
 }).merge(baseEntitySchema);
-
-// ============================================================================
-// BUCKET PLAN SCHEMAS
-// ============================================================================
-
-export const bucketPlanBaseSchema = z.object({
-  bucket_contract_line_id: uuidSchema.optional(),
-  contract_line_id: uuidSchema,
-  total_hours: z.number(),
-  billing_period: billingCycleTypeSchema,
-  overage_rate: z.number()
-});
-
-export const createBucketPlanSchema = bucketPlanBaseSchema.extend({
-  tenant: uuidSchema
-});
-
-export const bucketPlanResponseSchema = bucketPlanBaseSchema.merge(baseEntitySchema);
 
 export const bucketUsageSchema = z.object({
   usage_id: uuidSchema.optional(),

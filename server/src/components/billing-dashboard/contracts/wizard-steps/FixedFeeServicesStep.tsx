@@ -6,12 +6,13 @@ import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
-import { ContractWizardData } from '../ContractWizard';
+import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Plus, X, DollarSign, Package, HelpCircle } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { BucketOverlayFields } from '../BucketOverlayFields';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
@@ -83,6 +84,39 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
   const formatCurrency = (cents: number | undefined) => {
     if (!cents) return '$0.00';
     return `$${(cents / 100).toFixed(2)}`;
+  };
+
+  const getDefaultOverlay = (): BucketOverlayInput => ({
+    total_minutes: undefined,
+    overage_rate: undefined,
+    allow_rollover: false,
+    billing_period: 'monthly'
+  });
+
+  const toggleBucketOverlay = (index: number, enabled: boolean) => {
+    const newServices = [...data.fixed_services];
+    if (enabled) {
+      const existing = newServices[index].bucket_overlay;
+      newServices[index] = {
+        ...newServices[index],
+        bucket_overlay: existing ? { ...existing } : getDefaultOverlay()
+      };
+    } else {
+      newServices[index] = {
+        ...newServices[index],
+        bucket_overlay: undefined
+      };
+    }
+    updateData({ fixed_services: newServices });
+  };
+
+  const updateBucketOverlay = (index: number, overlay: BucketOverlayInput) => {
+    const newServices = [...data.fixed_services];
+    newServices[index] = {
+      ...newServices[index],
+      bucket_overlay: { ...overlay }
+    };
+    updateData({ fixed_services: newServices });
   };
 
   return (
@@ -202,6 +236,22 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                   min="1"
                   className="w-24"
                 />
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
+                <SwitchWithLabel
+                  label="Enable bucket of hours"
+                  checked={Boolean(service.bucket_overlay)}
+                  onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
+                />
+                {service.bucket_overlay && (
+                  <BucketOverlayFields
+                    mode="hours"
+                    value={service.bucket_overlay ?? getDefaultOverlay()}
+                    onChange={(next) => updateBucketOverlay(index, next)}
+                    automationId={`fixed-bucket-${index}`}
+                  />
+                )}
               </div>
             </div>
 

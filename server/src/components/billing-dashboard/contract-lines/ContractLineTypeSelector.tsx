@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { PLAN_TYPE_OPTIONS } from 'server/src/constants/billing';
 // Removed Card import as we'll use divs for custom styling
-import { Clock, Package, Shapes, Layers } from 'lucide-react'; // Import original icons: Shapes, Layers. Remove DollarSign, BarChart3, CheckCircle if unused.
+import { Clock, Package, Shapes } from 'lucide-react'; // Import original icons
 
-export type PlanType = 'Fixed' | 'Bucket' | 'Hourly' | 'Usage';
+export type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
 interface PlanTypeSelectorProps {
   value: PlanType;
@@ -19,7 +19,6 @@ interface PlanTypeSelectorProps {
 
 const PLAN_TYPE_DESCRIPTIONS: Record<PlanType, string> = {
   'Fixed': 'A fixed-price contract line with consistent billing regardless of usage. Ideal for predictable services.',
-  'Bucket': 'Pre-purchased hours that can be used over time. Good for clients who need flexibility with a budget cap.',
   'Hourly': 'Time-based billing with configurable rates. Best for variable workloads billed by time spent.',
   'Usage': 'Usage-based billing with tiered pricing options. Perfect for services measured by consumption.'
 };
@@ -27,7 +26,6 @@ const PLAN_TYPE_DESCRIPTIONS: Record<PlanType, string> = {
 // Define icons as components for easier styling control, using the original set
 const PLAN_TYPE_ICONS: Record<PlanType, React.ElementType> = {
   'Fixed': Package, // Originally proposed Package for Fixed
-  'Bucket': Layers, // Originally proposed Layers for Tiered/Bucket concept
   'Hourly': Clock,  // Kept Clock for Hourly
   'Usage': Shapes  // Originally proposed Shapes for Per Unit/Usage concept
 };
@@ -41,7 +39,7 @@ export function PlanTypeSelector({
   showCards = false
 }: PlanTypeSelectorProps) {
   const isPlanType = (value: string): value is PlanType => {
-    return ['Fixed', 'Bucket', 'Hourly', 'Usage'].includes(value);
+    return ['Fixed', 'Hourly', 'Usage'].includes(value);
   };
 
   const handlePlanTypeChange = (value: string) => {

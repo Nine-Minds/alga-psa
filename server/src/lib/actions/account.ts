@@ -63,7 +63,7 @@ export interface Service {
     display: string;
   };
   billing: {
-    type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+    type: 'Fixed' | 'Hourly' | 'Usage';
     frequency: string;
     isCustom: boolean;
     description?: string;
@@ -504,7 +504,7 @@ export async function getActiveServices(): Promise<Service[]> {
         'ps.tenant': session.user.tenant,
         'sc.tenant': session.user.tenant
       })
-      .whereIn('cl.contract_line_type', ['Fixed', 'Hourly', 'Usage', 'Bucket'])
+      .whereIn('cl.contract_line_type', ['Fixed', 'Hourly', 'Usage'])
       .andWhere('ccl.start_date', '<=', now)
       .andWhere(function(this: Knex.QueryBuilder) {
         this.where('ccl.end_date', '>', now)

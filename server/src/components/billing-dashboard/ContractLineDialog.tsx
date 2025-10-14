@@ -12,7 +12,7 @@ import { createContractLine, updateContractLine, updateContractLineFixedConfig, 
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 
-type PlanType = 'Fixed' | 'Hourly' | 'Bucket' | 'Usage';
+type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
 interface ContractLineDialogProps {
   onPlanAdded: (newPlanId?: string) => void;
@@ -193,7 +193,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 options={[
                   { value: 'Fixed', label: 'Fixed' },
                   { value: 'Hourly', label: 'Hourly' },
-                  { value: 'Bucket', label: 'Bucket' },
                   { value: 'Usage', label: 'Usage' }
                 ]}
                 placeholder="Select type"

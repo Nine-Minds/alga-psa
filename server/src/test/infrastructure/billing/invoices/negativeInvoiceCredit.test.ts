@@ -130,7 +130,6 @@ describe('Negative Invoice Credit Tests', () => {
         'contract_line_services',
         'service_catalog',
         'contract_lines',
-        'bucket_contract_lines',
         'bucket_usage',
         'tax_rates',
         'tax_regions',
