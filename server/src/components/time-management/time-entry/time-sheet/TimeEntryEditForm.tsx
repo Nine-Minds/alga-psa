@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { getEligibleContractLinesForUI, getClientIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
+import { getEligibleContractLinesForUI, getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -28,6 +28,7 @@ interface EligiblePlanUI {
   start_date: ISO8601String; // Required for filtering
   end_date?: ISO8601String | null; // Required for filtering
   contract_name?: string; // Contract name for display
+  has_bucket_overlay: boolean;
 }
 
 const TimeEntryEditForm = memo(function TimeEntryEditForm({
@@ -217,9 +218,9 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
               defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
               console.log('Setting default contract line (only one eligible):', defaultPlanId);
             } else {
-              const bucketPlans = currentEligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
-              if (bucketPlans.length === 1) {
-                defaultPlanId = bucketPlans[0].client_contract_line_id;
+              const overlayPlans = currentEligiblePlans.filter(plan => plan.has_bucket_overlay);
+              if (overlayPlans.length === 1) {
+                defaultPlanId = overlayPlans[0].client_contract_line_id;
                 console.log('Setting default contract line (single bucket line):', defaultPlanId);
               } else {
                 console.log('Multiple eligible contract lines, no single default determined.');
@@ -277,9 +278,9 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
               defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
               console.log('Setting default contract line (only one eligible):', defaultPlanId);
             } else {
-              const bucketPlans = currentEligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
-              if (bucketPlans.length === 1) {
-                defaultPlanId = bucketPlans[0].client_contract_line_id;
+              const overlayPlans = currentEligiblePlans.filter(plan => plan.has_bucket_overlay);
+              if (overlayPlans.length === 1) {
+                defaultPlanId = overlayPlans[0].client_contract_line_id;
                 console.log('Setting default contract line (single bucket line):', defaultPlanId);
               } else {
                 console.log('Multiple eligible contract lines, no single default determined.');

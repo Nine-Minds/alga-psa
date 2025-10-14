@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { getConnection } from 'server/src/lib/db/db';
-import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, IClientContractLine, IDiscount, IFixedPriceCharge, IContractLineService, ITimeBasedCharge, IBucketPlan, IBucketUsage, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
+import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, IClientContractLine, IDiscount, IFixedPriceCharge, IContractLineService, ITimeBasedCharge, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
 import { ISO8601String } from '../../types/types.d';
 import { TaxService } from 'server/src/lib/services/taxService';
 
@@ -571,7 +571,7 @@ describe('BillingEngine', () => {
       expect(result.totalAmount).toBeCloseTo(127.42, 2);
       expect(result.finalAmount).toBeCloseTo(127.42, 2);
     });
-    it('should calculate billing correctly with bucket plan charges', async () => {
+    it('should calculate billing correctly with bucket overlay charges', async () => {
       const mockClientContractLine: IClientContractLine[] = [
         {
           client_contract_line_id: 'test_billing_id',
@@ -590,8 +590,18 @@ describe('BillingEngine', () => {
       ];
 
       const mockBucketCharges = [
-        { serviceId: 'bucket1', serviceName: 'Bucket Plan Hours', quantity: 40, rate: 0, total: 0, type: 'bucket' },
-        { serviceId: 'bucket1', serviceName: 'Bucket Plan Overage Hours', quantity: 5, rate: 50, total: 250, type: 'bucket' },
+        {
+          type: 'bucket',
+          serviceId: 'bucket1',
+          serviceName: 'Consulting Overage',
+          hoursUsed: 45,
+          overageHours: 5,
+          overageRate: 50,
+          rate: 50,
+          total: 250,
+          tax_amount: 0,
+          tax_rate: 0
+        }
       ];
 
       vi.spyOn(billingEngine as any, 'getClientContractLinesAndCycle').mockResolvedValue({
@@ -620,9 +630,7 @@ describe('BillingEngine', () => {
 
 
   describe('calculateBucketPlanCharges', () => {
-
-
-    it('should calculate bucket plan charges correctly', async () => {
+    it('should calculate bucket overlay charges correctly', async () => {
       const mockClient = {
         client_id: mockClientId,
         client_name: 'Test Client',
@@ -630,32 +638,31 @@ describe('BillingEngine', () => {
         is_tax_exempt: false,
       };
 
-      const mockBucketPlan: IBucketPlan = {
-        bucket_contract_line_id: 'bucket1',
+      const bucketConfigRow = {
+        config_id: 'bucket-config-1',
+        tenant: mockTenant,
+        service_id: 'service_bucket',
         contract_line_id: 'test_contract_line_id',
-        total_hours: 40,
+        configuration_type: 'Bucket',
         total_minutes: 2400,
-        billing_period: 'Monthly',
         overage_rate: 50,
         allow_rollover: false,
         service_name: 'Emerald City Consulting Hours',
         tax_rate_id: 'tax-rate-1'
       };
 
-      const timeEntries = [
+      const bucketUsageRows = [
         {
-          start_time: new Date('2023-01-01T00:00:00Z'),
-          end_time: new Date('2023-01-02T16:00:00Z'),
-          invoiced: false,
-        },
-        {
-          start_time: new Date('2023-01-03T00:00:00Z'),
-          end_time: new Date('2023-01-03T05:00:00Z'),
-          invoiced: false,
+          tenant: mockTenant,
+          client_id: mockClientId,
+          contract_line_id: 'test_contract_line_id',
+          service_catalog_id: 'service_bucket',
+          minutes_used: 45 * 60,
+          overage_minutes: 5 * 60
         }
       ];
 
-      const planServiceBuilder = {
+      const configurationBuilder = {
         join: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         select: vi.fn().mockResolvedValue([bucketConfigRow])
@@ -666,9 +673,9 @@ describe('BillingEngine', () => {
         first: vi.fn().mockResolvedValue(mockClient)
       };
 
-      const timeEntriesBuilder = {
+      const bucketUsageBuilder = {
         where: vi.fn().mockReturnThis(),
-        select: vi.fn().mockResolvedValue(timeEntries)
+        select: vi.fn().mockResolvedValue(bucketUsageRows)
       };
 
       const taxRatesBuilder = {
@@ -680,12 +687,12 @@ describe('BillingEngine', () => {
 
       const mockKnex = vi.fn((tableName: string) => {
         switch (tableName) {
-          case 'plan_service_configuration':
-            return planServiceBuilder;
+          case 'contract_line_service_configuration':
+            return configurationBuilder;
           case 'clients':
             return clientsBuilder;
-          case 'time_entries':
-            return timeEntriesBuilder;
+          case 'bucket_usage':
+            return bucketUsageBuilder;
           case 'tax_rates':
             return taxRatesBuilder;
           default:
@@ -713,6 +720,7 @@ describe('BillingEngine', () => {
       expect(result).toMatchObject([
         {
           type: 'bucket',
+          serviceId: 'service_bucket',
           serviceName: 'Emerald City Consulting Hours',
           total: 250,
           hoursUsed: 45,
@@ -724,9 +732,9 @@ describe('BillingEngine', () => {
         }
       ]);
 
-      expect(mockKnex).toHaveBeenCalledWith('plan_service_configuration');
+      expect(mockKnex).toHaveBeenCalledWith('contract_line_service_configuration');
       expect(mockKnex).toHaveBeenCalledWith('clients');
-      expect(mockKnex).toHaveBeenCalledWith('time_entries');
+      expect(mockKnex).toHaveBeenCalledWith('bucket_usage');
       expect(mockKnex).toHaveBeenCalledWith('tax_rates');
 
       expect(calculateTaxSpy).toHaveBeenCalledWith(mockClientId, 250, mockEndDate, 'US-CA');

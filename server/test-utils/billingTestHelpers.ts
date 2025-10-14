@@ -277,24 +277,20 @@ interface AddServiceToPlanOptions {
   detailBaseRateCents?: number;
 }
 
-interface CreateBucketPlanOptions {
-  planId?: string;
-  clientBillingPlanId?: string;
+interface CreateBucketOverlayOptions {
   configId?: string;
-  planName?: string;
-  billingFrequency?: 'monthly' | 'quarterly' | 'annually';
+  serviceId?: string;
   totalMinutes?: number;
   totalHours?: number;
   overageRateCents?: number;
   allowRollover?: boolean;
   billingPeriod?: string;
-  startDate?: string;
-  endDate?: string | null;
 }
 
 interface CreateBucketUsageOptions {
   usageId?: string;
-  planId: string;
+  planId?: string;
+  contractLineId?: string;
   serviceId: string;
   clientId: string;
   periodStart: string;
@@ -727,19 +723,32 @@ export async function addServiceToFixedPlan(
   return configId;
 }
 
-let bucketConfigColumnsCache: Record<string, unknown> | null | undefined;
+let planBucketConfigColumnsCache: Record<string, unknown> | null | undefined;
+let contractLineBucketConfigColumnsCache: Record<string, unknown> | null | undefined;
 let bucketUsageColumnsCache: Record<string, unknown> | null | undefined;
 
-async function ensureBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
-  if (bucketConfigColumnsCache === undefined) {
+async function ensurePlanBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+  if (planBucketConfigColumnsCache === undefined) {
     try {
-      bucketConfigColumnsCache = await context.db('plan_service_bucket_config').columnInfo();
+      planBucketConfigColumnsCache = await context.db('plan_service_bucket_config').columnInfo();
     } catch (error) {
-      bucketConfigColumnsCache = null;
+      planBucketConfigColumnsCache = null;
     }
   }
 
-  return bucketConfigColumnsCache ?? null;
+  return planBucketConfigColumnsCache ?? null;
+}
+
+async function ensureContractLineBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+  if (contractLineBucketConfigColumnsCache === undefined) {
+    try {
+      contractLineBucketConfigColumnsCache = await context.db('contract_line_service_bucket_config').columnInfo();
+    } catch (error) {
+      contractLineBucketConfigColumnsCache = null;
+    }
+  }
+
+  return contractLineBucketConfigColumnsCache ?? null;
 }
 
 async function ensureBucketUsageColumns(context: TestContext): Promise<Record<string, unknown> | null> {
@@ -754,50 +763,186 @@ async function ensureBucketUsageColumns(context: TestContext): Promise<Record<st
   return bucketUsageColumnsCache ?? null;
 }
 
-export async function createBucketPlanAssignment(
+export async function createBucketOverlayForPlan(
   context: TestContext,
-  serviceId: string,
-  options: CreateBucketPlanOptions = {}
-): Promise<{ planId: string; configId: string; clientBillingPlanId: string }> {
-  const planId = options.planId ?? uuidv4();
-  const clientBillingPlanId = options.clientBillingPlanId ?? uuidv4();
-  const configId = options.configId ?? uuidv4();
-  const planName = options.planName ?? 'Bucket Plan';
-  const billingFrequency = options.billingFrequency ?? 'monthly';
-  const startDate = options.startDate ?? '2025-01-01';
-  const endDate = options.endDate ?? null;
+  planId: string,
+  options: CreateBucketOverlayOptions = {}
+): Promise<{ configId: string; serviceId: string }> {
+  const totalMinutes = options.totalMinutes ?? Math.round((options.totalHours ?? 40) * 60);
   const overageRateCents = options.overageRateCents ?? 0;
   const allowRollover = options.allowRollover ?? false;
   const billingPeriod = options.billingPeriod ?? 'monthly';
 
-  const totalMinutes = options.totalMinutes ?? Math.round((options.totalHours ?? 40) * 60);
+  // Identify the service this overlay should attach to, defaulting to the fixed configuration for the plan.
+  let serviceId = options.serviceId;
+  let quantity: number | null = null;
+  let customRate: number | null = null;
 
-  const existingPlan = await context.db('billing_plans')
-    .where({ tenant: context.tenantId, plan_id: planId })
+  let contractBaseConfig;
+
+  if (serviceId) {
+    contractBaseConfig = await context.db('contract_line_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        contract_line_id: planId,
+        service_id: serviceId
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .first();
+  } else {
+    contractBaseConfig = await context.db('contract_line_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        contract_line_id: planId
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .orderBy('created_at', 'asc')
+      .first();
+
+    if (contractBaseConfig) {
+      serviceId = contractBaseConfig.service_id;
+    }
+  }
+
+  if (contractBaseConfig) {
+    quantity = contractBaseConfig.quantity ?? null;
+    customRate = contractBaseConfig.custom_rate ?? null;
+  }
+
+  let planBaseConfig;
+  if (!serviceId) {
+    planBaseConfig = await context.db('plan_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        plan_id: planId
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .orderBy('created_at', 'asc')
+      .first();
+
+    if (planBaseConfig) {
+      serviceId = planBaseConfig.service_id;
+      quantity = planBaseConfig.quantity ?? quantity;
+      customRate = planBaseConfig.custom_rate ?? customRate;
+    }
+  } else if (!contractBaseConfig) {
+    planBaseConfig = await context.db('plan_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        plan_id: planId,
+        service_id: serviceId
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .first();
+
+    if (planBaseConfig) {
+      quantity = planBaseConfig.quantity ?? quantity;
+      customRate = planBaseConfig.custom_rate ?? customRate;
+    }
+  }
+
+  if (!serviceId) {
+    throw new Error(`Unable to determine service for bucket overlay on plan ${planId}`);
+  }
+
+  // Reuse existing overlay config if one exists so tests can update settings idempotently.
+  const existingOverlayConfig = await context.db('contract_line_service_configuration')
+    .where({
+      tenant: context.tenantId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket'
+    })
     .first();
 
-  if (!existingPlan) {
-    await context.db('billing_plans').insert({
+  const configId = options.configId ?? existingOverlayConfig?.config_id ?? uuidv4();
+
+  await context.db('contract_line_services')
+    .insert({
       tenant: context.tenantId,
-      plan_id: planId,
-      plan_name: planName,
-      billing_frequency: billingFrequency,
-      is_custom: false,
-      plan_type: 'Bucket'
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: customRate
+    })
+    .onConflict(['tenant', 'service_id', 'contract_line_id'])
+    .merge({ quantity, custom_rate: customRate });
+
+  await context.db('contract_line_service_configuration')
+    .insert({
+      config_id: configId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket',
+      custom_rate: null,
+      quantity: null,
+      tenant: context.tenantId
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket'
     });
+
+  const contractBucketColumns = await ensureContractLineBucketConfigColumns(context);
+  if (!contractBucketColumns) {
+    throw new Error('contract_line_service_bucket_config table is unavailable');
   }
+
+  const contractTotalMinutesColumn = contractBucketColumns.total_minutes
+    ? 'total_minutes'
+    : contractBucketColumns.total_hours
+      ? 'total_hours'
+      : null;
+
+  if (!contractTotalMinutesColumn) {
+    throw new Error('Unable to determine total minutes column for contract bucket config');
+  }
+
+  const contractBucketData: Record<string, unknown> = {
+    config_id: configId,
+    tenant: context.tenantId,
+    billing_period: billingPeriod,
+    overage_rate: overageRateCents,
+    allow_rollover: allowRollover
+  };
+
+  if (contractTotalMinutesColumn === 'total_minutes') {
+    contractBucketData.total_minutes = totalMinutes;
+  } else {
+    contractBucketData.total_hours = Math.round(totalMinutes / 60);
+  }
+
+  const contractBucketUpdate: Record<string, unknown> = {
+    billing_period: contractBucketData.billing_period,
+    overage_rate: contractBucketData.overage_rate,
+    allow_rollover: contractBucketData.allow_rollover,
+  };
+
+  if (contractTotalMinutesColumn === 'total_minutes') {
+    contractBucketUpdate.total_minutes = contractBucketData.total_minutes;
+  } else {
+    contractBucketUpdate.total_hours = contractBucketData.total_hours;
+  }
+
+  await context.db('contract_line_service_bucket_config')
+    .insert(contractBucketData)
+    .onConflict(['tenant', 'config_id'])
+    .merge(contractBucketUpdate);
 
   await context.db('plan_services')
     .insert({
       tenant: context.tenantId,
       plan_id: planId,
       service_id: serviceId,
-      quantity: null,
-      custom_rate: null
+      quantity,
+      custom_rate: customRate
     })
-    .onConflict(['tenant', 'plan_id', 'service_id'])
-    .ignore();
+    .onConflict(['tenant', 'service_id', 'plan_id'])
+    .merge({ quantity, custom_rate: customRate });
 
+  // Maintain legacy plan_service_* tables so tests remain compatible during the transition.
   await context.db('plan_service_configuration')
     .insert({
       config_id: configId,
@@ -807,21 +952,31 @@ export async function createBucketPlanAssignment(
       custom_rate: null,
       quantity: null,
       tenant: context.tenantId
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      plan_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket'
     });
 
-  const bucketColumns = await ensureBucketConfigColumns(context);
+  const planBucketColumns = await ensurePlanBucketConfigColumns(context);
 
-  if (!bucketColumns) {
+  if (!planBucketColumns) {
     throw new Error('plan_service_bucket_config table is unavailable');
   }
 
-  const totalMinutesColumn = bucketColumns.total_minutes ? 'total_minutes' : bucketColumns.total_hours ? 'total_hours' : null;
+  const planTotalMinutesColumn = planBucketColumns.total_minutes
+    ? 'total_minutes'
+    : planBucketColumns.total_hours
+      ? 'total_hours'
+      : null;
 
-  if (!totalMinutesColumn) {
-    throw new Error('Unable to determine total minutes column for bucket config');
+  if (!planTotalMinutesColumn) {
+    throw new Error('Unable to determine total minutes column for plan bucket config');
   }
 
-  const bucketConfigData: Record<string, unknown> = {
+  const planBucketData: Record<string, unknown> = {
     config_id: configId,
     tenant: context.tenantId,
     billing_period: billingPeriod,
@@ -829,33 +984,30 @@ export async function createBucketPlanAssignment(
     allow_rollover: allowRollover
   };
 
-  if (totalMinutesColumn === 'total_minutes') {
-    bucketConfigData.total_minutes = totalMinutes;
+  if (planTotalMinutesColumn === 'total_minutes') {
+    planBucketData.total_minutes = totalMinutes;
   } else {
-    bucketConfigData.total_hours = Math.round(totalMinutes / 60);
+    planBucketData.total_hours = Math.round(totalMinutes / 60);
   }
 
-  await context.db('plan_service_bucket_config').insert(bucketConfigData);
+  const planBucketUpdate: Record<string, unknown> = {
+    billing_period: planBucketData.billing_period,
+    overage_rate: planBucketData.overage_rate,
+    allow_rollover: planBucketData.allow_rollover,
+  };
 
-  const existingAssignment = await context.db('client_billing_plans')
-    .where({ tenant: context.tenantId, client_id: context.clientId, plan_id: planId })
-    .first();
-
-  if (!existingAssignment) {
-    await context.db('client_billing_plans').insert({
-      tenant: context.tenantId,
-      client_billing_plan_id: clientBillingPlanId,
-      client_id: context.clientId,
-      plan_id: planId,
-      service_category: null,
-      is_active: true,
-      start_date: startDate,
-      end_date: endDate,
-      client_bundle_id: null
-    });
+  if (planTotalMinutesColumn === 'total_minutes') {
+    planBucketUpdate.total_minutes = planBucketData.total_minutes;
+  } else {
+    planBucketUpdate.total_hours = planBucketData.total_hours;
   }
 
-  return { planId, configId, clientBillingPlanId };
+  await context.db('plan_service_bucket_config')
+    .insert(planBucketData)
+    .onConflict(['tenant', 'config_id'])
+    .merge(planBucketUpdate);
+
+  return { configId, serviceId };
 }
 
 export async function createBucketUsageRecord(
@@ -869,11 +1021,18 @@ export async function createBucketUsageRecord(
   }
 
   const usageId = options.usageId ?? uuidv4();
+  const contractLineId = options.contractLineId ?? options.planId;
+
+  if (!contractLineId) {
+    throw new Error('A contract line identifier is required to record bucket usage');
+  }
+
   const record: Record<string, unknown> = {
     usage_id: usageId,
     tenant: context.tenantId,
     client_id: options.clientId,
-    plan_id: options.planId,
+    plan_id: options.planId ?? contractLineId,
+    contract_line_id: contractLineId,
     service_catalog_id: options.serviceId,
     period_start: options.periodStart,
     period_end: options.periodEnd,

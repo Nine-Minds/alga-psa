@@ -584,7 +584,7 @@ export async function getActiveServices(): Promise<Service[]> {
   }): Service => {
     const hasCustomRate = service.custom_rate !== null;
     const rate = hasCustomRate ? service.custom_rate : service.default_rate;
-    const isBucketPlan = service.contract_line_type === 'Bucket';
+    const isBucketPlan = Boolean(service.psbc_total_hours);
 
     // Determine base status
     const status = determineServiceStatus(service.start_date, service.end_date);

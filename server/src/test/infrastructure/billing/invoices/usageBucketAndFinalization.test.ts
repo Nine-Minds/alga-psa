@@ -11,7 +11,7 @@ import {
   assignServiceTaxRate,
   createTestService,
   createFixedPlanAssignment,
-  createBucketContractLineAssignment,
+  createBucketOverlayForPlan,
   createBucketUsageRecord
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -309,7 +309,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
 
   describe('Bucket Contract Lines', () => {
     it('should handle overage charges correctly', async () => {
-      // Arrange - Create service for bucket contract line
+      // Arrange - Create service for bucket overlay contract line
       const serviceId = await createTestService(context, {
         service_name: 'Consulting Hours',
         billing_method: 'per_unit',
@@ -318,32 +318,23 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         tax_region: 'US-NY'
       });
 
-      const contractLineId = await context.createEntity('contract_lines', {
-        contract_line_name: 'Bucket Contract Line',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        contract_line_type: 'Bucket'
-      }, 'contract_line_id');
-
-      const bucketContractLineId = await context.createEntity('bucket_contract_lines', {
-        contract_line_id: contractLineId,
-        total_hours: 40,
-        billing_period: 'Monthly',
-        overage_rate: 7500,
-        tenant: context.tenantId
-      }, 'bucket_contract_line_id');
-
-      // Set up contract line service configuration for bucket billing
-      const configId = uuidv4();
-      await context.db('contract_line_service_configuration').insert({
-        config_id: configId,
-        contract_line_id: contractLineId,
-        service_id: serviceId,
-        configuration_type: 'Bucket',
-        tenant: context.tenantId
+      const { contractLineId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Bucket Contract Line',
+        baseRateCents: 0,
+        detailBaseRateCents: 0,
+        billingFrequency: 'monthly',
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
 
-      // Create billing cycle and assign contract line
+      await createBucketOverlayForPlan(context, contractLineId, {
+        serviceId,
+        totalHours: 40,
+        overageRateCents: 7500,
+        allowRollover: false,
+        billingPeriod: 'monthly'
+      });
+
+      // Create billing cycle covering the target period
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: context.clientId,
         billing_cycle: 'monthly',
@@ -352,26 +343,15 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: contractLineId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      });
-
-      // Create bucket usage
-      await context.db('bucket_usage').insert({
-        usage_id: uuidv4(),
-        bucket_contract_line_id: bucketContractLineId,
-        client_id: context.clientId,
-        period_start: '2023-01-01',
-        period_end: '2023-01-31',
-        minutes_used: 45,
-        overage_minutes: 5,
-        service_catalog_id: serviceId,
-        tenant: context.tenantId
+      // Record bucket usage for the period (45 hours consumed, 5 hours overage)
+      await createBucketUsageRecord(context, {
+        contractLineId,
+        serviceId,
+        clientId: context.clientId,
+        periodStart: '2023-01-01',
+        periodEnd: '2023-01-31',
+        minutesUsed: 45 * 60,
+        overageMinutes: 5 * 60
       });
 
       // Act

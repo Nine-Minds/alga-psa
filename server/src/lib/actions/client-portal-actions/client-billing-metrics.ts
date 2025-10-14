@@ -366,40 +366,44 @@ export async function getClientBucketUsageHistory(serviceId?: string): Promise<{
       const clientId = contact.client_id;
 
       let query: any = trx('bucket_usage as bu')
-        .join('billing_plans as bp', function(this: any) {
-          this.on('bu.plan_id', '=', 'bp.plan_id').andOn('bu.tenant', '=', 'bp.tenant');
+        .join('contract_line_service_configuration as clsc', function(this: any) {
+          this.on('bu.contract_line_id', '=', 'clsc.contract_line_id')
+            .andOn('bu.service_catalog_id', '=', 'clsc.service_id')
+            .andOn('bu.tenant', '=', 'clsc.tenant')
+            .andOnVal('clsc.configuration_type', 'Bucket');
         })
-        .join('plan_services as ps', function(this: any) {
-          this.on('bp.plan_id', '=', 'ps.plan_id').andOn('bp.tenant', '=', 'ps.tenant');
+        .join('contract_line_service_bucket_config as clsb', function(this: any) {
+          this.on('clsc.config_id', '=', 'clsb.config_id')
+            .andOn('clsc.tenant', '=', 'clsb.tenant');
+        })
+        .join('contract_lines as cl', function(this: any) {
+          this.on('cl.contract_line_id', '=', 'clsc.contract_line_id')
+            .andOn('cl.tenant', '=', 'clsc.tenant');
         })
         .join('service_catalog as sc', function(this: any) {
-          this.on('ps.service_id', '=', 'sc.service_id').andOn('ps.tenant', '=', 'sc.tenant');
-        })
-        .join('plan_service_configuration as psc', function(this: any) {
-          this.on('ps.plan_id', '=', 'psc.plan_id').andOn('ps.service_id', '=', 'psc.service_id').andOn('ps.tenant', '=', 'psc.tenant');
-        })
-        .join('plan_service_bucket_config as psbc', function(this: any) {
-          this.on('psc.config_id', '=', 'psbc.config_id').andOn('psc.tenant', '=', 'psbc.tenant');
+          this.on('clsc.service_id', '=', 'sc.service_id')
+            .andOn('clsc.tenant', '=', 'sc.tenant');
         })
         .where('bu.client_id', clientId)
-        .andWhere('bu.tenant', tenant)
-        .andWhere('bp.plan_type', 'Bucket');
+        .andWhere('bu.tenant', tenant);
 
       if (serviceId) {
-        query = query.andWhere('ps.service_id', serviceId);
+        query = query.andWhere('clsc.service_id', serviceId);
       }
 
       query = query
         .select(
-          'ps.service_id',
+          'clsc.service_id',
           'sc.service_name',
+          'cl.contract_line_id',
+          'cl.contract_line_name',
           'bu.period_start',
           'bu.period_end',
           'bu.minutes_used',
           'bu.rolled_over_minutes',
-          'psbc.total_minutes'
+          'clsb.total_minutes'
         )
-        .orderBy('ps.service_id')
+        .orderBy('clsc.service_id')
         .orderBy('bu.period_start', 'desc');
 
       const rawResults: any[] = await query;

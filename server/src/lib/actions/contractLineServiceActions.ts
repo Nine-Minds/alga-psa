@@ -106,8 +106,6 @@ export async function addServiceToContractLine(
   // Determine configuration type: Prioritize explicit param, then plan type, then service type
   if (configType) {
     determinedConfigType = configType;
-  } else if (plan.contract_line_type === 'Bucket') { // Check if the plan itself is a Bucket plan
-    determinedConfigType = 'Bucket';
   } else if (serviceWithType?.service_type_billing_method === 'fixed') {
     determinedConfigType = 'Fixed';
   } else if (serviceWithType?.service_type_billing_method === 'per_unit') {

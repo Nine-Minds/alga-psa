@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from 'server/src/lib/db';
-import { determineDefaultContractLine } from 'server/src/lib/utils/planDisambiguation';
+import { determineDefaultContractLine } from 'server/src/lib/utils/contractLineDisambiguation';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
 import {
   ITimeEntry,
@@ -539,20 +539,18 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
         }
         const currentPlanId = resultingEntry.contract_line_id; // Use the plan ID associated with the entry
 
-        if (clientId && currentPlanId) {
-          // Check if the plan is a 'Bucket' type plan
-          // Correctly check contract_line_type by joining client_contract_lines with contract_lines
-          const planInfo = await trx('client_contract_lines as ccl')
-            .join('contract_lines as cl', function() {
-                this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-                    .andOn('ccl.tenant', '=', 'cl.tenant');
+        if (clientId && currentPlanId && resultingEntry.service_id) {
+          const overlayConfig = await trx('contract_line_service_configuration')
+            .where({
+              tenant,
+              contract_line_id: currentPlanId,
+              service_id: resultingEntry.service_id,
+              configuration_type: 'Bucket'
             })
-            .where('ccl.client_contract_line_id', currentPlanId) // Use the ID from the time entry
-            .andWhere('ccl.tenant', tenant)
-            .first('cl.contract_line_type'); // Select contract_line_type from contract_lines table
+            .first('config_id');
 
-          if (planInfo && planInfo.contract_line_type === 'Bucket') {
-            console.log(`Time entry ${resultingEntry.entry_id} linked to Bucket contract line ${currentPlanId}. Updating usage.`);
+          if (overlayConfig) {
+            console.log(`Time entry ${resultingEntry.entry_id} linked to bucket overlay on contract line ${currentPlanId}. Updating usage.`);
 
             const newDuration = resultingEntry.billable_duration || 0;
             // Calculate delta in MINUTES first
@@ -583,7 +581,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
                console.log(`No duration change for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
             }
           } else {
-             console.log(`Time entry ${resultingEntry.entry_id} service/plan is not a Bucket type or plan not found.`);
+             console.log(`Time entry ${resultingEntry.entry_id} service/plan has no bucket overlay or plan not found.`);
           }
         } else {
            console.log(`Could not determine client ID or contract line for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
@@ -794,18 +792,18 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
         }
         const currentPlanId = timeEntry.contract_line_id;
 
-        if (clientId && currentPlanId) {
-          const planInfo = await trx('client_contract_lines as ccl')
-            .join('contract_lines as cl', function() {
-                this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-                    .andOn('ccl.tenant', '=', 'cl.tenant');
+        if (clientId && currentPlanId && timeEntry.service_id) {
+          const overlayConfig = await trx('contract_line_service_configuration')
+            .where({
+              tenant,
+              contract_line_id: currentPlanId,
+              service_id: timeEntry.service_id,
+              configuration_type: 'Bucket'
             })
-            .where('ccl.client_contract_line_id', currentPlanId)
-            .andWhere('ccl.tenant', tenant)
-            .first('cl.contract_line_type');
+            .first('config_id');
 
-          if (planInfo && planInfo.contract_line_type === 'Bucket') {
-            console.log(`Time entry ${entryId} linked to Bucket contract line ${currentPlanId}. Decrementing usage.`);
+          if (overlayConfig) {
+            console.log(`Time entry ${entryId} linked to bucket overlay on contract line ${currentPlanId}. Decrementing usage.`);
             const minutesDelta = -(timeEntry.billable_duration || 0); // Negative delta
 
             if (minutesDelta !== 0) {

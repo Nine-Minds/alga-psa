@@ -16,7 +16,14 @@ describe('Contract Line Disambiguation Logic', () => {
   beforeEach(() => {
     mockKnex = {
       join: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
+      whereNull: vi.fn().mockReturnThis(),
+      orWhere: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      on: vi.fn().mockReturnThis(),
+      andOn: vi.fn().mockReturnThis(),
+      andOnVal: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
     };
 
@@ -39,7 +46,8 @@ describe('Contract Line Disambiguation Logic', () => {
         },
         {
           client_contract_line_id: 'contractLine2',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 120 }
         },
       ];
 
@@ -49,6 +57,7 @@ describe('Contract Line Disambiguation Logic', () => {
 
       expect(result).toEqual(mockContractLines);
       expect(mockKnex.join).toHaveBeenCalledTimes(2);
+      expect(mockKnex.leftJoin).toHaveBeenCalledTimes(2);
       expect(mockKnex.where).toHaveBeenCalledWith({
         'client_contract_lines.client_id': mockClientId,
         'client_contract_lines.is_active': true,
@@ -82,7 +91,7 @@ describe('Contract Line Disambiguation Logic', () => {
       expect(result).toBeNull();
     });
 
-    it('should return the bucket contract line when there is only one bucket contract line', async () => {
+    it('should return the contract line with a bucket overlay when there is only one overlay', async () => {
       const mockContractLines = [
         {
           client_contract_line_id: 'contractLine1',
@@ -90,7 +99,8 @@ describe('Contract Line Disambiguation Logic', () => {
         },
         {
           client_contract_line_id: 'contractLine2',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 300 }
         },
         {
           client_contract_line_id: 'contractLine3',
@@ -124,15 +134,17 @@ describe('Contract Line Disambiguation Logic', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null when there are multiple bucket contract lines', async () => {
+    it('should return null when there are multiple contract lines with bucket overlays', async () => {
       const mockContractLines = [
         {
           client_contract_line_id: 'contractLine1',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 180 }
         },
         {
           client_contract_line_id: 'contractLine2',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 45 }
         },
       ];
 
@@ -153,7 +165,8 @@ describe('Contract Line Disambiguation Logic', () => {
         },
         {
           client_contract_line_id: 'contractLine2',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 120 }
         },
       ];
 
@@ -172,7 +185,8 @@ describe('Contract Line Disambiguation Logic', () => {
         },
         {
           client_contract_line_id: 'contractLine2',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 240 }
         },
       ];
 
@@ -200,7 +214,7 @@ describe('Contract Line Disambiguation Logic', () => {
       expect(result).toBe(true);
     });
 
-    it('should return true when this is the only bucket contract line', async () => {
+    it('should return true when this is the only contract line with a bucket overlay', async () => {
       const mockContractLines = [
         {
           client_contract_line_id: 'contractLine1',
@@ -208,7 +222,8 @@ describe('Contract Line Disambiguation Logic', () => {
         },
         {
           client_contract_line_id: 'contractLine2',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 600 }
         },
         {
           client_contract_line_id: 'contractLine3',
@@ -223,7 +238,7 @@ describe('Contract Line Disambiguation Logic', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false when this is not the only eligible contract line and not a bucket contract line', async () => {
+    it('should return false when this is not the only eligible contract line and has no bucket overlay', async () => {
       const mockContractLines = [
         {
           client_contract_line_id: 'contractLine1',
@@ -242,15 +257,17 @@ describe('Contract Line Disambiguation Logic', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false when there are multiple bucket contract lines', async () => {
+    it('should return false when there are multiple contract lines with bucket overlays', async () => {
       const mockContractLines = [
         {
           client_contract_line_id: 'contractLine1',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 100 }
         },
         {
           client_contract_line_id: 'contractLine2',
-          contract_line_type: 'Bucket',
+          contract_line_type: 'Fixed',
+          bucket_overlay: { remaining_minutes: 50 }
         },
       ];
 

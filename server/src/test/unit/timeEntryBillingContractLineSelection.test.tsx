@@ -4,15 +4,18 @@ import { TimeSheetStatus } from '../../interfaces/timeEntry.interfaces';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import TimeEntryEditForm from '../../components/time-management/time-entry/time-sheet/TimeEntryEditForm';
-import * as planDisambiguation from '../../lib/utils/planDisambiguation';
+import * as planDisambiguation from '../../lib/utils/contractLineDisambiguation';
 
 // Mock the planDisambiguation module
-vi.mock('../../lib/utils/planDisambiguation', () => ({
+vi.mock('../../lib/utils/contractLineDisambiguation', () => ({
   getClientIdForWorkItem: vi.fn(),
   getEligibleContractLinesForUI: vi.fn()
 }));
 
 describe('TimeEntryEditForm with Contract Line Selection', () => {
+  const defaultStartDate = '2023-01-01T00:00:00.000Z';
+  const defaultEndDate = null;
+
   const mockEntry = {
     client_id: 'test-client-id', // Add client ID to the mock entry
     entry_id: 'test-entry-id',
@@ -59,7 +62,10 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
       {
         client_contract_line_id: 'test-plan-id',
         contract_line_name: 'Test Plan',
-        contract_line_type: 'Fixed'
+        contract_line_type: 'Fixed',
+        start_date: defaultStartDate,
+        end_date: defaultEndDate,
+        has_bucket_overlay: false
       }
     ]);
 
@@ -161,12 +167,18 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
       {
         client_contract_line_id: 'plan-id-1',
         contract_line_name: 'Fixed Plan',
-        contract_line_type: 'Fixed'
+        contract_line_type: 'Fixed',
+        start_date: defaultStartDate,
+        end_date: defaultEndDate,
+        has_bucket_overlay: false
       },
       {
         client_contract_line_id: 'plan-id-2',
-        contract_line_name: 'Bucket Plan',
-        contract_line_type: 'Bucket'
+        contract_line_name: 'Fixed Plan with Bucket Overlay',
+        contract_line_type: 'Fixed',
+        start_date: defaultStartDate,
+        end_date: defaultEndDate,
+        has_bucket_overlay: true
       }
     ]);
 
@@ -221,12 +233,18 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
       {
         client_contract_line_id: 'plan-id-1',
         contract_line_name: 'Fixed Plan',
-        contract_line_type: 'Fixed'
+        contract_line_type: 'Fixed',
+        start_date: defaultStartDate,
+        end_date: defaultEndDate,
+        has_bucket_overlay: false
       },
       {
         client_contract_line_id: 'plan-id-2',
-        contract_line_name: 'Bucket Plan',
-        contract_line_type: 'Bucket'
+        contract_line_name: 'Fixed Plan with Bucket Overlay',
+        contract_line_type: 'Fixed',
+        start_date: defaultStartDate,
+        end_date: defaultEndDate,
+        has_bucket_overlay: true
       }
     ]);
 

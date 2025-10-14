@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex } from 'server/src/lib/db';
-import { determineDefaultContractLine } from 'server/src/lib/utils/planDisambiguation';
+import { determineDefaultContractLine } from 'server/src/lib/utils/contractLineDisambiguation';
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
@@ -55,12 +55,16 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
 
     // --- Bucket Usage Update Logic ---
     if (record.service_id && record.client_id && record.contract_line_id) {
-      // Check if the plan is a 'Bucket' type plan
-      const plan = await trx('contract_lines')
-        .where({ contract_line_id: record.contract_line_id, tenant })
-        .first('contract_line_type');
+      const overlayConfig = await trx('contract_line_service_configuration')
+        .where({
+          tenant,
+          contract_line_id: record.contract_line_id,
+          service_id: record.service_id,
+          configuration_type: 'Bucket'
+        })
+        .first('config_id');
 
-      if (plan && plan.contract_line_type === 'Bucket') {
+      if (overlayConfig) {
         console.log(`Usage record ${record.usage_id} linked to Bucket contract line ${record.contract_line_id}. Updating usage.`);
 
         // Assuming 1 quantity = 1 hour/unit for buckets
@@ -167,11 +171,16 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
     // It currently DOES NOT handle removing quantity when a record is changed *away* from a bucket plan. That requires more complex logic checking the original plan type.
 
     if (updatedRecord.service_id && updatedRecord.client_id && updatedRecord.contract_line_id) {
-      const plan = await trx('contract_lines')
-        .where({ contract_line_id: updatedRecord.contract_line_id, tenant })
-        .first('contract_line_type');
+      const overlayConfig = await trx('contract_line_service_configuration')
+        .where({
+          tenant,
+          contract_line_id: updatedRecord.contract_line_id,
+          service_id: updatedRecord.service_id,
+          configuration_type: 'Bucket'
+        })
+        .first('config_id');
 
-      if (plan && plan.contract_line_type === 'Bucket') {
+      if (overlayConfig) {
         console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket contract line ${updatedRecord.contract_line_id}. Updating usage.`);
 
         const newQuantity = updatedRecord.quantity || 0;
@@ -231,11 +240,16 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
 
     // --- Bucket Usage Update Logic (Before Delete) ---
     if (recordToDelete.service_id && recordToDelete.client_id && recordToDelete.contract_line_id) {
-      const plan = await trx('contract_lines')
-        .where({ contract_line_id: recordToDelete.contract_line_id, tenant })
-        .first('contract_line_type');
+      const overlayConfig = await trx('contract_line_service_configuration')
+        .where({
+          tenant,
+          contract_line_id: recordToDelete.contract_line_id,
+          service_id: recordToDelete.service_id,
+          configuration_type: 'Bucket'
+        })
+        .first('config_id');
 
-      if (plan && plan.contract_line_type === 'Bucket') {
+      if (overlayConfig) {
         console.log(`Usage record ${usageId} linked to Bucket contract line ${recordToDelete.contract_line_id}. Updating usage before delete.`);
 
         const quantity = recordToDelete.quantity || 0;

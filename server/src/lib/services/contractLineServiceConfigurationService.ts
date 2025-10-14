@@ -14,7 +14,6 @@ import ContractLineServiceFixedConfig from 'server/src/lib/models/contractLineSe
 import ContractLineServiceHourlyConfig from 'server/src/lib/models/contractLineServiceHourlyConfig';
 import ContractLineServiceUsageConfig from 'server/src/lib/models/contractLineServiceUsageConfig';
 import ContractLineServiceBucketConfig from 'server/src/lib/models/contractLineServiceBucketConfig';
-import ContractLine from 'server/src/lib/models/contractLine'; // Added import
 
 export class ContractLineServiceConfigurationService {
   private knex: Knex;
@@ -84,50 +83,30 @@ export class ContractLineServiceConfigurationService {
       throw new Error(`Configuration with ID ${configId} not found`);
     }
 
-    // Fetch the associated plan to check its type
-    const plan = await ContractLine.findById(this.knex, baseConfig.contract_line_id);
-    if (!plan) {
-      // This case should ideally not happen if baseConfig exists, but handle defensively
-      console.warn(`Plan with ID ${baseConfig.contract_line_id} not found for config ${configId}`);
-      // Proceed using the baseConfig.configuration_type as fallback
-    }
-    
     let typeConfig: IContractLineServiceBucketConfig | IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null = null;
     let rateTiers: IContractLineServiceRateTier[] | undefined = undefined;
     // let userTypeRates = undefined; // Removed
 
-    // If the plan is a Bucket plan, always fetch from bucket config table
-    if (plan?.contract_line_type === 'Bucket') {
-      typeConfig = await this.bucketConfigModel.getByConfigId(configId);
-      // Note: Rate tiers and user type rates are not applicable to Bucket configs
-    } else {
-      // Otherwise, use the configuration_type from the base config record
-      switch (baseConfig.configuration_type) {
-        case 'Fixed':
-          typeConfig = await this.fixedConfigModel.getByConfigId(configId);
-          break;
-          
-        case 'Hourly':
-          typeConfig = await this.hourlyConfigModel.getByConfigId(configId);
-          // userTypeRates are now plan-wide, not fetched here
-          // if (typeConfig) {
-          //   userTypeRates = await this.hourlyConfigModel.getUserTypeRates(configId);
-          // }          
-          break;
-          
-        case 'Usage':
-          typeConfig = await this.usageConfigModel.getByConfigId(configId);
-          if (typeConfig && (typeConfig as IContractLineServiceUsageConfig).enable_tiered_pricing) {
-            rateTiers = await this.usageConfigModel.getRateTiers(configId);
-          }
-          break;
-          
-        case 'Bucket':
-          // This case might occur if a service was initially Bucket type
-          // but the plan type changed, or if the plan fetch failed.
-          typeConfig = await this.bucketConfigModel.getByConfigId(configId);
-          break;
-      }
+    // Use the configuration_type from the base config record
+    switch (baseConfig.configuration_type) {
+      case 'Fixed':
+        typeConfig = await this.fixedConfigModel.getByConfigId(configId);
+        break;
+
+      case 'Hourly':
+        typeConfig = await this.hourlyConfigModel.getByConfigId(configId);
+        break;
+
+      case 'Usage':
+        typeConfig = await this.usageConfigModel.getByConfigId(configId);
+        if (typeConfig && (typeConfig as IContractLineServiceUsageConfig).enable_tiered_pricing) {
+          rateTiers = await this.usageConfigModel.getRateTiers(configId);
+        }
+        break;
+
+      case 'Bucket':
+        typeConfig = await this.bucketConfigModel.getByConfigId(configId);
+        break;
     }
     
     return {

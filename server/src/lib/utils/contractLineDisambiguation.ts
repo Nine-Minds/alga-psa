@@ -4,6 +4,16 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '../db';
 import { IClientContractLine } from '../../interfaces/billing.interfaces';
 
+type EligibleContractLine = IClientContractLine & {
+  contract_line_type: string;
+  bucket_overlay?: {
+    config_id: string;
+    total_minutes?: number | null;
+    overage_rate?: number | null;
+    allow_rollover?: boolean | null;
+  };
+};
+
 /**
  * Determines the default contract line for a time entry or usage record
  * @param clientId The client ID
@@ -34,7 +44,13 @@ export async function determineDefaultContractLine(
       return null;
     }
 
-    // Check for bucket contract lines
+    // Prefer contract lines that have a bucket overlay configuration
+    const overlayContractLines = eligibleContractLines.filter(contractLine => contractLine.bucket_overlay?.config_id);
+    if (overlayContractLines.length === 1) {
+      return overlayContractLines[0].client_contract_line_id;
+    }
+
+    // Fallback: check for legacy bucket contract lines (during migration)
     const bucketContractLines = eligibleContractLines.filter(contractLine =>
       contractLine.contract_line_type === 'Bucket'
     );
@@ -64,7 +80,7 @@ export async function getEligibleContractLines(
   tenant: string,
   clientId: string,
   serviceId: string
-): Promise<(IClientContractLine & { contract_line_type: string })[]> {
+): Promise<EligibleContractLine[]> {
   // First, get the service category for the given service
   const serviceInfo = await knex('service_catalog')
     .where({
@@ -88,6 +104,16 @@ export async function getEligibleContractLines(
       this.on('contract_lines.contract_line_id', '=', 'contract_line_services.contract_line_id')
           .andOn('contract_line_services.tenant', '=', 'contract_lines.tenant');
     })
+    .leftJoin('contract_line_service_configuration as bucket_config', function() {
+      this.on('bucket_config.contract_line_id', '=', 'contract_lines.contract_line_id')
+          .andOn('bucket_config.tenant', '=', 'contract_lines.tenant')
+          .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
+          .andOnVal('bucket_config.configuration_type', 'Bucket');
+    })
+    .leftJoin('contract_line_service_bucket_config as bucket_details', function() {
+      this.on('bucket_details.config_id', '=', 'bucket_config.config_id')
+          .andOn('bucket_details.tenant', '=', 'bucket_config.tenant');
+    })
     .where({
       'client_contract_lines.client_id': clientId,
       'client_contract_lines.is_active': true,
@@ -99,8 +125,6 @@ export async function getEligibleContractLines(
         .orWhere('client_contract_lines.end_date', '>', new Date().toISOString());
     });
 
-  console.log('service category id', serviceInfo.category_id);
-  
   // Filter by service category if available
   if (serviceInfo.category_id) {
     // Filter contract lines based on the service_category field in client_contract_lines
@@ -124,14 +148,42 @@ export async function getEligibleContractLines(
   //   }
   // }
 
-  console.log(query.toString());
-  
   // Execute the query and return the results
-  return query.select(
+  const rows = await query.select(
     'client_contract_lines.*',
     'contract_lines.contract_line_type',
-    'contract_lines.contract_line_name'
+    'contract_lines.contract_line_name',
+    'bucket_config.config_id as bucket_config_id',
+    'bucket_details.total_minutes as bucket_total_minutes',
+    'bucket_details.overage_rate as bucket_overage_rate',
+    'bucket_details.allow_rollover as bucket_allow_rollover'
   );
+
+  return rows.map(row => {
+    const {
+      bucket_config_id,
+      bucket_total_minutes,
+      bucket_overage_rate,
+      bucket_allow_rollover,
+      ...rest
+    } = row as Record<string, any>;
+
+    const { bucket_overlay: existingOverlay, ...restWithoutOverlay } = rest;
+
+    const bucket_overlay = bucket_config_id
+      ? {
+          config_id: bucket_config_id,
+          total_minutes: bucket_total_minutes ?? null,
+          overage_rate: bucket_overage_rate ?? null,
+          allow_rollover: bucket_allow_rollover ?? null
+        }
+      : existingOverlay;
+
+    return {
+      ...restWithoutOverlay,
+      bucket_overlay
+    } as EligibleContractLine;
+  });
 }
 
 /**
@@ -187,7 +239,13 @@ export async function shouldAllocateUnassignedEntry(
       return true;
     }
 
-    // If there are multiple eligible contract lines, check if this is a bucket contract line
+    // If there are multiple eligible contract lines, prefer ones with bucket overlays
+    const overlayContractLines = eligibleContractLines.filter(contractLine => contractLine.bucket_overlay?.config_id);
+    if (overlayContractLines.length === 1 && overlayContractLines[0].client_contract_line_id === contractLineId) {
+      return true;
+    }
+
+    // Fallback legacy behavior for bucket contract lines
     const bucketContractLines = eligibleContractLines.filter(contractLine => contractLine.contract_line_type === 'Bucket');
     if (bucketContractLines.length === 1 && bucketContractLines[0].client_contract_line_id === contractLineId) {
       return true;
@@ -214,6 +272,10 @@ export async function getEligibleContractLinesForUI(
   client_contract_line_id: string;
   contract_line_name: string;
   contract_line_type: string;
+  start_date: string;
+  end_date: string | null;
+  has_bucket_overlay: boolean;
+  bucket_overlay?: EligibleContractLine['bucket_overlay'];
 }>> {
   const { knex, tenant } = await createTenantKnex();
   
@@ -226,13 +288,19 @@ export async function getEligibleContractLinesForUI(
 
     // Transform to a simpler structure for UI
     // Transform to the structure expected by the UI, including dates
-    return contractLines.map(contractLine => ({
-      client_contract_line_id: contractLine.client_contract_line_id,
-      contract_line_name: contractLine.contract_line_name || 'Unnamed Contract Line',
-      contract_line_type: contractLine.contract_line_type,
-      start_date: contractLine.start_date, // Include start_date
-      end_date: contractLine.end_date // Include end_date
-    }));
+    return contractLines.map(contractLine => {
+      const hasBucketOverlay = Boolean(contractLine.bucket_overlay?.config_id);
+
+      return {
+        client_contract_line_id: contractLine.client_contract_line_id,
+        contract_line_name: contractLine.contract_line_name || 'Unnamed Contract Line',
+        contract_line_type: contractLine.contract_line_type,
+        start_date: contractLine.start_date,
+        end_date: contractLine.end_date,
+        has_bucket_overlay: hasBucketOverlay,
+        bucket_overlay: contractLine.bucket_overlay
+      };
+    });
   } catch (error) {
     console.error('Error getting eligible contract lines for UI:', error);
     return [];

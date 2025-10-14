@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getEligibleContractLinesForUI } from 'server/src/lib/utils/planDisambiguation';
+import { getEligibleContractLinesForUI } from 'server/src/lib/utils/contractLineDisambiguation';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
@@ -61,6 +61,9 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     client_contract_line_id: string;
     contract_line_name: string;
     contract_line_type: string;
+    start_date: string;
+    end_date: string | null;
+    has_bucket_overlay: boolean;
   }>>([]);
   const [showContractLineSelector, setShowContractLineSelector] = useState(false);
   type BucketUsageData = RemainingBucketUnitsResult & { plan_id: string; plan_name: string };
@@ -113,11 +116,10 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
             // If there's only one contract line, use it automatically
             setNewUsage(prev => ({ ...prev, contract_line_id: plans[0].client_contract_line_id }));
           } else if (plans.length > 1) {
-            // Check for bucket contract lines first
-            const bucketPlans = plans.filter(plan => plan.contract_line_type === 'Bucket');
-            if (bucketPlans.length === 1) {
-              // If there's only one bucket contract line, use it as default
-              setNewUsage(prev => ({ ...prev, contract_line_id: bucketPlans[0].client_contract_line_id }));
+            // Prefer the single contract line that has a bucket overlay (if any)
+            const overlayPlans = plans.filter(plan => plan.has_bucket_overlay);
+            if (overlayPlans.length === 1) {
+              setNewUsage(prev => ({ ...prev, contract_line_id: overlayPlans[0].client_contract_line_id }));
             }
           }
         } else if (plans.length === 0) {

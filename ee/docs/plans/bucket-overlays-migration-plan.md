@@ -20,6 +20,12 @@ Tasks
   - `bucket_usage` (per period usage results, minutes/units used and overage)
 - Establish coding conventions for overlay editor reuse and per-line validation.
 
+Schema verification (2025-02-14)
+- `plan_service_bucket_config` exists with `(tenant, config_id)` PK, FK back to `plan_service_configuration`, and bucket fields: `total_minutes`, `billing_period`, `overage_rate`, `allow_rollover`, timestamps.
+- `contract_line_service_configuration` exists with `(tenant, config_id)` PK but currently lacks FKs to `contract_lines` and `service_catalog`, and has no supporting indexes on `contract_line_id` / `service_id`.
+- `contract_line_service_bucket_config` mirrors the plan table structure (`total_minutes`, `billing_period`, `overage_rate`, `allow_rollover`, timestamps) but is missing the `(tenant, config_id)` FK back to `contract_line_service_configuration`.
+- Recommended follow-up migrations for Phase 2+: add `(tenant, contract_line_id)` FK + index, `(tenant, service_id)` FK + index, and unique `(tenant, contract_line_id, service_id)` constraint on `contract_line_service_configuration`; add `(tenant, config_id)` FK on `contract_line_service_bucket_config`; audit `bucket_usage` to ensure it will link to contract-line overlays post-cutover.
+
 Acceptance
 - Documentation notes captured in this plan; team aligned on scope.
 
@@ -42,11 +48,17 @@ Tasks
     - Inserts `plan_service_bucket_config` with: `total_minutes` (for hours) or units as “minutes” generic quantity for usage, `overage_rate`, `allow_rollover`, `billing_period`.
   - Remove the old function usage across the suite; do not maintain a shim.
 - Update/adjust unit tests that explicitly assert `plan_type = 'Bucket'`:
-  - `server/src/test/unit/planDisambiguation.test.ts`: remove bucket-plan special cases; add overlay preference tests (prefer lines with active bucket balance).
+  - `server/src/test/unit/contractLineDisambiguation.test.ts`: remove bucket-plan special cases; add overlay preference tests (prefer lines with active bucket balance).
   - `server/src/test/unit/timeEntryBillingPlanSelection.test.tsx`: mock overlay presence (not plan type) and assert default selection preference.
   - `server/src/test/unit/billingPlanSelection.test.ts`: same as above.
   - `server/src/test/unit/billingEngine.test.ts`: replace “calculateBucketPlanCharges” expectations with overlay consumption assertions (time/usage paths).
   - `server/src/test/unit/bucketUsageService.test.ts`: confirm logic still works with overlays.
+- Progress (2025-02-14):
+  - Helper rewritten as `createBucketOverlayForPlan` and wired to both contract-line and legacy plan tables; usage helper now records `contract_line_id`.
+  - Invoice infrastructure test (`usageBucketAndFinalization`) migrated to build overlays on top of fixed lines and seed usage via overlay helper.
+  - Selector/disambiguation unit tests now mock `has_bucket_overlay` metadata instead of `contract_line_type === 'Bucket'`; pending updates to the production disambiguation logic and remaining billing engine/unit suites.
+  - Billing engine unit coverage updated to treat overlays as the source for bucket charges (`calculateBucketPlanCharges` test now stubs overlay rows and bucket usage, and `calculateBilling` aggregates the overlay charge).
+  - UI/service layers now consume overlay metadata: contract-line selectors prefer overlays, usage/time-entry actions update bucket usage when overlays exist (rather than relying on `contract_line_type`), and API imports point at `contractLineDisambiguation`.
 
 Acceptance
 - Unit tests compile and run; bucket assertions are overlay-based.
@@ -147,7 +159,7 @@ Goals
 - Simplify plan selection by preferring plans with active overlays (balance available), removing bucket plan special-cases.
 
 Tasks
-- In `server/src/lib/utils/planDisambiguation.ts`:
+- In `server/src/lib/utils/contractLineDisambiguation.ts`:
   - `determineDefaultBillingPlan(clientId, serviceId)`:
     - If a single eligible plan → select it.
     - If multiple: prefer the plan where the overlay exists and has remaining balance in the entry’s period (requires a helper to query overlay and usage balance).
