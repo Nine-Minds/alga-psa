@@ -104,6 +104,9 @@ const TextDetailItem: React.FC<{
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
 
+  // Generate deterministic ID if automationId not provided
+  const fieldId = automationId || `company-detail-${label.toLowerCase().replace(/\s+/g, '-')}`;
+
   // Register for UI automation with meaningful label
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
@@ -139,7 +142,7 @@ const TextDetailItem: React.FC<{
     <div className="space-y-2" {...automationIdProps}>
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
-        id={automationId ? `${automationId}-input` : undefined}
+        id={fieldId}
         type="text"
         value={localValue}
         onChange={(e) => {
