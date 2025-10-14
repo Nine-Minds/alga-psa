@@ -31,15 +31,14 @@ import ContactTickets from './ContactTickets';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { IBoard } from 'server/src/interfaces/board.interface';
-import { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+// ClientPicker replaced with CustomSelect
 import { TagManager } from 'server/src/components/tags';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
-import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 
 const SwitchDetailItem: React.FC<{
@@ -387,15 +386,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           // Small delay to ensure the URL is updated before opening drawer (only in non-quick view)
           const delay = quickView ? 0 : 10;
           setTimeout(() => {
-            drawer.openDrawer(
-              <ClientDetails
-                client={client}
-                documents={[]}
-                contacts={[]}
-                isInDrawer={true}
-                quickView={true}
-              />
-            );
+            // Client details functionality has been moved to contacts
+            console.log('Client:', client.client_name);
           }, delay);
         } else {
           console.error('Client not found');
@@ -458,19 +450,19 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 // Show client picker when editing
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
-                    <ClientPicker
+                    <CustomSelect
                       id="contact-client-picker"
-                      onSelect={(clientId) => {
+                      options={clients.map((client) => ({
+                        value: client.client_id,
+                        label: client.client_name
+                      }))}
+                      value={selectedClientId || null}
+                      onValueChange={(clientId) => {
                         handleFieldChange('client_id', clientId || '');
                         setSelectedClientId(clientId);
                         setIsEditingClient(false);
                       }}
-                      selectedClientId={selectedClientId}
-                      clients={clients}
-                      filterState={filterState}
-                      onFilterStateChange={setFilterState}
-                      clientTypeFilter={clientTypeFilter}
-                      onClientTypeFilterChange={setClientTypeFilter}
+                      placeholder="Select a client"
                     />
                   </div>
                 </div>

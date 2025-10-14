@@ -478,29 +478,66 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
 
-    // Fetch all contacts with client information
-    const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .select(
-          'contacts.*',
-          'clients.client_name'
-        )
-        .leftJoin('clients', function (this: Knex.JoinClause) { // Add type for 'this'
-          this.on('contacts.client_id', 'clients.client_id')
-            .andOn('clients.tenant', 'contacts.tenant')
-        })
-        .where('contacts.tenant', tenant)
-        .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
+    console.log('[getAllContacts] Fetching contacts with status:', status, 'for tenant:', tenant);
+
+    // Check if contacts table exists and fallback gracefully
+    let contacts: any[] = [];
+    try {
+      contacts = await db('contacts')
+        .select('*')
+        .where('tenant', tenant)
+        .modify(function (queryBuilder: Knex.QueryBuilder) {
           if (status !== 'all') {
-            queryBuilder.where('contacts.is_inactive', status === 'inactive');
+            queryBuilder.where('is_inactive', status === 'inactive');
           }
         })
-        .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
-    });
+        .orderBy('full_name', 'asc');
+
+      console.log('[getAllContacts] Found', contacts.length, 'contacts');
+
+      // Try to add client names if clients table exists
+      if (contacts.length > 0) {
+        try {
+          const clientIds = contacts.map(c => c.client_id).filter(Boolean);
+          if (clientIds.length > 0) {
+            const clients = await db('clients')
+              .select('client_id', 'client_name')
+              .whereIn('client_id', clientIds)
+              .where('tenant', tenant);
+
+            const clientMap = new Map(clients.map(c => [c.client_id, c.client_name]));
+            contacts = contacts.map(contact => ({
+              ...contact,
+              client_name: contact.client_id ? clientMap.get(contact.client_id) || null : null
+            }));
+          }
+        } catch (clientErr) {
+          console.warn('[getAllContacts] Failed to fetch client names, proceeding without them:', clientErr);
+          // Continue without client names
+        }
+      }
+    } catch (dbErr: any) {
+      console.error('[getAllContacts] Database error:', dbErr);
+
+      if (dbErr.message && (
+        dbErr.message.includes('relation') ||
+        dbErr.message.includes('does not exist') ||
+        dbErr.message.includes('table')
+      )) {
+        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+      }
+      throw dbErr;
+    }
 
     // Fetch avatar URLs for each contact
     const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
+      let avatarUrl = null;
+      try {
+        avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
+      } catch (avatarErr) {
+        console.warn('[getAllContacts] Failed to fetch avatar for contact:', contact.contact_name_id, avatarErr);
+        // Continue without avatar
+      }
       return {
         ...contact,
         avatarUrl: avatarUrl || null,

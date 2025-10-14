@@ -54,12 +54,10 @@ const TextDetailItem: React.FC<{
   );
 };
 
-export function ClientDetailsSettings() {
   const { t } = useTranslation('clientPortal');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [clientDetails, setClientDetails] = useState<IClient | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
 
@@ -98,7 +96,6 @@ export function ClientDetailsSettings() {
           return;
         }
 
-        setClientDetails(client);
       } catch (error) {
         console.error('Error loading client details:', error);
         setError(t('clientSettings.messages.detailsLoadError', 'Failed to load client details'));
@@ -109,7 +106,6 @@ export function ClientDetailsSettings() {
   }, [router]);
 
   const handleFieldChange = (field: string, value: string) => {
-    setClientDetails(prevClient => {
       if (!prevClient) return prevClient;
       
       const updatedClient = JSON.parse(JSON.stringify(prevClient)) as IClient;
@@ -159,7 +155,6 @@ export function ClientDetailsSettings() {
           annual_revenue: clientDetails.properties?.annual_revenue
         }
       });
-      setClientDetails(updatedClient);
       setHasUnsavedChanges(false);
       toast.success(t('clientSettings.messages.updateSuccess'));
     } catch (error) {
@@ -201,7 +196,6 @@ export function ClientDetailsSettings() {
             uploadAction={uploadClientLogo}
             deleteAction={deleteClientLogo}
             onImageChange={async (newLogoUrl) => {
-              setClientDetails(prev => prev ? { ...prev, logoUrl: newLogoUrl } : null);
               
               // If logo was deleted (newLogoUrl is null), refresh client data to ensure consistency
               if (newLogoUrl === null && clientDetails?.client_id) {
@@ -209,7 +203,6 @@ export function ClientDetailsSettings() {
                 try {
                   const refreshedClient = await getClientById(clientDetails.client_id);
                   if (refreshedClient) {
-                    setClientDetails(refreshedClient);
                   }
                 } catch (error) {
                   console.error('Error refreshing client data after logo deletion:', error);

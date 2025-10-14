@@ -4,7 +4,7 @@ import { TextArea } from '../../../components/ui/TextArea';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { DatePicker } from '../../../components/ui/DatePicker';
 import UserPicker from '../../../components/ui/UserPicker';
-import { ClientPicker } from '../../../components/clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 import { IClient } from '../../../interfaces/client.interfaces';
 import { IUserWithRoles } from '../../../interfaces/auth.interfaces';
 import AlertWidget from '../../../components/ui/widgets/AlertWidget';

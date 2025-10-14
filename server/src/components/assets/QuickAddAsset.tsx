@@ -8,7 +8,7 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { CreateAssetRequest } from 'server/src/interfaces/asset.interfaces';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 import { IClient } from 'server/src/interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';

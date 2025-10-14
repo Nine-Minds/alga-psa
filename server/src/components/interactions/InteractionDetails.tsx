@@ -8,7 +8,6 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetailsView from '../contacts/ContactDetailsView';
-import ClientDetails from '../clients/ClientDetails';
 import AgentScheduleDrawer from '../tickets/ticket/AgentScheduleDrawer';
 import { Button } from 'server/src/components/ui/Button';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -139,27 +138,8 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   };
 
   const handleClientClick = async () => {
-    if (interaction.client_id) {
-      try {
-        const client = await getClientById(interaction.client_id);
-        if (client) {
-          openDrawer(
-            <ClientDetails
-              client={client}
-              documents={[]}
-              contacts={[]}
-              isInDrawer={true}
-            />
-          );
-        } else {
-          console.error('Client not found');
-        }
-      } catch (error) {
-        console.error('Error fetching client details:', error);
-      }
-    } else {
-      console.log('No client associated with this interaction');
-    }
+    // Client details functionality has been merged into contacts
+    console.log('Client clicked:', interaction.client_id);
   };
 
   const handleTicketAdded = (ticket: ITicket) => {

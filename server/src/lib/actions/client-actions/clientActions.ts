@@ -499,77 +499,61 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
   }
 
   try {
-    // Use a transaction to get all client data
-    const { clientsData, fileIdMap } = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Start building the query
-      let baseQuery = trx('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
-        .where({ 'c.tenant': tenant });
+    console.log('Fetching clients for tenant:', tenant);
 
-      if (!includeInactive) {
-        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+    // Check if clients table exists
+    const hasClientsTable = await db.schema.hasTable('clients');
+    console.log('Clients table exists:', hasClientsTable);
+
+    if (!hasClientsTable) {
+      console.log('Clients table does not exist, checking for companies table...');
+      const hasCompaniesTable = await db.schema.hasTable('companies');
+      console.log('Companies table exists:', hasCompaniesTable);
+
+      if (hasCompaniesTable) {
+        console.log('Using companies table instead of clients table');
+        const companies = await db('companies')
+          .select('*')
+          .where({ tenant });
+
+        // Map companies to client structure
+        const mappedClients = companies.map(company => ({
+          ...company,
+          client_id: company.company_id,
+          client_name: company.company_name,
+        }));
+
+        if (!includeInactive) {
+          return mappedClients.filter(client => !client.is_inactive);
+        }
+
+        return mappedClients as IClient[];
+      } else {
+        throw new Error('Neither clients nor companies table exists');
       }
+    }
 
-      // Get unique clients with document associations and account manager info
-      const clients = await baseQuery
-        .select(
-          'c.*',
-          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
-          trx.raw(
-            `(SELECT document_id 
-            FROM document_associations da 
-            WHERE da.entity_id = c.client_id 
-            AND da.entity_type = 'client'
-            AND da.tenant = '${tenant}'
-            LIMIT 1) as document_id`)
-        );
+    // Use clients table
+    const clients = await db('clients')
+      .select('*')
+      .where({ tenant });
 
-      // Fetch file_ids for logos
-      const documentIds = clients
-        .map(c => c.document_id)
-        .filter((id): id is string => !!id); // Filter out null/undefined IDs
+    console.log('Found clients:', clients.length);
 
-      let fileIds: Record<string, string> = {};
-      if (documentIds.length > 0) {
-        const fileRecords = await trx('documents')
-          .select('document_id', 'file_id')
-          .whereIn('document_id', documentIds)
-          .andWhere({ tenant });
-        
-        fileIds = fileRecords.reduce((acc, record) => {
-          if (record.file_id) {
-            acc[record.document_id] = record.file_id;
-          }
-          return acc;
-        }, {} as Record<string, string>);
-      }
+    if (!includeInactive) {
+      return clients.filter(client => !client.is_inactive);
+    }
 
-      return { clientsData: clients, fileIdMap: fileIds };
-    });
-
-    // Process clients to add logoUrl using batch loading
-    const clientIds = clientsData.map(c => c.client_id);
-    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-    const clientsWithLogos = clientsData.map((clientData) => {
-      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-      
-      // Remove the temporary document_id before returning
-      const { document_id, ...client } = clientData;
-      return {
-        ...client,
-        properties: client.properties || {},
-        logoUrl,
-      };
-    });
-
-    return clientsWithLogos as IClient[];
+    return clients as IClient[];
   } catch (error) {
     console.error('Error fetching all clients:', error);
-    throw new Error('Failed to fetch all clients');
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      tenant,
+      includeInactive
+    });
+    throw new Error(`Failed to fetch all clients: ${error.message}`);
   }
 }
 

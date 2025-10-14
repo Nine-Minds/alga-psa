@@ -10,7 +10,6 @@ import { useDrawer } from 'server/src/context/DrawerContext';
 import ContactDetailsEdit from 'server/src/components/contacts/ContactDetailsEdit';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
-import ClientDetails from 'server/src/components/clients/ClientDetails';
 import InteractionsFeed from 'server/src/components/interactions/InteractionsFeed';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { TagManager } from 'server/src/components/tags';
@@ -24,7 +23,7 @@ import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflect
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 
 interface ContactDetailsViewProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -187,15 +186,8 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         setError(null);
         const client = await getClientById(contact.client_id);
         if (client) {
-          openDrawer(
-            <ClientDetails
-              id={`${id}-client-details`}
-              client={client}
-              documents={[]}
-              contacts={[]}
-              isInDrawer={true}
-            />
-          );
+          // Client details functionality has been moved to contacts
+          console.log('Client:', client.client_name);
         } else {
           setError('Client not found. The client may have been deleted.');
         }

@@ -8,7 +8,7 @@ import { PhoneInput } from "server/src/components/ui/PhoneInput";
 import { Label } from "server/src/components/ui/Label";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -472,15 +472,15 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
             </div>
             <div>
               <Label>Client (Optional)</Label>
-              <ClientPicker
+              <CustomSelect
                 id="quick-add-contact-client"
-                clients={clients}
-                onSelect={handleClientSelect}
-                selectedClientId={clientId}
-                filterState={filterState}
-                onFilterStateChange={setFilterState}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={setClientTypeFilter}
+                options={clients.map((client) => ({
+                  value: client.client_id,
+                  label: client.client_name
+                }))}
+                value={clientId || null}
+                onValueChange={handleClientSelect}
+                placeholder="Select a client (optional)"
               />
             </div>
             <div>

@@ -16,7 +16,7 @@ import { getTicketFieldOptions, getCategoriesByBoard } from '../../lib/actions/e
 import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
@@ -333,15 +333,14 @@ export function InboundTicketDefaultsForm({
           {/* Optional Fields */}
           <div>
             <Label htmlFor="client_id">Client</Label>
-            <ClientPicker
+            <CustomSelect
               id="client_id"
-              clients={clients}
-              selectedClientId={formData.client_id || null}
-              onSelect={(value) => handleDefaultChange('client_id', value || '')}
-              filterState={clientFilterState}
-              onFilterStateChange={setClientFilterState}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={setClientTypeFilter}
+              options={clients.map((client) => ({
+                value: client.client_id,
+                label: client.client_name
+              }))}
+              value={formData.client_id || null}
+              onValueChange={(value) => handleDefaultChange('client_id', value || '')}
               placeholder="Select Client"
             />
             <p className="text-xs text-muted-foreground mt-1">

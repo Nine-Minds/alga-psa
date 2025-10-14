@@ -9,7 +9,7 @@ import { Flex, Text, Heading } from '@radix-ui/themes';
 import { updateContact } from '../../lib/actions/contact-actions/contactActions';
 import { findTagsByEntityIds } from '../../lib/actions/tagActions';
 import { ITag } from '../../interfaces/tag.interfaces';
-import { ClientPicker } from '../clients/ClientPicker';
+// ClientPicker component was removed during company->client migration
 import { IClient } from '../../interfaces/client.interfaces';
 import { TagManager } from '../tags';
 import { useTags } from '../../context/TagContext';
@@ -173,15 +173,14 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             <tr>
               <td className="py-2 font-semibold">Client:</td>
               <td className="py-2">
-                <ClientPicker
-                  id={`${id}-client-picker`}
-                  clients={clients}
-                  onSelect={handleClientSelect}
-                  selectedClientId={contact.client_id}
-                  filterState={filterState}
-                  onFilterStateChange={setFilterState}
-                  clientTypeFilter={clientTypeFilter}
-                  onClientTypeFilterChange={setClientTypeFilter}
+                <CustomSelect
+                  options={clients.map((client) => ({
+                    value: client.client_id,
+                    label: client.client_name
+                  }))}
+                  value={contact.client_id || null}
+                  onValueChange={(clientId) => handleClientSelect(clientId)}
+                  placeholder="Select a client"
                 />
               </td>
             </tr>
