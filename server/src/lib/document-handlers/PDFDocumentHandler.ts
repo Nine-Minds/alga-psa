@@ -6,7 +6,7 @@ import { fromPath } from 'pdf2pic';
 import sharp from 'sharp';
 import { join } from 'path';
 import { mkdir, writeFile, unlink } from 'fs/promises';
-import { getStorageConfig } from 'server/src/config/storage';
+import { tmpdir } from 'os';
 
 /**
  * Handler for PDF documents
@@ -58,10 +58,10 @@ export class PDFDocumentHandler extends BaseDocumentHandler {
         const pageCount = pdfDoc.getPages().length;
 
         // Set up temporary directory for PDF conversion
-        const config = await getStorageConfig();
-        const tempDir = join(config.providers[config.defaultProvider!].basePath!, 'pdf-previews');
-        await mkdir(tempDir, { recursive: true }).catch(err => { 
-          if (err.code !== 'EEXIST') throw err; 
+        // Use OS temp directory to work with any storage provider (local/S3/MinIO)
+        const tempDir = join(tmpdir(), 'alga-pdf-previews');
+        await mkdir(tempDir, { recursive: true }).catch(err => {
+          if (err.code !== 'EEXIST') throw err;
         });
         
         const tempPdfPath = join(tempDir, `${document.file_id}.pdf`);
