@@ -179,43 +179,29 @@ export async function getContractSummary(contractId: string): Promise<IContractS
       .where({ contract_id: contractId, tenant })
       .count<{ count: string }>('* as count');
 
-    const hasPoNumber = await knex.schema.hasColumn('client_contracts', 'po_number');
-    const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
-
-    const assignmentColumns = [
-      'client_contract_id',
-      'client_id',
-      'is_active',
-      'start_date',
-      'end_date',
-    ];
-
-    if (hasPoRequired) {
-      assignmentColumns.push('po_required');
-    }
-    if (hasPoNumber) {
-      assignmentColumns.push('po_number');
-    }
-
     const assignments = await knex('client_contracts')
       .where({ contract_id: contractId, tenant })
-      .select(assignmentColumns);
+      .select(
+        'client_contract_id',
+        'client_id',
+        'is_active',
+        'po_required',
+        'po_number',
+        'start_date',
+        'end_date'
+      );
 
     const totalAssignments = assignments.length;
     const activeAssignments = assignments.filter((assignment) => assignment.is_active).length;
-    const poRequiredAssignments = hasPoRequired
-      ? assignments.filter((assignment) => Boolean((assignment as any).po_required)).length
-      : 0;
+    const poRequiredAssignments = assignments.filter((assignment) => assignment.po_required).length;
 
-    const poNumbers = hasPoNumber
-      ? Array.from(
-        new Set(
-          assignments
-            .map((assignment) => (assignment as any).po_number as string | null | undefined)
-            .filter((poNumber): poNumber is string => Boolean(poNumber))
-        )
+    const poNumbers = Array.from(
+      new Set(
+        assignments
+          .map((assignment) => assignment.po_number)
+          .filter((poNumber): poNumber is string => Boolean(poNumber))
       )
-      : [];
+    );
 
     const startDates = assignments
       .map((assignment) => assignment.start_date)
