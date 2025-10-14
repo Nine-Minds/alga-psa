@@ -350,7 +350,6 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         tax_rate: 0,
         is_manual: false,
         is_bundle_header: true,
-        is_contract_header: true,
         client_contract_id: clientContractGroupId,
         contract_name: contractGroupName,
         rate: 0

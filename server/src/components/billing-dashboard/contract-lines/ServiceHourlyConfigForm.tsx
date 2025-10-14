@@ -6,7 +6,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button'; // Import Button
 import * as RadixTooltip from '@radix-ui/react-tooltip'; // Use Radix Tooltip directly
 import { Info, Trash2 } from 'lucide-react'; // Import Trash2
-import { IContractLineServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect'; // Import CustomSelect
 
 // Define the structure for the configuration object (using imported interface)

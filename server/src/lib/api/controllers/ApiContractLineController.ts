@@ -854,4 +854,72 @@ export class ApiContractLineController {
       return NextResponse.json(response);
     };
   }
+
+  // ---------------------------------------------------------------------------
+  // Legacy compatibility aliases (v1 route naming)
+  // ---------------------------------------------------------------------------
+
+  assignContractLineToClient() {
+    return this.assignPlanToClient();
+  }
+
+  unassignContractLineFromClient() {
+    return this.unassignPlanFromClient();
+  }
+
+  setContractLineActivation() {
+    return this.setPlanActivation();
+  }
+
+  getContractLineAnalytics() {
+    return this.getPlanAnalytics();
+  }
+
+  copyContractLine() {
+    return this.copyPlan();
+  }
+
+  getFixedContractLineConfig() {
+    return this.getFixedPlanConfig();
+  }
+
+  upsertFixedContractLineConfig() {
+    return this.upsertFixedPlanConfig();
+  }
+
+  getContractLineServices() {
+    return this.getPlanServices();
+  }
+
+  addServiceToContractLine() {
+    return this.addServiceToPlan();
+  }
+
+  updateContractLineService() {
+    return this.updatePlanService();
+  }
+
+  removeServiceFromContractLine() {
+    return this.removeServiceFromPlan();
+  }
+
+  bulkAddServicesToContractLine() {
+    return this.bulkAddServicesToPlan();
+  }
+
+  bulkRemoveServicesFromContractLine() {
+    return this.bulkRemoveServicesFromPlan();
+  }
+
+  bulkCreateContractLines() {
+    return this.bulkCreatePlans();
+  }
+
+  bulkUpdateContractLines() {
+    return this.bulkUpdatePlans();
+  }
+
+  bulkDeleteContractLines() {
+    return this.bulkDeletePlans();
+  }
 }

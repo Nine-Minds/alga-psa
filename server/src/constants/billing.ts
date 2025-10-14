@@ -9,6 +9,10 @@ export const CONTRACT_LINE_TYPE_OPTIONS = Object.entries(CONTRACT_LINE_TYPE_DISP
   label
 }));
 
+// Backwards compatibility aliases
+export const PLAN_TYPE_DISPLAY = CONTRACT_LINE_TYPE_DISPLAY;
+export const PLAN_TYPE_OPTIONS = CONTRACT_LINE_TYPE_OPTIONS;
+
 export const BILLING_FREQUENCY_DISPLAY: Record<string, string> = {
   'monthly': 'Monthly',
   'quarterly': 'Quarterly',

@@ -73,3 +73,7 @@ export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
       );
   }
 }
+
+export const ContractLineTypeRouter = PlanTypeRouter;
+
+export default PlanTypeRouter;

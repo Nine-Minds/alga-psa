@@ -11,7 +11,7 @@ import {
   upgradeService,
   downgradeService,
   type Service,
-  type ServiceContractLine
+  type ServicePlan
 } from "server/src/lib/actions/account";
 import { useTranslation } from 'server/src/lib/i18n/client';
 
@@ -21,7 +21,7 @@ export default function ServicesSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [availableContractLines, setAvailableContractLines] = useState<ServiceContractLine[]>([]);
+  const [availableContractLines, setAvailableContractLines] = useState<ServicePlan[]>([]);
   const [isManaging, setIsManaging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -199,7 +199,7 @@ export default function ServicesSection() {
                         </div>
                       </div>
                       <div>
-                        {!contractLine.isCurrentContractLine && (
+                        {!contractLine.isCurrentPlan && (
                           <Button
                             id={`contract-line-change-${contractLine.id}`}
                             variant="outline"

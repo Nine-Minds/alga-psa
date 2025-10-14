@@ -6,7 +6,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Card } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { IContractLineServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceBucketConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 
 interface BucketServiceConfigPanelProps {

@@ -149,9 +149,8 @@ export function BucketOverlayFields({
       <div className="flex items-start gap-2 pt-1">
         <Checkbox
           id={automationId ? `${automationId}-rollover` : 'allow-rollover'}
-          data-automation-id={automationId ? `${automationId}-rollover` : undefined}
           checked={value.allow_rollover ?? false}
-          onCheckedChange={(checked) => handleRolloverChange(Boolean(checked))}
+          onChange={(event) => handleRolloverChange(event.currentTarget.checked)}
           disabled={disabled}
         />
         <div className="flex flex-col">

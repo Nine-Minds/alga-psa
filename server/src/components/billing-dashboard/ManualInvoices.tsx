@@ -46,6 +46,7 @@ interface EditableInvoiceItem extends Omit<IInvoiceItem, 'tenant' | 'created_at'
   is_taxable?: boolean; // Add is_taxable back to the interface
   isExisting?: boolean;
   isRemoved?: boolean;
+  is_bundle_header?: boolean;
 }
 
 // Base structure for a default item, ensuring required fields for EditableInvoiceItem are present
@@ -67,7 +68,7 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   applies_to_service_id: undefined,
   client_contract_id: undefined,
   contract_name: undefined,
-  is_contract_header: undefined as any,
+  is_bundle_header: undefined as any,
   parent_item_id: undefined,
 };
 
@@ -143,7 +144,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
     const normalizeHeaderAlias = (it: any) => ({
       ...it,
-      is_contract_header: it?.is_contract_header ?? (it as any)[LEGACY_HEADER_KEY]
+      is_bundle_header: it?.is_bundle_header ?? (it as any)[LEGACY_HEADER_KEY]
     });
     const initialManualItems = invoice?.invoice_items?.filter(item => item.is_manual) || [];
     const mappedItems = initialManualItems.map((item): EditableInvoiceItem => {
@@ -162,7 +163,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         applies_to_service_id: item.applies_to_service_id,
         client_contract_id: item.client_contract_id,
         contract_name: item.contract_name,
-        is_contract_header: (i as any).is_contract_header,
+        is_bundle_header: (i as any).is_bundle_header,
         parent_item_id: item.parent_item_id,
         is_manual: true,
         is_taxable: item.is_taxable, // Include is_taxable from the item
@@ -201,7 +202,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
           const normalizeHeaderAlias = (it: any) => ({
             ...it,
-            is_contract_header: it?.is_contract_header ?? (it as any)[LEGACY_HEADER_KEY]
+            is_bundle_header: it?.is_bundle_header ?? (it as any)[LEGACY_HEADER_KEY]
           });
           console.log('[Effect] Fetched items:', fetchedItems.length);
 
@@ -231,7 +232,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               applies_to_service_id: item.applies_to_service_id,
               client_contract_id: item.client_contract_id,
               contract_name: item.contract_name,
-              is_contract_header: (i as any).is_contract_header,
+              is_bundle_header: (i as any).is_bundle_header,
               parent_item_id: item.parent_item_id,
               is_manual: true,
               is_taxable: item.is_taxable,
@@ -402,7 +403,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           applies_to_service_id: item.applies_to_service_id,
           client_contract_id: item.client_contract_id,
           contract_name: item.contract_name,
-          is_contract_header: item.is_contract_header as any,
+          is_bundle_header: item.is_bundle_header as any,
           parent_item_id: item.parent_item_id,
           rate: item.rate, // Add the missing rate property
           // Omit audit fields
@@ -470,7 +471,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             applies_to_service_id: item.applies_to_service_id,
             client_contract_id: item.client_contract_id,
             contract_name: item.contract_name,
-            is_contract_header: item.is_contract_header as any,
+            is_bundle_header: item.is_bundle_header as any,
             parent_item_id: item.parent_item_id,
             is_manual: true,
             is_taxable: item.is_taxable, // Include is_taxable from the item

@@ -165,7 +165,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
 
       {/* Plan Details Dialog */}
       <PlanDetailsDialog
-        plan={contractLine}
+        contractLine={contractLine}
         isOpen={isPlanDialogOpen}
         onClose={() => setIsPlanDialogOpen(false)}
         formatCurrency={formatCurrency}

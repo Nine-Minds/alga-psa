@@ -16,10 +16,12 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { getContracts, deleteContract } from 'server/src/lib/actions/contractActions';
 import { ContractDialog } from './ContractDialog';
+import { ContractWizard } from './ContractWizard';
 
 const Contracts: React.FC = () => {
   const [contracts, setContracts] = useState<IContract[]>([]);
   const [editingContract, setEditingContract] = useState<IContract | null>(null);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -117,19 +119,29 @@ const Contracts: React.FC = () => {
   return (
     <Card size="2">
       <Box p="4">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <Heading as="h3" size="4">Contracts</Heading>
-          <ContractDialog
-            onContractSaved={fetchContracts}
-            editingContract={editingContract}
-            onClose={() => setEditingContract(null)}
-            triggerButton={
-              <Button id='add-contract-button'>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Contract
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              id="wizard-contract-button"
+              data-automation-id="wizard-contract-button"
+              variant="primary"
+              onClick={() => setIsWizardOpen(true)}
+            >
+              Start Contract Wizard
+            </Button>
+            <ContractDialog
+              onContractSaved={fetchContracts}
+              editingContract={editingContract}
+              onClose={() => setEditingContract(null)}
+              triggerButton={
+                <Button id='add-contract-button'>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Contract
+                </Button>
+              }
+            />
+          </div>
         </div>
 
         {error && (
@@ -146,6 +158,14 @@ const Contracts: React.FC = () => {
           rowClassName={() => "cursor-pointer"}
         />
       </Box>
+      <ContractWizard
+        open={isWizardOpen}
+        onOpenChange={(open) => setIsWizardOpen(open)}
+        onComplete={() => {
+          setIsWizardOpen(false);
+          fetchContracts();
+        }}
+      />
     </Card>
   );
 };

@@ -24,12 +24,12 @@ import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 import {
     upsertPlanServiceHourlyConfiguration, // Correct action import
     upsertUserTypeRatesForConfig // Added import for user type rates action
-} from 'server/src/lib/actions/planServiceConfigurationActions';
+} from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import {
     IContractLineServiceHourlyConfig,
     IContractLineServiceConfiguration,
     IUserTypeRate
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 // Removed incorrect import: import { IService } from 'server/src/interfaces/service.interfaces';
 // Removed incorrect import: import { isDeepStrictEqual } from 'util';
 // Removed incorrect import: import { validateServiceHourlyConfig } from 'server/src/lib/validators/planServiceConfigurationValidators';
@@ -325,14 +325,15 @@ export function HourlyPlanConfiguration({
                 // Check if hourly fields actually changed
                 const initialConfig = initialServiceConfigs.find(ic => ic.config_id === config.config_id);
                 if (!isEqual(config.hourly_config, initialConfig?.hourly_config)) {
-                    const upsertHourlyInput = {
-                        contractLineId: contractLineId,
-                        serviceId: config.service_id,
-                        hourly_rate: config.hourly_config.hourly_rate ?? 0,
-                        minimum_billable_time: config.hourly_config.minimum_billable_time ?? null,
-                        round_up_to_nearest: config.hourly_config.round_up_to_nearest ?? null,
-                    };
-                    await upsertPlanServiceHourlyConfiguration(upsertHourlyInput);
+                    await upsertPlanServiceHourlyConfiguration(
+                        contractLineId,
+                        config.service_id,
+                        {
+                            hourly_rate: config.hourly_config.hourly_rate ?? 0,
+                            minimum_billable_time: config.hourly_config.minimum_billable_time ?? null,
+                            round_up_to_nearest: config.hourly_config.round_up_to_nearest ?? null,
+                        }
+                    );
                 }
             }
 
@@ -341,15 +342,12 @@ export function HourlyPlanConfiguration({
             const initialConfigForRates = initialServiceConfigs.find(ic => ic.config_id === config.config_id);
             if (!isEqual(config.user_type_rates, initialConfigForRates?.user_type_rates)) {
                  // Prepare rates for the backend action (remove unnecessary fields like rate_id)
-                 const ratesToSave = (config.user_type_rates || []).map(r => ({
+                 const ratesToSave: Array<Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'tenant' | 'created_at' | 'updated_at'>> = (config.user_type_rates || []).map(r => ({
                      user_type: r.user_type,
                      rate: r.rate,
                  }));
                  // Call the new action
-                 await upsertUserTypeRatesForConfig({
-                     configId: config.config_id,
-                     rates: ratesToSave,
-                 });
+                 await upsertUserTypeRatesForConfig(config.config_id, ratesToSave);
             }
         }
         // Update initial state for services after successful save

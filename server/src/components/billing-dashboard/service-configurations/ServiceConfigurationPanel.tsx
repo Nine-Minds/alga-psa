@@ -14,7 +14,7 @@ import {
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTier,
   IUserTypeRate
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Button } from 'server/src/components/ui/Button';

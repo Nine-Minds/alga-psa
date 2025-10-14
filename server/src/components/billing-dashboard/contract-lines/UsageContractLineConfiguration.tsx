@@ -14,11 +14,11 @@ import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 
 // Import actions and types
 import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Get list of services
-import { getPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Get config per service
+import { getContractLineConfigurationForService } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
 import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLine } from 'server/src/interfaces';
 import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
-import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Import the upsert action
+import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Import the upsert action
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 
@@ -48,7 +48,7 @@ type AllServiceValidationErrors = {
   [serviceId: string]: ServiceValidationErrors;
 };
 
-// Define the expected result type for getPlanServiceConfiguration
+// Define the expected result type for getContractLineConfigurationForService
 // Combining relevant fields from the interfaces file
 type FetchedServiceConfig = IContractLineServiceConfiguration & IContractLineServiceUsageConfig & {
     tiers?: IContractLineServiceRateTier[];
@@ -104,7 +104,7 @@ export function UsagePlanConfiguration({
       // 2. Fetch configuration for each service concurrently
       const configPromises = servicesList.map(service =>
         // Use service.configuration.service_id as it's guaranteed by PlanServiceWithConfig type
-        getPlanServiceConfiguration(contractLineId, service.configuration.service_id)
+        getContractLineConfigurationForService(contractLineId, service.configuration.service_id)
           .then(config => ({ serviceId: service.configuration.service_id, config: config as FetchedServiceConfig | null })) // Cast result
           .catch(err => {
             console.error(`Error fetching config for service ${service.configuration.service_id}:`, err);

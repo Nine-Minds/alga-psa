@@ -15,12 +15,12 @@ import {
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTier,
   IUserTypeRate
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { updateContractLineService } from 'server/src/lib/actions/contractLineServiceActions';
 import {
   getConfigurationForService,
   getConfigurationWithDetails
-} from 'server/src/lib/actions/planServiceConfigurationActions';
+} from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { useTenant } from 'server/src/components/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
 
@@ -95,6 +95,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         if (config) {
           // Load full configuration details
           const configDetails = await getConfigurationWithDetails(config.config_id);
+          const details: any = configDetails;
 
           setBaseConfig({
             ...configDetails.baseConfig,
@@ -105,16 +106,16 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
           setTypeConfig(configDetails.typeConfig);
 
           // Set plan fixed config if available
-          if (configDetails.planFixedConfig) {
-            setPlanFixedConfig(configDetails.planFixedConfig);
+          if (details.planFixedConfig) {
+            setPlanFixedConfig(details.planFixedConfig);
           }
 
           if (configDetails.rateTiers) {
             setRateTiers(configDetails.rateTiers);
           }
 
-          if (configDetails.userTypeRates) {
-            setUserTypeRates(configDetails.userTypeRates);
+          if (details.userTypeRates) {
+            setUserTypeRates(details.userTypeRates);
           }
         } else {
           // No configuration exists, use defaults

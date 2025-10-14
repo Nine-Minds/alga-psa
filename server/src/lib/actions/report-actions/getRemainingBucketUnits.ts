@@ -14,7 +14,7 @@ import {
 import {
   IContractLineServiceConfiguration,
   IContractLineServiceBucketConfig
-} from '../../../interfaces/planServiceConfiguration.interfaces';
+} from '../../../interfaces/contractLineServiceConfiguration.interfaces';
 import { Knex } from 'knex'; // Import Knex type for query builder
 
 // Define the schema for the input parameters

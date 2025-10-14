@@ -8,7 +8,7 @@ import {
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTier,
   IUserTypeRate
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import ContractLineServiceConfiguration from 'server/src/lib/models/contractLineServiceConfiguration';
 import ContractLineServiceFixedConfig from 'server/src/lib/models/contractLineServiceFixedConfig';
 import ContractLineServiceHourlyConfig from 'server/src/lib/models/contractLineServiceHourlyConfig';
@@ -364,7 +364,7 @@ export class ContractLineServiceConfigurationService {
   async getConfigurationsForPlan(contractLineId: string): Promise<IContractLineServiceConfiguration[]> {
     await this.initKnex();
     
-    return await this.planServiceConfigModel.getByPlanId(contractLineId);
+    return await this.planServiceConfigModel.getByContractLineId(contractLineId);
   }
 
   /**
@@ -373,7 +373,7 @@ export class ContractLineServiceConfigurationService {
   async getConfigurationForService(contractLineId: string, serviceId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
     
-    return await this.planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
+    return await this.planServiceConfigModel.getByContractLineIdAndServiceId(contractLineId, serviceId);
   }
 
   /**
@@ -393,7 +393,7 @@ export class ContractLineServiceConfigurationService {
       const bucketConfigModel = new ContractLineServiceBucketConfig(trx, this.tenant);
 
       // 1. Find existing base configuration
-      let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
+      let baseConfig = await planServiceConfigModel.getByContractLineIdAndServiceId(contractLineId, serviceId);
       let configId: string;
 
       if (!baseConfig) {
@@ -466,7 +466,7 @@ export class ContractLineServiceConfigurationService {
       const hourlyConfigModel = new ContractLineServiceHourlyConfig(trx);
 
       // 1. Find existing base configuration
-      let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(contractLineId, serviceId);
+      let baseConfig = await planServiceConfigModel.getByContractLineIdAndServiceId(contractLineId, serviceId);
       let configId: string;
 
       if (!baseConfig) {

@@ -5,7 +5,6 @@ import {
   IBillingResult,
   IBillingCharge,
   IClientContractLine,
-  IBucketPlan,
   IBucketUsage,
   IBucketCharge,
   IDiscount,
@@ -25,7 +24,7 @@ import {
   IContractLineServiceUsageConfig,
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTier
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';

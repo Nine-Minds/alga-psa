@@ -16,7 +16,7 @@ import { Tooltip } from 'server/src/components/ui/Tooltip'; // Corrected Tooltip
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
-import { IContractLineServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import {
   getContractLineServices,
   addServiceToContractLine,
@@ -28,7 +28,7 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { EditPlanServiceQuantityDialog } from './EditContractLineServiceQuantityDialog'; // Added dialog import
+import EditPlanServiceQuantityDialog from './contract-lines/EditContractLineServiceQuantityDialog';
 // Removed ContractLineServiceForm import as 'Configure' is removed
 
 // Define billing method options
@@ -362,7 +362,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
           serviceId={selectedService.service_id}
           serviceName={selectedService.service_name || 'Unknown Service'}
           currentQuantity={selectedService.quantity || 1}
-          onSave={handleSaveQuantity}
+          onSave={(newQuantity) => handleSaveQuantity(planId, selectedService.service_id, newQuantity)}
         />
       )}
     </div>

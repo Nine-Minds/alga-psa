@@ -19,7 +19,7 @@ import { IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { 
   IContractLineServiceConfiguration,
   IContractLineServiceBucketConfig
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { toPlainDate, formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import { getSession } from 'server/src/lib/auth/getSession';
