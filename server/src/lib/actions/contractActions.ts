@@ -2,7 +2,7 @@
 'use server'
 
 import Contract from 'server/src/lib/models/contract';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 
@@ -179,17 +179,34 @@ export async function getContractSummary(contractId: string): Promise<IContractS
       .where({ contract_id: contractId, tenant })
       .count<{ count: string }>('* as count');
 
-    const assignments = await knex('client_contracts')
+    const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
+    const hasPoNumber = await knex.schema.hasColumn('client_contracts', 'po_number');
+
+    const assignmentColumns = [
+      'client_contract_id',
+      'client_id',
+      'is_active',
+      'start_date',
+      'end_date'
+    ];
+
+    if (hasPoRequired) {
+      assignmentColumns.push('po_required');
+    }
+
+    if (hasPoNumber) {
+      assignmentColumns.push('po_number');
+    }
+
+    const assignmentsRaw = await knex('client_contracts')
       .where({ contract_id: contractId, tenant })
-      .select(
-        'client_contract_id',
-        'client_id',
-        'is_active',
-        'po_required',
-        'po_number',
-        'start_date',
-        'end_date'
-      );
+      .select(assignmentColumns);
+
+    const assignments = assignmentsRaw.map((assignment: any) => ({
+      ...assignment,
+      po_required: hasPoRequired ? Boolean(assignment.po_required) : false,
+      po_number: hasPoNumber ? assignment.po_number : undefined,
+    }));
 
     const totalAssignments = assignments.length;
     const activeAssignments = assignments.filter((assignment) => assignment.is_active).length;
@@ -228,5 +245,65 @@ export async function getContractSummary(contractId: string): Promise<IContractS
       throw error;
     }
     throw new Error(`Failed to compute contract summary: ${error}`);
+  }
+}
+
+export async function getContractAssignments(contractId: string): Promise<IContractAssignmentSummary[]> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
+    const hasPoNumber = await knex.schema.hasColumn('client_contracts', 'po_number');
+
+    const selection = [
+      'cc.client_contract_id',
+      'cc.client_id',
+      'cc.start_date',
+      'cc.end_date',
+      'cc.is_active',
+      'cc.tenant',
+      'c.client_name'
+    ];
+
+    if (hasPoRequired) {
+      selection.push('cc.po_required');
+    }
+    if (hasPoNumber) {
+      selection.push('cc.po_number');
+    }
+
+    const rows = await knex('client_contracts as cc')
+      .leftJoin('clients as c', function joinClients() {
+        this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
+      })
+      .where({ 'cc.contract_id': contractId, 'cc.tenant': tenant })
+      .select(selection)
+      .orderBy('cc.start_date', 'asc');
+
+    return rows.map((row: any) => ({
+      client_contract_id: row.client_contract_id,
+      client_id: row.client_id,
+      client_name: row.client_name ?? null,
+      start_date: row.start_date ?? null,
+      end_date: row.end_date ?? null,
+      is_active: row.is_active ?? false,
+      po_required: hasPoRequired ? Boolean(row.po_required) : false,
+      po_number: hasPoNumber ? row.po_number : undefined,
+      tenant: row.tenant,
+    }));
+  } catch (error) {
+    console.error(`Error fetching assignments for contract ${contractId}:`, error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to fetch contract assignments: ${error}`);
   }
 }

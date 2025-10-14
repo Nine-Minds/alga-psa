@@ -44,6 +44,20 @@ export interface IClientContract extends TenantEntity {
 }
 
 /**
+ * Lightweight summary of client assignments for a contract detail view
+ */
+export interface IContractAssignmentSummary extends TenantEntity {
+  client_contract_id: string;
+  client_id: string;
+  client_name?: string | null;
+  start_date: ISO8601String | null;
+  end_date: ISO8601String | null;
+  is_active: boolean;
+  po_required: boolean;
+  po_number?: string | null;
+}
+
+/**
  * Interface for contract pricing schedules
  * Represents time-based pricing changes for a contract
  */
