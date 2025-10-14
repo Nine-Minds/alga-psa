@@ -9,8 +9,6 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
 import ContractLine from 'server/src/lib/models/contractLine';
-import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
-import ClientContract from 'server/src/lib/models/clientContract';
 import { ContractLineServiceConfigurationService as ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 
 type BucketOverlayInput = {
@@ -145,6 +143,21 @@ async function upsertBucketOverlay(
       overage_rate: normalizedOverage,
       allow_rollover: overlay.allow_rollover ?? false
     });
+}
+
+function normalizeDateOnly(input?: string): string | undefined {
+  if (!input) return undefined;
+  const trimmed = input.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  if (trimmed.includes('T')) return trimmed.split('T')[0];
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const [, mmRaw, ddRaw, yyyy] = match;
+    const mm = mmRaw.padStart(2, '0');
+    const dd = ddRaw.padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return trimmed;
 }
 
 export async function createContractFromWizard(
@@ -288,8 +301,15 @@ export async function createContractFromWizard(
         }
       }
       // Map contract line to contract
-      await ContractLineMapping.addContractLine(contractId, planId, undefined);
-      nextDisplayOrder++;
+      await trx('contract_line_mappings').insert({
+        tenant,
+        contract_id: contractId,
+        contract_line_id: planId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        created_at: now.toISOString(),
+      });
+      nextDisplayOrder += 1;
     }
 
     if (filteredHourlyServices.length > 0) {
@@ -338,16 +358,34 @@ export async function createContractFromWizard(
         }
       }
 
-      await ContractLineMapping.addContractLine(contractId, hourlyPlanId, undefined);
-      nextDisplayOrder++;
+      await trx('contract_line_mappings').insert({
+        tenant,
+        contract_id: contractId,
+        contract_line_id: hourlyPlanId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        created_at: now.toISOString(),
+      });
+      nextDisplayOrder += 1;
     }
-    // Assign contract to client
-    await ClientContract.assignContractToClient(
-      submission.company_id,
-      contractId,
-      normalizeDateOnly(submission.start_date)!,
-      normalizeDateOnly(submission.end_date) ?? null
-    );
+    const startDate = normalizeDateOnly(submission.start_date);
+    if (!startDate) {
+      throw new Error('Contract start date is required');
+    }
+
+    const endDate = normalizeDateOnly(submission.end_date) ?? null;
+
+    await trx('client_contracts').insert({
+      tenant,
+      client_contract_id: uuidv4(),
+      client_id: submission.company_id,
+      contract_id: contractId,
+      start_date: startDate,
+      end_date: endDate,
+      is_active: true,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    });
 
     return {
       contract_id: contractId,
@@ -356,18 +394,3 @@ export async function createContractFromWizard(
     };
   });
 }
-    // Normalize date-only fields to YYYY-MM-DD to avoid TZ shifts at DB layer
-    const normalizeDateOnly = (input?: string): string | undefined => {
-      if (!input) return undefined;
-      const t = input.trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t; // already Y-M-D
-      if (t.includes('T')) return t.split('T')[0];
-      const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // M/D/YYYY
-      if (m) {
-        const [, mmRaw, ddRaw, yyyy] = m;
-        const mm = mmRaw.padStart(2, '0');
-        const dd = ddRaw.padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
-      }
-      return t;
-    };

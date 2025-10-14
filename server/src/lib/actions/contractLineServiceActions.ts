@@ -122,6 +122,7 @@ export async function addServiceToContractLine(
   }
 
   const configurationType = determinedConfigType;
+  let hourlyConfigPayload: Partial<IContractLineServiceHourlyConfig> | undefined;
 
   // If this is a Bucket configuration and overage_rate is not provided, set it to the service's default_rate
   if (configurationType === 'Bucket') {
@@ -129,6 +130,47 @@ export async function addServiceToContractLine(
     if ((typeConfig as Partial<IContractLineServiceBucketConfig>)?.overage_rate === undefined) {
       (typeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate = service.default_rate;
     }
+  } else if (configurationType === 'Hourly') {
+    const providedHourly = (typeConfig as Partial<IContractLineServiceHourlyConfig>) || {};
+    const resolvedHourlyRate =
+      typeof providedHourly.hourly_rate !== 'undefined'
+        ? providedHourly.hourly_rate
+        : service.default_rate;
+
+    if (resolvedHourlyRate === undefined || resolvedHourlyRate === null) {
+      throw new Error(`Service ${service.service_name} requires an hourly rate before it can be added to an hourly contract line.`);
+    }
+
+    const normalizedHourlyRate = Number(resolvedHourlyRate);
+    if (Number.isNaN(normalizedHourlyRate)) {
+      throw new Error(`Hourly rate for service ${service.service_name} must be a numeric value.`);
+    }
+
+    const minimumBillableCandidate = Number(
+      typeof providedHourly.minimum_billable_time !== 'undefined'
+        ? providedHourly.minimum_billable_time
+        : 15
+    );
+    const roundUpCandidate = Number(
+      typeof providedHourly.round_up_to_nearest !== 'undefined'
+        ? providedHourly.round_up_to_nearest
+        : 15
+    );
+
+    const minimumBillableTime = Number.isFinite(minimumBillableCandidate) && minimumBillableCandidate > 0
+      ? minimumBillableCandidate
+      : 15;
+    const roundUpToNearest = Number.isFinite(roundUpCandidate) && roundUpCandidate > 0
+      ? roundUpCandidate
+      : 15;
+
+    hourlyConfigPayload = {
+      hourly_rate: normalizedHourlyRate,
+      minimum_billable_time: minimumBillableTime,
+      round_up_to_nearest: roundUpToNearest,
+    };
+
+    typeConfig = hourlyConfigPayload;
   }
 
   // Check if the service is already in the plan
@@ -175,6 +217,14 @@ export async function addServiceToContractLine(
     );
   }
 
+  if (configurationType === 'Hourly' && hourlyConfigPayload) {
+    await planServiceConfigActions.upsertPlanServiceHourlyConfiguration(
+      contractLineId,
+      serviceId,
+      hourlyConfigPayload
+    );
+  }
+
     return configId;
   });
 }
@@ -218,6 +268,24 @@ export async function updateContractLineService(
       // Pass rateTiers if they exist
       rateTiers // Pass the rateTiers variable directly
     );
+
+  if (
+    config.configuration_type === 'Hourly' &&
+    updates.typeConfig &&
+    typeof (updates.typeConfig as IContractLineServiceHourlyConfig).hourly_rate !== 'undefined'
+  ) {
+    const hourlyPayload: Partial<IContractLineServiceHourlyConfig> = {
+      hourly_rate: (updates.typeConfig as IContractLineServiceHourlyConfig).hourly_rate,
+      minimum_billable_time: (updates.typeConfig as IContractLineServiceHourlyConfig).minimum_billable_time,
+      round_up_to_nearest: (updates.typeConfig as IContractLineServiceHourlyConfig).round_up_to_nearest,
+    };
+
+    await planServiceConfigActions.upsertPlanServiceHourlyConfiguration(
+      contractLineId,
+      serviceId,
+      hourlyPayload
+    );
+  }
 
     return true;
   });

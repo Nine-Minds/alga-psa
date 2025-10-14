@@ -108,10 +108,7 @@ export async function createContractLine(
             analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
                 contract_line_id: plan.contract_line_id,
                 contract_line_name: plan.contract_line_name,
-                contract_line_type: plan.contract_line_type,
-                hourly_rate: plan.hourly_rate,
-                minimum_billable_time: plan.minimum_billable_time,
-                is_sla_plan: (plan as any).is_sla_plan || false
+                contract_line_type: plan.contract_line_type
             }, currentUser.user_id);
 
             return plan;

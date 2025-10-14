@@ -105,8 +105,21 @@ const ContractLine = {
     if (!tenant) {
       throw new Error('No tenant found');
     }
+
+    const {
+      hourly_rate,
+      minimum_billable_time,
+      round_up_to_nearest,
+      enable_overtime,
+      overtime_rate,
+      overtime_threshold,
+      enable_after_hours_rate,
+      after_hours_multiplier,
+      ...contractLineCore
+    } = plan;
+
     const planWithId = {
-      ...plan,
+      ...contractLineCore,
       contract_line_id: uuidv4(),
       tenant
     };

@@ -1084,17 +1084,26 @@ export class BillingEngine {
     const tenant = this.tenant; // Capture tenant value for joins
 
     // First get the hourly configurations for this plan
-    const hourlyConfigs = await this.knex('contract_line_service_configuration')
-      .join('contract_line_service_hourly_config', function () {
-        this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_hourly_config.config_id')
-          .andOn('contract_line_service_hourly_config.tenant', '=', 'contract_line_service_configuration.tenant');
+    const hourlyConfigs = await this.knex('contract_line_service_configuration as clsc')
+      .join('contract_line_service_hourly_configs as clsh', function () {
+        this.on('clsc.config_id', '=', 'clsh.config_id')
+          .andOn('clsc.tenant', '=', 'clsh.tenant');
       })
       .where({
-        'contract_line_service_configuration.contract_line_id': clientContractLine.contract_line_id,
-        'contract_line_service_configuration.configuration_type': 'Hourly',
-        'contract_line_service_configuration.tenant': tenant
+        'clsc.contract_line_id': clientContractLine.contract_line_id,
+        'clsc.configuration_type': 'Hourly',
+        'clsc.tenant': tenant
       })
-      .select('contract_line_service_configuration.*', 'contract_line_service_hourly_config.*');
+      .select(
+        'clsc.config_id',
+        'clsc.contract_line_id',
+        'clsc.service_id',
+        'clsc.quantity',
+        'clsc.custom_rate',
+        'clsh.hourly_rate',
+        'clsh.minimum_billable_time',
+        'clsh.round_up_to_nearest'
+      );
 
     // Create a map of service IDs to their hourly configurations
     const serviceConfigMap = new Map<string, {
@@ -1116,8 +1125,20 @@ export class BillingEngine {
         userRateMap.set(rate.user_type, rate.rate);
       }
 
+      const combinedConfig = {
+        config_id: config.config_id,
+        contract_line_id: config.contract_line_id,
+        service_id: config.service_id,
+        configuration_type: 'Hourly',
+        quantity: config.quantity ?? null,
+        custom_rate: config.custom_rate ?? null,
+        hourly_rate: config.hourly_rate,
+        minimum_billable_time: config.minimum_billable_time ?? 0,
+        round_up_to_nearest: config.round_up_to_nearest ?? 0
+      } as IContractLineServiceConfiguration & IContractLineServiceHourlyConfig;
+
       serviceConfigMap.set(config.service_id, {
-        config,
+        config: combinedConfig,
         userTypeRates: userRateMap
       });
     }
