@@ -7,41 +7,26 @@ import { Label } from 'server/src/components/ui/Label';
 import { Badge } from 'server/src/components/ui/Badge';
 import { toast } from 'react-hot-toast';
 import { IdCardIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import {
+  getLicenseUsageAction,
+  getLicensePricingAction,
+  getSubscriptionInfoAction,
+  getPaymentMethodInfoAction,
+  getRecentInvoicesAction,
+  createCustomerPortalSessionAction,
+  cancelSubscriptionAction,
+} from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 import { useRouter } from 'next/navigation';
-
-// Placeholder data - will be replaced with actual API calls later
-interface LicenseInfo {
-  total_licenses: number | null;
-  active_licenses: number;
-  available_licenses: number | null;
-  plan_name: string;
-  price_per_license: number;
-}
-
-interface PaymentInfo {
-  card_brand: string;
-  card_last4: string;
-  card_exp_month: number;
-  card_exp_year: number;
-  billing_email: string;
-}
-
-interface SubscriptionInfo {
-  status: string;
-  current_period_start: string;
-  current_period_end: string;
-  next_billing_date: string;
-  monthly_amount: number;
-}
+import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo } from 'server/src/interfaces/subscription.interfaces';
 
 export default function AccountManagement() {
   const [loading, setLoading] = useState(true);
-  const [licenseInfo, setLicenseInfo] = useState<LicenseInfo | null>(null);
-  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
+  const [licenseInfo, setLicenseInfo] = useState<ILicenseInfo | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<IPaymentMethod | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<ISubscriptionInfo | null>(null);
+  const [invoices, setInvoices] = useState<IInvoiceInfo[]>([]);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const router = useRouter();
 
@@ -60,35 +45,43 @@ export default function AccountManagement() {
           return;
         }
 
-        // Fetch real license usage data
-        const licenseResult = await getLicenseUsageAction();
-        if (licenseResult.success && licenseResult.data) {
+        // Fetch license usage, pricing, subscription, payment, and invoices in parallel
+        const [licenseResult, pricingResult, subscriptionResult, paymentResult, invoicesResult] = await Promise.all([
+          getLicenseUsageAction(),
+          getLicensePricingAction(),
+          getSubscriptionInfoAction(),
+          getPaymentMethodInfoAction(),
+          getRecentInvoicesAction(5),
+        ]);
+
+        // Set license info with pricing
+        if (licenseResult.success && licenseResult.data && pricingResult.success && pricingResult.data) {
           const usage = licenseResult.data;
+          const pricing = pricingResult.data;
+
           setLicenseInfo({
             total_licenses: usage.limit,
             active_licenses: usage.used,
             available_licenses: usage.remaining,
-            plan_name: 'Professional', // TODO: Get from tenant settings
-            price_per_license: 49.99 // TODO: Get from subscription info
+            plan_name: 'Professional', // Could fetch from tenant settings if needed
+            price_per_license: pricing.unitAmount / 100, // Convert cents to dollars
           });
         }
 
-        // TODO: Replace with actual API calls for payment and subscription
-        setPaymentInfo({
-          card_brand: 'Visa',
-          card_last4: '4242',
-          card_exp_month: 12,
-          card_exp_year: 2025,
-          billing_email: 'billing@company.com'
-        });
+        // Set subscription info
+        if (subscriptionResult.success && subscriptionResult.data) {
+          setSubscriptionInfo(subscriptionResult.data);
+        }
 
-        setSubscriptionInfo({
-          status: 'active',
-          current_period_start: '2024-10-01',
-          current_period_end: '2024-11-01',
-          next_billing_date: '2024-11-01',
-          monthly_amount: 1249.75
-        });
+        // Set payment info
+        if (paymentResult.success && paymentResult.data) {
+          setPaymentInfo(paymentResult.data);
+        }
+
+        // Set invoices
+        if (invoicesResult.success && invoicesResult.data) {
+          setInvoices(invoicesResult.data);
+        }
 
       } catch (err) {
         console.error('Error loading account info:', err);
@@ -105,22 +98,57 @@ export default function AccountManagement() {
     window.location.href = '/msp/licenses/purchase';
   };
 
-  const handleUpdatePaymentMethod = () => {
+  const handleUpdatePaymentMethod = async () => {
     if (!canManageAccount) {
       toast.error('You do not have permission to update payment methods');
       return;
     }
-    // TODO: Implement payment method update flow
-    toast.success('Update payment method - Coming soon!');
+
+    try {
+      const result = await createCustomerPortalSessionAction();
+      if (result.success && result.data?.portal_url) {
+        // Redirect to Stripe Customer Portal
+        window.location.href = result.data.portal_url;
+      } else {
+        toast.error(result.error || 'Failed to open payment portal');
+      }
+    } catch (error) {
+      console.error('Error opening payment portal:', error);
+      toast.error('Failed to update payment method');
+    }
   };
 
-  const handleCancelSubscription = () => {
+  const handleCancelSubscription = async () => {
     if (!canManageAccount) {
       toast.error('You do not have permission to cancel subscription');
       return;
     }
-    // TODO: Implement cancellation flow with confirmation
-    toast.error('Cancel subscription flow - Coming soon!');
+
+    // Confirm cancellation
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel your subscription? Access will continue until the end of the current billing period.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const result = await cancelSubscriptionAction();
+      if (result.success) {
+        toast.success('Subscription will be cancelled at the end of the billing period');
+        // Refresh subscription info
+        const subscriptionResult = await getSubscriptionInfoAction();
+        if (subscriptionResult.success && subscriptionResult.data) {
+          setSubscriptionInfo(subscriptionResult.data);
+        }
+      } else {
+        toast.error(result.error || 'Failed to cancel subscription');
+      }
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      toast.error('Failed to cancel subscription');
+    }
   };
 
   if (loading) {
@@ -196,7 +224,7 @@ export default function AccountManagement() {
           <div className="flex space-x-2 pt-4">
             <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
               <RocketIcon className="mr-2 h-4 w-4" />
-              Buy More Licenses
+              Manage Subscription
             </Button>
           </div>
         </CardContent>
@@ -295,32 +323,38 @@ export default function AccountManagement() {
           {/* Billing History */}
           <div className="rounded-lg border p-4">
             <h3 className="text-sm font-semibold mb-3">Recent Invoices</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between items-center py-2 border-b">
-                <div>
-                  <p className="font-medium">October 2024</p>
-                  <p className="text-xs text-muted-foreground">Paid on Oct 1, 2024</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">${subscriptionInfo?.monthly_amount?.toFixed(2)}</p>
-                  <Button id="view-invoice-oct-2024" variant="link" size="sm" className="h-auto p-0 text-xs">
-                    View Invoice
-                  </Button>
-                </div>
+            {invoices.length > 0 ? (
+              <div className="space-y-2 text-sm">
+                {invoices.map((invoice) => (
+                  <div key={invoice.invoice_id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                    <div>
+                      <p className="font-medium">{invoice.period_label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {invoice.paid_at
+                          ? `Paid on ${new Date(invoice.paid_at).toLocaleDateString()}`
+                          : `Status: ${invoice.status}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">${invoice.amount.toFixed(2)}</p>
+                      {invoice.invoice_pdf_url && (
+                        <Button
+                          id={`view-invoice-${invoice.invoice_id}`}
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs"
+                          onClick={() => window.open(invoice.invoice_pdf_url!, '_blank')}
+                        >
+                          View Invoice
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <div>
-                  <p className="font-medium">September 2024</p>
-                  <p className="text-xs text-muted-foreground">Paid on Sep 1, 2024</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">${subscriptionInfo?.monthly_amount?.toFixed(2)}</p>
-                  <Button id="view-invoice-sep-2024" variant="link" size="sm" className="h-auto p-0 text-xs">
-                    View Invoice
-                  </Button>
-                </div>
-              </div>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No invoices found</p>
+            )}
           </div>
 
           {/* Danger Zone */}

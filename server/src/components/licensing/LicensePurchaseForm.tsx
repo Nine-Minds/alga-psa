@@ -54,10 +54,18 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
         // Get current license usage
         const usageResult = await getLicenseUsageAction();
         if (usageResult.success && usageResult.data) {
+          const usage = usageResult.data;
           setCurrentUsage({
-            used: usageResult.data.used,
-            total: usageResult.data.total,
+            used: usage.used,
+            total: usage.limit, // Use limit (total licenses) not total (which might be different)
           });
+
+          // Initialize quantity to current total (or used if no limit)
+          if (usage.limit !== null) {
+            setQuantity(usage.limit);
+          } else if (usage.used > 0) {
+            setQuantity(usage.used);
+          }
         }
       } catch (err) {
         console.error('Error loading data:', err);
@@ -77,14 +85,25 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
     setLoading(true);
 
     try {
-      // Create checkout session
+      // Create checkout session or update existing subscription
       const result = await createLicenseCheckoutSessionAction(quantity);
 
       if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to create checkout session');
+        throw new Error(result.error || 'Failed to process license update');
       }
 
+      if (result.data.type === 'updated') {
+        // Subscription was updated directly, redirect to success page
+        window.location.href = '/msp/licenses/purchase/success';
+        return;
+      }
+
+      // Checkout session created, show embedded checkout
       const { clientSecret, publishableKey } = result.data;
+
+      if (!clientSecret || !publishableKey) {
+        throw new Error('Missing checkout session data');
+      }
 
       // Initialize Stripe
       const stripe = await loadStripe(publishableKey);
@@ -92,8 +111,8 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
       setClientSecret(clientSecret);
       setShowCheckout(true);
     } catch (err) {
-      console.error('Error creating checkout session:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create checkout session');
+      console.error('Error processing license update:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process license update');
       setLoading(false);
     }
   };
@@ -124,6 +143,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
 
             <div className="mt-4">
               <Button
+                id="cancel-checkout-button"
                 variant="outline"
                 onClick={() => {
                   setShowCheckout(false);
@@ -147,7 +167,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
-            Purchase Additional Licenses
+            Manage License Subscription
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -184,7 +204,7 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
           {/* Quantity Selection */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="quantity">Number of Licenses</Label>
+              <Label htmlFor="quantity">Total License Count</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -194,8 +214,14 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
                 className="max-w-xs"
               />
               <p className="text-xs text-gray-500 mt-1">
-                How many additional licenses do you need?
+                Enter the new total number of licenses. Currently: {currentUsage?.total !== null && currentUsage?.total !== undefined ? currentUsage.total : 'None'}
               </p>
+              {currentUsage && currentUsage.total !== null && currentUsage.used > quantity && (
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Warning: You have {currentUsage.used} users but setting total to {quantity}
+                </p>
+              )}
             </div>
 
             {/* Pricing Summary */}
@@ -224,17 +250,28 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
             <Button
               id="purchase-licenses-button"
               onClick={handlePurchase}
-              disabled={loading || !pricing}
+              disabled={loading || !pricing || quantity === currentUsage?.total}
               className="w-full"
             >
-              {loading ? 'Creating Checkout...' : `Purchase ${quantity} License${quantity > 1 ? 's' : ''}`}
+              {loading ? 'Creating Checkout...' : (() => {
+                if (quantity === currentUsage?.total) return 'No Change';
+
+                const current = currentUsage?.total || 0;
+                const difference = quantity - current;
+                const diffText = difference > 0
+                  ? `+${difference}`
+                  : `${difference}`;
+
+                return `Update to ${quantity} Total (${diffText} license${Math.abs(difference) > 1 ? 's' : ''})`;
+              })()}
             </Button>
 
             {/* Information */}
             <div className="text-xs text-gray-500 space-y-1">
+              <p>• This sets your total subscription quantity (not an addition to current licenses)</p>
               <p>• Licenses are billed monthly and can be canceled anytime</p>
-              <p>• Your new licenses will be available immediately after payment</p>
-              <p>• Prorated charges will apply for mid-cycle additions</p>
+              <p>• Changes will be available immediately after payment</p>
+              <p>• Prorated charges will apply for mid-cycle changes</p>
             </div>
           </div>
         </CardContent>

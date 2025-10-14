@@ -358,11 +358,92 @@ export class StripeService {
   }
 
   /**
+   * Update existing subscription quantity or create checkout for new subscription
+   *
+   * Returns either an updated subscription or checkout session details
+   */
+  async updateOrCreateLicenseSubscription(
+    tenantId: string,
+    quantity: number
+  ): Promise<
+    | { type: 'updated'; subscription: Stripe.Subscription }
+    | { type: 'checkout'; clientSecret: string; sessionId: string }
+  > {
+    logger.info(`[StripeService] Update or create subscription for tenant ${tenantId}, quantity: ${quantity}`);
+
+    const knex = await getConnection(tenantId);
+
+    // Get or import customer
+    const customer = await this.getOrImportCustomer(tenantId);
+
+    // Check for existing active subscription for the license price
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_customer_id: customer.stripe_customer_id,
+        status: 'active',
+      })
+      .first();
+
+    if (existingSubscription && existingSubscription.stripe_subscription_item_id) {
+      // Update existing subscription
+      logger.info(
+        `[StripeService] Found existing subscription ${existingSubscription.stripe_subscription_external_id}, updating quantity to ${quantity}`
+      );
+
+      const updatedSubscription = await this.stripe.subscriptions.update(
+        existingSubscription.stripe_subscription_external_id,
+        {
+          items: [
+            {
+              id: existingSubscription.stripe_subscription_item_id,
+              quantity,
+            },
+          ],
+          proration_behavior: 'always_invoice', // Stripe will handle proration
+        }
+      );
+
+      // Update database
+      await knex<StripeSubscription>('stripe_subscriptions')
+        .where({
+          stripe_subscription_id: existingSubscription.stripe_subscription_id,
+        })
+        .update({
+          quantity,
+          updated_at: knex.fn.now(),
+        });
+
+      // Update tenant license count
+      await knex('tenants')
+        .where({ tenant: tenantId })
+        .update({
+          licensed_user_count: quantity,
+          updated_at: knex.fn.now(),
+        });
+
+      logger.info(`[StripeService] Updated subscription to ${quantity} licenses`);
+
+      return {
+        type: 'updated',
+        subscription: updatedSubscription,
+      };
+    }
+
+    // No existing subscription, create checkout session
+    logger.info(`[StripeService] No existing subscription found, creating checkout session`);
+    return {
+      type: 'checkout',
+      ...(await this.createLicenseCheckoutSession(tenantId, quantity)),
+    };
+  }
+
+  /**
    * Create an embedded checkout session for license purchase
    *
    * Returns clientSecret for embedding in UI
    */
-  async createLicenseCheckoutSession(
+  private async createLicenseCheckoutSession(
     tenantId: string,
     quantity: number
   ): Promise<{ clientSecret: string; sessionId: string }> {

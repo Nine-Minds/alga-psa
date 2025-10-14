@@ -20,7 +20,8 @@ export default function LicensePurchaseSuccessPage() {
       try {
         const result = await getLicenseUsageAction();
         if (result.success && result.data) {
-          setLicenseCount(result.data.total);
+          // Use limit (total licenses) not total
+          setLicenseCount(result.data.limit);
         }
       } catch (error) {
         console.error('Error fetching license count:', error);
@@ -94,14 +95,14 @@ export default function LicensePurchaseSuccessPage() {
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
-            <Link href="/msp/settings/general" className="flex-1">
-              <Button variant="default" className="w-full gap-2">
+            <Link href="/msp/account" className="flex-1">
+              <Button id="go-to-account-btn" variant="default" className="w-full gap-2">
                 Go to User Management
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="/msp/dashboard">
-              <Button variant="outline">Dashboard</Button>
+              <Button id="go-to-dashboard-btn" variant="outline">Dashboard</Button>
             </Link>
           </div>
         </CardContent>

@@ -280,6 +280,230 @@ After setup:
 3. Set up monitoring and alerting
 4. Plan for Phase 2 (multi-tenant billing)
 
+## NM-Store Integration (Initial Customer Subscription)
+
+### Overview
+
+New AlgaPSA customers purchase their initial subscription through **nm-store** (the Nine Minds website), which creates both:
+1. The Stripe subscription with initial license quantity
+2. The tenant record in AlgaPSA database via Temporal workflow
+
+The AlgaPSA Stripe integration then manages license changes after the initial purchase.
+
+### Integration Requirements
+
+#### 1. Temporal Workflow Updates
+
+The tenant creation workflow (`createTenantWorkflow`) needs to be updated to accept and store Stripe subscription data:
+
+**Input Parameters Required:**
+```typescript
+interface CreateTenantInput {
+  // Existing fields...
+  email: string;
+  client_name: string;
+
+  // NEW: Stripe subscription info from nm-store checkout
+  stripe_customer_id?: string;        // Stripe customer ID (cus_...)
+  stripe_subscription_id?: string;    // Stripe subscription ID (sub_...)
+  initial_license_count?: number;     // Initial quantity from purchase
+}
+```
+
+#### 2. Stripe Customer Record Creation
+
+During tenant creation, if Stripe data is provided, the workflow should:
+
+```typescript
+// In createTenantWorkflow or a new activity
+if (input.stripe_customer_id) {
+  await knex('stripe_customers').insert({
+    tenant: newTenant.tenant,
+    stripe_customer_external_id: input.stripe_customer_id,
+    billing_tenant: process.env.MASTER_BILLING_TENANT_ID,
+    email: input.email,
+    name: input.client_name,
+    metadata: {
+      source: 'nm_store_checkout',
+      created_at: new Date().toISOString()
+    }
+  });
+}
+```
+
+#### 3. Initial License Count
+
+Set the `licensed_user_count` on the tenant record during creation:
+
+```typescript
+await knex('tenants')
+  .where({ tenant: newTenant.tenant })
+  .update({
+    licensed_user_count: input.initial_license_count || null
+  });
+```
+
+#### 4. Subscription Import
+
+Optionally import the full subscription details:
+
+```typescript
+if (input.stripe_subscription_id) {
+  // Call StripeService to import subscription details
+  const stripeService = getStripeService();
+  await stripeService.importSubscriptionById(
+    newTenant.tenant,
+    input.stripe_subscription_id
+  );
+}
+```
+
+### NM-Store Checkout Flow
+
+The nm-store checkout should:
+
+1. **Create Stripe Customer & Subscription**
+   ```javascript
+   const customer = await stripe.customers.create({
+     email: customerEmail,
+     name: clientName,
+     metadata: {
+       source: 'nm_store',
+       pending_tenant: true
+     }
+   });
+
+   const subscription = await stripe.subscriptions.create({
+     customer: customer.id,
+     items: [{ price: LICENSE_PRICE_ID, quantity: licenseCount }],
+     metadata: {
+       source: 'nm_store_checkout',
+       client_name: clientName
+     }
+   });
+   ```
+
+2. **Trigger Temporal Workflow**
+   ```javascript
+   await temporalClient.workflow.start(createTenantWorkflow, {
+     args: [{
+       email: customerEmail,
+       client_name: clientName,
+       stripe_customer_id: customer.id,
+       stripe_subscription_id: subscription.id,
+       initial_license_count: licenseCount,
+       // ... other tenant creation params
+     }],
+     taskQueue: 'alga-psa-workflows',
+     workflowId: `create-tenant-${customer.id}`
+   });
+   ```
+
+3. **Update Customer Metadata After Tenant Creation**
+   ```javascript
+   // After workflow completes successfully
+   await stripe.customers.update(customer.id, {
+     metadata: {
+       tenant_id: newTenant.tenant,  // Link customer to tenant
+       algapsa_url: `https://app.algapsa.com`,
+       onboarded: true
+     }
+   });
+
+   await stripe.subscriptions.update(subscription.id, {
+     metadata: {
+       tenant_id: newTenant.tenant  // Critical for webhook event routing
+     }
+   });
+   ```
+
+### Migration Script for Existing Customers
+
+For customers who already have Stripe subscriptions but no database records:
+
+```typescript
+// scripts/sync-stripe-customers.ts
+async function syncExistingStripeCustomers() {
+  const tenants = await knex('tenants').select('*');
+
+  for (const tenant of tenants) {
+    // Search Stripe for customer by email
+    const customers = await stripe.customers.list({
+      email: tenant.email,
+      limit: 1
+    });
+
+    if (customers.data.length > 0) {
+      const customer = customers.data[0];
+
+      // Import customer
+      await knex('stripe_customers').insert({
+        tenant: tenant.tenant,
+        stripe_customer_external_id: customer.id,
+        billing_tenant: MASTER_BILLING_TENANT_ID,
+        email: customer.email,
+        name: customer.name,
+        metadata: { source: 'migration_import' }
+      }).onConflict(['tenant', 'stripe_customer_external_id']).ignore();
+
+      // Import active subscriptions
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'active'
+      });
+
+      for (const sub of subscriptions.data) {
+        // Use StripeService.importSubscription()
+        await stripeService.importSubscription(
+          tenant.tenant,
+          customer.id,
+          sub
+        );
+
+        // Update tenant license count
+        const quantity = sub.items.data[0]?.quantity || 0;
+        await knex('tenants')
+          .where({ tenant: tenant.tenant })
+          .update({ licensed_user_count: quantity });
+      }
+    }
+  }
+}
+```
+
+### Testing the Integration
+
+1. **Test Tenant Creation with Stripe Data:**
+   ```bash
+   # Create test customer in Stripe
+   stripe customers create \
+     --email test@example.com \
+     --name "Test Company" \
+     --metadata[source]=nm_store_test
+
+   # Create test subscription
+   stripe subscriptions create \
+     --customer cus_xxx \
+     --items[0][price]=price_xxx \
+     --items[0][quantity]=10
+
+   # Trigger workflow with test data
+   # Verify tenant created with correct licensed_user_count
+   ```
+
+2. **Verify Data Flow:**
+   - Customer record in `stripe_customers` table
+   - Subscription record in `stripe_subscriptions` table
+   - Correct `licensed_user_count` on tenant
+   - Metadata linking customer to tenant
+
+### Important Notes
+
+- **Always set `metadata.tenant_id`** on subscriptions - this is critical for webhook event routing
+- The initial subscription is created by nm-store, subsequent changes via AlgaPSA UI
+- License count in AlgaPSA = Stripe subscription quantity (not additive)
+- Subscription updates in AlgaPSA update the same Stripe subscription
+
 ## Phase 2: Multi-Tenant Billing (Future)
 
 Phase 2 will enable your customers to use their own Stripe accounts to charge their clients. This requires:
