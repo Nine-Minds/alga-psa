@@ -8,10 +8,12 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant, type TenantTestData } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
+import { establishTenantSession } from './utils/auth-helpers';
 
 // Set required environment variables for Playwright tests
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
@@ -21,54 +23,6 @@ process.env.E2E_AUTH_BYPASS = process.env.E2E_AUTH_BYPASS || 'true';
 const TEST_CONFIG = {
   baseUrl: process.env.EE_BASE_URL || 'http://localhost:3000',
 };
-
-async function setupAuthenticatedSession(
-  page: Page,
-  tenantData: TenantTestData
-): Promise<void> {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    throw new Error('NEXTAUTH_SECRET must be defined for Playwright auth mocking.');
-  }
-
-  const { encode } = await import('@auth/core/jwt');
-  const cookieName = 'authjs.session-token';
-
-  const sessionUser = {
-    id: tenantData.adminUser.userId,
-    email: tenantData.adminUser.email.toLowerCase(),
-    name: `${tenantData.adminUser.firstName} ${tenantData.adminUser.lastName}`.trim() ||
-      tenantData.adminUser.email,
-    username: tenantData.adminUser.email.toLowerCase(),
-    tenant: tenantData.tenant.tenantId,
-    user_type: 'internal',
-  };
-
-  const maxAge = 60 * 60 * 24; // 24 hours
-
-  const token = await encode({
-    token: {
-      ...sessionUser,
-      sub: sessionUser.id,
-    },
-    secret,
-    maxAge,
-    salt: cookieName,
-  });
-
-  const issuedAtSeconds = Math.floor(Date.now() / 1000);
-  const expiresAtSeconds = issuedAtSeconds + maxAge;
-
-  await page.context().addCookies([{
-    name: cookieName,
-    value: token,
-    url: TEST_CONFIG.baseUrl,
-    httpOnly: true,
-    secure: false,
-    sameSite: 'Lax' as const,
-    expires: expiresAtSeconds,
-  }]);
-}
 
 async function openAddContractLineDialog(page: Page) {
   const dialogHeading = page.getByRole('heading', { name: 'Add Contract Line' });
@@ -112,11 +66,12 @@ test.describe('ContractLineDialog Close Bug', () => {
         companyName: `Create Dialog Test ${uuidv4().slice(0, 6)}`,
       });
 
+      await markOnboardingComplete(db, tenantData.tenant.tenantId, new Date());
       // Setup authenticated session
-      await setupAuthenticatedSession(page, tenantData);
+      await establishTenantSession(page, tenantData, TEST_CONFIG.baseUrl);
 
       // Navigate to the billing page with contract-lines tab
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines&tenantId=${tenantData.tenant.tenantId}`);
 
       // Open the Add Contract Line dialog
       const dialogHeading = await openAddContractLineDialog(page);
@@ -145,8 +100,9 @@ test.describe('ContractLineDialog Close Bug', () => {
         companyName: `Close Guard Untouched ${uuidv4().slice(0, 6)}`,
       });
 
-      await setupAuthenticatedSession(page, tenantData);
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
+      await markOnboardingComplete(db, tenantData.tenant.tenantId, new Date());
+      await establishTenantSession(page, tenantData, TEST_CONFIG.baseUrl);
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines&tenantId=${tenantData.tenant.tenantId}`);
 
       let dialogHeading = await openAddContractLineDialog(page);
 
@@ -174,8 +130,9 @@ test.describe('ContractLineDialog Close Bug', () => {
         companyName: `Close Guard Edited ${uuidv4().slice(0, 6)}`,
       });
 
-      await setupAuthenticatedSession(page, tenantData);
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
+      await markOnboardingComplete(db, tenantData.tenant.tenantId, new Date());
+      await establishTenantSession(page, tenantData, TEST_CONFIG.baseUrl);
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines&tenantId=${tenantData.tenant.tenantId}`);
 
       const dialogHeading = await openAddContractLineDialog(page);
       const nameInput = page.locator('#name');
@@ -205,8 +162,9 @@ test.describe('ContractLineDialog Close Bug', () => {
         companyName: `Close Guard Cancel ${uuidv4().slice(0, 6)}`,
       });
 
-      await setupAuthenticatedSession(page, tenantData);
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
+      await markOnboardingComplete(db, tenantData.tenant.tenantId, new Date());
+      await establishTenantSession(page, tenantData, TEST_CONFIG.baseUrl);
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines&tenantId=${tenantData.tenant.tenantId}`);
 
       const dialogHeading = await openAddContractLineDialog(page);
       await page.locator('#name').fill('Unsaved Contract Line');
@@ -221,3 +179,23 @@ test.describe('ContractLineDialog Close Bug', () => {
     }
   });
 });
+async function markOnboardingComplete(db: Knex, tenantId: string, now: Date): Promise<void> {
+  await db('tenant_settings')
+    .insert({
+      tenant: tenantId,
+      onboarding_completed: true,
+      onboarding_completed_at: now,
+      onboarding_skipped: false,
+      onboarding_data: null,
+      settings: {},
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict('tenant')
+    .merge({
+      onboarding_completed: true,
+      onboarding_completed_at: now,
+      onboarding_skipped: false,
+      updated_at: now,
+    });
+}
