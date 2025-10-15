@@ -123,6 +123,15 @@ export interface IPricingInfo {
   interval_count: number;
 }
 
+export interface IScheduledLicenseChange {
+  current_quantity: number;
+  scheduled_quantity: number;
+  effective_date: ISO8601String;
+  current_monthly_cost: number; // in dollars
+  scheduled_monthly_cost: number; // in dollars
+  monthly_savings: number; // in dollars (can be negative for increases)
+}
+
 /**
  * Composite interfaces for the Account Management page
  */

@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Card, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { CheckCircle, ArrowRight, Loader2, Calendar } from 'lucide-react';
+import { Badge } from 'server/src/components/ui/Badge';
+import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
 import { getLicenseUsageAction, getSubscriptionInfoAction } from 'server/src/lib/actions/license-actions';
 
@@ -48,121 +49,130 @@ export default function LicensePurchaseSuccessPage() {
   return (
     <div className="container mx-auto p-4 max-w-2xl">
       <Card className="mt-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-green-600">
-            {isScheduled ? <Calendar className="h-8 w-8" /> : <CheckCircle className="h-8 w-8" />}
-            {isScheduled ? 'Change Scheduled Successfully!' : 'Update Successful!'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Success Message */}
-          <div className="space-y-2">
+        <CardContent className="pt-12 pb-8 space-y-8">
+          {/* Success Icon and Title */}
+          <div className="text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-primary-100 dark:bg-primary-900/20 p-6">
+                {isScheduled ? (
+                  <Calendar className="h-12 w-12 text-primary-500" />
+                ) : (
+                  <CheckCircle className="h-12 w-12 text-primary-500" />
+                )}
+              </div>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                {isScheduled ? 'Change Scheduled Successfully!' : 'Update Successful!'}
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                {isScheduled
+                  ? 'Your license change has been scheduled and will take effect at the end of your current billing period.'
+                  : 'Your license update has been processed successfully!'
+                }
+              </p>
+            </div>
+          </div>
+
+          {/* License Count Display */}
+          {loading ? (
+            <div className="flex items-center justify-center gap-3 text-muted-foreground py-6">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>{isScheduled ? 'Loading subscription details...' : 'Updating license count...'}</span>
+            </div>
+          ) : (
+            <div className="rounded-lg border bg-gradient-to-br from-primary-100 via-primary-50 to-blue-50 dark:from-primary-900/30 dark:via-primary-950/20 dark:to-blue-950/10 p-6">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <Users className="h-6 w-6 text-primary-500" />
+                <h2 className="text-lg font-semibold">License Information</h2>
+              </div>
+              <div className="text-center space-y-2">
+                {licenseCount !== null && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">You now have</p>
+                    <p className="text-5xl font-bold text-primary-500">{licenseCount}</p>
+                    <p className="text-lg text-muted-foreground mt-1">total licenses</p>
+                  </div>
+                )}
+                {isScheduled && scheduledDate && (
+                  <div className="mt-4 pt-4 border-t border-primary-200 dark:border-primary-800">
+                    <p className="text-sm text-muted-foreground mb-1">Change effective</p>
+                    <p className="text-xl font-semibold text-orange-600 dark:text-orange-400">
+                      {new Date(scheduledDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Next Steps */}
+          <div className="rounded-lg border p-6 space-y-4">
+            <h3 className="text-lg font-semibold">What's next?</h3>
             {isScheduled ? (
-              <>
-                <p className="text-lg">
-                  Your license change has been scheduled and will take effect at the end of your current billing period.
-                </p>
-                {loading ? (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Loading subscription details...</span>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-gray-600">
-                      Current licenses: <strong className="text-blue-600">{licenseCount}</strong>
-                    </p>
-                    {scheduledDate && (
-                      <p className="text-gray-600">
-                        Change effective: <strong className="text-orange-600">
-                          {new Date(scheduledDate).toLocaleDateString('en-US', {
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </strong>
-                      </p>
-                    )}
-                  </>
-                )}
-              </>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">Your current licenses remain active until the end of the billing period</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">The license count will automatically update on the scheduled date</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">You'll receive an email confirmation when the change takes effect</span>
+                </li>
+              </ul>
             ) : (
-              <>
-                <p className="text-lg">
-                  Your license update has been processed successfully!
-                </p>
-                {loading ? (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Updating license count...</span>
-                  </div>
-                ) : (
-                  licenseCount !== null && (
-                    <p className="text-gray-600">
-                      You now have <strong className="text-blue-600">{licenseCount}</strong> total licenses.
-                    </p>
-                  )
-                )}
-              </>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">Your licenses are now active and ready to use</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">You can create new users immediately from User Management</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">Your next invoice will include the prorated charges</span>
+                </li>
+              </ul>
             )}
           </div>
 
           {/* Session ID (for debugging/support) */}
           {sessionId && (
-            <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Session ID (for support reference):</p>
-              <p className="text-xs font-mono text-gray-700 dark:text-gray-300 break-all">
-                {sessionId}
-              </p>
-            </div>
+            <details className="rounded-lg border p-4">
+              <summary className="text-sm font-medium cursor-pointer hover:text-primary-500">
+                Session Details (for support)
+              </summary>
+              <div className="mt-3 pt-3 border-t">
+                <p className="text-xs text-muted-foreground mb-1">Session ID:</p>
+                <p className="text-xs font-mono bg-muted p-2 rounded break-all">
+                  {sessionId}
+                </p>
+              </div>
+            </details>
           )}
 
-          {/* Next Steps */}
-          <div className="space-y-3">
-            <h3 className="font-semibold">What's next?</h3>
-            {isScheduled ? (
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">✓</span>
-                  <span>Your current licenses remain active until the end of the billing period</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">✓</span>
-                  <span>The license count will automatically update on the scheduled date</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">✓</span>
-                  <span>You'll receive an email confirmation when the change takes effect</span>
-                </li>
-              </ul>
-            ) : (
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">✓</span>
-                  <span>Your licenses are now active and ready to use</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">✓</span>
-                  <span>You can create new users immediately from User Management</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">✓</span>
-                  <span>Your next invoice will include the prorated charges</span>
-                </li>
-              </ul>
-            )}
-          </div>
-
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Link href="/msp/account" className="flex-1">
               <Button id="go-to-account-btn" variant="default" className="w-full gap-2">
-                Go to User Management
+                Go to Account Management
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/msp/dashboard">
-              <Button id="go-to-dashboard-btn" variant="outline">Dashboard</Button>
+            <Link href="/msp/dashboard" className="flex-1 sm:flex-initial">
+              <Button id="go-to-dashboard-btn" variant="outline" className="w-full sm:w-auto">
+                Dashboard
+              </Button>
             </Link>
           </div>
         </CardContent>

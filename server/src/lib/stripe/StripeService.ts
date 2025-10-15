@@ -519,12 +519,42 @@ export class StripeService {
           throw new Error('Current period end not found for subscription');
         }
 
-        // Create subscription schedule
-        const schedule = await this.stripe.subscriptionSchedules.create({
-          from_subscription: existingSubscription.stripe_subscription_external_id,
+        // Check if subscription already has a schedule attached
+        const stripeSubscription = await this.stripe.subscriptions.retrieve(
+          existingSubscription.stripe_subscription_external_id
+        );
+
+        let schedule: Stripe.SubscriptionSchedule;
+
+        if (stripeSubscription.schedule) {
+          // Schedule already exists, retrieve and update it
+          logger.info(
+            `[StripeService] Found existing schedule ${stripeSubscription.schedule} for subscription`
+          );
+          schedule = await this.stripe.subscriptionSchedules.retrieve(
+            stripeSubscription.schedule as string
+          );
+        } else {
+          // No schedule exists, create one
+          schedule = await this.stripe.subscriptionSchedules.create({
+            from_subscription: existingSubscription.stripe_subscription_external_id,
+          });
+        }
+
+        // Get the current phase's start date to use as anchor
+        const currentPhase = schedule.phases[0];
+        if (!currentPhase) {
+          throw new Error('Schedule has no phases');
+        }
+
+        // Step 2: Update the schedule with metadata, end behavior, and phases
+        await this.stripe.subscriptionSchedules.update(schedule.id, {
           end_behavior: 'release',
+          metadata: {
+            tenant_id: tenantId,
+          },
           phases: [
-            // Phase 1: Keep current quantity until period end
+            // Phase 1: Keep current quantity until period end (use existing start_date)
             {
               items: [
                 {
@@ -532,6 +562,7 @@ export class StripeService {
                   quantity: currentQuantity,
                 },
               ],
+              start_date: currentPhase.start_date,
               end_date: Math.floor(currentPeriodEnd.getTime() / 1000),
               metadata: {
                 tenant_id: tenantId,
@@ -550,9 +581,6 @@ export class StripeService {
               },
             },
           ],
-          metadata: {
-            tenant_id: tenantId,
-          },
         });
 
         logger.info(
@@ -848,6 +876,32 @@ export class StripeService {
     const subscriptionItem = subscription.items.data[0];
     const quantity = subscriptionItem?.quantity || 1;
 
+    // Get existing subscription to check for scheduled changes
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_subscription_external_id: subscription.id,
+      })
+      .first();
+
+    // Check if this update matches a scheduled quantity change
+    let updatedMetadata = subscription.metadata || {};
+    if (existingSubscription?.metadata?.scheduled_quantity) {
+      const scheduledQuantity = existingSubscription.metadata.scheduled_quantity;
+
+      // If the quantity now matches the scheduled quantity, the schedule has activated
+      if (quantity === scheduledQuantity) {
+        logger.info(
+          `[StripeService] Scheduled license change activated for subscription ${subscription.id}: ` +
+          `${existingSubscription.quantity} -> ${quantity}`
+        );
+
+        // Clear the scheduled change metadata
+        const { scheduled_quantity, schedule_id, ...remainingMetadata } = existingSubscription.metadata;
+        updatedMetadata = remainingMetadata;
+      }
+    }
+
     await knex<StripeSubscription>('stripe_subscriptions')
       .where({
         tenant: tenantId,
@@ -860,6 +914,7 @@ export class StripeService {
         current_period_end: new Date(subscription.current_period_end * 1000),
         cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
         canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+        metadata: updatedMetadata,
         updated_at: knex.fn.now(),
       });
 
@@ -919,6 +974,84 @@ export class StripeService {
       logger.error('[StripeService] Webhook signature verification failed:', error);
       throw new Error('Invalid webhook signature');
     }
+  }
+
+  /**
+   * Get scheduled license changes for a tenant
+   * Returns information about any pending license reductions
+   */
+  async getScheduledLicenseChanges(
+    tenantId: string
+  ): Promise<{
+    current_quantity: number;
+    scheduled_quantity: number;
+    effective_date: Date;
+    current_monthly_cost: number;
+    scheduled_monthly_cost: number;
+    monthly_savings: number;
+  } | null> {
+    logger.info(`[StripeService] Getting scheduled license changes for tenant ${tenantId}`);
+
+    const knex = await getConnection(tenantId);
+    const customer = await this.getOrImportCustomer(tenantId);
+
+    // Get existing subscription
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_customer_id: customer.stripe_customer_id,
+        status: 'active',
+      })
+      .first();
+
+    if (!existingSubscription) {
+      logger.info(`[StripeService] No active subscription found for tenant ${tenantId}`);
+      return null;
+    }
+
+    // Check if there's a scheduled quantity in metadata
+    const scheduledQuantity = existingSubscription.metadata?.scheduled_quantity;
+    if (!scheduledQuantity || scheduledQuantity === existingSubscription.quantity) {
+      logger.info(`[StripeService] No scheduled license changes for tenant ${tenantId}`);
+      return null;
+    }
+
+    // Get the price per license
+    const price = await knex<StripePrice>('stripe_prices')
+      .where({ stripe_price_id: existingSubscription.stripe_price_id })
+      .first();
+
+    if (!price) {
+      logger.error(`[StripeService] Price not found for subscription ${existingSubscription.stripe_subscription_id}`);
+      return null;
+    }
+
+    const pricePerLicense = price.unit_amount / 100; // Convert cents to dollars
+    const currentQuantity = existingSubscription.quantity;
+    const effectiveDate = existingSubscription.current_period_end;
+
+    if (!effectiveDate) {
+      logger.error(`[StripeService] No period end date found for subscription`);
+      return null;
+    }
+
+    const currentMonthlyCost = currentQuantity * pricePerLicense;
+    const scheduledMonthlyCost = scheduledQuantity * pricePerLicense;
+    const monthlySavings = currentMonthlyCost - scheduledMonthlyCost;
+
+    logger.info(
+      `[StripeService] Found scheduled change: ${currentQuantity} → ${scheduledQuantity} licenses, ` +
+      `effective ${effectiveDate.toISOString()}`
+    );
+
+    return {
+      current_quantity: currentQuantity,
+      scheduled_quantity: scheduledQuantity,
+      effective_date: effectiveDate,
+      current_monthly_cost: currentMonthlyCost,
+      scheduled_monthly_cost: scheduledMonthlyCost,
+      monthly_savings: monthlySavings,
+    };
   }
 
   /**

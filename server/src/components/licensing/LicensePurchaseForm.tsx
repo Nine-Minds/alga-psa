@@ -250,6 +250,12 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
     const periodEnd = new Date(invoicePreview.currentPeriodEnd);
     const isIncrease = invoicePreview.isIncrease;
 
+    // Calculate monthly costs
+    const pricePerLicense = pricing ? pricing.unitAmount / 100 : 0;
+    const currentMonthlyCost = invoicePreview.currentQuantity * pricePerLicense;
+    const newMonthlyCost = invoicePreview.newQuantity * pricePerLicense;
+    const monthlyDifference = newMonthlyCost - currentMonthlyCost;
+
     console.log('[renderConfirmationModal] Rendering Dialog component');
 
     return (
@@ -265,23 +271,35 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
           </p>
 
           <div className="space-y-4">
-            {/* License Change Summary */}
-            <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Current licenses:</span>
-                <span className="font-semibold">{invoicePreview.currentQuantity}</span>
+            {/* Cost Breakdown */}
+            <div className="rounded-lg border p-4 bg-muted/50 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Current Monthly Cost</span>
+                <span className="font-semibold">${currentMonthlyCost.toFixed(2)}/month</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">New licenses:</span>
-                <span className="font-semibold text-blue-600 dark:text-blue-400">
-                  {invoicePreview.newQuantity}
-                </span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Current License Count</span>
+                <span className="font-semibold">{invoicePreview.currentQuantity} licenses</span>
               </div>
-              <div className="flex justify-between text-sm font-medium pt-2 border-t border-blue-200 dark:border-blue-900">
-                <span>{isIncrease ? 'Adding:' : 'Removing:'}</span>
-                <span className={isIncrease ? 'text-green-600' : 'text-orange-600'}>
-                  {isIncrease ? '+' : ''}{invoicePreview.newQuantity - invoicePreview.currentQuantity} licenses
-                </span>
+              <div className="border-t pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">New Monthly Cost</span>
+                  <span className="text-lg font-bold" style={{ color: isIncrease ? 'rgb(var(--color-primary-600))' : 'rgb(var(--color-secondary-600))' }}>
+                    ${newMonthlyCost.toFixed(2)}/month
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm text-muted-foreground">New License Count</span>
+                  <span className="font-semibold">{invoicePreview.newQuantity} licenses</span>
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm font-semibold">
+                    {isIncrease ? 'Monthly Increase' : 'Monthly Savings'}
+                  </span>
+                  <span className="font-bold" style={{ color: isIncrease ? 'rgb(var(--color-primary-600))' : 'rgb(var(--color-secondary-600))' }}>
+                    {isIncrease ? '+' : ''}${Math.abs(monthlyDifference).toFixed(2)}/month
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -419,14 +437,30 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
               <Input
                 id="quantity"
                 type="number"
-                min="1"
+                min={currentUsage?.total || 1}
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  setQuantity(value);
+                }}
+                onBlur={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  const minValue = currentUsage?.total || 1;
+                  if (value < minValue) {
+                    setQuantity(minValue);
+                  }
+                }}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="max-w-xs"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Enter the new total number of licenses. Currently: {currentUsage?.total !== null && currentUsage?.total !== undefined ? currentUsage.total : 'None'}
+                Enter the new total number of licenses (minimum: {currentUsage?.total || 1}). Currently: {currentUsage?.total !== null && currentUsage?.total !== undefined ? currentUsage.total : 'None'}
               </p>
+              {currentUsage && currentUsage.total !== null && (
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  To reduce licenses, visit Account Management
+                </p>
+              )}
               {currentUsage && currentUsage.total !== null && currentUsage.used > quantity && (
                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
@@ -481,7 +515,6 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
             <div className="text-xs text-gray-500 space-y-1">
               <p>• This sets your total subscription quantity (not an addition to current licenses)</p>
               <p>• Increasing licenses: Immediate access with prorated charge</p>
-              <p>• Decreasing licenses: Scheduled for end of billing period (no immediate credit)</p>
               <p>• Licenses are billed monthly and can be canceled anytime</p>
             </div>
           </div>

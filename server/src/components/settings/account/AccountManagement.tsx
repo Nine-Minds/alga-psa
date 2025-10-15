@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'serve
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Badge } from 'server/src/components/ui/Badge';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { toast } from 'react-hot-toast';
-import { IdCardIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
+import { CreditCard, User, Rocket, MinusCircle, Info } from 'lucide-react';
 import {
   getLicenseUsageAction,
   getLicensePricingAction,
@@ -15,11 +16,12 @@ import {
   getRecentInvoicesAction,
   createCustomerPortalSessionAction,
   cancelSubscriptionAction,
+  getScheduledLicenseChangesAction,
 } from 'server/src/lib/actions/license-actions';
-import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 import { useRouter } from 'next/navigation';
-import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo } from 'server/src/interfaces/subscription.interfaces';
+import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
+import ReduceLicensesModal from 'server/src/components/licensing/ReduceLicensesModal';
 
 export default function AccountManagement() {
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,8 @@ export default function AccountManagement() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<ISubscriptionInfo | null>(null);
   const [invoices, setInvoices] = useState<IInvoiceInfo[]>([]);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
+  const [showReduceModal, setShowReduceModal] = useState(false);
+  const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -45,13 +49,14 @@ export default function AccountManagement() {
           return;
         }
 
-        // Fetch license usage, pricing, subscription, payment, and invoices in parallel
-        const [licenseResult, pricingResult, subscriptionResult, paymentResult, invoicesResult] = await Promise.all([
+        // Fetch license usage, pricing, subscription, payment, invoices, and scheduled changes in parallel
+        const [licenseResult, pricingResult, subscriptionResult, paymentResult, invoicesResult, scheduledChangesResult] = await Promise.all([
           getLicenseUsageAction(),
           getLicensePricingAction(),
           getSubscriptionInfoAction(),
           getPaymentMethodInfoAction(),
           getRecentInvoicesAction(5),
+          getScheduledLicenseChangesAction(),
         ]);
 
         // Set license info with pricing
@@ -81,6 +86,11 @@ export default function AccountManagement() {
         // Set invoices
         if (invoicesResult.success && invoicesResult.data) {
           setInvoices(invoicesResult.data);
+        }
+
+        // Set scheduled changes
+        if (scheduledChangesResult.success && scheduledChangesResult.data) {
+          setScheduledChanges(scheduledChangesResult.data);
         }
 
       } catch (err) {
@@ -151,6 +161,45 @@ export default function AccountManagement() {
     }
   };
 
+  const handleReduceLicenses = () => {
+    if (!canManageAccount) {
+      toast.error('You do not have permission to manage licenses');
+      return;
+    }
+
+    setShowReduceModal(true);
+  };
+
+  const handleReduceSuccess = async () => {
+    // Refresh license info and scheduled changes after successful removal
+    try {
+      const [licenseResult, pricingResult, scheduledChangesResult] = await Promise.all([
+        getLicenseUsageAction(),
+        getLicensePricingAction(),
+        getScheduledLicenseChangesAction(),
+      ]);
+
+      if (licenseResult.success && licenseResult.data && pricingResult.success && pricingResult.data) {
+        const usage = licenseResult.data;
+        const pricing = pricingResult.data;
+
+        setLicenseInfo({
+          total_licenses: usage.limit,
+          active_licenses: usage.used,
+          available_licenses: usage.remaining,
+          plan_name: 'Professional',
+          price_per_license: pricing.unitAmount / 100,
+        });
+      }
+
+      if (scheduledChangesResult.success && scheduledChangesResult.data) {
+        setScheduledChanges(scheduledChangesResult.data);
+      }
+    } catch (error) {
+      console.error('Error refreshing license info:', error);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="p-6">
@@ -165,7 +214,7 @@ export default function AccountManagement() {
       <Card>
         <CardHeader>
           <div className="flex items-center space-x-2">
-            <PersonIcon className="h-5 w-5" />
+            <User className="h-5 w-5" />
             <CardTitle>License Management</CardTitle>
           </div>
           <CardDescription>
@@ -220,11 +269,81 @@ export default function AccountManagement() {
             </div>
           </div>
 
+          {/* Scheduled License Changes Alert */}
+          {scheduledChanges && (
+            <Alert
+              className="border"
+              style={{
+                backgroundColor: 'rgba(var(--color-secondary-600), 0.08)',
+                borderColor: 'rgba(var(--color-secondary-600), 0.3)'
+              }}
+            >
+              <Info
+                className="h-4 w-4"
+                style={{ color: 'rgb(var(--color-secondary-600))' }}
+              />
+              <AlertDescription>
+                <p
+                  className="font-semibold mb-2"
+                  style={{ color: 'rgb(var(--color-secondary-600))' }}
+                >
+                  Scheduled License Change
+                </p>
+                <p
+                  className="text-sm mb-2"
+                  style={{ color: 'rgb(var(--color-secondary-600))' }}
+                >
+                  Your license count will change from <strong>{scheduledChanges.current_quantity}</strong> to{' '}
+                  <strong>{scheduledChanges.scheduled_quantity}</strong> on{' '}
+                  <strong>{new Date(scheduledChanges.effective_date).toLocaleDateString()}</strong>.
+                </p>
+                <div
+                  className="text-sm space-y-1"
+                  style={{ color: 'rgb(var(--color-secondary-600))' }}
+                >
+                  <div className="flex justify-between">
+                    <span>Current monthly cost:</span>
+                    <span className="font-medium">${scheduledChanges.current_monthly_cost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>New monthly cost:</span>
+                    <span
+                      className="font-medium"
+                      style={{ color: 'rgb(var(--color-secondary-600))' }}
+                    >
+                      ${scheduledChanges.scheduled_monthly_cost.toFixed(2)}
+                    </span>
+                  </div>
+                  <div
+                    className="flex justify-between pt-1 border-t"
+                    style={{ borderColor: 'rgba(var(--color-secondary-600), 0.3)' }}
+                  >
+                    <span className="font-semibold">Monthly savings:</span>
+                    <span
+                      className="font-semibold"
+                      style={{ color: 'rgb(var(--color-secondary-600))' }}
+                    >
+                      ${scheduledChanges.monthly_savings.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Actions */}
           <div className="flex space-x-2 pt-4">
             <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
-              <RocketIcon className="mr-2 h-4 w-4" />
-              Manage Subscription
+              <Rocket className="mr-2 h-4 w-4" />
+              Add Licenses
+            </Button>
+            <Button
+              id="reduce-licenses-btn"
+              variant="outline"
+              onClick={handleReduceLicenses}
+            >
+              <MinusCircle className="mr-2 h-4 w-4" />
+              Remove Licenses
             </Button>
           </div>
         </CardContent>
@@ -234,7 +353,7 @@ export default function AccountManagement() {
       <Card>
         <CardHeader>
           <div className="flex items-center space-x-2">
-            <IdCardIcon className="h-5 w-5" />
+            <CreditCard className="h-5 w-5" />
             <CardTitle>Payment Information</CardTitle>
           </div>
           <CardDescription>
@@ -249,7 +368,7 @@ export default function AccountManagement() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <div className="h-12 w-16 rounded border flex items-center justify-center bg-muted">
-                  <IdCardIcon className="h-6 w-6" />
+                  <CreditCard className="h-6 w-6" />
                 </div>
                 <div>
                   <p className="font-semibold">
@@ -369,6 +488,15 @@ export default function AccountManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Reduce Licenses Modal */}
+      <ReduceLicensesModal
+        isOpen={showReduceModal}
+        onClose={() => setShowReduceModal(false)}
+        currentLicenseCount={licenseInfo?.total_licenses || 0}
+        activeUserCount={licenseInfo?.active_licenses || 0}
+        onSuccess={handleReduceSuccess}
+      />
     </div>
   );
 }

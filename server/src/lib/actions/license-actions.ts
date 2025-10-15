@@ -14,6 +14,7 @@ import {
   IStripeSubscription,
   IStripePrice,
   IStripeCustomer,
+  IScheduledLicenseChange,
 } from 'server/src/interfaces/subscription.interfaces';
 
 /**
@@ -578,6 +579,202 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to cancel subscription',
+    };
+  }
+}
+
+/**
+ * Get count of active (non-deactivated) internal users for a tenant
+ * Used for validating license reductions
+ */
+export async function getActiveUserCount(tenantId: string): Promise<number> {
+  const knex = await getConnection(tenantId);
+
+  const result = await knex('users')
+    .where({
+      tenant: tenantId,
+      user_type: 'internal',
+      is_inactive: false
+    })
+    .count('user_id as count')
+    .first();
+
+  return parseInt(result?.count as string || '0', 10);
+}
+
+/**
+ * Reduce license count with validation
+ * - Validates new quantity < current quantity
+ * - Checks active user count constraint
+ * - Schedules reduction at period end (Stripe handles automatically)
+ */
+export async function reduceLicenseCount(
+  tenantId: string,
+  newQuantity: number
+): Promise<{
+  success: boolean;
+  data?: {
+    scheduledChange: boolean;
+    effectiveDate: string;
+    currentQuantity: number;
+    newQuantity: number;
+    creditAmount?: number;
+    currency?: string;
+  };
+  error?: string;
+  needsDeactivation?: boolean;
+  activeUserCount?: number;
+  requestedQuantity?: number;
+}> {
+  try {
+    logger.info(
+      `[reduceLicenseCount] Processing license reduction for tenant ${tenantId}, new quantity: ${newQuantity}`
+    );
+
+    // Validate new quantity is a positive integer
+    if (!Number.isInteger(newQuantity) || newQuantity < 1) {
+      return {
+        success: false,
+        error: 'License quantity must be a positive integer (minimum 1)',
+      };
+    }
+
+    const knex = await getConnection(tenantId);
+
+    // Get current license count
+    const tenant = await knex('tenants')
+      .where({ tenant: tenantId })
+      .first('licensed_user_count');
+
+    if (!tenant) {
+      return {
+        success: false,
+        error: 'Tenant not found',
+      };
+    }
+
+    const currentQuantity = tenant.licensed_user_count || 0;
+
+    // Validate this is actually a reduction
+    if (newQuantity >= currentQuantity) {
+      return {
+        success: false,
+        error: `Cannot reduce licenses. Current: ${currentQuantity}, Requested: ${newQuantity}. Use the 'Add Licenses' flow to increase licenses.`,
+      };
+    }
+
+    // Check active user count
+    const activeUserCount = await getActiveUserCount(tenantId);
+
+    if (newQuantity < activeUserCount) {
+      const usersToDeactivate = activeUserCount - newQuantity;
+      return {
+        success: false,
+        error: `Cannot reduce to ${newQuantity} licenses. You have ${activeUserCount} active users. Please deactivate ${usersToDeactivate} user${usersToDeactivate > 1 ? 's' : ''} first.`,
+        needsDeactivation: true,
+        activeUserCount,
+        requestedQuantity: newQuantity,
+      };
+    }
+
+    // Use StripeService to update subscription (scheduled for period end)
+    const stripeService = getStripeService();
+    const result = await stripeService.updateOrCreateLicenseSubscription(tenantId, newQuantity);
+
+    if (result.type !== 'updated') {
+      return {
+        success: false,
+        error: 'Unexpected result from subscription update',
+      };
+    }
+
+    // Get subscription details for effective date
+    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        status: 'active',
+      })
+      .first();
+
+    if (!subscription || !subscription.current_period_end) {
+      return {
+        success: false,
+        error: 'Could not determine effective date for license reduction',
+      };
+    }
+
+    const effectiveDate = new Date(subscription.current_period_end).toISOString();
+
+    logger.info(
+      `[reduceLicenseCount] Successfully scheduled license reduction for tenant ${tenantId} from ${currentQuantity} to ${newQuantity}, effective ${effectiveDate}`
+    );
+
+    return {
+      success: true,
+      data: {
+        scheduledChange: true,
+        effectiveDate,
+        currentQuantity,
+        newQuantity,
+      },
+    };
+  } catch (error) {
+    logger.error('[reduceLicenseCount] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to reduce license count',
+    };
+  }
+}
+
+/**
+ * Get scheduled license changes for the current tenant
+ * Returns information about any pending license reductions
+ */
+export async function getScheduledLicenseChangesAction(): Promise<{
+  success: boolean;
+  data?: IScheduledLicenseChange | null;
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return {
+        success: false,
+        error: 'Not authenticated',
+      };
+    }
+
+    logger.info(`[getScheduledLicenseChangesAction] Getting scheduled changes for tenant ${session.user.tenant}`);
+
+    const stripeService = getStripeService();
+    const scheduledChanges = await stripeService.getScheduledLicenseChanges(session.user.tenant);
+
+    if (!scheduledChanges) {
+      return {
+        success: true,
+        data: null,
+      };
+    }
+
+    // Convert to interface format with ISO date string
+    return {
+      success: true,
+      data: {
+        current_quantity: scheduledChanges.current_quantity,
+        scheduled_quantity: scheduledChanges.scheduled_quantity,
+        effective_date: scheduledChanges.effective_date.toISOString(),
+        current_monthly_cost: scheduledChanges.current_monthly_cost,
+        scheduled_monthly_cost: scheduledChanges.scheduled_monthly_cost,
+        monthly_savings: scheduledChanges.monthly_savings,
+      },
+    };
+  } catch (error) {
+    logger.error('[getScheduledLicenseChangesAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get scheduled license changes',
     };
   }
 }
