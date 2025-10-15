@@ -197,9 +197,9 @@ const ClientContract = {
       };
 
       const effectiveStart = updateData.start_date ?? existing.start_date;
-      const effectiveEnd = updateData.end_date ?? existing.end_date;
+      const effectiveEnd = updateData.end_date !== undefined ? updateData.end_date : existing.end_date;
 
-      if (updateData.start_date || updateData.end_date) {
+      if (updateData.start_date !== undefined || updateData.end_date !== undefined) {
         const overlapping = await db('client_contracts')
           .where({ client_id: existing.client_id, tenant, is_active: true })
           .whereNot({ client_contract_id: clientContractId })
