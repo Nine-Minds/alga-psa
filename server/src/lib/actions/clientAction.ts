@@ -40,19 +40,28 @@ export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
         });
     });
 
-    return clients.map((client): Omit<IClientSummary, "tenant"> => ({
-      id: client.client_id,
-      name: client.client_name,
-      contractLine: client.contract_line_id
-        ? {
-            contract_line_id: client.contract_line_id,
-            contract_line_name: client.contract_line_name,
-            billing_frequency: client.billing_frequency,
-            is_custom: client.is_custom,
-            contract_line_type: client.contract_line_type
-          }
-        : undefined
-    }));
+    // Deduplicate clients - the left joins create one row per contract line
+    const uniqueClientsMap = new Map<string, Omit<IClientSummary, "tenant">>();
+
+    clients.forEach((client) => {
+      if (!uniqueClientsMap.has(client.client_id)) {
+        uniqueClientsMap.set(client.client_id, {
+          id: client.client_id,
+          name: client.client_name,
+          contractLine: client.contract_line_id
+            ? {
+                contract_line_id: client.contract_line_id,
+                contract_line_name: client.contract_line_name,
+                billing_frequency: client.billing_frequency,
+                is_custom: client.is_custom,
+                contract_line_type: client.contract_line_type
+              }
+            : undefined
+        });
+      }
+    });
+
+    return Array.from(uniqueClientsMap.values());
   } catch (error) {
     console.error('Error fetching clients:', error);
     throw new Error('Failed to fetch clients');
