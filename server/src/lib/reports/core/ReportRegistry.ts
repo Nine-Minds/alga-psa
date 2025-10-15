@@ -4,6 +4,12 @@ import { ReportDefinition, ReportRegistry as IReportRegistry, ReportValidationEr
 
 // Import report definitions
 import { billingOverviewReport } from '../definitions/billing/overview';
+import {
+  contractRevenueReport,
+  contractExpirationReport,
+  contractBucketUsageReport,
+  contractProfitabilityReport
+} from '../definitions/contracts';
 
 export class ReportRegistry {
   private static registry: IReportRegistry = {};
@@ -16,14 +22,20 @@ export class ReportRegistry {
     if (this.initialized) {
       return;
     }
-    
+
     // Register billing reports
     this.register(billingOverviewReport);
-    
+
+    // Register contract reports
+    this.register(contractRevenueReport);
+    this.register(contractExpirationReport);
+    this.register(contractBucketUsageReport);
+    this.register(contractProfitabilityReport);
+
     // TODO: Register other report categories as they're implemented
     // this.register(operationsReports);
     // this.register(financialReports);
-    
+
     this.initialized = true;
     console.log(`Report registry initialized with ${Object.keys(this.registry).length} reports`);
   }
