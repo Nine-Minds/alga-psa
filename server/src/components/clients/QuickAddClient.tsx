@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -227,13 +227,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
     // If field is empty, only validate required fields
     if (!trimmedValue) {
-      if (fieldName === 'company_name' && isSubmitting) {
-        error = 'Company name is required';
-    
-    // If field is empty, only validate if it's a required field
-    if (!value || !value.trim()) {
       // Only client name is required, all other fields are optional
-      if (fieldName === 'client_name') {
+      if (fieldName === 'client_name' && isSubmitting) {
         error = 'Client name is required';
       }
       // For optional fields, clear any existing errors when empty

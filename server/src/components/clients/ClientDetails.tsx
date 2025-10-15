@@ -225,7 +225,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { toast } = useToast();
 
 
-  const handleDeleteCompany = () => {
+  const handleDeleteClient = () => {
     setDeleteError(null);
     setIsDeleteDialogOpen(true);
   };
@@ -245,10 +245,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       if (isInDrawer) {
         drawer.closeDrawer();
       } else {
-        router.push('/msp/companies');
+        router.push('/msp/clients');
       }
     } catch (error: any) {
-      console.error('Failed to delete company:', error);
+      console.error('Failed to delete client:', error);
       setDeleteError(error.message || 'Failed to delete client. Please try again.');
     }
   };
@@ -454,7 +454,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
     // Professional PSA validation pattern: Check required fields
     const requiredFields = {
-      company_name: editedCompany.company_name?.trim() || ''
+      client_name: editedClient.client_name?.trim() || ''
     };
 
     // Clear previous errors and validate required fields
@@ -462,7 +462,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     let hasValidationErrors = false;
 
     Object.entries(requiredFields).forEach(([field, value]) => {
-      if (field === 'company_name') {
+      if (field === 'client_name') {
         const error = validateClientName(value);
         if (error) {
           newErrors[field] = error;
@@ -1057,8 +1057,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <Button
-            id={`${id}-delete-company-button`}
-            onClick={handleDeleteCompany}
+            id={`${id}-delete-client-button`}
+            onClick={handleDeleteClient}
             variant="destructive"
             size="sm"
             className="flex items-center mr-8"
@@ -1105,7 +1105,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
         {/* Delete Confirmation Dialog */}
         <ConfirmationDialog
-          id="delete-company-dialog"
+          id="delete-client-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={() => {
             setIsDeleteDialogOpen(false);
