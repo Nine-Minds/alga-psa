@@ -5,18 +5,17 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
-import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { createContract, updateContract } from 'server/src/lib/actions/contractActions';
+import { createClientContract } from 'server/src/lib/actions/clientContractActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { IClient } from 'server/src/interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { useTenant } from 'server/src/components/TenantProvider';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { HelpCircle, Info } from 'lucide-react';
 
@@ -44,7 +43,6 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const tenant = useTenant()!;
 
   // Load clients on mount
   useEffect(() => {
@@ -78,7 +76,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, saveAsActive: boolean = true) => {
     e.preventDefault();
     setHasAttemptedSubmit(true);
 
@@ -108,24 +106,32 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     setValidationErrors([]);
 
     try {
+      // Create the contract template first (without client-specific fields)
       const contractData = {
         contract_name: contractName,
         contract_description: contractDescription || undefined,
-        client_id: clientId,
         billing_frequency: billingFrequency,
-        start_date: startDate ? startDate.toISOString().split('T')[0] : '',
-        end_date: endDate ? endDate.toISOString().split('T')[0] : null,
-        po_required: poRequired,
-        po_number: poRequired ? poNumber : null,
-        po_amount: poRequired ? poAmount : null,
-        is_active: isActive,
-        tenant: tenant
+        is_active: saveAsActive,
       };
 
+      let contract;
       if (editingContract?.contract_id) {
-        await updateContract(editingContract.contract_id, contractData);
+        contract = await updateContract(editingContract.contract_id, contractData);
       } else {
-        await createContract(contractData);
+        contract = await createContract(contractData);
+      }
+
+      // Then create the client contract assignment with PO fields
+      if (contract && clientId && startDate) {
+        await createClientContract({
+          client_id: clientId,
+          contract_id: contract.contract_id,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+          po_required: poRequired,
+          po_number: poRequired ? poNumber : null,
+          po_amount: poRequired ? poAmount : null,
+        });
       }
 
       resetForm();
@@ -376,12 +382,6 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               )}
             </div>
 
-            <SwitchWithLabel
-              label="Active"
-              checked={isActive}
-              onCheckedChange={setIsActive}
-            />
-
             <DialogFooter>
               <Button
                 id="cancel-contract-btn"
@@ -390,6 +390,15 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 onClick={handleClose}
               >
                 Cancel
+              </Button>
+              <Button
+                id="save-draft-btn"
+                type="button"
+                variant="secondary"
+                onClick={(e) => void handleSubmit(e, false)}
+                className={!contractName.trim() || !clientId ? 'opacity-50' : ''}
+              >
+                Save as Draft
               </Button>
               <Button
                 id="save-contract-btn"
