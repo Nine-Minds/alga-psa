@@ -7,7 +7,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { toast } from 'react-hot-toast';
-import { CreditCard, User, Rocket, MinusCircle, Info } from 'lucide-react';
+import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle } from 'lucide-react';
 import {
   getLicenseUsageAction,
   getLicensePricingAction,
@@ -32,7 +32,23 @@ export default function AccountManagement() {
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
+
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState({
+    licenseDetails: true,
+    paymentInfo: true,
+    subscriptionDetails: true,
+    invoices: true,
+  });
+
   const router = useRouter();
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -208,20 +224,153 @@ export default function AccountManagement() {
     );
   }
 
+  const monthlyTotal = licenseInfo?.total_licenses !== null
+    ? ((licenseInfo?.total_licenses || 0) * (licenseInfo?.price_per_license || 0))
+    : 0;
+
   return (
     <div className="space-y-6">
-      {/* License Management Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
-            <CardTitle>License Management</CardTitle>
+      {/* Summary Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Licenses Used Card */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <User className="h-5 w-5 text-muted-foreground" />
           </div>
-          <CardDescription>
-            Manage your user licenses and plan details
-          </CardDescription>
+          <div className="space-y-1">
+            <p className="text-2xl font-bold">
+              {licenseInfo?.active_licenses}/{licenseInfo?.total_licenses ?? '∞'}
+            </p>
+            <p className="text-sm text-muted-foreground">Licenses Used</p>
+          </div>
+        </Card>
+
+        {/* Monthly Cost Card */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <DollarSign className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-2xl font-bold">${monthlyTotal.toFixed(2)}</p>
+            <p className="text-sm text-muted-foreground">Per Month</p>
+          </div>
+        </Card>
+
+        {/* Status Card */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <CheckCircle className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-2xl font-bold capitalize">{subscriptionInfo?.status || 'Unknown'}</p>
+            <p className="text-sm text-muted-foreground">Status</p>
+          </div>
+        </Card>
+
+        {/* Next Billing Card */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <Calendar className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-2xl font-bold">
+              {subscriptionInfo?.next_billing_date
+                ? new Date(subscriptionInfo.next_billing_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : 'N/A'}
+            </p>
+            <p className="text-sm text-muted-foreground">Next Billing</p>
+          </div>
+        </Card>
+      </div>
+
+      {/* Scheduled License Changes Alert */}
+      {scheduledChanges && (
+        <Alert
+          className="border-0"
+          style={{
+            backgroundColor: 'rgba(var(--color-secondary-600), 0.08)'
+          }}
+        >
+          <Info
+            className="h-4 w-4"
+            style={{ color: 'rgb(var(--color-secondary-600))' }}
+          />
+          <AlertDescription>
+            <p className="font-semibold mb-2 text-gray-900">
+              Scheduled License Change
+            </p>
+            <p className="text-sm mb-2 text-gray-800">
+              Your license count will change from <strong>{scheduledChanges.current_quantity}</strong> to{' '}
+              <strong>{scheduledChanges.scheduled_quantity}</strong> on{' '}
+              <strong>{new Date(scheduledChanges.effective_date).toLocaleDateString()}</strong>.
+            </p>
+            <div className="text-sm space-y-1 text-gray-800">
+              <div className="flex justify-between">
+                <span>Current monthly cost:</span>
+                <span className="font-medium">${scheduledChanges.current_monthly_cost.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>New monthly cost:</span>
+                <span
+                  className="font-medium"
+                  style={{ color: 'rgb(var(--color-secondary-600))' }}
+                >
+                  ${scheduledChanges.scheduled_monthly_cost.toFixed(2)}
+                </span>
+              </div>
+              <div
+                className="flex justify-between pt-1 border-t"
+                style={{ borderColor: 'rgba(var(--color-secondary-600), 0.3)' }}
+              >
+                <span className="font-semibold">Monthly savings:</span>
+                <span
+                  className="font-semibold"
+                  style={{ color: 'rgb(var(--color-secondary-600))' }}
+                >
+                  ${scheduledChanges.monthly_savings.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Primary Actions */}
+      <div className="flex space-x-2">
+        <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
+          <Rocket className="mr-2 h-4 w-4" />
+          Add Licenses
+        </Button>
+        <Button
+          id="reduce-licenses-btn"
+          variant="outline"
+          onClick={handleReduceLicenses}
+        >
+          <MinusCircle className="mr-2 h-4 w-4" />
+          Remove Licenses
+        </Button>
+      </div>
+
+      {/* Collapsible License Details Section */}
+      <Card>
+        <CardHeader
+          className="cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => toggleSection('licenseDetails')}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <User className="h-5 w-5" />
+              <CardTitle>License Details</CardTitle>
+            </div>
+            {expandedSections.licenseDetails ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        {expandedSections.licenseDetails && (
+          <CardContent className="space-y-4">
           {/* Current Plan */}
           <div className="rounded-lg border p-4 bg-muted/50">
             <div className="flex items-center justify-between mb-4">
@@ -268,99 +417,30 @@ export default function AccountManagement() {
               </span>
             </div>
           </div>
-
-          {/* Scheduled License Changes Alert */}
-          {scheduledChanges && (
-            <Alert
-              className="border"
-              style={{
-                backgroundColor: 'rgba(var(--color-secondary-600), 0.08)',
-                borderColor: 'rgba(var(--color-secondary-600), 0.3)'
-              }}
-            >
-              <Info
-                className="h-4 w-4"
-                style={{ color: 'rgb(var(--color-secondary-600))' }}
-              />
-              <AlertDescription>
-                <p
-                  className="font-semibold mb-2"
-                  style={{ color: 'rgb(var(--color-secondary-600))' }}
-                >
-                  Scheduled License Change
-                </p>
-                <p
-                  className="text-sm mb-2"
-                  style={{ color: 'rgb(var(--color-secondary-600))' }}
-                >
-                  Your license count will change from <strong>{scheduledChanges.current_quantity}</strong> to{' '}
-                  <strong>{scheduledChanges.scheduled_quantity}</strong> on{' '}
-                  <strong>{new Date(scheduledChanges.effective_date).toLocaleDateString()}</strong>.
-                </p>
-                <div
-                  className="text-sm space-y-1"
-                  style={{ color: 'rgb(var(--color-secondary-600))' }}
-                >
-                  <div className="flex justify-between">
-                    <span>Current monthly cost:</span>
-                    <span className="font-medium">${scheduledChanges.current_monthly_cost.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>New monthly cost:</span>
-                    <span
-                      className="font-medium"
-                      style={{ color: 'rgb(var(--color-secondary-600))' }}
-                    >
-                      ${scheduledChanges.scheduled_monthly_cost.toFixed(2)}
-                    </span>
-                  </div>
-                  <div
-                    className="flex justify-between pt-1 border-t"
-                    style={{ borderColor: 'rgba(var(--color-secondary-600), 0.3)' }}
-                  >
-                    <span className="font-semibold">Monthly savings:</span>
-                    <span
-                      className="font-semibold"
-                      style={{ color: 'rgb(var(--color-secondary-600))' }}
-                    >
-                      ${scheduledChanges.monthly_savings.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Actions */}
-          <div className="flex space-x-2 pt-4">
-            <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
-              <Rocket className="mr-2 h-4 w-4" />
-              Add Licenses
-            </Button>
-            <Button
-              id="reduce-licenses-btn"
-              variant="outline"
-              onClick={handleReduceLicenses}
-            >
-              <MinusCircle className="mr-2 h-4 w-4" />
-              Remove Licenses
-            </Button>
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* Payment Information Section */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <CreditCard className="h-5 w-5" />
-            <CardTitle>Payment Information</CardTitle>
+        <CardHeader
+          className="cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => toggleSection('paymentInfo')}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CreditCard className="h-5 w-5" />
+              <CardTitle>Payment Information</CardTitle>
+            </div>
+            {expandedSections.paymentInfo ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
           </div>
-          <CardDescription>
-            Manage your payment methods and billing details
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        {expandedSections.paymentInfo && (
+          <CardContent className="space-y-6">
           {/* Current Payment Method */}
           <div className="rounded-lg border p-4">
             <h3 className="text-sm font-semibold mb-4">Current Payment Method</h3>
@@ -395,18 +475,30 @@ export default function AccountManagement() {
               Update Payment Method
             </Button>
           </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
-      {/* Subscription Management Section */}
+      {/* Subscription Details Section */}
       <Card>
-        <CardHeader>
-          <CardTitle>Subscription Management</CardTitle>
-          <CardDescription>
-            View and manage your subscription details
-          </CardDescription>
+        <CardHeader
+          className="cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => toggleSection('subscriptionDetails')}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5" />
+              <CardTitle>Subscription Details</CardTitle>
+            </div>
+            {expandedSections.subscriptionDetails ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        {expandedSections.subscriptionDetails && (
+          <CardContent className="space-y-6">
           {/* Subscription Status */}
           <div className="rounded-lg border p-4 bg-muted/50">
             <div className="flex items-center justify-between mb-4">
@@ -438,14 +530,34 @@ export default function AccountManagement() {
               </div>
             </div>
           </div>
+          </CardContent>
+        )}
+      </Card>
 
-          {/* Billing History */}
-          <div className="rounded-lg border p-4">
-            <h3 className="text-sm font-semibold mb-3">Recent Invoices</h3>
+      {/* Recent Invoices Section */}
+      <Card>
+        <CardHeader
+          className="cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => toggleSection('invoices')}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CreditCard className="h-5 w-5" />
+              <CardTitle>Recent Invoices</CardTitle>
+            </div>
+            {expandedSections.invoices ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </CardHeader>
+        {expandedSections.invoices && (
+          <CardContent>
             {invoices.length > 0 ? (
               <div className="space-y-2 text-sm">
                 {invoices.map((invoice) => (
-                  <div key={invoice.invoice_id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                  <div key={invoice.invoice_id} className="flex justify-between items-center py-3 border-b last:border-b-0">
                     <div>
                       <p className="font-medium">{invoice.period_label}</p>
                       <p className="text-xs text-muted-foreground">
@@ -464,7 +576,7 @@ export default function AccountManagement() {
                           className="h-auto p-0 text-xs"
                           onClick={() => window.open(invoice.invoice_pdf_url!, '_blank')}
                         >
-                          View Invoice
+                          View PDF
                         </Button>
                       )}
                     </div>
@@ -474,18 +586,22 @@ export default function AccountManagement() {
             ) : (
               <p className="text-sm text-muted-foreground">No invoices found</p>
             )}
-          </div>
+          </CardContent>
+        )}
+      </Card>
 
-          {/* Danger Zone */}
-          <div className="rounded-lg border border-destructive/50 p-4">
-            <h3 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Canceling your subscription will disable access for all users at the end of the current billing period.
-            </p>
-            <Button id="cancel-subscription-btn" variant="destructive" onClick={handleCancelSubscription}>
-              Cancel Subscription
-            </Button>
-          </div>
+      {/* Danger Zone */}
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="text-destructive">Danger Zone</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Canceling your subscription will disable access for all users at the end of the current billing period.
+          </p>
+          <Button id="cancel-subscription-btn" variant="destructive" onClick={handleCancelSubscription}>
+            Cancel Subscription
+          </Button>
         </CardContent>
       </Card>
 

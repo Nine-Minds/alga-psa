@@ -559,7 +559,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
         stripe_subscription_id: subscription.stripe_subscription_id,
       })
       .update({
-        cancel_at: new Date(updatedSubscription.cancel_at * 1000),
+        cancel_at: updatedSubscription.cancel_at ? new Date(updatedSubscription.cancel_at * 1000).toISOString() : null,
         updated_at: knex.fn.now(),
       });
 
@@ -720,6 +720,51 @@ export async function reduceLicenseCount(
     };
   } catch (error) {
     logger.error('[reduceLicenseCount] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to reduce license count',
+    };
+  }
+}
+
+/**
+ * Server action to reduce license count for the current tenant
+ * Validates and schedules license reduction at period end
+ */
+export async function reduceLicenseCountAction(
+  newQuantity: number
+): Promise<{
+  success: boolean;
+  data?: {
+    scheduledChange: boolean;
+    effectiveDate: string;
+    currentQuantity: number;
+    newQuantity: number;
+    creditAmount?: number;
+    currency?: string;
+  };
+  error?: string;
+  needsDeactivation?: boolean;
+  activeUserCount?: number;
+  requestedQuantity?: number;
+}> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return {
+        success: false,
+        error: 'Not authenticated',
+      };
+    }
+
+    logger.info(
+      `[reduceLicenseCountAction] Reducing licenses for tenant ${session.user.tenant} to ${newQuantity}`
+    );
+
+    return await reduceLicenseCount(session.user.tenant, newQuantity);
+  } catch (error) {
+    logger.error('[reduceLicenseCountAction] Error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to reduce license count',

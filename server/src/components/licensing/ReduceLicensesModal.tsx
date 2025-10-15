@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { toast } from 'react-hot-toast';
 import { AlertTriangle, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getLicensePricingAction, reduceLicenseCountAction } from 'server/src/lib/actions/license-actions';
 
 interface ReduceLicensesModalProps {
   isOpen: boolean;
@@ -39,8 +40,7 @@ export default function ReduceLicensesModal({
 
     const fetchPrice = async () => {
       try {
-        const response = await fetch('/api/licenses/pricing');
-        const result = await response.json();
+        const result = await getLicensePricingAction();
         if (result.success && result.data) {
           setPricePerLicense(result.data.unitAmount / 100); // Convert cents to dollars
         }
@@ -92,20 +92,12 @@ export default function ReduceLicensesModal({
     setLoading(true);
 
     try {
-      const response = await fetch('/api/licenses/reduce', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ newQuantity }),
-      });
-
-      const result = await response.json();
+      const result = await reduceLicenseCountAction(newQuantity);
 
       if (!result.success) {
         // Handle validation errors from backend
         if (result.needsDeactivation) {
-          setValidationError(result.error);
+          setValidationError(result.error || 'Please deactivate users first');
           setNeedsDeactivation(true);
           setShowConfirmation(false);
         } else {
@@ -115,9 +107,9 @@ export default function ReduceLicensesModal({
       }
 
       // Success!
-      const effectiveDate = new Date(result.data.effectiveDate).toLocaleDateString();
+      const effectiveDate = new Date(result.data!.effectiveDate).toLocaleDateString();
       toast.success(
-        `License removal scheduled! Your license count will change from ${result.data.currentQuantity} to ${result.data.newQuantity} on ${effectiveDate}.`
+        `License removal scheduled! Your license count will change from ${result.data!.currentQuantity} to ${result.data!.newQuantity} on ${effectiveDate}.`
       );
 
       onSuccess();
@@ -260,7 +252,9 @@ export default function ReduceLicensesModal({
               <div className="border-t pt-3 mt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">New Monthly Cost</span>
-                  <span className="text-lg font-bold text-blue-600">${newMonthlyTotal.toFixed(2)}/month</span>
+                  <span className="text-lg font-bold" style={{ color: 'rgb(var(--color-secondary-600))' }}>
+                    ${newMonthlyTotal.toFixed(2)}/month
+                  </span>
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-sm text-muted-foreground">New License Count</span>
@@ -268,7 +262,9 @@ export default function ReduceLicensesModal({
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-sm font-semibold">Monthly Savings</span>
-                  <span className="font-bold text-blue-600">${monthlySavings.toFixed(2)}/month</span>
+                  <span className="font-bold" style={{ color: 'rgb(var(--color-secondary-600))' }}>
+                    ${monthlySavings.toFixed(2)}/month
+                  </span>
                 </div>
               </div>
             </div>

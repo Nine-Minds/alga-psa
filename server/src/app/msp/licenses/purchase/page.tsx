@@ -14,6 +14,7 @@ export default function LicensePurchasePage() {
       {/* Back Button */}
       <div className="mb-6">
         <Button
+          id="back-button"
           variant="outline"
           className="gap-2"
           onClick={() => router.back()}

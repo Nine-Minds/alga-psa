@@ -119,7 +119,7 @@ export class StripeService {
   constructor() {
     this.config = getStripeConfig();
     this.stripe = new Stripe(this.config.secretKey, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2024-12-18.acacia' as any,
       typescript: true,
     });
   }
@@ -311,6 +311,9 @@ export class StripeService {
       .first();
 
     if (!dbPrice) {
+      const interval = price.recurring?.interval;
+      const recurringInterval = (interval === 'month' || interval === 'year') ? interval : null;
+
       const [newPrice] = await db<StripePrice>('stripe_prices')
         .insert({
           tenant: tenantId,
@@ -318,7 +321,7 @@ export class StripeService {
           stripe_product_id: dbProduct.stripe_product_id,
           unit_amount: price.unit_amount || 0,
           currency: price.currency,
-          recurring_interval: price.recurring?.interval || null,
+          recurring_interval: recurringInterval,
           recurring_interval_count: price.recurring?.interval_count || 1,
           is_active: price.active,
           metadata: price.metadata,
@@ -344,8 +347,8 @@ export class StripeService {
         stripe_price_id: dbPrice.stripe_price_id,
         status: subscription.status as 'active' | 'canceled' | 'past_due',
         quantity: subscriptionItem.quantity || 1,
-        current_period_start: new Date(subscription.current_period_start * 1000),
-        current_period_end: new Date(subscription.current_period_end * 1000),
+        current_period_start: new Date((subscription as any).current_period_start * 1000),
+        current_period_end: new Date((subscription as any).current_period_end * 1000),
         cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
         canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
         metadata: subscription.metadata,
@@ -412,7 +415,7 @@ export class StripeService {
 
     // Calculate proration amount (difference between new and old)
     const prorationAmount = upcomingInvoice.lines.data
-      .filter(line => line.proration)
+      .filter(line => (line as any).proration)
       .reduce((sum, line) => sum + line.amount, 0);
 
     return {
@@ -910,8 +913,8 @@ export class StripeService {
       .update({
         status: subscription.status as 'active' | 'canceled' | 'past_due',
         quantity,
-        current_period_start: new Date(subscription.current_period_start * 1000),
-        current_period_end: new Date(subscription.current_period_end * 1000),
+        current_period_start: new Date((subscription as any).current_period_start * 1000),
+        current_period_end: new Date((subscription as any).current_period_end * 1000),
         cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
         canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
         metadata: updatedMetadata,
