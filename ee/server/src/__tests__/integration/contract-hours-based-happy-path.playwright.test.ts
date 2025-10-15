@@ -6,9 +6,9 @@ import { expect, Page, test } from '@playwright/test';
 import type { Knex } from 'knex';
 import { knex as createKnex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { encode } from '@auth/core/jwt';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant, type TenantTestData } from '../../lib/testing/tenant-test-factory';
+import { setupAuthenticatedSession } from './helpers/playwrightAuthSessionHelper';
 
 // Ensure hashing utilities can retrieve an encryption key
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
@@ -65,43 +65,6 @@ async function findComponent(
     await page.waitForTimeout(delayMs);
   }
   throw new Error('UI component not found');
-}
-
-async function setupAuthenticatedSession(page: Page, tenantData: TenantTestData): Promise<void> {
-  const secret = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
-  const cookieName = process.env.NODE_ENV === 'production'
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token';
-
-  const sessionUser = {
-    id: tenantData.adminUser.userId,
-    email: tenantData.adminUser.email.toLowerCase(),
-    name: `${tenantData.adminUser.firstName} ${tenantData.adminUser.lastName}`.trim() || tenantData.adminUser.email,
-    username: tenantData.adminUser.email.toLowerCase(),
-    proToken: 'playwright-mock-token',
-    tenant: tenantData.tenant.tenantId,
-    user_type: 'internal',
-  };
-
-  const token = await encode({
-    token: { ...sessionUser, sub: sessionUser.id },
-    secret,
-    maxAge: 60 * 60,
-    salt: cookieName,
-  });
-
-  const expiresAtSeconds = Math.floor(Date.now() / 1000) + 60 * 60;
-  await page.context().addCookies([
-    {
-      name: cookieName,
-      value: token,
-      url: TEST_CONFIG.baseUrl,
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-      expires: expiresAtSeconds,
-    },
-  ]);
 }
 
 async function markOnboardingComplete(db: Knex, tenantId: string, now: Date): Promise<void> {
