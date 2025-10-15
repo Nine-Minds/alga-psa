@@ -15,12 +15,12 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
-import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateCompanyName } from 'server/src/lib/utils/clientFormValidation';
-import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
+import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from 'server/src/lib/utils/clientFormValidation';
+import ClientContactsList from 'server/src/components/contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById, deleteCompany } from 'server/src/lib/actions/company-actions/companyActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { useToast } from 'server/src/hooks/use-toast';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -232,7 +232,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const confirmDelete = async () => {
     try {
-      await deleteCompany(editedCompany.company_id);
+      await deleteClient(editedClient.client_id);
 
       setIsDeleteDialogOpen(false);
 
@@ -463,7 +463,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
     Object.entries(requiredFields).forEach(([field, value]) => {
       if (field === 'company_name') {
-        const error = validateCompanyName(value);
+        const error = validateClientName(value);
         if (error) {
           newErrors[field] = error;
           hasValidationErrors = true;
@@ -489,12 +489,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         ...restOfEditedClient,
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
         account_manager_id: editedClient.account_manager_id === '' ? null : editedClient.account_manager_id,
-        ...restOfEditedCompany
-      } = editedCompany;
-      const dataToUpdate: Partial<Omit<ICompany, 'account_manager_full_name'>> = {
-        ...restOfEditedCompany,
-        properties: restOfEditedCompany.properties ? { ...restOfEditedCompany.properties } : {},
-        account_manager_id: editedCompany.account_manager_id === '' ? null : editedCompany.account_manager_id,
       };
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
       // Assuming updateClient returns the full updated client object matching IClient
@@ -622,7 +616,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 value={editedClient.client_name}
                 onEdit={(value) => handleFieldChange('client_name', value)}
                 automationId="client-name-field"
-                validate={validateCompanyName}
+                validate={validateClientName}
               />
                            
               <FieldContainer

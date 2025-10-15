@@ -11,7 +11,7 @@ import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "server/src/lib/actions/tenantActions";
 import { getAllClients } from "server/src/lib/actions/client-actions/clientActions";
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from "server/src/components/clients/ClientPicker";
 import { IClient } from "server/src/interfaces/client.interfaces";
 
 const GeneralSettings = () => {
@@ -23,6 +23,8 @@ const GeneralSettings = () => {
   }, []);
   const [selectedClientId, setSelectedClientId] = React.useState<string | null>(null);
   const [allClients, setAllClients] = React.useState<IClient[]>([]);
+  const [filterState, setFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
 
   const loadTenantData = async () => {
     try {
@@ -171,15 +173,17 @@ const GeneralSettings = () => {
           </Table>
 
           <div className="space-y-4">
-            <CustomSelect
+            <ClientPicker
               id="tenant-client-picker"
-              options={allClients.map((client) => ({
-                value: client.client_id,
-                label: client.client_name
-              }))}
-              value={selectedClientId || null}
-              onValueChange={setSelectedClientId}
+              clients={allClients}
+              onSelect={setSelectedClientId}
+              selectedClientId={selectedClientId}
+              filterState={filterState}
+              onFilterStateChange={setFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
               placeholder="Select a client to add"
+              fitContent={true}
             />
             <Button
               onClick={handleAddClient}

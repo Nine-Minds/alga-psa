@@ -120,16 +120,31 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   useEffect(() => {
     const { phone, extension } = parsePhoneAndExtension(value);
 
-    // Remove phone code from display value if it exists
-    let cleanedPhone = phone;
-    if (phoneCode && phone.startsWith(phoneCode)) {
-      cleanedPhone = phone.substring(phoneCode.length).trim();
+    // If phone code has changed, we need to update the phone number
+    if (phoneCode !== previousPhoneCode && previousPhoneCode && phoneCode) {
+      // Remove the old phone code and add the new one
+      let cleanedPhone = phone;
+      if (previousPhoneCode && phone.startsWith(previousPhoneCode)) {
+        cleanedPhone = phone.substring(previousPhoneCode.length).trim();
+      }
+
+      // Update with new phone code
+      const newPhone = phoneCode ? `${phoneCode} ${cleanedPhone}`.trim() : cleanedPhone;
+      const newFullValue = combinePhoneAndExtension(newPhone, extension);
+      onChange(newFullValue);
+      setDisplayValue(cleanedPhone);
+    } else {
+      // Normal processing - remove phone code from display value if it exists
+      let cleanedPhone = phone;
+      if (phoneCode && phone.startsWith(phoneCode)) {
+        cleanedPhone = phone.substring(phoneCode.length).trim();
+      }
+      setDisplayValue(cleanedPhone);
     }
 
-    setDisplayValue(cleanedPhone);
     setExtensionValue(extension);
     setPreviousPhoneCode(phoneCode);
-  }, [phoneCode, value]);
+  }, [phoneCode, value, previousPhoneCode, onChange]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const phoneNumber = e.target.value;
@@ -142,7 +157,9 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   };
 
   const handleExtensionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const extension = e.target.value;
+    const inputValue = e.target.value;
+    // Only allow numbers for extension
+    const extension = inputValue.replace(/[^0-9]/g, '');
     setExtensionValue(extension);
 
     // Combine phone code with the number and extension for the full value
@@ -341,11 +358,10 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               type="text"
               value={extensionValue}
               onChange={handleExtensionChange}
-              placeholder={extensionPlaceholder}
+              placeholder={extensionPlaceholder || "optional ext."}
               disabled={disabled}
               style={{ border: 'none', borderLeft: '1px solid rgb(209 213 219)', boxShadow: 'none', outline: 'none' }}
               className="w-20 rounded-r-md h-[42px] text-center text-xs"
-              placeholder="optional ext."
             />
           )}
         </div>

@@ -33,13 +33,12 @@ exports.up = async function(knex) {
      //Primary key
     table.primary(['email_provider_id', 'tenant']);
     
-     //Foreign keys
-    // Note: This FK between distributed tables is handled during Citus distribution
-    // The foreign key constraints are captured and recreated by the distribution migration
-    table.foreign(['email_provider_id', 'tenant'])
-      .references(['id', 'tenant'])
-      .inTable('email_providers')
-      .onDelete('CASCADE');
+     // Foreign keys removed - CitusDB does not support FK constraints between distributed tables
+    // Referential integrity enforced in application logic instead
+    // table.foreign(['email_provider_id', 'tenant'])
+    //   .references(['id', 'tenant'])
+    //   .inTable('email_providers')
+    //   .onDelete('CASCADE');
   });
 
    //Create google_email_provider_config table
@@ -81,13 +80,12 @@ exports.up = async function(knex) {
     //Primary key
     table.primary(['email_provider_id', 'tenant']);
     
-     //Foreign keys
-    // Note: This FK between distributed tables is handled during Citus distribution
-    // The foreign key constraints are captured and recreated by the distribution migration
-    table.foreign(['email_provider_id', 'tenant'])
-      .references(['id', 'tenant'])
-      .inTable('email_providers')
-      .onDelete('CASCADE');
+     // Foreign keys removed - CitusDB does not support FK constraints between distributed tables
+    // Referential integrity enforced in application logic instead
+    // table.foreign(['email_provider_id', 'tenant'])
+    //   .references(['id', 'tenant'])
+    //   .inTable('email_providers')
+    //   .onDelete('CASCADE');
   });
 
    //Create indexes
@@ -97,9 +95,24 @@ exports.up = async function(knex) {
   `);
 
   await knex.schema.raw(`
-    CREATE INDEX idx_google_email_config_tenant 
+    CREATE INDEX idx_google_email_config_tenant
     ON google_email_provider_config (tenant)
   `);
+
+  // Create compound indexes for typical lookup paths
+  await knex.schema.raw(`
+    CREATE INDEX idx_microsoft_email_config_tenant_provider
+    ON microsoft_email_provider_config (tenant, email_provider_id)
+  `);
+
+  await knex.schema.raw(`
+    CREATE INDEX idx_google_email_config_tenant_provider
+    ON google_email_provider_config (tenant, email_provider_id)
+  `);
+
+  // Create distributed tables for CitusDB
+  await knex.raw("SELECT create_distributed_table('microsoft_email_provider_config', 'tenant')");
+  await knex.raw("SELECT create_distributed_table('google_email_provider_config', 'tenant')");
 
   console.log('✅ Created vendor-specific email configuration tables');
 };
