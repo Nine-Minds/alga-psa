@@ -383,6 +383,9 @@ export async function createContractFromWizard(
       start_date: startDate,
       end_date: endDate,
       is_active: true,
+      po_required: submission.po_required ?? false,
+      po_number: submission.po_number ?? null,
+      po_amount: submission.po_amount ?? null,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
     });
