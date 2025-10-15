@@ -654,7 +654,7 @@ function DocumentStorageCardComponent({
                                 className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-50 inline-flex items-center"
                             >
                                 <Unlink className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading') : t('documents.remove', 'Remove')}
+                                {isLoading ? t('common.loading', 'Loading...') : t('documents.remove', 'Remove')}
                             </Button>
                         )}
                         {onDelete && (
@@ -670,7 +670,7 @@ function DocumentStorageCardComponent({
                                 className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-50 inline-flex items-center"
                             >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading') : t('documents.delete', 'Delete')}
+                                {isLoading ? t('common.loading', 'Loading...') : t('documents.delete', 'Delete')}
                             </Button>
                         )}
                     </div>
