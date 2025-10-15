@@ -86,7 +86,9 @@ const Contracts: React.FC = () => {
               id="edit-contract-menu-item"
               onClick={(event) => {
                 event.stopPropagation();
-                setEditingContract({ ...record });
+                if (record.contract_id) {
+                  router.push(`/msp/billing?tab=contracts&contractId=${record.contract_id}`);
+                }
               }}
             >
               Edit
