@@ -16,6 +16,7 @@ import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import Drawer from 'server/src/components/ui/Drawer';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
 import { IClient } from 'server/src/interfaces';
 import {
@@ -72,6 +73,9 @@ const ContractDetail: React.FC = () => {
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
+  // Confirmation dialog state
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -84,6 +88,7 @@ const ContractDetail: React.FC = () => {
   // Assignment editing state
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [editAssignments, setEditAssignments] = useState<Record<string, IContractAssignmentSummary>>({});
+  const [preEditSnapshot, setPreEditSnapshot] = useState<IContractAssignmentSummary | null>(null);
 
   // Contract fields editing state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -92,11 +97,41 @@ const ContractDetail: React.FC = () => {
   // PO Amount input state for formatting (stores display value while editing)
   const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
 
+  // Track if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!contract) return false;
+
+    // Check contract field changes
+    const contractChanged =
+      editContractName !== contract.contract_name ||
+      editDescription !== (contract.contract_description ?? '') ||
+      editIsActive !== contract.is_active ||
+      editBillingFrequency !== contract.billing_frequency;
+
+    // Check assignment changes
+    const assignmentsChanged = Object.keys(editAssignments).length > 0;
+
+    return contractChanged || assignmentsChanged;
+  }, [contract, editContractName, editDescription, editIsActive, editBillingFrequency, editAssignments]);
+
   useEffect(() => {
     if (contractId) {
       loadContractData();
     }
   }, [contractId]);
+
+  // Warn before leaving page with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Initialize edit form when contract loads
   useEffect(() => {
@@ -177,6 +212,36 @@ const ContractDetail: React.FC = () => {
     }
   };
 
+  const handleCancelClick = () => {
+    if (hasUnsavedChanges) {
+      setShowCancelConfirm(true);
+    } else {
+      setActiveTab('overview');
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    // Reset all changes
+    if (contract) {
+      setEditContractName(contract.contract_name);
+      setEditDescription(contract.contract_description ?? '');
+      setEditIsActive(contract.is_active);
+      setEditBillingFrequency(contract.billing_frequency);
+    }
+    setEditAssignments({});
+    setEditingAssignmentId(null);
+    setPreEditSnapshot(null);
+    setPoAmountInputs({});
+    setValidationErrors([]);
+    setHasAttemptedSubmit(false);
+    setShowCancelConfirm(false);
+    setActiveTab('overview');
+  };
+
+  const handleCancelDismiss = () => {
+    setShowCancelConfirm(false);
+  };
+
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
@@ -237,10 +302,8 @@ const ContractDetail: React.FC = () => {
           updatePayload.po_number = editedAssignment.po_number;
         }
         if (editedAssignment.po_amount !== originalAssignment.po_amount) {
-          // Convert dollars to cents for storage
-          updatePayload.po_amount = editedAssignment.po_amount != null
-            ? Math.round(editedAssignment.po_amount * 100)
-            : null;
+          // po_amount is already in cents in the state
+          updatePayload.po_amount = editedAssignment.po_amount;
         }
 
         // Only update if there are changes
@@ -265,15 +328,23 @@ const ContractDetail: React.FC = () => {
 
   const handleStartEditAssignment = (assignment: IContractAssignmentSummary) => {
     setEditingAssignmentId(assignment.client_contract_id);
+
+    // Use edited data if it exists, otherwise use original assignment data
+    const dataToEdit = editAssignments[assignment.client_contract_id] || assignment;
+
+    // Save a snapshot of the data at the start of this edit session
+    setPreEditSnapshot({ ...dataToEdit });
+
     setEditAssignments(prev => ({
       ...prev,
-      [assignment.client_contract_id]: { ...assignment }
+      [assignment.client_contract_id]: { ...dataToEdit }
     }));
+
     // Initialize PO amount input with formatted value (convert from cents to dollars)
-    if (assignment.po_amount != null) {
+    if (dataToEdit.po_amount != null) {
       setPoAmountInputs(prev => ({
         ...prev,
-        [assignment.client_contract_id]: (Number(assignment.po_amount) / 100).toFixed(2)
+        [assignment.client_contract_id]: (Number(dataToEdit.po_amount) / 100).toFixed(2)
       }));
     }
   };
@@ -281,25 +352,34 @@ const ContractDetail: React.FC = () => {
   const handleConfirmEditAssignment = () => {
     // Just close the editor - changes are kept in editAssignments state
     setEditingAssignmentId(null);
+    setPreEditSnapshot(null);
   };
 
   const handleCancelEditAssignment = (assignmentId: string) => {
-    // Revert changes and close editor
-    const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
-    if (originalAssignment) {
-      setEditAssignments(prev => {
-        const newState = { ...prev };
-        delete newState[assignmentId];
-        return newState;
-      });
-      // Clear PO amount input
-      setPoAmountInputs(prev => {
-        const newState = { ...prev };
-        delete newState[assignmentId];
-        return newState;
-      });
+    // Revert to the snapshot from when editing started
+    if (preEditSnapshot) {
+      setEditAssignments(prev => ({
+        ...prev,
+        [assignmentId]: { ...preEditSnapshot }
+      }));
+
+      // Update PO amount input to match the snapshot
+      if (preEditSnapshot.po_amount != null) {
+        setPoAmountInputs(prev => ({
+          ...prev,
+          [assignmentId]: (Number(preEditSnapshot.po_amount) / 100).toFixed(2)
+        }));
+      } else {
+        setPoAmountInputs(prev => {
+          const newState = { ...prev };
+          delete newState[assignmentId];
+          return newState;
+        });
+      }
     }
+
     setEditingAssignmentId(null);
+    setPreEditSnapshot(null);
   };
 
 
@@ -593,6 +673,15 @@ const ContractDetail: React.FC = () => {
 
         <TabsContent value="edit">
           <div className="space-y-6">
+            {hasUnsavedChanges && (
+              <Alert className="bg-amber-50 border-amber-200">
+                <AlertDescription className="text-amber-800 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>You have unsaved changes. Click "Save Changes" to apply them.</span>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {saveSuccess && (
               <Alert className="bg-green-50 border-green-200">
                 <AlertDescription className="text-green-800">
@@ -906,7 +995,7 @@ const ContractDetail: React.FC = () => {
                                       className="w-40"
                                     />
                                   ) : (
-                                    formatDate(assignment.start_date)
+                                    formatDate(editData.start_date)
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
@@ -923,7 +1012,7 @@ const ContractDetail: React.FC = () => {
                                       placeholder="Ongoing"
                                     />
                                   ) : (
-                                    assignment.end_date ? formatDate(assignment.end_date) : 'Ongoing'
+                                    editData.end_date ? formatDate(editData.end_date) : 'Ongoing'
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
@@ -940,7 +1029,7 @@ const ContractDetail: React.FC = () => {
                                       }}
                                     />
                                   ) : (
-                                    <span>{assignment.po_required ? 'Yes' : 'No'}</span>
+                                    <span>{editData.po_required ? 'Yes' : 'No'}</span>
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
@@ -957,9 +1046,9 @@ const ContractDetail: React.FC = () => {
                                       disabled={!editData.po_required}
                                     />
                                   ) : (
-                                    assignment.po_required ? (
+                                    editData.po_required ? (
                                       <Badge variant="outline" className="border-orange-300 text-orange-700">
-                                        {assignment.po_number ? assignment.po_number : 'Required'}
+                                        {editData.po_number ? editData.po_number : 'Required'}
                                       </Badge>
                                     ) : (
                                       <span className="text-gray-500">Not required</span>
@@ -997,15 +1086,16 @@ const ContractDetail: React.FC = () => {
                                               null
                                             );
                                           } else {
-                                            const amount = parseFloat(input) || 0;
+                                            const dollars = parseFloat(input) || 0;
+                                            const cents = Math.round(dollars * 100);
                                             handleAssignmentFieldChange(
                                               assignment.client_contract_id,
                                               'po_amount',
-                                              amount
+                                              cents
                                             );
                                             setPoAmountInputs(prev => ({
                                               ...prev,
-                                              [assignment.client_contract_id]: amount.toFixed(2)
+                                              [assignment.client_contract_id]: dollars.toFixed(2)
                                             }));
                                           }
                                         }}
@@ -1015,7 +1105,7 @@ const ContractDetail: React.FC = () => {
                                       />
                                     </div>
                                   ) : (
-                                    assignment.po_amount != null ? `$${(Number(assignment.po_amount) / 100).toFixed(2)}` : '—'
+                                    editData.po_amount != null ? `$${(Number(editData.po_amount) / 100).toFixed(2)}` : '—'
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
@@ -1089,7 +1179,7 @@ const ContractDetail: React.FC = () => {
                   id="cancel-edit-contract-btn"
                   type="button"
                   variant="outline"
-                  onClick={() => setActiveTab('overview')}
+                  onClick={handleCancelClick}
                 >
                   Cancel
                 </Button>
@@ -1099,7 +1189,9 @@ const ContractDetail: React.FC = () => {
                   disabled={isSaving}
                   className={!editContractName.trim() || !editBillingFrequency ? 'opacity-50' : ''}
                 >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  <span className={hasUnsavedChanges ? 'font-bold' : ''}>
+                    {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                  </span>
                   {!isSaving && <Save className="ml-2 h-4 w-4" />}
                 </Button>
               </div>
@@ -1147,6 +1239,16 @@ const ContractDetail: React.FC = () => {
           />
         )}
       </Drawer>
+
+      <ConfirmationDialog
+        isOpen={showCancelConfirm}
+        onClose={handleCancelDismiss}
+        onConfirm={handleCancelConfirm}
+        title="Discard Changes"
+        message="Are you sure you want to discard all changes? Any unsaved changes will be lost."
+        confirmLabel="Discard Changes"
+        cancelLabel="Continue Editing"
+      />
     </div>
   );
 };
