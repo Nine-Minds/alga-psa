@@ -15,7 +15,8 @@ import {
   createTestService,
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -170,6 +171,7 @@ describe('Prepayment Invoice System', () => {
     mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
+    await ensureClientPlanBundlesTable(context);
   }, 120000);
 
   beforeEach(async () => {
@@ -185,6 +187,7 @@ describe('Prepayment Invoice System', () => {
 
     // Configure default tax for the test client
     await configureDefaultTax();
+    await ensureClientPlanBundlesTable(context);
   }, 30000);
 
   afterEach(async () => {

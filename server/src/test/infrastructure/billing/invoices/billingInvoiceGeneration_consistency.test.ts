@@ -3,10 +3,9 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService } from '../../../../../test-utils/billingTestHelpers';
+import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, createFixedPlanAssignment, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TextEncoder as NodeTextEncoder } from 'util';
-import { v4 as uuidv4 } from 'uuid';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
@@ -154,6 +153,7 @@ async function ensureDefaultBillingSettings() {
     mockedUserId = mockContext.userId;
     await ensureDefaultTaxConfiguration();
     await ensureDefaultBillingSettings();
+    await ensureClientPlanBundlesTable(context);
   }, 60000);
 
   beforeEach(async () => {
@@ -167,6 +167,7 @@ async function ensureDefaultBillingSettings() {
     mockedUserId = mockContext.userId;
     await ensureDefaultTaxConfiguration();
     await ensureDefaultBillingSettings();
+    await ensureClientPlanBundlesTable(context);
   }, 30000);
 
   afterAll(async () => {
@@ -197,126 +198,14 @@ async function ensureDefaultBillingSettings() {
         period_end_date: '2025-03-01'
       }, 'billing_cycle_id');
 
-      // Create and assign contract line
-      const contractLineId = await context.createEntity('contract_lines', {
-        contract_line_name: 'Test Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        contract_line_type: 'Fixed'
-      }, 'contract_line_id');
-
-      const baseRateDollars = 1000 / 100;
-      const configId = uuidv4();
-
-      await context.db('contract_line_fixed_config')
-        .insert({
-          contract_line_id: contractLineId,
-          tenant: context.tenantId,
-          base_rate: baseRateDollars,
-          enable_proration: false,
-          billing_cycle_alignment: 'start'
-        })
-        .onConflict(['tenant', 'contract_line_id'])
-        .merge({
-          base_rate: baseRateDollars,
-          enable_proration: false,
-          billing_cycle_alignment: 'start'
-        });
-
-      await context.db('contract_line_service_configuration').insert({
-        config_id: configId,
-        tenant: context.tenantId,
-        contract_line_id: contractLineId,
-        service_id: serviceId,
-        configuration_type: 'Fixed',
-        custom_rate: null,
-        quantity: 1
-      });
-
-      await context.db('contract_line_service_fixed_config').insert({
-        config_id: configId,
-        tenant: context.tenantId,
-        base_rate: baseRateDollars
-      });
-
-      await context.db('contract_line_services').insert({
-        tenant: context.tenantId,
-        contract_line_id: contractLineId,
-        service_id: serviceId,
+      await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Test Plan',
+        baseRateCents: 1000,
+        detailBaseRateCents: 1000,
         quantity: 1,
-        custom_rate: null
-      });
-
-      // Legacy billing plan tables (kept for compatibility with existing FKs)
-      await context.db('billing_plans')
-        .insert({
-          plan_id: contractLineId,
-          tenant: context.tenantId,
-          plan_name: 'Test Plan',
-          billing_frequency: 'monthly',
-          is_custom: false,
-          plan_type: 'Fixed'
-        })
-        .onConflict(['tenant', 'plan_id'])
-        .merge({
-          plan_name: 'Test Plan',
-          billing_frequency: 'monthly',
-          is_custom: false,
-          plan_type: 'Fixed'
-        });
-
-      await context.db('billing_plan_fixed_config')
-        .insert({
-          plan_id: contractLineId,
-          tenant: context.tenantId,
-          base_rate: baseRateDollars,
-          enable_proration: false,
-          billing_cycle_alignment: 'start'
-        })
-        .onConflict(['tenant', 'plan_id'])
-        .merge({
-          base_rate: baseRateDollars,
-          enable_proration: false,
-          billing_cycle_alignment: 'start'
-        });
-
-      await context.db('plan_service_configuration')
-        .insert({
-          config_id: configId,
-          plan_id: contractLineId,
-          service_id: serviceId,
-          configuration_type: 'Fixed',
-          custom_rate: null,
-          quantity: 1,
-          tenant: context.tenantId
-        })
-        .onConflict(['tenant', 'config_id'])
-        .merge({
-          plan_id: contractLineId,
-          service_id: serviceId,
-          configuration_type: 'Fixed',
-          custom_rate: null,
-          quantity: 1
-        });
-
-      await context.db('plan_service_fixed_config')
-        .insert({
-          config_id: configId,
-          tenant: context.tenantId,
-          base_rate: baseRateDollars
-        })
-        .onConflict(['tenant', 'config_id'])
-        .merge({
-          base_rate: baseRateDollars
-        });
-
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: contractLineId,
-        start_date: '2025-02-01',
-        is_active: true,
-        tenant: context.tenantId
+        billingFrequency: 'monthly',
+        startDate: '2025-02-01',
+        clientId: context.clientId
       });
 
       // Generate automatic invoice

@@ -7,7 +7,8 @@ import {
   addServiceToFixedPlan,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
-  ensureDefaultBillingSettings
+  ensureDefaultBillingSettings,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
@@ -112,6 +113,7 @@ describe('Billing Invoice Tax Calculations', () => {
       taxPercentage: 10 // easier math for tests
     });
     await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: false });
+    await ensureClientPlanBundlesTable(context);
   }
 
   beforeAll(async () => {

@@ -37,6 +37,17 @@ import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated imp
 import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateActions';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
+const POSTGRES_UNDEFINED_TABLE = '42P01';
+
+function isMissingRelationError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === POSTGRES_UNDEFINED_TABLE
+  );
+}
+
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
   return charge.type === 'fixed';
 }
@@ -489,21 +500,28 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   // Check for Purchase Order requirements
-  const clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_plan_bundles')
-      .where({
-        client_id,
-        tenant,
-        is_active: true
-      })
-      .where(function() {
-        this.where('start_date', '<=', cycleEnd)
-          .where(function() {
-            this.whereNull('end_date')
-              .orWhere('end_date', '>=', cycleStart);
-          });
-      });
-  });
+  let clientContracts: Array<{ po_required?: boolean; po_number?: string }> = [];
+  try {
+    clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('client_plan_bundles')
+        .where({
+          client_id,
+          tenant,
+          is_active: true
+        })
+        .where(function() {
+          this.where('start_date', '<=', cycleEnd)
+            .where(function() {
+              this.whereNull('end_date')
+                .orWhere('end_date', '>=', cycleStart);
+            });
+        });
+    });
+  } catch (error) {
+    if (!isMissingRelationError(error)) {
+      throw error;
+    }
+  }
 
   // Validate PO requirements for active contracts
   for (const contract of clientContracts) {

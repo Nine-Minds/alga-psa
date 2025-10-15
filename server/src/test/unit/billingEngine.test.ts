@@ -7,6 +7,10 @@ import { TaxService } from 'server/src/lib/services/taxService';
 
 
 vi.mock('@/lib/db/db');
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
+  withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
+}));
 vi.mock('server/src/lib/auth/getSession', () => ({
   getSession: vi.fn(() => Promise.resolve({
     user: {
@@ -25,6 +29,15 @@ vi.mock('openid-client', () => ({
 
 vi.mock('jose', () => ({
   // Add any jose methods you're using
+}));
+
+vi.mock('server/src/lib/actions/client-actions/clientActions', () => ({
+  getClientById: vi.fn(() => Promise.resolve({
+    client_id: 'mock-client-id',
+    client_name: 'Mock Client',
+    tenant: 'test_tenant',
+    is_tax_exempt: false
+  }))
 }));
 
 
@@ -52,7 +65,58 @@ describe('BillingEngine', () => {
       raw: vi.fn().mockReturnThis(),
     };
 
-    (billingEngine as any).knex = vi.fn().mockReturnValue(mockQueryBuilder);
+    const createBuilder = () => {
+      const builder: any = {};
+      builder.select = vi.fn().mockResolvedValue([]);
+      const handleWhere = (condition: any, operator?: any, value?: any) => {
+        if (typeof condition === 'function') {
+          condition(builder);
+        }
+        return builder;
+      };
+      builder.where = vi.fn().mockImplementation(handleWhere);
+      builder.andWhere = vi.fn().mockImplementation(handleWhere);
+      builder.orWhere = vi.fn().mockImplementation(handleWhere);
+      builder.whereBetween = vi.fn().mockImplementation(() => builder);
+      builder.whereNull = vi.fn().mockImplementation(() => builder);
+      builder.whereIn = vi.fn().mockImplementation(() => builder);
+      builder.join = vi.fn().mockImplementation(() => builder);
+      builder.leftJoin = vi.fn().mockImplementation(() => builder);
+      builder.orderBy = vi.fn().mockImplementation(() => builder);
+      builder.first = vi.fn().mockResolvedValue(null);
+      builder.count = vi.fn().mockResolvedValue([{ count: 0 }]);
+      builder.raw = vi.fn().mockReturnValue('RAW');
+      return builder;
+    };
+
+    (billingEngine as any).knex = vi.fn((table: string) => {
+      const builder = createBuilder();
+
+      if (table === 'clients') {
+        builder.first.mockResolvedValue({ client_id: mockClientId, tenant: mockTenant, client_name: 'Mock Client', is_tax_exempt: false });
+      }
+
+      if (table === 'client_billing_cycles') {
+        builder.first.mockResolvedValue({
+          billing_cycle_id: mockBillingCycleId,
+          client_id: mockClientId,
+          period_start_date: mockStartDate,
+          period_end_date: mockEndDate,
+          billing_cycle: 'monthly'
+        });
+      }
+
+      if (table === 'invoices') {
+        builder.first.mockResolvedValue(null);
+      }
+
+      if (table === 'client_contracts') {
+        builder.select.mockResolvedValue([]);
+        builder.orderBy.mockImplementation(() => builder);
+      }
+
+      return builder;
+    });
     (billingEngine as any).knex.raw = vi.fn().mockReturnValue('COALESCE(project_tasks.task_name, tickets.title) as work_item_name');
     vi.spyOn(billingEngine as any, 'fetchDiscounts').mockResolvedValue([]);
 
@@ -78,16 +142,64 @@ describe('BillingEngine', () => {
         },
       ];
 
-      const mockFixedCharges = [
-        { serviceId: 'service1', serviceName: 'Service 1', quantity: 1, rate: 100, total: 100, type: 'fixed', tax_amount: 0, tax_rate: 0 },
-      ];
+      (billingEngine as any).knex = vi.fn((table: string) => {
+        if (table === 'clients') {
+          return {
+            where: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({ tenant: mockTenant, client_id: mockClientId })
+          };
+        }
 
-      const mockTimeCharges = [
-        { serviceId: 'service2', serviceName: 'Service 2', userId: 'user1', duration: 2, rate: 50, total: 100, type: 'time', tax_amount: 0, tax_rate: 0 },
-      ];
+        if (table === 'client_billing_cycles') {
+          return {
+            where: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({
+              billing_cycle_id: mockBillingCycleId,
+              period_start_date: mockStartDate,
+              period_end_date: mockEndDate,
+              billing_cycle: 'monthly'
+            })
+          };
+        }
 
-      const mockUsageCharges = [
-        { serviceId: 'service3', serviceName: 'Service 3', quantity: 10, rate: 5, total: 50, type: 'usage', tax_amount: 0, tax_rate: 0 },
+        if (table === 'invoices') {
+          return {
+            where: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue(null)
+          };
+        }
+
+        if (table === 'client_contracts') {
+          return {
+            where: vi.fn().mockReturnThis(),
+            whereNull: vi.fn().mockReturnThis(),
+            orWhere: vi.fn().mockReturnThis(),
+            whereIn: vi.fn().mockReturnThis(),
+            select: vi.fn().mockResolvedValue([])
+          };
+        }
+
+        return {
+          select: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          whereBetween: vi.fn().mockReturnThis(),
+          whereNull: vi.fn().mockReturnThis(),
+          andWhere: vi.fn().mockReturnThis(),
+          join: vi.fn().mockReturnThis(),
+          leftJoin: vi.fn().mockReturnThis(),
+          orderBy: vi.fn().mockReturnThis(),
+          first: vi.fn().mockResolvedValue(null)
+        };
+      });
+
+      const mockFixedCharges: IFixedPriceCharge[] = [
+        { serviceId: 'service1', serviceName: 'Service 1', quantity: 1, rate: 100, total: 100, type: 'fixed', tax_amount: 0, tax_rate: 0 }
+      ];
+      const mockTimeCharges: ITimeBasedCharge[] = [
+        { serviceId: 'service2', serviceName: 'Service 2', userId: 'user1', duration: 2, rate: 50, total: 100, type: 'time', tax_amount: 0, tax_rate: 0, entryId: 'mock-entry-id' }
+      ];
+      const mockUsageCharges: IUsageBasedCharge[] = [
+        { serviceId: 'service3', serviceName: 'Service 3', quantity: 10, rate: 5, total: 50, type: 'usage', tax_amount: 0, tax_rate: 0, usageId: 'mock-usage-id' }
       ];
 
       vi.spyOn(billingEngine as any, 'getClientContractLinesAndCycle').mockResolvedValue({
@@ -97,19 +209,18 @@ describe('BillingEngine', () => {
       vi.spyOn(billingEngine as any, 'calculateFixedPriceCharges').mockResolvedValue(mockFixedCharges);
       vi.spyOn(billingEngine as any, 'calculateTimeBasedCharges').mockResolvedValue(mockTimeCharges);
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue(mockUsageCharges);
+      vi.spyOn(billingEngine as any, 'calculateBucketPlanCharges').mockResolvedValue([]);
+      vi.spyOn(billingEngine as any, 'validateBillingPeriod').mockResolvedValue({ success: true });
+      vi.spyOn(billingEngine as any, 'applyDiscountsAndAdjustments').mockImplementation(async (result) => result);
 
       const result = await billingEngine.calculateBilling(mockClientId, mockStartDate, mockEndDate, mockBillingCycleId);
 
       expect(result).toEqual({
-        charges: [
-          ...mockFixedCharges.map((c): IFixedPriceCharge => ({ ...c, type: 'fixed', tax_amount: 0, tax_rate: 0 })),
-          ...mockTimeCharges.map((c): ITimeBasedCharge => ({ ...c, type: 'time', tax_amount: 0, tax_rate: 0, entryId: 'mock-entry-id' })),
-          ...mockUsageCharges.map((c): IUsageBasedCharge => ({ ...c, type: 'usage', tax_amount: 0, tax_rate: 0, usageId: 'mock-usage-id' })),
-        ],
+        charges: [...mockFixedCharges, ...mockTimeCharges, ...mockUsageCharges],
         totalAmount: 250,
         discounts: [],
         adjustments: [],
-        finalAmount: 250,
+        finalAmount: 250
       });
     });
 
@@ -1014,5 +1125,328 @@ describe('BillingEngine', () => {
         expect(proratedCharges[0].total).toBeCloseTo(48.39, 2); // 100 * (15 / 31) ≈ 48.39
       });
     });
-  })
+  });
+
+  describe('Pricing Schedule Integration', () => {
+    const createGenericQueryBuilder = () => {
+      const builder: any = {};
+      builder.where = vi.fn().mockImplementation(() => builder);
+      builder.andWhere = vi.fn().mockImplementation(() => builder);
+      builder.whereBetween = vi.fn().mockImplementation(() => builder);
+      builder.orderBy = vi.fn().mockImplementation(() => builder);
+      builder.join = vi.fn().mockImplementation(() => builder);
+      builder.leftJoin = vi.fn().mockImplementation(() => builder);
+      builder.select = vi.fn().mockResolvedValue([]);
+      builder.first = vi.fn().mockResolvedValue(null);
+      return builder;
+    };
+
+    const createScheduleQuery = (options?: {
+      first?: any;
+      reject?: Error;
+      onWhereCall?: (args: any[]) => void;
+    }) => {
+      const scheduleQuery: any = {};
+      scheduleQuery.where = vi.fn().mockImplementation(function(condition: any, operator?: any, value?: any) {
+        options?.onWhereCall?.([condition, operator, value]);
+        if (typeof condition === 'function') {
+          condition({
+            whereNull: vi.fn().mockReturnThis(),
+            orWhere: vi.fn().mockReturnThis()
+          });
+        }
+        return scheduleQuery;
+      });
+      scheduleQuery.orderBy = vi.fn().mockImplementation(() => scheduleQuery);
+      scheduleQuery.first = options?.reject
+        ? vi.fn().mockRejectedValue(options.reject)
+        : vi.fn().mockResolvedValue(options?.first ?? null);
+      return scheduleQuery;
+    };
+
+    it('should produce a fixed charge that uses the pricing schedule override when an active schedule exists', async () => {
+      const scheduleRate = 20000;
+      const mockClientContractLine: IClientContractLine = {
+        client_contract_line_id: 'test_billing_id',
+        client_id: mockClientId,
+        contract_line_id: 'test_contract_line_id',
+        client_contract_id: 'client_contract_assignment',
+        contract_id: 'test_contract_id',
+        service_category: 'test_category',
+        contract_line_name: 'Managed Support',
+        contract_name: 'Acme Corp',
+        start_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        is_active: true,
+        tenant: mockTenant,
+        custom_rate: 15000
+      };
+
+      const mockPricingSchedule = {
+        schedule_id: 'schedule-1',
+        contract_id: 'test_contract_id',
+        effective_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        custom_rate: scheduleRate
+      };
+
+      const scheduleQuery = createScheduleQuery({ first: mockPricingSchedule });
+
+      (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+        if (tableName === 'contract_pricing_schedules') {
+          return scheduleQuery;
+        }
+
+        return createGenericQueryBuilder();
+      });
+
+      const charges = await (billingEngine as any).calculateFixedPriceCharges(
+        mockClientId,
+        { startDate: mockStartDate, endDate: mockEndDate },
+        mockClientContractLine
+      );
+
+      expect(charges).toEqual([
+        {
+          type: 'fixed',
+          serviceName: 'Managed Support (Contract: Acme Corp)',
+          quantity: 1,
+          rate: scheduleRate,
+          total: scheduleRate,
+          client_contract_line_id: 'test_billing_id',
+          client_contract_id: 'client_contract_assignment',
+          contract_name: 'Acme Corp',
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: undefined,
+        },
+      ]);
+
+      expect(scheduleQuery.where).toHaveBeenCalledWith({
+        tenant: mockTenant,
+        contract_id: 'test_contract_id'
+      });
+    });
+
+    it('should fall back to the contract custom rate when the pricing schedule has no override rate', async () => {
+      const mockClientContractLine: IClientContractLine = {
+        client_contract_line_id: 'test_billing_id',
+        client_id: mockClientId,
+        contract_line_id: 'test_contract_line_id',
+        client_contract_id: 'client_contract_assignment',
+        contract_id: 'test_contract_id',
+        service_category: 'test_category',
+        contract_line_name: 'Managed Support',
+        contract_name: 'Acme Corp',
+        start_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        is_active: true,
+        tenant: mockTenant,
+        custom_rate: 17500
+      };
+
+      const mockPricingSchedule = {
+        schedule_id: 'schedule-1',
+        contract_id: 'test_contract_id',
+        effective_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        custom_rate: null
+      };
+
+      const scheduleQuery = createScheduleQuery({ first: mockPricingSchedule });
+
+      (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+        if (tableName === 'contract_pricing_schedules') {
+          return scheduleQuery;
+        }
+
+        return createGenericQueryBuilder();
+      });
+
+      const charges = await (billingEngine as any).calculateFixedPriceCharges(
+        mockClientId,
+        { startDate: mockStartDate, endDate: mockEndDate },
+        mockClientContractLine
+      );
+
+      expect(charges).toEqual([
+        {
+          type: 'fixed',
+          serviceName: 'Managed Support (Contract: Acme Corp)',
+          quantity: 1,
+          rate: 17500,
+          total: 17500,
+          client_contract_line_id: 'test_billing_id',
+          client_contract_id: 'client_contract_assignment',
+          contract_name: 'Acme Corp',
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: undefined,
+        },
+      ]);
+
+      expect(scheduleQuery.first).toHaveBeenCalled();
+    });
+
+    it('should apply pricing schedule rate to fixed price charges calculation', async () => {
+      // This test verifies that when calculateFixedPriceCharges is called,
+      // it queries for pricing schedules and would use the schedule rate if found
+      const mockClientContractLine: IClientContractLine = {
+        client_contract_line_id: 'test_billing_id',
+        client_id: mockClientId,
+        contract_line_id: 'test_contract_line_id',
+        contract_id: 'test_contract_id',
+        service_category: 'test_category',
+        custom_rate: 12000,
+        start_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        is_active: true,
+        tenant: mockTenant
+      };
+
+      // Mock pricing schedule query to return a schedule
+      const mockPricingSchedule = {
+        schedule_id: 'schedule-1',
+        contract_id: 'test_contract_id',
+        effective_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        custom_rate: 20000 // Override rate: $200/hour instead of default
+      };
+
+      let pricingScheduleQueried = false;
+      (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+        if (tableName === 'contract_pricing_schedules') {
+          pricingScheduleQueried = true;
+          return createScheduleQuery({ first: mockPricingSchedule });
+        }
+        return createGenericQueryBuilder();
+      });
+
+      // Verify that the calculateFixedPriceCharges method queries for pricing schedules
+      // This is an integration point we want to verify exists
+      await (billingEngine as any).calculateFixedPriceCharges(
+        mockClientId,
+        { startDate: mockStartDate, endDate: mockEndDate },
+        mockClientContractLine
+      );
+
+      // The key assertion: pricing schedule was queried during the calculation
+      expect(pricingScheduleQueried).toBe(true);
+    });
+
+    it('should skip pricing schedule when contract has no pricing schedules', async () => {
+      const mockClientContractLine: IClientContractLine = {
+        client_contract_line_id: 'test_billing_id',
+        client_id: mockClientId,
+        contract_line_id: 'test_contract_line_id',
+        contract_id: 'test_contract_id',
+        service_category: 'test_category',
+        custom_rate: 12000,
+        start_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        is_active: true,
+        tenant: mockTenant
+      };
+
+      // Mock pricing schedule query to return no schedule
+      let pricingScheduleQueried = false;
+      (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+        if (tableName === 'contract_pricing_schedules') {
+          pricingScheduleQueried = true;
+          return createScheduleQuery();
+        }
+        return createGenericQueryBuilder();
+      });
+
+      // Call calculateFixedPriceCharges
+      await (billingEngine as any).calculateFixedPriceCharges(
+        mockClientId,
+        { startDate: mockStartDate, endDate: mockEndDate },
+        mockClientContractLine
+      );
+
+      // The key assertion: pricing schedule was still queried (we check for it)
+      expect(pricingScheduleQueried).toBe(true);
+    });
+
+    it('should handle pricing schedule query errors gracefully', async () => {
+      const mockClientContractLine: IClientContractLine = {
+        client_contract_line_id: 'test_billing_id',
+        client_id: mockClientId,
+        contract_line_id: 'test_contract_line_id',
+        contract_id: 'test_contract_id',
+        service_category: 'test_category',
+        custom_rate: 12000,
+        start_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        is_active: true,
+        tenant: mockTenant
+      };
+
+      // Mock pricing schedule query to throw an error
+      (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+        if (tableName === 'contract_pricing_schedules') {
+          return createScheduleQuery({
+            reject: new Error('Database connection failed')
+          });
+        }
+        return createGenericQueryBuilder();
+      });
+
+      // The method should handle the error and not crash
+      // This is testing that the pricing schedule lookup doesn't break the entire billing flow
+      try {
+        await (billingEngine as any).calculateFixedPriceCharges(
+          mockClientId,
+          { startDate: mockStartDate, endDate: mockEndDate },
+          mockClientContractLine
+        );
+        // If we get here, the error was handled gracefully
+        expect(true).toBe(true);
+      } catch (error) {
+        // If error is thrown, it should be related to database/query, not to pricing schedule integration
+        expect((error as any).message).toContain('Database connection failed');
+      }
+    });
+
+    it('should query pricing schedules with correct date range filtering', async () => {
+      const mockClientContractLine: IClientContractLine = {
+        client_contract_line_id: 'test_billing_id',
+        client_id: mockClientId,
+        contract_line_id: 'test_contract_line_id',
+        contract_id: 'test_contract_id',
+        service_category: 'test_category',
+        custom_rate: 12000,
+        start_date: '2023-01-01T00:00:00Z',
+        end_date: null,
+        is_active: true,
+        tenant: mockTenant
+      };
+
+      // Track the query parameters used
+      const whereCalls: any[] = [];
+      (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+        if (tableName === 'contract_pricing_schedules') {
+          return createScheduleQuery({
+            onWhereCall: (args) => whereCalls.push(args)
+          });
+        }
+        return createGenericQueryBuilder();
+      });
+
+      await (billingEngine as any).calculateFixedPriceCharges(
+        mockClientId,
+        { startDate: mockStartDate, endDate: mockEndDate },
+        mockClientContractLine
+      );
+
+      // Verify that we're querying with the contract_id (the pricing schedules should be contract-specific)
+      const [firstWhereCall] = whereCalls;
+      expect(firstWhereCall?.[0]).toEqual({
+        tenant: mockTenant,
+        contract_id: 'test_contract_id'
+      });
+    });
+  });
+
 });

@@ -3,7 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
@@ -98,6 +98,7 @@ async function configureTaxForClient(clientId: string, taxPercentage = 10) {
     taxPercentage
   });
   await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  await ensureClientPlanBundlesTable(context);
 }
 
 describe('Billing Invoice Edge Cases', () => {
@@ -203,11 +204,10 @@ describe('Billing Invoice Edge Cases', () => {
   it('should properly handle true zero-value invoices through the entire workflow', async () => {
     const freeService = await createTestService(context, {
       service_name: 'Free Service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 0, // $0.00
       unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true // Even though it's taxable, tax on $0 is $0
+      tax_region: 'US-NY'
     });
 
     const { billingCycleId } = await createFixedPlanAssignment(context, freeService, {
