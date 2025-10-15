@@ -32,14 +32,15 @@ const Contract = {
     }
 
     try {
-      // Check if any invoice items reference this contract's client_contracts
-      const result = await db('invoice_items as ii')
+      // Check if any invoices exist for clients assigned to this contract
+      // Join through: invoices -> client_contracts -> contracts
+      const result = await db('invoices as i')
         .join('client_contracts as cc', function joinClientContracts() {
-          this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
-            .andOn('ii.tenant', '=', 'cc.tenant');
+          this.on('i.client_id', '=', 'cc.client_id')
+            .andOn('i.tenant', '=', 'cc.tenant');
         })
         .where({ 'cc.contract_id': contractId, 'cc.tenant': tenant })
-        .count('ii.item_id as count')
+        .count('i.invoice_id as count')
         .first() as { count?: string };
 
       return Number(result?.count ?? 0) > 0;
