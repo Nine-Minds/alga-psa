@@ -107,8 +107,8 @@ export default function AccountManagement() {
     try {
       const result = await createCustomerPortalSessionAction();
       if (result.success && result.data?.portal_url) {
-        // Redirect to Stripe Customer Portal
-        window.location.href = result.data.portal_url;
+        // Open Stripe Customer Portal in new tab
+        window.open(result.data.portal_url, '_blank', 'noopener,noreferrer');
       } else {
         toast.error(result.error || 'Failed to open payment portal');
       }

@@ -51,6 +51,66 @@ export async function getLicenseUsageAction(): Promise<{
 }
 
 /**
+ * Server action to get invoice preview for license change
+ * @param quantity - New total number of licenses
+ * @returns Invoice preview data or null if no existing subscription
+ */
+export async function getInvoicePreviewAction(
+  quantity: number
+): Promise<{
+  success: boolean;
+  data?: {
+    currentQuantity: number;
+    newQuantity: number;
+    isIncrease: boolean;
+    amountDue: number;
+    currency: string;
+    currentPeriodEnd: string;
+    prorationAmount: number;
+    remainingAmount: number;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return {
+        success: false,
+        error: 'Not authenticated',
+      };
+    }
+
+    const stripeService = getStripeService();
+    const preview = await stripeService.getUpcomingInvoicePreview(
+      session.user.tenant,
+      quantity
+    );
+
+    if (!preview) {
+      return {
+        success: false,
+        error: 'No existing subscription found',
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        ...preview,
+        currentPeriodEnd: preview.currentPeriodEnd.toISOString(),
+      },
+    };
+  } catch (error) {
+    logger.error('[getInvoicePreviewAction] Error getting invoice preview:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get invoice preview',
+    };
+  }
+}
+
+/**
  * Server action to create a Stripe checkout session for license purchase or update existing subscription
  * @param quantity - Number of licenses to set as total
  * @returns Checkout session data, update confirmation, or error
@@ -64,6 +124,7 @@ export async function createLicenseCheckoutSessionAction(
     clientSecret?: string;
     sessionId?: string;
     publishableKey?: string;
+    scheduledChange?: boolean;
   };
   error?: string;
 }> {
@@ -98,12 +159,15 @@ export async function createLicenseCheckoutSessionAction(
     );
 
     if (result.type === 'updated') {
-      // Subscription was updated directly
-      logger.info(`[createLicenseCheckoutSessionAction] Subscription updated for tenant ${session.user.tenant}`);
+      // Subscription was updated directly (or scheduled for period end)
+      logger.info(
+        `[createLicenseCheckoutSessionAction] Subscription ${result.scheduledChange ? 'scheduled' : 'updated'} for tenant ${session.user.tenant}`
+      );
       return {
         success: true,
         data: {
           type: 'updated',
+          scheduledChange: result.scheduledChange,
         },
       };
     }

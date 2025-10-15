@@ -358,7 +358,81 @@ export class StripeService {
   }
 
   /**
+   * Get upcoming invoice preview for subscription change
+   * Shows what the customer will be charged/credited
+   */
+  async getUpcomingInvoicePreview(
+    tenantId: string,
+    newQuantity: number
+  ): Promise<{
+    currentQuantity: number;
+    newQuantity: number;
+    isIncrease: boolean;
+    amountDue: number;
+    currency: string;
+    currentPeriodEnd: Date;
+    prorationAmount: number;
+    remainingAmount: number;
+  } | null> {
+    logger.info(`[StripeService] Getting invoice preview for tenant ${tenantId}, new quantity: ${newQuantity}`);
+
+    const knex = await getConnection(tenantId);
+    const customer = await this.getOrImportCustomer(tenantId);
+
+    // Get existing subscription
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_customer_id: customer.stripe_customer_id,
+        status: 'active',
+      })
+      .first();
+
+    if (!existingSubscription || !existingSubscription.stripe_subscription_item_id) {
+      return null; // No existing subscription
+    }
+
+    const currentQuantity = existingSubscription.quantity;
+    const isIncrease = newQuantity > currentQuantity;
+
+    // Get upcoming invoice from Stripe
+    const upcomingInvoice = await this.stripe.invoices.createPreview({
+      customer: customer.stripe_customer_external_id,
+      subscription: existingSubscription.stripe_subscription_external_id,
+      subscription_details: {
+        items: [
+          {
+            id: existingSubscription.stripe_subscription_item_id,
+            quantity: newQuantity,
+          },
+        ],
+        proration_behavior: isIncrease ? 'always_invoice' : 'none',
+      },
+    });
+
+    // Calculate proration amount (difference between new and old)
+    const prorationAmount = upcomingInvoice.lines.data
+      .filter(line => line.proration)
+      .reduce((sum, line) => sum + line.amount, 0);
+
+    return {
+      currentQuantity,
+      newQuantity,
+      isIncrease,
+      amountDue: upcomingInvoice.amount_due / 100, // Convert cents to dollars
+      currency: upcomingInvoice.currency,
+      currentPeriodEnd: existingSubscription.current_period_end || new Date(),
+      prorationAmount: prorationAmount / 100,
+      remainingAmount: upcomingInvoice.amount_remaining / 100,
+    };
+  }
+
+  /**
    * Update existing subscription quantity or create checkout for new subscription
+   *
+   * IMPORTANT: Different behavior for increases vs decreases:
+   * - Increase: Immediate change with prorated charge
+   * - Decrease: Scheduled for end of billing period (no immediate credit)
    *
    * Returns either an updated subscription or checkout session details
    */
@@ -366,7 +440,7 @@ export class StripeService {
     tenantId: string,
     quantity: number
   ): Promise<
-    | { type: 'updated'; subscription: Stripe.Subscription }
+    | { type: 'updated'; subscription: Stripe.Subscription; scheduledChange?: boolean }
     | { type: 'checkout'; clientSecret: string; sessionId: string }
   > {
     logger.info(`[StripeService] Update or create subscription for tenant ${tenantId}, quantity: ${quantity}`);
@@ -386,48 +460,131 @@ export class StripeService {
       .first();
 
     if (existingSubscription && existingSubscription.stripe_subscription_item_id) {
-      // Update existing subscription
+      const currentQuantity = existingSubscription.quantity;
+      const isIncrease = quantity > currentQuantity;
+
       logger.info(
-        `[StripeService] Found existing subscription ${existingSubscription.stripe_subscription_external_id}, updating quantity to ${quantity}`
+        `[StripeService] Found existing subscription ${existingSubscription.stripe_subscription_external_id}, ` +
+        `${isIncrease ? 'increasing' : 'decreasing'} from ${currentQuantity} to ${quantity}`
       );
 
-      const updatedSubscription = await this.stripe.subscriptions.update(
-        existingSubscription.stripe_subscription_external_id,
-        {
-          items: [
+      if (isIncrease) {
+        // INCREASE: Immediate change with prorated charge
+        const updatedSubscription = await this.stripe.subscriptions.update(
+          existingSubscription.stripe_subscription_external_id,
+          {
+            items: [
+              {
+                id: existingSubscription.stripe_subscription_item_id,
+                quantity,
+              },
+            ],
+            proration_behavior: 'always_invoice', // Charge prorated amount now
+            metadata: {
+              tenant_id: tenantId,
+            },
+          }
+        );
+
+        // Update database immediately for increases
+        await knex<StripeSubscription>('stripe_subscriptions')
+          .where({
+            stripe_subscription_id: existingSubscription.stripe_subscription_id,
+          })
+          .update({
+            quantity,
+            updated_at: knex.fn.now(),
+          });
+
+        await knex('tenants')
+          .where({ tenant: tenantId })
+          .update({
+            licensed_user_count: quantity,
+            updated_at: knex.fn.now(),
+          });
+
+        logger.info(`[StripeService] Immediately increased subscription to ${quantity} licenses`);
+
+        return {
+          type: 'updated',
+          subscription: updatedSubscription,
+          scheduledChange: false,
+        };
+      } else {
+        // DECREASE: Schedule change for end of billing period
+        // Use subscription schedule to delay the change
+        const currentPeriodEnd = existingSubscription.current_period_end;
+
+        if (!currentPeriodEnd) {
+          throw new Error('Current period end not found for subscription');
+        }
+
+        // Create subscription schedule
+        const schedule = await this.stripe.subscriptionSchedules.create({
+          from_subscription: existingSubscription.stripe_subscription_external_id,
+          end_behavior: 'release',
+          phases: [
+            // Phase 1: Keep current quantity until period end
             {
-              id: existingSubscription.stripe_subscription_item_id,
-              quantity,
+              items: [
+                {
+                  price: this.config.licensePriceId!,
+                  quantity: currentQuantity,
+                },
+              ],
+              end_date: Math.floor(currentPeriodEnd.getTime() / 1000),
+              metadata: {
+                tenant_id: tenantId,
+              },
+            },
+            // Phase 2: New quantity starting next period
+            {
+              items: [
+                {
+                  price: this.config.licensePriceId!,
+                  quantity,
+                },
+              ],
+              metadata: {
+                tenant_id: tenantId,
+              },
             },
           ],
-          proration_behavior: 'always_invoice', // Stripe will handle proration
-        }
-      );
-
-      // Update database
-      await knex<StripeSubscription>('stripe_subscriptions')
-        .where({
-          stripe_subscription_id: existingSubscription.stripe_subscription_id,
-        })
-        .update({
-          quantity,
-          updated_at: knex.fn.now(),
+          metadata: {
+            tenant_id: tenantId,
+          },
         });
 
-      // Update tenant license count
-      await knex('tenants')
-        .where({ tenant: tenantId })
-        .update({
-          licensed_user_count: quantity,
-          updated_at: knex.fn.now(),
-        });
+        logger.info(
+          `[StripeService] Scheduled subscription decrease to ${quantity} licenses at period end (${currentPeriodEnd.toISOString()})`
+        );
 
-      logger.info(`[StripeService] Updated subscription to ${quantity} licenses`);
+        // Don't update database quantity yet - it will be updated by webhook when schedule activates
+        // But store the scheduled change in metadata
+        await knex<StripeSubscription>('stripe_subscriptions')
+          .where({
+            stripe_subscription_id: existingSubscription.stripe_subscription_id,
+          })
+          .update({
+            metadata: {
+              ...(existingSubscription.metadata || {}),
+              scheduled_quantity: quantity,
+              schedule_id: schedule.id,
+            },
+            updated_at: knex.fn.now(),
+          });
 
-      return {
-        type: 'updated',
-        subscription: updatedSubscription,
-      };
+        // Fetch the updated subscription to return
+        const updatedSubscription = await this.stripe.subscriptions.retrieve(
+          existingSubscription.stripe_subscription_external_id
+        );
+
+        return {
+          type: 'updated',
+          subscription: updatedSubscription,
+          scheduledChange: true,
+        };
+      }
     }
 
     // No existing subscription, create checkout session

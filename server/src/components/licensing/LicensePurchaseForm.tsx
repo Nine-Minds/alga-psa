@@ -9,13 +9,17 @@ import {
   createLicenseCheckoutSessionAction,
   getLicensePricingAction,
   getLicenseUsageAction,
+  getInvoicePreviewAction,
+  getPaymentMethodInfoAction,
+  createCustomerPortalSessionAction,
 } from 'server/src/lib/actions/license-actions';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
 } from '@stripe/react-stripe-js';
-import { AlertCircle, ShoppingCart } from 'lucide-react';
+import { AlertCircle, ShoppingCart, CreditCard, Calendar } from 'lucide-react';
+import { Dialog } from 'server/src/components/ui/Dialog';
 
 interface LicensePurchaseFormProps {
   className?: string;
@@ -38,6 +42,23 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
+
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [invoicePreview, setInvoicePreview] = useState<{
+    currentQuantity: number;
+    newQuantity: number;
+    isIncrease: boolean;
+    amountDue: number;
+    currency: string;
+    currentPeriodEnd: string;
+    prorationAmount: number;
+  } | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<{
+    card_brand: string;
+    card_last4: string;
+  } | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // Load pricing and current usage on mount
   useEffect(() => {
@@ -79,10 +100,54 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
   // Calculate total price
   const totalPrice = pricing ? (pricing.unitAmount * quantity) / 100 : 0;
 
-  // Handle purchase button click
+  // Handle purchase button click - show confirmation modal
   const handlePurchase = async () => {
     setError(null);
     setLoading(true);
+
+    try {
+      console.log('[LicensePurchaseForm] Getting invoice preview for quantity:', quantity);
+
+      // Check if there's an existing subscription (for preview)
+      const previewResult = await getInvoicePreviewAction(quantity);
+      console.log('[LicensePurchaseForm] Invoice preview result:', previewResult);
+
+      if (previewResult.success && previewResult.data) {
+        // Has existing subscription - show confirmation modal with preview
+        console.log('[LicensePurchaseForm] Setting invoice preview data');
+        setInvoicePreview(previewResult.data);
+
+        // Try to get payment method
+        console.log('[LicensePurchaseForm] Getting payment method info');
+        const pmResult = await getPaymentMethodInfoAction();
+        console.log('[LicensePurchaseForm] Payment method result:', pmResult);
+
+        if (pmResult.success && pmResult.data) {
+          setPaymentMethod({
+            card_brand: pmResult.data.card_brand,
+            card_last4: pmResult.data.card_last4,
+          });
+        }
+
+        console.log('[LicensePurchaseForm] Showing confirmation modal');
+        setShowConfirmModal(true);
+        setLoading(false);
+      } else {
+        // No existing subscription - go straight to checkout
+        console.log('[LicensePurchaseForm] No preview available, going to checkout');
+        await processLicenseUpdate();
+      }
+    } catch (err) {
+      console.error('Error preparing confirmation:', err);
+      setError(err instanceof Error ? err.message : 'Failed to prepare license update');
+      setLoading(false);
+    }
+  };
+
+  // Process the actual license update after confirmation
+  const processLicenseUpdate = async () => {
+    setConfirmLoading(true);
+    setError(null);
 
     try {
       // Create checkout session or update existing subscription
@@ -93,8 +158,14 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
       }
 
       if (result.data.type === 'updated') {
-        // Subscription was updated directly, redirect to success page
-        window.location.href = '/msp/licenses/purchase/success';
+        // Subscription was updated directly (or scheduled)
+        if (result.data.scheduledChange) {
+          // For scheduled changes (decreases), show success message with timing info
+          window.location.href = '/msp/licenses/purchase/success?scheduled=true';
+        } else {
+          // Immediate update
+          window.location.href = '/msp/licenses/purchase/success';
+        }
         return;
       }
 
@@ -109,10 +180,13 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
       const stripe = await loadStripe(publishableKey);
       setStripePromise(Promise.resolve(stripe));
       setClientSecret(clientSecret);
+      setShowConfirmModal(false);
       setShowCheckout(true);
+      setConfirmLoading(false);
     } catch (err) {
       console.error('Error processing license update:', err);
       setError(err instanceof Error ? err.message : 'Failed to process license update');
+      setConfirmLoading(false);
       setLoading(false);
     }
   };
@@ -160,9 +234,146 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
     );
   }
 
+  // Render confirmation modal
+  const renderConfirmationModal = () => {
+    console.log('[renderConfirmationModal] Called', {
+      invoicePreview,
+      showConfirmModal,
+      paymentMethod,
+    });
+
+    if (!invoicePreview) {
+      console.log('[renderConfirmationModal] No invoice preview, returning null');
+      return null;
+    }
+
+    const periodEnd = new Date(invoicePreview.currentPeriodEnd);
+    const isIncrease = invoicePreview.isIncrease;
+
+    console.log('[renderConfirmationModal] Rendering Dialog component');
+
+    return (
+      <Dialog
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        title="Confirm License Update"
+      >
+          <p className="text-sm text-gray-600 mb-4">
+            {isIncrease
+              ? 'Review the details of your license increase before confirming.'
+              : 'Review the details of your license decrease. Changes will take effect at the end of your billing period.'}
+          </p>
+
+          <div className="space-y-4">
+            {/* License Change Summary */}
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Current licenses:</span>
+                <span className="font-semibold">{invoicePreview.currentQuantity}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">New licenses:</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {invoicePreview.newQuantity}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm font-medium pt-2 border-t border-blue-200 dark:border-blue-900">
+                <span>{isIncrease ? 'Adding:' : 'Removing:'}</span>
+                <span className={isIncrease ? 'text-green-600' : 'text-orange-600'}>
+                  {isIncrease ? '+' : ''}{invoicePreview.newQuantity - invoicePreview.currentQuantity} licenses
+                </span>
+              </div>
+            </div>
+
+            {/* Payment Method */}
+            {paymentMethod && (
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <CreditCard className="h-5 w-5 text-gray-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Payment Method</p>
+                  <p className="text-xs text-gray-500">
+                    {paymentMethod.card_brand.toUpperCase()} •••• {paymentMethod.card_last4}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const result = await createCustomerPortalSessionAction();
+                    if (result.success && result.data?.portal_url) {
+                      window.open(result.data.portal_url, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  Change
+                </button>
+              </div>
+            )}
+
+            {/* Billing Impact */}
+            <div className="space-y-2">
+              {isIncrease ? (
+                <>
+                  <div className="flex items-start gap-2 text-sm">
+                    <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Immediate charge</p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        You will be charged ${invoicePreview.amountDue.toFixed(2)} {invoicePreview.currency.toUpperCase()} now for the prorated amount.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 ml-6">
+                    Proration: ${invoicePreview.prorationAmount.toFixed(2)} for the remainder of this billing period
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-orange-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Scheduled for period end</p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        License decrease will take effect on {periodEnd.toLocaleDateString()} at the end of your current billing period.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 ml-6">
+                    You'll keep access to all {invoicePreview.currentQuantity} licenses until then.
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 flex gap-2 justify-end">
+            <Button
+              id="cancel-confirmation-button"
+              variant="outline"
+              onClick={() => {
+                setShowConfirmModal(false);
+                setLoading(false);
+              }}
+              disabled={confirmLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="confirm-license-update-button"
+              onClick={processLicenseUpdate}
+              disabled={confirmLoading}
+            >
+              {confirmLoading ? 'Processing...' : isIncrease ? 'Confirm & Pay Now' : 'Confirm Schedule'}
+            </Button>
+          </div>
+      </Dialog>
+    );
+  };
+
   // Render purchase form
   return (
     <div className={className}>
+      {renderConfirmationModal()}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -269,9 +480,9 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
             {/* Information */}
             <div className="text-xs text-gray-500 space-y-1">
               <p>• This sets your total subscription quantity (not an addition to current licenses)</p>
+              <p>• Increasing licenses: Immediate access with prorated charge</p>
+              <p>• Decreasing licenses: Scheduled for end of billing period (no immediate credit)</p>
               <p>• Licenses are billed monthly and can be canceled anytime</p>
-              <p>• Changes will be available immediately after payment</p>
-              <p>• Prorated charges will apply for mid-cycle changes</p>
             </div>
           </div>
         </CardContent>
