@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import BackNav from 'server/src/components/ui/BackNav';
@@ -58,6 +58,7 @@ const formatCount = (value?: number): string => {
 
 const ContractDetail: React.FC = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const contractId = searchParams?.get('contractId') as string;
   const tenant = useTenant()!;
 
@@ -75,6 +76,8 @@ const ContractDetail: React.FC = () => {
 
   // Confirmation dialog state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
@@ -120,7 +123,7 @@ const ContractDetail: React.FC = () => {
     }
   }, [contractId]);
 
-  // Warn before leaving page with unsaved changes
+  // Warn before leaving page with unsaved changes (browser navigation)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
@@ -131,6 +134,32 @@ const ContractDetail: React.FC = () => {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Intercept internal navigation (clicking links)
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+
+      const target = e.target as HTMLElement;
+      const link = target.closest('a[href]') as HTMLAnchorElement;
+
+      if (link && link.href) {
+        const currentPath = window.location.pathname + window.location.search;
+        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
+
+        // Only intercept if navigating to a different page
+        if (linkPath !== currentPath && !link.target && !link.download) {
+          e.preventDefault();
+          e.stopPropagation();
+          setPendingNavigation(link.href);
+          setShowNavigateAwayConfirm(true);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
   }, [hasUnsavedChanges]);
 
   // Initialize edit form when contract loads
@@ -240,6 +269,20 @@ const ContractDetail: React.FC = () => {
 
   const handleCancelDismiss = () => {
     setShowCancelConfirm(false);
+  };
+
+  const handleNavigateAwayConfirm = () => {
+    if (pendingNavigation) {
+      // Allow navigation
+      window.location.href = pendingNavigation;
+    }
+    setShowNavigateAwayConfirm(false);
+    setPendingNavigation(null);
+  };
+
+  const handleNavigateAwayDismiss = () => {
+    setShowNavigateAwayConfirm(false);
+    setPendingNavigation(null);
   };
 
   const clearErrorIfSubmitted = () => {
@@ -993,6 +1036,8 @@ const ContractDetail: React.FC = () => {
                                         e.target.value
                                       )}
                                       className="w-40"
+                                      disabled={contract.is_active}
+                                      title={contract.is_active ? 'Start date cannot be changed for active contracts' : ''}
                                     />
                                   ) : (
                                     formatDate(editData.start_date)
@@ -1248,6 +1293,16 @@ const ContractDetail: React.FC = () => {
         message="Are you sure you want to discard all changes? Any unsaved changes will be lost."
         confirmLabel="Discard Changes"
         cancelLabel="Continue Editing"
+      />
+
+      <ConfirmationDialog
+        isOpen={showNavigateAwayConfirm}
+        onClose={handleNavigateAwayDismiss}
+        onConfirm={handleNavigateAwayConfirm}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
+        confirmLabel="Leave Page"
+        cancelLabel="Stay on Page"
       />
     </div>
   );
