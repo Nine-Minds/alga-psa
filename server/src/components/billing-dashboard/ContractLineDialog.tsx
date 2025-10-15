@@ -41,34 +41,42 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const tenant = useTenant()!;
 
+  const markDirty = () => setIsDirty(true);
+
+  // Open dialog when editingPlan is provided
   useEffect(() => {
-    if (open) {
-      if (editingPlan) {
-        setPlanName(editingPlan.contract_line_name);
-        setBillingFrequency(editingPlan.billing_frequency);
-        setPlanType(editingPlan.contract_line_type as PlanType);
-        setIsCustom(editingPlan.is_custom);
-        if (editingPlan.contract_line_id && editingPlan.contract_line_type === 'Fixed') {
-          getContractLineFixedConfig(editingPlan.contract_line_id)
-            .then((cfg) => {
-              if (cfg) {
-                setBaseRate(cfg.base_rate ?? undefined);
-                setEnableProration(!!cfg.enable_proration);
-                setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
-              }
-            })
-            .catch(() => {});
-        }
-      } else {
-        resetForm();
+    if (editingPlan) {
+      setOpen(true);
+      setPlanName(editingPlan.contract_line_name);
+      setBillingFrequency(editingPlan.billing_frequency);
+      setPlanType(editingPlan.contract_line_type as PlanType);
+      setIsCustom(editingPlan.is_custom);
+      if (editingPlan.contract_line_id && editingPlan.contract_line_type === 'Fixed') {
+        getContractLineFixedConfig(editingPlan.contract_line_id)
+          .then((cfg) => {
+            if (cfg) {
+              setBaseRate(cfg.base_rate ?? undefined);
+              setEnableProration(!!cfg.enable_proration);
+              setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
+            }
+          })
+          .catch(() => {});
       }
-    } else {
+      setIsDirty(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingPlan]);
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open && !editingPlan) {
       resetForm();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingPlan, open]);
+  }, [open]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
@@ -153,14 +161,21 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     setBillingCycleAlignment('start');
     setValidationErrors([]);
     setHasAttemptedSubmit(false);
+    setIsDirty(false);
   };
 
-  const handleClose = () => {
+  const closeDialog = () => {
     setOpen(false);
-    if (!editingPlan) {
-      resetForm();
-    }
+    resetForm();
     onClose?.();
+  };
+
+  const handleCloseRequest = (force = false) => {
+    if (!force && isDirty) {
+      setOpen(true);
+      return;
+    }
+    closeDialog();
   };
 
   return (
@@ -173,6 +188,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               setBillingFrequency(editingPlan.billing_frequency);
               setPlanType(editingPlan.contract_line_type as PlanType);
               setIsCustom(editingPlan.is_custom);
+              setIsDirty(false);
             }
             setOpen(true);
           }}
@@ -181,10 +197,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         </div>
       )}
       <Dialog
-        isOpen={open || !!editingPlan}
-        onClose={handleClose}
+        isOpen={open}
+        onClose={() => handleCloseRequest(false)}
         title={editingPlan ? 'Edit Contract Line' : 'Add Contract Line'}
         className="max-w-3xl"
+        hideCloseButton={!!editingPlan}
       >
         <DialogContent>
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>
@@ -218,6 +235,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     onChange={(e) => {
                       setPlanName(e.target.value);
                       clearErrorIfSubmitted();
+                      markDirty();
                     }}
                     placeholder="e.g. Managed Support – Gold"
                     required
@@ -233,6 +251,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       onValueChange={(value) => {
                         setBillingFrequency(value);
                         clearErrorIfSubmitted();
+                        markDirty();
                       }}
                       options={BILLING_FREQUENCY_OPTIONS}
                       placeholder="Select billing frequency"
@@ -241,7 +260,14 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                   </div>
                   <div className="border border-gray-200 rounded-md p-3 bg-white">
                     <div className="flex items-center gap-3">
-                      <Switch id="is-custom" checked={isCustom} onCheckedChange={setIsCustom} />
+                      <Switch
+                        id="is-custom"
+                        checked={isCustom}
+                        onCheckedChange={(checked) => {
+                          setIsCustom(checked);
+                          markDirty();
+                        }}
+                      />
                       <div>
                         <Label htmlFor="is-custom" className="cursor-pointer">
                           Custom Line
@@ -295,6 +321,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     onClick={() => {
                       setPlanType(key);
                       clearErrorIfSubmitted();
+                      markDirty();
                     }}
                     className={`text-left p-4 border-2 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       planType === key ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
@@ -327,7 +354,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       id="base-rate"
                       type="number"
                       value={baseRate ?? ''}
-                      onChange={(e) => setBaseRate(e.target.value === '' ? undefined : Number(e.target.value))}
+                      onChange={(e) => {
+                        setBaseRate(e.target.value === '' ? undefined : Number(e.target.value));
+                        markDirty();
+                      }}
                       placeholder="0.00"
                       min={0}
                       step={0.01}
@@ -343,7 +373,14 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       <Label htmlFor="enable-proration" className="font-medium text-gray-800">
                         Enable Proration
                       </Label>
-                      <Switch id="enable-proration" checked={enableProration} onCheckedChange={setEnableProration} />
+                      <Switch
+                        id="enable-proration"
+                        checked={enableProration}
+                        onCheckedChange={(checked) => {
+                          setEnableProration(checked);
+                          markDirty();
+                        }}
+                      />
                     </div>
                     <p className="text-xs text-gray-500">
                       Toggle this on if you want the base rate to be prorated when the contract starts mid-cycle.
@@ -354,7 +391,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         <CustomSelect
                           id="alignment"
                           value={billingCycleAlignment}
-                          onValueChange={(value: string) => setBillingCycleAlignment(value as 'start' | 'end' | 'prorated')}
+                          onValueChange={(value: string) => {
+                            setBillingCycleAlignment(value as 'start' | 'end' | 'prorated');
+                            markDirty();
+                          }}
                           options={[
                             { value: 'start', label: 'Start of Billing Cycle' },
                             { value: 'end', label: 'End of Billing Cycle' },
@@ -394,7 +434,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             )}
 
             <DialogFooter>
-              <Button id="contract-line-cancel" variant="outline" onClick={handleClose}>
+              <Button id="contract-line-cancel" variant="outline" onClick={() => handleCloseRequest(true)}>
                 Cancel
               </Button>
               <Button
