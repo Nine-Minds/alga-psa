@@ -15,7 +15,9 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import Drawer from 'server/src/components/ui/Drawer';
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
+import { IClient } from 'server/src/interfaces';
 import {
   getContractById,
   getContractSummary,
@@ -24,12 +26,14 @@ import {
   IContractSummary
 } from 'server/src/lib/actions/contractActions';
 import { updateClientContract } from 'server/src/lib/actions/client-actions/clientContractActions';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from 'server/src/components/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractForm from './ContractForm';
 import ContractLines from './ContractLines';
 import PricingSchedules from './PricingSchedules';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -63,6 +67,10 @@ const ContractDetail: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summary, setSummary] = useState<IContractSummary | null>(null);
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
+
+  // Client drawer state
+  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
@@ -155,6 +163,18 @@ const ContractDetail: React.FC = () => {
 
   const handleContractLinesChanged = () => {
     refreshSummary();
+  };
+
+  const handleOpenClientDrawer = async (clientId: string) => {
+    try {
+      const clientData = await getClientById(clientId);
+      if (clientData) {
+        setQuickViewClient(clientData);
+        setIsQuickViewOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching client details:', error);
+    }
   };
 
   const clearErrorIfSubmitted = () => {
@@ -347,7 +367,7 @@ const ContractDetail: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span>Status</span>
                     <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                      {contract.is_active ? 'Active' : 'Inactive'}
+                      {contract.is_active ? 'Active' : 'Draft'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
@@ -576,12 +596,18 @@ const ContractDetail: React.FC = () => {
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    <p className="font-medium mb-2">Please fix the following errors:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      {validationErrors.map((err, index) => (
-                        <li key={index}>{err}</li>
-                      ))}
-                    </ul>
+                    {validationErrors.length === 1 && validationErrors[0].includes('Cannot set contract to draft') ? (
+                      <p>{validationErrors[0]}</p>
+                    ) : (
+                      <>
+                        <p className="font-medium mb-2">Please fix the following errors:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {validationErrors.map((err, index) => (
+                            <li key={index}>{err}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}
@@ -717,11 +743,11 @@ const ContractDetail: React.FC = () => {
                         <span className="text-xs text-gray-500">Status</span>
                         <CustomSelect
                           id="edit-is-active"
-                          value={editIsActive ? 'active' : 'inactive'}
+                          value={editIsActive ? 'active' : 'draft'}
                           onValueChange={(value) => setEditIsActive(value === 'active')}
                           options={[
                             { value: 'active', label: 'Active' },
-                            { value: 'inactive', label: 'Inactive' }
+                            { value: 'draft', label: 'Draft' }
                           ]}
                         />
                       </div>
@@ -760,29 +786,61 @@ const ContractDetail: React.FC = () => {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
-                      <Layers3 className="h-4 w-4 text-emerald-600" />
-                      Client Overview
+                      <Users className="h-4 w-4 text-emerald-600" />
+                      Client Details
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-gray-700">
-                    <div className="flex items-center justify-between">
-                      <span>Assigned Clients</span>
-                      <span className="font-semibold">{formatCount(totalAssignments)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Active Assignments</span>
-                      <span className="font-semibold text-green-700">{formatCount(activeAssignments.length)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Earliest Start</span>
-                      <span className="font-medium">{formatDate(summary?.earliestStartDate)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Latest End</span>
-                      <span className="font-medium">
-                        {summary?.latestEndDate ? formatDate(summary.latestEndDate) : totalAssignments > 0 ? 'Ongoing' : '—'}
-                      </span>
-                    </div>
+                    {assignments.length === 0 ? (
+                      <p className="text-gray-500">No client assigned to this contract yet.</p>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span>Client Name</span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenClientDrawer(assignments[0].client_id)}
+                            className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {assignments[0].client_name || assignments[0].client_id}
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Assignment Status</span>
+                          <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {contract.is_active ? 'Active' : 'Draft'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Start Date</span>
+                          <span className="font-medium">{formatDate(assignments[0].start_date)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>End Date</span>
+                          <span className="font-medium">
+                            {assignments[0].end_date ? formatDate(assignments[0].end_date) : 'Ongoing'}
+                          </span>
+                        </div>
+                        {assignments[0].po_required && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span>PO Number</span>
+                              <span className="font-medium">
+                                {assignments[0].po_number || <span className="text-orange-600">Required</span>}
+                              </span>
+                            </div>
+                            {assignments[0].po_amount != null && (
+                              <div className="flex items-center justify-between">
+                                <span>PO Amount</span>
+                                <span className="font-medium">
+                                  ${(Number(assignments[0].po_amount) / 100).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1080,6 +1138,22 @@ const ContractDetail: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Drawer
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setQuickViewClient(null);
+        }}
+      >
+        {quickViewClient && (
+          <ClientDetails
+            client={quickViewClient}
+            isInDrawer={true}
+            quickView={true}
+          />
+        )}
+      </Drawer>
     </div>
   );
 };

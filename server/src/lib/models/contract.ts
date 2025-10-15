@@ -1,4 +1,4 @@
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract, IContractWithClient } from 'server/src/interfaces/contract.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -21,6 +21,31 @@ const Contract = {
       return Number(result?.count ?? 0) > 0;
     } catch (error) {
       console.error(`Error checking contract ${contractId} usage:`, error);
+      throw error;
+    }
+  },
+
+  async hasInvoices(contractId: string): Promise<boolean> {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for checking contract invoices');
+    }
+
+    try {
+      // Check if any invoices exist for clients assigned to this contract
+      // Join through: invoices -> client_contracts -> contracts
+      const result = await db('invoices as i')
+        .join('client_contracts as cc', function joinClientContracts() {
+          this.on('i.client_id', '=', 'cc.client_id')
+            .andOn('i.tenant', '=', 'cc.tenant');
+        })
+        .where({ 'cc.contract_id': contractId, 'cc.tenant': tenant })
+        .count('i.invoice_id as count')
+        .first() as { count?: string };
+
+      return Number(result?.count ?? 0) > 0;
+    } catch (error) {
+      console.error(`Error checking contract ${contractId} invoices:`, error);
       throw error;
     }
   },
@@ -67,6 +92,37 @@ const Contract = {
       return rows;
     } catch (error) {
       console.error('Error fetching contracts:', error);
+      throw error;
+    }
+  },
+
+  async getAllWithClients(): Promise<IContractWithClient[]> {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for fetching contracts');
+    }
+
+    try {
+      const rows = await db('contracts as co')
+        .leftJoin('client_contracts as cc', function joinClientContracts() {
+          this.on('co.contract_id', '=', 'cc.contract_id')
+            .andOn('co.tenant', '=', 'cc.tenant');
+        })
+        .leftJoin('clients as c', function joinClients() {
+          this.on('cc.client_id', '=', 'c.client_id')
+            .andOn('cc.tenant', '=', 'c.tenant');
+        })
+        .where({ 'co.tenant': tenant })
+        .select(
+          'co.*',
+          'c.client_id',
+          'c.client_name'
+        )
+        .orderBy('co.created_at', 'desc');
+
+      return rows;
+    } catch (error) {
+      console.error('Error fetching contracts with clients:', error);
       throw error;
     }
   },

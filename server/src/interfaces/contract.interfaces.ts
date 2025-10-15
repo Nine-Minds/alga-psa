@@ -16,6 +16,14 @@ export interface IContract extends TenantEntity {
 }
 
 /**
+ * Extended contract interface with client information for list views
+ */
+export interface IContractWithClient extends IContract {
+  client_id?: string;
+  client_name?: string;
+}
+
+/**
  * Interface for mapping contract lines to contracts
  * Represents the many-to-many relationship between contract lines and their parent contracts.
  */

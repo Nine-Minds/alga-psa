@@ -2,7 +2,7 @@
 'use server'
 
 import Contract from 'server/src/lib/models/contract';
-import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
+import { IContract, IContractAssignmentSummary, IContractWithClient } from 'server/src/interfaces/contract.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 
@@ -25,6 +25,28 @@ export async function getContracts(): Promise<IContract[]> {
       throw error; // Preserve specific error messages
     }
     throw new Error(`Failed to fetch contracts: ${error}`);
+  }
+}
+
+export async function getContractsWithClients(): Promise<IContractWithClient[]> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    return await Contract.getAllWithClients();
+  } catch (error) {
+    console.error('Error fetching contracts with clients:', error);
+    if (error instanceof Error) {
+      throw error; // Preserve specific error messages
+    }
+    throw new Error(`Failed to fetch contracts with clients: ${error}`);
   }
 }
 
@@ -90,6 +112,14 @@ export async function updateContract(
   }
 
   try {
+    // If trying to set contract to draft (is_active = false), check if it has invoices
+    if (updateData.is_active === false) {
+      const hasInvoices = await Contract.hasInvoices(contractId);
+      if (hasInvoices) {
+        throw new Error('Cannot set contract to draft because it has associated invoices. Contracts with invoices must remain active.');
+      }
+    }
+
     const { tenant: _, ...safeUpdateData } = updateData as any;
     return await Contract.update(contractId, safeUpdateData);
   } catch (error) {
