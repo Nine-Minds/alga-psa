@@ -118,19 +118,6 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
             <span className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-gray-400" />
-              <span className="font-medium text-gray-800">{contract.contract_id}</span>
-              <Button
-                id="copy-contract-id"
-                variant="ghost"
-                size="xs"
-                onClick={handleCopyContractId}
-                className="h-7 px-2"
-              >
-                {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </span>
-            <span className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-400" />
               <span>Created {formatDate(contract.created_at)}</span>
             </span>

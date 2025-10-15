@@ -13,6 +13,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
 import {
@@ -75,6 +76,13 @@ const ContractDetail: React.FC = () => {
   // Assignment editing state
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [editAssignments, setEditAssignments] = useState<Record<string, IContractAssignmentSummary>>({});
+
+  // Contract fields editing state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+
+  // PO Amount input state for formatting (stores display value while editing)
+  const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (contractId) {
@@ -202,6 +210,13 @@ const ContractDetail: React.FC = () => {
       ...prev,
       [assignment.client_contract_id]: { ...assignment }
     }));
+    // Initialize PO amount input with formatted value (convert from cents to dollars)
+    if (assignment.po_amount != null) {
+      setPoAmountInputs(prev => ({
+        ...prev,
+        [assignment.client_contract_id]: (Number(assignment.po_amount) / 100).toFixed(2)
+      }));
+    }
   };
 
   const handleCancelEditAssignment = () => {
@@ -212,16 +227,40 @@ const ContractDetail: React.FC = () => {
     const editedAssignment = editAssignments[assignmentId];
     if (!editedAssignment) return;
 
+    // Find the original assignment to compare what changed
+    const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
+    if (!originalAssignment) return;
+
+    // Build update payload with only changed fields
+    const updatePayload: any = {
+      tenant
+    };
+
+    // Only include fields that have changed
+    if (editedAssignment.start_date !== originalAssignment.start_date) {
+      updatePayload.start_date = editedAssignment.start_date || undefined;
+    }
+    if (editedAssignment.end_date !== originalAssignment.end_date) {
+      updatePayload.end_date = editedAssignment.end_date;
+    }
+    if (editedAssignment.is_active !== originalAssignment.is_active) {
+      updatePayload.is_active = editedAssignment.is_active;
+    }
+    if (editedAssignment.po_required !== originalAssignment.po_required) {
+      updatePayload.po_required = editedAssignment.po_required;
+    }
+    if (editedAssignment.po_number !== originalAssignment.po_number) {
+      updatePayload.po_number = editedAssignment.po_number;
+    }
+    if (editedAssignment.po_amount !== originalAssignment.po_amount) {
+      // Convert dollars to cents for storage
+      updatePayload.po_amount = editedAssignment.po_amount != null
+        ? Math.round(editedAssignment.po_amount * 100)
+        : null;
+    }
+
     try {
-      await updateClientContract(assignmentId, {
-        start_date: editedAssignment.start_date || undefined,
-        end_date: editedAssignment.end_date,
-        is_active: editedAssignment.is_active,
-        po_required: editedAssignment.po_required,
-        po_number: editedAssignment.po_number,
-        po_amount: editedAssignment.po_amount,
-        tenant
-      });
+      await updateClientContract(assignmentId, updatePayload);
 
       await loadContractData();
       setEditingAssignmentId(null);
@@ -492,7 +531,6 @@ const ContractDetail: React.FC = () => {
                               <div className="font-medium text-gray-900">
                                 {assignment.client_name || assignment.client_id}
                               </div>
-                              <div className="text-xs text-gray-500">{assignment.client_id}</div>
                             </td>
                             <td className="px-4 py-3">{formatDate(assignment.start_date)}</td>
                             <td className="px-4 py-3">
@@ -558,28 +596,110 @@ const ContractDetail: React.FC = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-1">
-                      <Label htmlFor="edit-contract-name">Contract Name *</Label>
-                      <Input
-                        id="edit-contract-name"
-                        value={editContractName}
-                        onChange={(e) => {
-                          setEditContractName(e.target.value);
-                          clearErrorIfSubmitted();
-                        }}
-                        placeholder="Enter contract name"
-                        required
-                        className={hasAttemptedSubmit && !editContractName.trim() ? 'border-red-500' : ''}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="edit-contract-name">Contract Name *</Label>
+                        {!isEditingName && (
+                          <Button
+                            id="edit-contract-name-btn"
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setIsEditingName(true)}
+                            className="h-5 w-5 p-0"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      {isEditingName ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="edit-contract-name"
+                            value={editContractName}
+                            onChange={(e) => {
+                              setEditContractName(e.target.value);
+                              clearErrorIfSubmitted();
+                            }}
+                            placeholder="Enter contract name"
+                            required
+                            className={hasAttemptedSubmit && !editContractName.trim() ? 'border-red-500' : ''}
+                          />
+                          <Button
+                            id="save-contract-name"
+                            type="button"
+                            size="sm"
+                            onClick={() => setIsEditingName(false)}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            id="cancel-contract-name"
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditContractName(contract.contract_name);
+                              setIsEditingName(false);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-base font-medium text-gray-900">{editContractName}</span>
+                      )}
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="edit-description">Description</Label>
-                      <TextArea
-                        id="edit-description"
-                        value={editDescription}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
-                        placeholder="Enter contract description"
-                        className="min-h-[100px]"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="edit-description">Description</Label>
+                        {!isEditingDescription && (
+                          <Button
+                            id="edit-description-btn"
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setIsEditingDescription(true)}
+                            className="h-5 w-5 p-0"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      {isEditingDescription ? (
+                        <div className="space-y-2">
+                          <TextArea
+                            id="edit-description"
+                            value={editDescription}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
+                            placeholder="Enter contract description"
+                            className="min-h-[100px]"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              id="save-description"
+                              type="button"
+                              size="sm"
+                              onClick={() => setIsEditingDescription(false)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              id="cancel-description"
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditDescription(contract.contract_description ?? '');
+                                setIsEditingDescription(false);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-base text-gray-700">{editDescription || 'No description'}</p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -705,7 +825,6 @@ const ContractDetail: React.FC = () => {
                                   <div className="font-medium text-gray-900">
                                     {assignment.client_name || assignment.client_id}
                                   </div>
-                                  <div className="text-xs text-gray-500">{assignment.client_id}</div>
                                 </td>
                                 <td className="px-4 py-3">
                                   {isEditing ? (
@@ -742,13 +861,16 @@ const ContractDetail: React.FC = () => {
                                 </td>
                                 <td className="px-4 py-3">
                                   {isEditing ? (
-                                    <Checkbox
+                                    <Switch
+                                      id={`po-required-${assignment.client_contract_id}`}
                                       checked={editData.po_required}
-                                      onChange={(checked) => handleAssignmentFieldChange(
-                                        assignment.client_contract_id,
-                                        'po_required',
-                                        !!checked
-                                      )}
+                                      onCheckedChange={(checked) => {
+                                        handleAssignmentFieldChange(
+                                          assignment.client_contract_id,
+                                          'po_required',
+                                          checked
+                                        );
+                                      }}
                                     />
                                   ) : (
                                     <span>{assignment.po_required ? 'Yes' : 'No'}</span>
@@ -779,20 +901,54 @@ const ContractDetail: React.FC = () => {
                                 </td>
                                 <td className="px-4 py-3">
                                   {isEditing ? (
-                                    <Input
-                                      type="number"
-                                      value={editData.po_amount || ''}
-                                      onChange={(e) => handleAssignmentFieldChange(
-                                        assignment.client_contract_id,
-                                        'po_amount',
-                                        e.target.value ? parseFloat(e.target.value) : null
-                                      )}
-                                      placeholder="0.00"
-                                      className="w-28"
-                                      disabled={!editData.po_required}
-                                    />
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                      <Input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={poAmountInputs[assignment.client_contract_id] || ''}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                                          const decimalCount = (value.match(/\./g) || []).length;
+                                          if (decimalCount <= 1) {
+                                            setPoAmountInputs(prev => ({
+                                              ...prev,
+                                              [assignment.client_contract_id]: value
+                                            }));
+                                          }
+                                        }}
+                                        onBlur={() => {
+                                          const input = poAmountInputs[assignment.client_contract_id] || '';
+                                          if (input.trim() === '' || input === '.') {
+                                            setPoAmountInputs(prev => ({
+                                              ...prev,
+                                              [assignment.client_contract_id]: ''
+                                            }));
+                                            handleAssignmentFieldChange(
+                                              assignment.client_contract_id,
+                                              'po_amount',
+                                              null
+                                            );
+                                          } else {
+                                            const amount = parseFloat(input) || 0;
+                                            handleAssignmentFieldChange(
+                                              assignment.client_contract_id,
+                                              'po_amount',
+                                              amount
+                                            );
+                                            setPoAmountInputs(prev => ({
+                                              ...prev,
+                                              [assignment.client_contract_id]: amount.toFixed(2)
+                                            }));
+                                          }
+                                        }}
+                                        placeholder="0.00"
+                                        className="w-28 pl-7"
+                                        disabled={!editData.po_required}
+                                      />
+                                    </div>
                                   ) : (
-                                    assignment.po_amount ? `$${assignment.po_amount.toFixed(2)}` : '—'
+                                    assignment.po_amount != null ? `$${(Number(assignment.po_amount) / 100).toFixed(2)}` : '—'
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
