@@ -39,6 +39,9 @@ export interface IClientContract extends TenantEntity {
   start_date: ISO8601String;
   end_date: ISO8601String | null;
   is_active: boolean;
+  po_required?: boolean;
+  po_number?: string | null;
+  po_amount?: number | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
@@ -55,6 +58,7 @@ export interface IContractAssignmentSummary extends TenantEntity {
   is_active: boolean;
   po_required: boolean;
   po_number?: string | null;
+  po_amount?: number | null;
 }
 
 /**

@@ -375,7 +375,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     onClick={handleSubmitComment}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? t('common.loading') : t('tickets.conversation.addComment', 'Add Comment')}
+                    {isSubmitting ? t('common.loading', 'Loading...') : t('tickets.conversation.addComment', 'Add Comment')}
                   </Button>
                   <Button
                     id={`${compId}-cancel-comment-btn`}
@@ -383,7 +383,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     variant="outline"
                     disabled={isSubmitting}
                   >
-                    {t('common.cancel')}
+                    {t('common.cancel', 'Cancel')}
                   </Button>
                 </div>
               </div>

@@ -263,6 +263,7 @@ export async function getContractAssignments(contractId: string): Promise<IContr
 
     const hasPoRequired = await knex.schema.hasColumn('client_contracts', 'po_required');
     const hasPoNumber = await knex.schema.hasColumn('client_contracts', 'po_number');
+    const hasPoAmount = await knex.schema.hasColumn('client_contracts', 'po_amount');
 
     const selection = [
       'cc.client_contract_id',
@@ -279,6 +280,9 @@ export async function getContractAssignments(contractId: string): Promise<IContr
     }
     if (hasPoNumber) {
       selection.push('cc.po_number');
+    }
+    if (hasPoAmount) {
+      selection.push('cc.po_amount');
     }
 
     const rows = await knex('client_contracts as cc')
@@ -298,6 +302,7 @@ export async function getContractAssignments(contractId: string): Promise<IContr
       is_active: row.is_active ?? false,
       po_required: hasPoRequired ? Boolean(row.po_required) : false,
       po_number: hasPoNumber ? row.po_number : undefined,
+      po_amount: hasPoAmount ? row.po_amount : undefined,
       tenant: row.tenant,
     }));
   } catch (error) {

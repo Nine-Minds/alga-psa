@@ -190,9 +190,9 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               <ul className="list-disc list-inside space-y-1 ml-2">
                 {data.fixed_services.map((service, idx) => (
                   <li key={idx} className="space-y-1">
-                    <p className="font-medium">
+                    <span className="font-medium">
                       {service.service_name || service.service_id} (Qty: {service.quantity})
-                    </p>
+                    </span>
                     {formatBucketSummary(service.bucket_overlay, 'hours') && (
                       <p className="text-xs text-blue-700 pl-4">
                         Bucket: {formatBucketSummary(service.bucket_overlay, 'hours')}
@@ -225,9 +225,9 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               <ul className="list-disc list-inside space-y-1 ml-2">
                 {data.hourly_services.map((service, idx) => (
                   <li key={idx} className="space-y-1">
-                    <p className="font-medium">
+                    <span className="font-medium">
                       {service.service_name || service.service_id} - {formatCurrency(service.hourly_rate)}/hour
-                    </p>
+                    </span>
                     {formatBucketSummary(service.bucket_overlay, 'hours') && (
                       <p className="text-xs text-blue-700 pl-4">
                         Bucket: {formatBucketSummary(service.bucket_overlay, 'hours')}
@@ -266,9 +266,9 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             <ul className="list-disc list-inside space-y-1 ml-2">
               {(data.usage_services || []).map((service, idx) => (
                 <li key={idx} className="space-y-1">
-                  <p className="font-medium">
+                  <span className="font-medium">
                     {service.service_name || service.service_id} - {formatCurrency(service.unit_rate)}/{service.unit_of_measure || 'unit'}
-                  </p>
+                  </span>
                   {formatBucketSummary(service.bucket_overlay, 'usage', service.unit_of_measure) && (
                     <p className="text-xs text-blue-700 pl-4">
                       Bucket: {formatBucketSummary(service.bucket_overlay, 'usage', service.unit_of_measure)}
