@@ -17,6 +17,8 @@ import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from 'server/src/components/ui/Tooltip';
 import { getContractLineById, updateContractLine } from 'server/src/lib/actions/contractLineAction';
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { useTenant } from '../../TenantProvider';
 import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Corrected import path
 import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IContractLine, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
