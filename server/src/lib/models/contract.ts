@@ -25,6 +25,30 @@ const Contract = {
     }
   },
 
+  async hasInvoices(contractId: string): Promise<boolean> {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for checking contract invoices');
+    }
+
+    try {
+      // Check if any invoice items reference this contract's client_contracts
+      const result = await db('invoice_items as ii')
+        .join('client_contracts as cc', function joinClientContracts() {
+          this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
+            .andOn('ii.tenant', '=', 'cc.tenant');
+        })
+        .where({ 'cc.contract_id': contractId, 'cc.tenant': tenant })
+        .count('ii.item_id as count')
+        .first() as { count?: string };
+
+      return Number(result?.count ?? 0) > 0;
+    } catch (error) {
+      console.error(`Error checking contract ${contractId} invoices:`, error);
+      throw error;
+    }
+  },
+
   async delete(contractId: string): Promise<void> {
     const { knex: db, tenant } = await createTenantKnex();
     if (!tenant) {

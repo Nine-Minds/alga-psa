@@ -576,12 +576,18 @@ const ContractDetail: React.FC = () => {
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    <p className="font-medium mb-2">Please fix the following errors:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      {validationErrors.map((err, index) => (
-                        <li key={index}>{err}</li>
-                      ))}
-                    </ul>
+                    {validationErrors.length === 1 && validationErrors[0].includes('Cannot set contract to draft') ? (
+                      <p>{validationErrors[0]}</p>
+                    ) : (
+                      <>
+                        <p className="font-medium mb-2">Please fix the following errors:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {validationErrors.map((err, index) => (
+                            <li key={index}>{err}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}
