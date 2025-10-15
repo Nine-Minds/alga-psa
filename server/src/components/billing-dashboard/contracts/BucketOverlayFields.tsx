@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Label } from 'server/src/components/ui/Label';
@@ -19,18 +19,6 @@ interface BucketOverlayFieldsProps {
   automationId?: string;
 }
 
-const dollarsFromCents = (cents?: number) => {
-  if (cents == null) return '';
-  return (cents / 100).toFixed(2);
-};
-
-const centsFromInput = (input: string) => {
-  if (!input.trim()) return undefined;
-  const parsed = Number.parseFloat(input);
-  if (Number.isNaN(parsed)) return undefined;
-  return Math.round(parsed * 100);
-};
-
 export function BucketOverlayFields({
   mode,
   value,
@@ -39,6 +27,16 @@ export function BucketOverlayFields({
   disabled = false,
   automationId
 }: BucketOverlayFieldsProps) {
+  const [overageRateInput, setOverageRateInput] = useState<string>('');
+
+  useEffect(() => {
+    // Initialize overage rate input from value
+    if (value.overage_rate !== undefined) {
+      setOverageRateInput((value.overage_rate / 100).toFixed(2));
+    } else {
+      setOverageRateInput('');
+    }
+  }, [value.overage_rate]);
   const resolvedUnitLabel =
     mode === 'hours'
       ? 'hours'
@@ -79,8 +77,7 @@ export function BucketOverlayFields({
     });
   };
 
-  const handleOverageChange = (raw: string) => {
-    const cents = centsFromInput(raw);
+  const handleOverageChange = (cents: number) => {
     onChange({
       ...value,
       overage_rate: cents,
@@ -133,17 +130,38 @@ export function BucketOverlayFields({
             <Info className="h-4 w-4 text-blue-500" />
           </Tooltip>
         </div>
-        <Input
-          id={automationId ? `${automationId}-overage` : undefined}
-          data-automation-id={automationId ? `${automationId}-overage` : undefined}
-          type="number"
-          min={0}
-          step={0.01}
-          value={dollarsFromCents(value.overage_rate)}
-          placeholder="0.00"
-          onChange={(event) => handleOverageChange(event.target.value)}
-          disabled={disabled}
-        />
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+          <Input
+            id={automationId ? `${automationId}-overage` : undefined}
+            data-automation-id={automationId ? `${automationId}-overage` : undefined}
+            type="text"
+            inputMode="decimal"
+            value={overageRateInput}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^0-9.]/g, '');
+              // Allow only one decimal point
+              const decimalCount = (value.match(/\./g) || []).length;
+              if (decimalCount <= 1) {
+                setOverageRateInput(value);
+              }
+            }}
+            onBlur={() => {
+              if (overageRateInput.trim() === '' || overageRateInput === '.') {
+                setOverageRateInput('');
+                handleOverageChange(0);
+              } else {
+                const dollars = parseFloat(overageRateInput) || 0;
+                const cents = Math.round(dollars * 100);
+                handleOverageChange(cents);
+                setOverageRateInput((cents / 100).toFixed(2));
+              }
+            }}
+            placeholder="0.00"
+            className="pl-7"
+            disabled={disabled}
+          />
+        </div>
       </div>
 
       <div className="flex items-start gap-2 pt-1">
