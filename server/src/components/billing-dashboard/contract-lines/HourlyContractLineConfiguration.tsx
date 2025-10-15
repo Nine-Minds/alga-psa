@@ -10,7 +10,6 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, Trash2, Info, ChevronDown } from 'lucide-react';
 import { Button, ButtonProps } from 'server/src/components/ui/Button'; // Import ButtonProps
-import { ContractLineDialog } from '../ContractLineDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import * as Accordion from '@radix-ui/react-accordion';
@@ -108,6 +107,18 @@ export function HourlyPlanConfiguration({
   // Plan-wide state
   const [plan, setPlan] = useState<HourlyPlanData | null>(null);
   const [initialPlanData, setInitialPlanData] = useState<Partial<HourlyPlanData>>({}); // For plan-wide change detection
+
+  // Plan basics state for inline editing
+  const [planName, setPlanName] = useState('');
+  const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
+  const [isCustom, setIsCustom] = useState(false);
+  const [planBasicsErrors, setPlanBasicsErrors] = useState<string[]>([]);
+  const [isSavingBasics, setIsSavingBasics] = useState(false);
+  const [isBasicsDirty, setIsBasicsDirty] = useState(false);
+  const tenant = useTenant()!;
+
+  const markBasicsDirty = () => setIsBasicsDirty(true);
+
   const [enableOvertime, setEnableOvertime] = useState<boolean>(false);
   const [overtimeRate, setOvertimeRate] = useState<number | undefined>(undefined);
   const [overtimeThreshold, setOvertimeThreshold] = useState<number | undefined>(40);
@@ -153,6 +164,12 @@ export function HourlyPlanConfiguration({
         return;
       }
       setPlan(fetchedPlan);
+
+      // Populate plan basics form fields
+      setPlanName(fetchedPlan.contract_line_name);
+      setBillingFrequency(fetchedPlan.billing_frequency);
+      setIsCustom(fetchedPlan.is_custom);
+      setIsBasicsDirty(false);
 
       // Set initial plan-wide states
       const initialData: Partial<HourlyPlanData> = {
@@ -291,6 +308,55 @@ export function HourlyPlanConfiguration({
       );
   }, []);
 
+  // Plan basics save/reset handlers
+  const validatePlanBasics = (): string[] => {
+    const errors: string[] = [];
+    if (!planName.trim()) errors.push('Contract line name');
+    if (!billingFrequency) errors.push('Billing frequency');
+    return errors;
+  };
+
+  const handleSavePlanBasics = async () => {
+    const errors = validatePlanBasics();
+    if (errors.length > 0) {
+      setPlanBasicsErrors(errors);
+      return;
+    }
+
+    setIsSavingBasics(true);
+    setPlanBasicsErrors([]);
+    try {
+      const planData: Partial<HourlyPlanData> = {
+        contract_line_name: planName,
+        billing_frequency: billingFrequency,
+        is_custom: isCustom,
+        tenant,
+      };
+
+      if (plan?.contract_line_id) {
+        await updateContractLine(plan.contract_line_id, planData);
+      }
+
+      await fetchPlanData();
+      setIsBasicsDirty(false);
+    } catch (error) {
+      console.error('Error saving contract line basics:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line';
+      setPlanBasicsErrors([errorMessage]);
+    } finally {
+      setIsSavingBasics(false);
+    }
+  };
+
+  const handleResetPlanBasics = () => {
+    if (plan) {
+      setPlanName(plan.contract_line_name);
+      setBillingFrequency(plan.billing_frequency);
+      setIsCustom(plan.is_custom);
+      setIsBasicsDirty(false);
+      setPlanBasicsErrors([]);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -585,18 +651,108 @@ export function HourlyPlanConfiguration({
                 </Accordion.Item>
             </Accordion.Root>
 
+            {/* Contract Line Basics - Inline Editing */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Hourly)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {planBasicsErrors.length > 0 && (
+                        <Alert variant="destructive">
+                            <AlertDescription>
+                                <p className="font-medium mb-2">Please correct the following:</p>
+                                <ul className="list-disc list-inside space-y-1">
+                                    {planBasicsErrors.map((err, idx) => (
+                                        <li key={idx}>{err}</li>
+                                    ))}
+                                </ul>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    <section className="space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+                            <p className="text-sm text-gray-600">
+                                Name the contract line and choose how it should bill by default.
+                            </p>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <Label htmlFor="hourly-name">Contract Line Name *</Label>
+                                <Input
+                                    id="hourly-name"
+                                    value={planName}
+                                    onChange={(e) => {
+                                        setPlanName(e.target.value);
+                                        markBasicsDirty();
+                                    }}
+                                    placeholder="e.g. Time & Materials Support"
+                                    required
+                                />
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <Label htmlFor="hourly-frequency">Billing Frequency *</Label>
+                                    <CustomSelect
+                                        id="hourly-frequency"
+                                        value={billingFrequency}
+                                        onValueChange={(value) => {
+                                            setBillingFrequency(value);
+                                            markBasicsDirty();
+                                        }}
+                                        options={BILLING_FREQUENCY_OPTIONS}
+                                        placeholder="Select billing frequency"
+                                    />
+                                </div>
+                                <div className="border border-gray-200 rounded-md p-3 bg-white">
+                                    <div className="flex items-center gap-3">
+                                        <Switch
+                                            id="hourly-is-custom"
+                                            checked={isCustom}
+                                            onCheckedChange={(checked) => {
+                                                setIsCustom(checked);
+                                                markBasicsDirty();
+                                            }}
+                                        />
+                                        <div>
+                                            <Label htmlFor="hourly-is-custom" className="cursor-pointer">
+                                                Custom Line
+                                            </Label>
+                                            <p className="text-xs text-gray-500">
+                                                Flag the line as bespoke for reporting and analytics.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t">
+                        <Button
+                            id="reset-hourly-plan-basics"
+                            variant="outline"
+                            onClick={handleResetPlanBasics}
+                            disabled={isSavingBasics || !isBasicsDirty}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            id="save-hourly-plan-basics"
+                            onClick={handleSavePlanBasics}
+                            disabled={isSavingBasics || !isBasicsDirty}
+                        >
+                            {isSavingBasics ? 'Saving…' : 'Save Changes'}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Service Specific Settings */}
             <Card>
-                <CardHeader className="flex items-center justify-between">
-                    <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
-                    {plan && (
-                        <ContractLineDialog
-                            editingPlan={plan}
-                            onPlanAdded={() => fetchPlanData()}
-                            triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
-                            allServiceTypes={[]}
-                        />
-                    )}
+                <CardHeader>
+                    <CardTitle>Service Rates & Settings</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {serviceConfigs.length > 0 ? (
