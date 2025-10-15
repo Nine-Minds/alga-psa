@@ -347,7 +347,7 @@ const ContractDetail: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span>Status</span>
                     <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                      {contract.is_active ? 'Active' : 'Inactive'}
+                      {contract.is_active ? 'Active' : 'Draft'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
@@ -717,11 +717,11 @@ const ContractDetail: React.FC = () => {
                         <span className="text-xs text-gray-500">Status</span>
                         <CustomSelect
                           id="edit-is-active"
-                          value={editIsActive ? 'active' : 'inactive'}
+                          value={editIsActive ? 'active' : 'draft'}
                           onValueChange={(value) => setEditIsActive(value === 'active')}
                           options={[
                             { value: 'active', label: 'Active' },
-                            { value: 'inactive', label: 'Inactive' }
+                            { value: 'draft', label: 'Draft' }
                           ]}
                         />
                       </div>

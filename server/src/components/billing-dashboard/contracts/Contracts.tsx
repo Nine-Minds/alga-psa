@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
+import { Badge } from 'server/src/components/ui/Badge';
 import { MoreVertical, Plus, Wand2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -13,14 +14,14 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContract } from 'server/src/interfaces/contract.interfaces';
-import { getContracts, deleteContract } from 'server/src/lib/actions/contractActions';
+import { IContractWithClient } from 'server/src/interfaces/contract.interfaces';
+import { getContractsWithClients, deleteContract } from 'server/src/lib/actions/contractActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
 
 const Contracts: React.FC = () => {
-  const [contracts, setContracts] = useState<IContract[]>([]);
-  const [editingContract, setEditingContract] = useState<IContract | null>(null);
+  const [contracts, setContracts] = useState<IContractWithClient[]>([]);
+  const [editingContract, setEditingContract] = useState<IContractWithClient | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -31,7 +32,7 @@ const Contracts: React.FC = () => {
 
   const fetchContracts = async () => {
     try {
-      const fetchedContracts = await getContracts();
+      const fetchedContracts = await getContractsWithClients();
       setContracts(fetchedContracts);
       setError(null);
     } catch (err) {
@@ -50,10 +51,15 @@ const Contracts: React.FC = () => {
     }
   };
 
-  const contractColumns: ColumnDefinition<IContract>[] = [
+  const contractColumns: ColumnDefinition<IContractWithClient>[] = [
     {
       title: 'Contract Name',
       dataIndex: 'contract_name',
+    },
+    {
+      title: 'Client',
+      dataIndex: 'client_name',
+      render: (value) => value || '—',
     },
     {
       title: 'Description',
@@ -63,7 +69,11 @@ const Contracts: React.FC = () => {
     {
       title: 'Status',
       dataIndex: 'is_active',
-      render: (value) => (value ? 'Active' : 'Inactive'),
+      render: (value) => (
+        <Badge className={value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+          {value ? 'Active' : 'Draft'}
+        </Badge>
+      ),
     },
     {
       title: 'Actions',
@@ -111,7 +121,7 @@ const Contracts: React.FC = () => {
     },
   ];
 
-  const handleContractClick = (record: IContract) => {
+  const handleContractClick = (record: IContractWithClient) => {
     if (record.contract_id) {
       router.push(`/msp/billing?tab=contracts&contractId=${record.contract_id}`);
     }

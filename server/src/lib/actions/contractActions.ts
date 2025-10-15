@@ -2,7 +2,7 @@
 'use server'
 
 import Contract from 'server/src/lib/models/contract';
-import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
+import { IContract, IContractAssignmentSummary, IContractWithClient } from 'server/src/interfaces/contract.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 
@@ -25,6 +25,28 @@ export async function getContracts(): Promise<IContract[]> {
       throw error; // Preserve specific error messages
     }
     throw new Error(`Failed to fetch contracts: ${error}`);
+  }
+}
+
+export async function getContractsWithClients(): Promise<IContractWithClient[]> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    return await Contract.getAllWithClients();
+  } catch (error) {
+    console.error('Error fetching contracts with clients:', error);
+    if (error instanceof Error) {
+      throw error; // Preserve specific error messages
+    }
+    throw new Error(`Failed to fetch contracts with clients: ${error}`);
   }
 }
 
