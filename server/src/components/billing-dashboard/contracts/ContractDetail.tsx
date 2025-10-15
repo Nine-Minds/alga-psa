@@ -204,6 +204,7 @@ const ContractDetail: React.FC = () => {
     setIsSaving(true);
 
     try {
+      // Update contract
       await updateContract(contractId, {
         contract_name: editContractName,
         contract_description: editDescription || undefined,
@@ -212,7 +213,45 @@ const ContractDetail: React.FC = () => {
         tenant
       });
 
+      // Update any edited assignments
+      for (const [assignmentId, editedAssignment] of Object.entries(editAssignments)) {
+        const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
+        if (!originalAssignment) continue;
+
+        // Build update payload with only changed fields
+        const updatePayload: any = {
+          tenant
+        };
+
+        // Only include fields that have changed
+        if (editedAssignment.start_date !== originalAssignment.start_date) {
+          updatePayload.start_date = editedAssignment.start_date || undefined;
+        }
+        if (editedAssignment.end_date !== originalAssignment.end_date) {
+          updatePayload.end_date = editedAssignment.end_date;
+        }
+        if (editedAssignment.po_required !== originalAssignment.po_required) {
+          updatePayload.po_required = editedAssignment.po_required;
+        }
+        if (editedAssignment.po_number !== originalAssignment.po_number) {
+          updatePayload.po_number = editedAssignment.po_number;
+        }
+        if (editedAssignment.po_amount !== originalAssignment.po_amount) {
+          // Convert dollars to cents for storage
+          updatePayload.po_amount = editedAssignment.po_amount != null
+            ? Math.round(editedAssignment.po_amount * 100)
+            : null;
+        }
+
+        // Only update if there are changes
+        if (Object.keys(updatePayload).length > 1) { // More than just tenant
+          await updateClientContract(assignmentId, updatePayload);
+        }
+      }
+
       await loadContractData();
+      setEditingAssignmentId(null);
+      setEditAssignments({});
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
@@ -239,59 +278,30 @@ const ContractDetail: React.FC = () => {
     }
   };
 
-  const handleCancelEditAssignment = () => {
+  const handleConfirmEditAssignment = () => {
+    // Just close the editor - changes are kept in editAssignments state
     setEditingAssignmentId(null);
   };
 
-  const handleSaveAssignment = async (assignmentId: string) => {
-    const editedAssignment = editAssignments[assignmentId];
-    if (!editedAssignment) return;
-
-    // Find the original assignment to compare what changed
+  const handleCancelEditAssignment = (assignmentId: string) => {
+    // Revert changes and close editor
     const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
-    if (!originalAssignment) return;
-
-    // Build update payload with only changed fields
-    const updatePayload: any = {
-      tenant
-    };
-
-    // Only include fields that have changed
-    if (editedAssignment.start_date !== originalAssignment.start_date) {
-      updatePayload.start_date = editedAssignment.start_date || undefined;
+    if (originalAssignment) {
+      setEditAssignments(prev => {
+        const newState = { ...prev };
+        delete newState[assignmentId];
+        return newState;
+      });
+      // Clear PO amount input
+      setPoAmountInputs(prev => {
+        const newState = { ...prev };
+        delete newState[assignmentId];
+        return newState;
+      });
     }
-    if (editedAssignment.end_date !== originalAssignment.end_date) {
-      updatePayload.end_date = editedAssignment.end_date;
-    }
-    if (editedAssignment.is_active !== originalAssignment.is_active) {
-      updatePayload.is_active = editedAssignment.is_active;
-    }
-    if (editedAssignment.po_required !== originalAssignment.po_required) {
-      updatePayload.po_required = editedAssignment.po_required;
-    }
-    if (editedAssignment.po_number !== originalAssignment.po_number) {
-      updatePayload.po_number = editedAssignment.po_number;
-    }
-    if (editedAssignment.po_amount !== originalAssignment.po_amount) {
-      // Convert dollars to cents for storage
-      updatePayload.po_amount = editedAssignment.po_amount != null
-        ? Math.round(editedAssignment.po_amount * 100)
-        : null;
-    }
-
-    try {
-      await updateClientContract(assignmentId, updatePayload);
-
-      await loadContractData();
-      setEditingAssignmentId(null);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (error) {
-      console.error('Error updating assignment:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update assignment';
-      setValidationErrors([errorMessage]);
-    }
+    setEditingAssignmentId(null);
   };
+
 
   const handleAssignmentFieldChange = (
     assignmentId: string,
@@ -868,7 +878,6 @@ const ContractDetail: React.FC = () => {
                             <th className="px-4 py-3">PO Required</th>
                             <th className="px-4 py-3">PO Number</th>
                             <th className="px-4 py-3">PO Amount</th>
-                            <th className="px-4 py-3">Status</th>
                             <th className="px-4 py-3">Actions</th>
                           </tr>
                         </thead>
@@ -1011,28 +1020,12 @@ const ContractDetail: React.FC = () => {
                                 </td>
                                 <td className="px-4 py-3">
                                   {isEditing ? (
-                                    <Checkbox
-                                      checked={editData.is_active}
-                                      onChange={(checked) => handleAssignmentFieldChange(
-                                        assignment.client_contract_id,
-                                        'is_active',
-                                        !!checked
-                                      )}
-                                    />
-                                  ) : (
-                                    <Badge className={assignment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}>
-                                      {assignment.is_active ? 'Active' : 'Inactive'}
-                                    </Badge>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
                                     <div className="flex gap-2">
                                       <Button
-                                        id={`save-assignment-${assignment.client_contract_id}`}
+                                        id={`confirm-assignment-${assignment.client_contract_id}`}
                                         type="button"
                                         size="sm"
-                                        onClick={() => handleSaveAssignment(assignment.client_contract_id)}
+                                        onClick={handleConfirmEditAssignment}
                                       >
                                         <Check className="h-4 w-4" />
                                       </Button>
@@ -1041,7 +1034,7 @@ const ContractDetail: React.FC = () => {
                                         type="button"
                                         size="sm"
                                         variant="outline"
-                                        onClick={handleCancelEditAssignment}
+                                        onClick={() => handleCancelEditAssignment(assignment.client_contract_id)}
                                       >
                                         <X className="h-4 w-4" />
                                       </Button>
