@@ -11,6 +11,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [initialData, setInitialData] = useState<Partial<WizardData>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isRevisit, setIsRevisit] = useState(false);
 
   useEffect(() => {
     checkOnboardingStatusAndLoadData();
@@ -18,33 +19,43 @@ export default function OnboardingPage() {
 
   const checkOnboardingStatusAndLoadData = async () => {
     try {
-      // Check if onboarding is already completed
+      // Load tenant settings
       const settings = await getTenantSettings();
-      
-      if (settings?.onboarding_completed) {
-        // Redirect to dashboard if onboarding is already completed
-        router.push('/msp');
-        return;
-      }
+
+      // Check if this is a revisit (onboarding was previously completed)
+      const isReturningUser = settings?.onboarding_completed || false;
+      setIsRevisit(isReturningUser);
 
       // Load any saved progress
       let data: Partial<WizardData> = {};
-      
+
       if (settings?.onboarding_data) {
         data = settings.onboarding_data;
       }
-      
-      // Fetch current user and client info to prefill
-      const initialDataResult = await getOnboardingInitialData();
-      
-      if (initialDataResult.success && initialDataResult.data) {
-        // Merge with any existing saved data (saved data takes precedence)
-        data = {
-          ...initialDataResult.data,
-          ...data
-        };
+
+      // For first-time users, fetch user data to prefill
+      // For returning users, only fetch company/tenant data
+      if (!isReturningUser) {
+        const initialDataResult = await getOnboardingInitialData();
+
+        if (initialDataResult.success && initialDataResult.data) {
+          // Merge with any existing saved data (saved data takes precedence)
+          data = {
+            ...initialDataResult.data,
+            ...data
+          };
+        }
+      } else {
+        // For returning users, just prefill company name from tenant data
+        const initialDataResult = await getOnboardingInitialData();
+        if (initialDataResult.success && initialDataResult.data?.clientName) {
+          data = {
+            ...data,
+            clientName: initialDataResult.data.clientName
+          };
+        }
       }
-      
+
       setInitialData(data);
     } catch (error) {
       console.error('Error loading onboarding data:', error);
@@ -75,6 +86,7 @@ export default function OnboardingPage() {
         initialData={initialData}
         onComplete={handleComplete}
         fullPage={true}
+        isRevisit={isRevisit}
       />
     </div>
   );

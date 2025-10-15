@@ -33,7 +33,7 @@ export interface TenantCreationInput {
   };
   companyName?: string;
   clientName?: string;
-  billingPlan?: string;
+  contractLine?: string;
 }
 
 export interface TenantCreationResult {
@@ -190,7 +190,7 @@ export async function setupTenantData(
     tenantId: string;
     adminUserId: string;
     clientId?: string;
-    billingPlan?: string;
+    contractLine?: string;
   }
 ): Promise<{ setupSteps: string[] }> {
   return await db.transaction(async (trx) => {
@@ -262,7 +262,7 @@ export async function createTenantComplete(
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
       clientId: tenantResult.clientId,
-      billingPlan: input.billingPlan,
+      contractLine: input.contractLine,
     });
 
     return {

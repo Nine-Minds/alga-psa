@@ -158,8 +158,24 @@ export function InboundTicketDefaultsForm({
       return;
     }
 
-    if (!formData.board_id || !formData.status_id || !formData.priority_id) {
-      setError('Board, status, and priority are required');
+    if (!formData.board_id) {
+      setError('Board is required');
+      return;
+    }
+
+    if (!formData.status_id) {
+      setError('Status is required');
+      return;
+    }
+
+    if (!formData.priority_id) {
+      setError('Priority is required');
+      return;
+    }
+
+    // Client/Company is required
+    if (!formData.client_id) {
+      setError('Company is required');
       return;
     }
 
@@ -332,7 +348,7 @@ export function InboundTicketDefaultsForm({
 
           {/* Optional Fields */}
           <div>
-            <Label htmlFor="client_id">Client</Label>
+            <Label htmlFor="client_id">Client *</Label>
             <ClientPicker
               id="client_id"
               clients={clients}
@@ -345,7 +361,7 @@ export function InboundTicketDefaultsForm({
               placeholder="Select Client"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Used as a catch-all when no client can be matched from the email; otherwise ignored.
+              Required: used as a catch-all when no client can be matched from the email.
             </p>
           </div>
 

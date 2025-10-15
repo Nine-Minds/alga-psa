@@ -4,6 +4,13 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePostHog } from 'posthog-js/react';
 
+const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
+const featureFlagsDisabled =
+  typeof process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS === 'string' &&
+  FEATURE_FLAG_DISABLE_VALUES.has(
+    process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS.toLowerCase()
+  );
+
 interface FeatureFlagOptions {
   // Override the user context
   userId?: string;
@@ -28,13 +35,23 @@ export function useFeatureFlag(
 } {
   const { data: session } = useSession();
   const posthog = usePostHog();
-  const [enabled, setEnabled] = useState<boolean>(
-    typeof options.defaultValue === 'boolean' ? options.defaultValue : false
-  );
-  const [loading, setLoading] = useState(true);
+  const [enabled, setEnabled] = useState<boolean>(() => {
+    if (featureFlagsDisabled) {
+      return true;
+    }
+    return typeof options.defaultValue === 'boolean' ? options.defaultValue : false;
+  });
+  const [loading, setLoading] = useState(!featureFlagsDisabled);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    if (featureFlagsDisabled) {
+      setEnabled(true);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     if (!posthog) {
       setLoading(false);
       return;
@@ -95,7 +112,14 @@ export function useFeatureFlag(
     }
     
     return () => clearTimeout(timeoutId);
-  }, [posthog, flagKey, session?.user?.id, session?.user?.tenant, options.userId, options.pollInterval]);
+  }, [
+    posthog,
+    flagKey,
+    session?.user?.id,
+    session?.user?.tenant,
+    options.userId,
+    options.pollInterval,
+  ]);
 
   return { enabled, loading, error };
 }
@@ -116,10 +140,17 @@ export function useFeatureFlagVariant(
   const [variant, setVariant] = useState<string | null>(
     typeof options.defaultValue === 'string' ? options.defaultValue : null
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!featureFlagsDisabled);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    if (featureFlagsDisabled) {
+      setVariant(typeof options.defaultValue === 'string' ? options.defaultValue : null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     if (!posthog) {
       setLoading(false);
       return;
@@ -169,10 +200,17 @@ export function useFeatureFlags(): {
 } {
   const posthog = usePostHog();
   const [flags, setFlags] = useState<Record<string, boolean | string>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!featureFlagsDisabled);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    if (featureFlagsDisabled) {
+      setFlags({});
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     if (!posthog) {
       setLoading(false);
       return;

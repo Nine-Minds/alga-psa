@@ -2,29 +2,29 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import { v4 as uuidv4 } from 'uuid';
 import { ITicket } from '../../interfaces/ticket.interfaces';
 import * as ticketActions from '../../lib/actions/ticket-actions/ticketActions';
-import { TestContext } from '../../../test-utils/testContext';
+import { TestContext } from '../../../../test-utils/testContext';
 import {
   setupCommonMocks,
   mockNextHeaders,
   mockNextAuth,
   mockRBAC,
   createMockUser
-} from '../../../test-utils/testMocks';
+} from '../../../../test-utils/testMocks';
 import {
   createTenant,
   createClient,
   createUser,
   createTestEnvironment
-} from '../../../test-utils/testDataFactory';
+} from '../../../../test-utils/testDataFactory';
 import {
   resetDatabase,
   createCleanupHook,
   cleanupTables
-} from '../../../test-utils/dbReset';
+} from '../../../../test-utils/dbReset';
 import {
   expectPermissionDenied,
   expectError
-} from '../../../test-utils/errorUtils';
+} from '../../../../test-utils/errorUtils';
 
 describe('Ticket Permissions Infrastructure', () => {
   const context = new TestContext({

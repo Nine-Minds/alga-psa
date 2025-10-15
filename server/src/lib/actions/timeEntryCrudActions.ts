@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from 'server/src/lib/db';
-import { determineDefaultBillingPlan } from 'server/src/lib/utils/planDisambiguation';
+import { determineDefaultContractLine } from 'server/src/lib/utils/contractLineDisambiguation';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
 import {
   ITimeEntry,
@@ -243,7 +243,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       approval_status,
       service_id,
       tax_region,
-      billing_plan_id,
+      contract_line_id,
       tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
@@ -275,7 +275,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       approval_status,
       service_id,
       tax_region,
-      billing_plan_id,
+      contract_line_id,
       tax_rate_id, // Add tax_rate_id to the object being saved
       user_id: session.user.id, // Always use session user_id
       tenant: tenant as string,
@@ -287,10 +287,10 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
     let resultingEntry: ITimeEntry | null = null;
 
-    // If no billing plan ID is provided, try to determine the default one
-    if (!billing_plan_id && service_id) {
+    // If no contract line ID is provided, try to determine the default one
+    if (!contract_line_id && service_id) {
       try {
-        const defaultPlanId = await determineDefaultBillingPlan(
+        const defaultPlanId = await determineDefaultContractLine(
           work_item_type === 'project_task' ?
             (await db('project_tasks')
               .join('project_phases', function() {
@@ -319,10 +319,10 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
         );
 
         if (defaultPlanId) {
-          cleanedEntry.billing_plan_id = defaultPlanId;
+          cleanedEntry.contract_line_id = defaultPlanId;
         }
       } catch (error) {
-        console.error('Error determining default billing plan:', error);
+        console.error('Error determining default contract line:', error);
       }
     }
 
@@ -537,22 +537,20 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
             // Now TypeScript knows both are strings here
             clientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
         }
-        const currentPlanId = resultingEntry.billing_plan_id; // Use the plan ID associated with the entry
+        const currentPlanId = resultingEntry.contract_line_id; // Use the plan ID associated with the entry
 
-        if (clientId && currentPlanId) {
-          // Check if the plan is a 'Bucket' type plan
-          // Correctly check plan_type by joining client_billing_plans with billing_plans
-          const planInfo = await trx('client_billing_plans as cbp')
-            .join('billing_plans as bp', function() {
-                this.on('cbp.plan_id', '=', 'bp.plan_id')
-                    .andOn('cbp.tenant', '=', 'bp.tenant');
+        if (clientId && currentPlanId && resultingEntry.service_id) {
+          const overlayConfig = await trx('contract_line_service_configuration')
+            .where({
+              tenant,
+              contract_line_id: currentPlanId,
+              service_id: resultingEntry.service_id,
+              configuration_type: 'Bucket'
             })
-            .where('cbp.client_billing_plan_id', currentPlanId) // Use the ID from the time entry
-            .andWhere('cbp.tenant', tenant)
-            .first('bp.plan_type'); // Select plan_type from billing_plans table
+            .first('config_id');
 
-          if (planInfo && planInfo.plan_type === 'Bucket') {
-            console.log(`Time entry ${resultingEntry.entry_id} linked to Bucket plan ${currentPlanId}. Updating usage.`);
+          if (overlayConfig) {
+            console.log(`Time entry ${resultingEntry.entry_id} linked to bucket overlay on contract line ${currentPlanId}. Updating usage.`);
 
             const newDuration = resultingEntry.billable_duration || 0;
             // Calculate delta in MINUTES first
@@ -583,10 +581,10 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
                console.log(`No duration change for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
             }
           } else {
-             console.log(`Time entry ${resultingEntry.entry_id} service/plan is not a Bucket type or plan not found.`);
+             console.log(`Time entry ${resultingEntry.entry_id} service/plan has no bucket overlay or plan not found.`);
           }
         } else {
-           console.log(`Could not determine client ID or billing plan for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
+           console.log(`Could not determine client ID or contract line for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
         }
       } else {
          console.log(`Time entry ${resultingEntry?.entry_id} is not billable or missing service ID, skipping bucket update.`);
@@ -728,7 +726,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       has_notes: !!notes,
       has_service: !!service_id,
       has_tax_region: !!tax_region,
-      has_billing_plan: !!billing_plan_id,
+      has_contract_line: !!contract_line_id,
       approval_status: approval_status || 'pending',
       // Track if this was a duration adjustment
       duration_changed: isUpdate ? (entry.billable_duration !== finalBillableDuration) : false,
@@ -792,20 +790,20 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
         if (timeEntry.work_item_id && timeEntry.work_item_type) {
             clientId = await getClientIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
         }
-        const currentPlanId = timeEntry.billing_plan_id;
+        const currentPlanId = timeEntry.contract_line_id;
 
-        if (clientId && currentPlanId) {
-          const planInfo = await trx('client_billing_plans as cbp')
-            .join('billing_plans as bp', function() {
-                this.on('cbp.plan_id', '=', 'bp.plan_id')
-                    .andOn('cbp.tenant', '=', 'bp.tenant');
+        if (clientId && currentPlanId && timeEntry.service_id) {
+          const overlayConfig = await trx('contract_line_service_configuration')
+            .where({
+              tenant,
+              contract_line_id: currentPlanId,
+              service_id: timeEntry.service_id,
+              configuration_type: 'Bucket'
             })
-            .where('cbp.client_billing_plan_id', currentPlanId)
-            .andWhere('cbp.tenant', tenant)
-            .first('bp.plan_type');
+            .first('config_id');
 
-          if (planInfo && planInfo.plan_type === 'Bucket') {
-            console.log(`Time entry ${entryId} linked to Bucket plan ${currentPlanId}. Decrementing usage.`);
+          if (overlayConfig) {
+            console.log(`Time entry ${entryId} linked to bucket overlay on contract line ${currentPlanId}. Decrementing usage.`);
             const minutesDelta = -(timeEntry.billable_duration || 0); // Negative delta
 
             if (minutesDelta !== 0) {

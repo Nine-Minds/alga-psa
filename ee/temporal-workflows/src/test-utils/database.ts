@@ -123,10 +123,10 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
           await trx('clients').where({ tenant: tenantId }).del();
         }
         
-        // Remove billing plans and associations
+        // Remove contract lines and associations
         for (const tenantId of createdTenants) {
-          await trx('client_billing_plans').where({ tenant: tenantId }).del();
-          await trx('billing_plans').where({ tenant: tenantId }).del();
+          await trx('client_contract_lines').where({ tenant: tenantId }).del();
+          await trx('contract_lines').where({ tenant: tenantId }).del();
         }
         
         // Remove statuses (may reference users as created_by)

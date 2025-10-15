@@ -3,6 +3,59 @@ import { posthogConfig } from '../../config/posthog.config';
 import { analytics } from '../analytics/posthog';
 import { createTenantKnex } from '../db';
 
+const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
+
+const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
+  // Core features (enabled by default)
+  'enable_ticket_automation': true,
+  'enable_time_tracking': true,
+  'enable_billing': true,
+  'enable_reporting': true,
+  'email-configuration': false, // Email configuration feature flag (disabled by default)
+  
+  // New features (disabled by default)
+  'new_ticket_ui': false,
+  'ai_ticket_suggestions': false,
+  'advanced_workflow_engine': false,
+  'beta_mobile_app': false,
+  'new_dashboard_layout': false,
+  
+  // Experimental features
+  'enable_voice_commands': false,
+  'enable_ai_time_tracking': false,
+  'enable_predictive_analytics': false,
+  
+  // Performance features
+  'enable_query_caching': true,
+  'enable_lazy_loading': true,
+  'enable_websocket_updates': false,
+  
+  // Integration features
+  'enable_slack_integration': true,
+  'enable_teams_integration': true,
+  'enable_jira_sync': false,
+  'enable_salesforce_sync': false,
+  
+  // Migration features
+  'enable_client_client_dual_write': true, // Dual-write to both clients and clients tables during migration
+};
+
+const DEFAULT_VARIANT_FLAGS: Record<string, string> = {
+  'dashboard_layout': 'classic',
+  'ticket_list_view': 'table',
+  'invoice_template': 'standard',
+  'email_composer': 'rich_text',
+};
+
+function featureFlagsAreDisabled(): boolean {
+  const raw =
+    process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? process.env.DISABLE_FEATURE_FLAGS;
+  if (typeof raw !== 'string') {
+    return false;
+  }
+  return FEATURE_FLAG_DISABLE_VALUES.has(raw.toLowerCase());
+}
+
 export interface FeatureFlagContext {
   userId?: string;
   tenantId?: string;
@@ -49,6 +102,10 @@ export class FeatureFlags {
     flagKey: string,
     context: FeatureFlagContext = {}
   ): Promise<boolean> {
+    if (featureFlagsAreDisabled()) {
+      return true;
+    }
+
     // Check cache first
     const cached = this.getCachedValue(flagKey);
     if (cached !== null && typeof cached === 'boolean') {
@@ -108,6 +165,10 @@ export class FeatureFlags {
       return cached;
     }
 
+    if (featureFlagsAreDisabled()) {
+      return this.getDefaultVariant(flagKey);
+    }
+
     if (!this.client) {
       return this.getDefaultVariant(flagKey);
     }
@@ -155,6 +216,10 @@ export class FeatureFlags {
    * Get all feature flags for a context
    */
   async getAllFlags(context: FeatureFlagContext = {}): Promise<Record<string, boolean | string>> {
+    if (featureFlagsAreDisabled()) {
+      return this.getAllDefaultValues();
+    }
+
     if (!this.client) {
       return this.getAllDefaultValues();
     }
@@ -300,56 +365,14 @@ export class FeatureFlags {
    * Get default value for a feature flag
    */
   private getDefaultValue(flagKey: string): boolean {
-    const defaults: Record<string, boolean> = {
-      // Core features (enabled by default)
-      'enable_ticket_automation': true,
-      'enable_time_tracking': true,
-      'enable_billing': true,
-      'enable_reporting': true,
-      'email-configuration': false, // Email configuration feature flag (disabled by default)
-
-      // Migration features
-      'enable_client_client_dual_write': true, // Dual-write to both clients and clients tables during migration
-
-      // New features (disabled by default)
-      'new_ticket_ui': false,
-      'ai_ticket_suggestions': false,
-      'advanced_workflow_engine': false,
-      'beta_mobile_app': false,
-      'new_dashboard_layout': false,
-
-      // Experimental features
-      'enable_voice_commands': false,
-      'enable_ai_time_tracking': false,
-      'enable_predictive_analytics': false,
-
-      // Performance features
-      'enable_query_caching': true,
-      'enable_lazy_loading': true,
-      'enable_websocket_updates': false,
-
-      // Integration features
-      'enable_slack_integration': true,
-      'enable_teams_integration': true,
-      'enable_jira_sync': false,
-      'enable_salesforce_sync': false,
-    };
-
-    return defaults[flagKey] ?? false;
+    return DEFAULT_BOOLEAN_FLAGS[flagKey] ?? false;
   }
 
   /**
    * Get default variant for a feature flag
    */
   private getDefaultVariant(flagKey: string): string | null {
-    const variants: Record<string, string> = {
-      'dashboard_layout': 'classic',
-      'ticket_list_view': 'table',
-      'invoice_template': 'standard',
-      'email_composer': 'rich_text',
-    };
-
-    return variants[flagKey] ?? null;
+    return DEFAULT_VARIANT_FLAGS[flagKey] ?? null;
   }
 
   /**
@@ -357,15 +380,8 @@ export class FeatureFlags {
    */
   private getAllDefaultValues(): Record<string, boolean | string> {
     return {
-      ...Object.keys(this.getDefaultValue).reduce((acc, key) => {
-        acc[key] = this.getDefaultValue(key);
-        return acc;
-      }, {} as Record<string, boolean>),
-      ...Object.keys(this.getDefaultVariant).reduce((acc, key) => {
-        const variant = this.getDefaultVariant(key);
-        if (variant) acc[key] = variant;
-        return acc;
-      }, {} as Record<string, string>),
+      ...DEFAULT_BOOLEAN_FLAGS,
+      ...DEFAULT_VARIANT_FLAGS,
     };
   }
 }

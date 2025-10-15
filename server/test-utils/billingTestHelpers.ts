@@ -18,6 +18,22 @@ let clientTaxSettingsColumnsCache: Record<string, unknown> | null | undefined;
 let clientTaxRatesColumnsCache: Record<string, unknown> | null | undefined;
 const serviceTypeCache = new Map<string, string>();
 
+/**
+ * Clears the service type cache. Useful when tests reset their context/tenant
+ * and need to ensure stale service type IDs aren't reused.
+ */
+export function clearServiceTypeCache(): void {
+  serviceTypeCache.clear();
+}
+
+interface BillingSettingsOptions {
+  zeroDollarInvoiceHandling?: 'normal' | 'finalized';
+  suppressZeroDollarInvoices?: boolean;
+  enableCreditExpiration?: boolean;
+  creditExpirationDays?: number;
+  creditExpirationNotificationDays?: number[];
+}
+
 export async function setupClientTaxConfiguration(
   context: TestContext,
   options: SetupTaxOptions = {}
@@ -202,10 +218,31 @@ async function upsertClientDefaultTaxRate(
     rateData.location_id = null;
   }
 
-  await context.db('client_tax_rates')
-    .insert(rateData)
-    .onConflict(['client_id', 'tax_rate_id', 'tenant'])
-    .merge(rateData);
+  const existingRate = await context.db('client_tax_rates')
+    .where({
+      tenant: context.tenantId,
+      client_id: clientId,
+      tax_rate_id: taxRateId
+    })
+    .first();
+
+  if (existingRate) {
+    await context.db('client_tax_rates')
+      .where({
+        tenant: context.tenantId,
+        client_tax_rates_id: existingRate.client_tax_rates_id
+      })
+      .update({
+        ...rateData,
+        updated_at: context.db.fn.now()
+      });
+  } else {
+    await context.db('client_tax_rates').insert({
+      ...rateData,
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now()
+    });
+  }
 }
 
 interface CreateServiceOptions {
@@ -240,24 +277,20 @@ interface AddServiceToPlanOptions {
   detailBaseRateCents?: number;
 }
 
-interface CreateBucketPlanOptions {
-  planId?: string;
-  clientBillingPlanId?: string;
+interface CreateBucketOverlayOptions {
   configId?: string;
-  planName?: string;
-  billingFrequency?: 'monthly' | 'quarterly' | 'annually';
+  serviceId?: string;
   totalMinutes?: number;
   totalHours?: number;
   overageRateCents?: number;
   allowRollover?: boolean;
   billingPeriod?: string;
-  startDate?: string;
-  endDate?: string | null;
 }
 
 interface CreateBucketUsageOptions {
   usageId?: string;
-  planId: string;
+  planId?: string;
+  contractLineId?: string;
   serviceId: string;
   clientId: string;
   periodStart: string;
@@ -346,36 +379,132 @@ export async function createFixedPlanAssignment(
   context: TestContext,
   serviceId: string,
   options: CreateFixedPlanOptions = {}
-): Promise<{ planId: string; clientBillingPlanId: string }> {
-  const planId = options.planId ?? uuidv4();
-  const clientBillingPlanId = options.clientBillingPlanId ?? uuidv4();
+): Promise<{ planId: string; clientBillingPlanId: string; contractLineId: string; clientContractLineId: string }> {
+  const contractLineId = options.planId ?? uuidv4();
+  const clientContractLineId = options.clientBillingPlanId ?? uuidv4();
+  const legacyPlanId = contractLineId;
+  const legacyClientPlanId = clientContractLineId;
   const configId = uuidv4();
   const baseRateCents = options.baseRateCents ?? 1000;
   const baseRateDollars = baseRateCents / 100;
   const detailBaseRateCents = options.detailBaseRateCents ?? baseRateCents;
   const detailBaseRateDollars = detailBaseRateCents / 100;
   const enableProration = options.enableProration ?? false;
-  const billingCycleAlignment = options.billingCycleAlignment ?? 'start';
+  const billingCycleAlignment: 'start' | 'end' | 'prorated' = options.billingCycleAlignment ?? 'start';
+  const quantity = options.quantity ?? 1;
+  const planName = options.planName ?? 'Test Plan';
+  const billingFrequency = options.billingFrequency ?? 'monthly';
 
-  const existingPlan = await context.db('billing_plans')
-    .where({ plan_id: planId, tenant: context.tenantId })
-    .first();
+  // Primary contract line tables
+  await context.db('contract_lines')
+    .insert({
+      contract_line_id: contractLineId,
+      tenant: context.tenantId,
+      contract_line_name: planName,
+      billing_frequency: billingFrequency,
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    })
+    .onConflict(['tenant', 'contract_line_id'])
+    .merge({
+      contract_line_name: planName,
+      billing_frequency: billingFrequency,
+      contract_line_type: 'Fixed'
+    });
 
-  if (!existingPlan) {
-    await context.db('billing_plans')
-      .insert({
-        plan_id: planId,
-        tenant: context.tenantId,
-        plan_name: options.planName ?? 'Test Plan',
-        billing_frequency: options.billingFrequency ?? 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
-      });
-  }
+  await context.db('contract_line_fixed_config')
+    .insert({
+      contract_line_id: contractLineId,
+      tenant: context.tenantId,
+      base_rate: baseRateDollars,
+      enable_proration: enableProration,
+      billing_cycle_alignment: billingCycleAlignment
+    })
+    .onConflict(['tenant', 'contract_line_id'])
+    .merge({
+      base_rate: baseRateDollars,
+      enable_proration: enableProration,
+      billing_cycle_alignment: billingCycleAlignment
+    });
+
+  await context.db('contract_line_service_configuration')
+    .insert({
+      config_id: configId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      custom_rate: null,
+      quantity,
+      tenant: context.tenantId
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      custom_rate: null,
+      quantity
+    });
+
+  await context.db('contract_line_service_fixed_config')
+    .insert({
+      config_id: configId,
+      tenant: context.tenantId,
+      base_rate: baseRateDollars
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({ base_rate: baseRateDollars });
+
+  await context.db('contract_line_services')
+    .insert({
+      tenant: context.tenantId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: null
+    })
+    .onConflict(['tenant', 'service_id', 'contract_line_id'])
+    .merge({ quantity, custom_rate: null });
+
+  await context.db('client_contract_lines')
+    .insert({
+      tenant: context.tenantId,
+      client_contract_line_id: clientContractLineId,
+      client_id: context.clientId,
+      contract_line_id: contractLineId,
+      start_date: options.startDate ?? '2025-02-01',
+      end_date: options.endDate ?? null,
+      is_active: true
+    })
+    .onConflict(['tenant', 'client_contract_line_id'])
+    .merge({
+      client_id: context.clientId,
+      contract_line_id: contractLineId,
+      start_date: options.startDate ?? '2025-02-01',
+      end_date: options.endDate ?? null,
+      is_active: true
+    });
+
+  // Legacy plan tables (maintain compatibility with existing FKs until schema fully migrated)
+  await context.db('billing_plans')
+    .insert({
+      plan_id: legacyPlanId,
+      tenant: context.tenantId,
+      plan_name: planName,
+      billing_frequency: billingFrequency,
+      is_custom: false,
+      plan_type: 'Fixed'
+    })
+    .onConflict(['tenant', 'plan_id'])
+    .merge({
+      plan_name: planName,
+      billing_frequency: billingFrequency,
+      plan_type: 'Fixed'
+    });
 
   await context.db('billing_plan_fixed_config')
     .insert({
-      plan_id: planId,
+      plan_id: legacyPlanId,
       tenant: context.tenantId,
       base_rate: baseRateDollars,
       enable_proration: enableProration,
@@ -385,19 +514,26 @@ export async function createFixedPlanAssignment(
     .merge({
       base_rate: baseRateDollars,
       enable_proration: enableProration,
-      billing_cycle_alignment: billingCycleAlignment,
-      updated_at: context.db.fn.now()
+      billing_cycle_alignment: billingCycleAlignment
     });
 
   await context.db('plan_service_configuration')
     .insert({
       config_id: configId,
-      plan_id: planId,
+      plan_id: legacyPlanId,
       service_id: serviceId,
       configuration_type: 'Fixed',
       custom_rate: null,
-      quantity: options.quantity ?? 1,
+      quantity,
       tenant: context.tenantId
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      plan_id: legacyPlanId,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      custom_rate: null,
+      quantity
     });
 
   await context.db('plan_service_fixed_config')
@@ -405,28 +541,112 @@ export async function createFixedPlanAssignment(
       config_id: configId,
       tenant: context.tenantId,
       base_rate: detailBaseRateDollars
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({ base_rate: detailBaseRateDollars });
+
+  await context.db('plan_services')
+    .insert({
+      tenant: context.tenantId,
+      plan_id: legacyPlanId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: null
+    })
+    .onConflict(['tenant', 'service_id', 'plan_id'])
+    .merge({ quantity, custom_rate: null });
+
+  await context.db('client_billing_plans')
+    .insert({
+      tenant: context.tenantId,
+      client_billing_plan_id: legacyClientPlanId,
+      client_id: context.clientId,
+      plan_id: legacyPlanId,
+      service_category: null,
+      is_active: true,
+      start_date: options.startDate ?? '2025-02-01',
+      end_date: options.endDate ?? null,
+      client_bundle_id: null
+    })
+    .onConflict(['tenant', 'client_billing_plan_id'])
+    .merge({
+      client_id: context.clientId,
+      plan_id: legacyPlanId,
+      is_active: true,
+      start_date: options.startDate ?? '2025-02-01',
+      end_date: options.endDate ?? null
     });
 
-  const existingAssignment = await context.db('client_billing_plans')
-    .where({ tenant: context.tenantId, client_id: context.clientId, plan_id: planId })
-    .first();
+  return {
+    planId: legacyPlanId,
+    clientBillingPlanId: legacyClientPlanId,
+    contractLineId,
+    clientContractLineId
+  };
+}
 
-  if (!existingAssignment) {
-    await context.db('client_billing_plans')
+export async function ensureDefaultBillingSettings(
+  context: TestContext,
+  options: BillingSettingsOptions = {}
+): Promise<void> {
+  const {
+    zeroDollarInvoiceHandling = 'normal',
+    suppressZeroDollarInvoices = false,
+    enableCreditExpiration = false,
+    creditExpirationDays = 365,
+    creditExpirationNotificationDays = [30, 7, 1]
+  } = options;
+
+  const notificationArraySql = `ARRAY[${creditExpirationNotificationDays.map(() => '?').join(',')}]::INTEGER[]`;
+
+  const hasDefaultSettingsTable = await context.db.schema.hasTable('default_billing_settings');
+  if (hasDefaultSettingsTable) {
+    await context.db('default_billing_settings')
       .insert({
         tenant: context.tenantId,
-        client_billing_plan_id: clientBillingPlanId,
-        client_id: context.clientId,
-        plan_id: planId,
-        service_category: null,
-        is_active: true,
-        start_date: options.startDate ?? '2025-02-01',
-        end_date: options.endDate ?? null,
-        client_bundle_id: null
+        zero_dollar_invoice_handling: zeroDollarInvoiceHandling,
+        suppress_zero_dollar_invoices: suppressZeroDollarInvoices,
+        enable_credit_expiration: enableCreditExpiration,
+        credit_expiration_days: creditExpirationDays,
+        credit_expiration_notification_days: context.db.raw(notificationArraySql, creditExpirationNotificationDays),
+        created_at: context.db.fn.now(),
+        updated_at: context.db.fn.now()
+      })
+      .onConflict('tenant')
+      .merge({
+        zero_dollar_invoice_handling: zeroDollarInvoiceHandling,
+        suppress_zero_dollar_invoices: suppressZeroDollarInvoices,
+        enable_credit_expiration: enableCreditExpiration,
+        credit_expiration_days: creditExpirationDays,
+        credit_expiration_notification_days: context.db.raw(notificationArraySql, creditExpirationNotificationDays),
+        updated_at: context.db.fn.now()
       });
   }
 
-  return { planId, clientBillingPlanId };
+  const hasCompanySettingsTable = await context.db.schema.hasTable('company_billing_settings');
+  if (hasCompanySettingsTable) {
+    await context.db('company_billing_settings')
+      .insert({
+        tenant: context.tenantId,
+        company_id: context.clientId,
+        zero_dollar_invoice_handling: zeroDollarInvoiceHandling,
+        suppress_zero_dollar_invoices: suppressZeroDollarInvoices,
+        enable_credit_expiration: enableCreditExpiration,
+        credit_expiration_days: creditExpirationDays,
+        credit_expiration_notification_days: context.db.raw(notificationArraySql, creditExpirationNotificationDays),
+        created_at: context.db.fn.now(),
+        updated_at: context.db.fn.now()
+      })
+      .onConflict(['tenant', 'company_id'])
+      .merge({
+        zero_dollar_invoice_handling: zeroDollarInvoiceHandling,
+        suppress_zero_dollar_invoices: suppressZeroDollarInvoices,
+        enable_credit_expiration: enableCreditExpiration,
+        credit_expiration_days: creditExpirationDays,
+        credit_expiration_notification_days: context.db.raw(notificationArraySql, creditExpirationNotificationDays),
+        updated_at: context.db.fn.now()
+      });
+  }
 }
 
 export async function addServiceToFixedPlan(
@@ -440,6 +660,37 @@ export async function addServiceToFixedPlan(
   const detailBaseRateCents = options.detailBaseRateCents ?? 0;
   const detailBaseRateDollars = detailBaseRateCents / 100;
 
+  // Insert into new contract line tables
+  await context.db('contract_line_service_configuration')
+    .insert({
+      config_id: configId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      custom_rate: null,
+      quantity,
+      tenant: context.tenantId
+    });
+
+  await context.db('contract_line_service_fixed_config')
+    .insert({
+      config_id: configId,
+      tenant: context.tenantId,
+      base_rate: detailBaseRateDollars
+    });
+
+  await context.db('contract_line_services')
+    .insert({
+      tenant: context.tenantId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: null
+    })
+    .onConflict(['tenant', 'service_id', 'contract_line_id'])
+    .merge({ quantity, custom_rate: null });
+
+  // Insert into legacy plan tables for compatibility
   await context.db('plan_service_configuration')
     .insert({
       config_id: configId,
@@ -458,22 +709,46 @@ export async function addServiceToFixedPlan(
       base_rate: detailBaseRateDollars
     });
 
+  await context.db('plan_services')
+    .insert({
+      tenant: context.tenantId,
+      plan_id: planId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: null
+    })
+    .onConflict(['tenant', 'service_id', 'plan_id'])
+    .merge({ quantity, custom_rate: null });
+
   return configId;
 }
 
-let bucketConfigColumnsCache: Record<string, unknown> | null | undefined;
+let planBucketConfigColumnsCache: Record<string, unknown> | null | undefined;
+let contractLineBucketConfigColumnsCache: Record<string, unknown> | null | undefined;
 let bucketUsageColumnsCache: Record<string, unknown> | null | undefined;
 
-async function ensureBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
-  if (bucketConfigColumnsCache === undefined) {
+async function ensurePlanBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+  if (planBucketConfigColumnsCache === undefined) {
     try {
-      bucketConfigColumnsCache = await context.db('plan_service_bucket_config').columnInfo();
+      planBucketConfigColumnsCache = await context.db('plan_service_bucket_config').columnInfo();
     } catch (error) {
-      bucketConfigColumnsCache = null;
+      planBucketConfigColumnsCache = null;
     }
   }
 
-  return bucketConfigColumnsCache ?? null;
+  return planBucketConfigColumnsCache ?? null;
+}
+
+async function ensureContractLineBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+  if (contractLineBucketConfigColumnsCache === undefined) {
+    try {
+      contractLineBucketConfigColumnsCache = await context.db('contract_line_service_bucket_config').columnInfo();
+    } catch (error) {
+      contractLineBucketConfigColumnsCache = null;
+    }
+  }
+
+  return contractLineBucketConfigColumnsCache ?? null;
 }
 
 async function ensureBucketUsageColumns(context: TestContext): Promise<Record<string, unknown> | null> {
@@ -488,50 +763,186 @@ async function ensureBucketUsageColumns(context: TestContext): Promise<Record<st
   return bucketUsageColumnsCache ?? null;
 }
 
-export async function createBucketPlanAssignment(
+export async function createBucketOverlayForPlan(
   context: TestContext,
-  serviceId: string,
-  options: CreateBucketPlanOptions = {}
-): Promise<{ planId: string; configId: string; clientBillingPlanId: string }> {
-  const planId = options.planId ?? uuidv4();
-  const clientBillingPlanId = options.clientBillingPlanId ?? uuidv4();
-  const configId = options.configId ?? uuidv4();
-  const planName = options.planName ?? 'Bucket Plan';
-  const billingFrequency = options.billingFrequency ?? 'monthly';
-  const startDate = options.startDate ?? '2025-01-01';
-  const endDate = options.endDate ?? null;
+  planId: string,
+  options: CreateBucketOverlayOptions = {}
+): Promise<{ configId: string; serviceId: string }> {
+  const totalMinutes = options.totalMinutes ?? Math.round((options.totalHours ?? 40) * 60);
   const overageRateCents = options.overageRateCents ?? 0;
   const allowRollover = options.allowRollover ?? false;
   const billingPeriod = options.billingPeriod ?? 'monthly';
 
-  const totalMinutes = options.totalMinutes ?? Math.round((options.totalHours ?? 40) * 60);
+  // Identify the service this overlay should attach to, defaulting to the fixed configuration for the plan.
+  let serviceId = options.serviceId;
+  let quantity: number | null = null;
+  let customRate: number | null = null;
 
-  const existingPlan = await context.db('billing_plans')
-    .where({ tenant: context.tenantId, plan_id: planId })
+  let contractBaseConfig;
+
+  if (serviceId) {
+    contractBaseConfig = await context.db('contract_line_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        contract_line_id: planId,
+        service_id: serviceId
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .first();
+  } else {
+    contractBaseConfig = await context.db('contract_line_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        contract_line_id: planId
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .orderBy('created_at', 'asc')
+      .first();
+
+    if (contractBaseConfig) {
+      serviceId = contractBaseConfig.service_id;
+    }
+  }
+
+  if (contractBaseConfig) {
+    quantity = contractBaseConfig.quantity ?? null;
+    customRate = contractBaseConfig.custom_rate ?? null;
+  }
+
+  let planBaseConfig;
+  if (!serviceId) {
+    planBaseConfig = await context.db('plan_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        plan_id: planId
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .orderBy('created_at', 'asc')
+      .first();
+
+    if (planBaseConfig) {
+      serviceId = planBaseConfig.service_id;
+      quantity = planBaseConfig.quantity ?? quantity;
+      customRate = planBaseConfig.custom_rate ?? customRate;
+    }
+  } else if (!contractBaseConfig) {
+    planBaseConfig = await context.db('plan_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        plan_id: planId,
+        service_id: serviceId
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .first();
+
+    if (planBaseConfig) {
+      quantity = planBaseConfig.quantity ?? quantity;
+      customRate = planBaseConfig.custom_rate ?? customRate;
+    }
+  }
+
+  if (!serviceId) {
+    throw new Error(`Unable to determine service for bucket overlay on plan ${planId}`);
+  }
+
+  // Reuse existing overlay config if one exists so tests can update settings idempotently.
+  const existingOverlayConfig = await context.db('contract_line_service_configuration')
+    .where({
+      tenant: context.tenantId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket'
+    })
     .first();
 
-  if (!existingPlan) {
-    await context.db('billing_plans').insert({
+  const configId = options.configId ?? existingOverlayConfig?.config_id ?? uuidv4();
+
+  await context.db('contract_line_services')
+    .insert({
       tenant: context.tenantId,
-      plan_id: planId,
-      plan_name: planName,
-      billing_frequency: billingFrequency,
-      is_custom: false,
-      plan_type: 'Bucket'
+      contract_line_id: planId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: customRate
+    })
+    .onConflict(['tenant', 'service_id', 'contract_line_id'])
+    .merge({ quantity, custom_rate: customRate });
+
+  await context.db('contract_line_service_configuration')
+    .insert({
+      config_id: configId,
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket',
+      custom_rate: null,
+      quantity: null,
+      tenant: context.tenantId
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      contract_line_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket'
     });
+
+  const contractBucketColumns = await ensureContractLineBucketConfigColumns(context);
+  if (!contractBucketColumns) {
+    throw new Error('contract_line_service_bucket_config table is unavailable');
   }
+
+  const contractTotalMinutesColumn = contractBucketColumns.total_minutes
+    ? 'total_minutes'
+    : contractBucketColumns.total_hours
+      ? 'total_hours'
+      : null;
+
+  if (!contractTotalMinutesColumn) {
+    throw new Error('Unable to determine total minutes column for contract bucket config');
+  }
+
+  const contractBucketData: Record<string, unknown> = {
+    config_id: configId,
+    tenant: context.tenantId,
+    billing_period: billingPeriod,
+    overage_rate: overageRateCents,
+    allow_rollover: allowRollover
+  };
+
+  if (contractTotalMinutesColumn === 'total_minutes') {
+    contractBucketData.total_minutes = totalMinutes;
+  } else {
+    contractBucketData.total_hours = Math.round(totalMinutes / 60);
+  }
+
+  const contractBucketUpdate: Record<string, unknown> = {
+    billing_period: contractBucketData.billing_period,
+    overage_rate: contractBucketData.overage_rate,
+    allow_rollover: contractBucketData.allow_rollover,
+  };
+
+  if (contractTotalMinutesColumn === 'total_minutes') {
+    contractBucketUpdate.total_minutes = contractBucketData.total_minutes;
+  } else {
+    contractBucketUpdate.total_hours = contractBucketData.total_hours;
+  }
+
+  await context.db('contract_line_service_bucket_config')
+    .insert(contractBucketData)
+    .onConflict(['tenant', 'config_id'])
+    .merge(contractBucketUpdate);
 
   await context.db('plan_services')
     .insert({
       tenant: context.tenantId,
       plan_id: planId,
       service_id: serviceId,
-      quantity: null,
-      custom_rate: null
+      quantity,
+      custom_rate: customRate
     })
-    .onConflict(['tenant', 'plan_id', 'service_id'])
-    .ignore();
+    .onConflict(['tenant', 'service_id', 'plan_id'])
+    .merge({ quantity, custom_rate: customRate });
 
+  // Maintain legacy plan_service_* tables so tests remain compatible during the transition.
   await context.db('plan_service_configuration')
     .insert({
       config_id: configId,
@@ -541,21 +952,31 @@ export async function createBucketPlanAssignment(
       custom_rate: null,
       quantity: null,
       tenant: context.tenantId
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      plan_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket'
     });
 
-  const bucketColumns = await ensureBucketConfigColumns(context);
+  const planBucketColumns = await ensurePlanBucketConfigColumns(context);
 
-  if (!bucketColumns) {
+  if (!planBucketColumns) {
     throw new Error('plan_service_bucket_config table is unavailable');
   }
 
-  const totalMinutesColumn = bucketColumns.total_minutes ? 'total_minutes' : bucketColumns.total_hours ? 'total_hours' : null;
+  const planTotalMinutesColumn = planBucketColumns.total_minutes
+    ? 'total_minutes'
+    : planBucketColumns.total_hours
+      ? 'total_hours'
+      : null;
 
-  if (!totalMinutesColumn) {
-    throw new Error('Unable to determine total minutes column for bucket config');
+  if (!planTotalMinutesColumn) {
+    throw new Error('Unable to determine total minutes column for plan bucket config');
   }
 
-  const bucketConfigData: Record<string, unknown> = {
+  const planBucketData: Record<string, unknown> = {
     config_id: configId,
     tenant: context.tenantId,
     billing_period: billingPeriod,
@@ -563,33 +984,30 @@ export async function createBucketPlanAssignment(
     allow_rollover: allowRollover
   };
 
-  if (totalMinutesColumn === 'total_minutes') {
-    bucketConfigData.total_minutes = totalMinutes;
+  if (planTotalMinutesColumn === 'total_minutes') {
+    planBucketData.total_minutes = totalMinutes;
   } else {
-    bucketConfigData.total_hours = Math.round(totalMinutes / 60);
+    planBucketData.total_hours = Math.round(totalMinutes / 60);
   }
 
-  await context.db('plan_service_bucket_config').insert(bucketConfigData);
+  const planBucketUpdate: Record<string, unknown> = {
+    billing_period: planBucketData.billing_period,
+    overage_rate: planBucketData.overage_rate,
+    allow_rollover: planBucketData.allow_rollover,
+  };
 
-  const existingAssignment = await context.db('client_billing_plans')
-    .where({ tenant: context.tenantId, client_id: context.clientId, plan_id: planId })
-    .first();
-
-  if (!existingAssignment) {
-    await context.db('client_billing_plans').insert({
-      tenant: context.tenantId,
-      client_billing_plan_id: clientBillingPlanId,
-      client_id: context.clientId,
-      plan_id: planId,
-      service_category: null,
-      is_active: true,
-      start_date: startDate,
-      end_date: endDate,
-      client_bundle_id: null
-    });
+  if (planTotalMinutesColumn === 'total_minutes') {
+    planBucketUpdate.total_minutes = planBucketData.total_minutes;
+  } else {
+    planBucketUpdate.total_hours = planBucketData.total_hours;
   }
 
-  return { planId, configId, clientBillingPlanId };
+  await context.db('plan_service_bucket_config')
+    .insert(planBucketData)
+    .onConflict(['tenant', 'config_id'])
+    .merge(planBucketUpdate);
+
+  return { configId, serviceId };
 }
 
 export async function createBucketUsageRecord(
@@ -603,11 +1021,18 @@ export async function createBucketUsageRecord(
   }
 
   const usageId = options.usageId ?? uuidv4();
+  const contractLineId = options.contractLineId ?? options.planId;
+
+  if (!contractLineId) {
+    throw new Error('A contract line identifier is required to record bucket usage');
+  }
+
   const record: Record<string, unknown> = {
     usage_id: usageId,
     tenant: context.tenantId,
     client_id: options.clientId,
-    plan_id: options.planId,
+    plan_id: options.planId ?? contractLineId,
+    contract_line_id: contractLineId,
     service_catalog_id: options.serviceId,
     period_start: options.periodStart,
     period_end: options.periodEnd,

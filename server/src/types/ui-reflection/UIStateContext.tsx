@@ -126,9 +126,10 @@ export function UIStateProvider({ children, initialPageState }: {
     const initializeSocket = () => {
       // Check if AI backend is enabled via environment variable
       const aiBackendEnabled = process.env.NEXT_PUBLIC_AI_BACKEND_ENABLED === 'true';
-      
+
       if (!aiBackendEnabled) {
         console.log('🔌 [UI-STATE] AI Backend disabled - skipping Socket.IO connection');
+        console.log('🔌 [UI-STATE] UI reflection system active: window.__UI_STATE__ available for test automation');
         return;
       }
       
@@ -207,12 +208,18 @@ export function UIStateProvider({ children, initialPageState }: {
   }, []); // Empty dependency array since we manage connection internally
 
   // Send UI state updates on changes (debounced) + periodic sync
+  // Only send if socket is connected (AI backend is enabled)
   useEffect(() => {
-    if (!(socketRef.current?.connected)) {
-      console.log('⚠️ [UI-STATE] Cannot send UI_STATE_UPDATE - socket not connected');
+    if (!socketRef.current?.connected) {
+      // Still log state changes for debugging, even without AI backend
+      console.log('📊 [UI-STATE] State updated:', pageState ? {
+        id: pageState.id,
+        title: pageState.title,
+        componentCount: pageState.components?.length || 0
+      } : 'null');
       return;
     }
-    
+
     // Debounce immediate updates by 100ms to handle React StrictMode double-mounting
     const timeoutId = setTimeout(() => {
       console.log('📤 [UI-STATE] Sending immediate UI_STATE_UPDATE to automation server');
@@ -223,7 +230,7 @@ export function UIStateProvider({ children, initialPageState }: {
       } : 'null');
       socketRef.current?.emit('UI_STATE_UPDATE', pageState);
     }, 100);
-    
+
     return () => clearTimeout(timeoutId);
   }, [pageState]);
 
@@ -253,7 +260,8 @@ export function UIStateProvider({ children, initialPageState }: {
   // Send initial UI state update when socket connection changes
   useEffect(() => {
     if (!isConnected) {
-      console.log('⚠️ [UI-STATE] Cannot send initial UI_STATE_UPDATE - not connected');
+      // UI state is still available on window.__UI_STATE__ for test automation
+      // even when AI backend is not connected
       return;
     }
     console.log('📤 [UI-STATE] Sending initial UI_STATE_UPDATE on connection');

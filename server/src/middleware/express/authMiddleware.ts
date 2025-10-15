@@ -341,7 +341,7 @@ export async function sessionAuthMiddleware(
   try {
     // Get secret from provider only - the provider handles env vars and fallbacks
     const secretProvider = await getSecretProviderInstance();
-    const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    const nextAuthSecret = (await secretProvider.getAppSecret('NEXTAUTH_SECRET')) || process.env.NEXTAUTH_SECRET || '';
 
     if (!nextAuthSecret) {
       console.error('NEXTAUTH_SECRET not available from secret provider');
@@ -459,7 +459,7 @@ export async function authorizationMiddleware(
 
     // Get secret from provider only - the provider handles env vars and fallbacks
     const secretProvider = await getSecretProviderInstance();
-    const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    const nextAuthSecret = (await secretProvider.getAppSecret('NEXTAUTH_SECRET')) || process.env.NEXTAUTH_SECRET || '';
 
     if (!nextAuthSecret) {
       console.error('NEXTAUTH_SECRET not available from secret provider');

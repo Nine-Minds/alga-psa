@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 | WebhookController | 24 | webhooks |
 | WorkflowController | 23 | workflows |
 | TimeSheetController | 23 | time-sheets |
-| BillingPlanController | 17 | billing-plans |
+| ContractLineController | 17 | contract-lines |
 | AssetController | 15 | assets |
 | AutomationController | 14 | automation |
 | TagController | 10 | tags |

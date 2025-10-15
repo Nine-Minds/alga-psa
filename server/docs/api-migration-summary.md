@@ -65,7 +65,7 @@ Based on the detection scripts, the following APIs still need migration:
    - Invoices API
    - Payments API
    - Tax Rates API
-   - Billing Plans API
+   - Contract Lines API
 
 2. **Resource Management**
    - Documents API
@@ -207,7 +207,7 @@ For remaining APIs, follow this process:
 2. **Priority 2: Complete Financial APIs**
    - Invoices API
    - Payments API
-   - Billing Plans API
+   - Contract Lines API
 
 3. **Priority 3: Analytics and Reporting**
    - Reports API

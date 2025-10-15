@@ -165,6 +165,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     sortDirection,
     onSortChange,
     rowClassName,
+    initialSorting,
     onVisibleRowsChange,
   } = props;
 
@@ -362,18 +363,29 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         desc: sortDirection === 'desc'
       }];
     }
+    if (initialSorting && initialSorting.length > 0) {
+      return initialSorting;
+    }
     return [];
   });
 
   // Update sorting state when props change (for manual sorting)
   React.useEffect(() => {
     if (manualSorting && sortBy) {
-      setSorting([{
-        id: sortBy,
-        desc: sortDirection === 'desc'
-      }]);
+      setSorting([
+        {
+          id: sortBy,
+          desc: sortDirection === 'desc'
+        }
+      ]);
     }
   }, [manualSorting, sortBy, sortDirection]);
+
+  React.useEffect(() => {
+    if (!manualSorting && initialSorting && initialSorting.length > 0) {
+      setSorting(prev => (prev.length === 0 ? initialSorting : prev));
+    }
+  }, [initialSorting, manualSorting]);
 
   const table = useReactTable({
     data,

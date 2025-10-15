@@ -5,16 +5,16 @@ import { createTenantKnex } from '../../db';
 import { withTransaction } from '@shared/db';
 // Import interfaces from correct files
 import {
-  IClientBillingPlan,
-  IBillingPlan,
+  IClientContractLine,
+  IContractLine,
   IBucketUsage,
-  IPlanService,
+  IContractLineService,
   IService // Added IService for service_catalog join
 } from '../../../interfaces/billing.interfaces';
 import {
-  IPlanServiceConfiguration,
-  IPlanServiceBucketConfig
-} from '../../../interfaces/planServiceConfiguration.interfaces'; // Corrected import path
+  IContractLineServiceConfiguration,
+  IContractLineServiceBucketConfig
+} from '../../../interfaces/contractLineServiceConfiguration.interfaces';
 import { Knex } from 'knex'; // Import Knex type for query builder
 
 // Define the schema for the input parameters
@@ -27,8 +27,8 @@ const InputSchema = z.object({
 
 // Define the structure for the returned data
 export interface RemainingBucketUnitsResult {
-  plan_id: string;
-  plan_name: string;
+  contract_line_id: string;
+  contract_line_name: string;
   service_id: string;
   service_name: string;
   display_label: string;
@@ -68,57 +68,49 @@ export async function getRemainingBucketUnits(
 
   try {
     const results: RemainingBucketUnitsResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const query = trx<IClientBillingPlan>('client_billing_plans as cbp')
-      .join<IBillingPlan>('billing_plans as bp', function() {
-        this.on('cbp.plan_id', '=', 'bp.plan_id')
-            .andOn('cbp.tenant', '=', 'bp.tenant');
+      const query = trx<IClientContractLine>('client_contract_lines as ccl')
+      .join<IContractLine>('contract_lines as cl', function() {
+        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      // Removed join to bucket_plans
-      // Add joins for new configuration structure
-      .join<IPlanService>('plan_services as ps', function() {
-        this.on('bp.plan_id', '=', 'ps.plan_id')
-            .andOn('bp.tenant', '=', 'ps.tenant');
+      // Add joins for configuration structure
+      .join<IContractLineService>('contract_line_services as ps', function() {
+        this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
+            .andOn('cl.tenant', '=', 'ps.tenant');
       })
       // Join to service_catalog to get service_name
       .join<IService>('service_catalog as sc', function() {
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      .join<IPlanServiceConfiguration>('plan_service_configuration as psc', function() { 
-        this.on('ps.plan_id', '=', 'psc.plan_id')
-            .andOn('ps.service_id', '=', 'psc.service_id') // Need service_id for the join
+      .join<IContractLineServiceConfiguration>('contract_line_service_configuration as psc', function() {
+        this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
+            .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
-      .join<IPlanServiceBucketConfig>('plan_service_bucket_config as psbc', function() {
+      .join<IContractLineServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
         this.on('psc.config_id', '=', 'psbc.config_id')
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
       .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
-        // Update join condition to use bp.plan_id AND ps.service_id
-        // Assuming bucket_usage might need service context if a plan has multiple bucket services
-        // If bucket_usage only stores plan-level usage, joining on plan_id is sufficient.
-        // Sticking with plan_id only for now based on previous structure.
-        // If issues arise, consider adding service_id to bucket_usage table and join condition.
-        this.on('bp.plan_id', '=', 'bu.plan_id')
-            .andOn('cbp.client_id', '=', 'bu.client_id') // Join on client_id as well
-            .andOn('cbp.tenant', '=', 'bu.tenant')
+        this.on('cl.contract_line_id', '=', 'bu.contract_line_id')
+            .andOn('ccl.client_id', '=', 'bu.client_id')
+            .andOn('ccl.tenant', '=', 'bu.tenant')
             // Filter bucket_usage for the period containing currentDate
             .andOn('bu.period_start', '<=', knex.raw('?', [currentDate]))
             .andOn('bu.period_end', '>', knex.raw('?', [currentDate]));
       })
-      .where('cbp.client_id', clientId)
-      .andWhere('cbp.tenant', tenant)
-      .andWhere('bp.plan_type', 'Bucket') // Filter for Bucket plans
-      .andWhere('cbp.is_active', true) // Only active client plans
-      // Ensure the plan itself is active based on start/end dates relative to currentDate
-      .andWhere('cbp.start_date', '<=', knex.raw('?', [currentDate]))
+      .where('ccl.client_id', clientId)
+      .andWhere('ccl.tenant', tenant)
+      .andWhere('ccl.is_active', true)
+      .andWhere('ccl.start_date', '<=', knex.raw('?', [currentDate]))
       .andWhere(function() {
-        this.whereNull('cbp.end_date')
-            .orWhere('cbp.end_date', '>', knex.raw('?', [currentDate]));
+        this.whereNull('ccl.end_date')
+            .orWhere('ccl.end_date', '>', knex.raw('?', [currentDate]));
       })
       .select(
-        'bp.plan_id',
-        'bp.plan_name',
+        'cl.contract_line_id',
+        'cl.contract_line_name',
         'ps.service_id',
         'sc.service_name',
         'psbc.total_minutes',
@@ -137,11 +129,11 @@ export async function getRemainingBucketUnits(
         const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
         const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
         const remainingMinutes = totalMinutes + rolledOverMinutes - minutesUsed;
-        const displayLabel = `${row.plan_name} - ${row.service_name}`;
+        const displayLabel = `${row.contract_line_name} - ${row.service_name}`;
       
         return {
-          plan_id: row.plan_id,
-          plan_name: row.plan_name,
+          contract_line_id: row.contract_line_id,
+          contract_line_name: row.contract_line_name,
           service_id: row.service_id,
           service_name: row.service_name,
           display_label: displayLabel,

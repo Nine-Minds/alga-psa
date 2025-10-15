@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex } from 'server/src/lib/db';
-import { determineDefaultBillingPlan } from 'server/src/lib/utils/planDisambiguation';
+import { determineDefaultContractLine } from 'server/src/lib/utils/contractLineDisambiguation';
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
@@ -17,22 +17,22 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
   const { knex, tenant } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
-    // If no billing plan ID is provided, try to determine the default one
-    let billingPlanId = data.billing_plan_id;
-    if (!billingPlanId && data.service_id && data.client_id) {
+    // If no contract line ID is provided, try to determine the default one
+    let contractLineId = data.contract_line_id;
+    if (!contractLineId && data.service_id && data.client_id) {
       try {
-        // Use trx for consistency if determineDefaultBillingPlan needs DB access within transaction
-        const defaultPlanId = await determineDefaultBillingPlan(
+        // Use trx for consistency if determineDefaultContractLine needs DB access within transaction
+        const defaultPlanId = await determineDefaultContractLine(
           data.client_id,
           data.service_id
           // trx // Removed transaction argument
         );
 
         if (defaultPlanId) {
-          billingPlanId = defaultPlanId;
+          contractLineId = defaultPlanId;
         }
       } catch (error) {
-        console.error('Error determining default billing plan:', error);
+        console.error('Error determining default contract line:', error);
         // Potentially rethrow or handle if this is critical
       }
     }
@@ -45,7 +45,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
         service_id: data.service_id,
         quantity: data.quantity,
         usage_date: data.usage_date,
-        billing_plan_id: billingPlanId, // Use determined or provided plan ID
+        contract_line_id: contractLineId, // Use determined or provided plan ID
       })
       .returning('*');
 
@@ -54,14 +54,18 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
     }
 
     // --- Bucket Usage Update Logic ---
-    if (record.service_id && record.client_id && record.billing_plan_id) {
-      // Check if the plan is a 'Bucket' type plan
-      const plan = await trx('billing_plans')
-        .where({ plan_id: record.billing_plan_id, tenant })
-        .first('plan_type');
+    if (record.service_id && record.client_id && record.contract_line_id) {
+      const overlayConfig = await trx('contract_line_service_configuration')
+        .where({
+          tenant,
+          contract_line_id: record.contract_line_id,
+          service_id: record.service_id,
+          configuration_type: 'Bucket'
+        })
+        .first('config_id');
 
-      if (plan && plan.plan_type === 'Bucket') {
-        console.log(`Usage record ${record.usage_id} linked to Bucket plan ${record.billing_plan_id}. Updating usage.`);
+      if (overlayConfig) {
+        console.log(`Usage record ${record.usage_id} linked to Bucket contract line ${record.contract_line_id}. Updating usage.`);
 
         // Assuming 1 quantity = 1 hour/unit for buckets
         const hoursDelta = record.quantity || 0;
@@ -117,26 +121,26 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
     }
     const oldQuantity = originalRecord.quantity || 0;
 
-    // 2. Determine the final billing plan ID
-    let finalBillingPlanId = data.billing_plan_id;
+    // 2. Determine the final contract line ID
+    let finalContractLineId = data.contract_line_id;
     // If plan ID is explicitly set to null/undefined OR not provided in update payload, try determining default
-    if (finalBillingPlanId === null || finalBillingPlanId === undefined) {
+    if (finalContractLineId === null || finalContractLineId === undefined) {
       const clientIdForPlan = data.client_id || originalRecord.client_id;
       const serviceIdForPlan = data.service_id || originalRecord.service_id;
       if (clientIdForPlan && serviceIdForPlan) {
         try {
-          const defaultPlanId = await determineDefaultBillingPlan(
+          const defaultPlanId = await determineDefaultContractLine(
             clientIdForPlan,
             serviceIdForPlan
             // trx // Removed transaction argument
           );
-          finalBillingPlanId = defaultPlanId || undefined; // Use default or undefined if none found
+          finalContractLineId = defaultPlanId || undefined; // Use default or undefined if none found
         } catch (error) {
-          console.error('Error determining default billing plan during update:', error);
-          finalBillingPlanId = originalRecord.billing_plan_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
+          console.error('Error determining default contract line during update:', error);
+          finalContractLineId = originalRecord.contract_line_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
         }
       } else {
-         finalBillingPlanId = originalRecord.billing_plan_id; // Fallback if client/service IDs are missing
+         finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing
       }
     }
 
@@ -147,7 +151,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
         ...(data.service_id !== undefined && { service_id: data.service_id }),
         ...(data.quantity !== undefined && { quantity: data.quantity }),
         ...(data.usage_date !== undefined && { usage_date: data.usage_date }),
-        billing_plan_id: finalBillingPlanId, // Always update the plan ID based on determination logic
+        contract_line_id: finalContractLineId, // Always update the plan ID based on determination logic
         // updated_at is likely handled by DB trigger/default, removed from payload
     };
 
@@ -166,13 +170,18 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
     // This handles adding/removing quantity from a bucket-linked record, or changing a record to become bucket-linked.
     // It currently DOES NOT handle removing quantity when a record is changed *away* from a bucket plan. That requires more complex logic checking the original plan type.
 
-    if (updatedRecord.service_id && updatedRecord.client_id && updatedRecord.billing_plan_id) {
-      const plan = await trx('billing_plans')
-        .where({ plan_id: updatedRecord.billing_plan_id, tenant })
-        .first('plan_type');
+    if (updatedRecord.service_id && updatedRecord.client_id && updatedRecord.contract_line_id) {
+      const overlayConfig = await trx('contract_line_service_configuration')
+        .where({
+          tenant,
+          contract_line_id: updatedRecord.contract_line_id,
+          service_id: updatedRecord.service_id,
+          configuration_type: 'Bucket'
+        })
+        .first('config_id');
 
-      if (plan && plan.plan_type === 'Bucket') {
-        console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket plan ${updatedRecord.billing_plan_id}. Updating usage.`);
+      if (overlayConfig) {
+        console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket contract line ${updatedRecord.contract_line_id}. Updating usage.`);
 
         const newQuantity = updatedRecord.quantity || 0;
         const quantityDelta = newQuantity - oldQuantity;
@@ -201,7 +210,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
         }
       }
       // TODO: Add logic here to handle the case where the *original* record was bucket-linked but the *updated* one is not.
-      // This would involve checking originalRecord.billing_plan_id's type and applying a negative delta of -oldQuantity.
+      // This would involve checking originalRecord.contract_line_id's type and applying a negative delta of -oldQuantity.
     }
     // --- End Bucket Usage Update Logic ---
 
@@ -230,13 +239,18 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
     }
 
     // --- Bucket Usage Update Logic (Before Delete) ---
-    if (recordToDelete.service_id && recordToDelete.client_id && recordToDelete.billing_plan_id) {
-      const plan = await trx('billing_plans')
-        .where({ plan_id: recordToDelete.billing_plan_id, tenant })
-        .first('plan_type');
+    if (recordToDelete.service_id && recordToDelete.client_id && recordToDelete.contract_line_id) {
+      const overlayConfig = await trx('contract_line_service_configuration')
+        .where({
+          tenant,
+          contract_line_id: recordToDelete.contract_line_id,
+          service_id: recordToDelete.service_id,
+          configuration_type: 'Bucket'
+        })
+        .first('config_id');
 
-      if (plan && plan.plan_type === 'Bucket') {
-        console.log(`Usage record ${usageId} linked to Bucket plan ${recordToDelete.billing_plan_id}. Updating usage before delete.`);
+      if (overlayConfig) {
+        console.log(`Usage record ${usageId} linked to Bucket contract line ${recordToDelete.contract_line_id}. Updating usage before delete.`);
 
         const quantity = recordToDelete.quantity || 0;
         // Calculate NEGATIVE delta assuming 1 quantity = 1 hour/unit

@@ -37,7 +37,7 @@ const activities = proxyActivities<{
     tenantId: string;
     adminUserId: string;
     clientId?: string;
-    billingPlan?: string;
+    contractLine?: string;
   }): Promise<SetupTenantDataActivityResult>;
   run_onboarding_seeds(tenantId: string): Promise<{ success: boolean; seedsApplied: string[] }>;
   sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
@@ -118,7 +118,7 @@ export const getWorkflowStateQuery = defineQuery<TenantCreationWorkflowState>('g
  * 1. Creating the tenant record in the database
  * 2. Running onboarding seeds (roles, permissions, tax settings)
  * 3. Creating an admin user for the tenant
- * 4. Setting up initial tenant data (billing plans, default settings, etc.)
+ * 4. Setting up initial tenant data (contract lines, default settings, etc.)
  * 5. Creating customer tracking records in nineminds tenant
  * 6. Sending welcome email to the admin user
  * 
@@ -267,7 +267,7 @@ export async function tenantCreationWorkflow(
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
       clientId: tenantResult.clientId,
-      billingPlan: input.billingPlan,
+      contractLine: input.contractLine,
     });
 
     workflowState.progress = 90;

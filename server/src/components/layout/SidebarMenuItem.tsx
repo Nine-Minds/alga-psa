@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { MenuItem } from '../../config/menuConfig';
 import { Construction, ChevronDown } from 'lucide-react';
 
@@ -19,13 +20,15 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   openSubmenu,
   onToggleSubmenu,
 }) => {
+  const hasActiveSubItem = item.subItems?.some((subItem) => isActive(subItem.href || '')) ?? false;
 
   if (item.subItems) {
     return (
       <div
-        className="flex items-center px-4 py-2 hover:bg-[#2a2b32] cursor-pointer"
+        className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] cursor-pointer ${hasActiveSubItem ? 'bg-[#2a2b32]' : ''}`}
         onClick={() => onToggleSubmenu(item.name)}
         data-automation-id={`sidebar-menu-${id}`}
+        aria-expanded={openSubmenu === item.name}
       >
         <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
         {sidebarOpen && (
@@ -43,7 +46,8 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   }
 
   return (
-      <a
+      <Link
+        prefetch={false}
         href={item.href || '#'}
         className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
         data-automation-id={`sidebar-menu-${id}`}
@@ -57,7 +61,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
           )}
         </>
       )}
-    </a>
+    </Link>
   );
 };
 

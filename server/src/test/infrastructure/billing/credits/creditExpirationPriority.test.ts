@@ -12,8 +12,8 @@ import {
 } from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate, createTestDateISO } from '../../../../../test-utils/dateUtils';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { createClient } from '../../../../../test-utils/testDataFactory';
@@ -376,13 +376,11 @@ describe('Credit Expiration Prioritization Tests', () => {
         'transactions',
         'credit_tracking',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_services',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
-        'plan_service_bucket_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'bucket_usage',
         'tax_rates',
         'client_tax_settings',
@@ -444,6 +442,49 @@ describe('Credit Expiration Prioritization Tests', () => {
       credit_expiration_notification_days: [7, 1]
     });
 
+    // Create NY tax rate (10%)
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 10.0,
+      description: 'NY Test Tax',
+      start_date: '2025-01-01'
+    }, 'tax_rate_id');
+
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Create a service
+    const service = await context.createEntity('service_catalog', {
+      service_name: 'Standard Service',
+      service_type: 'Fixed',
+      default_rate: 20000, // $200.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Link service to plan
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
+    });
+
+    // Create a billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
@@ -455,6 +496,16 @@ describe('Credit Expiration Prioritization Tests', () => {
       period_end_date: endDate,
       effective_date: startDate
     }, 'billing_cycle_id');
+
+    // Link plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
 
     // Step 1: Create a credit with expiration date
     const futureDate = new Date();
@@ -514,7 +565,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       .update({ expiration_date: null });
     
     // Step 6: Verify initial credit balance
-    const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(creditWithExpirationAmount + creditWithoutExpirationAmount);
     
     // Step 7: Generate an invoice that will use some but not all of the credits
@@ -605,7 +656,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(creditWithoutExpirationTracking.remaining_amount)).toBe(0);
     
     // Step 14: Verify final credit balance
-    const finalCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0); // All credit should be used
   });
 
@@ -627,17 +678,17 @@ describe('Credit Expiration Prioritization Tests', () => {
       tax_region: 'US-NY'
     });
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
-    await context.db('plan_services').insert({
-      plan_id: planId,
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -671,10 +722,10 @@ describe('Credit Expiration Prioritization Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate1, // Start from the first billing cycle
       is_active: true
@@ -749,7 +800,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       .first();
     
     // Step 4: Verify initial credit balance
-    const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(credit1Amount + credit2Amount + credit3Amount);
     
     // Step 5: Generate first invoice
@@ -937,7 +988,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(actualCredit3Remaining).toBeGreaterThanOrEqual(0);
     
     // Step 18: Verify final credit balance
-    const finalCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     
     // Verify final credit balance matches the actual remaining amount
     expect(finalCredit).toBe(actualCredit3Remaining);
@@ -961,17 +1012,17 @@ describe('Credit Expiration Prioritization Tests', () => {
       tax_region: 'US-NY'
     });
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
-    await context.db('plan_services').insert({
-      plan_id: planId,
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -991,10 +1042,10 @@ describe('Credit Expiration Prioritization Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -1038,7 +1089,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       .first();
     
     // Step 4: Verify initial credit balance
-    const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(expiringCreditAmount + activeCreditAmount);
     
     // Step 5: Create a manual invoice to control totals
@@ -1092,7 +1143,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       });
     
     // Step 7: Verify credit balance after expiration
-    const creditAfterExpiration = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const creditAfterExpiration = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterExpiration).toBe(activeCreditAmount);
     
     // Step 8: Apply remaining credit (only the active credit should be used)
@@ -1171,7 +1222,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(activeCreditTracking.remaining_amount)).toBe(0); // Fully used
     
     // Step 15: Verify final credit balance is zero
-    const finalCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
   });
 });

@@ -130,7 +130,7 @@ describe('Tenant Activities', () => {
         tenantId: createResult.tenantId,
         adminUserId: 'admin-user-123',
         clientId: createResult.clientId,
-        billingPlan: 'Enterprise'
+        contractLine: 'Enterprise'
       };
 
       const result = await setupTenantData(setupInput);
@@ -140,7 +140,7 @@ describe('Tenant Activities', () => {
       expect(result.setupSteps).toContain('Created User role');
       expect(result.setupSteps).toContain('Created Client role');
       expect(result.setupSteps).toContain('Created default statuses');
-      expect(result.setupSteps).toContain('Set up billing plan: Enterprise');
+      expect(result.setupSteps).toContain('Set up contract line: Enterprise');
       expect(result.setupSteps).toContain('Set up default notification preferences');
 
       // Verify roles were created
@@ -171,7 +171,7 @@ describe('Tenant Activities', () => {
         tenantId: createResult.tenantId,
         adminUserId: 'admin-user-456',
         clientId: createResult.clientId,
-        billingPlan: 'Basic'
+        contractLine: 'Basic'
       };
 
       // First setup
@@ -200,7 +200,7 @@ describe('Tenant Activities', () => {
         tenantId: createResult.tenantId,
         adminUserId: 'admin-user-789',
         clientId: createResult.clientId,
-        billingPlan: 'Pro'
+        contractLine: 'Pro'
       };
       await setupTenantData(setupInput);
 

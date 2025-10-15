@@ -82,7 +82,7 @@ export async function updateEmailSettings(updates: Partial<TenantEmailSettings>)
     
     // Prepare data for database
     const settingsData = {
-      tenant_id: tenant,
+      tenant: tenant,
       default_from_domain: updates.defaultFromDomain,
       custom_domains: JSON.stringify(updates.customDomains || []),
       email_provider: updates.emailProvider,
@@ -94,13 +94,13 @@ export async function updateEmailSettings(updates: Partial<TenantEmailSettings>)
 
     // Check if settings exist
     const existing = await knex('tenant_email_settings')
-      .where({ tenant_id: tenant })
+      .where({ tenant: tenant })
       .first();
 
     if (existing) {
       // Update existing settings
       await knex('tenant_email_settings')
-        .where({ tenant_id: tenant })
+        .where({ tenant: tenant })
         .update(settingsData);
     } else {
       // Create new settings
