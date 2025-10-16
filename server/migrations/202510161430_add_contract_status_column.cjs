@@ -2,20 +2,10 @@
  * Adds status column to contracts table with values: 'active', 'draft', 'terminated', 'expired'
  */
 exports.up = async function up(knex) {
-  // Create enum type for contract status
-  await knex.raw(`
-    DO $$
-    BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'contract_status') THEN
-            CREATE TYPE contract_status AS ENUM ('active', 'draft', 'terminated', 'expired');
-        END IF;
-    END $$;
-  `);
-
-  // Add status column
+  // Add status column as text to avoid distributed enum limitations
   await knex.raw(`
     ALTER TABLE contracts
-    ADD COLUMN IF NOT EXISTS status contract_status;
+    ADD COLUMN IF NOT EXISTS status text;
   `);
 
   // Populate status based on existing is_active field
@@ -24,8 +14,8 @@ exports.up = async function up(knex) {
   await knex.raw(`
     UPDATE contracts
     SET status = CASE
-      WHEN is_active = true THEN 'active'::contract_status
-      ELSE 'draft'::contract_status
+      WHEN is_active = true THEN 'active'
+      ELSE 'draft'
     END
     WHERE status IS NULL;
   `);
@@ -34,16 +24,41 @@ exports.up = async function up(knex) {
   await knex.raw(`
     ALTER TABLE contracts
     ALTER COLUMN status SET NOT NULL,
-    ALTER COLUMN status SET DEFAULT 'draft'::contract_status;
+    ALTER COLUMN status SET DEFAULT 'draft';
+  `);
+
+  // Add check constraint for valid statuses
+  await knex.raw(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'contracts_status_check'
+      ) THEN
+        ALTER TABLE contracts
+        ADD CONSTRAINT contracts_status_check
+        CHECK (status IN ('active', 'draft', 'terminated', 'expired'));
+      END IF;
+    END $$;
   `);
 };
 
 exports.down = async function down(knex) {
-  // Remove status column
-  await knex.schema.alterTable('contracts', (table) => {
-    table.dropColumn('status');
-  });
+  await knex.raw(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'contracts_status_check'
+      ) THEN
+        ALTER TABLE contracts
+        DROP CONSTRAINT contracts_status_check;
+      END IF;
+    END $$;
+  `);
 
-  // Drop the enum type
-  await knex.raw('DROP TYPE IF EXISTS contract_status');
+  await knex.raw(`
+    ALTER TABLE contracts
+    DROP COLUMN IF EXISTS status;
+  `);
 };
