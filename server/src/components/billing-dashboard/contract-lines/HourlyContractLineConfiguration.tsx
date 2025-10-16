@@ -803,7 +803,7 @@ export function HourlyPlanConfiguration({
                     // Disable save if saving, no changes, or plan-wide errors exist. Service errors handled by action.
                     disabled={saving || !hasUnsavedChanges || Object.values(planValidationErrors).some(e => e)}
                 >
-                {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save Configuration" /> : "Save Configuration"}
+                {saving ? <LoadingIndicator spinnerProps={{ size: "sm" }} text="Save Configuration" /> : "Save Configuration"}
                 </Button>
             </div>
 

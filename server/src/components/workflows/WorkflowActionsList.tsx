@@ -148,7 +148,7 @@ export default function WorkflowActionsList({ actionResults, executionId }: Work
                   disabled={isRetrying[action.result_id]}
                 >
                   {isRetrying[action.result_id] ? (
-                    <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Retry" />
+                    <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Retry" />
                   ) : (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2" />

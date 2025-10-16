@@ -132,7 +132,7 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
   // Render Status Indicator (Task 80)
   const renderStatusIndicator = () => {
     if (isLoading || !statusInfo) {
-      return <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Loading status..." />;
+      return <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Loading status..." />;
     }
 
     switch (statusInfo.status) {
@@ -174,7 +174,7 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
   const renderActionButtons = () => {
     if (isLoading || !statusInfo) {
       // Added ID to disabled button
-      return <Button disabled id="qbo-loading-button"><LoadingIndicator spinnerProps={{ size: 'xs' }} text="Please wait..." /></Button>;
+      return <Button disabled id="qbo-loading-button"><LoadingIndicator spinnerProps={{ size: 'sm' }} text="Please wait..." /></Button>;
     }
 
     switch (statusInfo.status) {
@@ -186,7 +186,7 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
             disabled={isDisconnecting}
             id="qbo-disconnect-button" // Added ID
           >
-            {isDisconnecting ? <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Disconnect" /> : <><Unlink className="mr-2 h-4 w-4" /> Disconnect</>}
+            {isDisconnecting ? <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Disconnect" /> : <><Unlink className="mr-2 h-4 w-4" /> Disconnect</>}
           </Button>
         );
       case 'Not Connected':
