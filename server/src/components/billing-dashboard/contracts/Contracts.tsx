@@ -15,7 +15,7 @@ import {
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractWithClient } from 'server/src/interfaces/contract.interfaces';
-import { getContractsWithClients, deleteContract, updateContract } from 'server/src/lib/actions/contractActions';
+import { getContractsWithClients, deleteContract, updateContract, checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
 
@@ -57,6 +57,52 @@ const Contracts: React.FC = () => {
       fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to terminate contract';
+      alert(message);
+    }
+  };
+
+  const handleRestoreContract = async (contractId: string, clientId?: string) => {
+    if (!clientId) {
+      alert('Cannot restore contract: client information is missing.');
+      return;
+    }
+
+    try {
+      // Check if client already has an active contract
+      const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
+
+      if (hasActiveContract) {
+        alert('Cannot restore this contract to active status because the client already has an active contract. Please terminate their current active contract first, or restore this contract as a draft.');
+        return;
+      }
+
+      await updateContract(contractId, { status: 'active' });
+      fetchContracts();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to restore contract';
+      alert(message);
+    }
+  };
+
+  const handleSetToActive = async (contractId: string, clientId?: string) => {
+    if (!clientId) {
+      alert('Cannot activate contract: client information is missing.');
+      return;
+    }
+
+    try {
+      // Check if client already has an active contract
+      const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
+
+      if (hasActiveContract) {
+        alert('Cannot set this contract to active because the client already has an active contract. Please terminate their current active contract first.');
+        return;
+      }
+
+      await updateContract(contractId, { status: 'active' });
+      fetchContracts();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to activate contract';
       alert(message);
     }
   };
@@ -134,6 +180,34 @@ const Contracts: React.FC = () => {
                 }}
               >
                 Terminate
+              </DropdownMenuItem>
+            )}
+            {record.status === 'terminated' && (
+              <DropdownMenuItem
+                id="restore-contract-menu-item"
+                className="text-green-600 focus:text-green-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    handleRestoreContract(record.contract_id, record.client_id);
+                  }
+                }}
+              >
+                Restore
+              </DropdownMenuItem>
+            )}
+            {record.status === 'draft' && (
+              <DropdownMenuItem
+                id="set-to-active-menu-item"
+                className="text-green-600 focus:text-green-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    handleSetToActive(record.contract_id, record.client_id);
+                  }
+                }}
+              >
+                Set to Active
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
