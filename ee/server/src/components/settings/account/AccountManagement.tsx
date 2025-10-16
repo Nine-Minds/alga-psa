@@ -17,11 +17,11 @@ import {
   createCustomerPortalSessionAction,
   cancelSubscriptionAction,
   getScheduledLicenseChangesAction,
-} from 'server/src/lib/actions/license-actions';
+} from '@ee/lib/actions/license-actions';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
-import ReduceLicensesModal from 'server/src/components/licensing/ReduceLicensesModal';
+import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 
 export default function AccountManagement() {
   const [loading, setLoading] = useState(true);

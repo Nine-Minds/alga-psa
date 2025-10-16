@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { toast } from 'react-hot-toast';
 import { AlertTriangle, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getLicensePricingAction, reduceLicenseCountAction } from 'server/src/lib/actions/license-actions';
+import { getLicensePricingAction, reduceLicenseCountAction } from '@ee/lib/actions/license-actions';
 
 interface ReduceLicensesModalProps {
   isOpen: boolean;

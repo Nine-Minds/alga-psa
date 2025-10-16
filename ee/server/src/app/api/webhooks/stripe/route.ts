@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStripeService } from 'server/src/lib/stripe/StripeService';
+import { getStripeService } from '@ee/lib/stripe/StripeService';
 import logger from '@alga-psa/shared/core/logger';
 
 /**

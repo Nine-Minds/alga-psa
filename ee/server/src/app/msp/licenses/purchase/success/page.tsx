@@ -7,7 +7,8 @@ import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getLicenseUsageAction, getSubscriptionInfoAction } from 'server/src/lib/actions/license-actions';
+import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import { getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
 
 export default function LicensePurchaseSuccessPage() {
   const searchParams = useSearchParams();

@@ -12,7 +12,7 @@ import {
   getInvoicePreviewAction,
   getPaymentMethodInfoAction,
   createCustomerPortalSessionAction,
-} from 'server/src/lib/actions/license-actions';
+} from '@ee/lib/actions/license-actions';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import {
   EmbeddedCheckoutProvider,

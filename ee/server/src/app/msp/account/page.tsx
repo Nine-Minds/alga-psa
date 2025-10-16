@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import AccountManagement from 'server/src/components/settings/account/AccountManagement';
+import AccountManagement from '@ee/components/settings/account/AccountManagement';
 
 export default function AccountPage() {
   return (
