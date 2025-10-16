@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card } from '../../ui/Card';
-import { Button } from '../../ui/Button';
 import CustomSelect from '../../ui/CustomSelect';
 import LoadingIndicator from '../../ui/LoadingIndicator';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
@@ -13,6 +12,7 @@ import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapte
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
+import { Button } from '../../ui/Button';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -173,6 +173,66 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           </div>
         ) : detailedInvoiceData && selectedTemplate ? (
           <>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {!isFinalized && onFinalize && (
+                <Button
+                  id="invoice-finalize"
+                  onClick={() => handleAction(onFinalize, 'finalize invoice')}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  Finalize Invoice
+                </Button>
+              )}
+
+              {!isFinalized && onEdit && (
+                <Button
+                  id="invoice-edit-items"
+                  variant="outline"
+                  onClick={onEdit}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  Edit Items
+                </Button>
+              )}
+
+              {onDownload && (
+                <Button
+                  id="invoice-download-pdf"
+                  onClick={() => handleAction(onDownload, 'download PDF')}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  Download PDF
+                </Button>
+              )}
+
+              {onEmail && (
+                <Button
+                  id="invoice-send-email"
+                  variant="secondary"
+                  onClick={() => handleAction(onEmail, 'send email')}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  Send Email
+                </Button>
+              )}
+
+              {isFinalized && onUnfinalize && (
+                <Button
+                  id="invoice-unfinalize"
+                  variant="destructive"
+                  onClick={() => handleAction(onUnfinalize, 'unfinalize invoice')}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  Unfinalize
+                </Button>
+              )}
+            </div>
+
             <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-hidden">
               <div
                 style={{
@@ -206,67 +266,6 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 />
               </div>
             )}
-
-            <div className="flex flex-wrap gap-2">
-              {!isFinalized && onFinalize && (
-                <Button
-                  id="invoice-finalize"
-                  onClick={() => handleAction(onFinalize, 'finalize invoice')}
-                  disabled={isActionLoading}
-                  className="flex-1"
-                >
-                  Finalize Invoice
-                </Button>
-              )}
-
-              {!isFinalized && onEdit && (
-                <Button
-                  id="invoice-edit-items"
-                  variant="outline"
-                  onClick={onEdit}
-                  disabled={isActionLoading}
-                  className="flex-1"
-                >
-                  Edit Items
-                </Button>
-              )}
-
-              {onDownload && (
-                <Button
-                  id="invoice-download-pdf"
-                  variant="outline"
-                  onClick={() => handleAction(onDownload, 'download PDF')}
-                  disabled={isActionLoading}
-                  className="flex-1"
-                >
-                  Download PDF
-                </Button>
-              )}
-
-              {onEmail && (
-                <Button
-                  id="invoice-send-email"
-                  variant="outline"
-                  onClick={() => handleAction(onEmail, 'send email')}
-                  disabled={isActionLoading}
-                  className="flex-1"
-                >
-                  Send Email
-                </Button>
-              )}
-
-              {isFinalized && onUnfinalize && (
-                <Button
-                  id="invoice-unfinalize"
-                  variant="outline"
-                  onClick={() => handleAction(onUnfinalize, 'unfinalize invoice')}
-                  disabled={isActionLoading}
-                  className="flex-1"
-                >
-                  Unfinalize
-                </Button>
-              )}
-            </div>
           </>
         ) : (
           <div className="text-gray-500 text-center h-64 flex items-center justify-center">

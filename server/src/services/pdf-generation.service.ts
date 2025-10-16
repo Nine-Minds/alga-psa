@@ -216,7 +216,7 @@ export class PDFGenerationService {
         template = templates.find(t => t.template_id === client.invoice_template_id);
       }
       if (!template) {
-        template = templates.find(t => t.is_default);
+        template = templates.find(t => t.isTenantDefault);
       }
       if (!template && templates.length > 0) {
         template = templates[0];

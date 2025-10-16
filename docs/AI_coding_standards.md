@@ -4,6 +4,7 @@
 - If you would like to search for the contents to files, offer to use the run command and grep command to search for the contents.
 - Do not proceed to updating files until you have enough context to do so.
 - When working in the billing domain, prefer the renamed terminology (`contract lines`, `contracts`) and alias any remaining helper imports that include `plan`/`bundle` to the new schema names in your edits.
+- Default invoice template selections must flow through the `invoice_template_assignments` table. Do **not** add new usages of `invoice_templates.is_default` or `companies.invoice_template_id`; those fields are legacy-only until they are removed.
 
 
 # Failure Handling Philosophy

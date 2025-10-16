@@ -84,7 +84,7 @@ These Next.js Server Actions handle the core logic for managing invoice template
 *   **`getInvoiceTemplates(tenantId)`:** Fetches all standard templates and custom templates belonging to the specified tenant. Returns a combined list, marking standard templates appropriately.
 *   **`getInvoiceTemplate(templateId, tenantId)`:** Fetches a single custom invoice template by its ID and tenant ID. Used by the editor view. Includes `created_at` and `updated_at` fields.
 *   **`saveInvoiceTemplate(templateData, tenantId)`:** Creates or updates a custom invoice template in the `invoice_templates` table for the specified tenant. Does *not* handle compilation itself but saves the source code. Called internally by `compileAndSaveTemplate`.
-*   **`setDefaultTemplate(templateId, tenantId)`:** Updates the `companies` table to set the specified custom `templateId` as the default for the tenant's company. Also unsets the `is_default` flag on any previously default custom template for that tenant in the `invoice_templates` table.
+*   **`setDefaultTemplate({ templateSource, templateId?, standardTemplateCode? })`:** Persists the tenant-scoped default selection in `invoice_template_assignments`. When `templateSource = 'custom'`, the action also synchronizes the legacy `invoice_templates.is_default` column for backward compatibility.
 *   **`deleteInvoiceTemplate(templateId, tenantId)`:** Deletes a custom invoice template from the `invoice_templates` table after checking it's not a standard template, not currently set as the default for the company, and not referenced in any conditional display rules (logic for this check needs confirmation).
 *   **`compileAndSaveTemplate(templateData, tenantId)`:**
     1.  Validates input data (e.g., template name).
@@ -112,7 +112,7 @@ These Next.js Server Actions handle the core logic for managing invoice template
 *   `assemblyScriptSource` (TEXT): The AssemblyScript source code provided by the user.
 *   `wasmBinary` (BYTEA): The compiled WebAssembly binary code.
 *   `sha` (TEXT): SHA hash of the `assemblyScriptSource` for change detection.
-*   `is_default` (BOOLEAN): Flag indicating if this is the default template for the tenant's company.
+*   `is_default` (BOOLEAN, legacy): Maintained for backward compatibility; tenant defaults are resolved through `invoice_template_assignments`.
 *   `created_at` (TIMESTAMP): Timestamp of creation.
 *   `updated_at` (TIMESTAMP): Timestamp of last update.
 
@@ -189,7 +189,7 @@ A process runs at server startup to ensure the `standard_invoice_templates` tabl
     6.  User is redirected back to `InvoiceTemplates.tsx`.
 *   **Set Default Template:**
     1.  User clicks "Set as Default" for a custom template in `InvoiceTemplates.tsx`.
-    2.  `setDefaultTemplate` action runs: updates `companies` table and `invoice_templates` table (`is_default` flag).
+    2.  `setDefaultTemplate` action runs: upserts the tenant-scoped record in `invoice_template_assignments` and, when applicable, mirrors the selection in `invoice_templates.is_default`.
     3.  List refreshes, showing the new default.
 *   **Delete Custom Template:**
     1.  User clicks "Delete" for an unused custom template in `InvoiceTemplates.tsx`.

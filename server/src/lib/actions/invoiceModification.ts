@@ -279,8 +279,22 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
       throw new Error('Invoice not found');
     }
 
-    if (!invoice.finalized_at) {
+    const normalizedStatus = invoice.status ? invoice.status.toLowerCase() : null;
+    const isFinalized = Boolean(invoice.finalized_at) || (normalizedStatus && normalizedStatus !== 'draft');
+
+    if (!isFinalized) {
       throw new Error('Invoice is not finalized');
+    }
+
+    // When unfinalizing make sure the invoice returns to draft status even if some
+    // environments only toggle the status flag without storing finalized_at.
+    const updatedFields: Record<string, unknown> = {
+      finalized_at: null,
+      updated_at: toISODate(Temporal.Now.plainDateISO())
+    };
+
+    if (normalizedStatus && normalizedStatus !== 'draft') {
+      updatedFields.status = 'draft';
     }
 
     await trx('invoices')
@@ -288,10 +302,7 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
         invoice_id: invoiceId,
         tenant
       })
-      .update({
-        finalized_at: null,
-        updated_at: toISODate(Temporal.Now.plainDateISO())
-      });
+      .update(updatedFields);
 
     // Record audit log
     // await auditLog(

@@ -100,6 +100,8 @@ export type ParsedTemplate = {
   globals: Calculation[];
 };
 
+export type InvoiceTemplateSource = 'standard' | 'custom';
+
 export interface IInvoiceTemplate extends TenantEntity {
   template_id: string;
   name: string;
@@ -108,7 +110,11 @@ export interface IInvoiceTemplate extends TenantEntity {
   wasmBinary?: Buffer;
   isStandard?: boolean;
   isClone?: boolean;
-  is_default?: boolean;
+  is_default?: boolean; // Legacy flag retained for compatibility
+  isTenantDefault?: boolean;
+  templateSource?: InvoiceTemplateSource;
+  standard_invoice_template_code?: string;
+  selectValue?: string;
   created_at?: ISO8601String; // Added timestamp
   updated_at?: ISO8601String; // Added timestamp
   parsed?: ParsedTemplate; // Added for backward compatibility with tests
