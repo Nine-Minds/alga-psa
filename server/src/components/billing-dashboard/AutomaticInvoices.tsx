@@ -32,6 +32,7 @@ import {
 } from "../ui/DropdownMenu";
 // Use ConfirmationDialog instead of AlertDialog
 import { ConfirmationDialog } from '../ui/ConfirmationDialog'; // Corrected import
+import LoadingIndicator from '../ui/LoadingIndicator';
 interface AutomaticInvoicesProps {
   periods: (IClientContractLineCycle & {
     client_name: string;
@@ -464,7 +465,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         <div>
           <h2 className="text-lg font-semibold mb-4">Already Invoiced</h2>
           {isLoading ? (
-            <div className="text-center py-4">Loading...</div>
+            <LoadingIndicator
+              layout="stacked"
+              className="py-10 text-gray-600"
+              spinnerProps={{ size: 'md' }}
+              text="Loading generated invoices"
+            />
           ) : (
             <>
               <DataTable
