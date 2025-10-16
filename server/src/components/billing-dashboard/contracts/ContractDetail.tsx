@@ -314,14 +314,22 @@ const ContractDetail: React.FC = () => {
     setIsSaving(true);
 
     try {
-      // Update contract
-      await updateContract(contractId, {
+      // Build contract update payload
+      const contractUpdatePayload: any = {
         contract_name: editContractName,
         contract_description: editDescription || undefined,
         billing_frequency: editBillingFrequency,
-        status: editStatus as any,
         tenant
-      });
+      };
+
+      // Only include status if the contract is not expired
+      // Expired contracts cannot have their status changed manually
+      if (contract.status !== 'expired') {
+        contractUpdatePayload.status = editStatus;
+      }
+
+      // Update contract
+      await updateContract(contractId, contractUpdatePayload);
 
       // Update any edited assignments
       for (const [assignmentId, editedAssignment] of Object.entries(editAssignments)) {
@@ -736,9 +744,15 @@ const ContractDetail: React.FC = () => {
                             { value: 'active', label: 'Active' },
                             { value: 'draft', label: 'Draft' },
                             { value: 'terminated', label: 'Terminated' },
-                            { value: 'expired', label: 'Expired' }
+                            ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
                           ]}
+                          disabled={contract.status === 'expired'}
                         />
+                        {contract.status === 'expired' && (
+                          <p className="text-xs text-gray-500">
+                            Expired contracts cannot be changed to another status
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <span className="text-xs text-gray-500">Billing Frequency *</span>
