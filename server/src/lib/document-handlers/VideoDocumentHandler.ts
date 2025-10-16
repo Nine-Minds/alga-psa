@@ -140,21 +140,32 @@ function resolveFfprobePath(): string | null {
   return null;
 }
 
-const ffmpegExecutable = resolveFfmpegPath();
-const ffprobeExecutable = resolveFfprobePath();
+// Lazy initialization to avoid running path resolution during build/type-checking
+let ffmpegExecutable: string | null | undefined = undefined;
+let ffprobeExecutable: string | null | undefined = undefined;
 
-if (ffmpegExecutable) {
-  ffmpeg.setFfmpegPath(ffmpegExecutable);
-  console.log(`[VideoDocumentHandler] Using ffmpeg executable at ${ffmpegExecutable}`);
-} else {
-  console.warn('[VideoDocumentHandler] ffmpeg executable not found; video thumbnails disabled');
+function ensureFfmpegInitialized() {
+  if (ffmpegExecutable === undefined) {
+    ffmpegExecutable = resolveFfmpegPath();
+    if (ffmpegExecutable) {
+      ffmpeg.setFfmpegPath(ffmpegExecutable);
+      console.log(`[VideoDocumentHandler] Using ffmpeg executable at ${ffmpegExecutable}`);
+    } else {
+      console.warn('[VideoDocumentHandler] ffmpeg executable not found; video thumbnails disabled');
+    }
+  }
 }
 
-if (ffprobeExecutable) {
-  ffmpeg.setFfprobePath(ffprobeExecutable);
-  console.log(`[VideoDocumentHandler] Using ffprobe executable at ${ffprobeExecutable}`);
-} else {
-  console.warn('[VideoDocumentHandler] ffprobe executable not found; some video thumbnails may fail');
+function ensureFfprobeInitialized() {
+  if (ffprobeExecutable === undefined) {
+    ffprobeExecutable = resolveFfprobePath();
+    if (ffprobeExecutable) {
+      ffmpeg.setFfprobePath(ffprobeExecutable);
+      console.log(`[VideoDocumentHandler] Using ffprobe executable at ${ffprobeExecutable}`);
+    } else {
+      console.warn('[VideoDocumentHandler] ffprobe executable not found; some video thumbnails may fail');
+    }
+  }
 }
 
 /**
@@ -311,6 +322,10 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
   }
 
   private async generateThumbnail(document: IDocument, tenant: string, knex: Knex | Knex.Transaction): Promise<Buffer | null> {
+    // Initialize ffmpeg/ffprobe paths on first use
+    ensureFfmpegInitialized();
+    ensureFfprobeInitialized();
+
     if (!ffmpegExecutable) {
       return null;
     }
