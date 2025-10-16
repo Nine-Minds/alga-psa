@@ -10,17 +10,18 @@
 import { test, expect, Page } from '@playwright/test';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
-import { createTestTenant, type TenantTestData } from '../../lib/testing/tenant-test-factory';
+import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
-import { setupAuthenticatedSession } from './helpers/playwrightAuthSessionHelper';
+import {
+  applyPlaywrightAuthEnvDefaults,
+  createTenantAndLogin,
+  resolvePlaywrightBaseUrl,
+} from './helpers/playwrightAuthSessionHelper';
 
-// Set required environment variables for Playwright tests
-process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
-process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-process.env.E2E_AUTH_BYPASS = process.env.E2E_AUTH_BYPASS || 'true';
+applyPlaywrightAuthEnvDefaults();
 
 const TEST_CONFIG = {
-  baseUrl: process.env.EE_BASE_URL || 'http://localhost:3000',
+  baseUrl: resolvePlaywrightBaseUrl(),
 };
 
 async function openAddContractLineDialog(page: Page) {
@@ -61,12 +62,11 @@ test.describe('ContractLineDialog Close Bug', () => {
 
     try {
       // Create test tenant
-      tenantData = await createTestTenant(db, {
-        companyName: `Create Dialog Test ${uuidv4().slice(0, 6)}`,
+      tenantData = await createTenantAndLogin(db, page, {
+        tenantOptions: {
+          companyName: `Create Dialog Test ${uuidv4().slice(0, 6)}`,
+        },
       });
-
-      // Setup authenticated session
-      await setupAuthenticatedSession(page, tenantData);
 
       // Navigate to the billing page with contract-lines tab
       await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
@@ -94,11 +94,11 @@ test.describe('ContractLineDialog Close Bug', () => {
     let tenantData: TenantTestData | null = null;
 
     try {
-      tenantData = await createTestTenant(db, {
-        companyName: `Close Guard Untouched ${uuidv4().slice(0, 6)}`,
+      tenantData = await createTenantAndLogin(db, page, {
+        tenantOptions: {
+          companyName: `Close Guard Untouched ${uuidv4().slice(0, 6)}`,
+        },
       });
-
-      await setupAuthenticatedSession(page, tenantData);
       await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
 
       let dialogHeading = await openAddContractLineDialog(page);
@@ -123,11 +123,11 @@ test.describe('ContractLineDialog Close Bug', () => {
     let tenantData: TenantTestData | null = null;
 
     try {
-      tenantData = await createTestTenant(db, {
-        companyName: `Close Guard Edited ${uuidv4().slice(0, 6)}`,
+      tenantData = await createTenantAndLogin(db, page, {
+        tenantOptions: {
+          companyName: `Close Guard Edited ${uuidv4().slice(0, 6)}`,
+        },
       });
-
-      await setupAuthenticatedSession(page, tenantData);
       await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
 
       const dialogHeading = await openAddContractLineDialog(page);
@@ -154,11 +154,11 @@ test.describe('ContractLineDialog Close Bug', () => {
     let tenantData: TenantTestData | null = null;
 
     try {
-      tenantData = await createTestTenant(db, {
-        companyName: `Close Guard Cancel ${uuidv4().slice(0, 6)}`,
+      tenantData = await createTenantAndLogin(db, page, {
+        tenantOptions: {
+          companyName: `Close Guard Cancel ${uuidv4().slice(0, 6)}`,
+        },
       });
-
-      await setupAuthenticatedSession(page, tenantData);
       await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
 
       const dialogHeading = await openAddContractLineDialog(page);

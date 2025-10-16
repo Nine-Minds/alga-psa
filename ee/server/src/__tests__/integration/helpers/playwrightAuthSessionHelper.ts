@@ -1,5 +1,11 @@
 import type { Page } from '@playwright/test';
-import type { TenantTestData } from '../../../lib/testing/tenant-test-factory';
+import type { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  createTestTenant,
+  type TenantTestData,
+  type TenantTestOptions,
+} from '../../../lib/testing/tenant-test-factory';
 
 export interface SessionUserClaims {
   id: string;
@@ -20,6 +26,36 @@ export type AuthSessionOptions = {
   additionalHosts?: string[];
   additionalDomains?: string[];
 };
+
+export type TenantPermissionTuple = {
+  resource: string;
+  action: string;
+};
+
+export type TenantRolePermissionConfig = {
+  roleName: string;
+  permissions: TenantPermissionTuple[];
+};
+
+export type TenantPreparationOptions = {
+  completeOnboarding?: boolean | { completedAt?: Date };
+  permissions?: TenantRolePermissionConfig[];
+};
+
+export type CreateTenantAndLoginOptions = TenantPreparationOptions & {
+  tenantOptions?: TenantTestOptions;
+  sessionOptions?: AuthSessionOptions;
+};
+
+export function applyPlaywrightAuthEnvDefaults(): void {
+  process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
+  process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  process.env.E2E_AUTH_BYPASS = process.env.E2E_AUTH_BYPASS || 'true';
+}
+
+export function resolvePlaywrightBaseUrl(): string {
+  return process.env.EE_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+}
 
 /**
  * Central helper for establishing an authenticated Playwright session that mirrors NextAuth's
@@ -206,4 +242,113 @@ export async function setupAuthenticatedSession(
   options: AuthSessionOptions = {}
 ): Promise<void> {
   await PlaywrightAuthSessionHelper.authenticate(page, tenantData, options);
+}
+
+export async function ensureRoleHasPermission(
+  db: Knex,
+  tenantId: string,
+  roleName: string,
+  permissionTuples: TenantPermissionTuple[]
+): Promise<void> {
+  const role = await db('roles')
+    .where({ tenant: tenantId, role_name: roleName })
+    .first();
+
+  if (!role) {
+    throw new Error(`Role ${roleName} not found for tenant ${tenantId}`);
+  }
+
+  for (const { resource, action } of permissionTuples) {
+    let permission = await db('permissions')
+      .where({ tenant: tenantId, resource, action })
+      .first();
+
+    if (!permission) {
+      permission = {
+        permission_id: uuidv4(),
+        tenant: tenantId,
+        resource,
+        action,
+        created_at: new Date(),
+      };
+      await db('permissions').insert(permission);
+    }
+
+    const existingLink = await db('role_permissions')
+      .where({
+        tenant: tenantId,
+        role_id: role.role_id,
+        permission_id: permission.permission_id,
+      })
+      .first();
+
+    if (!existingLink) {
+      await db('role_permissions').insert({
+        tenant: tenantId,
+        role_id: role.role_id,
+        permission_id: permission.permission_id,
+      });
+    }
+  }
+}
+
+export async function markOnboardingComplete(
+  db: Knex,
+  tenantId: string,
+  completedAt: Date = new Date()
+): Promise<void> {
+  await db('tenant_settings')
+    .insert({
+      tenant: tenantId,
+      onboarding_completed: true,
+      onboarding_completed_at: completedAt,
+      onboarding_skipped: false,
+      onboarding_data: null,
+      settings: {},
+      created_at: completedAt,
+      updated_at: completedAt,
+    })
+    .onConflict('tenant')
+    .merge({
+      onboarding_completed: true,
+      onboarding_completed_at: completedAt,
+      onboarding_skipped: false,
+      updated_at: completedAt,
+    });
+}
+
+export async function prepareTenantForPlaywright(
+  db: Knex,
+  tenantId: string,
+  options: TenantPreparationOptions = {}
+): Promise<void> {
+  const { completeOnboarding, permissions } = options;
+
+  if (completeOnboarding) {
+    const completedAt =
+      typeof completeOnboarding === 'object' && completeOnboarding.completedAt
+        ? completeOnboarding.completedAt
+        : new Date();
+    await markOnboardingComplete(db, tenantId, completedAt);
+  }
+
+  if (permissions) {
+    for (const { roleName, permissions: tuples } of permissions) {
+      await ensureRoleHasPermission(db, tenantId, roleName, tuples);
+    }
+  }
+}
+
+export async function createTenantAndLogin(
+  db: Knex,
+  page: Page,
+  options: CreateTenantAndLoginOptions = {}
+): Promise<TenantTestData> {
+  const { tenantOptions, sessionOptions, ...preparationOptions } = options;
+
+  const tenantData = await createTestTenant(db, tenantOptions);
+  await prepareTenantForPlaywright(db, tenantData.tenant.tenantId, preparationOptions);
+  await setupAuthenticatedSession(page, tenantData, sessionOptions);
+
+  return tenantData;
 }
