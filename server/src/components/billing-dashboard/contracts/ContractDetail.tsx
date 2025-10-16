@@ -72,7 +72,7 @@ const ContractDetail: React.FC = () => {
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editIsActive, setEditIsActive] = useState<boolean>(false);
+  const [editStatus, setEditStatus] = useState<string>('draft');
   const [editBillingFrequency, setEditBillingFrequency] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -101,14 +101,14 @@ const ContractDetail: React.FC = () => {
     const contractChanged =
       editContractName !== contract.contract_name ||
       editDescription !== (contract.contract_description ?? '') ||
-      editIsActive !== contract.is_active ||
+      editStatus !== contract.status ||
       editBillingFrequency !== contract.billing_frequency;
 
     // Check assignment changes
     const assignmentsChanged = Object.keys(editAssignments).length > 0;
 
     return contractChanged || assignmentsChanged;
-  }, [contract, editContractName, editDescription, editIsActive, editBillingFrequency, editAssignments, isFormInitialized]);
+  }, [contract, editContractName, editDescription, editStatus, editBillingFrequency, editAssignments, isFormInitialized]);
 
   useEffect(() => {
     if (contractId) {
@@ -162,7 +162,7 @@ const ContractDetail: React.FC = () => {
       Promise.resolve().then(() => {
         setEditContractName(contract.contract_name);
         setEditDescription(contract.contract_description ?? '');
-        setEditIsActive(contract.is_active);
+        setEditStatus(contract.status);
         setEditBillingFrequency(contract.billing_frequency);
         setIsFormInitialized(true);
       });
@@ -250,7 +250,7 @@ const ContractDetail: React.FC = () => {
     if (contract) {
       setEditContractName(contract.contract_name);
       setEditDescription(contract.contract_description ?? '');
-      setEditIsActive(contract.is_active);
+      setEditStatus(contract.status);
       setEditBillingFrequency(contract.billing_frequency);
     }
     setEditAssignments({});
@@ -313,7 +313,7 @@ const ContractDetail: React.FC = () => {
         contract_name: editContractName,
         contract_description: editDescription || undefined,
         billing_frequency: editBillingFrequency,
-        is_active: editIsActive,
+        status: editStatus as any,
         tenant
       });
 
@@ -658,12 +658,14 @@ const ContractDetail: React.FC = () => {
                       <div className="space-y-1">
                         <span className="text-xs text-gray-500">Status</span>
                         <CustomSelect
-                          id="edit-is-active"
-                          value={editIsActive ? 'active' : 'draft'}
-                          onValueChange={(value) => setEditIsActive(value === 'active')}
+                          id="edit-status"
+                          value={editStatus}
+                          onValueChange={(value) => setEditStatus(value)}
                           options={[
                             { value: 'active', label: 'Active' },
-                            { value: 'draft', label: 'Draft' }
+                            { value: 'draft', label: 'Draft' },
+                            { value: 'terminated', label: 'Terminated' },
+                            { value: 'expired', label: 'Expired' }
                           ]}
                         />
                       </div>
@@ -723,8 +725,16 @@ const ContractDetail: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between">
                           <span>Assignment Status</span>
-                          <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                            {contract.is_active ? 'Active' : 'Draft'}
+                          <Badge className={
+                            contract.status === 'active' ? 'bg-green-100 text-green-800' :
+                            contract.status === 'terminated' ? 'bg-orange-100 text-orange-800' :
+                            contract.status === 'expired' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }>
+                            {contract.status === 'active' ? 'Active' :
+                             contract.status === 'terminated' ? 'Terminated' :
+                             contract.status === 'expired' ? 'Expired' :
+                             'Draft'}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
@@ -810,8 +820,8 @@ const ContractDetail: React.FC = () => {
                                         e.target.value
                                       )}
                                       className="w-40"
-                                      disabled={contract.is_active}
-                                      title={contract.is_active ? 'Start date cannot be changed for active contracts' : ''}
+                                      disabled={contract.status === 'active'}
+                                      title={contract.status === 'active' ? 'Start date cannot be changed for active contracts' : ''}
                                     />
                                   ) : (
                                     formatDate(editData.start_date)

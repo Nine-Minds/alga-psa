@@ -30,7 +30,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [open, setOpen] = useState(false);
   const [contractName, setContractName] = useState(editingContract?.contract_name ?? '');
   const [contractDescription, setContractDescription] = useState(editingContract?.contract_description ?? '');
-  const [isActive, setIsActive] = useState<boolean>(editingContract?.is_active ?? true);
+  const [status, setStatus] = useState<string>(editingContract?.status ?? 'active');
   const [clientId, setClientId] = useState<string>('');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -65,7 +65,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     if (editingContract) {
       setContractName(editingContract.contract_name);
       setContractDescription(editingContract.contract_description ?? '');
-      setIsActive(editingContract.is_active);
+      setStatus(editingContract.status);
       setOpen(true);
     }
   }, [editingContract]);
@@ -111,7 +111,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         contract_name: contractName,
         contract_description: contractDescription || undefined,
         billing_frequency: billingFrequency,
-        is_active: saveAsActive,
+        status: (saveAsActive ? 'active' : 'draft') as any,
       };
 
       let contract;
@@ -178,7 +178,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
           if (editingContract) {
             setContractName(editingContract.contract_name);
             setContractDescription(editingContract.contract_description ?? '');
-            setIsActive(editingContract.is_active);
+            setStatus(editingContract.status);
           }
           setOpen(true);
         }}>

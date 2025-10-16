@@ -23,7 +23,7 @@ interface ContractFormProps {
 const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated }) => {
   const [contractName, setContractName] = useState(contract.contract_name);
   const [description, setDescription] = useState(contract.contract_description ?? '');
-  const [isActive, setIsActive] = useState<boolean>(contract.is_active);
+  const [status, setStatus] = useState<string>(contract.status);
   const [billingFrequency, setBillingFrequency] = useState(contract.billing_frequency);
   const [isSaving, setIsSaving] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -61,7 +61,7 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
         contract_name: contractName,
         contract_description: description || undefined,
         billing_frequency: billingFrequency,
-        is_active: isActive,
+        status: status as any,
         tenant
       });
 
@@ -135,13 +135,19 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
             />
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="is-active"
-              checked={isActive}
-              onChange={(checked) => setIsActive(!!checked)}
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <CustomSelect
+              id="status"
+              value={status}
+              onValueChange={(value) => setStatus(value)}
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'draft', label: 'Draft' },
+                { value: 'terminated', label: 'Terminated' },
+                { value: 'expired', label: 'Expired' }
+              ]}
             />
-            <Label htmlFor="is-active" className="cursor-pointer">Active</Label>
           </div>
 
           <div className="flex justify-end">
