@@ -1,21 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import BackNav from 'server/src/components/ui/BackNav';
-import { AlertCircle, CalendarClock, FileCheck, FileText, Layers3, Package, Users, Save, Pencil, X, Check } from 'lucide-react';
+import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import Drawer from 'server/src/components/ui/Drawer';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
 import { IClient } from 'server/src/interfaces';
 import {
@@ -30,7 +29,6 @@ import { getClientById } from 'server/src/lib/actions/client-actions/clientActio
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from 'server/src/components/TenantProvider';
 import ContractHeader from './ContractHeader';
-import ContractForm from './ContractForm';
 import ContractLines from './ContractLines';
 import PricingSchedules from './PricingSchedules';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
@@ -48,22 +46,16 @@ const formatDate = (value?: string | Date | null): string => {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
 };
 
-const formatCount = (value?: number): string => {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return '—';
-  }
-  return value.toLocaleString();
-};
-
 const ContractDetail: React.FC = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const contractId = searchParams?.get('contractId') as string;
   const tenant = useTenant()!;
 
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('edit');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summary, setSummary] = useState<IContractSummary | null>(null);
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
@@ -71,6 +63,11 @@ const ContractDetail: React.FC = () => {
   // Client drawer state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+
+  // Confirmation dialog state
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
@@ -80,10 +77,12 @@ const ContractDetail: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   // Assignment editing state
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [editAssignments, setEditAssignments] = useState<Record<string, IContractAssignmentSummary>>({});
+  const [preEditSnapshot, setPreEditSnapshot] = useState<IContractAssignmentSummary | null>(null);
 
   // Contract fields editing state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -92,25 +91,92 @@ const ContractDetail: React.FC = () => {
   // PO Amount input state for formatting (stores display value while editing)
   const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
 
+  // Track if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!contract || !isFormInitialized) {
+      return false;
+    }
+
+    // Check contract field changes
+    const contractChanged =
+      editContractName !== contract.contract_name ||
+      editDescription !== (contract.contract_description ?? '') ||
+      editIsActive !== contract.is_active ||
+      editBillingFrequency !== contract.billing_frequency;
+
+    // Check assignment changes
+    const assignmentsChanged = Object.keys(editAssignments).length > 0;
+
+    return contractChanged || assignmentsChanged;
+  }, [contract, editContractName, editDescription, editIsActive, editBillingFrequency, editAssignments, isFormInitialized]);
+
   useEffect(() => {
     if (contractId) {
       loadContractData();
     }
   }, [contractId]);
 
+  // Warn before leaving page with unsaved changes (browser navigation)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Intercept internal navigation (clicking links)
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+
+      const target = e.target as HTMLElement;
+      const link = target.closest('a[href]') as HTMLAnchorElement;
+
+      if (link && link.href) {
+        const currentPath = window.location.pathname + window.location.search;
+        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
+
+        // Only intercept if navigating to a different page
+        if (linkPath !== currentPath && !link.target && !link.download) {
+          e.preventDefault();
+          e.stopPropagation();
+          setPendingNavigation(link.href);
+          setShowNavigateAwayConfirm(true);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [hasUnsavedChanges]);
+
   // Initialize edit form when contract loads
   useEffect(() => {
     if (contract) {
-      setEditContractName(contract.contract_name);
-      setEditDescription(contract.contract_description ?? '');
-      setEditIsActive(contract.is_active);
-      setEditBillingFrequency(contract.billing_frequency);
+      // Use a microtask to ensure state updates happen together
+      Promise.resolve().then(() => {
+        setEditContractName(contract.contract_name);
+        setEditDescription(contract.contract_description ?? '');
+        setEditIsActive(contract.is_active);
+        setEditBillingFrequency(contract.billing_frequency);
+        setIsFormInitialized(true);
+      });
     }
   }, [contract]);
 
   const loadContractData = async () => {
     setIsLoading(true);
     setError(null);
+    setIsFormInitialized(false);
+    setEditAssignments({});
+    setEditingAssignmentId(null);
+    setPreEditSnapshot(null);
+    setPoAmountInputs({});
 
     try {
       const [contractData, summaryData, assignmentData] = await Promise.all([
@@ -155,12 +221,6 @@ const ContractDetail: React.FC = () => {
     }
   };
 
-  const handleContractUpdated = () => {
-    loadContractData();
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
-  };
-
   const handleContractLinesChanged = () => {
     refreshSummary();
   };
@@ -175,6 +235,50 @@ const ContractDetail: React.FC = () => {
     } catch (error) {
       console.error('Error fetching client details:', error);
     }
+  };
+
+  const handleCancelClick = () => {
+    if (hasUnsavedChanges) {
+      setShowCancelConfirm(true);
+    } else {
+      setActiveTab('edit');
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    // Reset all changes
+    if (contract) {
+      setEditContractName(contract.contract_name);
+      setEditDescription(contract.contract_description ?? '');
+      setEditIsActive(contract.is_active);
+      setEditBillingFrequency(contract.billing_frequency);
+    }
+    setEditAssignments({});
+    setEditingAssignmentId(null);
+    setPreEditSnapshot(null);
+    setPoAmountInputs({});
+    setValidationErrors([]);
+    setHasAttemptedSubmit(false);
+    setShowCancelConfirm(false);
+    setActiveTab('edit');
+  };
+
+  const handleCancelDismiss = () => {
+    setShowCancelConfirm(false);
+  };
+
+  const handleNavigateAwayConfirm = () => {
+    if (pendingNavigation) {
+      // Allow navigation
+      window.location.href = pendingNavigation;
+    }
+    setShowNavigateAwayConfirm(false);
+    setPendingNavigation(null);
+  };
+
+  const handleNavigateAwayDismiss = () => {
+    setShowNavigateAwayConfirm(false);
+    setPendingNavigation(null);
   };
 
   const clearErrorIfSubmitted = () => {
@@ -204,6 +308,7 @@ const ContractDetail: React.FC = () => {
     setIsSaving(true);
 
     try {
+      // Update contract
       await updateContract(contractId, {
         contract_name: editContractName,
         contract_description: editDescription || undefined,
@@ -212,7 +317,44 @@ const ContractDetail: React.FC = () => {
         tenant
       });
 
+      // Update any edited assignments
+      for (const [assignmentId, editedAssignment] of Object.entries(editAssignments)) {
+        const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
+        if (!originalAssignment) continue;
+
+        // Build update payload with only changed fields
+        const updatePayload: any = {
+          tenant
+        };
+
+        // Only include fields that have changed
+        if (editedAssignment.start_date !== originalAssignment.start_date) {
+          updatePayload.start_date = editedAssignment.start_date || undefined;
+        }
+        if (editedAssignment.end_date !== originalAssignment.end_date) {
+          updatePayload.end_date = editedAssignment.end_date;
+        }
+        if (editedAssignment.po_required !== originalAssignment.po_required) {
+          updatePayload.po_required = editedAssignment.po_required;
+        }
+        if (editedAssignment.po_number !== originalAssignment.po_number) {
+          updatePayload.po_number = editedAssignment.po_number;
+        }
+        if (editedAssignment.po_amount !== originalAssignment.po_amount) {
+          // po_amount is already in cents in the state
+          updatePayload.po_amount = editedAssignment.po_amount;
+        }
+
+        // Only update if there are changes
+        if (Object.keys(updatePayload).length > 1) { // More than just tenant
+          await updateClientContract(assignmentId, updatePayload);
+        }
+      }
+
       await loadContractData();
+      setEditingAssignmentId(null);
+      setEditAssignments({});
+      setIsFormInitialized(true);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
@@ -226,72 +368,60 @@ const ContractDetail: React.FC = () => {
 
   const handleStartEditAssignment = (assignment: IContractAssignmentSummary) => {
     setEditingAssignmentId(assignment.client_contract_id);
+
+    // Use edited data if it exists, otherwise use original assignment data
+    const dataToEdit = editAssignments[assignment.client_contract_id] || assignment;
+
+    // Save a snapshot of the data at the start of this edit session
+    setPreEditSnapshot({ ...dataToEdit });
+
     setEditAssignments(prev => ({
       ...prev,
-      [assignment.client_contract_id]: { ...assignment }
+      [assignment.client_contract_id]: { ...dataToEdit }
     }));
+
     // Initialize PO amount input with formatted value (convert from cents to dollars)
-    if (assignment.po_amount != null) {
+    if (dataToEdit.po_amount != null) {
       setPoAmountInputs(prev => ({
         ...prev,
-        [assignment.client_contract_id]: (Number(assignment.po_amount) / 100).toFixed(2)
+        [assignment.client_contract_id]: (Number(dataToEdit.po_amount) / 100).toFixed(2)
       }));
     }
   };
 
-  const handleCancelEditAssignment = () => {
+  const handleConfirmEditAssignment = () => {
+    // Just close the editor - changes are kept in editAssignments state
     setEditingAssignmentId(null);
+    setPreEditSnapshot(null);
   };
 
-  const handleSaveAssignment = async (assignmentId: string) => {
-    const editedAssignment = editAssignments[assignmentId];
-    if (!editedAssignment) return;
+  const handleCancelEditAssignment = (assignmentId: string) => {
+    // Revert to the snapshot from when editing started
+    if (preEditSnapshot) {
+      setEditAssignments(prev => ({
+        ...prev,
+        [assignmentId]: { ...preEditSnapshot }
+      }));
 
-    // Find the original assignment to compare what changed
-    const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
-    if (!originalAssignment) return;
-
-    // Build update payload with only changed fields
-    const updatePayload: any = {
-      tenant
-    };
-
-    // Only include fields that have changed
-    if (editedAssignment.start_date !== originalAssignment.start_date) {
-      updatePayload.start_date = editedAssignment.start_date || undefined;
-    }
-    if (editedAssignment.end_date !== originalAssignment.end_date) {
-      updatePayload.end_date = editedAssignment.end_date;
-    }
-    if (editedAssignment.is_active !== originalAssignment.is_active) {
-      updatePayload.is_active = editedAssignment.is_active;
-    }
-    if (editedAssignment.po_required !== originalAssignment.po_required) {
-      updatePayload.po_required = editedAssignment.po_required;
-    }
-    if (editedAssignment.po_number !== originalAssignment.po_number) {
-      updatePayload.po_number = editedAssignment.po_number;
-    }
-    if (editedAssignment.po_amount !== originalAssignment.po_amount) {
-      // Convert dollars to cents for storage
-      updatePayload.po_amount = editedAssignment.po_amount != null
-        ? Math.round(editedAssignment.po_amount * 100)
-        : null;
+      // Update PO amount input to match the snapshot
+      if (preEditSnapshot.po_amount != null) {
+        setPoAmountInputs(prev => ({
+          ...prev,
+          [assignmentId]: (Number(preEditSnapshot.po_amount) / 100).toFixed(2)
+        }));
+      } else {
+        setPoAmountInputs(prev => {
+          const newState = { ...prev };
+          delete newState[assignmentId];
+          return newState;
+        });
+      }
     }
 
-    try {
-      await updateClientContract(assignmentId, updatePayload);
-
-      await loadContractData();
-      setEditingAssignmentId(null);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (error) {
-      console.error('Error updating assignment:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update assignment';
-      setValidationErrors([errorMessage]);
-    }
+    setEditingAssignmentId(null);
+    setPreEditSnapshot(null);
   };
+
 
   const handleAssignmentFieldChange = (
     assignmentId: string,
@@ -307,32 +437,29 @@ const ContractDetail: React.FC = () => {
     }));
   };
 
-  const activeAssignments = useMemo(
-    () => assignments.filter((assignment) => assignment.is_active),
-    [assignments]
-  );
-
-  const poNumbers = useMemo(() => summary?.poNumbers ?? [], [summary]);
-
-  const totalAssignments = summary?.totalClientAssignments ?? assignments.length;
-
-
   if (isLoading) {
     return <div className="p-4">Loading contract details...</div>;
   }
 
   if (error || !contract) {
     return (
-      <div className="p-4">
+      <div className="p-4 space-y-4">
+        <Button
+          id="back-to-contracts-error"
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/msp/billing?tab=contracts')}
+          className="gap-2 hover:bg-gray-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Contracts
+        </Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             {error || 'Contract not found'}
           </AlertDescription>
         </Alert>
-        <BackNav href="/msp/billing?tab=contracts">
-          Back to Contracts
-        </BackNav>
       </div>
     );
   }
@@ -340,249 +467,38 @@ const ContractDetail: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
-        <BackNav href="/msp/billing?tab=contracts">Back to Contracts</BackNav>
+        <Button
+          id="back-to-contracts"
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/msp/billing?tab=contracts')}
+          className="gap-2 self-start hover:bg-gray-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Contracts
+        </Button>
         <ContractHeader contract={contract} summary={summary} />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4 flex flex-wrap gap-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="edit">Edit</TabsTrigger>
+          <TabsTrigger value="edit">Overview</TabsTrigger>
           <TabsTrigger value="lines">Contract Lines</TabsTrigger>
           <TabsTrigger value="pricing">Pricing Schedules</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
-          <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                    Contract Snapshot
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-gray-700">
-                  <div className="flex items-center justify-between">
-                    <span>Status</span>
-                    <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                      {contract.is_active ? 'Active' : 'Draft'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Billing Frequency</span>
-                    <span className="font-medium">{contract.billing_frequency}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Created</span>
-                    <span className="font-medium">{formatDate(contract.created_at)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Last Updated</span>
-                    <span className="font-medium">{formatDate(contract.updated_at)}</span>
-                  </div>
-                  {contract.contract_description && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Description</p>
-                      <p className="text-sm text-gray-800">{contract.contract_description}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Layers3 className="h-4 w-4 text-emerald-600" />
-                    Client Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-gray-700">
-                  <div className="flex items-center justify-between">
-                    <span>Assigned Clients</span>
-                    <span className="font-semibold">{formatCount(totalAssignments)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Active Assignments</span>
-                    <span className="font-semibold text-green-700">{formatCount(activeAssignments.length)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Earliest Start</span>
-                    <span className="font-medium">{formatDate(summary?.earliestStartDate)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Latest End</span>
-                    <span className="font-medium">
-                      {summary?.latestEndDate ? formatDate(summary.latestEndDate) : totalAssignments > 0 ? 'Ongoing' : '—'}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4 text-indigo-600" />
-                    Client Assignments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-gray-700">
-                  <div className="flex items-center justify-between">
-                    <span>Total Assignments</span>
-                    <span className="font-semibold">{formatCount(totalAssignments)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Active Clients</span>
-                    <span className="font-semibold text-green-700">{formatCount(activeAssignments.length)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Earliest Start</span>
-                    <span className="font-medium">{formatDate(summary?.earliestStartDate)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Latest End</span>
-                    <span className="font-medium">
-                      {summary?.latestEndDate ? formatDate(summary.latestEndDate) : totalAssignments > 0 ? 'Ongoing' : '—'}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <FileCheck className="h-4 w-4 text-orange-600" />
-                    Purchase Orders
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-gray-700">
-                  <div className="flex items-center justify-between">
-                    <span>Assignments Requiring PO</span>
-                    <span className="font-semibold">{formatCount(summary?.poRequiredCount)}</span>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">PO Numbers</p>
-                    {poNumbers.length > 0 ? (
-                      <ul className="space-y-1">
-                        {poNumbers.map((po) => (
-                          <li key={po} className="font-medium text-gray-800">
-                            {po}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-gray-500">No purchase orders recorded.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Package className="h-4 w-4 text-amber-600" />
-                    Revenue Snapshot
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-gray-700">
-                  <p className="text-gray-500">
-                    Detailed revenue metrics are coming soon. This section will summarize recurring charges and billing totals once reporting hooks are in place.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Package className="h-4 w-4 text-purple-600" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-3">
-                <Button id="overview-edit-details" variant="outline" onClick={() => setActiveTab('details')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Edit Contract Details
-                </Button>
-                <Button id="overview-manage-lines" variant="outline" onClick={() => setActiveTab('lines')}>
-                  <Layers3 className="mr-2 h-4 w-4" />
-                  Manage Contract Lines
-                </Button>
-                <Button id="overview-manage-pricing" variant="outline" onClick={() => setActiveTab('pricing')}>
-                  <CalendarClock className="mr-2 h-4 w-4" />
-                  Manage Pricing Schedules
-                </Button>
-                <Button id="overview-view-invoices" variant="outline" onClick={() => setActiveTab('invoices')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  View Invoices
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Users className="h-4 w-4 text-sky-600" />
-                  Assignment Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {assignments.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-gray-500">
-                    No clients are currently assigned to this contract.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                      <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        <tr>
-                          <th className="px-4 py-3">Client</th>
-                          <th className="px-4 py-3">Start Date</th>
-                          <th className="px-4 py-3">End Date</th>
-                          <th className="px-4 py-3">PO</th>
-                          <th className="px-4 py-3">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {assignments.map((assignment) => (
-                          <tr key={assignment.client_contract_id} className="text-gray-700">
-                            <td className="px-4 py-3">
-                              <div className="font-medium text-gray-900">
-                                {assignment.client_name || assignment.client_id}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">{formatDate(assignment.start_date)}</td>
-                            <td className="px-4 py-3">
-                              {assignment.end_date ? formatDate(assignment.end_date) : 'Ongoing'}
-                            </td>
-                            <td className="px-4 py-3">
-                              {assignment.po_required ? (
-                                <Badge variant="outline" className="border-orange-300 text-orange-700">
-                                  {assignment.po_number ? assignment.po_number : 'Required'}
-                                </Badge>
-                              ) : (
-                                <span className="text-gray-500">Not required</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge className={assignment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}>
-                                {assignment.is_active ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
         <TabsContent value="edit">
           <div className="space-y-6">
+            {hasUnsavedChanges && (
+              <Alert className="bg-amber-50 border-amber-200">
+                <AlertDescription className="text-amber-800 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>You have unsaved changes. Click "Save Changes" to apply them.</span>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {saveSuccess && (
               <Alert className="bg-green-50 border-green-200">
                 <AlertDescription className="text-green-800">
@@ -868,7 +784,6 @@ const ContractDetail: React.FC = () => {
                             <th className="px-4 py-3">PO Required</th>
                             <th className="px-4 py-3">PO Number</th>
                             <th className="px-4 py-3">PO Amount</th>
-                            <th className="px-4 py-3">Status</th>
                             <th className="px-4 py-3">Actions</th>
                           </tr>
                         </thead>
@@ -895,9 +810,11 @@ const ContractDetail: React.FC = () => {
                                         e.target.value
                                       )}
                                       className="w-40"
+                                      disabled={contract.is_active}
+                                      title={contract.is_active ? 'Start date cannot be changed for active contracts' : ''}
                                     />
                                   ) : (
-                                    formatDate(assignment.start_date)
+                                    formatDate(editData.start_date)
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
@@ -914,7 +831,7 @@ const ContractDetail: React.FC = () => {
                                       placeholder="Ongoing"
                                     />
                                   ) : (
-                                    assignment.end_date ? formatDate(assignment.end_date) : 'Ongoing'
+                                    editData.end_date ? formatDate(editData.end_date) : 'Ongoing'
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
@@ -931,7 +848,7 @@ const ContractDetail: React.FC = () => {
                                       }}
                                     />
                                   ) : (
-                                    <span>{assignment.po_required ? 'Yes' : 'No'}</span>
+                                    <span>{editData.po_required ? 'Yes' : 'No'}</span>
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
@@ -948,9 +865,9 @@ const ContractDetail: React.FC = () => {
                                       disabled={!editData.po_required}
                                     />
                                   ) : (
-                                    assignment.po_required ? (
+                                    editData.po_required ? (
                                       <Badge variant="outline" className="border-orange-300 text-orange-700">
-                                        {assignment.po_number ? assignment.po_number : 'Required'}
+                                        {editData.po_number ? editData.po_number : 'Required'}
                                       </Badge>
                                     ) : (
                                       <span className="text-gray-500">Not required</span>
@@ -988,15 +905,16 @@ const ContractDetail: React.FC = () => {
                                               null
                                             );
                                           } else {
-                                            const amount = parseFloat(input) || 0;
+                                            const dollars = parseFloat(input) || 0;
+                                            const cents = Math.round(dollars * 100);
                                             handleAssignmentFieldChange(
                                               assignment.client_contract_id,
                                               'po_amount',
-                                              amount
+                                              cents
                                             );
                                             setPoAmountInputs(prev => ({
                                               ...prev,
-                                              [assignment.client_contract_id]: amount.toFixed(2)
+                                              [assignment.client_contract_id]: dollars.toFixed(2)
                                             }));
                                           }
                                         }}
@@ -1006,33 +924,17 @@ const ContractDetail: React.FC = () => {
                                       />
                                     </div>
                                   ) : (
-                                    assignment.po_amount != null ? `$${(Number(assignment.po_amount) / 100).toFixed(2)}` : '—'
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <Checkbox
-                                      checked={editData.is_active}
-                                      onChange={(checked) => handleAssignmentFieldChange(
-                                        assignment.client_contract_id,
-                                        'is_active',
-                                        !!checked
-                                      )}
-                                    />
-                                  ) : (
-                                    <Badge className={assignment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}>
-                                      {assignment.is_active ? 'Active' : 'Inactive'}
-                                    </Badge>
+                                    editData.po_amount != null ? `$${(Number(editData.po_amount) / 100).toFixed(2)}` : '—'
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
                                   {isEditing ? (
                                     <div className="flex gap-2">
                                       <Button
-                                        id={`save-assignment-${assignment.client_contract_id}`}
+                                        id={`confirm-assignment-${assignment.client_contract_id}`}
                                         type="button"
                                         size="sm"
-                                        onClick={() => handleSaveAssignment(assignment.client_contract_id)}
+                                        onClick={handleConfirmEditAssignment}
                                       >
                                         <Check className="h-4 w-4" />
                                       </Button>
@@ -1041,7 +943,7 @@ const ContractDetail: React.FC = () => {
                                         type="button"
                                         size="sm"
                                         variant="outline"
-                                        onClick={handleCancelEditAssignment}
+                                        onClick={() => handleCancelEditAssignment(assignment.client_contract_id)}
                                       >
                                         <X className="h-4 w-4" />
                                       </Button>
@@ -1096,7 +998,7 @@ const ContractDetail: React.FC = () => {
                   id="cancel-edit-contract-btn"
                   type="button"
                   variant="outline"
-                  onClick={() => setActiveTab('overview')}
+                  onClick={handleCancelClick}
                 >
                   Cancel
                 </Button>
@@ -1106,7 +1008,9 @@ const ContractDetail: React.FC = () => {
                   disabled={isSaving}
                   className={!editContractName.trim() || !editBillingFrequency ? 'opacity-50' : ''}
                 >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  <span className={hasUnsavedChanges ? 'font-bold' : ''}>
+                    {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                  </span>
                   {!isSaving && <Save className="ml-2 h-4 w-4" />}
                 </Button>
               </div>
@@ -1154,6 +1058,26 @@ const ContractDetail: React.FC = () => {
           />
         )}
       </Drawer>
+
+      <ConfirmationDialog
+        isOpen={showCancelConfirm}
+        onClose={handleCancelDismiss}
+        onConfirm={handleCancelConfirm}
+        title="Discard Changes"
+        message="Are you sure you want to discard all changes? Any unsaved changes will be lost."
+        confirmLabel="Discard Changes"
+        cancelLabel="Continue Editing"
+      />
+
+      <ConfirmationDialog
+        isOpen={showNavigateAwayConfirm}
+        onClose={handleNavigateAwayDismiss}
+        onConfirm={handleNavigateAwayConfirm}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
+        confirmLabel="Leave Page"
+        cancelLabel="Stay on Page"
+      />
     </div>
   );
 };

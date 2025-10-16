@@ -32,8 +32,9 @@ import {
 
 // Define billing method options (as per contract line)
 const BILLING_METHOD_OPTIONS = [
-  { value: 'fixed', label: 'Fixed Price' },
-  { value: 'per_unit', label: 'Per Unit' }
+  { value: 'fixed', label: 'Fixed Fee' },
+  { value: 'hourly', label: 'Hourly' },
+  { value: 'usage', label: 'Usage Based' }
 ];
 
 // Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
@@ -49,7 +50,7 @@ const ServiceCatalogManager: React.FC = () => {
   // Note: Categories are currently hidden in favor of using Service Types for organization
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   // Update state type to match what getServiceTypesForSelection returns
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
   // Use IService directly, extended with optional UI fields
   const [editingService, setEditingService] = useState<(IService & {
     sku?: string; // These might need to be added to IService if they are persisted
@@ -71,6 +72,8 @@ const ServiceCatalogManager: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // Default page size
   const [totalCount, setTotalCount] = useState(0);
+  // State for rate input (display value while typing)
+  const [rateInput, setRateInput] = useState<string>('');
   const filteredServices = services.filter(service => {
     // Filter by Service Type
     const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
@@ -342,7 +345,7 @@ const ServiceCatalogManager: React.FC = () => {
       {
         title: 'Unit', // Shortened title
         dataIndex: 'unit_of_measure',
-        render: (value, record) => record.billing_method === 'per_unit' ? value || 'N/A' : 'N/A',
+        render: (value, record) => record.billing_method === 'usage' ? value || 'N/A' : 'N/A',
       },
       // Updated Tax Column
       {
@@ -422,6 +425,7 @@ const ServiceCatalogManager: React.FC = () => {
               id={`edit-service-${record.service_id}`}
               onClick={() => {
                 setEditingService(record);
+                setRateInput((record.default_rate / 100).toFixed(2));
                 setIsEditDialogOpen(true);
               }}
             >
@@ -499,14 +503,16 @@ const ServiceCatalogManager: React.FC = () => {
               onRowClick={(record: IService) => { // Use updated IService
                 // Store the current page before opening the dialog
                 const currentPageBeforeDialog = currentPage;
-                
+
                 // Add optional UI fields if needed when setting state
                 setEditingService({
                   ...record,
                   // sku: record.sku || '', // Example if sku was fetched
                 });
+                // Initialize rate input with formatted value
+                setRateInput((record.default_rate / 100).toFixed(2));
                 setIsEditDialogOpen(true);
-                
+
                 // Ensure the current page is preserved
                 setCurrentPage(currentPageBeforeDialog);
               }}
@@ -565,7 +571,7 @@ const ServiceCatalogManager: React.FC = () => {
                 id="billing-method"
                 options={BILLING_METHOD_OPTIONS}
                 value={editingService?.billing_method || 'fixed'}
-                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'per_unit' })}
+                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'hourly' | 'usage' })}
                 placeholder="Select billing method..."
               />
             </div>
@@ -579,50 +585,139 @@ const ServiceCatalogManager: React.FC = () => {
                 onChange={(e) => setEditingService({ ...editingService!, description: e.target.value })}
               />
             </div>
-            <div>
-              <label htmlFor="default-rate" className="block text-sm font-medium text-gray-700 mb-1">Default Rate ($)</label>
-              <Input
-                id="default-rate"
-                type="number"
-                placeholder="Default Rate"
-                // Display dollars, allow user to type decimals freely.
-                // The browser's number input might still show trailing zeros based on step, but typing isn't blocked.
-                value={(editingService?.default_rate ?? 0) / 100}
-                step="0.01" // Hint to the browser about expected precision
-                onChange={(e) => {
-                  const rawValue = e.target.value;
-                  // Allow empty string -> 0 cents
-                  if (rawValue === '') {
-                    // Ensure editingService is not null before updating
-                    if (editingService) {
-                      setEditingService({ ...editingService, default_rate: 0 });
-                    }
-                    return;
-                  }
-                  // Try parsing, update cents only if valid number
-                  const dollarValue = parseFloat(rawValue);
-                  if (!isNaN(dollarValue) && editingService) {
-                    const centsValue = Math.round(dollarValue * 100);
-                    setEditingService({ ...editingService, default_rate: centsValue });
-                  }
-                  // If input is invalid (e.g., "abc", "1..2"), do nothing to the cents state.
-                  // The input field itself might show the invalid input temporarily depending on browser behavior.
-                }}
-              />
-            </div>
-            {/* Category dropdown removed - using Service Types for organization */}
-            {/* Conditional Unit of Measure */}
-            {editingService?.billing_method === 'per_unit' && (
+            {/* Conditional Rate Fields Based on Billing Method */}
+            {editingService?.billing_method === 'fixed' && (
               <div>
-                <label htmlFor="unit-of-measure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure</label>
-                <UnitOfMeasureInput
-                  value={editingService?.unit_of_measure || ''}
-                  onChange={(value) => setEditingService({ ...editingService!, unit_of_measure: value })}
-                  placeholder="Unit of Measure"
-                  className="w-full"
-                />
+                <label htmlFor="fixed-rate" className="block text-sm font-medium text-gray-700 mb-1">Monthly Base Rate *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="fixed-rate"
+                    type="text"
+                    inputMode="decimal"
+                    value={rateInput}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setRateInput(value);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rateInput.trim() === '' || rateInput === '.') {
+                        setRateInput('');
+                        if (editingService) {
+                          setEditingService({ ...editingService, default_rate: 0 });
+                        }
+                      } else {
+                        const dollars = parseFloat(rateInput) || 0;
+                        const cents = Math.round(dollars * 100);
+                        if (editingService) {
+                          setEditingService({ ...editingService, default_rate: cents });
+                        }
+                        setRateInput((cents / 100).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">The monthly fee for this service</p>
               </div>
             )}
+
+            {editingService?.billing_method === 'hourly' && (
+              <div>
+                <label htmlFor="hourly-rate" className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="hourly-rate"
+                    type="text"
+                    inputMode="decimal"
+                    value={rateInput}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setRateInput(value);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rateInput.trim() === '' || rateInput === '.') {
+                        setRateInput('');
+                        if (editingService) {
+                          setEditingService({ ...editingService, default_rate: 0 });
+                        }
+                      } else {
+                        const dollars = parseFloat(rateInput) || 0;
+                        const cents = Math.round(dollars * 100);
+                        if (editingService) {
+                          setEditingService({ ...editingService, default_rate: cents });
+                        }
+                        setRateInput((cents / 100).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Rate charged per hour</p>
+              </div>
+            )}
+
+            {editingService?.billing_method === 'usage' && (
+              <>
+                <div>
+                  <label htmlFor="unit-rate" className="block text-sm font-medium text-gray-700 mb-1">Unit Rate *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <Input
+                      id="unit-rate"
+                      type="text"
+                      inputMode="decimal"
+                      value={rateInput}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                        const decimalCount = (value.match(/\./g) || []).length;
+                        if (decimalCount <= 1) {
+                          setRateInput(value);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (rateInput.trim() === '' || rateInput === '.') {
+                          setRateInput('');
+                          if (editingService) {
+                            setEditingService({ ...editingService, default_rate: 0 });
+                          }
+                        } else {
+                          const dollars = parseFloat(rateInput) || 0;
+                          const cents = Math.round(dollars * 100);
+                          if (editingService) {
+                            setEditingService({ ...editingService, default_rate: cents });
+                          }
+                          setRateInput((cents / 100).toFixed(2));
+                        }
+                      }}
+                      placeholder="0.00"
+                      className="pl-7"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Price per unit</p>
+                </div>
+                <div>
+                  <label htmlFor="unit-of-measure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</label>
+                  <UnitOfMeasureInput
+                    value={editingService?.unit_of_measure || ''}
+                    onChange={(value) => setEditingService({ ...editingService!, unit_of_measure: value })}
+                    placeholder="e.g., GB, API call, user"
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
+                </div>
+              </>
+            )}
+            {/* Category dropdown removed - using Service Types for organization */}
             {/* Replaced Tax Region/Is Taxable with Tax Rate Selector */}
             <CustomSelect
                 id="edit-service-tax-rate-select"
@@ -732,6 +827,7 @@ const ServiceCatalogManager: React.FC = () => {
             <Button id='cancel-button' variant="outline" onClick={() => {
               setIsEditDialogOpen(false);
               setEditingService(null);
+              setRateInput('');
             }}>Cancel</Button>
             <Button id='save-button' onClick={() => {
               // Just call handleUpdateService - it will close the dialog

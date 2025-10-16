@@ -23,6 +23,7 @@ import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
+import ServiceCatalogManager from 'server/src/components/settings/billing/ServiceCatalogManager';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -160,6 +161,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="usage-tracking">
           <UsageTracking initialServices={initialServices} />
+        </Tabs.Content>
+
+        <Tabs.Content value="service-catalog">
+          <ServiceCatalogManager />
         </Tabs.Content>
       </Tabs.Root>
     </div>

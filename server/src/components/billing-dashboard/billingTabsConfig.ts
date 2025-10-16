@@ -6,7 +6,8 @@ import {
   Layers3,
   Calendar,
   Gauge,
-  BarChart3
+  BarChart3,
+  Package
 } from 'lucide-react';
 
 export interface BillingTabDefinition {
@@ -24,7 +25,8 @@ export type BillingTabValue =
   | 'contract-lines'
   | 'billing-cycles'
   | 'usage-tracking'
-  | 'reports';
+  | 'reports'
+  | 'service-catalog';
 
 export const billingTabDefinitions: BillingTabDefinition[] = [
   {
@@ -74,5 +76,11 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     label: 'Reports',
     href: '/msp/billing?tab=reports',
     icon: BarChart3
+  },
+  {
+    value: 'service-catalog',
+    label: 'Service Catalog',
+    href: '/msp/billing?tab=service-catalog',
+    icon: Package
   }
 ];
