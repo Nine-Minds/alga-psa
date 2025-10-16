@@ -198,7 +198,7 @@ export async function getServicesByCategory(categoryId: string): Promise<IServic
 }
 
 // New action to get combined service types for UI selection
-export async function getServiceTypesForSelection(): Promise<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]> {
+export async function getServiceTypesForSelection(): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> {
    try {
        // Assuming ServiceTypeModel is imported or available
        // Need to import ServiceTypeModel from '../models/serviceType'
@@ -326,7 +326,7 @@ export async function deleteServiceType(id: string): Promise<void> {
 
 /**
  * Create a new service type with just a name (inline creation)
- * Automatically assigns billing_method as 'per_unit' and generates next order number
+ * Automatically assigns billing_method as 'usage' and generates next order number
  */
 export async function createServiceTypeInline(name: string): Promise<IServiceType> {
   try {
@@ -344,7 +344,7 @@ export async function createServiceTypeInline(name: string): Promise<IServiceTyp
       // Create service type with default billing method and next order
       const newServiceType = await ServiceTypeModel.create(trx, {
         name: name.trim(),
-        billing_method: 'per_unit', // Default to per_unit for inline creation
+        billing_method: 'usage', // Default to usage for inline creation
         description: null,
         is_active: true,
         order_number: nextOrder,

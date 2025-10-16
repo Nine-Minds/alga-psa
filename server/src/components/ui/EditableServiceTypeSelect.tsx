@@ -11,7 +11,7 @@ import { ChevronDown } from 'lucide-react';
 interface ServiceType {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'per_unit';
+  billing_method: 'fixed' | 'hourly' | 'usage';
 }
 
 interface EditableServiceTypeSelectProps {
