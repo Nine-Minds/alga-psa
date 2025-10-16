@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import BackNav from 'server/src/components/ui/BackNav';
-import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check } from 'lucide-react';
+import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
@@ -49,6 +48,7 @@ const formatDate = (value?: string | Date | null): string => {
 
 const ContractDetail: React.FC = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const contractId = searchParams?.get('contractId') as string;
   const tenant = useTenant()!;
 
@@ -443,16 +443,23 @@ const ContractDetail: React.FC = () => {
 
   if (error || !contract) {
     return (
-      <div className="p-4">
+      <div className="p-4 space-y-4">
+        <Button
+          id="back-to-contracts-error"
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/msp/billing?tab=contracts')}
+          className="gap-2 hover:bg-gray-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Contracts
+        </Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             {error || 'Contract not found'}
           </AlertDescription>
         </Alert>
-        <BackNav href="/msp/billing?tab=contracts">
-          Back to Contracts
-        </BackNav>
       </div>
     );
   }
@@ -460,7 +467,16 @@ const ContractDetail: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
-        <BackNav href="/msp/billing?tab=contracts">Back to Contracts</BackNav>
+        <Button
+          id="back-to-contracts"
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/msp/billing?tab=contracts')}
+          className="gap-2 self-start hover:bg-gray-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Contracts
+        </Button>
         <ContractHeader contract={contract} summary={summary} />
       </div>
 
