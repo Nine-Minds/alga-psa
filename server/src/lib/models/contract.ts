@@ -177,7 +177,9 @@ const Contract = {
         .select(
           'co.*',
           'c.client_id',
-          'c.client_name'
+          'c.client_name',
+          'cc.start_date',
+          'cc.end_date'
         )
         .orderBy('co.created_at', 'desc');
 

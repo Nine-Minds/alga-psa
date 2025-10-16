@@ -130,6 +130,16 @@ const Contracts: React.FC = () => {
       render: (value) => value || 'No description',
     },
     {
+      title: 'Start Date',
+      dataIndex: 'start_date',
+      render: (value) => value ? new Date(value).toLocaleDateString() : '—',
+    },
+    {
+      title: 'End Date',
+      dataIndex: 'end_date',
+      render: (value) => value ? new Date(value).toLocaleDateString() : '—',
+    },
+    {
       title: 'Status',
       dataIndex: 'status',
       render: (value) => {
