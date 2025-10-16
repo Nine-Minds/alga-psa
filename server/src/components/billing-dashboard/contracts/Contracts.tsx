@@ -18,6 +18,7 @@ import { IContractWithClient } from 'server/src/interfaces/contract.interfaces';
 import { getContractsWithClients, deleteContract, updateContract, checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const Contracts: React.FC = () => {
   const [contracts, setContracts] = useState<IContractWithClient[]>([]);
