@@ -36,6 +36,8 @@ import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
+import { cn } from 'server/src/lib/utils';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -517,7 +519,85 @@ const ContractDetail: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div className="p-4">Loading contract details...</div>;
+    return (
+      <div className="space-y-6 p-4 animate-pulse">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <Skeleton className="h-9 w-36 md:w-32" />
+          <div className="space-y-2 md:w-1/2 lg:w-1/3">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-7 w-56" />
+            <div className="grid gap-2 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`metric-${index}`} className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-6 w-28" />
+                </div>
+              ))}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`form-field-${index}`} className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={`client-row-${index}`} className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="xl:col-span-2">
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-6 gap-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={`header-${index}`} className="h-4" />
+                ))}
+              </div>
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, rowIndex) => (
+                  <div key={`assignment-row-${rowIndex}`} className="grid grid-cols-6 gap-3">
+                    {Array.from({ length: 6 }).map((_, cellIndex) => (
+                      <Skeleton
+                        key={`assignment-cell-${rowIndex}-${cellIndex}`}
+                        className={cn(
+                          'h-9',
+                          cellIndex === 5 ? 'rounded-full w-10 justify-self-center' : 'w-full'
+                        )}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (error || !contract) {
