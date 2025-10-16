@@ -27,6 +27,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 // Removed old SERVICE_TYPE_OPTIONS
 
@@ -80,9 +81,11 @@ const ServiceCatalogManager: React.FC = () => {
     const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
     return serviceTypeMatch && billingMethodMatch;
   });
+  const memoizedFilteredServices = useMemo(() => filteredServices, [JSON.stringify(filteredServices)]);
 
   // Track when page changes are from user interaction vs. programmatic updates
   const [userChangedPage, setUserChangedPage] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Add effect to refetch data when page changes from user interaction
   useEffect(() => {
@@ -146,6 +149,7 @@ const ServiceCatalogManager: React.FC = () => {
   const [isUpdatingService, setIsUpdatingService] = useState(false);
   
   const fetchServices = async (preservePage = false) => {
+    setIsLoading(true);
     try {
       const pageToFetch = preservePage ? currentPage : 1;
       console.log(`Fetching services for page: ${pageToFetch}, preserve page: ${preservePage}, filters: serviceType=${selectedServiceType}, billingMethod=${selectedBillingMethod}`);
@@ -187,6 +191,8 @@ const ServiceCatalogManager: React.FC = () => {
     } catch (error) {
       console.error('Error fetching services:', error);
       setError('Failed to fetch services');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -491,33 +497,41 @@ const ServiceCatalogManager: React.FC = () => {
                 onServiceTypesChange={fetchAllServiceTypes}
               /> {/* Pass prop */}
             </div>
-            <DataTable
-              // Memoize filteredServices to prevent unnecessary rerenders
-              data={useMemo(() => filteredServices, [JSON.stringify(filteredServices)])}
-              columns={columns}
-              pagination={true} // Keep this to enable pagination UI
-              currentPage={currentPage}
-              pageSize={pageSize}
-              totalItems={totalCount} // Pass total count for server-side pagination
-              onPageChange={handlePageChange}
-              onRowClick={(record: IService) => { // Use updated IService
-                // Store the current page before opening the dialog
-                const currentPageBeforeDialog = currentPage;
+            {isLoading ? (
+              <LoadingIndicator
+                layout="stacked"
+                className="py-10 text-gray-600"
+                spinnerProps={{ size: 'md' }}
+                text="Loading services"
+              />
+            ) : (
+              <DataTable
+                data={memoizedFilteredServices}
+                columns={columns}
+                pagination={true} // Keep this to enable pagination UI
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalItems={totalCount} // Pass total count for server-side pagination
+                onPageChange={handlePageChange}
+                onRowClick={(record: IService) => { // Use updated IService
+                  // Store the current page before opening the dialog
+                  const currentPageBeforeDialog = currentPage;
 
-                // Add optional UI fields if needed when setting state
-                setEditingService({
-                  ...record,
-                  // sku: record.sku || '', // Example if sku was fetched
-                });
-                // Initialize rate input with formatted value
-                setRateInput((record.default_rate / 100).toFixed(2));
-                setIsEditDialogOpen(true);
+                  // Add optional UI fields if needed when setting state
+                  setEditingService({
+                    ...record,
+                    // sku: record.sku || '', // Example if sku was fetched
+                  });
+                  // Initialize rate input with formatted value
+                  setRateInput((record.default_rate / 100).toFixed(2));
+                  setIsEditDialogOpen(true);
 
-                // Ensure the current page is preserved
-                setCurrentPage(currentPageBeforeDialog);
-              }}
-              key={`service-catalog-table-${currentPage}`} // Include currentPage in the key to force proper re-rendering
-            />
+                  // Ensure the current page is preserved
+                  setCurrentPage(currentPageBeforeDialog);
+                }}
+                key={`service-catalog-table-${currentPage}`} // Include currentPage in the key to force proper re-rendering
+              />
+            )}
           </div>
         </CardContent>
       </Card>
