@@ -23,6 +23,7 @@ import { FileTextIcon, PencilIcon, MoreVertical } from 'lucide-react'; // Added 
 import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const InvoiceTemplates: React.FC = () => {
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
@@ -31,6 +32,7 @@ const InvoiceTemplates: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null); // State for delete-specific errors
   const [templateToDeleteId, setTemplateToDeleteId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter(); // Initialize router
 
   const handleCloneTemplate = async (template: IInvoiceTemplate) => {
@@ -80,6 +82,7 @@ const InvoiceTemplates: React.FC = () => {
   }, []);
 
   const fetchTemplates = async () => {
+    setIsLoading(true);
     try {
       const templates = await getInvoiceTemplates();
       setInvoiceTemplates(templates);
@@ -87,6 +90,8 @@ const InvoiceTemplates: React.FC = () => {
     } catch (error) {
       console.error('Error fetching invoice templates:', error);
       setError('Failed to fetch invoice templates');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -230,27 +235,36 @@ return (
             {error}
           </div>
         )}
-        <div className="space-y-4">
-           <div className="flex justify-end">
-             <Button
-               id="create-new-template-button"
-               onClick={() => handleNavigateToEditor('new')}
-             >
-               Create New Template
-             </Button>
-           </div>
-          <DataTable
-            data={invoiceTemplates}
-            columns={templateColumns}
-            pagination={false}
-            onRowClick={(record) => {
-              if (!record.isStandard) {
-                handleNavigateToEditor(record.template_id);
-              }
-            }}
-            // Ensure InvoiceTemplateManager rendering is removed
+        {isLoading ? (
+          <LoadingIndicator
+            layout="stacked"
+            className="py-10 text-gray-600"
+            spinnerProps={{ size: 'md' }}
+            text="Loading invoice templates"
           />
-        </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button
+                id="create-new-template-button"
+                onClick={() => handleNavigateToEditor('new')}
+              >
+                Create New Template
+              </Button>
+            </div>
+            <DataTable
+              data={invoiceTemplates}
+              columns={templateColumns}
+              pagination={false}
+              onRowClick={(record) => {
+                if (!record.isStandard) {
+                  handleNavigateToEditor(record.template_id);
+                }
+              }}
+              // Ensure InvoiceTemplateManager rendering is removed
+            />
+          </div>
+        )}
       </CardContent>
       {/* Confirmation Dialog */}
       <Dialog 
