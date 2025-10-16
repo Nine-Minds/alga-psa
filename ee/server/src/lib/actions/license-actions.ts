@@ -1,9 +1,9 @@
 'use server';
 
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '../../../../../server/src/lib/auth/getSession';
 import { getStripeService } from '../stripe/StripeService';
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection } from '../../../../../server/src/lib/db/db';
 import logger from '@alga-psa/shared/core/logger';
 import {
   IGetSubscriptionInfoResponse,
@@ -507,6 +507,83 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create portal session',
+    };
+  }
+}
+
+/**
+ * Submit cancellation feedback
+ * Sends feedback email to support (does NOT actually cancel the subscription)
+ */
+export async function sendCancellationFeedbackAction(
+  reasonText: string,
+  reasonCategory?: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return {
+        success: false,
+        error: 'Not authenticated',
+      };
+    }
+
+    const knex = await getConnection(session.user.tenant);
+
+    // Get subscription details
+    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
+      .where({ tenant: session.user.tenant, status: 'active' })
+      .first();
+
+    if (!subscription) {
+      return {
+        success: false,
+        error: 'No active subscription found',
+      };
+    }
+
+    // Get pricing info
+    const price = await knex<IStripePrice>('stripe_prices')
+      .where({ stripe_price_id: subscription.stripe_price_id })
+      .first();
+
+    const monthlyCost = price ? (price.unit_amount / 100) * subscription.quantity : 0;
+
+    // Get tenant info
+    const tenant = await knex('tenants')
+      .where({ tenant: session.user.tenant })
+      .first('client_name', 'email');
+
+    // Import the email function dynamically
+    const { sendCancellationFeedbackEmail } = await import('../../../../../server/src/lib/email/sendCancellationFeedbackEmail');
+
+    // Send email to support
+    await sendCancellationFeedbackEmail({
+      tenantName: tenant?.client_name || 'Unknown',
+      tenantEmail: tenant?.email || session.user.email,
+      reasonText,
+      reasonCategory,
+      licenseCount: subscription.quantity,
+      monthlyCost,
+      cancelAt: new Date(subscription.current_period_end).toLocaleDateString(),
+    });
+
+    logger.info(
+      `[sendCancellationFeedbackAction] Cancellation feedback sent for tenant ${session.user.tenant}`
+    );
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    logger.error('[sendCancellationFeedbackAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send cancellation feedback',
     };
   }
 }

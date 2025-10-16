@@ -7,6 +7,7 @@
     "assets": "Assets",
     "clientSettings": "Bedrijfsinstellingen",
     "profile": "Profiel",
+    "account": "Account",
     "signOut": "Afmelden",
     "clientPortal": "Klantenportaal",
     "portal": "Portal"
@@ -201,6 +202,7 @@
     "failedToLoad": "Facturen laden is mislukt. Probeer het opnieuw.",
     "invoices": "Facturen",
     "payments": "Betalingen",
+    "contractLines": "Service-abonnementen",
     "plans": "Service-abonnementen",
     "usage": "Verbruiksstatistieken",
     "hoursByService": "Uren per dienst",
@@ -461,6 +463,7 @@
       "website": "Website",
       "industry": "Sector",
       "companySize": "Bedrijfsgrootte",
+      "company_size": "Bedrijfsgrootte",
       "annualRevenue": "Jaarlijkse omzet",
       "size": "Bedrijfsgrootte",
       "taxId": "BTW-nummer",
@@ -520,6 +523,21 @@
     }
   },
   "account": {
+    "title": "Account",
+    "licenseManagement": {
+      "title": "Account",
+      "subtitle": "Licentiebeheer is beschikbaar in het MSP-portaal",
+      "howToPurchaseTitle": "Zo koop je extra licenties:",
+      "step1": "Meld je aan bij het MSP-portaal (als je beheerdersrechten hebt)",
+      "step2": "Ga naar Instellingen → Accountbeheer",
+      "step3": "Klik op \"Licenties toevoegen\" om extra licenties te kopen",
+      "step4": "Rond het afrekenproces af",
+      "needHelpTitle": "Hulp nodig?",
+      "needHelpDescription": "Alleen gebruikers met accountbeheerrechten kunnen licenties kopen. Neem contact op met je AlgaPSA-beheerder als je geen toegang hebt.",
+      "backToDashboard": "Terug naar dashboard",
+      "goToMSPPortal": "Ga naar MSP-portaal",
+      "signingOut": "Bezig met afmelden..."
+    },
     "services": {
       "loadError": "Services konden niet worden geladen",
       "loadContractLinesError": "Serviceplannen konden niet worden geladen",
@@ -606,8 +624,7 @@
         "status": "Status",
         "empty": "Geen facturatiegeschiedenis beschikbaar"
       }
-    },
-    "title": "Account"
+    }
   },
   "documents": {
     "title": "Documenten",

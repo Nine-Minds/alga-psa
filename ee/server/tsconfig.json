@@ -107,9 +107,9 @@
     ]
   },
   "include": [
-    "src/__tests__/integration/client-portal-login-e2e.playwright.test.ts",
-    "src/__tests__/integration/client-portal-vanity-session.playwright.test.ts",
-    "src/__tests__/integration/utils/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../../server/src/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

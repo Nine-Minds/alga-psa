@@ -14,7 +14,7 @@
 
 import Stripe from 'stripe';
 import { Knex } from 'knex';
-import { getConnection } from '../db/db';
+import { getConnection } from '../../../../../server/src/lib/db/db';
 import logger from '@alga-psa/shared/core/logger';
 
 // Environment variable validation

@@ -15,6 +15,7 @@ export * from './interfaces/client.interfaces';
 export * from './interfaces/contact.interfaces';
 export * from './interfaces/tag.interfaces';
 export * from './interfaces/validation.interfaces';
+export * from './interfaces/subscription.interfaces';
 
 export { default as logger } from '@alga-psa/shared/core/logger';
 

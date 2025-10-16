@@ -47,7 +47,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
     <Card className="p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-500">{t('billing.currentPlan')}</p>
+          <p className="text-sm font-medium text-gray-500">{t('billing.currentContractLine')}</p>
           {contractLine ? (
             <>
               <p className="mt-2 text-3xl font-semibold">{contractLine.contract_line_name}</p>
@@ -68,7 +68,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         variant="outline"
         onClick={() => setIsPlanDialogOpen(true)}
       >
-        {t('billing.viewPlanDetails')}
+        {t('billing.viewContractLineDetails')}
       </Button>
     </Card>
   ), [contractLine]);
@@ -145,9 +145,9 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
                 <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.bucket.noPlanTitle')}</h3>
+                <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.bucket.noContractLineTitle')}</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {t('billing.bucket.noPlanDescription')}
+                  {t('billing.bucket.noContractLineDescription')}
                 </p>
               </div>
             </div>

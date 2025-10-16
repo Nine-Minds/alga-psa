@@ -17,11 +17,13 @@ import {
   createCustomerPortalSessionAction,
   cancelSubscriptionAction,
   getScheduledLicenseChangesAction,
+  sendCancellationFeedbackAction,
 } from '@ee/lib/actions/license-actions';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
+import CancellationFeedbackModal from './CancellationFeedbackModal';
 
 export default function AccountManagement() {
   const [loading, setLoading] = useState(true);
@@ -31,6 +33,7 @@ export default function AccountManagement() {
   const [invoices, setInvoices] = useState<IInvoiceInfo[]>([]);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const [showReduceModal, setShowReduceModal] = useState(false);
+  const [showCancellationFeedback, setShowCancellationFeedback] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
 
   // Collapsible sections state
@@ -144,36 +147,31 @@ export default function AccountManagement() {
     }
   };
 
-  const handleCancelSubscription = async () => {
+  const handleCancelSubscription = () => {
     if (!canManageAccount) {
       toast.error('You do not have permission to cancel subscription');
       return;
     }
 
-    // Confirm cancellation
-    const confirmed = window.confirm(
-      'Are you sure you want to cancel your subscription? Access will continue until the end of the current billing period.'
-    );
+    // Open feedback modal instead of window.confirm
+    setShowCancellationFeedback(true);
+  };
 
-    if (!confirmed) {
-      return;
-    }
-
+  const handleConfirmCancellation = async (reasonText: string, reasonCategory?: string) => {
     try {
-      const result = await cancelSubscriptionAction();
-      if (result.success) {
-        toast.success('Subscription will be cancelled at the end of the billing period');
-        // Refresh subscription info
-        const subscriptionResult = await getSubscriptionInfoAction();
-        if (subscriptionResult.success && subscriptionResult.data) {
-          setSubscriptionInfo(subscriptionResult.data);
-        }
-      } else {
-        toast.error(result.error || 'Failed to cancel subscription');
+      // Send feedback email (does not cancel subscription)
+      const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);
+      if (!feedbackResult.success) {
+        toast.error(feedbackResult.error || 'Failed to send feedback');
+        return;
       }
+
+      // Note: Feedback has been sent, but subscription is not cancelled automatically
+      // A follow-up step or manual process may be needed to actually cancel
+      // For now, we're just collecting feedback as per user requirements
     } catch (error) {
-      console.error('Error canceling subscription:', error);
-      toast.error('Failed to cancel subscription');
+      console.error('Error submitting cancellation feedback:', error);
+      throw error; // Re-throw to let modal handle the error
     }
   };
 
@@ -285,48 +283,31 @@ export default function AccountManagement() {
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (
-        <Alert
-          className="border-0"
-          style={{
-            backgroundColor: 'rgba(var(--color-secondary-600), 0.08)'
-          }}
-        >
-          <Info
-            className="h-4 w-4"
-            style={{ color: 'rgb(var(--color-secondary-600))' }}
-          />
+        <Alert className="bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-600" />
           <AlertDescription>
-            <p className="font-semibold mb-2 text-gray-900">
+            <p className="font-semibold mb-2 text-blue-900">
               Scheduled License Change
             </p>
-            <p className="text-sm mb-2 text-gray-800">
+            <p className="text-sm mb-2 text-blue-800">
               Your license count will change from <strong>{scheduledChanges.current_quantity}</strong> to{' '}
               <strong>{scheduledChanges.scheduled_quantity}</strong> on{' '}
               <strong>{new Date(scheduledChanges.effective_date).toLocaleDateString()}</strong>.
             </p>
-            <div className="text-sm space-y-1 text-gray-800">
+            <div className="text-sm space-y-1 text-blue-800">
               <div className="flex justify-between">
                 <span>Current monthly cost:</span>
                 <span className="font-medium">${scheduledChanges.current_monthly_cost.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>New monthly cost:</span>
-                <span
-                  className="font-medium"
-                  style={{ color: 'rgb(var(--color-secondary-600))' }}
-                >
+                <span className="font-medium text-blue-600">
                   ${scheduledChanges.scheduled_monthly_cost.toFixed(2)}
                 </span>
               </div>
-              <div
-                className="flex justify-between pt-1 border-t"
-                style={{ borderColor: 'rgba(var(--color-secondary-600), 0.3)' }}
-              >
+              <div className="flex justify-between pt-1 border-t border-blue-200">
                 <span className="font-semibold">Monthly savings:</span>
-                <span
-                  className="font-semibold"
-                  style={{ color: 'rgb(var(--color-secondary-600))' }}
-                >
+                <span className="font-semibold text-blue-600">
                   ${scheduledChanges.monthly_savings.toFixed(2)}
                 </span>
               </div>
@@ -612,6 +593,13 @@ export default function AccountManagement() {
         currentLicenseCount={licenseInfo?.total_licenses || 0}
         activeUserCount={licenseInfo?.active_licenses || 0}
         onSuccess={handleReduceSuccess}
+      />
+
+      {/* Cancellation Feedback Modal */}
+      <CancellationFeedbackModal
+        isOpen={showCancellationFeedback}
+        onClose={() => setShowCancellationFeedback(false)}
+        onConfirm={handleConfirmCancellation}
       />
     </div>
   );

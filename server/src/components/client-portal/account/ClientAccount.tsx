@@ -122,7 +122,7 @@ export default function ClientAccount() {
       {/* Contract Line */}
       <Card id="contract-line-card" className="bg-white">
         <CardHeader>
-          <CardTitle>{t('billing.currentPlan')}</CardTitle>
+          <CardTitle>{t('billing.currentContractLine')}</CardTitle>
         </CardHeader>
         <CardContent>
           {contractLine ? (

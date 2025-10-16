@@ -25,4 +25,3 @@ export * from './asset.interfaces';
 export * from './status.interface';
 export * from './contractLineServiceConfiguration.interfaces';
 export * from './contract.interfaces';
-export * from './subscription.interfaces';
