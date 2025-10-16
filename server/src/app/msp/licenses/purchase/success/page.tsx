@@ -9,6 +9,7 @@ import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react'
 import Link from 'next/link';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
+import type { IGetSubscriptionInfoResponse } from 'server/src/interfaces/subscription.interfaces';
 
 export default function LicensePurchaseSuccessPage() {
   const searchParams = useSearchParams();
@@ -30,7 +31,7 @@ export default function LicensePurchaseSuccessPage() {
 
         // If scheduled change, get subscription end date
         if (isScheduled) {
-          const subResult = await getSubscriptionInfoAction();
+          const subResult: IGetSubscriptionInfoResponse = await getSubscriptionInfoAction();
           if (subResult.success && subResult.data) {
             setScheduledDate(subResult.data.current_period_end);
           }
