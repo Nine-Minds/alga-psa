@@ -8,20 +8,20 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
-import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
-import { createTestTenant, type TenantTestData } from '../../lib/testing/tenant-test-factory';
+import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
-import { establishTenantSession } from './utils/auth-helpers';
+import {
+  applyPlaywrightAuthEnvDefaults,
+  createTenantAndLogin,
+  resolvePlaywrightBaseUrl,
+} from './helpers/playwrightAuthSessionHelper';
 
-// Set required environment variables for Playwright tests
-process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
-process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-process.env.E2E_AUTH_BYPASS = process.env.E2E_AUTH_BYPASS || 'true';
+applyPlaywrightAuthEnvDefaults();
 
 const TEST_CONFIG = {
-  baseUrl: process.env.EE_BASE_URL || 'http://localhost:3000',
+  baseUrl: resolvePlaywrightBaseUrl(),
 };
 
 async function openAddContractLineDialog(page: Page) {
@@ -62,16 +62,14 @@ test.describe('ContractLineDialog Close Bug', () => {
 
     try {
       // Create test tenant
-      tenantData = await createTestTenant(db, {
-        companyName: `Create Dialog Test ${uuidv4().slice(0, 6)}`,
+      tenantData = await createTenantAndLogin(db, page, {
+        tenantOptions: {
+          companyName: `Create Dialog Test ${uuidv4().slice(0, 6)}`,
+        },
       });
 
-      await markOnboardingComplete(db, tenantData.tenant.tenantId, new Date());
-      // Setup authenticated session
-      await establishTenantSession(page, tenantData, TEST_CONFIG.baseUrl);
-
       // Navigate to the billing page with contract-lines tab
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines&tenantId=${tenantData.tenant.tenantId}`);
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
 
       // Open the Add Contract Line dialog
       const dialogHeading = await openAddContractLineDialog(page);
@@ -96,13 +94,12 @@ test.describe('ContractLineDialog Close Bug', () => {
     let tenantData: TenantTestData | null = null;
 
     try {
-      tenantData = await createTestTenant(db, {
-        companyName: `Close Guard Untouched ${uuidv4().slice(0, 6)}`,
+      tenantData = await createTenantAndLogin(db, page, {
+        tenantOptions: {
+          companyName: `Close Guard Untouched ${uuidv4().slice(0, 6)}`,
+        },
       });
-
-      await markOnboardingComplete(db, tenantData.tenant.tenantId, new Date());
-      await establishTenantSession(page, tenantData, TEST_CONFIG.baseUrl);
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines&tenantId=${tenantData.tenant.tenantId}`);
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
 
       let dialogHeading = await openAddContractLineDialog(page);
 
@@ -126,13 +123,12 @@ test.describe('ContractLineDialog Close Bug', () => {
     let tenantData: TenantTestData | null = null;
 
     try {
-      tenantData = await createTestTenant(db, {
-        companyName: `Close Guard Edited ${uuidv4().slice(0, 6)}`,
+      tenantData = await createTenantAndLogin(db, page, {
+        tenantOptions: {
+          companyName: `Close Guard Edited ${uuidv4().slice(0, 6)}`,
+        },
       });
-
-      await markOnboardingComplete(db, tenantData.tenant.tenantId, new Date());
-      await establishTenantSession(page, tenantData, TEST_CONFIG.baseUrl);
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines&tenantId=${tenantData.tenant.tenantId}`);
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
 
       const dialogHeading = await openAddContractLineDialog(page);
       const nameInput = page.locator('#name');
@@ -158,13 +154,12 @@ test.describe('ContractLineDialog Close Bug', () => {
     let tenantData: TenantTestData | null = null;
 
     try {
-      tenantData = await createTestTenant(db, {
-        companyName: `Close Guard Cancel ${uuidv4().slice(0, 6)}`,
+      tenantData = await createTenantAndLogin(db, page, {
+        tenantOptions: {
+          companyName: `Close Guard Cancel ${uuidv4().slice(0, 6)}`,
+        },
       });
-
-      await markOnboardingComplete(db, tenantData.tenant.tenantId, new Date());
-      await establishTenantSession(page, tenantData, TEST_CONFIG.baseUrl);
-      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines&tenantId=${tenantData.tenant.tenantId}`);
+      await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contract-lines`);
 
       const dialogHeading = await openAddContractLineDialog(page);
       await page.locator('#name').fill('Unsaved Contract Line');
@@ -179,23 +174,3 @@ test.describe('ContractLineDialog Close Bug', () => {
     }
   });
 });
-async function markOnboardingComplete(db: Knex, tenantId: string, now: Date): Promise<void> {
-  await db('tenant_settings')
-    .insert({
-      tenant: tenantId,
-      onboarding_completed: true,
-      onboarding_completed_at: now,
-      onboarding_skipped: false,
-      onboarding_data: null,
-      settings: {},
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict('tenant')
-    .merge({
-      onboarding_completed: true,
-      onboarding_completed_at: now,
-      onboarding_skipped: false,
-      updated_at: now,
-    });
-}
