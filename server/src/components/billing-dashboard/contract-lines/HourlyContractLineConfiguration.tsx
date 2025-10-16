@@ -121,9 +121,11 @@ export function HourlyPlanConfiguration({
 
   const [enableOvertime, setEnableOvertime] = useState<boolean>(false);
   const [overtimeRate, setOvertimeRate] = useState<number | undefined>(undefined);
+  const [overtimeRateInput, setOvertimeRateInput] = useState<string>('');
   const [overtimeThreshold, setOvertimeThreshold] = useState<number | undefined>(40);
   const [enableAfterHoursRate, setEnableAfterHoursRate] = useState<boolean>(false);
   const [afterHoursMultiplier, setAfterHoursMultiplier] = useState<number | undefined>(1.5);
+  const [afterHoursMultiplierInput, setAfterHoursMultiplierInput] = useState<string>('');
   // Removed plan-wide userTypeRates state: const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
 
   // Service-specific config state (using locally defined interface)
@@ -185,9 +187,15 @@ export function HourlyPlanConfiguration({
       setInitialPlanData(initialData);
       setEnableOvertime(initialData.enable_overtime!);
       setOvertimeRate(initialData.overtime_rate);
+      if (initialData.overtime_rate !== undefined && initialData.overtime_rate !== null) {
+        setOvertimeRateInput((initialData.overtime_rate / 100).toFixed(2));
+      }
       setOvertimeThreshold(initialData.overtime_threshold);
       setEnableAfterHoursRate(initialData.enable_after_hours_rate!);
       setAfterHoursMultiplier(initialData.after_hours_multiplier);
+      if (initialData.after_hours_multiplier !== undefined && initialData.after_hours_multiplier !== null) {
+        setAfterHoursMultiplierInput(initialData.after_hours_multiplier.toFixed(2));
+      }
       // Removed setting plan-wide userTypeRates state: setUserTypeRates(initialData.user_type_rates!);
 
       // Fetch services and their configurations using the correct action
@@ -587,13 +595,36 @@ export function HourlyPlanConfiguration({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-8">
                                     <div>
                                     <Label htmlFor="overtime-rate">Overtime Rate ($/hr)</Label>
-                                    <Input
-                                        id="overtime-rate" type="number"
-                                        value={overtimeRate?.toString() || ''}
-                                        onChange={handleNumberInputChange(setOvertimeRate)}
-                                        placeholder="Enter overtime rate" disabled={saving} min={0} step={0.01}
-                                        className={planValidationErrors.overtimeRate ? 'border-red-500' : ''}
-                                    />
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                      <Input
+                                        id="overtime-rate"
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={overtimeRateInput}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                                          const decimalCount = (value.match(/\./g) || []).length;
+                                          if (decimalCount <= 1) {
+                                            setOvertimeRateInput(value);
+                                          }
+                                        }}
+                                        onBlur={() => {
+                                          if (overtimeRateInput.trim() === '' || overtimeRateInput === '.') {
+                                            setOvertimeRateInput('');
+                                            setOvertimeRate(undefined);
+                                          } else {
+                                            const dollars = parseFloat(overtimeRateInput) || 0;
+                                            const cents = Math.round(dollars * 100);
+                                            setOvertimeRate(cents);
+                                            setOvertimeRateInput((cents / 100).toFixed(2));
+                                          }
+                                        }}
+                                        placeholder="0.00"
+                                        disabled={saving}
+                                        className={`pl-7 ${planValidationErrors.overtimeRate ? 'border-red-500' : ''}`}
+                                      />
+                                    </div>
                                     {planValidationErrors.overtimeRate && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeRate}</p>}
                                     {!planValidationErrors.overtimeRate && <p className="text-sm text-muted-foreground mt-1">Rate applied after threshold.</p>}
                                     </div>
@@ -635,11 +666,30 @@ export function HourlyPlanConfiguration({
                                 <div className="pl-8">
                                     <Label htmlFor="after-hours-multiplier">After-Hours Multiplier</Label>
                                     <Input
-                                    id="after-hours-multiplier" type="number"
-                                    value={afterHoursMultiplier?.toString() || ''}
-                                    onChange={handleNumberInputChange(setAfterHoursMultiplier)}
-                                    placeholder="1.5" disabled={saving} min={1} step={0.1}
-                                    className={`w-full md:w-1/2 ${planValidationErrors.afterHoursMultiplier ? 'border-red-500' : ''}`}
+                                      id="after-hours-multiplier"
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={afterHoursMultiplierInput}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                                        const decimalCount = (value.match(/\./g) || []).length;
+                                        if (decimalCount <= 1) {
+                                          setAfterHoursMultiplierInput(value);
+                                        }
+                                      }}
+                                      onBlur={() => {
+                                        if (afterHoursMultiplierInput.trim() === '' || afterHoursMultiplierInput === '.') {
+                                          setAfterHoursMultiplierInput('1.5');
+                                          setAfterHoursMultiplier(1.5);
+                                        } else {
+                                          const multiplier = parseFloat(afterHoursMultiplierInput) || 1.5;
+                                          setAfterHoursMultiplier(multiplier);
+                                          setAfterHoursMultiplierInput(multiplier.toFixed(2));
+                                        }
+                                      }}
+                                      placeholder="1.5"
+                                      disabled={saving}
+                                      className={`w-full md:w-1/2 ${planValidationErrors.afterHoursMultiplier ? 'border-red-500' : ''}`}
                                     />
                                     {planValidationErrors.afterHoursMultiplier && <p className="text-sm text-red-500 mt-1">{planValidationErrors.afterHoursMultiplier}</p>}
                                     {!planValidationErrors.afterHoursMultiplier && <p className="text-sm text-muted-foreground mt-1">Multiplier for non-business hours (e.g., 1.5x).</p>}
@@ -691,40 +741,18 @@ export function HourlyPlanConfiguration({
                                     required
                                 />
                             </div>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <Label htmlFor="hourly-frequency">Billing Frequency *</Label>
-                                    <CustomSelect
-                                        id="hourly-frequency"
-                                        value={billingFrequency}
-                                        onValueChange={(value) => {
-                                            setBillingFrequency(value);
-                                            markBasicsDirty();
-                                        }}
-                                        options={BILLING_FREQUENCY_OPTIONS}
-                                        placeholder="Select billing frequency"
-                                    />
-                                </div>
-                                <div className="border border-gray-200 rounded-md p-3 bg-white">
-                                    <div className="flex items-center gap-3">
-                                        <Switch
-                                            id="hourly-is-custom"
-                                            checked={isCustom}
-                                            onCheckedChange={(checked) => {
-                                                setIsCustom(checked);
-                                                markBasicsDirty();
-                                            }}
-                                        />
-                                        <div>
-                                            <Label htmlFor="hourly-is-custom" className="cursor-pointer">
-                                                Custom Line
-                                            </Label>
-                                            <p className="text-xs text-gray-500">
-                                                Flag the line as bespoke for reporting and analytics.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div>
+                                <Label htmlFor="hourly-frequency">Billing Frequency *</Label>
+                                <CustomSelect
+                                    id="hourly-frequency"
+                                    value={billingFrequency}
+                                    onValueChange={(value) => {
+                                        setBillingFrequency(value);
+                                        markBasicsDirty();
+                                    }}
+                                    options={BILLING_FREQUENCY_OPTIONS}
+                                    placeholder="Select billing frequency"
+                                />
                             </div>
                         </div>
                     </section>

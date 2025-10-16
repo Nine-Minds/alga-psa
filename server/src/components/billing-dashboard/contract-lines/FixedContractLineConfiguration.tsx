@@ -46,6 +46,7 @@ export function FixedPlanConfiguration({
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [isCustom, setIsCustom] = useState(false);
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
+  const [baseRateInput, setBaseRateInput] = useState<string>('');
   const [enableProration, setEnableProration] = useState<boolean>(false);
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'prorated'>('start');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -75,6 +76,9 @@ export function FixedPlanConfiguration({
           const cfg = await getContractLineFixedConfig(fetchedPlan.contract_line_id);
           if (cfg) {
             setBaseRate(cfg.base_rate ?? undefined);
+            if (cfg.base_rate !== undefined && cfg.base_rate !== null) {
+              setBaseRateInput((cfg.base_rate / 100).toFixed(2));
+            }
             setEnableProration(!!cfg.enable_proration);
             setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
           }
@@ -213,40 +217,18 @@ export function FixedPlanConfiguration({
                   required
                 />
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="frequency">Billing Frequency *</Label>
-                  <CustomSelect
-                    id="frequency"
-                    value={billingFrequency}
-                    onValueChange={(value) => {
-                      setBillingFrequency(value);
-                      markDirty();
-                    }}
-                    options={BILLING_FREQUENCY_OPTIONS}
-                    placeholder="Select billing frequency"
-                  />
-                </div>
-                <div className="border border-gray-200 rounded-md p-3 bg-white">
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="is-custom"
-                      checked={isCustom}
-                      onCheckedChange={(checked) => {
-                        setIsCustom(checked);
-                        markDirty();
-                      }}
-                    />
-                    <div>
-                      <Label htmlFor="is-custom" className="cursor-pointer">
-                        Custom Line
-                      </Label>
-                      <p className="text-xs text-gray-500">
-                        Flag the line as bespoke for reporting and analytics.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <Label htmlFor="frequency">Billing Frequency *</Label>
+                <CustomSelect
+                  id="frequency"
+                  value={billingFrequency}
+                  onValueChange={(value) => {
+                    setBillingFrequency(value);
+                    markDirty();
+                  }}
+                  options={BILLING_FREQUENCY_OPTIONS}
+                  placeholder="Select billing frequency"
+                />
               </div>
             </div>
           </section>
@@ -260,22 +242,39 @@ export function FixedPlanConfiguration({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="base-rate">Base Rate (USD) *</Label>
-                <Input
-                  id="base-rate"
-                  type="number"
-                  value={baseRate ?? ''}
-                  onChange={(e) => {
-                    setBaseRate(e.target.value === '' ? undefined : Number(e.target.value));
-                    markDirty();
-                  }}
-                  placeholder="0.00"
-                  min={0}
-                  step={0.01}
-                  required
-                />
+                <Label htmlFor="base-rate">Monthly Base Rate *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="base-rate"
+                    type="text"
+                    inputMode="decimal"
+                    value={baseRateInput}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setBaseRateInput(value);
+                        markDirty();
+                      }
+                    }}
+                    onBlur={() => {
+                      if (baseRateInput.trim() === '' || baseRateInput === '.') {
+                        setBaseRateInput('');
+                        setBaseRate(undefined);
+                      } else {
+                        const dollars = parseFloat(baseRateInput) || 0;
+                        const cents = Math.round(dollars * 100);
+                        setBaseRate(cents);
+                        setBaseRateInput((cents / 100).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  This value becomes the base recurring charge before overlays or usage adjustments.
+                  The total monthly fee for all fixed services combined
                 </p>
               </div>
               <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
