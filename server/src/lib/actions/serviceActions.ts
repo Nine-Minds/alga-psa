@@ -107,7 +107,7 @@ export async function createService(
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
 
-        // 1. Verify the custom service type exists and get billing method
+        // 1. Verify the custom service type exists
         const customServiceType = await trx<IServiceType>('service_types')
             .where('id', custom_service_type_id)
             .andWhere('tenant', tenant) // Match tenant
@@ -115,19 +115,18 @@ export async function createService(
         if (!customServiceType) {
             throw new Error(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
         }
-        const derivedBillingMethod = customServiceType.billing_method;
-        console.log(`[serviceActions] Billing method '${derivedBillingMethod}' derived from custom type: ${custom_service_type_id} for tenant ${tenant}`);
 
-        // 2. Ensure a billing method was determined (as it's required on IService)
-        if (!derivedBillingMethod) {
-            throw new Error(`Could not determine billing method for ServiceType ID '${custom_service_type_id}'. The source type might lack a billing method.`);
+        // 2. Ensure a billing method was provided (use the one from serviceData, not from service type)
+        if (!serviceData.billing_method) {
+            throw new Error('billing_method is required to create a service.');
         }
+        console.log(`[serviceActions] Creating service with billing method: ${serviceData.billing_method}`);
 
         // 3. Prepare final data
         const finalServiceData = {
             ...serviceData,
             tenant: tenant, // Explicitly add tenant to the data
-            billing_method: derivedBillingMethod, // Use the derived billing method
+            billing_method: serviceData.billing_method, // Use the billing method from the form
             custom_service_type_id: custom_service_type_id,
             // Ensure default_rate is a number
             default_rate: typeof serviceData.default_rate === 'string'

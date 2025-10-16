@@ -106,17 +106,32 @@ export async function updateContract(
     throw new Error('Unauthorized');
   }
 
-  const { tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error("tenant context not found");
   }
 
   try {
-    // If trying to set contract to draft (is_active = false), check if it has invoices
-    if (updateData.is_active === false) {
+    // If trying to set contract to draft, check if it has invoices
+    if (updateData.status === 'draft') {
       const hasInvoices = await Contract.hasInvoices(contractId);
       if (hasInvoices) {
-        throw new Error('Cannot set contract to draft because it has associated invoices. Contracts with invoices must remain active.');
+        throw new Error('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
+      }
+    }
+
+    // If trying to set contract to active, check if client already has an active contract
+    if (updateData.status === 'active') {
+      // Get all clients assigned to this contract
+      const clientContracts = await knex('client_contracts')
+        .where({ contract_id: contractId, tenant })
+        .select('client_id');
+
+      for (const cc of clientContracts) {
+        const hasActiveContract = await Contract.hasActiveContractForClient(cc.client_id, contractId);
+        if (hasActiveContract) {
+          throw new Error('Client already has an active contract. To create a new active contract, terminate their current contract or save this contract as a draft.');
+        }
       }
     }
 
@@ -143,19 +158,11 @@ export async function deleteContract(contractId: string): Promise<void> {
   }
 
   try {
-    const isInUse = await Contract.isInUse(contractId);
-    if (isInUse) {
-      throw new Error(`Cannot delete contract that is currently in use by clients in tenant ${tenant}`);
-    }
-
     await Contract.delete(contractId);
   } catch (error) {
     console.error('Error deleting contract:', error);
     if (error instanceof Error) {
-      if (error.message.includes('in use')) {
-        throw new Error(`Cannot delete contract that is currently in use by clients in tenant ${tenant}`);
-      }
-      throw error; // Preserve other specific error messages
+      throw error; // Preserve specific error messages from the model
     }
     throw new Error(`Failed to delete contract in tenant ${tenant}: ${error}`);
   }
@@ -276,6 +283,20 @@ export async function getContractSummary(contractId: string): Promise<IContractS
       throw error;
     }
     throw new Error(`Failed to compute contract summary: ${error}`);
+  }
+}
+
+export async function checkClientHasActiveContract(clientId: string, excludeContractId?: string): Promise<boolean> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    return await Contract.hasActiveContractForClient(clientId, excludeContractId);
+  } catch (error) {
+    console.error(`Error checking active contract for client ${clientId}:`, error);
+    throw error;
   }
 }
 

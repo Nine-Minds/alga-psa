@@ -8,7 +8,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
-import { createContract, updateContract } from 'server/src/lib/actions/contractActions';
+import { createContract, updateContract, checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { createClientContract } from 'server/src/lib/actions/clientContractActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
@@ -30,7 +30,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [open, setOpen] = useState(false);
   const [contractName, setContractName] = useState(editingContract?.contract_name ?? '');
   const [contractDescription, setContractDescription] = useState(editingContract?.contract_description ?? '');
-  const [isActive, setIsActive] = useState<boolean>(editingContract?.is_active ?? true);
+  const [status, setStatus] = useState<string>(editingContract?.status ?? 'active');
   const [clientId, setClientId] = useState<string>('');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -43,6 +43,8 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [clientHasActiveContract, setClientHasActiveContract] = useState(false);
+  const [checkingActiveContract, setCheckingActiveContract] = useState(false);
 
   // Load clients on mount
   useEffect(() => {
@@ -65,10 +67,33 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     if (editingContract) {
       setContractName(editingContract.contract_name);
       setContractDescription(editingContract.contract_description ?? '');
-      setIsActive(editingContract.is_active);
+      setStatus(editingContract.status);
       setOpen(true);
     }
   }, [editingContract]);
+
+  // Check for active contract when client or status changes
+  useEffect(() => {
+    const checkActiveContract = async () => {
+      if (!clientId || status !== 'active') {
+        setClientHasActiveContract(false);
+        return;
+      }
+
+      setCheckingActiveContract(true);
+      try {
+        const hasActive = await checkClientHasActiveContract(clientId, editingContract?.contract_id);
+        setClientHasActiveContract(hasActive);
+      } catch (error) {
+        console.error('Error checking for active contract:', error);
+        setClientHasActiveContract(false);
+      } finally {
+        setCheckingActiveContract(false);
+      }
+    };
+
+    checkActiveContract();
+  }, [clientId, status, editingContract?.contract_id]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
@@ -111,7 +136,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         contract_name: contractName,
         contract_description: contractDescription || undefined,
         billing_frequency: billingFrequency,
-        is_active: saveAsActive,
+        status: (saveAsActive ? 'active' : 'draft') as any,
       };
 
       let contract;
@@ -150,7 +175,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const resetForm = () => {
     setContractName('');
     setContractDescription('');
-    setIsActive(true);
+    setStatus('active');
     setClientId('');
     setBillingFrequency('monthly');
     setStartDate(null);
@@ -178,7 +203,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
           if (editingContract) {
             setContractName(editingContract.contract_name);
             setContractDescription(editingContract.contract_description ?? '');
-            setIsActive(editingContract.is_active);
+            setStatus(editingContract.status);
           }
           setOpen(true);
         }}>
@@ -223,6 +248,11 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 disabled={isLoadingClients}
                 className="w-full"
               />
+              {clientHasActiveContract && status === 'active' && (
+                <p className="mt-1 text-sm text-red-600">
+                  This client already has an active contract. To create a new active contract, terminate their current contract or save this contract as a draft.
+                </p>
+              )}
             </div>
 
             {/* Contract Name */}
@@ -403,7 +433,8 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               <Button
                 id="save-contract-btn"
                 type="submit"
-                className={!contractName.trim() || !clientId ? 'opacity-50' : ''}
+                disabled={!contractName.trim() || !clientId || (clientHasActiveContract && status === 'active')}
+                className={(!contractName.trim() || !clientId || (clientHasActiveContract && status === 'active')) ? 'opacity-50' : ''}
               >
                 {editingContract ? 'Update Contract' : 'Create Contract'}
               </Button>

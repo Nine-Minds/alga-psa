@@ -15,7 +15,7 @@ import {
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractWithClient } from 'server/src/interfaces/contract.interfaces';
-import { getContractsWithClients, deleteContract } from 'server/src/lib/actions/contractActions';
+import { getContractsWithClients, deleteContract, updateContract, checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
 
@@ -51,6 +51,62 @@ const Contracts: React.FC = () => {
     }
   };
 
+  const handleTerminateContract = async (contractId: string) => {
+    try {
+      await updateContract(contractId, { status: 'terminated' });
+      fetchContracts();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to terminate contract';
+      alert(message);
+    }
+  };
+
+  const handleRestoreContract = async (contractId: string, clientId?: string) => {
+    if (!clientId) {
+      alert('Cannot restore contract: client information is missing.');
+      return;
+    }
+
+    try {
+      // Check if client already has an active contract
+      const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
+
+      if (hasActiveContract) {
+        alert('Cannot restore this contract to active status because the client already has an active contract. Please terminate their current active contract first, or restore this contract as a draft.');
+        return;
+      }
+
+      await updateContract(contractId, { status: 'active' });
+      fetchContracts();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to restore contract';
+      alert(message);
+    }
+  };
+
+  const handleSetToActive = async (contractId: string, clientId?: string) => {
+    if (!clientId) {
+      alert('Cannot activate contract: client information is missing.');
+      return;
+    }
+
+    try {
+      // Check if client already has an active contract
+      const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
+
+      if (hasActiveContract) {
+        alert('Cannot set this contract to active because the client already has an active contract. Please terminate their current active contract first.');
+        return;
+      }
+
+      await updateContract(contractId, { status: 'active' });
+      fetchContracts();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to activate contract';
+      alert(message);
+    }
+  };
+
   const contractColumns: ColumnDefinition<IContractWithClient>[] = [
     {
       title: 'Contract Name',
@@ -68,12 +124,21 @@ const Contracts: React.FC = () => {
     },
     {
       title: 'Status',
-      dataIndex: 'is_active',
-      render: (value) => (
-        <Badge className={value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-          {value ? 'Active' : 'Draft'}
-        </Badge>
-      ),
+      dataIndex: 'status',
+      render: (value) => {
+        const statusConfig = {
+          active: { className: 'bg-green-100 text-green-800', label: 'Active' },
+          draft: { className: 'bg-gray-100 text-gray-800', label: 'Draft' },
+          terminated: { className: 'bg-orange-100 text-orange-800', label: 'Terminated' },
+          expired: { className: 'bg-red-100 text-red-800', label: 'Expired' },
+        };
+        const config = statusConfig[value as keyof typeof statusConfig] || statusConfig.draft;
+        return (
+          <Badge className={config.className}>
+            {config.label}
+          </Badge>
+        );
+      },
     },
     {
       title: 'Actions',
@@ -103,6 +168,48 @@ const Contracts: React.FC = () => {
             >
               Edit
             </DropdownMenuItem>
+            {record.status === 'active' && (
+              <DropdownMenuItem
+                id="terminate-contract-menu-item"
+                className="text-orange-600 focus:text-orange-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    handleTerminateContract(record.contract_id);
+                  }
+                }}
+              >
+                Terminate
+              </DropdownMenuItem>
+            )}
+            {record.status === 'terminated' && (
+              <DropdownMenuItem
+                id="restore-contract-menu-item"
+                className="text-green-600 focus:text-green-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    handleRestoreContract(record.contract_id, record.client_id);
+                  }
+                }}
+              >
+                Restore
+              </DropdownMenuItem>
+            )}
+            {record.status === 'draft' && (
+              <DropdownMenuItem
+                id="set-to-active-menu-item"
+                className="text-green-600 focus:text-green-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    handleSetToActive(record.contract_id, record.client_id);
+                  }
+                }}
+              >
+                Set to Active
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id="delete-contract-menu-item"
               className="text-red-600 focus:text-red-600"

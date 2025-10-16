@@ -10,6 +10,7 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { getClients } from 'server/src/lib/actions/clientAction';
+import { checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { Calendar, Building2, FileText, FileCheck, HelpCircle, Repeat, Info } from 'lucide-react';
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
@@ -25,6 +26,9 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [poAmountInput, setPoAmountInput] = useState<string>('');
+  const [clientHasActiveContract, setClientHasActiveContract] = useState(false);
+  const [checkingActiveContract, setCheckingActiveContract] = useState(false);
+
   const parseLocalYMD = (ymd?: string): Date | undefined => {
     if (!ymd) return undefined;
     const d = parseDateFns(ymd, 'yyyy-MM-dd', new Date());
@@ -48,6 +52,30 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
     setStartDate(parseLocalYMD(data.start_date));
     setEndDate(parseLocalYMD(data.end_date));
   }, [data.start_date, data.end_date]);
+
+  // Check for active contract when client changes
+  useEffect(() => {
+    const checkActiveContract = async () => {
+      const clientId = data.client_id || data.company_id;
+      if (!clientId || data.is_draft) {
+        setClientHasActiveContract(false);
+        return;
+      }
+
+      setCheckingActiveContract(true);
+      try {
+        const hasActive = await checkClientHasActiveContract(clientId, data.contract_id);
+        setClientHasActiveContract(hasActive);
+      } catch (error) {
+        console.error('Error checking for active contract:', error);
+        setClientHasActiveContract(false);
+      } finally {
+        setCheckingActiveContract(false);
+      }
+    };
+
+    checkActiveContract();
+  }, [data.client_id, data.company_id, data.is_draft, data.contract_id]);
 
   const loadClients = async () => {
     try {
@@ -87,6 +115,11 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
         />
         {!(data.client_id || data.company_id) && (
           <p className="text-xs text-gray-500">Choose the client this contract is for</p>
+        )}
+        {clientHasActiveContract && !data.is_draft && (
+          <p className="text-sm text-red-600">
+            This client already has an active contract. To create a new active contract, terminate their current contract or save this contract as a draft.
+          </p>
         )}
       </div>
 

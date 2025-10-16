@@ -105,8 +105,16 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold text-gray-900">{contract.contract_name}</h1>
-          <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-            {contract.is_active ? 'Active' : 'Draft'}
+          <Badge className={
+            contract.status === 'active' ? 'bg-green-100 text-green-800' :
+            contract.status === 'terminated' ? 'bg-orange-100 text-orange-800' :
+            contract.status === 'expired' ? 'bg-red-100 text-red-800' :
+            'bg-gray-100 text-gray-800'
+          }>
+            {contract.status === 'active' ? 'Active' :
+             contract.status === 'terminated' ? 'Terminated' :
+             contract.status === 'expired' ? 'Expired' :
+             'Draft'}
           </Badge>
         </div>
 
