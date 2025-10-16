@@ -18,6 +18,7 @@ import { IClient } from 'server/src/interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { HelpCircle, Info } from 'lucide-react';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 
 interface ContractDialogProps {
   onContractSaved: () => void;
@@ -45,6 +46,8 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [clientHasActiveContract, setClientHasActiveContract] = useState(false);
   const [checkingActiveContract, setCheckingActiveContract] = useState(false);
+  const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   // Load clients on mount
   useEffect(() => {
@@ -234,18 +237,19 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
             {/* Client Selection */}
             <div>
               <Label htmlFor="client">Client *</Label>
-              <CustomSelect
-                value={clientId}
-                onValueChange={(value: string) => {
-                  setClientId(value);
+              <ClientPicker
+                id="contract-dialog-client-picker"
+                clients={clients}
+                selectedClientId={clientId}
+                onSelect={(id) => {
+                  setClientId(id || '');
                   clearErrorIfSubmitted();
                 }}
-                options={clients.map(client => ({
-                  value: client.client_id,
-                  label: client.client_name
-                }))}
-                placeholder={isLoadingClients ? "Loading clients..." : "Select a client"}
-                disabled={isLoadingClients}
+                filterState={filterState}
+                onFilterStateChange={setFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
+                placeholder="Select a client"
                 className="w-full"
               />
               {clientHasActiveContract && status === 'active' && (

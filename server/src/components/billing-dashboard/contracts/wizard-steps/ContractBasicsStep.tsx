@@ -9,25 +9,27 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
-import { getClients } from 'server/src/lib/actions/clientAction';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { Calendar, Building2, FileText, FileCheck, HelpCircle, Repeat, Info } from 'lucide-react';
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+import { IClient } from 'server/src/interfaces';
 
 interface ContractBasicsStepProps {
   data: ContractWizardData;
   updateData: (data: Partial<ContractWizardData>) => void;
 }
 
-type ClientOption = Awaited<ReturnType<typeof getClients>>[number];
-
 export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps) {
-  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [poAmountInput, setPoAmountInput] = useState<string>('');
   const [clientHasActiveContract, setClientHasActiveContract] = useState(false);
   const [checkingActiveContract, setCheckingActiveContract] = useState(false);
+  const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const parseLocalYMD = (ymd?: string): Date | undefined => {
     if (!ymd) return undefined;
@@ -79,7 +81,7 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
 
   const loadClients = async () => {
     try {
-      const fetchedClients = await getClients();
+      const fetchedClients = await getAllClients();
       setClients(fetchedClients);
     } catch (error) {
       console.error('Error loading clients:', error);
@@ -87,8 +89,6 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
       setIsLoadingClients(false);
     }
   };
-
-  const clientOptions = clients.map(client => ({ value: client.id, label: client.name }));
 
   return (
     <div className="space-y-6" data-automation-id="contract-basics-step">
@@ -105,12 +105,16 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
           <Building2 className="h-4 w-4" />
           Client *
         </Label>
-        <CustomSelect
-          value={data.client_id || data.company_id}
-          onValueChange={(value: string) => updateData({ client_id: value, company_id: value })}
-          options={clientOptions}
-          placeholder={isLoadingClients ? 'Loading clients...' : 'Select a client'}
-          disabled={isLoadingClients}
+        <ClientPicker
+          id="contract-basics-client-picker"
+          clients={clients}
+          selectedClientId={data.client_id || data.company_id || null}
+          onSelect={(id) => updateData({ client_id: id || '', company_id: id || '' })}
+          filterState={filterState}
+          onFilterStateChange={setFilterState}
+          clientTypeFilter={clientTypeFilter}
+          onClientTypeFilterChange={setClientTypeFilter}
+          placeholder="Select a client"
           className="w-full"
         />
         {!(data.client_id || data.company_id) && (
@@ -304,7 +308,7 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
           <h4 className="text-sm font-semibold text-blue-900 mb-2">Contract Summary</h4>
           <div className="text-sm text-blue-800 space-y-1">
-            <p><strong>Client:</strong> {clientOptions.find(c => c.value === (data.client_id || data.company_id))?.label || 'Not selected'}</p>
+            <p><strong>Client:</strong> {clients.find(c => c.client_id === (data.client_id || data.company_id))?.client_name || 'Not selected'}</p>
             <p><strong>Contract:</strong> {data.contract_name}</p>
             <p><strong>Billing Frequency:</strong> {BILLING_FREQUENCY_OPTIONS.find(opt => opt.value === data.billing_frequency)?.label || data.billing_frequency}</p>
             <p><strong>Period:</strong> {formatDateFns(parseLocalYMD(data.start_date)!, 'MM/dd/yyyy')}{data.end_date ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}` : ' (Ongoing)'}</p>
