@@ -112,11 +112,11 @@ export async function updateContract(
   }
 
   try {
-    // If trying to set contract to draft (is_active = false), check if it has invoices
-    if (updateData.is_active === false) {
+    // If trying to set contract to draft, check if it has invoices
+    if (updateData.status === 'draft') {
       const hasInvoices = await Contract.hasInvoices(contractId);
       if (hasInvoices) {
-        throw new Error('Cannot set contract to draft because it has associated invoices. Contracts with invoices must remain active.');
+        throw new Error('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
       }
     }
 

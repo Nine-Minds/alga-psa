@@ -2,6 +2,11 @@ import { TenantEntity } from './index';
 import { ISO8601String } from '../types/types.d';
 
 /**
+ * Contract status types
+ */
+export type ContractStatus = 'active' | 'draft' | 'terminated' | 'expired';
+
+/**
  * Interface for a Contract
  * Represents a collection of contract lines (formerly contract lines) assignable to clients.
  */
@@ -11,6 +16,7 @@ export interface IContract extends TenantEntity {
   contract_description?: string;
   billing_frequency: string;
   is_active: boolean;
+  status: ContractStatus;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
