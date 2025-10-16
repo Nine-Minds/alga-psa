@@ -193,11 +193,14 @@ export class StripeService {
     const db = knex || (await getConnection(tenantId));
 
     // Fetch customer from Stripe
-    const stripeCustomer = await this.stripe.customers.retrieve(stripeCustomerId);
+    const stripeCustomerResponse = await this.stripe.customers.retrieve(stripeCustomerId);
 
-    if (stripeCustomer.deleted) {
+    if (stripeCustomerResponse.deleted) {
       throw new Error(`Stripe customer ${stripeCustomerId} has been deleted`);
     }
+
+    // Type assertion - we've confirmed it's not deleted
+    const stripeCustomer = stripeCustomerResponse as Stripe.Customer;
 
     // Insert into database
     const [customer] = await db<StripeCustomer>('stripe_customers')

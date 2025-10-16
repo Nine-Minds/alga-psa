@@ -201,6 +201,15 @@ email:
     name: "app-secrets"
     key: "RESEND_API_KEY"
 
+# Stripe configuration (for billing integration during tenant creation)
+stripe:
+  # Stripe API secret key - should be provided via Kubernetes secret
+  secretKeySecret:
+    name: "stripe-credentials"
+    key: "STRIPE_SECRET_KEY"
+  # Master billing tenant ID (Nine Minds tenant ID for billing operations)
+  masterBillingTenantId: ""  # Should be set via override or secret
+
 # Application configuration
 applicationUrl: "https://algapsa.com"
 
