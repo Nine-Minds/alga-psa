@@ -129,16 +129,25 @@ const ContractLineMapping = {
         throw new Error(`Contract line ${contractLineId} is not linked to contract ${contractId}`);
       }
 
-      const isInUse = await db('client_contracts')
-        .where({ 
-          contract_id: contractId,
-          tenant,
-          is_active: true 
+      // Check if any invoices exist for clients assigned to THIS contract
+      // This is the same check used when setting a contract to draft
+      // Contract lines can be reused across contracts, so we only check if THIS specific contract has invoices
+      const result = await db('invoices as i')
+        .join('client_contracts as cc', function() {
+          this.on('i.client_id', '=', 'cc.client_id')
+              .andOn('i.tenant', '=', 'cc.tenant');
         })
-        .first();
+        .where({
+          'cc.contract_id': contractId,
+          'cc.tenant': tenant
+        })
+        .count('i.invoice_id as count')
+        .first() as { count?: string };
 
-      if (isInUse) {
-        throw new Error(`Cannot remove contract line ${contractLineId} from contract ${contractId} as it is currently assigned to clients`);
+      const hasInvoices = Number(result?.count ?? 0) > 0;
+
+      if (hasInvoices) {
+        throw new Error(`Cannot remove contract line ${contractLineId} from contract ${contractId} as the contract has associated invoices`);
       }
 
       const deletedCount = await db('contract_line_mappings')
