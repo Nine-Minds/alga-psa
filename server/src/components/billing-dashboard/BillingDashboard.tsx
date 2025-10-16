@@ -8,8 +8,6 @@ import { AlertCircle } from 'lucide-react';
 
 // Import all the components
 import ContractLinesOverview from './contract-lines/ContractLinesOverview';
-import Overview from './Overview';
-import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';

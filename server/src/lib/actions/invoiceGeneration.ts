@@ -670,6 +670,59 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
   return { file_id: fileRecord.file_id };
 }
 
+export async function downloadInvoicePDF(invoiceId: string): Promise<{ pdfData: number[]; invoiceNumber: string }> {
+  try {
+    console.log('[downloadInvoicePDF] Called with invoiceId:', invoiceId);
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Check permissions within transaction
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'invoice', 'read', trx)) {
+        throw new Error('Permission denied: Cannot download invoice PDFs');
+      }
+    });
+
+    // Get invoice details
+    const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .first();
+    });
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    console.log('[downloadInvoicePDF] Generating PDF for invoice:', invoice.invoice_number);
+    // Use the PDF generation service to generate the PDF
+    const pdfGenerationService = createPDFGenerationService(tenant);
+
+    const pdfBuffer = await pdfGenerationService.generatePDF({
+      invoiceId,
+      userId: currentUser.user_id
+    });
+
+    console.log('[downloadInvoicePDF] PDF generated, size:', pdfBuffer.length, 'bytes');
+    // Convert Buffer to plain array for serialization across server/client boundary
+    return {
+      pdfData: Array.from(pdfBuffer),
+      invoiceNumber: invoice.invoice_number
+    };
+  } catch (error) {
+    console.error('[downloadInvoicePDF] Error:', error);
+    console.error('[downloadInvoicePDF] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    throw error;
+  }
+}
+
 export async function createInvoiceFromBillingResult(
   billingResult: IBillingResult,
   clientId: string,
