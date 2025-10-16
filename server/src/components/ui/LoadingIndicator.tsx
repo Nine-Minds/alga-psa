@@ -10,9 +10,9 @@ interface LoadingIndicatorProps {
 }
 
 const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
-  spinnerProps = { size: 'md', color: 'border-primary-500' },
+  spinnerProps = { size: 'md' },
   text,
-  textClassName = 'ml-2 text-gray-600',
+  textClassName = 'text-gray-600',
   className = '',
   layout = 'inline',
 }) => {
@@ -21,12 +21,12 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
     stacked: 'flex flex-col items-center',
   };
 
-  const textMarginClass = layout === 'stacked' ? 'mt-2' : 'ml-2';
+  const marginClass = layout === 'stacked' ? 'mt-2' : 'ml-2';
 
   return (
     <div className={`${layoutClasses[layout]} ${className}`}>
       <Spinner {...spinnerProps} />
-      {text && <span className={`${textClassName} ${layout === 'inline' ? textMarginClass : 'mt-2'}`}>{text}</span>}
+      {text && <span className={`${textClassName} ${marginClass}`}>{text}</span>}
     </div>
   );
 };

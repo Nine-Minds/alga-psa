@@ -344,7 +344,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       {isLoading ? (
         <Card>
           <div className="p-12 flex items-center justify-center">
-            <LoadingIndicator text="Loading draft invoices..." />
+            <LoadingIndicator text="Loading draft invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-gray-600" />
           </div>
         </Card>
       ) : filteredInvoices.length === 0 ? (

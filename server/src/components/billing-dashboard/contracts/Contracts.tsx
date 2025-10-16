@@ -19,6 +19,7 @@ import { IContractWithClient } from 'server/src/interfaces/contract.interfaces';
 import { getContractsWithClients, deleteContract, updateContract, checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const Contracts: React.FC = () => {
   const [contracts, setContracts] = useState<IContractWithClient[]>([]);
@@ -26,6 +27,7 @@ const Contracts: React.FC = () => {
   const [showWizard, setShowWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -34,12 +36,15 @@ const Contracts: React.FC = () => {
 
   const fetchContracts = async () => {
     try {
+      setIsLoading(true);
       const fetchedContracts = await getContractsWithClients();
       setContracts(fetchedContracts);
       setError(null);
     } catch (err) {
       console.error('Error fetching contracts:', err);
       setError('Failed to fetch contracts');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -310,13 +315,23 @@ const Contracts: React.FC = () => {
             </div>
           </div>
 
-          <DataTable
-            data={filteredContracts}
-            columns={contractColumns}
-            pagination={true}
-            onRowClick={handleContractClick}
-            rowClassName={() => 'cursor-pointer'}
-          />
+          {isLoading ? (
+            <LoadingIndicator
+              className="py-12 text-gray-600"
+              layout="stacked"
+              spinnerProps={{ size: 'md' }}
+              text="Loading contracts..."
+              textClassName="text-gray-600"
+            />
+          ) : (
+            <DataTable
+              data={filteredContracts}
+              columns={contractColumns}
+              pagination={true}
+              onRowClick={handleContractClick}
+              rowClassName={() => 'cursor-pointer'}
+            />
+          )}
         </Box>
       </Card>
 

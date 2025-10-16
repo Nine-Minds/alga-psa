@@ -12,8 +12,7 @@ import {
   TrendingUp,
   Clock,
   Building2,
-  AlertCircle,
-  Loader2
+  AlertCircle
 } from 'lucide-react';
 import {
   getContractRevenueReport,
@@ -27,6 +26,7 @@ import {
   Profitability,
   ContractReportSummary
 } from 'server/src/lib/actions/contractReportActions';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 const ContractReports: React.FC = () => {
   const [activeReport, setActiveReport] = useState('revenue');
@@ -264,19 +264,45 @@ const ContractReports: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold mb-2">Contract Reports</h2>
-          <p className="text-gray-600 text-sm">
-            Analyze contract performance, revenue, and utilization metrics
-          </p>
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-4 w-72" />
         </div>
 
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-            <p className="text-gray-600">Loading reports...</p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Card key={`summary-skeleton-${index}`} className="p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            </Card>
+          ))}
         </div>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Skeleton className="h-5 w-5 rounded-full" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+
+          <div className="mb-4">
+            <Skeleton className="h-4 w-64" />
+          </div>
+
+          <div className="flex gap-2 mb-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={`tab-pill-${index}`} className="h-8 w-28 rounded-full" />
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={`table-row-${index}`} className="h-4 w-full rounded" />
+            ))}
+          </div>
+        </Card>
       </div>
     );
   }

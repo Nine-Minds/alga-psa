@@ -391,7 +391,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       {isLoading ? (
         <Card>
           <div className="p-12 flex items-center justify-center">
-            <LoadingIndicator text="Loading invoices..." />
+            <LoadingIndicator text="Loading invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-gray-600" />
           </div>
         </Card>
       ) : filteredInvoices.length === 0 ? (

@@ -277,7 +277,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
               >
                 {isPendingUpload ? (
                   <LoadingIndicator
-                    spinnerProps={{ size: "xs" }}
+                    spinnerProps={{ size: "sm" }}
                     text={(entityType === 'client' || entityType === 'tenant')
                       ? t('profile.imageUpload.uploadingLogo', 'Uploading Logo...')
                       : t('profile.imageUpload.uploadingAvatar', 'Uploading Avatar...')
@@ -319,7 +319,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 >
                   {isPendingDelete ? (
                     <LoadingIndicator
-                      spinnerProps={{ size: "xs" }}
+                      spinnerProps={{ size: "sm" }}
                       text={t('profile.imageUpload.deleting', 'Deleting...')}
                       className="mr-2"
                     />
