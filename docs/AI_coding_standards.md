@@ -3,6 +3,7 @@
 - If you need to see any additional files before you are sure you have enough context, ask the user to provide the file to the context before continuing.
 - If you would like to search for the contents to files, offer to use the run command and grep command to search for the contents.
 - Do not proceed to updating files until you have enough context to do so.
+- When working in the billing domain, prefer the renamed terminology (`contract lines`, `contracts`) and alias any remaining helper imports that include `plan`/`bundle` to the new schema names in your edits.
 
 
 # Failure Handling Philosophy
