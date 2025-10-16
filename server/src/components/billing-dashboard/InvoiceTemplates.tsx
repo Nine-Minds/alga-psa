@@ -53,7 +53,20 @@ const InvoiceTemplates: React.FC = () => {
 
   const handleSetDefaultTemplate = async (template: IInvoiceTemplate) => {
     try {
-      await setDefaultTemplate(template.template_id);
+      if (template.templateSource === 'standard' || template.isStandard) {
+        if (!template.standard_invoice_template_code) {
+          throw new Error('Standard template is missing a template code');
+        }
+        await setDefaultTemplate({
+          templateSource: 'standard',
+          standardTemplateCode: template.standard_invoice_template_code,
+        });
+      } else {
+        await setDefaultTemplate({
+          templateSource: 'custom',
+          templateId: template.template_id,
+        });
+      }
       await fetchTemplates();
       setError(null);
     } catch (error) {
@@ -109,8 +122,15 @@ const InvoiceTemplates: React.FC = () => {
     },
     {
       title: 'Default',
-      dataIndex: 'is_default',
-      render: (value) => value ? <CheckCircledIcon className="w-4 h-4 text-blue-500" /> : null,
+      dataIndex: 'isTenantDefault',
+      headerClassName: 'text-center align-middle',
+      cellClassName: 'text-center align-middle max-w-none',
+      render: (_, record) =>
+        record.isTenantDefault ? (
+          <div className="flex justify-center items-center">
+            <CheckCircledIcon className="h-4 w-4 text-primary-500" />
+          </div>
+        ) : null,
     },
     {
       title: 'Actions',
@@ -149,18 +169,16 @@ const InvoiceTemplates: React.FC = () => {
               >
                 Clone
               </DropdownMenuItem>
-              {!record.isStandard && (
-                <DropdownMenuItem
-                  id="set-default-invoice-template-menu-item" // Per standard: set-default-{object}-menu-item
-                  disabled={record.is_default}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSetDefaultTemplate(record);
-                  }}
-                >
-                  Set as Default
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                id="set-default-invoice-template-menu-item" // Per standard: set-default-{object}-menu-item
+                disabled={record.isTenantDefault}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSetDefaultTemplate(record);
+                }}
+              >
+                Set as Default
+              </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-invoice-template-menu-item" // Per standard: delete-{object}-menu-item
               className="text-red-600 focus:text-red-600" // Destructive styling

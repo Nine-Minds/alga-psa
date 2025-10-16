@@ -437,6 +437,31 @@ The system allows for customization of the visual appearance and layout of gener
 For comprehensive information on the architecture, components (UI and backend), database schema, compilation/execution process, and workflows, please refer to the dedicated documentation:
 
 [Invoice Template System Documentation](./invoice_templates.md)
+
+### Default Template Resolution
+
+Standard templates are global across every tenant, while custom templates are namespaced per tenant. To support tenant-specific defaults without duplicating the standard template rows, we introduce the `invoice_template_assignments` table. Each record captures the tenant, the scope the default applies to, and whether the selection points to a standard template (`standard_invoice_template_code`) or a custom template (`invoice_template_id`).
+
+- `assignment_id` (UUID, PK)
+- `tenant` (UUID, FK to `tenants`)
+- `scope_type` (`tenant`, `company`, extensible to future scopes like `contract`)
+- `scope_id` (UUID, nullable; `NULL` for tenant-wide defaults, `company_id` when `scope_type = 'company'`)
+- `template_source` (`standard` | `custom`)
+- `standard_invoice_template_code` (TEXT, FK to `standard_invoice_templates.standard_invoice_template_code`, nullable)
+- `invoice_template_id` (UUID, FK to `invoice_templates.template_id`, nullable)
+- `created_by` (UUID, FK to `users.user_id`, nullable)
+- `created_at` / `updated_at` (TIMESTAMPTZ)
+
+**Constraints and behavior:**
+
+- Unique index on `(tenant, scope_type, scope_id)` guarantees a single active default per scope.
+- CHECK constraints ensure `standard_invoice_template_code` is populated when `template_source = 'standard'` and `invoice_template_id` is populated when `template_source = 'custom'`.
+- When fetching a template for rendering:
+  1. Query for a company-scoped assignment (`scope_type = 'company'` + `scope_id = company_id`).
+  2. If none, fall back to the tenant-scoped assignment.
+  3. If still none, fall back to the platform-wide default standard template.
+- The previous `invoice_templates.is_default` flag becomes read-only legacy metadata and should be removed once all flows rely on `invoice_template_assignments`.
+- The `companies.invoice_template_id` FK becomes optional and will be retired after backfilling `invoice_template_assignments`. Retrieval code must ignore it in favor of the new table.
 ## Service Types
 
 The billing system uses service configurations to determine billing logic. Key types include:
@@ -508,10 +533,27 @@ The billing system uses service configurations to determine billing logic. Key t
 2.  **`companies`**
     - **Purpose:** Represents clients of the MSP
     - **Key Fields:** `tenant` (UUID, PK), `company_id` (UUID, PK), `company_name`, `billing_type`, `is_tax_exempt` (boolean)
+    - **Notes:** `invoice_template_id` is now legacy-only; tenant defaults are resolved through `invoice_template_assignments`.
 
 3.  **`users`**
     - **Purpose:** Stores information about MSP staff and client contacts
     - **Key Fields:** `tenant` (UUID, PK), `user_id` (UUID, PK), `email`, `role`, `rate`
+
+### Invoice Template Tables
+
+- **`invoice_templates`**
+  - **Purpose:** Stores tenant-scoped custom invoice templates alongside their compiled Wasm payloads.
+  - **Key Fields:** `template_id` (UUID, PK), `tenant` (UUID, FK), `name`, `source_code`, `compiled_wasm`, `sha`, `created_at`, `updated_at`.
+  - **Notes:** The historical `is_default` flag is deprecated in favor of `invoice_template_assignments`.
+
+- **`standard_invoice_templates`**
+  - **Purpose:** Stores system-provided template definitions shared across all tenants.
+  - **Key Fields:** `standard_invoice_template_code` (TEXT, PK), `name`, `source_code`, `compiled_wasm`, `sha`, `updated_at`.
+
+- **`invoice_template_assignments`**
+  - **Purpose:** Records default template selections per tenant and optional scopes (tenant-wide, company-specific, future extensions).
+  - **Key Fields:** `assignment_id` (UUID, PK), `tenant` (UUID, FK), `scope_type`, `scope_id`, `template_source`, `standard_invoice_template_code`, `invoice_template_id`, `created_at`, `updated_at`.
+  - **Constraints:** Unique `(tenant, scope_type, scope_id)`; CHECK constraints enforce mutual exclusivity between standard and custom references.
 
 ### Billing-Specific Tables
 

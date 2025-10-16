@@ -526,10 +526,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     <th
                       key={`header_${columnId}_${headerIndex}`}
                       onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
-                      className={`px-6 py-3 text-left text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-gray-50' : ''} ${colDef?.headerClassName ?? ''}`}
+                      className={`px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-gray-50' : ''} ${colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left'} ${colDef?.headerClassName ?? ''}`}
                       style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
                     >
-                        <div className="flex items-center space-x-1">
+                        <div className={`flex space-x-1 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''} items-center`}>
                           <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                           {isSortable && (
                             <span className="text-gray-400">

@@ -86,12 +86,13 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                         <FileTextIcon className="w-4 h-4" /> 
                         {template.name} 
                         <span className="text-gray-500">(Standard)</span>
+                        {template.isTenantDefault && <span className="text-blue-500">(Default)</span>}
                     </div>
                 ) : (
                     <div className="flex items-center gap-1">
                         <GearIcon className="w-4 h-4" /> 
                         {template.name}
-                        {template.is_default && <span className="text-blue-500">(Default)</span>}
+                        {template.isTenantDefault && <span className="text-blue-500">(Default)</span>}
                     </div>
                 )}
             </div>
