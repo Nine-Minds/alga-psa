@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
-import { MoreVertical, Plus, Wand2 } from 'lucide-react';
+import { MoreVertical, Plus, Wand2, Search } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
 import { DataTable } from 'server/src/components/ui/DataTable';
+import { Input } from 'server/src/components/ui/Input';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractWithClient } from 'server/src/interfaces/contract.interfaces';
 import { getContractsWithClients, deleteContract, updateContract, checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
@@ -26,6 +27,7 @@ const Contracts: React.FC = () => {
   const [showWizard, setShowWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -239,6 +241,18 @@ const Contracts: React.FC = () => {
     }
   };
 
+  // Filter contracts by search term
+  const filteredContracts = contracts
+    .filter((contract) => contract.contract_id !== undefined)
+    .filter((contract) => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        contract.contract_name?.toLowerCase().includes(searchLower) ||
+        contract.client_name?.toLowerCase().includes(searchLower)
+      );
+    });
+
   return (
     <>
       <Card size="2">
@@ -286,13 +300,32 @@ const Contracts: React.FC = () => {
               textClassName="text-gray-600"
             />
           ) : (
-            <DataTable
-              data={contracts.filter((contract) => contract.contract_id !== undefined)}
-              columns={contractColumns}
-              pagination={true}
-              onRowClick={handleContractClick}
-              rowClassName={() => 'cursor-pointer'}
-            />
+            <>
+              <div className="mb-4">
+                <div className="relative max-w-md">
+                  <Search
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Search by contract name or client..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                    aria-label="Search contracts"
+                  />
+                </div>
+              </div>
+
+              <DataTable
+                data={filteredContracts}
+                columns={contractColumns}
+                pagination={true}
+                onRowClick={handleContractClick}
+                rowClassName={() => 'cursor-pointer'}
+              />
+            </>
           )}
         </Box>
       </Card>
