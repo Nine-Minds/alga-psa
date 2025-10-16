@@ -129,19 +129,18 @@ const ContractLineMapping = {
         throw new Error(`Contract line ${contractLineId} is not linked to contract ${contractId}`);
       }
 
-      // Check if any invoices exist for clients assigned to THIS contract
-      // This is the same check used when setting a contract to draft
-      // Contract lines can be reused across contracts, so we only check if THIS specific contract has invoices
-      const result = await db('invoices as i')
+      // Check if any invoice items exist that reference client_contracts for this specific contract
+      // This ensures we only prevent removal if invoices were actually generated from THIS contract
+      const result = await db('invoice_items as ii')
         .join('client_contracts as cc', function() {
-          this.on('i.client_id', '=', 'cc.client_id')
-              .andOn('i.tenant', '=', 'cc.tenant');
+          this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
+              .andOn('ii.tenant', '=', 'cc.tenant');
         })
         .where({
           'cc.contract_id': contractId,
           'cc.tenant': tenant
         })
-        .count('i.invoice_id as count')
+        .count('ii.item_id as count')
         .first() as { count?: string };
 
       const hasInvoices = Number(result?.count ?? 0) > 0;

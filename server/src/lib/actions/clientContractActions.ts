@@ -1,6 +1,7 @@
 'use server'
 
 import ClientContract from 'server/src/lib/models/clientContract';
+import Contract from 'server/src/lib/models/contract';
 import { IClientContract } from 'server/src/interfaces/contract.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getSession } from 'server/src/lib/auth/getSession';
@@ -39,7 +40,7 @@ export async function createClientContract(
       throw new Error(`Client ${data.client_id} not found`);
     }
 
-    // Verify contract exists (don't require it to be active for drafts)
+    // Verify contract exists
     const contractExists = await knex('contracts')
       .where({ contract_id: data.contract_id, tenant })
       .first();
@@ -48,24 +49,12 @@ export async function createClientContract(
       throw new Error(`Contract ${data.contract_id} not found`);
     }
 
-    // Check for overlapping contracts
-    const overlapping = await knex('client_contracts')
-      .where({ client_id: data.client_id, tenant, is_active: true })
-      .where(function overlap() {
-        this.where(function overlapsExistingEnd() {
-          this.where('end_date', '>', data.start_date).orWhereNull('end_date');
-        }).where(function overlapsExistingStart() {
-          if (data.end_date) {
-            this.where('start_date', '<', data.end_date);
-          } else {
-            this.whereRaw('1 = 1');
-          }
-        });
-      })
-      .first();
-
-    if (overlapping) {
-      throw new Error('Client already has an active contract overlapping the specified date range');
+    // If contract is active, check if client already has an active contract
+    if (contractExists.status === 'active') {
+      const hasActiveContract = await Contract.hasActiveContractForClient(data.client_id, data.contract_id);
+      if (hasActiveContract) {
+        throw new Error('Client already has an active contract. To create a new active contract, terminate their current contract or save this contract as a draft.');
+      }
     }
 
     const timestamp = new Date().toISOString();
