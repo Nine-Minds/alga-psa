@@ -161,8 +161,10 @@ function normalizeDateOnly(input?: string): string | undefined {
 }
 
 export async function createContractFromWizard(
-  submission: ContractWizardSubmission
+  submission: ContractWizardSubmission,
+  options?: { isDraft?: boolean }
 ): Promise<ContractWizardResult> {
+  const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
   const currentUser = isBypass ? ({} as any) : await getCurrentUser();
   if (!currentUser && !isBypass) {
@@ -190,8 +192,8 @@ export async function createContractFromWizard(
       contract_id: contractId,
       contract_name: submission.contract_name,
       contract_description: submission.description ?? null,
-      billing_frequency: 'monthly',
-      is_active: true,
+      billing_frequency: submission.billing_frequency ?? 'monthly',
+      is_active: !isDraft,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
     });
@@ -382,7 +384,7 @@ export async function createContractFromWizard(
       contract_id: contractId,
       start_date: startDate,
       end_date: endDate,
-      is_active: true,
+      is_active: !isDraft,
       po_required: submission.po_required ?? false,
       po_number: submission.po_number ?? null,
       po_amount: submission.po_amount ?? null,
