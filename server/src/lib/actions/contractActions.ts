@@ -112,6 +112,32 @@ export async function updateContract(
   }
 
   try {
+    // Get the current contract to check its status
+    const currentContract = await Contract.getById(contractId);
+    if (!currentContract) {
+      throw new Error(`Contract ${contractId} not found`);
+    }
+
+    // Special handling for expired contracts
+    if (currentContract.status === 'expired') {
+      // If trying to manually change status of an expired contract (not through end date logic)
+      if (updateData.status && updateData.status !== 'expired') {
+        throw new Error('Cannot manually change the status of an expired contract. To reactivate, extend the contract end date.');
+      }
+
+      // Check if end dates are being updated on client contracts
+      // We'll check this after the client contract updates below
+      // For now, remove the status from updateData if it's expired (we'll handle it automatically)
+      if (updateData.status === 'expired') {
+        delete updateData.status; // Don't update status, we'll determine it based on end dates
+      }
+    } else {
+      // Prevent manual setting of expired status on non-expired contracts
+      if (updateData.status === 'expired') {
+        throw new Error('Cannot manually set contract to expired. Contracts are automatically expired when their end date passes.');
+      }
+    }
+
     // If trying to set contract to draft, check if it has invoices
     if (updateData.status === 'draft') {
       const hasInvoices = await Contract.hasInvoices(contractId);
@@ -136,7 +162,17 @@ export async function updateContract(
     }
 
     const { tenant: _, ...safeUpdateData } = updateData as any;
-    return await Contract.update(contractId, safeUpdateData);
+    const updated = await Contract.update(contractId, safeUpdateData);
+
+    // After updating, check if an expired contract should be reactivated based on end dates
+    if (currentContract.status === 'expired') {
+      await Contract.checkAndReactivateExpiredContract(contractId);
+      // Re-fetch the contract to get the potentially updated status
+      const reactivatedContract = await Contract.getById(contractId);
+      return reactivatedContract!;
+    }
+
+    return updated;
   } catch (error) {
     console.error('Error updating contract:', error);
     if (error instanceof Error) {

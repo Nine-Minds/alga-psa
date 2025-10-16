@@ -196,6 +196,12 @@ export async function updateClientContract(
     // Remove tenant field if present in updateData to prevent override
     const { tenant: _, ...safeUpdateData } = updateData as any;
     const updatedClientContract = await ClientContract.updateClientContract(clientContractId, safeUpdateData);
+
+    // After updating the client contract, check if the parent contract should be reactivated
+    // This handles the case where an expired contract's end dates are extended
+    const Contract = (await import('server/src/lib/models/contract')).default;
+    await Contract.checkAndReactivateExpiredContract(updatedClientContract.contract_id);
+
     return updatedClientContract;
   } catch (error) {
     console.error(`Error updating client contract ${clientContractId}:`, error);
