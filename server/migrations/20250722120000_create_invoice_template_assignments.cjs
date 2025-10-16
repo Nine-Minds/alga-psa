@@ -53,11 +53,6 @@ exports.up = async function up(knex) {
         .inTable('users')
         .onDelete('SET NULL');
 
-      table
-        .foreign('standard_invoice_template_code')
-        .references('standard_invoice_template_code')
-        .inTable('standard_invoice_templates')
-        .onDelete('SET NULL');
     });
   }
 
