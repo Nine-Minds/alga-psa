@@ -373,40 +373,41 @@ const ServiceCatalogManager: React.FC = () => {
 
     // Removed conditional columns based on old service_type
     // TODO: Re-add conditional columns based on new category/billing method if needed
-    baseColumns.push(
-      {
-        title: 'SKU',
-        dataIndex: 'sku',
-        render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name === 'Hardware' ? value || 'N/A' : 'N/A';
-        },
-      },
-      {
-        title: 'Inventory',
-        dataIndex: 'inventory_count',
-        render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name === 'Hardware' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-        },
-      },
-      {
-        title: 'Seat Limit',
-        dataIndex: 'seat_limit',
-        render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-        },
-      },
-      {
-        title: 'License Term',
-        dataIndex: 'license_term',
-        render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-        }
-      }
-    );
+    // Hidden columns: SKU, Inventory, Seat Limit, License Term
+    // baseColumns.push(
+    //   {
+    //     title: 'SKU',
+    //     dataIndex: 'sku',
+    //     render: (value, record) => {
+    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
+    //       return type?.name === 'Hardware' ? value || 'N/A' : 'N/A';
+    //     },
+    //   },
+    //   {
+    //     title: 'Inventory',
+    //     dataIndex: 'inventory_count',
+    //     render: (value, record) => {
+    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
+    //       return type?.name === 'Hardware' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
+    //     },
+    //   },
+    //   {
+    //     title: 'Seat Limit',
+    //     dataIndex: 'seat_limit',
+    //     render: (value, record) => {
+    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
+    //       return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
+    //     },
+    //   },
+    //   {
+    //     title: 'License Term',
+    //     dataIndex: 'license_term',
+    //     render: (value, record) => {
+    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
+    //       return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
+    //     }
+    //   }
+    // );
 
     // Always add actions column at the end
     baseColumns.push({
