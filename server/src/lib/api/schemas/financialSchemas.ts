@@ -98,7 +98,7 @@ export const taxTypeSchema = z.enum(['VAT', 'GST', 'Sales Tax']);
 
 export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage']);
 
-export const billingMethodSchema = z.enum(['fixed', 'per_unit']);
+export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
 

@@ -205,9 +205,9 @@ export function HourlyPlanConfiguration({
       const processedConfigs: IPlanServiceWithHourlyConfig[] = servicesWithConfigsResult.map((item) => {
         // Determine if the service *should* be hourly configurable
         const isHourlyService =
-          item.service.billing_method === 'per_unit' &&
-          item.service.unit_of_measure?.toLowerCase().includes('hour');
-        // Add || item.service.billing_method === 'hourly' if that method exists
+          item.service.billing_method === 'hourly' ||
+          (item.service.billing_method === 'usage' &&
+            item.service.unit_of_measure?.toLowerCase().includes('hour'));
 
         let hourlyConfig: IContractLineServiceHourlyConfig | null = null;
         let userTypeRatesForConfig: IUserTypeRate[] = []; // Initialize as empty array

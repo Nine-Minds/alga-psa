@@ -137,7 +137,7 @@ export const EntityAvatar: React.FC<EntityAvatarProps> = ({
           {/* Loading shimmer effect */}
           {showShimmer && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse rounded-full overflow-hidden">
-              <Spinner size="xs" className="opacity-70" />
+              <Spinner size="sm" className="opacity-70 scale-75" />
             </div>
           )}
           

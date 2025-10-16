@@ -155,7 +155,7 @@ afterEach(async () => {
  */
 async function createTestService(overrides = {}) {
   const serviceId = uuidv4();
-  const billingMethod = (overrides as { billing_method?: 'fixed' | 'per_unit' }).billing_method ?? 'fixed';
+  const billingMethod = (overrides as { billing_method?: 'fixed' | 'hourly' | 'usage' }).billing_method ?? 'fixed';
   const serviceTypeId = await ensureServiceType(billingMethod);
 
   const serviceData: Record<string, unknown> = {
@@ -181,7 +181,7 @@ async function createTestService(overrides = {}) {
   return serviceId;
 }
 
-async function ensureServiceType(billingMethod: 'fixed' | 'per_unit' = 'fixed') {
+async function ensureServiceType(billingMethod: 'fixed' | 'hourly' | 'usage' = 'fixed') {
   if (serviceTypeCache[billingMethod]) {
     return serviceTypeCache[billingMethod];
   }

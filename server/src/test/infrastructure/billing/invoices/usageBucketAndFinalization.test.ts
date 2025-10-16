@@ -200,7 +200,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       // Arrange - Create usage-based service
       const serviceId = await createTestService(context, {
         service_name: 'Data Transfer',
-        billing_method: 'per_unit',
+        billing_method: 'usage',
         default_rate: 1000, // $10.00 per GB
         unit_of_measure: 'GB',
         tax_region: 'US-NY'
@@ -314,7 +314,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       // Arrange - Create service for bucket overlay contract line
       const serviceId = await createTestService(context, {
         service_name: 'Consulting Hours',
-        billing_method: 'per_unit',
+        billing_method: 'usage',
         default_rate: 7500, // $75.00 per hour overage
         unit_of_measure: 'hour',
         tax_region: 'US-NY'

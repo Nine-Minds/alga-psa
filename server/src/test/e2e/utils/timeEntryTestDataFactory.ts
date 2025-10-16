@@ -28,7 +28,7 @@ export interface Service {
   tenant: string;
   service_name: string;
   description?: string;
-  billing_method: 'fixed' | 'per_unit';
+  billing_method: 'fixed' | 'hourly' | 'usage';
   custom_service_type_id: string;
   default_rate?: number;
   unit_of_measure?: string;

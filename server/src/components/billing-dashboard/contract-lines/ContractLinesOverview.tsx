@@ -25,7 +25,7 @@ const ContractLinesOverview: React.FC = () => {
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
   const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]); // Added state for service types
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]); // Added state for service types
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 

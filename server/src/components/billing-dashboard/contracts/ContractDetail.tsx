@@ -316,6 +316,10 @@ const ContractDetail: React.FC = () => {
     setIsSaving(true);
 
     try {
+      if (!contract) {
+        setIsSaving(false);
+        return;
+      }
       // Build contract update payload
       const contractUpdatePayload: any = {
         contract_name: editContractName,

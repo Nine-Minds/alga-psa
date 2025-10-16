@@ -54,12 +54,10 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
     if (svc.billing_method === 'fixed') {
       return 'Fixed';
-    } else if (svc.billing_method === 'per_unit') {
-      if (svc.unit_of_measure?.toLowerCase().includes('hour')) {
-        return 'Hourly';
-      } else {
-        return 'Usage';
-      }
+    } else if (svc.billing_method === 'hourly') {
+      return 'Hourly';
+    } else if (svc.billing_method === 'usage') {
+      return 'Usage';
     }
     // Add logic for 'Bucket' if applicable based on service properties
     return undefined; // Default if no match
@@ -133,17 +131,10 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
             if (service.billing_method === 'fixed') {
               configType = 'Fixed';
-            } else if (service.billing_method === 'per_unit') {
-              // Check service type name for per_unit services
-              const laborServiceTypes = ['Labor - Support', 'Labor - Project', 'Consulting']; // Assuming these are potential service type names
-              // Use service_type_name directly from the service object
-              // The 'service' object comes from the 'services' prop which now includes service_type_name
-              const serviceTypeName = service.service_type_name;
-              if (serviceTypeName && laborServiceTypes.includes(serviceTypeName)) {
-                configType = 'Hourly'; // Default labor service types to Hourly
-              } else {
-                configType = 'Usage'; // Default other per_unit categories to Usage
-              }
+            } else if (service.billing_method === 'hourly') {
+              configType = 'Hourly';
+            } else if (service.billing_method === 'usage') {
+              configType = 'Usage';
             }
             // Note: 'Bucket' type is not set as a default here, it must be explicitly chosen.
 

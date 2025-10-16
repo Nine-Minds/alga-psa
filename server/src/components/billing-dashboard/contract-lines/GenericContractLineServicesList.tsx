@@ -28,9 +28,10 @@ import { Badge } from 'server/src/components/ui/Badge';
 import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 
 // Define billing method options
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string }> = [
+const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
   { value: 'fixed', label: 'Fixed Price' },
-  { value: 'per_unit', label: 'Per Unit' }
+  { value: 'hourly', label: 'Hourly' },
+  { value: 'usage', label: 'Usage Based' }
 ];
 
 interface GenericPlanServicesListProps {
@@ -46,7 +47,7 @@ interface EnhancedPlanService extends IContractLineService {
   // Added fields for display consistency
   service_name?: string;
   service_type_name?: string; // Changed from service_category
-  billing_method?: 'fixed' | 'per_unit' | null; // Allow null to match IService
+  billing_method?: 'fixed' | 'hourly' | 'usage' | null; // Allow null to match IService
   unit_of_measure?: string;
   default_rate?: number;
 }
@@ -197,12 +198,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
 
         if (record.billing_method === 'fixed') {
           derivedType = 'Fixed';
-        } else if (record.billing_method === 'per_unit') {
-          if (record.unit_of_measure?.toLowerCase().includes('hour')) {
-            derivedType = 'Hourly';
-          } else {
-            derivedType = 'Usage';
-          }
+        } else if (record.billing_method === 'hourly') {
+          derivedType = 'Hourly';
+        } else if (record.billing_method === 'usage') {
+          derivedType = 'Usage';
         }
         // Determine display text, defaulting to 'Default' if derivedType is undefined
         const displayText = derivedType || 'Default';

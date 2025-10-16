@@ -24,7 +24,7 @@ export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage']);
 export const billingFrequencySchema = z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']);
 export const configurationTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
-export const billingMethodSchema = z.enum(['fixed', 'per_unit']);
+export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 
 // ============================================================================
 // CORE CONTRACT LINE SCHEMAS

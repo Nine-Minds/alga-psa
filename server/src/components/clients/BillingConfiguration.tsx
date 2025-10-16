@@ -66,7 +66,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [editingContractLine, setEditingContractLine] = useState<ClientContractLineWithStringDates | null>(null);
     const [contractLineToDelete, setContractLineToDelete] = useState<string | null>(null);
     const [services, setServices] = useState<IService[]>([]);
-    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
+    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',
         custom_service_type_id: '', // Will be set after fetching service types

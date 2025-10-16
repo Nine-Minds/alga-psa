@@ -251,7 +251,7 @@ async function upsertClientDefaultTaxRate(
 interface CreateServiceOptions {
   service_id?: string;
   service_name?: string;
-  billing_method?: 'fixed' | 'per_unit' | 'time';
+  billing_method?: 'fixed' | 'hourly' | 'usage' | 'time';
   default_rate?: number;
   unit_of_measure?: string;
   description?: string | null;
@@ -306,7 +306,7 @@ interface CreateBucketUsageOptions {
 
 async function ensureServiceType(
   context: TestContext,
-  billingMethod: 'fixed' | 'per_unit' = 'fixed'
+  billingMethod: 'fixed' | 'hourly' | 'usage' = 'fixed'
 ): Promise<string> {
   const cacheKey = `${context.tenantId}:${billingMethod}`;
   if (serviceTypeCache.has(cacheKey)) {
@@ -332,7 +332,12 @@ async function ensureServiceType(
   const typeId = uuidv4();
   const typeData: Record<string, unknown> = {
     id: typeId,
-    name: billingMethod === 'fixed' ? 'Fixed Service Type' : 'Per Unit Service Type',
+    name:
+      billingMethod === 'fixed'
+        ? 'Fixed Service Type'
+        : billingMethod === 'hourly'
+          ? 'Hourly Service Type'
+          : 'Usage Service Type',
     billing_method: billingMethod,
     is_active: true,
     description: 'Auto-generated service type for invoice tests',
@@ -354,7 +359,7 @@ async function ensureServiceType(
 
 async function getStandardServiceTypeId(
   context: TestContext,
-  billingMethod: 'fixed' | 'per_unit'
+  billingMethod: 'fixed' | 'hourly' | 'usage'
 ): Promise<string | null> {
   const hasTable = await context.db.schema.hasTable('standard_service_types');
   if (!hasTable) {
@@ -388,7 +393,7 @@ export async function createTestService(
 ): Promise<string> {
   const serviceId = overrides.service_id ?? uuidv4();
   const billingMethod = overrides.billing_method ?? 'fixed';
-  const normalizedBillingMethod = billingMethod === 'time' ? 'per_unit' : billingMethod;
+  const normalizedBillingMethod = billingMethod === 'time' ? 'hourly' : billingMethod;
   const cacheKey = `${context.tenantId}:${normalizedBillingMethod}`;
   let serviceTypeId: string | null = overrides.custom_service_type_id ?? null;
 

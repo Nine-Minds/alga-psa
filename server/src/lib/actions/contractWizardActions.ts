@@ -45,6 +45,7 @@ export type ContractWizardSubmission = {
   description?: string;
   company_id: string;
   start_date: string;
+  billing_frequency?: string;
   end_date?: string;
   po_required?: boolean;
   po_number?: string;

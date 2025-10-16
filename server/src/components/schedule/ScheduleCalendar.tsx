@@ -894,7 +894,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         <CalendarStyleProvider />
         <div className="flex-grow flex items-center justify-center">
           <div className="text-center">
-            <Spinner size="lg" color="border-[rgb(var(--color-primary-500))]" className="mb-4" />
+            <Spinner size="lg" className="mb-4" />
             <div className="text-[rgb(var(--color-text-600))]">Loading schedule...</div>
           </div>
         </div>

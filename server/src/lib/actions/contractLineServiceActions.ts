@@ -70,7 +70,7 @@ export async function addServiceToContractLine(
       'sc.tenant': tenant
     })
     .select('sc.*', 'st.billing_method as service_type_billing_method') // Select the billing_method from the type table
-    .first() as IService & { service_type_billing_method?: 'fixed' | 'per_unit' }; // Add type info
+    .first() as IService & { service_type_billing_method?: 'fixed' | 'hourly' | 'usage' }; // Add type info
 
   if (!serviceWithType) {
     throw new Error(`Service ${serviceId} not found`);
@@ -108,13 +108,10 @@ export async function addServiceToContractLine(
     determinedConfigType = configType;
   } else if (serviceWithType?.service_type_billing_method === 'fixed') {
     determinedConfigType = 'Fixed';
-  } else if (serviceWithType?.service_type_billing_method === 'per_unit') {
-    // Use the service's specific unit_of_measure for per_unit services on non-Bucket plans
-    if (serviceWithType.unit_of_measure?.toLowerCase().includes('hour')) {
-       determinedConfigType = 'Hourly';
-    } else {
-       determinedConfigType = 'Usage'; // Default for other per_unit types
-    }
+  } else if (serviceWithType?.service_type_billing_method === 'hourly') {
+    determinedConfigType = 'Hourly';
+  } else if (serviceWithType?.service_type_billing_method === 'usage') {
+    determinedConfigType = 'Usage';
   } else {
     // Fallback for missing/unknown service billing method on non-Bucket plans
     console.warn(`Could not determine standard billing method for service type of ${serviceId} on a non-Bucket plan. Defaulting configuration type to 'Fixed'.`);

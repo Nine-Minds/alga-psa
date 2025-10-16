@@ -140,6 +140,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         contract_description: contractDescription || undefined,
         billing_frequency: billingFrequency,
         status: (saveAsActive ? 'active' : 'draft') as any,
+        is_active: saveAsActive,
       };
 
       let contract;

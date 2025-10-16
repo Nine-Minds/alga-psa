@@ -326,7 +326,7 @@ console.log('[QuickAddService] Service created successfully');
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
                 value={serviceData.billing_method}
-                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'per_unit' | '' })}
+                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'usage' | '' })}
                 placeholder="Select billing method..."
                 className={`w-full ${hasAttemptedSubmit && !serviceData.billing_method ? 'ring-1 ring-red-500' : ''}`}
               />
