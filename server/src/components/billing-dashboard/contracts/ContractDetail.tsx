@@ -12,6 +12,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import Drawer from 'server/src/components/ui/Drawer';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -32,18 +33,22 @@ import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import PricingSchedules from './PricingSchedules';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
+import { Temporal } from '@js-temporal/polyfill';
+import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
     return '—';
   }
 
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+  try {
+    const plainDate = toPlainDate(value);
+    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(displayDate);
+  } catch (error) {
+    console.error('Error formatting date:', error);
     return '—';
   }
-
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
 };
 
 const ContractDetail: React.FC = () => {
@@ -328,11 +333,15 @@ const ContractDetail: React.FC = () => {
         };
 
         // Only include fields that have changed
-        if (editedAssignment.start_date !== originalAssignment.start_date) {
-          updatePayload.start_date = editedAssignment.start_date || undefined;
+        if (!datesAreEqual(editedAssignment.start_date, originalAssignment.start_date)) {
+          updatePayload.start_date = editedAssignment.start_date
+            ? toISODate(toPlainDate(editedAssignment.start_date))
+            : undefined;
         }
-        if (editedAssignment.end_date !== originalAssignment.end_date) {
-          updatePayload.end_date = editedAssignment.end_date;
+        if (!datesAreEqual(editedAssignment.end_date, originalAssignment.end_date)) {
+          updatePayload.end_date = editedAssignment.end_date
+            ? toISODate(toPlainDate(editedAssignment.end_date))
+            : null;
         }
         if (editedAssignment.po_required !== originalAssignment.po_required) {
           updatePayload.po_required = editedAssignment.po_required;
@@ -371,20 +380,25 @@ const ContractDetail: React.FC = () => {
 
     // Use edited data if it exists, otherwise use original assignment data
     const dataToEdit = editAssignments[assignment.client_contract_id] || assignment;
+    const normalizedData: IContractAssignmentSummary = {
+      ...dataToEdit,
+      start_date: dataToEdit.start_date ? toISODate(toPlainDate(dataToEdit.start_date)) : null,
+      end_date: dataToEdit.end_date ? toISODate(toPlainDate(dataToEdit.end_date)) : null
+    };
 
     // Save a snapshot of the data at the start of this edit session
-    setPreEditSnapshot({ ...dataToEdit });
+    setPreEditSnapshot({ ...normalizedData });
 
     setEditAssignments(prev => ({
       ...prev,
-      [assignment.client_contract_id]: { ...dataToEdit }
+      [assignment.client_contract_id]: { ...normalizedData }
     }));
 
     // Initialize PO amount input with formatted value (convert from cents to dollars)
-    if (dataToEdit.po_amount != null) {
+    if (normalizedData.po_amount != null) {
       setPoAmountInputs(prev => ({
         ...prev,
-        [assignment.client_contract_id]: (Number(dataToEdit.po_amount) / 100).toFixed(2)
+        [assignment.client_contract_id]: (Number(normalizedData.po_amount) / 100).toFixed(2)
       }));
     }
   };
@@ -435,6 +449,62 @@ const ContractDetail: React.FC = () => {
         [field]: value
       }
     }));
+  };
+
+  const convertToDatePickerValue = (value: string | null | undefined): Date | undefined => {
+    if (!value) {
+      return undefined;
+    }
+
+    try {
+      const plainDate = toPlainDate(value);
+      return new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
+    } catch (error) {
+      console.error('Error converting stored date for picker:', error);
+      return undefined;
+    }
+  };
+
+  const handleAssignmentDateChange = (
+    assignmentId: string,
+    field: 'start_date' | 'end_date',
+    date: Date | undefined
+  ) => {
+    if (!date) {
+      if (field === 'end_date') {
+        // Clearing the end date keeps the assignment open-ended
+        handleAssignmentFieldChange(assignmentId, field, null);
+      }
+      return;
+    }
+
+    try {
+      const isoDate = toISODate(toPlainDate(date));
+      handleAssignmentFieldChange(assignmentId, field, isoDate);
+    } catch (error) {
+      console.error('Error handling assignment date change:', error);
+    }
+  };
+
+  const datesAreEqual = (
+    first: string | null | undefined,
+    second: string | null | undefined
+  ): boolean => {
+    if (!first && !second) {
+      return true;
+    }
+    if (!first || !second) {
+      return false;
+    }
+
+    try {
+      const firstPlain = toPlainDate(first);
+      const secondPlain = toPlainDate(second);
+      return Temporal.PlainDate.compare(firstPlain, secondPlain) === 0;
+    } catch (error) {
+      console.error('Error comparing dates:', error);
+      return first === second;
+    }
   };
 
   if (isLoading) {
@@ -811,34 +881,46 @@ const ContractDetail: React.FC = () => {
                                 </td>
                                 <td className="px-4 py-3">
                                   {isEditing ? (
-                                    <Input
-                                      type="date"
-                                      value={editData.start_date ? new Date(editData.start_date).toISOString().split('T')[0] : ''}
-                                      onChange={(e) => handleAssignmentFieldChange(
-                                        assignment.client_contract_id,
-                                        'start_date',
-                                        e.target.value
-                                      )}
-                                      className="w-40"
-                                      disabled={contract.status === 'active'}
-                                      title={contract.status === 'active' ? 'Start date cannot be changed for active contracts' : ''}
-                                    />
+                                    <div
+                                      className="w-44"
+                                      title={contract.status === 'active' ? 'Start date cannot be changed for active contracts' : undefined}
+                                    >
+                                      <DatePicker
+                                        id={`assignment-start-date-${assignment.client_contract_id}`}
+                                        value={convertToDatePickerValue(editData.start_date)}
+                                        onChange={(date) =>
+                                          handleAssignmentDateChange(
+                                            assignment.client_contract_id,
+                                            'start_date',
+                                            date
+                                          )
+                                        }
+                                        className="w-full"
+                                        placeholder="Select start date"
+                                        label="Assignment start date"
+                                        disabled={contract.status === 'active'}
+                                      />
+                                    </div>
                                   ) : (
                                     formatDate(editData.start_date)
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
                                   {isEditing ? (
-                                    <Input
-                                      type="date"
-                                      value={editData.end_date ? new Date(editData.end_date).toISOString().split('T')[0] : ''}
-                                      onChange={(e) => handleAssignmentFieldChange(
-                                        assignment.client_contract_id,
-                                        'end_date',
-                                        e.target.value || null
-                                      )}
-                                      className="w-40"
+                                    <DatePicker
+                                      id={`assignment-end-date-${assignment.client_contract_id}`}
+                                      value={convertToDatePickerValue(editData.end_date)}
+                                      onChange={(date) =>
+                                        handleAssignmentDateChange(
+                                          assignment.client_contract_id,
+                                          'end_date',
+                                          date
+                                        )
+                                      }
+                                      className="w-44"
                                       placeholder="Ongoing"
+                                      label="Assignment end date"
+                                      clearable
                                     />
                                   ) : (
                                     editData.end_date ? formatDate(editData.end_date) : 'Ongoing'
