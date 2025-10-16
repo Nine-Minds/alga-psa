@@ -26,37 +26,9 @@ exports.up = async function up(knex) {
     ALTER COLUMN status SET NOT NULL,
     ALTER COLUMN status SET DEFAULT 'draft';
   `);
-
-  // Add check constraint for valid statuses
-  await knex.raw(`
-    DO $$
-    BEGIN
-      IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'contracts_status_check'
-      ) THEN
-        ALTER TABLE contracts
-        ADD CONSTRAINT contracts_status_check
-        CHECK (status IN ('active', 'draft', 'terminated', 'expired'));
-      END IF;
-    END $$;
-  `);
 };
 
 exports.down = async function down(knex) {
-  await knex.raw(`
-    DO $$
-    BEGIN
-      IF EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'contracts_status_check'
-      ) THEN
-        ALTER TABLE contracts
-        DROP CONSTRAINT contracts_status_check;
-      END IF;
-    END $$;
-  `);
-
   await knex.raw(`
     ALTER TABLE contracts
     DROP COLUMN IF EXISTS status;
