@@ -25,6 +25,7 @@ import {
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { ContractLineRateDialog } from './ContractLineRateDialog';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface ContractLinesProps {
   contract: IContract;
@@ -185,6 +186,21 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     ],
     []
   );
+
+  if (isLoading) {
+    return (
+      <Card size="2">
+        <Box p="8">
+          <LoadingIndicator
+            layout="stacked"
+            className="py-6 text-gray-600"
+            spinnerProps={{ size: 'md' }}
+            text="Loading contract lines"
+          />
+        </Box>
+      </Card>
+    );
+  }
 
   return (
     <Card size="2">

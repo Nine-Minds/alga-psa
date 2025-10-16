@@ -35,6 +35,7 @@ import PricingSchedules from './PricingSchedules';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {

@@ -22,6 +22,7 @@ import { AlertCircle } from 'lucide-react';
 import { PricingScheduleDialog } from './PricingScheduleDialog';
 import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface PricingSchedulesProps {
   contractId: string;
@@ -171,7 +172,12 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
           )}
 
           {isLoading ? (
-            <div className="text-center py-4">Loading schedules...</div>
+            <LoadingIndicator
+              layout="stacked"
+              className="py-10 text-gray-600"
+              spinnerProps={{ size: 'md' }}
+              text="Loading pricing schedules"
+            />
           ) : (
             <>
               {schedules.length === 0 ? (
