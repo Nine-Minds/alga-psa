@@ -530,26 +530,6 @@ export function UsagePlanConfiguration({
                                           placeholder="Select billing frequency"
                                       />
                                   </div>
-                                  <div className="border border-gray-200 rounded-md p-3 bg-white">
-                                      <div className="flex items-center gap-3">
-                                          <Switch
-                                              id="is-custom"
-                                              checked={isCustom}
-                                              onCheckedChange={(checked) => {
-                                                  setIsCustom(checked);
-                                                  markBasicsDirty();
-                                              }}
-                                          />
-                                          <div>
-                                              <Label htmlFor="is-custom" className="cursor-pointer">
-                                                  Custom Line
-                                              </Label>
-                                              <p className="text-xs text-gray-500">
-                                                  Flag the line as bespoke for reporting and analytics.
-                                              </p>
-                                          </div>
-                                      </div>
-                                  </div>
                               </div>
                           </div>
                       </section>
@@ -630,40 +610,18 @@ export function UsagePlanConfiguration({
                   required
                 />
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="frequency">Billing Frequency *</Label>
-                  <CustomSelect
-                    id="frequency"
-                    value={billingFrequency}
-                    onValueChange={(value) => {
-                      setBillingFrequency(value);
-                      markBasicsDirty();
-                    }}
-                    options={BILLING_FREQUENCY_OPTIONS}
-                    placeholder="Select billing frequency"
-                  />
-                </div>
-                <div className="border border-gray-200 rounded-md p-3 bg-white">
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="is-custom"
-                      checked={isCustom}
-                      onCheckedChange={(checked) => {
-                        setIsCustom(checked);
-                        markBasicsDirty();
-                      }}
-                    />
-                    <div>
-                      <Label htmlFor="is-custom" className="cursor-pointer">
-                        Custom Line
-                      </Label>
-                      <p className="text-xs text-gray-500">
-                        Flag the line as bespoke for reporting and analytics.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <Label htmlFor="frequency">Billing Frequency *</Label>
+                <CustomSelect
+                  id="frequency"
+                  value={billingFrequency}
+                  onValueChange={(value) => {
+                    setBillingFrequency(value);
+                    markBasicsDirty();
+                  }}
+                  options={BILLING_FREQUENCY_OPTIONS}
+                  placeholder="Select billing frequency"
+                />
               </div>
             </div>
           </section>
