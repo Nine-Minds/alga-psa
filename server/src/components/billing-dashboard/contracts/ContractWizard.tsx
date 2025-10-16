@@ -9,7 +9,7 @@ import { FixedFeeServicesStep } from './wizard-steps/FixedFeeServicesStep';
 import { HourlyServicesStep } from './wizard-steps/HourlyServicesStep';
 import { UsageBasedServicesStep } from './wizard-steps/UsageBasedServicesStep';
 import { ReviewContractStep } from './wizard-steps/ReviewContractStep';
-import { createContractFromWizard } from 'server/src/lib/actions/contractWizardActions';
+import { createContractFromWizard, ContractWizardSubmission } from 'server/src/lib/actions/contractWizardActions';
 
 const STEPS = [
   'Contract Basics',
@@ -111,6 +111,25 @@ export function ContractWizard({
     round_up_to_nearest: undefined,
     usage_services: [],
     ...editingContract
+  });
+
+  const buildSubmissionData = (clientIdentifier: string): ContractWizardSubmission => ({
+    contract_name: wizardData.contract_name.trim(),
+    description: wizardData.description?.trim() || undefined,
+    company_id: clientIdentifier,
+    start_date: wizardData.start_date,
+    end_date: wizardData.end_date,
+    po_required: wizardData.po_required,
+    po_number: wizardData.po_number,
+    po_amount: wizardData.po_amount,
+    fixed_base_rate: wizardData.fixed_base_rate,
+    enable_proration: wizardData.enable_proration,
+    fixed_services: wizardData.fixed_services ?? [],
+    hourly_services: wizardData.hourly_services ?? [],
+    usage_services: wizardData.usage_services ?? [],
+    minimum_billable_time: wizardData.minimum_billable_time,
+    round_up_to_nearest: wizardData.round_up_to_nearest,
+    billing_frequency: wizardData.billing_frequency,
   });
 
   useEffect(() => {
@@ -227,26 +246,10 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const bundleName = wizardData.contract_name.trim();
-      const bundleDescription = wizardData.description?.trim();
+      const clientIdentifier = wizardData.company_id || wizardData.client_id || '';
+      const submission = buildSubmissionData(clientIdentifier);
 
-      const contractResult = await createContractFromWizard({
-        contract_name: bundleName,
-        description: bundleDescription || undefined,
-        company_id: wizardData.company_id,
-        start_date: wizardData.start_date,
-        end_date: wizardData.end_date,
-        po_required: wizardData.po_required,
-        po_number: wizardData.po_number,
-        po_amount: wizardData.po_amount,
-        fixed_base_rate: wizardData.fixed_base_rate,
-        enable_proration: wizardData.enable_proration,
-        fixed_services: wizardData.fixed_services,
-        hourly_services: wizardData.hourly_services,
-        minimum_billable_time: wizardData.minimum_billable_time,
-        round_up_to_nearest: wizardData.round_up_to_nearest,
-        usage_services: wizardData.usage_services,
-      });
+      const contractResult = await createContractFromWizard(submission);
 
       const completedData: ContractWizardData = {
         ...wizardData,
@@ -269,6 +272,12 @@ export function ContractWizard({
   };
 
   const handleSaveDraft = async () => {
+    const basicsValid = validateStep(0);
+    if (!basicsValid) {
+      setCurrentStep(0);
+      return;
+    }
+
     if (!(wizardData.client_id || wizardData.company_id)) {
       setErrors(prev => ({ ...prev, [currentStep]: 'Select a client before saving as draft' }));
       return;
@@ -276,13 +285,20 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const clientIdentifier = wizardData.client_id || wizardData.company_id;
-      onComplete?.({
+      const clientIdentifier = wizardData.company_id || wizardData.client_id || '';
+      const submission = buildSubmissionData(clientIdentifier);
+      const contractResult = await createContractFromWizard(submission, { isDraft: true });
+
+      const draftData: ContractWizardData = {
         ...wizardData,
+        contract_id: contractResult.contract_id,
         company_id: clientIdentifier ?? '',
         client_id: clientIdentifier,
-        is_draft: true
-      });
+        is_draft: true,
+      };
+
+      setWizardData(draftData);
+      onComplete?.(draftData);
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving contract draft:', error);
