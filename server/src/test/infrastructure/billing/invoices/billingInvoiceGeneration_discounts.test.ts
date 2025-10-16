@@ -3,7 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, ensureDefaultBillingSettings } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, ensureDefaultBillingSettings, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -108,6 +108,7 @@ async function configureNyTax(taxPercentage = 10) {
   });
 
   await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: false });
+  await ensureClientPlanBundlesTable(context);
 
   return taxRateId;
 }

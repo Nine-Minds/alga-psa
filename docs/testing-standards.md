@@ -656,6 +656,10 @@ describe('Companies API E2E Tests', () => {
 - Verify side effects (database changes, API calls, etc.)
 - Use `toThrow()` for error testing
 
+### 11. Use Updated Billing Terminology
+- Refer to billing `contract lines` and `contracts` instead of the legacy `plans` and `bundles`.
+- When bringing in legacy helpers (e.g., `createFixedPlanAssignment`), alias them to the new naming in your test files so intent stays aligned with the schema.
+
 ## Additional Resources
 
 - [Vitest Documentation](https://vitest.dev/)

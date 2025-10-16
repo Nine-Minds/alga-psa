@@ -442,52 +442,27 @@ describe('Credit Expiration Prioritization Tests', () => {
       credit_expiration_notification_days: [7, 1]
     });
 
-    // Create NY tax rate (10%)
-    const nyTaxRateId = await context.createEntity('tax_rates', {
-      region: 'US-NY',
-      tax_percentage: 10.0,
-      description: 'NY Test Tax',
-      start_date: '2025-01-01'
-    }, 'tax_rate_id');
-
-    // Set up client tax settings
-    await context.db('client_tax_settings').insert({
-      client_id: client_id,
-      tenant: context.tenantId,
-      tax_rate_id: nyTaxRateId,
-      is_reverse_charge_applicable: false
-    });
-
-    // Create a service
-    const service = await context.createEntity('service_catalog', {
-      service_name: 'Standard Service',
-      service_type: 'Fixed',
-      default_rate: 20000, // $200.00
-      unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true
-    }, 'service_id');
-
-    // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Standard Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      contract_line_type: 'Fixed'
-    }, 'contract_line_id');
-
-    // Link service to plan
-    await context.db('contract_line_services').insert({
-      contract_line_id: planId,
-      service_id: service,
-      tenant: context.tenantId,
-      quantity: 1
-    });
-
-    // Create a billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
+
+    const service = await createTestService(context, {
+      service_name: 'Standard Service',
+      billing_method: 'fixed',
+      default_rate: 20000, // $200.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY'
+    });
+
+    await createFixedPlanAssignment(context, service, {
+      planName: 'Standard Plan',
+      baseRateCents: 20000,
+      detailBaseRateCents: 20000,
+      quantity: 1,
+      billingFrequency: 'monthly',
+      startDate,
+      clientId: client_id
+    });
 
     const billingCycleId = await context.createEntity('client_billing_cycles', {
       client_id: client_id,
@@ -496,16 +471,6 @@ describe('Credit Expiration Prioritization Tests', () => {
       period_end_date: endDate,
       effective_date: startDate
     }, 'billing_cycle_id');
-
-    // Link plan to client
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: client_id,
-      contract_line_id: planId,
-      tenant: context.tenantId,
-      start_date: startDate,
-      is_active: true
-    });
 
     // Step 1: Create a credit with expiration date
     const futureDate = new Date();
@@ -670,31 +635,6 @@ describe('Credit Expiration Prioritization Tests', () => {
       credit_expiration_notification_days: [7, 1]
     });
 
-    const service = await createTestService(context, {
-      service_name: 'Standard Service',
-      billing_method: 'fixed',
-      default_rate: 10000,
-      unit_of_measure: 'unit',
-      tax_region: 'US-NY'
-    });
-
-    // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Standard Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      contract_line_type: 'Fixed'
-    }, 'contract_line_id');
-
-    // Link service to plan
-    await context.db('contract_line_services').insert({
-      contract_line_id: planId,
-      service_id: service,
-      tenant: context.tenantId,
-      quantity: 1
-    });
-
-    // Create billing cycles for multiple invoices
     const now = createTestDate();
     
     // First billing cycle (previous month)
@@ -721,14 +661,22 @@ describe('Credit Expiration Prioritization Tests', () => {
       effective_date: startDate2
     }, 'billing_cycle_id');
 
-    // Link plan to client
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: client_id,
-      contract_line_id: planId,
-      tenant: context.tenantId,
-      start_date: startDate1, // Start from the first billing cycle
-      is_active: true
+    const service = await createTestService(context, {
+      service_name: 'Standard Service',
+      billing_method: 'fixed',
+      default_rate: 10000,
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY'
+    });
+
+    await createFixedPlanAssignment(context, service, {
+      planName: 'Standard Plan',
+      baseRateCents: 10000,
+      detailBaseRateCents: 10000,
+      quantity: 1,
+      billingFrequency: 'monthly',
+      startDate: startDate1,
+      clientId: client_id
     });
 
     // Step 1: Create three credits with different expiration dates
@@ -1004,6 +952,11 @@ describe('Credit Expiration Prioritization Tests', () => {
       credit_expiration_notification_days: [7, 1]
     });
 
+    // Create a billing cycle
+    const now = createTestDate();
+    const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const endDate = Temporal.PlainDate.from(now).toString();
+
     const service = await createTestService(context, {
       service_name: 'Standard Service',
       billing_method: 'fixed',
@@ -1012,26 +965,15 @@ describe('Credit Expiration Prioritization Tests', () => {
       tax_region: 'US-NY'
     });
 
-    // Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Standard Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      contract_line_type: 'Fixed'
-    }, 'contract_line_id');
-
-    // Link service to plan
-    await context.db('contract_line_services').insert({
-      contract_line_id: planId,
-      service_id: service,
-      tenant: context.tenantId,
-      quantity: 1
+    await createFixedPlanAssignment(context, service, {
+      planName: 'Standard Plan',
+      baseRateCents: 15000,
+      detailBaseRateCents: 15000,
+      quantity: 1,
+      billingFrequency: 'monthly',
+      startDate,
+      clientId: client_id
     });
-
-    // Create a billing cycle
-    const now = createTestDate();
-    const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-    const endDate = Temporal.PlainDate.from(now).toString();
     
     const billingCycleId = await context.createEntity('client_billing_cycles', {
       client_id: client_id,
@@ -1040,16 +982,6 @@ describe('Credit Expiration Prioritization Tests', () => {
       period_end_date: endDate,
       effective_date: startDate
     }, 'billing_cycle_id');
-
-    // Link plan to client
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: client_id,
-      contract_line_id: planId,
-      tenant: context.tenantId,
-      start_date: startDate,
-      is_active: true
-    });
 
     // Step 1: Create two credits - one that will expire and one that will remain active
     

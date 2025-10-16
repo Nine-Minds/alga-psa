@@ -14,7 +14,8 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   createFixedPlanAssignment,
-  addServiceToFixedPlan
+  addServiceToFixedPlan,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -116,6 +117,7 @@ describe('Negative Invoice Credit Tests', () => {
       taxPercentage: 10.0
     });
     await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+    await ensureClientPlanBundlesTable(context);
   }
 
   beforeAll(async () => {

@@ -96,6 +96,7 @@ export interface IClientContractLine extends TenantEntity {
   is_active: boolean;
   custom_rate?: number;
   client_contract_id?: string; // Reference to the client contract assignment
+  contract_id?: string; // Reference to the contract (for pricing schedule lookups)
   // Added fields from join with contract_lines
   contract_line_name?: string;
   billing_frequency?: string;

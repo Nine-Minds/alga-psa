@@ -445,6 +445,7 @@ export class BillingEngine {
         'cc.start_date',
         'cc.end_date',
         'cc.client_contract_id',
+        'cc.contract_id as contract_id',
         'c.contract_name'
         // REMOVED: 'sc.service_id' - Not needed for contract-level custom rates
       )
@@ -457,6 +458,7 @@ export class BillingEngine {
         'cc.start_date',
         'cc.end_date',
         'cc.client_contract_id',
+        'cc.contract_id',
         'c.contract_name'
         // REMOVED: 'sc.service_id' - Grouping by service_id caused duplicates
       );
@@ -476,6 +478,7 @@ export class BillingEngine {
           ? null // Pass null through
           : Math.round(parseFloat(plan.custom_rate) * 100), // Convert non-null string to cents
         client_contract_id: plan.client_contract_id,
+        contract_id: plan.contract_id,
         contract_line_name: plan.contract_line_name,
         billing_frequency: plan.billing_frequency,
         contract_name: plan.contract_name,
@@ -631,12 +634,42 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    // --- Custom Rate Check (Contracts) ---
+    // --- Custom Rate Check (Contracts & Pricing Schedules) ---
     // Check if a custom rate is defined for this plan assignment (provided via contract association)
+    // or if an active pricing schedule overrides the rate for this billing period.
+    // Pricing schedules take precedence over contract-level custom rates.
     // Ensure custom_rate is not null and not undefined before using it.
-    if (clientContractLine.custom_rate !== null && clientContractLine.custom_rate !== undefined) {
-      // Assuming custom_rate is already in cents. Add logging to confirm.
-      console.log(`Using custom rate ${clientContractLine.custom_rate} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || 'N/A'}`);
+
+    let effectiveCustomRate = clientContractLine.custom_rate;
+
+    // Check for active pricing schedule that applies to this billing period
+    if (clientContractLine.contract_id) {
+      try {
+        const activePricingSchedule = await this.knex('contract_pricing_schedules')
+          .where({
+            tenant: this.tenant,
+            contract_id: clientContractLine.contract_id
+          })
+          .where('effective_date', '<=', billingPeriod.endDate)
+          .where(function(builder) {
+            builder.whereNull('end_date')
+              .orWhere('end_date', '>', billingPeriod.startDate);
+          })
+          .orderBy('effective_date', 'desc')
+          .first();
+
+        if (activePricingSchedule && activePricingSchedule.custom_rate !== null && activePricingSchedule.custom_rate !== undefined) {
+          effectiveCustomRate = activePricingSchedule.custom_rate;
+          console.log(`[PRICING_SCHEDULE] Using pricing schedule rate ${activePricingSchedule.custom_rate} cents for contract ${clientContractLine.contract_id} during period ${billingPeriod.startDate} to ${billingPeriod.endDate}. Schedule ID: ${activePricingSchedule.schedule_id}`);
+        }
+      } catch (error) {
+        console.warn(`[PRICING_SCHEDULE] Error checking for active pricing schedule for contract ${clientContractLine.contract_id}:`, error);
+      }
+    }
+
+    if (effectiveCustomRate !== null && effectiveCustomRate !== undefined) {
+      // Assuming effectiveCustomRate is already in cents. Add logging to confirm.
+      console.log(`Using custom rate ${effectiveCustomRate} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || 'N/A'}`);
 
       // If a custom rate exists, create a single charge item for the entire plan at that rate.
       // This charge represents the entire plan when a custom contract-level rate is applied.
@@ -645,8 +678,8 @@ export class BillingEngine {
         type: 'fixed',
         serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Contract: ${clientContractLine.contract_name})` : ''}`,
         quantity: 1, // Represents the single contract-level plan item
-        rate: clientContractLine.custom_rate, // Use the custom rate (assumed cents)
-        total: clientContractLine.custom_rate, // Total is the custom rate (assumed cents)
+        rate: effectiveCustomRate, // Use the effective custom rate (from schedule or contract) (assumed cents)
+        total: effectiveCustomRate, // Total is the effective custom rate (assumed cents)
         // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
         client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
         client_contract_id: clientContractLine.client_contract_id || undefined, // Use correct property name

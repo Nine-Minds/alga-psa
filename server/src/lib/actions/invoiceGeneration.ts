@@ -37,6 +37,17 @@ import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated imp
 import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateActions';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
+const POSTGRES_UNDEFINED_TABLE = '42P01';
+
+function isMissingRelationError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === POSTGRES_UNDEFINED_TABLE
+  );
+}
+
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
   return charge.type === 'fixed';
 }
@@ -489,21 +500,28 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   // Check for Purchase Order requirements
-  const clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_plan_bundles')
-      .where({
-        client_id,
-        tenant,
-        is_active: true
-      })
-      .where(function() {
-        this.where('start_date', '<=', cycleEnd)
-          .where(function() {
-            this.whereNull('end_date')
-              .orWhere('end_date', '>=', cycleStart);
-          });
-      });
-  });
+  let clientContracts: Array<{ po_required?: boolean; po_number?: string }> = [];
+  try {
+    clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('client_plan_bundles')
+        .where({
+          client_id,
+          tenant,
+          is_active: true
+        })
+        .where(function() {
+          this.where('start_date', '<=', cycleEnd)
+            .where(function() {
+              this.whereNull('end_date')
+                .orWhere('end_date', '>=', cycleStart);
+            });
+        });
+    });
+  } catch (error) {
+    if (!isMissingRelationError(error)) {
+      throw error;
+    }
+  }
 
   // Validate PO requirements for active contracts
   for (const contract of clientContracts) {
@@ -650,6 +668,59 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
   });
 
   return { file_id: fileRecord.file_id };
+}
+
+export async function downloadInvoicePDF(invoiceId: string): Promise<{ pdfData: number[]; invoiceNumber: string }> {
+  try {
+    console.log('[downloadInvoicePDF] Called with invoiceId:', invoiceId);
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Check permissions within transaction
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'invoice', 'read', trx)) {
+        throw new Error('Permission denied: Cannot download invoice PDFs');
+      }
+    });
+
+    // Get invoice details
+    const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .first();
+    });
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    console.log('[downloadInvoicePDF] Generating PDF for invoice:', invoice.invoice_number);
+    // Use the PDF generation service to generate the PDF
+    const pdfGenerationService = createPDFGenerationService(tenant);
+
+    const pdfBuffer = await pdfGenerationService.generatePDF({
+      invoiceId,
+      userId: currentUser.user_id
+    });
+
+    console.log('[downloadInvoicePDF] PDF generated, size:', pdfBuffer.length, 'bytes');
+    // Convert Buffer to plain array for serialization across server/client boundary
+    return {
+      pdfData: Array.from(pdfBuffer),
+      invoiceNumber: invoice.invoice_number
+    };
+  } catch (error) {
+    console.error('[downloadInvoicePDF] Error:', error);
+    console.error('[downloadInvoicePDF] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    throw error;
+  }
 }
 
 export async function createInvoiceFromBillingResult(

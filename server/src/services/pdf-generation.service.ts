@@ -46,6 +46,21 @@ export class PDFGenerationService {
     this.tenant = config.tenant;
   }
 
+  async generatePDF(options: { invoiceId?: string; documentId?: string; userId: string }): Promise<Buffer> {
+    let htmlContent: string;
+
+    if (options.invoiceId) {
+      htmlContent = await this.getInvoiceHtml(options.invoiceId);
+    } else if (options.documentId) {
+      htmlContent = await this.getDocumentHtml(options.documentId);
+    } else {
+      throw new Error('Either invoiceId or documentId must be provided');
+    }
+
+    const pdfBuffer = await this.generatePDFBuffer(htmlContent);
+    return Buffer.from(pdfBuffer);
+  }
+
   async generateAndStore(options: PDFGenerationOptions): Promise<FileStore> {
     let htmlContent: string;
     let entityId: string;
@@ -61,7 +76,7 @@ export class PDFGenerationService {
     } else if (options.documentId) {
       htmlContent = await this.getDocumentHtml(options.documentId);
       entityId = options.documentId;
-      
+
       const document = await runWithTenant(this.tenant, () => getDocument(options.documentId!));
       if (!document) {
         throw new Error(`Document ${options.documentId} not found.`);

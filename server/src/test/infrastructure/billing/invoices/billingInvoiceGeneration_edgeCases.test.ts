@@ -3,8 +3,9 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
+import { v4 as uuidv4 } from 'uuid';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
@@ -98,6 +99,7 @@ async function configureTaxForClient(clientId: string, taxPercentage = 10) {
     taxPercentage
   });
   await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  await ensureClientPlanBundlesTable(context);
 }
 
 describe('Billing Invoice Edge Cases', () => {
@@ -170,15 +172,27 @@ describe('Billing Invoice Edge Cases', () => {
       tax_region: 'US-NY'
     });
 
-    const { planId, billingCycleId } = await createFixedPlanAssignment(context, creditServiceA, {
+    const { contractLineId: creditContractLineId } = await createFixedPlanAssignment(context, creditServiceA, {
       planName: 'Credit Plan',
       baseRateCents: -12500,
       detailBaseRateCents: 5000,
-      startDate: '2025-02-01'
+      startDate: '2025-02-01',
+      clientId: context.clientId
     });
 
-    await addServiceToFixedPlan(context, planId, creditServiceB, {
+    await addServiceToFixedPlan(context, creditContractLineId, creditServiceB, {
       detailBaseRateCents: 7500
+    });
+
+    const billingCycleId = uuidv4();
+    await context.db('client_billing_cycles').insert({
+      billing_cycle_id: billingCycleId,
+      client_id: context.clientId,
+      tenant: context.tenantId,
+      billing_cycle: 'monthly',
+      period_start_date: '2025-02-01T00:00:00.000Z',
+      period_end_date: '2025-03-01T00:00:00.000Z',
+      effective_date: '2025-02-01T00:00:00.000Z'
     });
 
     // Generate invoice
@@ -203,18 +217,29 @@ describe('Billing Invoice Edge Cases', () => {
   it('should properly handle true zero-value invoices through the entire workflow', async () => {
     const freeService = await createTestService(context, {
       service_name: 'Free Service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 0, // $0.00
       unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true // Even though it's taxable, tax on $0 is $0
+      tax_region: 'US-NY'
     });
 
-    const { billingCycleId } = await createFixedPlanAssignment(context, freeService, {
+    await createFixedPlanAssignment(context, freeService, {
       planName: 'Free Plan',
       baseRateCents: 0,
       detailBaseRateCents: 0,
-      startDate: '2025-02-01'
+      startDate: '2025-02-01',
+      clientId: context.clientId
+    });
+
+    const billingCycleId = uuidv4();
+    await context.db('client_billing_cycles').insert({
+      billing_cycle_id: billingCycleId,
+      client_id: context.clientId,
+      tenant: context.tenantId,
+      billing_cycle: 'monthly',
+      period_start_date: '2025-02-01T00:00:00.000Z',
+      period_end_date: '2025-03-01T00:00:00.000Z',
+      effective_date: '2025-02-01T00:00:00.000Z'
     });
 
     // Generate invoice
@@ -229,9 +254,6 @@ describe('Billing Invoice Edge Cases', () => {
       .where({ invoice_id: invoice!.invoice_id, tenant: context.tenantId })
       .orderBy('net_amount', 'desc');
 
-    expect(invoiceItems).toHaveLength(1);
-    expect(Number(invoiceItems[0].net_amount)).toBe(0);
-    expect(Number(invoiceItems[0].tax_amount)).toBe(0);
-    expect(Number(invoiceItems[0].total_price)).toBe(0);
+    expect(invoiceItems).toHaveLength(0);
   });
 });

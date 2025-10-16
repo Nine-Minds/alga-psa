@@ -65,7 +65,21 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
     const today = new Date();
     const yearStart = new Date(today.getFullYear(), 0, 1);
 
-    // Query to get contract revenue data
+    // First get aggregated invoice data by client to avoid cartesian product
+    const invoicesByClient = await knex('invoices')
+      .where({ tenant })
+      .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
+      .select('client_id')
+      .select(knex.raw('SUM(total_amount) as total_billed_ytd'))
+      .groupBy('client_id');
+
+    // Create a map for quick lookup
+    const invoiceMap = new Map<string, number>();
+    for (const inv of invoicesByClient) {
+      invoiceMap.set(inv.client_id, inv.total_billed_ytd || 0);
+    }
+
+    // Query to get contract data (without invoices to avoid join issues)
     const data = await knex('contracts as c')
       .leftJoin('client_contracts as cc', function joinClientContracts() {
         this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
@@ -73,23 +87,19 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
       .leftJoin('clients as cl', function joinClients() {
         this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
       })
-      .leftJoin('invoices as i', function joinInvoices() {
-        this.on('cc.client_id', '=', 'i.client_id').andOn('cc.tenant', '=', 'i.tenant');
-      })
-      .where({ 'c.tenant': tenant, 'c.is_active': true })
+      .where({ 'c.tenant': tenant })
       .where(builder => {
         builder.where('cc.is_active', true).orWhereNull('cc.client_contract_id');
       })
       .select(
         'c.contract_id',
         'c.contract_name',
+        'c.is_active',
         'cl.client_name',
+        'cc.client_id',
         'cc.client_contract_id',
         'cc.start_date',
-        'cc.end_date',
-        'i.invoice_id',
-        'i.total_amount',
-        'i.invoice_date'
+        'cc.end_date'
       );
 
     // Process data to aggregate by contract-client pair
@@ -99,38 +109,35 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
       const key = `${row.contract_id}-${row.client_name || 'Unknown'}`;
 
       if (!aggregatedMap.has(key)) {
-        // Determine status
-        let status: 'active' | 'upcoming' | 'expired' = 'active';
-        if (row.start_date) {
-          const startDate = new Date(row.start_date);
-          if (startDate > today) {
-            status = 'upcoming';
+        // Determine status based on contract active flag first, then date logic
+        let status: 'active' | 'upcoming' | 'expired' = row.is_active ? 'active' : 'expired';
+
+        // Only apply date logic if contract is still active
+        if (row.is_active) {
+          if (row.start_date) {
+            const startDate = new Date(row.start_date);
+            if (startDate > today) {
+              status = 'upcoming';
+            }
+          }
+          if (row.end_date) {
+            const endDate = new Date(row.end_date);
+            if (endDate < today) {
+              status = 'expired';
+            }
           }
         }
-        if (row.end_date) {
-          const endDate = new Date(row.end_date);
-          if (endDate < today) {
-            status = 'expired';
-          }
-        }
+
+        // Look up invoice total from the map using client_id
+        const totalBilledYtd = row.client_id ? (invoiceMap.get(row.client_id) || 0) : 0;
 
         aggregatedMap.set(key, {
           contract_name: row.contract_name,
           client_name: row.client_name || 'Unknown Client',
           monthly_recurring: 0, // Will be calculated from contract lines
-          total_billed_ytd: 0,
-          status,
-          invoices: []
+          total_billed_ytd: totalBilledYtd,
+          status
         });
-      }
-
-      const item = aggregatedMap.get(key)!;
-      if (row.invoice_id && row.invoice_date) {
-        const invoiceDate = new Date(row.invoice_date);
-        if (invoiceDate >= yearStart) {
-          item.total_billed_ytd += row.total_amount || 0;
-        }
-        item.invoices.push(row);
       }
     }
 

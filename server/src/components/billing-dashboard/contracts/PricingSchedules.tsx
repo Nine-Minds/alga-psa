@@ -192,14 +192,14 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
                     </h4>
                     <div className="relative">
                       {/* Timeline line */}
-                      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-300" style={{ left: '12px' }}></div>
+                      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-300" style={{ left: '10px' }}></div>
 
                       {/* Timeline items */}
                       <div className="space-y-4">
                         {schedules.map((schedule, index) => (
                           <div key={schedule.schedule_id} className="relative pl-8 pb-4">
                             {/* Timeline dot */}
-                            <div className="absolute left-2 top-1 w-5 h-5 rounded-full bg-blue-500 border-4 border-white"></div>
+                            <div className="absolute w-5 h-5 rounded-full bg-blue-500 border-4 border-white" style={{ left: '1px', top: '1px' }}></div>
 
                             <div className="bg-white p-3 rounded border shadow-sm">
                               <div className="flex justify-between items-start mb-2">

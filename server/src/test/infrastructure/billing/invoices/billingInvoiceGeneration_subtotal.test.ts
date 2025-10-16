@@ -9,7 +9,8 @@ import {
   addServiceToFixedPlan,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
-  ensureDefaultBillingSettings
+  ensureDefaultBillingSettings,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -113,6 +114,7 @@ async function configureDefaultTax() {
 async function ensureBillingDefaults() {
   await configureDefaultTax();
   await ensureDefaultBillingSettings(context);
+  await ensureClientPlanBundlesTable(context);
 }
 
 async function getInvoiceItems(invoiceId: string) {
