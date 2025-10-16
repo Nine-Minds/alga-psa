@@ -7,6 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "sample:create-service-category": "tsx samples/node/create-service-category.ts",
     "sample:create-client": "tsx samples/node/create-client.ts",
+    "sample:extension-storage": "tsx samples/node/extension-storage.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts"
   },
   "dependencies": {
