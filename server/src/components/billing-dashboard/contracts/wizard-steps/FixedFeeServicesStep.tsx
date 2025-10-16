@@ -39,7 +39,9 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     try {
       const result = await getServices();
       if (result && Array.isArray(result.services)) {
-        setServices(result.services);
+        // Filter to only show services with billing_method === 'fixed'
+        const fixedServices = result.services.filter(service => service.billing_method === 'fixed');
+        setServices(fixedServices);
       }
     } catch (error) {
       console.error('Error loading services:', error);

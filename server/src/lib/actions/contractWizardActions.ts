@@ -206,6 +206,46 @@ export async function createContractFromWizard(
     const filteredHourlyServices = (submission.hourly_services || []).filter(
       (service) => service?.service_id
     );
+    const filteredUsageServices = (submission.usage_services || []).filter(
+      (service) => service?.service_id
+    );
+
+    // Validate that all services match their contract line type
+    const allServiceIds = [
+      ...filteredFixedServices.map(s => s.service_id),
+      ...filteredHourlyServices.map(s => s.service_id),
+      ...filteredUsageServices.map(s => s.service_id)
+    ];
+
+    if (allServiceIds.length > 0) {
+      const services = await trx('service_catalog')
+        .whereIn('service_id', allServiceIds)
+        .select('service_id', 'service_name', 'billing_method');
+
+      // Validate fixed services
+      for (const fixedService of filteredFixedServices) {
+        const service = services.find(s => s.service_id === fixedService.service_id);
+        if (service && service.billing_method !== 'fixed') {
+          throw new Error(`Service "${service.service_name}" has billing method "${service.billing_method}" but can only be added to fixed fee contract lines`);
+        }
+      }
+
+      // Validate hourly services
+      for (const hourlyService of filteredHourlyServices) {
+        const service = services.find(s => s.service_id === hourlyService.service_id);
+        if (service && service.billing_method !== 'hourly') {
+          throw new Error(`Service "${service.service_name}" has billing method "${service.billing_method}" but can only be added to hourly contract lines`);
+        }
+      }
+
+      // Validate usage services
+      for (const usageService of filteredUsageServices) {
+        const service = services.find(s => s.service_id === usageService.service_id);
+        if (service && service.billing_method !== 'usage') {
+          throw new Error(`Service "${service.service_name}" has billing method "${service.billing_method}" but can only be added to usage-based contract lines`);
+        }
+      }
+    }
 
     const createdContractLineIds: string[] = [];
     let primaryContractLineId: string | undefined;

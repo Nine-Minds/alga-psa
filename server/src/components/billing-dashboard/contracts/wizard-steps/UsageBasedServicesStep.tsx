@@ -41,7 +41,9 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
     try {
       const result = await getServices();
       if (result && Array.isArray(result.services)) {
-        setServices(result.services);
+        // Filter to only show services with billing_method === 'usage'
+        const usageServices = result.services.filter(service => service.billing_method === 'usage');
+        setServices(usageServices);
       }
     } catch (error) {
       console.error('Error loading services:', error);

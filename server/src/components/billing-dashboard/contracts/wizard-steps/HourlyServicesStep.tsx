@@ -41,7 +41,9 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     try {
       const result = await getServices();
       if (result && Array.isArray(result.services)) {
-        setServices(result.services);
+        // Filter to only show services with billing_method === 'hourly'
+        const hourlyServices = result.services.filter(service => service.billing_method === 'hourly');
+        setServices(hourlyServices);
       }
     } catch (error) {
       console.error('Error loading services:', error);
