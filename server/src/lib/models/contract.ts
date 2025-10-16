@@ -32,20 +32,54 @@ const Contract = {
     }
 
     try {
-      // Check if any invoices exist for clients assigned to this contract
-      // Join through: invoices -> client_contracts -> contracts
-      const result = await db('invoices as i')
-        .join('client_contracts as cc', function joinClientContracts() {
-          this.on('i.client_id', '=', 'cc.client_id')
-            .andOn('i.tenant', '=', 'cc.tenant');
+      // Check if any invoice items exist that reference client_contracts for this specific contract
+      const result = await db('invoice_items as ii')
+        .join('client_contracts as cc', function() {
+          this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
+              .andOn('ii.tenant', '=', 'cc.tenant');
         })
-        .where({ 'cc.contract_id': contractId, 'cc.tenant': tenant })
-        .count('i.invoice_id as count')
+        .where({
+          'cc.contract_id': contractId,
+          'cc.tenant': tenant
+        })
+        .count('ii.item_id as count')
         .first() as { count?: string };
 
       return Number(result?.count ?? 0) > 0;
     } catch (error) {
       console.error(`Error checking contract ${contractId} invoices:`, error);
+      throw error;
+    }
+  },
+
+  async hasActiveContractForClient(clientId: string, excludeContractId?: string): Promise<boolean> {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for checking client active contracts');
+    }
+
+    try {
+      // Check if client has any active contracts (excluding the current one if updating)
+      let query = db('client_contracts as cc')
+        .join('contracts as c', function joinContracts() {
+          this.on('cc.contract_id', '=', 'c.contract_id')
+            .andOn('cc.tenant', '=', 'c.tenant');
+        })
+        .where({
+          'cc.client_id': clientId,
+          'cc.tenant': tenant,
+          'c.status': 'active'
+        });
+
+      if (excludeContractId) {
+        query = query.andWhere('c.contract_id', '!=', excludeContractId);
+      }
+
+      const result = await query.count('cc.client_contract_id as count').first() as { count?: string };
+
+      return Number(result?.count ?? 0) > 0;
+    } catch (error) {
+      console.error(`Error checking active contracts for client ${clientId}:`, error);
       throw error;
     }
   },
