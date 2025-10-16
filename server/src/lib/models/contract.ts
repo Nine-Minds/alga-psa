@@ -57,16 +57,24 @@ const Contract = {
     }
 
     try {
-      const inUse = await Contract.isInUse(contractId);
-      if (inUse) {
-        throw new Error('Cannot delete contract that is assigned to active clients');
+      // Check if contract has any invoices - cannot delete if invoices exist
+      const hasInvoices = await Contract.hasInvoices(contractId);
+      if (hasInvoices) {
+        throw new Error('Cannot delete contract that has associated invoices');
       }
 
       await db.transaction(async (trx) => {
+        // Delete client contract assignments
+        await trx('client_contracts')
+          .where({ contract_id: contractId, tenant })
+          .delete();
+
+        // Delete contract line mappings
         await trx('contract_line_mappings')
           .where({ contract_id: contractId, tenant })
           .delete();
 
+        // Delete the contract itself
         const deleted = await trx('contracts')
           .where({ contract_id: contractId, tenant })
           .delete();

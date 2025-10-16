@@ -143,19 +143,11 @@ export async function deleteContract(contractId: string): Promise<void> {
   }
 
   try {
-    const isInUse = await Contract.isInUse(contractId);
-    if (isInUse) {
-      throw new Error(`Cannot delete contract that is currently in use by clients in tenant ${tenant}`);
-    }
-
     await Contract.delete(contractId);
   } catch (error) {
     console.error('Error deleting contract:', error);
     if (error instanceof Error) {
-      if (error.message.includes('in use')) {
-        throw new Error(`Cannot delete contract that is currently in use by clients in tenant ${tenant}`);
-      }
-      throw error; // Preserve other specific error messages
+      throw error; // Preserve specific error messages from the model
     }
     throw new Error(`Failed to delete contract in tenant ${tenant}: ${error}`);
   }
