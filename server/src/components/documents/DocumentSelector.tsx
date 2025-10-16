@@ -281,7 +281,7 @@ export default function DocumentSelector({
                                     >
                                         {isSaving ? (
                                             <>
-                                                <LoadingIndicator text="Saving..." spinnerProps={{ size: "xs" }} />
+                                                <LoadingIndicator text="Saving..." spinnerProps={{ size: "sm" }} />
                                             </>
                                         ) : (
                                             singleSelect ? 'Select Document' : 'Associate Selected'

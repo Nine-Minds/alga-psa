@@ -762,7 +762,7 @@ export function UsagePlanConfiguration({
           {/* Save Button */}
           <div className="flex justify-end pt-4">
             <Button id="save-all-service-configs-button" onClick={handleSave} disabled={saving || loading}>
-              {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save All Configurations" /> : "Save All Configurations"}
+              {saving ? <LoadingIndicator spinnerProps={{ size: "sm" }} text="Save All Configurations" /> : "Save All Configurations"}
             </Button>
           </div>
         </CardContent>

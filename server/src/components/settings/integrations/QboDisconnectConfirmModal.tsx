@@ -55,7 +55,7 @@ const QboDisconnectConfirmModal: React.FC<QboDisconnectConfirmModalProps> = ({
             id="qbo-disconnect-confirm-button" // Added ID
           >
             {isDisconnecting ? (
-              <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Confirm Disconnect" className="mr-2" />
+              <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Confirm Disconnect" className="mr-2" />
             ) : (
               'Confirm Disconnect'
             )}

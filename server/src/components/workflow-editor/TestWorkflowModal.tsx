@@ -280,7 +280,7 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
           <div className="space-y-2">
             <Label htmlFor="event-name">Event Type</Label>
             {isLoadingCatalog ? (
-              <LoadingIndicator text="Loading event types..." spinnerProps={{ size: "xs" }} />
+              <LoadingIndicator text="Loading event types..." spinnerProps={{ size: "sm" }} />
             ) : (
               <CustomSelect
                 id="event-name"

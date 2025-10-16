@@ -1,28 +1,26 @@
 import React from 'react';
 
 export interface SpinnerProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg';
-  color?: string; // e.g., 'border-purple-500', 'border-blue-500'
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 const Spinner: React.FC<SpinnerProps> = ({
   size = 'md',
-  color = 'border-primary-500',
   className = '',
 }) => {
   const sizeClasses = {
-    xs: 'h-4 w-4',
-    sm: 'h-8 w-8',
-    md: 'h-12 w-12',
-    lg: 'h-16 w-16',
+    sm: 'h-10 w-10 border-2',
+    md: 'h-12 w-12 border-[6px]',
+    lg: 'h-16 w-16 border-[8px]',
   };
 
   return (
     <div className={`flex items-center justify-center ${className}`}>
-      <div
-        className={`animate-spin rounded-full border-t-2 border-b-2 ${sizeClasses[size]} ${color}`}
-      ></div>
+      <div className={`spinner ${sizeClasses[size]}`} role="status" aria-label="Loading">
+        <div className="spinner-inner" />
+        <span className="sr-only">Loading</span>
+      </div>
     </div>
   );
 };
