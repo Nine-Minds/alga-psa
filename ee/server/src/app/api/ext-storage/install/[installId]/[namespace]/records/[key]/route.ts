@@ -7,7 +7,6 @@ import type {
   StorageGetRequest,
   StoragePutRequest,
 } from '@/lib/extensions/storage/v2/types';
-import { isStorageApiEnabled } from '@/lib/extensions/storage/v2/config';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import type { Knex } from 'knex';
@@ -124,9 +123,6 @@ export async function GET(
   { params }: { params: { installId: string; namespace: string; key: string } },
 ) {
   try {
-    if (!isStorageApiEnabled()) {
-      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
-    }
     const ifRevisionHeader = req.headers.get('if-revision-match');
     const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);
@@ -150,9 +146,6 @@ export async function PUT(
   { params }: { params: { installId: string; namespace: string; key: string } },
 ) {
   try {
-    if (!isStorageApiEnabled()) {
-      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
-    }
     const body = putSchema.parse(await req.json());
     const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);
@@ -180,9 +173,6 @@ export async function DELETE(
   { params }: { params: { installId: string; namespace: string; key: string } },
 ) {
   try {
-    if (!isStorageApiEnabled()) {
-      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
-    }
     const search = deleteQuerySchema.parse(
       Object.fromEntries(new URL(req.url).searchParams.entries()),
     );

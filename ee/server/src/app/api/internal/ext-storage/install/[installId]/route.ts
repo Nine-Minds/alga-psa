@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getStorageServiceForInstall } from '@/lib/extensions/storage/v2/factory';
-import { isStorageApiEnabled } from '@/lib/extensions/storage/v2/config';
 import {
   StorageServiceError,
   StorageValidationError,
@@ -112,10 +111,6 @@ export async function POST(
   { params }: { params: { installId: string } }
 ) {
   try {
-    if (!isStorageApiEnabled()) {
-      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
-    }
-
     ensureRunnerAuth(req);
 
     const raw = await req.json();

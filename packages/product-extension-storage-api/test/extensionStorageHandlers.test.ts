@@ -37,15 +37,12 @@ describe('product-extension-storage-api handlers', () => {
   let installId = '';
   let originalEdition: string | undefined;
   let originalPublicEdition: string | undefined;
-  let originalFlag: string | undefined;
   let getCurrentUserSpy: ReturnType<typeof vi.spyOn> | null = null;
   let hasPermissionSpy: ReturnType<typeof vi.spyOn> | null = null;
 
   beforeAll(async () => {
-    originalFlag = process.env.EXT_STORAGE_API_ENABLED;
     originalEdition = process.env.EDITION;
     originalPublicEdition = process.env.NEXT_PUBLIC_EDITION;
-    process.env.EXT_STORAGE_API_ENABLED = 'true';
     process.env.EDITION = 'ee';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
@@ -58,11 +55,6 @@ describe('product-extension-storage-api handlers', () => {
 
   afterAll(async () => {
     await testHelpers.afterAll();
-    if (originalFlag === undefined) {
-      delete process.env.EXT_STORAGE_API_ENABLED;
-    } else {
-      process.env.EXT_STORAGE_API_ENABLED = originalFlag;
-    }
     if (originalEdition === undefined) {
       delete process.env.EDITION;
     } else {

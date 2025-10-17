@@ -17,7 +17,6 @@ import {
 } from './extension-storage.helpers';
 let tenantId = '';
 let installId = '';
-let originalFlag: string | undefined;
 let originalNextRuntime: string | undefined;
 let originalSkipAppInit: string | undefined;
 const cjsRequire = createRequire(import.meta.url);
@@ -45,8 +44,6 @@ configureExtensionStorageTestDatabase();
 
 describe('Extension Storage API E2E Tests (real Next server)', () => {
   beforeAll(async () => {
-    originalFlag = process.env.EXT_STORAGE_API_ENABLED;
-    process.env.EXT_STORAGE_API_ENABLED = 'true';
     process.env.NEXT_TELEMETRY_DISABLED = process.env.NEXT_TELEMETRY_DISABLED ?? '1';
     process.env.NEXT_PUBLIC_EDITION = process.env.NEXT_PUBLIC_EDITION ?? 'enterprise';
     process.env.EDITION = process.env.EDITION ?? 'ee';
@@ -101,11 +98,6 @@ describe('Extension Storage API E2E Tests (real Next server)', () => {
       if (nextApp && typeof (nextApp as any).close === 'function') {
         await (nextApp as any).close().catch(() => undefined);
         nextApp = null;
-      }
-      if (originalFlag === undefined) {
-        delete process.env.EXT_STORAGE_API_ENABLED;
-      } else {
-        process.env.EXT_STORAGE_API_ENABLED = originalFlag;
       }
       if (originalNextRuntime === undefined) {
         delete process.env.NEXT_RUNTIME;
