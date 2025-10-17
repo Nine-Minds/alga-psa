@@ -35,6 +35,8 @@ const baseServiceSchema = z.object({
   tax_rate_id: z.union([z.string().uuid(), z.null()]).optional(), // Accept string, null, or undefined
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
+  created_at: z.string().optional(),
+  updated_at: z.string().optional()
 });
 
 // No need for refine check anymore since we only have custom_service_type_id
@@ -61,7 +63,7 @@ export type ServiceSchemaType = z.infer<typeof serviceSchema>;
 
 // Create schema: Omit service_id and tenant from the *base* schema first
 // We omit tenant because it will be added by the server-side code after validation
-const baseCreateServiceSchema = baseServiceSchema.omit({ service_id: true, tenant: true });
+const baseCreateServiceSchema = baseServiceSchema.omit({ service_id: true, tenant: true, created_at: true, updated_at: true });
 
 // No need for refine check anymore
 const refinedCreateServiceSchema = baseCreateServiceSchema;
@@ -310,7 +312,20 @@ const Service = {
       const { tenant: _, service_type_name, ...updateData } = serviceData;
 
       // No need to handle type ID changes anymore
-      let finalUpdateData = { ...updateData };
+      const finalUpdateData: Partial<IService> = { ...updateData };
+
+      if (finalUpdateData.default_rate !== undefined) {
+        const numericRate =
+          typeof finalUpdateData.default_rate === 'string'
+            ? parseFloat(finalUpdateData.default_rate)
+            : finalUpdateData.default_rate;
+
+        if (Number.isNaN(numericRate)) {
+          delete finalUpdateData.default_rate;
+        } else {
+          finalUpdateData.default_rate = Math.round(numericRate);
+        }
+      }
 
       // Ensure updateData conforms to Partial<IService> based on the *new* interface
       // Zod validation could be added here too if needed for partial updates.

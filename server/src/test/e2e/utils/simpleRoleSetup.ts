@@ -38,7 +38,7 @@ export async function setupTestUserWithPermissions(
   });
 
   // Create basic permissions for the tenant
-  const resources = ['contact', 'client', 'client', 'user', 'ticket', 'project', 'team', 'role', 'permission', 'time_entry'];
+  const resources = ['contact', 'client', 'user', 'ticket', 'project', 'team', 'role', 'permission', 'time_entry', 'service'];
   const actions = ['create', 'read', 'update', 'delete'];
   
   for (const resource of resources) {

@@ -6,6 +6,8 @@ import { IService, IServiceType } from '../../interfaces/billing.interfaces';
 import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
+import { validateArray } from 'server/src/lib/utils/validation';
+import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 
 // Interface for paginated service response
 export interface PaginatedServicesResponse {
@@ -14,48 +16,131 @@ export interface PaginatedServicesResponse {
   page: number;
   pageSize: number;
 }
-import { validateArray } from 'server/src/lib/utils/validation';
-import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 
-export async function getServices(page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> {
+export interface ServiceListOptions {
+  search?: string;
+  billing_method?: 'fixed' | 'hourly' | 'usage';
+  category_id?: string | null;
+  custom_service_type_id?: string;
+  sort?: 'service_name' | 'billing_method' | 'default_rate';
+  order?: 'asc' | 'desc';
+}
+
+export async function getServices(
+  page: number = 1,
+  pageSize: number = 999,
+  options: ServiceListOptions = {}
+): Promise<PaginatedServicesResponse> {
     try {
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
 
         // Calculate pagination offset
         const offset = (page - 1) * pageSize;
-        
+
+        type SortField = NonNullable<ServiceListOptions['sort']>;
+        const sortFields: SortField[] = ['service_name', 'billing_method', 'default_rate'];
+        const sortField: SortField = sortFields.includes(options.sort as SortField)
+          ? (options.sort as SortField)
+          : 'service_name';
+
+        const defaultOrderForSort: Record<SortField, 'asc' | 'desc'> = {
+          service_name: 'asc',
+          billing_method: 'asc',
+          default_rate: 'asc'
+        };
+
+        const sortOrder: 'asc' | 'desc' =
+          options.order === 'asc' || options.order === 'desc'
+            ? options.order
+            : defaultOrderForSort[sortField];
+
+        const sanitizedOptions: ServiceListOptions & { sort: SortField; order: 'asc' | 'desc' } = {
+          search: options.search?.trim() ? options.search.trim() : undefined,
+          billing_method: options.billing_method,
+          category_id: options.category_id,
+          custom_service_type_id: options.custom_service_type_id,
+          sort: sortField,
+          order: sortOrder
+        };
+
+        const applyFilters = (query: Knex.QueryBuilder) => {
+          if (sanitizedOptions.billing_method) {
+            query.where('sc.billing_method', sanitizedOptions.billing_method);
+          }
+
+          if (sanitizedOptions.custom_service_type_id) {
+            query.where('sc.custom_service_type_id', sanitizedOptions.custom_service_type_id);
+          }
+
+          if (sanitizedOptions.category_id !== undefined) {
+            if (sanitizedOptions.category_id === null) {
+              query.whereNull('sc.category_id');
+            } else {
+              query.where('sc.category_id', sanitizedOptions.category_id);
+            }
+          }
+
+          if (sanitizedOptions.search) {
+            const term = `%${sanitizedOptions.search}%`;
+            query.andWhere((builder) => {
+              builder
+                .whereILike('sc.service_name', term)
+                .orWhereILike('sc.description', term);
+            });
+          }
+
+          return query;
+        };
+
+        const sortColumnMap: Record<SortField, string> = {
+          service_name: 'sc.service_name',
+          billing_method: 'sc.billing_method',
+          default_rate: 'sc.default_rate'
+        };
+
+        const baseQuery = trx('service_catalog as sc').where({ 'sc.tenant': tenant });
+
         // Get total count for pagination
-        const countResult = await trx('service_catalog as sc')
-            .where({ 'sc.tenant': tenant })
-            .count('sc.service_id as count')
-            .first();
-            
+        const countQuery = applyFilters(baseQuery.clone());
+        const countResult = await countQuery
+          .count('sc.service_id as count')
+          .first();
+
         const totalCount = parseInt(countResult?.count as string) || 0;
-        
+
         // Fetch services with service type names by joining with custom service type table
-        const servicesData = await trx('service_catalog as sc')
-            .where({ 'sc.tenant': tenant })
+        const servicesQuery = applyFilters(
+          baseQuery
+            .clone()
             .leftJoin('service_types as st', function() {
-                this.on('sc.custom_service_type_id', '=', 'st.id')
-                    .andOn('sc.tenant', '=', 'st.tenant');
+              this.on('sc.custom_service_type_id', '=', 'st.id')
+                .andOn('sc.tenant', '=', 'st.tenant');
             })
             .select(
-                'sc.service_id',
-                'sc.service_name',
-                'sc.custom_service_type_id',
-                'sc.billing_method',
-                trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
-                'sc.unit_of_measure',
-                'sc.category_id',
-                'sc.tenant',
-                'sc.description',
-                'sc.tax_rate_id', // Corrected: Use tax_rate_id based on schema
-                'st.name as service_type_name' // Add service type name
+              'sc.service_id',
+              'sc.service_name',
+              'sc.custom_service_type_id',
+              'sc.billing_method',
+              trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+              'sc.unit_of_measure',
+              'sc.category_id',
+              'sc.tenant',
+              'sc.description',
+              'sc.tax_rate_id', // Corrected: Use tax_rate_id based on schema
+              'st.name as service_type_name' // Add service type name
             )
-            .orderBy('sc.service_name', 'asc') // Sort by service name alphabetically
-            .limit(pageSize)
-            .offset(offset);
+        )
+          .orderBy(sortColumnMap[sanitizedOptions.sort], sanitizedOptions.order)
+          .modify((queryBuilder) => {
+            if (sanitizedOptions.sort !== 'service_name') {
+              queryBuilder.orderBy('sc.service_name', 'asc');
+            }
+          })
+          .limit(pageSize)
+          .offset(offset);
+
+        const servicesData = await servicesQuery;
 
         // Validate and transform the data
         const validatedServices = servicesData.map(service => {

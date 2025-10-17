@@ -1,16 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { spawn, ChildProcess } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   setupE2ETestEnvironment,
   E2ETestEnvironment
 } from '../utils/e2eTestSetup';
 import { ApiTestClient } from '../utils/apiTestHelpers';
 import { createClientTestData, createClientLocationTestData } from '../utils/clientTestData';
-
-const testFileDir = path.dirname(fileURLToPath(import.meta.url));
-const serverRoot = path.resolve(testFileDir, '../../../../');
+import {
+  ensureApiServerRunning,
+  resolveApiBaseUrl,
+  stopApiServerIfStarted
+} from '../utils/apiServerManager';
 
 // Ensure the API server uses the same database as the E2E test fixtures
 process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
@@ -23,117 +22,7 @@ if (!process.env.DB_PASSWORD_SERVER && process.env.DB_PASSWORD_ADMIN) {
 process.env.DB_HOST = process.env.DB_HOST || 'localhost';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
 
-const rawApiBaseUrl = process.env.TEST_API_BASE_URL || 'http://127.0.0.1:3000';
-const apiBaseUrl = rawApiBaseUrl.replace(/\/$/, '');
-const parsedApiBaseUrl = new URL(apiBaseUrl);
-const localHosts = new Set(['127.0.0.1', 'localhost', '0.0.0.0', '::1', '[::1]']);
-
-let apiServerProcess: ChildProcess | null = null;
-let serverStartedByTests = false;
-
-async function isApiServerRunning(): Promise<boolean> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/api/health`);
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function ensureApiServerRunning(): Promise<void> {
-  if (await isApiServerRunning()) {
-    return;
-  }
-
-  if (!localHosts.has(parsedApiBaseUrl.hostname)) {
-    throw new Error(`API server not reachable at ${apiBaseUrl} and hostname is not local; cannot auto-start.`);
-  }
-
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  apiServerProcess = spawn(npmCommand, ['run', 'start:express'], {
-    cwd: serverRoot,
-    env: {
-      ...process.env,
-      NODE_ENV: process.env.NODE_ENV || 'test'
-    },
-    stdio: 'inherit'
-  });
-
-  serverStartedByTests = true;
-
-  apiServerProcess.once('error', (error) => {
-    console.error('API server process error:', error);
-  });
-
-  const maxAttempts = 60;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (apiServerProcess && apiServerProcess.exitCode !== null) {
-      const exitCode = apiServerProcess.exitCode;
-      apiServerProcess = null;
-      serverStartedByTests = false;
-
-      if (await isApiServerRunning()) {
-        return;
-      }
-
-      throw new Error(`API server exited early with code ${exitCode}`);
-    }
-
-    if (await isApiServerRunning()) {
-      return;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-
-  throw new Error(`Timed out waiting for API server at ${apiBaseUrl} to become ready.`);
-}
-
-async function stopApiServerIfStarted(): Promise<void> {
-  if (!serverStartedByTests || !apiServerProcess) {
-    return;
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    const child = apiServerProcess;
-    if (!child) {
-      resolve();
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      if (child.exitCode === null) {
-        child.kill('SIGKILL');
-      }
-    }, 5000);
-
-    const cleanup = () => {
-      clearTimeout(timeout);
-      resolve();
-    };
-
-    child.once('exit', cleanup);
-    child.once('error', (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-
-    if (!child.kill('SIGTERM')) {
-      cleanup();
-    }
-  }).catch((error) => {
-    console.warn('Failed to stop API server cleanly:', error);
-  });
-
-  apiServerProcess = null;
-  serverStartedByTests = false;
-}
-
-process.on('exit', () => {
-  if (serverStartedByTests && apiServerProcess) {
-    apiServerProcess.kill('SIGTERM');
-  }
-});
+const apiBaseUrl = resolveApiBaseUrl(process.env.TEST_API_BASE_URL);
 
 describe('Clients API E2E Tests', () => {
   let env: E2ETestEnvironment;
@@ -141,7 +30,7 @@ describe('Clients API E2E Tests', () => {
 
   beforeAll(async () => {
     // Ensure the API server is ready before seeding test data
-    await ensureApiServerRunning();
+    await ensureApiServerRunning(apiBaseUrl);
 
     // Setup test environment
     env = await setupE2ETestEnvironment({
