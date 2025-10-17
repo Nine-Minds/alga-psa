@@ -82,6 +82,21 @@ export async function getInvoicePreviewAction(
       };
     }
 
+    // Validate quantity - must be a positive integer
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return {
+        success: false,
+        error: 'License quantity must be a positive integer (minimum 1)',
+      };
+    }
+
+    if (quantity > 100000) {
+      return {
+        success: false,
+        error: 'License quantity exceeds maximum allowed (100,000)',
+      };
+    }
+
     const stripeService = getStripeService();
     const preview = await stripeService.getUpcomingInvoicePreview(
       session.user.tenant,
@@ -139,11 +154,19 @@ export async function createLicenseCheckoutSessionAction(
       };
     }
 
-    // Validate quantity
-    if (!quantity || quantity < 1) {
+    // Validate quantity - must be a positive integer
+    if (!Number.isInteger(quantity) || quantity < 1) {
       return {
         success: false,
-        error: 'Invalid license quantity',
+        error: 'License quantity must be a positive integer (minimum 1)',
+      };
+    }
+
+    // Additional safety check for unreasonably large values
+    if (quantity > 100000) {
+      return {
+        success: false,
+        error: 'License quantity exceeds maximum allowed (100,000)',
       };
     }
 
@@ -216,8 +239,6 @@ export async function getLicensePricingAction(): Promise<{
         error: 'License pricing not configured',
       };
     }
-
-    const stripeService = getStripeService();
 
     // Get pricing from environment variables
     const unitAmountCents = parseInt(process.env.STRIPE_LICENSE_UNIT_AMOUNT || '5000', 10);
@@ -713,6 +734,14 @@ export async function reduceLicenseCount(
       return {
         success: false,
         error: 'License quantity must be a positive integer (minimum 1)',
+      };
+    }
+
+    // Additional safety check for unreasonably large values
+    if (newQuantity > 100000) {
+      return {
+        success: false,
+        error: 'License quantity exceeds maximum allowed (100,000)',
       };
     }
 

@@ -12,6 +12,7 @@ interface CancellationFeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (reasonText: string, reasonCategory?: string) => Promise<void>;
+  onLogout?: () => Promise<void>;
 }
 
 const CANCELLATION_REASONS = [
@@ -27,6 +28,7 @@ export default function CancellationFeedbackModal({
   isOpen,
   onClose,
   onConfirm,
+  onLogout,
 }: CancellationFeedbackModalProps) {
   const [reasonText, setReasonText] = useState('');
   const [reasonCategory, setReasonCategory] = useState('');
@@ -49,11 +51,18 @@ export default function CancellationFeedbackModal({
     setLoading(true);
     try {
       await onConfirm(reasonText.trim(), reasonCategory || undefined);
-      toast.success('Thank you for your feedback. We have received your cancellation request.');
+      toast.success('Thank you for your feedback. We have received your cancellation request. You will be logged out shortly.');
       onClose();
       // Reset form
       setReasonText('');
       setReasonCategory('');
+
+      // Wait 2 seconds to let the user see the toast, then log out
+      if (onLogout) {
+        setTimeout(async () => {
+          await onLogout();
+        }, 2000);
+      }
     } catch (error) {
       console.error('Error submitting cancellation feedback:', error);
       toast.error('Failed to submit feedback. Please try again.');

@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
+import { signOut } from 'next-auth/react';
 
 export default function AccountManagement() {
   const [loading, setLoading] = useState(true);
@@ -159,20 +160,29 @@ export default function AccountManagement() {
 
   const handleConfirmCancellation = async (reasonText: string, reasonCategory?: string) => {
     try {
-      // Send feedback email (does not cancel subscription)
+      // Send feedback email
       const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);
       if (!feedbackResult.success) {
         toast.error(feedbackResult.error || 'Failed to send feedback');
         return;
       }
 
-      // Note: Feedback has been sent, but subscription is not cancelled automatically
-      // A follow-up step or manual process may be needed to actually cancel
-      // For now, we're just collecting feedback as per user requirements
+      // Actually cancel the subscription
+      const cancelResult = await cancelSubscriptionAction();
+      if (!cancelResult.success) {
+        toast.error(cancelResult.error || 'Failed to cancel subscription');
+        return;
+      }
+
+      // Success - the modal will show the toast and then log the user out
     } catch (error) {
       console.error('Error submitting cancellation feedback:', error);
       throw error; // Re-throw to let modal handle the error
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/auth/msp/login' });
   };
 
   const handleReduceLicenses = () => {
@@ -600,6 +610,7 @@ export default function AccountManagement() {
         isOpen={showCancellationFeedback}
         onClose={() => setShowCancellationFeedback(false)}
         onConfirm={handleConfirmCancellation}
+        onLogout={handleLogout}
       />
     </div>
   );
