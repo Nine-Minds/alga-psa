@@ -9,6 +9,7 @@ import {
   ServiceListOptions
 } from '@/lib/actions/serviceActions';
 import type { CreateServiceRequest, UpdateServiceRequest } from '../schemas/serviceSchemas';
+import { ca } from 'date-fns/locale';
 
 type SortField = NonNullable<ServiceListOptions['sort']>;
 
@@ -67,7 +68,11 @@ export class ServiceCatalogService implements ControllerBaseService {
 
   async create(data: CreateServiceRequest, context: unknown): Promise<IService> {
     void context;
-    return await createService(data);
+    let dataSanitized = {
+      category_id: data.category_id ?? null,
+      ...data,
+    }
+    return await createService(dataSanitized);
   }
 
   async update(id: string, data: UpdateServiceRequest, context: unknown): Promise<IService | null> {
