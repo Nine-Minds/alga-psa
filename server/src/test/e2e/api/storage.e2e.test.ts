@@ -6,27 +6,27 @@ import { parse } from 'node:url';
 import { createRequire } from 'node:module';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { ApiTestClient, assertSuccess, assertError } from '../utils/apiTestHelpers';
-
-import { TestContext } from '../../../../test-utils/testContext';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { setupE2ETestEnvironment, type E2ETestEnvironment } from '../utils/e2eTestSetup';
 import {
   STORAGE_NAMESPACE as namespace,
-  configureExtensionStorageTestDatabase,
-  ensureExtensionStorageTables,
-  seedExtensionData,
-} from './extension-storage.helpers';
+  configureStorageTestDatabase,
+  ensureStorageTables,
+  resetStorageTables,
+} from './storage.helpers';
+import { randomUUID } from 'node:crypto';
+
 let tenantId = '';
-let installId = '';
 let originalNextRuntime: string | undefined;
 let originalSkipAppInit: string | undefined;
 const cjsRequire = createRequire(import.meta.url);
-const testHelpers = TestContext.createHelpers();
 let server: http.Server | null = null;
 let baseUrl = '';
 let apiClient: ApiTestClient;
 let nextApp: any = null;
+let testEnv: E2ETestEnvironment | null = null;
 
-const recordsBasePath = () => `/api/ext-storage/install/${installId}/${namespace}/records`;
+const recordsBasePath = () => `/api/v1/storage/namespaces/${namespace}/records`;
 const recordPath = (key: string) => `${recordsBasePath()}/${encodeURIComponent(key)}`;
 
 if (typeof (globalThis as any).AsyncLocalStorage === 'undefined') {
@@ -40,24 +40,19 @@ process.env.DB_HOST = process.env.DB_HOST || '127.0.0.1';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
 
-configureExtensionStorageTestDatabase();
+configureStorageTestDatabase();
 
-describe('Extension Storage API E2E Tests (real Next server)', () => {
+describe('Storage API E2E Tests (real Next server)', () => {
   beforeAll(async () => {
     process.env.NEXT_TELEMETRY_DISABLED = process.env.NEXT_TELEMETRY_DISABLED ?? '1';
-    process.env.NEXT_PUBLIC_EDITION = process.env.NEXT_PUBLIC_EDITION ?? 'enterprise';
-    process.env.EDITION = process.env.EDITION ?? 'ee';
     process.env.NODE_ENV = process.env.NODE_ENV || 'test';
     originalNextRuntime = process.env.NEXT_RUNTIME;
     originalSkipAppInit = process.env.E2E_SKIP_APP_INIT;
     process.env.NEXT_RUNTIME = 'nodejs';
     process.env.E2E_SKIP_APP_INIT = 'true';
 
-    const initialCtx = await testHelpers.beforeAll();
-    tenantId = initialCtx.tenantId;
-    await ensureExtensionStorageTables();
-    const seed = await seedExtensionData(tenantId, namespace);
-    installId = seed.installId;
+    await ensureStorageTables();
+    await resetStorageTables();
 
     const appDir = path.resolve(__dirname, '../../../../../server');
     const createNextServer = cjsRequire('next');
@@ -74,18 +69,18 @@ describe('Extension Storage API E2E Tests (real Next server)', () => {
       const parsedUrl = parse(req.url ?? '', true);
       requestHandler(req, res, parsedUrl);
     });
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-    const address = server.address() as AddressInfo;
+    await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
+    const address = server!.address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${address.port}`;
   }, 180_000);
 
   afterAll(async () => {
     try {
-      await testHelpers.afterAll();
+      await resetStorageTables();
     } finally {
       if (server) {
         await new Promise<void>((resolve, reject) => {
-          server.close((error) => {
+          server!.close((error) => {
             if (error) {
               reject(error);
             } else {
@@ -113,20 +108,17 @@ describe('Extension Storage API E2E Tests (real Next server)', () => {
   });
 
   beforeEach(async () => {
-    const loopCtx = await testHelpers.beforeEach();
-    tenantId = loopCtx.tenantId;
-    const seed = await seedExtensionData(tenantId, namespace);
-    installId = seed.installId;
-    apiClient = new ApiTestClient({
-      baseUrl,
-      headers: {
-        'x-tenant-id': tenantId,
-      },
-    });
+    testEnv = await setupE2ETestEnvironment({ baseUrl });
+    tenantId = testEnv.tenant;
+    apiClient = testEnv.apiClient;
+    await ensureStoragePermissions(testEnv.db, testEnv.userId, tenantId);
+    await resetStorageTables(tenantId);
   });
 
   afterEach(async () => {
-    await testHelpers.afterEach();
+    await testEnv?.cleanup();
+    testEnv = null;
+    await resetStorageTables();
   });
 
   describe('Record operations', () => {
@@ -240,14 +232,9 @@ describe('Extension Storage API E2E Tests (real Next server)', () => {
 
       const db = await createTestDbConnection();
       try {
-        await db('ext_storage_usage')
-          .where({
-            tenant_id: tenantId,
-            extension_install_id: installId,
-          })
-          .update({
-            bytes_used: (256 * 1024 * 1024) - 16,
-          });
+        await db('storage_usage')
+          .where({ tenant: tenantId })
+          .update({ bytes_used: (256 * 1024 * 1024) - 16 });
       } finally {
         await db.destroy();
       }
@@ -259,3 +246,44 @@ describe('Extension Storage API E2E Tests (real Next server)', () => {
     });
   });
 });
+
+async function ensureStoragePermissions(db: Awaited<ReturnType<typeof createTestDbConnection>>, userId: string, tenantId: string) {
+  const userRole = await db('user_roles')
+    .where({ user_id: userId, tenant: tenantId })
+    .first<{ role_id: string }>();
+
+  if (!userRole) {
+    return;
+  }
+
+  const actions: Array<'read' | 'write'> = ['read', 'write'];
+
+  for (const action of actions) {
+    let permission = await db('permissions')
+      .where({ tenant: tenantId, resource: 'storage', action })
+      .first<{ permission_id: string }>();
+
+    if (!permission) {
+      const permissionId = randomUUID();
+      await db('permissions').insert({
+        tenant: tenantId,
+        permission_id: permissionId,
+        resource: 'storage',
+        action,
+      });
+      permission = { permission_id: permissionId };
+    }
+
+    await db('role_permissions')
+      .insert({
+        tenant: tenantId,
+        role_id: userRole.role_id,
+        permission_id: permission.permission_id,
+      })
+      .catch((error: any) => {
+        if (error?.code !== '23505') {
+          throw error;
+        }
+      });
+  }
+}

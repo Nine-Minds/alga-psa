@@ -1,14 +1,14 @@
 import type { ZodTypeAny } from 'zod';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 
-export function registerExtensionStorageRoutes(
+export function registerStorageRoutes(
   registry: ApiOpenApiRegistry,
   deps: { ErrorResponse: ZodTypeAny },
 ) {
-  const tag = 'Extension Storage';
+  const tag = 'Storage';
 
   const StoragePutRequest = registry.registerSchema(
-    'ExtStoragePutRequest',
+    'StoragePutRequest',
     zOpenApi.object({
       value: zOpenApi.any(),
       metadata: zOpenApi.record(zOpenApi.any()).optional(),
@@ -19,7 +19,7 @@ export function registerExtensionStorageRoutes(
   );
 
   const StoragePutResponse = registry.registerSchema(
-    'ExtStoragePutResponse',
+    'StoragePutResponse',
     zOpenApi.object({
       namespace: zOpenApi.string(),
       key: zOpenApi.string(),
@@ -31,7 +31,7 @@ export function registerExtensionStorageRoutes(
   );
 
   const StorageGetResponse = registry.registerSchema(
-    'ExtStorageGetResponse',
+    'StorageGetResponse',
     zOpenApi.object({
       namespace: zOpenApi.string(),
       key: zOpenApi.string(),
@@ -45,7 +45,7 @@ export function registerExtensionStorageRoutes(
   );
 
   const StorageListQuery = registry.registerSchema(
-    'ExtStorageListQuery',
+    'StorageListQuery',
     zOpenApi.object({
       limit: zOpenApi.number().int().min(1).max(100).optional(),
       cursor: zOpenApi.string().optional(),
@@ -56,10 +56,8 @@ export function registerExtensionStorageRoutes(
   );
 
   const StorageListItem = registry.registerSchema(
-    'ExtStorageListItem',
+    'StorageListItem',
     zOpenApi.object({
-      tenant: zOpenApi.string().uuid().optional(),
-      extensionInstallId: zOpenApi.string().uuid().optional(),
       namespace: zOpenApi.string(),
       key: zOpenApi.string(),
       revision: zOpenApi.number().int().positive(),
@@ -72,7 +70,7 @@ export function registerExtensionStorageRoutes(
   );
 
   const StorageListResponse = registry.registerSchema(
-    'ExtStorageListResponse',
+    'StorageListResponse',
     zOpenApi.object({
       items: zOpenApi.array(StorageListItem),
       nextCursor: zOpenApi.string().nullable(),
@@ -80,7 +78,7 @@ export function registerExtensionStorageRoutes(
   );
 
   const StorageBulkPutRequest = registry.registerSchema(
-    'ExtStorageBulkPutRequest',
+    'StorageBulkPutRequest',
     zOpenApi.object({
       items: zOpenApi.array(
         zOpenApi.object({
@@ -96,7 +94,7 @@ export function registerExtensionStorageRoutes(
   );
 
   const StorageBulkPutResponse = registry.registerSchema(
-    'ExtStorageBulkPutResponse',
+    'StorageBulkPutResponse',
     zOpenApi.object({
       namespace: zOpenApi.string(),
       items: zOpenApi.array(
@@ -109,38 +107,36 @@ export function registerExtensionStorageRoutes(
     }),
   );
 
-  const IdNamespaceParams = registry.registerSchema(
-    'ExtStorageIdNamespaceParams',
+  const NamespaceParams = registry.registerSchema(
+    'StorageNamespaceParams',
     zOpenApi.object({
-      installId: zOpenApi.string().uuid(),
       namespace: zOpenApi.string().min(1).max(128),
     }),
   );
 
-  const IdNamespaceKeyParams = registry.registerSchema(
-    'ExtStorageIdNamespaceKeyParams',
-    IdNamespaceParams.extend({ key: zOpenApi.string().min(1).max(256) }),
+  const NamespaceKeyParams = registry.registerSchema(
+    'StorageNamespaceKeyParams',
+    NamespaceParams.extend({ key: zOpenApi.string().min(1).max(256) }),
   );
 
   const IfRevisionHeader = registry.registerSchema(
-    'ExtStorageIfRevisionHeader',
+    'StorageIfRevisionHeader',
     zOpenApi.object({ 'if-revision-match': zOpenApi.string().optional() }),
   );
 
   const DeleteQuery = registry.registerSchema(
-    'ExtStorageDeleteQuery',
+    'StorageDeleteQuery',
     zOpenApi.object({ ifRevision: zOpenApi.coerce.number().int().nonnegative().optional() }),
   );
 
-  // List records
   registry.registerRoute({
     method: 'get',
-    path: '/api/ext-storage/install/{installId}/{namespace}/records',
+    path: '/api/v1/storage/namespaces/{namespace}/records',
     summary: 'List records in a namespace',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
-      params: IdNamespaceParams,
+      params: NamespaceParams,
       query: StorageListQuery,
     },
     responses: {
@@ -151,20 +147,19 @@ export function registerExtensionStorageRoutes(
     },
     extensions: {
       'x-tenant-header-required': true,
-      'x-rbac-resource': 'extension',
+      'x-rbac-resource': 'storage',
     },
-    edition: 'ee',
+    edition: 'ce',
   });
 
-  // Bulk put
   registry.registerRoute({
     method: 'post',
-    path: '/api/ext-storage/install/{installId}/{namespace}/records',
-    summary: 'Bulk insert/update records',
+    path: '/api/v1/storage/namespaces/{namespace}/records',
+    summary: 'Bulk insert or update records',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
-      params: IdNamespaceParams,
+      params: NamespaceParams,
       body: { schema: StorageBulkPutRequest },
     },
     responses: {
@@ -177,20 +172,19 @@ export function registerExtensionStorageRoutes(
     },
     extensions: {
       'x-tenant-header-required': true,
-      'x-rbac-resource': 'extension',
+      'x-rbac-resource': 'storage',
     },
-    edition: 'ee',
+    edition: 'ce',
   });
 
-  // Get record
   registry.registerRoute({
     method: 'get',
-    path: '/api/ext-storage/install/{installId}/{namespace}/records/{key}',
+    path: '/api/v1/storage/namespaces/{namespace}/records/{key}',
     summary: 'Get a record by key',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
-      params: IdNamespaceKeyParams,
+      params: NamespaceKeyParams,
       headers: IfRevisionHeader,
     },
     responses: {
@@ -203,24 +197,23 @@ export function registerExtensionStorageRoutes(
     },
     extensions: {
       'x-tenant-header-required': true,
-      'x-rbac-resource': 'extension',
+      'x-rbac-resource': 'storage',
     },
-    edition: 'ee',
+    edition: 'ce',
   });
 
-  // Put record
   registry.registerRoute({
     method: 'put',
-    path: '/api/ext-storage/install/{installId}/{namespace}/records/{key}',
+    path: '/api/v1/storage/namespaces/{namespace}/records/{key}',
     summary: 'Create or update a record by key',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
-      params: IdNamespaceKeyParams,
+      params: NamespaceKeyParams,
       body: { schema: StoragePutRequest },
     },
     responses: {
-      200: { description: 'Record metadata', schema: StoragePutResponse },
+      200: { description: 'Updated record', schema: StoragePutResponse },
       400: { description: 'Validation error', schema: deps.ErrorResponse },
       401: { description: 'Unauthorized', schema: deps.ErrorResponse },
       403: { description: 'Forbidden', schema: deps.ErrorResponse },
@@ -229,34 +222,32 @@ export function registerExtensionStorageRoutes(
     },
     extensions: {
       'x-tenant-header-required': true,
-      'x-rbac-resource': 'extension',
+      'x-rbac-resource': 'storage',
     },
-    edition: 'ee',
+    edition: 'ce',
   });
 
-  // Delete record
   registry.registerRoute({
     method: 'delete',
-    path: '/api/ext-storage/install/{installId}/{namespace}/records/{key}',
+    path: '/api/v1/storage/namespaces/{namespace}/records/{key}',
     summary: 'Delete a record by key',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
-      params: IdNamespaceKeyParams,
+      params: NamespaceKeyParams,
       query: DeleteQuery,
     },
     responses: {
-      204: { description: 'Deleted', emptyBody: true },
+      204: { description: 'Record deleted' },
       400: { description: 'Validation error', schema: deps.ErrorResponse },
       401: { description: 'Unauthorized', schema: deps.ErrorResponse },
       403: { description: 'Forbidden', schema: deps.ErrorResponse },
-      409: { description: 'Revision mismatch', schema: deps.ErrorResponse },
+      404: { description: 'Not found', schema: deps.ErrorResponse },
     },
     extensions: {
       'x-tenant-header-required': true,
-      'x-rbac-resource': 'extension',
+      'x-rbac-resource': 'storage',
     },
-    edition: 'ee',
+    edition: 'ce',
   });
 }
-

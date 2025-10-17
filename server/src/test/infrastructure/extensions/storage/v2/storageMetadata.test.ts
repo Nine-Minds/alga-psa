@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { v4 as uuidv4 } from 'uuid';
 
 import { TestContext } from '../../../../../../test-utils/testContext';
-import { ensureExtensionStorageTables } from '../../../../e2e/api/extension-storage.helpers';
-import { ExtensionStorageServiceV2 } from '@ee/lib/extensions/storage/v2/service';
-import { StorageValidationError } from '@ee/lib/extensions/storage/v2/errors';
+import { ensureStorageTables, resetStorageTables } from '../../../../e2e/api/storage.helpers';
+import { StorageService } from '@/lib/storage/api/service';
+import { StorageValidationError } from '@/lib/storage/api/errors';
 
 process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
 process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'test_password';
@@ -15,19 +14,16 @@ process.env.DB_DIRECT_HOST = process.env.DB_DIRECT_HOST || process.env.DB_HOST;
 process.env.DB_DIRECT_PORT = process.env.DB_DIRECT_PORT || process.env.DB_PORT;
 process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
 
-const namespace = 'ext-metadata-tests';
+const namespace = 'storage-metadata-tests';
 
-describe('ExtensionStorageServiceV2 metadata (infrastructure)', () => {
+describe('StorageService metadata (infrastructure)', () => {
   const testHelpers = TestContext.createHelpers();
   let context: TestContext;
-  let service: ExtensionStorageServiceV2;
-  let installId: string;
+  let service: StorageService;
 
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
-      runSeeds: true,
-    });
-    await ensureExtensionStorageTables();
+    context = await testHelpers.beforeAll({ runSeeds: true });
+    await ensureStorageTables();
   }, 120_000);
 
   afterAll(async () => {
@@ -36,8 +32,8 @@ describe('ExtensionStorageServiceV2 metadata (infrastructure)', () => {
 
   beforeEach(async () => {
     context = await testHelpers.beforeEach();
-    installId = uuidv4();
-    service = new ExtensionStorageServiceV2(context.db, context.tenantId, installId);
+    await resetStorageTables(context.tenantId);
+    service = new StorageService(context.db, context.tenantId);
   });
 
   afterEach(async () => {
@@ -58,10 +54,9 @@ describe('ExtensionStorageServiceV2 metadata (infrastructure)', () => {
     });
 
     const stored = await context
-      .db('ext_storage_records')
+      .db('storage_records')
       .where({
         tenant: context.tenantId,
-        extension_install_id: installId,
         namespace,
         key: 'profile',
       })
