@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // Verify webhook signature and construct event
     let event;
     try {
-      event = stripeService.verifyWebhookSignature(body, signature);
+      event = await stripeService.verifyWebhookSignature(body, signature);
       logger.info('[Stripe Webhook] Signature verified successfully', {
         eventId: event.id,
         eventType: event.type,

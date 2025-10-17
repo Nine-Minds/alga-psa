@@ -181,7 +181,7 @@ export async function createLicenseCheckoutSessionAction(
         type: 'checkout',
         clientSecret: result.clientSecret,
         sessionId: result.sessionId,
-        publishableKey: stripeService.getPublishableKey(),
+        publishableKey: await stripeService.getPublishableKey(),
       },
     };
   } catch (error) {

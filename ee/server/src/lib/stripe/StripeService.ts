@@ -16,26 +16,44 @@ import Stripe from 'stripe';
 import { Knex } from 'knex';
 import { getConnection } from '../../../../../server/src/lib/db/db';
 import logger from '@alga-psa/shared/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 
-// Environment variable validation
-function getStripeConfig() {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+// Stripe configuration with secret provider support
+async function getStripeConfig() {
+  const secretProvider = await getSecretProviderInstance();
+
+  // Get secrets using the secret provider system (supports env, filesystem, vault)
+  // Try secret provider first, fall back to environment variables
+  let secretKey = await secretProvider.getAppSecret('stripe_secret_key');
+  if (!secretKey && process.env.STRIPE_SECRET_KEY) {
+    secretKey = process.env.STRIPE_SECRET_KEY;
+  }
+
+  let webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
+  if (!webhookSecret && process.env.STRIPE_WEBHOOK_SECRET) {
+    webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  }
+
+  let publishableKey = await secretProvider.getAppSecret('stripe_publishable_key');
+  if (!publishableKey && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+    publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  }
+
+  // These are non-sensitive config, can come from env vars
   const masterTenantId = process.env.MASTER_BILLING_TENANT_ID;
   const licenseProductId = process.env.STRIPE_LICENSE_PRODUCT_ID;
   const licensePriceId = process.env.STRIPE_LICENSE_PRICE_ID;
 
   if (!secretKey) {
-    throw new Error('STRIPE_SECRET_KEY environment variable is required');
+    throw new Error('STRIPE_SECRET_KEY not found in secrets or environment');
   }
 
   if (!webhookSecret) {
-    throw new Error('STRIPE_WEBHOOK_SECRET environment variable is required');
+    throw new Error('STRIPE_WEBHOOK_SECRET not found in secrets or environment');
   }
 
   if (!publishableKey) {
-    throw new Error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable is required');
+    throw new Error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY not found in secrets or environment');
   }
 
   if (!masterTenantId) {
@@ -113,15 +131,24 @@ interface StripeSubscription {
 }
 
 export class StripeService {
-  private stripe: Stripe;
-  private config: ReturnType<typeof getStripeConfig>;
+  private stripe!: Stripe;
+  private config!: Awaited<ReturnType<typeof getStripeConfig>>;
+  private initPromise: Promise<void>;
 
   constructor() {
-    this.config = getStripeConfig();
+    this.initPromise = this.initialize();
+  }
+
+  private async initialize() {
+    this.config = await getStripeConfig();
     this.stripe = new Stripe(this.config.secretKey, {
       apiVersion: '2024-12-18.acacia' as any,
       typescript: true,
     });
+  }
+
+  private async ensureInitialized() {
+    await this.initPromise;
   }
 
   /**
@@ -134,6 +161,7 @@ export class StripeService {
    * 4. Return customer record
    */
   async getOrImportCustomer(tenantId: string): Promise<StripeCustomer> {
+    await this.ensureInitialized();
     const knex = await getConnection(tenantId);
 
     // 1. Check database first
@@ -380,6 +408,7 @@ export class StripeService {
     prorationAmount: number;
     remainingAmount: number;
   } | null> {
+    await this.ensureInitialized();
     logger.info(`[StripeService] Getting invoice preview for tenant ${tenantId}, new quantity: ${newQuantity}`);
 
     const knex = await getConnection(tenantId);
@@ -449,6 +478,7 @@ export class StripeService {
     | { type: 'updated'; subscription: Stripe.Subscription; scheduledChange?: boolean }
     | { type: 'checkout'; clientSecret: string; sessionId: string }
   > {
+    await this.ensureInitialized();
     logger.info(`[StripeService] Update or create subscription for tenant ${tenantId}, quantity: ${quantity}`);
 
     const knex = await getConnection(tenantId);
@@ -690,6 +720,7 @@ export class StripeService {
    * Processes events and updates database accordingly
    */
   async handleWebhookEvent(event: Stripe.Event, tenantId?: string): Promise<void> {
+    await this.ensureInitialized();
     logger.info(`[StripeService] Processing webhook event: ${event.type} (${event.id})`);
 
     // For most events, we need to determine the tenant from the event data
@@ -969,7 +1000,8 @@ export class StripeService {
   /**
    * Verify webhook signature
    */
-  verifyWebhookSignature(payload: string, signature: string): Stripe.Event {
+  async verifyWebhookSignature(payload: string, signature: string): Promise<Stripe.Event> {
+    await this.ensureInitialized();
     try {
       return this.stripe.webhooks.constructEvent(
         payload,
@@ -996,6 +1028,7 @@ export class StripeService {
     scheduled_monthly_cost: number;
     monthly_savings: number;
   } | null> {
+    await this.ensureInitialized();
     logger.info(`[StripeService] Getting scheduled license changes for tenant ${tenantId}`);
 
     const knex = await getConnection(tenantId);
@@ -1063,7 +1096,8 @@ export class StripeService {
   /**
    * Get Stripe publishable key for frontend
    */
-  getPublishableKey(): string {
+  async getPublishableKey(): Promise<string> {
+    await this.ensureInitialized();
     return this.config.publishableKey;
   }
 }
