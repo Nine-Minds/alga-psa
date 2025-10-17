@@ -111,6 +111,7 @@
     "autoprefixer": "^10.4.21",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.0",
+    "clean": "^4.0.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "cookie-parser": "^1.4.7",
