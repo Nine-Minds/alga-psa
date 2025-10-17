@@ -92,6 +92,13 @@ await updateManualInvoice(invoiceId, {
 - `ManualInvoices.tsx`: A form-based UI that lets users pick a company, add line items, compute a quick total, and create/update the invoice.
 - `Invoices.tsx`: Lists all invoices (manual or automated). For manual invoices, an "Edit" button is available if the invoice is still in a modifiable state.
 
+### API Sample: Create Service and Manual Invoice
+- A runnable Node.js example lives at `sdk/samples/node/create-service-and-manual-invoice.ts`.
+- It demonstrates how to create a service catalog entry via `POST /api/v1/services` and immediately generate a manual invoice for that service using `POST /api/v1/invoices/manual`.
+- Run `npm run sample:create-service-manual-invoice -- --client-id <client-uuid> --service-type-id <service-type-uuid>` with the usual `ALGA_API_URL`, `ALGA_API_KEY`, and `ALGA_TENANT_ID` environment variables.
+- When `--service-type-id` is omitted, the script reuses the service type from the first service it finds; specify the flag if your tenant has not created services yet.
+- Provide `--rate` (dollars) or `--rate-cents` to control the line amount; rates are converted to cents before being sent to the API.
+
 #### Database Fields (relevant to manual invoicing):
 - `invoices.is_manual` (boolean)
 - `invoices.status` (e.g. draft, open, paid)

@@ -178,6 +178,14 @@ export async function getServiceById(serviceId: string): Promise<IService | null
 export type CreateServiceInput = Omit<IService, 'service_id' | 'tenant'>;
 
 
+function safeRevalidate(path: string): void {
+    try {
+        revalidatePath(path)
+    } catch (error) {
+        console.warn(`[serviceActions] Failed to revalidate path "${path}":`, error instanceof Error ? error.message : error)
+    }
+}
+
 export async function createService(
     serviceData: CreateServiceInput
 ): Promise<IService> {
@@ -224,7 +232,7 @@ export async function createService(
             // 4. Create the service using the model
             const service = await Service.create(trx, finalServiceData as Omit<IService, 'service_id'>);
             console.log('[serviceActions] Service created successfully:', service);
-            revalidatePath('/msp/billing'); // Revalidate the billing page
+            safeRevalidate('/msp/billing'); // Revalidate the billing page
             return service; // Assuming Service.create returns the full IService object
         });
     } catch (error) {
@@ -241,7 +249,7 @@ export async function updateService(
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             const updatedService = await Service.update(trx, serviceId, serviceData);
-            revalidatePath('/msp/billing'); // Revalidate the billing page
+            safeRevalidate('/msp/billing'); // Revalidate the billing page
 
             if (updatedService === null) {
                 throw new Error(`Service with id ${serviceId} not found or couldn't be updated`);
@@ -260,7 +268,7 @@ export async function deleteService(serviceId: string): Promise<void> {
     try {
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await Service.delete(trx, serviceId)
-            revalidatePath('/msp/billing') // Revalidate the billing page
+            safeRevalidate('/msp/billing') // Revalidate the billing page
         });
     } catch (error) {
         console.error(`Error deleting service with id ${serviceId}:`, error)
@@ -386,7 +394,7 @@ export async function deleteServiceType(id: string): Promise<void> {
       }
       
           // Revalidate paths for the service type management page
-          revalidatePath('/msp/settings/billing');
+          safeRevalidate('/msp/settings/billing');
       });
   } catch (error: any) {
       console.error(`Error deleting service type ${id}:`, error);
@@ -434,7 +442,7 @@ export async function createServiceTypeInline(name: string): Promise<IServiceTyp
         order_number: nextOrder,
       });
 
-      revalidatePath('/msp/settings/billing');
+      safeRevalidate('/msp/settings/billing');
       return newServiceType;
     });
   } catch (error) {
@@ -459,7 +467,7 @@ export async function updateServiceTypeInline(id: string, name: string): Promise
       throw new Error(`Service type with id ${id} not found or could not be updated.`);
     }
 
-    revalidatePath('/msp/settings/billing');
+      safeRevalidate('/msp/settings/billing');
     return updatedServiceType;
   } catch (error) {
     console.error(`Error updating service type ${id}:`, error);
