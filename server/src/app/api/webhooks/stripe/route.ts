@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStripeService } from '@ee/lib/stripe/StripeService';
 import logger from '@alga-psa/shared/core/logger';
 
 /**
@@ -7,7 +6,10 @@ import logger from '@alga-psa/shared/core/logger';
  *
  * Stripe webhook endpoint for processing subscription events
  *
- * Events handled:
+ * NOTE: This endpoint is only functional in Enterprise Edition.
+ * In Community Edition, it returns a 404.
+ *
+ * Events handled (EE only):
  * - checkout.session.completed: New license purchase completed
  * - customer.subscription.created: Subscription created
  * - customer.subscription.updated: Subscription quantity or status changed
@@ -30,7 +32,31 @@ import logger from '@alga-psa/shared/core/logger';
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
+  // Check if running Enterprise Edition
+  const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+  if (!isEE) {
+    logger.warn('[Stripe Webhook] Stripe webhooks are only available in Enterprise Edition');
+    return NextResponse.json(
+      { error: 'Stripe integration is only available in Enterprise Edition' },
+      { status: 404 }
+    );
+  }
+
   try {
+    // Dynamically import EE StripeService (only available in EE builds)
+    let getStripeService: any;
+    try {
+      const eeModule = await import('@ee/lib/stripe/StripeService');
+      getStripeService = eeModule.getStripeService;
+    } catch (importError) {
+      logger.error('[Stripe Webhook] Failed to import StripeService (EE module not available)');
+      return NextResponse.json(
+        { error: 'Stripe integration not available' },
+        { status: 503 }
+      );
+    }
+
     // Get raw body as text (needed for signature verification)
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
@@ -49,10 +75,10 @@ export async function POST(req: NextRequest) {
     });
 
     // Initialize Stripe service
-    const stripeService = getStripeService();
+    const stripeService: any = getStripeService();
 
     // Verify webhook signature and construct event
-    let event;
+    let event: any;
     try {
       event = await stripeService.verifyWebhookSignature(body, signature);
       logger.info('[Stripe Webhook] Signature verified successfully', {
@@ -142,10 +168,21 @@ export async function POST(req: NextRequest) {
  * Not used by Stripe, but useful for testing connectivity
  */
 export async function GET(req: NextRequest) {
+  const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+  if (!isEE) {
+    return NextResponse.json({
+      status: 'unavailable',
+      message: 'Stripe integration is only available in Enterprise Edition',
+      edition: 'community',
+    });
+  }
+
   return NextResponse.json({
     status: 'ok',
     message: 'Stripe webhook endpoint is active',
     timestamp: new Date().toISOString(),
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ? 'configured' : 'missing',
+    edition: 'enterprise',
   });
 }
