@@ -381,6 +381,9 @@ spec:
           # Public base URL for links in emails and client-side code
           - name: NEXT_PUBLIC_BASE_URL
             value: "https://{{ .Values.host }}"
+          # App URL for Stripe redirects (can differ from host for blue/green testing)
+          - name: NEXT_PUBLIC_APP_URL
+            value: "https://{{ .Values.appUrl | default .Values.host }}"
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
