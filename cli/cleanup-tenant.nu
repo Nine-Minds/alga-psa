@@ -412,9 +412,9 @@ def "main cleanup" [
         "standard_statuses" "statuses"
         "priorities" "severities" "urgencies" "impacts"
         
-        # === LEVEL 7: Channels (referenced by categories) ===
-        # Channels must be deleted AFTER categories
-        "channels"
+        # === LEVEL 7: Boards (referenced by categories) ===
+        # Boards must be deleted AFTER categories (renamed from channels)
+        "boards"
         
         # === LEVEL 8: Breaking circular dependencies ===
         # There's a complex circular dependency:
