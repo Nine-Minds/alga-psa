@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
@@ -14,31 +14,44 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Input } from 'server/src/components/ui/Input';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContractWithClient } from 'server/src/interfaces/contract.interfaces';
-import { getContractsWithClients, deleteContract, updateContract, checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
+import { IContract, IContractWithClient } from 'server/src/interfaces/contract.interfaces';
+import {
+  checkClientHasActiveContract,
+  deleteContract,
+  getContracts,
+  getContractsWithClients,
+  updateContract,
+} from 'server/src/lib/actions/contractActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const Contracts: React.FC = () => {
-  const [contracts, setContracts] = useState<IContractWithClient[]>([]);
-  const [editingContract, setEditingContract] = useState<IContractWithClient | null>(null);
+  const router = useRouter();
+  const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
+  const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
   const [showWizard, setShowWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const router = useRouter();
+  const [activeView, setActiveView] = useState<'Templates' | 'Client Contracts'>('Templates');
+  const [templateSearchTerm, setTemplateSearchTerm] = useState('');
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
 
   useEffect(() => {
-    fetchContracts();
+    void fetchContracts();
   }, []);
 
   const fetchContracts = async () => {
     try {
       setIsLoading(true);
-      const fetchedContracts = await getContractsWithClients();
-      setContracts(fetchedContracts);
+      const [fetchedTemplates, fetchedAssignments] = await Promise.all([
+        getContracts(),
+        getContractsWithClients(),
+      ]);
+      setTemplateContracts(fetchedTemplates);
+      setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
       setError(null);
     } catch (err) {
       console.error('Error fetching contracts:', err);
@@ -51,7 +64,7 @@ const Contracts: React.FC = () => {
   const handleDeleteContract = async (contractId: string) => {
     try {
       await deleteContract(contractId);
-      fetchContracts();
+      await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
       alert(message);
@@ -61,7 +74,7 @@ const Contracts: React.FC = () => {
   const handleTerminateContract = async (contractId: string) => {
     try {
       await updateContract(contractId, { status: 'terminated' });
-      fetchContracts();
+      await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to terminate contract';
       alert(message);
@@ -69,22 +82,16 @@ const Contracts: React.FC = () => {
   };
 
   const handleRestoreContract = async (contractId: string, clientId?: string) => {
-    if (!clientId) {
-      alert('Cannot restore contract: client information is missing.');
-      return;
-    }
-
     try {
-      // Check if client already has an active contract
-      const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
-
-      if (hasActiveContract) {
-        alert('Cannot restore this contract to active status because the client already has an active contract. Please terminate their current active contract first, or restore this contract as a draft.');
-        return;
+      if (clientId) {
+        const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
+        if (hasActiveContract) {
+          alert('Cannot restore this contract to active status because the client already has an active contract. Please terminate their current active contract first, or restore this contract as a draft.');
+          return;
+        }
       }
-
       await updateContract(contractId, { status: 'active' });
-      fetchContracts();
+      await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to restore contract';
       alert(message);
@@ -92,70 +99,54 @@ const Contracts: React.FC = () => {
   };
 
   const handleSetToActive = async (contractId: string, clientId?: string) => {
-    if (!clientId) {
-      alert('Cannot activate contract: client information is missing.');
-      return;
-    }
-
     try {
-      // Check if client already has an active contract
-      const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
-
-      if (hasActiveContract) {
-        alert('Cannot set this contract to active because the client already has an active contract. Please terminate their current active contract first.');
-        return;
+      if (clientId) {
+        const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
+        if (hasActiveContract) {
+          alert('Cannot set this contract to active because the client already has an active contract. Please terminate their current active contract first.');
+          return;
+        }
       }
-
       await updateContract(contractId, { status: 'active' });
-      fetchContracts();
+      await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to activate contract';
       alert(message);
     }
   };
 
-  const contractColumns: ColumnDefinition<IContractWithClient>[] = [
+  const navigateToContract = (contractId?: string) => {
+    if (contractId) {
+      router.push(`/msp/billing?tab=contracts&contractId=${contractId}`);
+    }
+  };
+
+  const renderStatusBadge = (status: string) => {
+    const statusConfig = {
+      active: { className: 'bg-green-100 text-green-800', label: 'Active' },
+      draft: { className: 'bg-gray-100 text-gray-800', label: 'Draft' },
+      terminated: { className: 'bg-orange-100 text-orange-800', label: 'Terminated' },
+      expired: { className: 'bg-red-100 text-red-800', label: 'Expired' },
+    };
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    return <Badge className={config.className}>{config.label}</Badge>;
+  };
+
+  const templateColumns: ColumnDefinition<IContract>[] = [
     {
       title: 'Contract Name',
       dataIndex: 'contract_name',
     },
     {
-      title: 'Client',
-      dataIndex: 'client_name',
-      render: (value) => value || '—',
-    },
-    {
       title: 'Description',
       dataIndex: 'contract_description',
-      render: (value) => value || 'No description',
-    },
-    {
-      title: 'Start Date',
-      dataIndex: 'start_date',
-      render: (value) => value ? new Date(value).toLocaleDateString() : '—',
-    },
-    {
-      title: 'End Date',
-      dataIndex: 'end_date',
-      render: (value) => value ? new Date(value).toLocaleDateString() : '—',
+      render: (value: string | null) =>
+        typeof value === 'string' && value.trim().length > 0 ? value : 'No description',
     },
     {
       title: 'Status',
       dataIndex: 'status',
-      render: (value) => {
-        const statusConfig = {
-          active: { className: 'bg-green-100 text-green-800', label: 'Active' },
-          draft: { className: 'bg-gray-100 text-gray-800', label: 'Draft' },
-          terminated: { className: 'bg-orange-100 text-orange-800', label: 'Terminated' },
-          expired: { className: 'bg-red-100 text-red-800', label: 'Expired' },
-        };
-        const config = statusConfig[value as keyof typeof statusConfig] || statusConfig.draft;
-        return (
-          <Badge className={config.className}>
-            {config.label}
-          </Badge>
-        );
-      },
+      render: renderStatusBadge,
     },
     {
       title: 'Actions',
@@ -192,7 +183,7 @@ const Contracts: React.FC = () => {
                 onClick={(event) => {
                   event.stopPropagation();
                   if (record.contract_id) {
-                    handleTerminateContract(record.contract_id);
+                    void handleTerminateContract(record.contract_id);
                   }
                 }}
               >
@@ -206,7 +197,7 @@ const Contracts: React.FC = () => {
                 onClick={(event) => {
                   event.stopPropagation();
                   if (record.contract_id) {
-                    handleRestoreContract(record.contract_id, record.client_id);
+                    void handleRestoreContract(record.contract_id);
                   }
                 }}
               >
@@ -220,7 +211,7 @@ const Contracts: React.FC = () => {
                 onClick={(event) => {
                   event.stopPropagation();
                   if (record.contract_id) {
-                    handleSetToActive(record.contract_id, record.client_id);
+                    void handleSetToActive(record.contract_id);
                   }
                 }}
               >
@@ -233,7 +224,7 @@ const Contracts: React.FC = () => {
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  handleDeleteContract(record.contract_id);
+                  void handleDeleteContract(record.contract_id);
                 }
               }}
             >
@@ -245,23 +236,132 @@ const Contracts: React.FC = () => {
     },
   ];
 
-  const handleContractClick = (record: IContractWithClient) => {
-    if (record.contract_id) {
-      router.push(`/msp/billing?tab=contracts&contractId=${record.contract_id}`);
-    }
-  };
+  const clientContractColumns: ColumnDefinition<IContractWithClient>[] = [
+    {
+      title: 'Client',
+      dataIndex: 'client_name',
+      render: (value: string | null) =>
+        typeof value === 'string' && value.trim().length > 0 ? value : '—',
+    },
+    {
+      title: 'Contract Template',
+      dataIndex: 'contract_name',
+      render: (value: string | null) =>
+        typeof value === 'string' && value.trim().length > 0 ? value : '—',
+    },
+    {
+      title: 'Start Date',
+      dataIndex: 'start_date',
+      render: (value: string | null) => {
+        if (typeof value !== 'string' || value.length === 0) {
+          return '—';
+        }
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+      },
+    },
+    {
+      title: 'End Date',
+      dataIndex: 'end_date',
+      render: (value: string | null) => {
+        if (typeof value !== 'string' || value.length === 0) {
+          return '—';
+        }
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+      },
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      render: renderStatusBadge,
+    },
+  ];
 
-  // Filter contracts by search term
-  const filteredContracts = contracts
-    .filter((contract) => contract.contract_id !== undefined)
-    .filter((contract) => {
-      if (!searchTerm) return true;
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        contract.contract_name?.toLowerCase().includes(searchLower) ||
-        contract.client_name?.toLowerCase().includes(searchLower)
-      );
-    });
+  const filteredTemplateContracts = templateContracts.filter((contract) => {
+    if (!templateSearchTerm) {
+      return true;
+    }
+    const search = templateSearchTerm.toLowerCase();
+    return (
+      contract.contract_name?.toLowerCase().includes(search) ||
+      contract.contract_description?.toLowerCase().includes(search)
+    );
+  });
+
+  const filteredClientContracts = clientContracts.filter((contract) => {
+    if (!clientSearchTerm) {
+      return true;
+    }
+    const search = clientSearchTerm.toLowerCase();
+    return (
+      contract.contract_name?.toLowerCase().includes(search) ||
+      contract.client_name?.toLowerCase().includes(search)
+    );
+  });
+
+  const renderTemplateTab = () => (
+    <>
+      <div className="mb-4">
+        <div className="relative max-w-md">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+            aria-hidden="true"
+          />
+          <Input
+            type="text"
+            placeholder="Search templates..."
+            value={templateSearchTerm}
+            onChange={(event) => setTemplateSearchTerm(event.target.value)}
+            className="pl-10"
+            aria-label="Search contract templates"
+          />
+        </div>
+      </div>
+
+      <DataTable
+        data={filteredTemplateContracts}
+        columns={templateColumns}
+        pagination
+        onRowClick={(record) => navigateToContract(record.contract_id)}
+        rowClassName={() => 'cursor-pointer'}
+      />
+    </>
+  );
+
+  const renderClientContractsTab = () => (
+    <>
+      <div className="mb-4">
+        <div className="relative max-w-md">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+            aria-hidden="true"
+          />
+          <Input
+            type="text"
+            placeholder="Search by client or contract..."
+            value={clientSearchTerm}
+            onChange={(event) => setClientSearchTerm(event.target.value)}
+            className="pl-10"
+            aria-label="Search client contracts"
+          />
+        </div>
+      </div>
+
+      <DataTable
+        data={filteredClientContracts}
+        columns={clientContractColumns}
+        pagination
+        onRowClick={(record) => navigateToContract(record.contract_id)}
+        rowClassName={() => 'cursor-pointer'}
+      />
+    </>
+  );
+
+  const tabs = [
+    { label: 'Templates', content: renderTemplateTab() },
+    { label: 'Client Contracts', content: renderClientContractsTab() },
+  ];
 
   return (
     <>
@@ -282,9 +382,9 @@ const Contracts: React.FC = () => {
                 Create with Wizard
               </Button>
               <ContractDialog
-                onContractSaved={fetchContracts}
-                editingContract={editingContract}
-                onClose={() => setEditingContract(null)}
+                onContractSaved={() => {
+                  void fetchContracts();
+                }}
                 triggerButton={
                   <Button id="add-contract-button" variant="outline">
                     <Plus className="h-4 w-4 mr-2" />
@@ -310,42 +410,22 @@ const Contracts: React.FC = () => {
               textClassName="text-gray-600"
             />
           ) : (
-            <>
-              <div className="mb-4">
-                <div className="relative max-w-md">
-                  <Search
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
-                    aria-hidden="true"
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Search by contract name or client..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                    aria-label="Search contracts"
-                  />
-                </div>
-              </div>
-
-              <DataTable
-                data={filteredContracts}
-                columns={contractColumns}
-                pagination={true}
-                onRowClick={handleContractClick}
-                rowClassName={() => 'cursor-pointer'}
-              />
-            </>
+            <CustomTabs
+              tabs={tabs}
+              defaultTab={activeView}
+              onTabChange={(tab) =>
+                setActiveView(tab === 'Client Contracts' ? 'Client Contracts' : 'Templates')
+              }
+            />
           )}
         </Box>
       </Card>
-
       <ContractWizard
         open={showWizard}
         onOpenChange={setShowWizard}
         onComplete={() => {
           setShowWizard(false);
-          fetchContracts();
+          void fetchContracts();
         }}
       />
     </>
