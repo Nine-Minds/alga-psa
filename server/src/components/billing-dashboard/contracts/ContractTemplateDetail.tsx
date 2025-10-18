@@ -1,43 +1,97 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, Sparkles } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Heading } from '@radix-ui/themes';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Layers3, ArrowLeft, Package, ListChecks, Pencil, StickyNote } from 'lucide-react';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import { Switch } from 'server/src/components/ui/Switch';
-import { DatePicker } from 'server/src/components/ui/DatePicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import Drawer from 'server/src/components/ui/Drawer';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
-import { IClient } from 'server/src/interfaces';
-import {
-  getContractById,
-  getContractSummary,
-  getContractAssignments,
-  updateContract,
-  IContractSummary
-} from 'server/src/lib/actions/contractActions';
-import { updateClientContract } from 'server/src/lib/actions/client-actions/clientContractActions';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+
+import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContractLineServiceBucketConfig, IContractLineServiceConfiguration, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { getContractById, getContractSummary, updateContract } from 'server/src/lib/actions/contractActions';
+import { getDetailedContractLines } from 'server/src/lib/actions/contractLineMappingActions';
+import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { useTenant } from 'server/src/components/TenantProvider';
-import ContractHeader from './ContractHeader';
-import ContractLines from './ContractLines';
-import PricingSchedules from './PricingSchedules';
-import ClientDetails from 'server/src/components/clients/ClientDetails';
-import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { Skeleton } from 'server/src/components/ui/Skeleton';
-import { cn } from 'server/src/lib/utils';
+import ContractLinesEditor from './ContractLines';
+
+type TemplateMetadataService = {
+  service_id?: string;
+  service_name?: string;
+  notes?: string;
+  [key: string]: unknown;
+};
+
+type BucketOverlayInput = {
+  total_minutes?: number;
+  overage_rate?: number;
+  allow_rollover?: boolean;
+  billing_period?: 'monthly' | 'weekly';
+};
+
+type TemplateMetadata = {
+  usage_notes?: string;
+  recommended_services?: TemplateMetadataService[];
+  recommended_billing_cadence?: string;
+  tags?: Array<string | null | undefined>;
+  [key: string]: unknown;
+};
+
+type TemplateLineService = {
+  service_id: string;
+  service_name: string;
+  billing_method?: string | null;
+  configuration: IContractLineServiceConfiguration;
+  bucket_overlay?: BucketOverlayInput | null;
+  unit_of_measure?: string | null;
+  minimum_billable_time?: number | null;
+  round_up_to_nearest?: number | null;
+  quantity?: number | null;
+};
+
+type TemplateSummary = {
+  contractLineCount: number;
+  totalClientAssignments: number;
+  activeClientCount: number;
+  poRequiredCount: number;
+};
+
+type TemplateContractLine = {
+  contract_line_id: string;
+  contract_line_name: string;
+  contract_line_type: string;
+  billing_frequency: string;
+  services: TemplateLineService[];
+};
+
+type DetailedContractLineRow = {
+  contract_line_id: string;
+  contract_line_name: string;
+  contract_line_type: string;
+  billing_frequency: string;
+};
+
+type RawContractSummary = Awaited<ReturnType<typeof getContractSummary>>;
+
+type BasicsFormState = {
+  contract_name: string;
+  contract_description: string;
+  billing_frequency: string;
+};
+
+type GuidanceFormState = {
+  usageNotes: string;
+  recommendedCadence: string;
+  tags: string;
+};
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {
@@ -54,50 +108,71 @@ const formatDate = (value?: string | Date | null): string => {
   }
 };
 
-type TemplateMetadataService = {
-  service_id?: string;
-  service_name?: string;
-  notes?: string;
-  [key: string]: unknown;
-};
-
-type TemplateMetadata = {
-  usage_notes?: string;
-  recommended_services?: TemplateMetadataService[];
-  recommended_billing_cadence?: string;
-  tags?: Array<string | null | undefined>;
-  [key: string]: unknown;
-};
-
-const humanizeLabel = (value?: string | null): string => {
+const humanize = (value?: string | null): string => {
   if (!value) {
     return '';
   }
 
   return value
-    .toString()
     .split(/[_\s-]+/)
     .filter(Boolean)
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(' ');
 };
 
-const ContractTemplateDetail: React.FC = () => {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const contractId = searchParams?.get('contractId') as string;
-  const tenant = useTenant()!;
+function isBucketConfig(
+  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+): config is IContractLineServiceBucketConfig {
+  return Boolean(config && 'total_minutes' in config && 'overage_rate' in config);
+}
 
-  const [contract, setContract] = useState<IContract | null>(null);
+function isHourlyConfig(
+  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+): config is IContractLineServiceHourlyConfig {
+  return Boolean(config && 'hourly_rate' in config && 'minimum_billable_time' in config);
+}
+
+function isUsageConfig(
+  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+): config is IContractLineServiceUsageConfig {
+  return Boolean(config && 'unit_of_measure' in config && 'enable_tiered_pricing' in config);
+}
+
+const ContractTemplateDetail: React.FC = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const contractId = searchParams?.get('contractId') ?? undefined;
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('edit');
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [summary, setSummary] = useState<IContractSummary | null>(null);
-  const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
+
+  const [contract, setContract] = useState<IContract | null>(null);
+  const [summary, setSummary] = useState<TemplateSummary | null>(null);
+  const [templateLines, setTemplateLines] = useState<TemplateContractLine[]>([]);
+
+  const [isEditingBasics, setIsEditingBasics] = useState(false);
+  const [basicsForm, setBasicsForm] = useState<BasicsFormState>({
+    contract_name: '',
+    contract_description: '',
+    billing_frequency: 'monthly',
+  });
+  const [isSavingBasics, setIsSavingBasics] = useState(false);
+  const [basicsError, setBasicsError] = useState<string | null>(null);
+
+  const [isEditingGuidance, setIsEditingGuidance] = useState(false);
+  const [guidanceForm, setGuidanceForm] = useState<GuidanceFormState>({
+    usageNotes: '',
+    recommendedCadence: '',
+    tags: '',
+  });
+  const [isSavingGuidance, setIsSavingGuidance] = useState(false);
+  const [guidanceError, setGuidanceError] = useState<string | null>(null);
+
+  const [showServicesEditor, setShowServicesEditor] = useState(false);
+  const lastContractIdRef = useRef<string | null>(null);
 
   const templateMetadata = useMemo<TemplateMetadata>(() => {
-    if (!contract || !contract.template_metadata) {
+    if (!contract?.template_metadata) {
       return {};
     }
 
@@ -107,12 +182,12 @@ const ContractTemplateDetail: React.FC = () => {
 
     if (typeof contract.template_metadata === 'string') {
       try {
-        const parsed = JSON.parse(contract.template_metadata);
+        const parsed = JSON.parse(contract.template_metadata) as unknown;
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           return parsed as TemplateMetadata;
         }
-      } catch (error) {
-        console.warn('Unable to parse contract template metadata JSON', error);
+      } catch (metadataError) {
+        console.warn('Unable to parse contract template metadata JSON', metadataError);
       }
     }
 
@@ -121,1273 +196,841 @@ const ContractTemplateDetail: React.FC = () => {
 
   const usageNotes = typeof templateMetadata.usage_notes === 'string' ? templateMetadata.usage_notes : '';
   const recommendedCadence = typeof templateMetadata.recommended_billing_cadence === 'string'
-    ? humanizeLabel(templateMetadata.recommended_billing_cadence)
+    ? humanize(templateMetadata.recommended_billing_cadence)
     : '';
-  const recommendedServices = Array.isArray(templateMetadata.recommended_services)
-    ? templateMetadata.recommended_services.filter(
-        (service): service is TemplateMetadataService =>
-          Boolean(service) && typeof service === 'object'
-      )
-    : [];
-  const templateTags = Array.isArray(templateMetadata.tags)
-    ? templateMetadata.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
-    : [];
+  const recommendedServices = useMemo(
+    () =>
+      Array.isArray(templateMetadata.recommended_services)
+        ? templateMetadata.recommended_services.filter(
+            (service): service is TemplateMetadataService =>
+              Boolean(service) && typeof service === 'object'
+          )
+        : [],
+    [templateMetadata.recommended_services]
+  );
 
-  // Client drawer state
-  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  const templateTags = useMemo(
+    () =>
+      Array.isArray(templateMetadata.tags)
+        ? templateMetadata.tags.filter(
+            (tag): tag is string => typeof tag === 'string' && tag.trim().length > 0
+          )
+        : [],
+    [templateMetadata.tags]
+  );
 
-  // Confirmation dialog state
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
-
-  // Edit tab state
-  const [editContractName, setEditContractName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editStatus, setEditStatus] = useState<string>('draft');
-  const [editBillingFrequency, setEditBillingFrequency] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [isFormInitialized, setIsFormInitialized] = useState(false);
-
-  // Assignment editing state
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const [editAssignments, setEditAssignments] = useState<Record<string, IContractAssignmentSummary>>({});
-  const [preEditSnapshot, setPreEditSnapshot] = useState<IContractAssignmentSummary | null>(null);
-
-  // Contract fields editing state
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-
-  // PO Amount input state for formatting (stores display value while editing)
-  const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
-
-  // Track if there are unsaved changes
-  const hasUnsavedChanges = useMemo(() => {
-    if (!contract || !isFormInitialized) {
-      return false;
-    }
-
-    // Check contract field changes
-    const contractChanged =
-      editContractName !== contract.contract_name ||
-      editDescription !== (contract.contract_description ?? '') ||
-      editStatus !== contract.status ||
-      editBillingFrequency !== contract.billing_frequency;
-
-    // Check assignment changes
-    const assignmentsChanged = Object.keys(editAssignments).length > 0;
-
-    return contractChanged || assignmentsChanged;
-  }, [contract, editContractName, editDescription, editStatus, editBillingFrequency, editAssignments, isFormInitialized]);
-
-  useEffect(() => {
-    if (contractId) {
-      loadContractData();
-    }
-  }, [contractId]);
-
-  // Warn before leaving page with unsaved changes (browser navigation)
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = ''; // Required for Chrome
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  // Intercept internal navigation (clicking links)
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!hasUnsavedChanges) return;
-
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
-
-      if (link && link.href) {
-        const currentPath = window.location.pathname + window.location.search;
-        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
-
-        // Only intercept if navigating to a different page
-        if (linkPath !== currentPath && !link.target && !link.download) {
-          e.preventDefault();
-          e.stopPropagation();
-          setPendingNavigation(link.href);
-          setShowNavigateAwayConfirm(true);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [hasUnsavedChanges]);
-
-  // Initialize edit form when contract loads
   useEffect(() => {
     if (contract) {
-      // Use a microtask to ensure state updates happen together
-      Promise.resolve().then(() => {
-        setEditContractName(contract.contract_name);
-        setEditDescription(contract.contract_description ?? '');
-        setEditStatus(contract.status);
-        setEditBillingFrequency(contract.billing_frequency);
-        setIsFormInitialized(true);
+      setBasicsForm({
+        contract_name: contract.contract_name ?? '',
+        contract_description: contract.contract_description ?? '',
+        billing_frequency: contract.billing_frequency ?? 'monthly',
       });
     }
   }, [contract]);
 
-  const loadContractData = async () => {
-    setIsLoading(true);
-    setError(null);
-    setIsFormInitialized(false);
-    setEditAssignments({});
-    setEditingAssignmentId(null);
-    setPreEditSnapshot(null);
-    setPoAmountInputs({});
-
-    try {
-      const [contractData, summaryData, assignmentData] = await Promise.all([
-        getContractById(contractId),
-        getContractSummary(contractId),
-        getContractAssignments(contractId)
-      ]);
-
-      if (!contractData) {
-        setError('Contract not found');
-        setContract(null);
-        setSummary(null);
-        setAssignments([]);
-        return;
-      }
-
-      setContract(contractData);
-      setSummary(summaryData);
-      setAssignments(assignmentData);
-    } catch (err) {
-      console.error('Error loading contract details:', err);
-      setError('Failed to load contract');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const refreshSummary = async () => {
-    if (!contractId) {
+  useEffect(() => {
+    const currentContractId = contract?.contract_id ?? null;
+    if (!currentContractId) {
       return;
     }
 
-    try {
-      const [summaryData, assignmentData] = await Promise.all([
-        getContractSummary(contractId),
-        getContractAssignments(contractId)
-      ]);
-      setSummary(summaryData);
-      setAssignments(assignmentData);
-    } catch (error) {
-      console.error('Error refreshing contract summary:', error);
+    if (lastContractIdRef.current !== currentContractId) {
+      setShowServicesEditor(false);
+      lastContractIdRef.current = currentContractId;
     }
+  }, [contract?.contract_id]);
+
+  useEffect(() => {
+    setGuidanceForm({
+      usageNotes: typeof templateMetadata.usage_notes === 'string' ? templateMetadata.usage_notes : '',
+      recommendedCadence: typeof templateMetadata.recommended_billing_cadence === 'string'
+        ? templateMetadata.recommended_billing_cadence
+        : '',
+      tags: templateTags.join(', '),
+    });
+  }, [templateMetadata, templateTags]);
+
+  const handleNavigateBack = () => {
+    router.push('/msp/billing?tab=contracts');
   };
 
-  const handleContractLinesChanged = () => {
-    refreshSummary();
-  };
+  const enrichServices = useCallback(
+    async (contractLineId: string): Promise<TemplateLineService[]> => {
+      try {
+        const servicesWithConfig = await getContractLineServicesWithConfigurations(contractLineId);
+        const serviceMap = new Map<string, TemplateLineService>();
 
-  const handleOpenClientDrawer = async (clientId: string) => {
-    try {
-      const clientData = await getClientById(clientId);
-      if (clientData) {
-        setQuickViewClient(clientData);
-        setIsQuickViewOpen(true);
-      }
-    } catch (error) {
-      console.error('Error fetching client details:', error);
-    }
-  };
+        servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
+          const base: TemplateLineService = serviceMap.get(configuration.service_id) ?? {
+            service_id: service.service_id,
+            service_name: service.service_name,
+            billing_method: service.billing_method ?? null,
+            configuration,
+            bucket_overlay: null,
+            unit_of_measure: null,
+            minimum_billable_time: null,
+            round_up_to_nearest: null,
+            quantity: configuration.quantity ?? null,
+          };
 
-  const handleCancelClick = () => {
-    if (hasUnsavedChanges) {
-      setShowCancelConfirm(true);
-    } else {
-      setActiveTab('edit');
-    }
-  };
+          if (configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig)) {
+            base.bucket_overlay = {
+              total_minutes: typeConfig.total_minutes ?? undefined,
+              overage_rate: typeConfig.overage_rate ?? undefined,
+              allow_rollover: Boolean(typeConfig.allow_rollover),
+              billing_period: (typeConfig.billing_period as BucketOverlayInput['billing_period']) ?? 'monthly',
+            };
+            base.quantity = configuration.quantity ?? base.quantity;
+          } else if (configuration.configuration_type === 'Hourly' && isHourlyConfig(typeConfig)) {
+            base.minimum_billable_time = typeConfig.minimum_billable_time ?? base.minimum_billable_time;
+            base.round_up_to_nearest = typeConfig.round_up_to_nearest ?? base.round_up_to_nearest;
+          } else if (configuration.configuration_type === 'Usage' && isUsageConfig(typeConfig)) {
+            base.unit_of_measure = typeConfig.unit_of_measure ?? base.unit_of_measure;
+          } else if (configuration.configuration_type === 'Fixed') {
+            base.quantity = configuration.quantity ?? base.quantity;
+          }
 
-  const handleCancelConfirm = () => {
-    // Reset all changes
-    if (contract) {
-      setEditContractName(contract.contract_name);
-      setEditDescription(contract.contract_description ?? '');
-      setEditStatus(contract.status);
-      setEditBillingFrequency(contract.billing_frequency);
-    }
-    setEditAssignments({});
-    setEditingAssignmentId(null);
-    setPreEditSnapshot(null);
-    setPoAmountInputs({});
-    setValidationErrors([]);
-    setHasAttemptedSubmit(false);
-    setShowCancelConfirm(false);
-    setActiveTab('edit');
-  };
+          if (configuration.custom_rate != null) {
+            base.configuration = { ...base.configuration, custom_rate: configuration.custom_rate };
+          }
 
-  const handleCancelDismiss = () => {
-    setShowCancelConfirm(false);
-  };
-
-  const handleNavigateAwayConfirm = () => {
-    if (pendingNavigation) {
-      // Allow navigation
-      window.location.href = pendingNavigation;
-    }
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
-  const handleNavigateAwayDismiss = () => {
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
-  const clearErrorIfSubmitted = () => {
-    if (hasAttemptedSubmit) {
-      setValidationErrors([]);
-    }
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setHasAttemptedSubmit(true);
-
-    const errors: string[] = [];
-    if (!editContractName.trim()) {
-      errors.push('Contract name');
-    }
-    if (!editBillingFrequency) {
-      errors.push('Billing frequency');
-    }
-
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-
-    setValidationErrors([]);
-    setIsSaving(true);
-
-    try {
-      if (!contract) {
-        setIsSaving(false);
-        return;
-      }
-      // Build contract update payload
-      const contractUpdatePayload: any = {
-        contract_name: editContractName,
-        contract_description: editDescription || undefined,
-        billing_frequency: editBillingFrequency,
-        tenant
-      };
-
-      // Only include status if the contract is not expired
-      // Expired contracts cannot have their status changed manually
-      if (contract.status !== 'expired') {
-        contractUpdatePayload.status = editStatus;
-      }
-
-      // Update contract
-      await updateContract(contractId, contractUpdatePayload);
-
-      // Update any edited assignments
-      for (const [assignmentId, editedAssignment] of Object.entries(editAssignments)) {
-        const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
-        if (!originalAssignment) continue;
-
-        // Build update payload with only changed fields
-        const updatePayload: any = {
-          tenant
-        };
-
-        // Only include fields that have changed
-        if (!datesAreEqual(editedAssignment.start_date, originalAssignment.start_date)) {
-          updatePayload.start_date = editedAssignment.start_date
-            ? toISODate(toPlainDate(editedAssignment.start_date))
-            : undefined;
-        }
-        if (!datesAreEqual(editedAssignment.end_date, originalAssignment.end_date)) {
-          updatePayload.end_date = editedAssignment.end_date
-            ? toISODate(toPlainDate(editedAssignment.end_date))
-            : null;
-        }
-        if (editedAssignment.po_required !== originalAssignment.po_required) {
-          updatePayload.po_required = editedAssignment.po_required;
-        }
-        if (editedAssignment.po_number !== originalAssignment.po_number) {
-          updatePayload.po_number = editedAssignment.po_number;
-        }
-        if (editedAssignment.po_amount !== originalAssignment.po_amount) {
-          // po_amount is already in cents in the state
-          updatePayload.po_amount = editedAssignment.po_amount;
-        }
-
-        // Only update if there are changes
-        if (Object.keys(updatePayload).length > 1) { // More than just tenant
-          await updateClientContract(assignmentId, updatePayload);
-        }
-      }
-
-      await loadContractData();
-      setEditingAssignmentId(null);
-      setEditAssignments({});
-      setIsFormInitialized(true);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (error) {
-      console.error('Error updating contract:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update contract';
-      setValidationErrors([errorMessage]);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleStartEditAssignment = (assignment: IContractAssignmentSummary) => {
-    setEditingAssignmentId(assignment.client_contract_id);
-
-    // Use edited data if it exists, otherwise use original assignment data
-    const dataToEdit = editAssignments[assignment.client_contract_id] || assignment;
-    const normalizedData: IContractAssignmentSummary = {
-      ...dataToEdit,
-      start_date: dataToEdit.start_date ? toISODate(toPlainDate(dataToEdit.start_date)) : null,
-      end_date: dataToEdit.end_date ? toISODate(toPlainDate(dataToEdit.end_date)) : null
-    };
-
-    // Save a snapshot of the data at the start of this edit session
-    setPreEditSnapshot({ ...normalizedData });
-
-    setEditAssignments(prev => ({
-      ...prev,
-      [assignment.client_contract_id]: { ...normalizedData }
-    }));
-
-    // Initialize PO amount input with formatted value (convert from cents to dollars)
-    if (normalizedData.po_amount != null) {
-      setPoAmountInputs(prev => ({
-        ...prev,
-        [assignment.client_contract_id]: (Number(normalizedData.po_amount) / 100).toFixed(2)
-      }));
-    }
-  };
-
-  const handleConfirmEditAssignment = () => {
-    // Just close the editor - changes are kept in editAssignments state
-    setEditingAssignmentId(null);
-    setPreEditSnapshot(null);
-  };
-
-  const handleCancelEditAssignment = (assignmentId: string) => {
-    // Revert to the snapshot from when editing started
-    if (preEditSnapshot) {
-      setEditAssignments(prev => ({
-        ...prev,
-        [assignmentId]: { ...preEditSnapshot }
-      }));
-
-      // Update PO amount input to match the snapshot
-      if (preEditSnapshot.po_amount != null) {
-        setPoAmountInputs(prev => ({
-          ...prev,
-          [assignmentId]: (Number(preEditSnapshot.po_amount) / 100).toFixed(2)
-        }));
-      } else {
-        setPoAmountInputs(prev => {
-          const newState = { ...prev };
-          delete newState[assignmentId];
-          return newState;
+          serviceMap.set(configuration.service_id, base);
         });
+
+        return Array.from(serviceMap.values());
+      } catch (serviceError) {
+        console.error(`Error fetching services for contract line ${contractLineId}`, serviceError);
+        return [];
       }
+    },
+    []
+  );
+
+  const loadTemplate = useCallback(
+    async (id: string) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const [contractData, summaryDataRaw, detailedLinesRaw] = (await Promise.all([
+          getContractById(id),
+          getContractSummary(id),
+          getDetailedContractLines(id),
+        ])) as [IContract | null, RawContractSummary, DetailedContractLineRow[]];
+
+        if (!contractData) {
+          setContract(null);
+          setTemplateLines([]);
+          setSummary(null);
+          setError('Template not found');
+          return;
+        }
+
+        const normalizedSummary: TemplateSummary | null = summaryDataRaw
+          ? {
+              contractLineCount: Number(summaryDataRaw.contractLineCount ?? 0),
+              totalClientAssignments: Number(summaryDataRaw.totalClientAssignments ?? 0),
+              activeClientCount: Number(summaryDataRaw.activeClientCount ?? 0),
+              poRequiredCount: Number(summaryDataRaw.poRequiredCount ?? 0),
+            }
+          : null;
+
+        const linesWithServices = await Promise.all(
+          detailedLinesRaw.map(async (line) => {
+            const services = await enrichServices(line.contract_line_id);
+            return {
+              contract_line_id: line.contract_line_id,
+              contract_line_name: line.contract_line_name,
+              contract_line_type: line.contract_line_type,
+              billing_frequency: line.billing_frequency,
+              services,
+            } as TemplateContractLine;
+          })
+        );
+
+        setContract(contractData);
+        setSummary(normalizedSummary);
+        setTemplateLines(linesWithServices);
+      } catch (loadError) {
+        console.error('Error loading contract template detail:', loadError);
+        setError('Failed to load contract template');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [enrichServices]
+  );
+
+  const resetBasicsForm = useCallback(() => {
+    if (!contract) {
+      setBasicsForm({
+        contract_name: '',
+        contract_description: '',
+        billing_frequency: 'monthly',
+      });
+      return;
     }
 
-    setEditingAssignmentId(null);
-    setPreEditSnapshot(null);
-  };
+    setBasicsForm({
+      contract_name: contract.contract_name ?? '',
+      contract_description: contract.contract_description ?? '',
+      billing_frequency: contract.billing_frequency ?? 'monthly',
+    });
+  }, [contract]);
 
+  const resetGuidanceForm = useCallback(() => {
+    setGuidanceForm({
+      usageNotes: typeof templateMetadata.usage_notes === 'string' ? templateMetadata.usage_notes : '',
+      recommendedCadence:
+        typeof templateMetadata.recommended_billing_cadence === 'string'
+          ? templateMetadata.recommended_billing_cadence
+          : '',
+      tags: templateTags.join(', '),
+    });
+  }, [templateMetadata, templateTags]);
 
-  const handleAssignmentFieldChange = (
-    assignmentId: string,
-    field: keyof IContractAssignmentSummary,
-    value: any
-  ) => {
-    setEditAssignments(prev => ({
-      ...prev,
-      [assignmentId]: {
-        ...prev[assignmentId],
-        [field]: value
-      }
-    }));
-  };
-
-  const convertToDatePickerValue = (value: string | null | undefined): Date | undefined => {
-    if (!value) {
-      return undefined;
+  const handleSaveBasics = useCallback(async () => {
+    if (!contract) {
+      return;
     }
 
-    try {
-      const plainDate = toPlainDate(value);
-      return new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    } catch (error) {
-      console.error('Error converting stored date for picker:', error);
-      return undefined;
+    if (!basicsForm.contract_name.trim()) {
+      setBasicsError('Template name is required');
+      return;
     }
-  };
 
-  const handleAssignmentDateChange = (
-    assignmentId: string,
-    field: 'start_date' | 'end_date',
-    date: Date | undefined
-  ) => {
-    if (!date) {
-      if (field === 'end_date') {
-        // Clearing the end date keeps the assignment open-ended
-        handleAssignmentFieldChange(assignmentId, field, null);
-      }
+    if (!basicsForm.billing_frequency) {
+      setBasicsError('Billing frequency is required');
       return;
     }
 
     try {
-      const isoDate = toISODate(toPlainDate(date));
-      handleAssignmentFieldChange(assignmentId, field, isoDate);
-    } catch (error) {
-      console.error('Error handling assignment date change:', error);
-    }
-  };
+      setIsSavingBasics(true);
+      setBasicsError(null);
 
-  const datesAreEqual = (
-    first: string | null | undefined,
-    second: string | null | undefined
-  ): boolean => {
-    if (!first && !second) {
-      return true;
+      await updateContract(contract.contract_id, {
+        contract_name: basicsForm.contract_name.trim(),
+        contract_description: basicsForm.contract_description.trim()
+          ? basicsForm.contract_description.trim()
+          : null,
+        billing_frequency: basicsForm.billing_frequency,
+      });
+
+      if (contract.contract_id) {
+        await loadTemplate(contract.contract_id);
+      }
+
+      setIsEditingBasics(false);
+    } catch (saveError) {
+      console.error('Failed to update template basics', saveError);
+      setBasicsError(saveError instanceof Error ? saveError.message : 'Failed to update template basics');
+    } finally {
+      setIsSavingBasics(false);
     }
-    if (!first || !second) {
-      return false;
+  }, [basicsForm, contract, loadTemplate]);
+
+  const handleCancelBasics = useCallback(() => {
+    setBasicsError(null);
+    resetBasicsForm();
+    setIsEditingBasics(false);
+  }, [resetBasicsForm]);
+
+  const handleSaveGuidance = useCallback(async () => {
+    if (!contract) {
+      return;
     }
 
     try {
-      const firstPlain = toPlainDate(first);
-      const secondPlain = toPlainDate(second);
-      return Temporal.PlainDate.compare(firstPlain, secondPlain) === 0;
-    } catch (error) {
-      console.error('Error comparing dates:', error);
-      return first === second;
+      setIsSavingGuidance(true);
+      setGuidanceError(null);
+
+      const nextMetadata: TemplateMetadata = { ...templateMetadata };
+
+      if (guidanceForm.usageNotes.trim()) {
+        nextMetadata.usage_notes = guidanceForm.usageNotes.trim();
+      } else {
+        delete nextMetadata.usage_notes;
+      }
+
+      if (guidanceForm.recommendedCadence) {
+        nextMetadata.recommended_billing_cadence = guidanceForm.recommendedCadence;
+      } else {
+        delete nextMetadata.recommended_billing_cadence;
+      }
+
+      const parsedTags = guidanceForm.tags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+
+      if (parsedTags.length > 0) {
+        nextMetadata.tags = parsedTags;
+      } else {
+        delete nextMetadata.tags;
+      }
+
+      await updateContract(contract.contract_id, { template_metadata: nextMetadata });
+
+      if (contract.contract_id) {
+        await loadTemplate(contract.contract_id);
+      }
+
+      setIsEditingGuidance(false);
+    } catch (saveError) {
+      console.error('Failed to update template guidance', saveError);
+      setGuidanceError(saveError instanceof Error ? saveError.message : 'Failed to update template guidance');
+    } finally {
+      setIsSavingGuidance(false);
     }
-  };
+  }, [contract, guidanceForm, loadTemplate, templateMetadata]);
+
+  const handleCancelGuidance = useCallback(() => {
+    setGuidanceError(null);
+    resetGuidanceForm();
+    setIsEditingGuidance(false);
+  }, [resetGuidanceForm]);
+
+  useEffect(() => {
+    if (contractId) {
+      void loadTemplate(contractId);
+    }
+  }, [contractId, loadTemplate]);
+
+  const groupedLines = useMemo(() => {
+    return templateLines.reduce<Record<'Fixed' | 'Hourly' | 'Usage' | 'Other', TemplateContractLine[]>>(
+      (acc, line) => {
+        if (line.contract_line_type === 'Fixed') {
+          acc.Fixed.push(line);
+        } else if (line.contract_line_type === 'Hourly') {
+          acc.Hourly.push(line);
+        } else if (line.contract_line_type === 'Usage') {
+          acc.Usage.push(line);
+        } else {
+          acc.Other.push(line);
+        }
+        return acc;
+      },
+      { Fixed: [], Hourly: [], Usage: [], Other: [] }
+    );
+  }, [templateLines]);
+
+  const totalServices = useMemo(
+    () => templateLines.reduce((count, line) => count + line.services.length, 0),
+    [templateLines]
+  );
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-4 animate-pulse">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <Skeleton className="h-9 w-36 md:w-32" />
-          <div className="space-y-2 md:w-1/2 lg:w-1/3">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-7 w-56" />
-            <div className="grid gap-2 pt-4 sm:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={`metric-${index}`} className="space-y-2">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-6 w-28" />
-                </div>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={`form-field-${index}`} className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-40" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div key={`client-row-${index}`} className="flex items-center justify-between">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-4 w-24" />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card className="xl:col-span-2">
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-6 gap-3">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <Skeleton key={`header-${index}`} className="h-4" />
-                ))}
-              </div>
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, rowIndex) => (
-                  <div key={`assignment-row-${rowIndex}`} className="grid grid-cols-6 gap-3">
-                    {Array.from({ length: 6 }).map((_, cellIndex) => (
-                      <Skeleton
-                        key={`assignment-cell-${rowIndex}-${cellIndex}`}
-                        className={cn(
-                          'h-9',
-                          cellIndex === 5 ? 'rounded-full w-10 justify-self-center' : 'w-full'
-                        )}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="p-6">
+        <Button
+          id="back-to-contracts-loading"
+          variant="outline"
+          size="sm"
+          onClick={handleNavigateBack}
+          className="gap-2 mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Contracts
+        </Button>
+        <LoadingIndicator
+          className="py-12 text-gray-600"
+          layout="stacked"
+          spinnerProps={{ size: 'md' }}
+          text="Loading template..."
+        />
       </div>
     );
   }
 
   if (error || !contract) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="p-6 space-y-4">
         <Button
           id="back-to-contracts-error"
           variant="outline"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts')}
-          className="gap-2 hover:bg-gray-50"
+          onClick={handleNavigateBack}
+          className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Contracts
         </Button>
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error || 'Contract not found'}
-          </AlertDescription>
+          <AlertDescription>{error || 'Contract template not found'}</AlertDescription>
         </Alert>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <Button
-          id="back-to-contracts"
-          variant="outline"
-          size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts')}
-          className="gap-2 self-start hover:bg-gray-50"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Contracts
-        </Button>
-        <ContractHeader contract={contract} summary={summary} />
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-4 flex flex-wrap gap-2">
-          <TabsTrigger value="edit">Overview</TabsTrigger>
-          <TabsTrigger value="lines">Contract Lines</TabsTrigger>
-          <TabsTrigger value="pricing">Pricing Schedules</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="edit">
-          <div className="space-y-6">
-            {hasUnsavedChanges && (
-              <Alert className="bg-amber-50 border-amber-200">
-                <AlertDescription className="text-amber-800 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>You have unsaved changes. Click "Save Changes" to apply them.</span>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {saveSuccess && (
-              <Alert className="bg-green-50 border-green-200">
-                <AlertDescription className="text-green-800">
-                  Contract saved successfully!
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <form onSubmit={handleEditSubmit} className="space-y-6" noValidate>
-              {hasAttemptedSubmit && validationErrors.length > 0 && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {validationErrors.length === 1 && validationErrors[0].includes('Cannot set contract to draft') ? (
-                      <p>{validationErrors[0]}</p>
-                    ) : (
-                      <>
-                        <p className="font-medium mb-2">Please fix the following errors:</p>
-                        <ul className="list-disc list-inside space-y-1">
-                          {validationErrors.map((err, index) => (
-                            <li key={index}>{err}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold flex items-center gap-2">
-                      <Pencil className="h-4 w-4 text-blue-600" />
-                      Contract Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="edit-contract-name">Contract Name *</Label>
-                        {!isEditingName && (
-                          <Button
-                            id="edit-contract-name-btn"
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setIsEditingName(true)}
-                            className="h-5 w-5 p-0"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                      {isEditingName ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="edit-contract-name"
-                            value={editContractName}
-                            onChange={(e) => {
-                              setEditContractName(e.target.value);
-                              clearErrorIfSubmitted();
-                            }}
-                            placeholder="Enter contract name"
-                            required
-                            className={hasAttemptedSubmit && !editContractName.trim() ? 'border-red-500' : ''}
-                          />
-                          <Button
-                            id="save-contract-name"
-                            type="button"
-                            size="sm"
-                            onClick={() => setIsEditingName(false)}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            id="cancel-contract-name"
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditContractName(contract.contract_name);
-                              setIsEditingName(false);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-base font-medium text-gray-900">{editContractName}</span>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="edit-description">Description</Label>
-                        {!isEditingDescription && (
-                          <Button
-                            id="edit-description-btn"
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setIsEditingDescription(true)}
-                            className="h-5 w-5 p-0"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                      {isEditingDescription ? (
-                        <div className="space-y-2">
-                          <TextArea
-                            id="edit-description"
-                            value={editDescription}
-                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
-                            placeholder="Enter contract description"
-                            className="min-h-[100px]"
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              id="save-description"
-                              type="button"
-                              size="sm"
-                              onClick={() => setIsEditingDescription(false)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              id="cancel-description"
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setEditDescription(contract.contract_description ?? '');
-                                setIsEditingDescription(false);
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-base text-gray-700">{editDescription || 'No description'}</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-purple-600" />
-                      Contract Snapshot
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-gray-700">
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <span className="text-xs text-gray-500">Status</span>
-                        <CustomSelect
-                          id="edit-status"
-                          value={editStatus}
-                          onValueChange={(value) => setEditStatus(value)}
-                          options={[
-                            { value: 'active', label: 'Active' },
-                            { value: 'draft', label: 'Draft' },
-                            { value: 'terminated', label: 'Terminated' },
-                            ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
-                          ]}
-                          disabled={contract.status === 'expired'}
-                        />
-                        {contract.status === 'expired' && (
-                          <p className="text-xs text-gray-500">
-                            Expired contracts cannot be changed to another status
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xs text-gray-500">Billing Frequency *</span>
-                        <CustomSelect
-                          id="edit-billing-frequency"
-                          value={editBillingFrequency}
-                          onValueChange={(value) => {
-                            setEditBillingFrequency(value);
-                            clearErrorIfSubmitted();
-                          }}
-                          options={BILLING_FREQUENCY_OPTIONS}
-                          placeholder="Select billing frequency"
-                          className={hasAttemptedSubmit && !editBillingFrequency ? 'ring-1 ring-red-500' : ''}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Created</span>
-                      <span className="font-medium">{formatDate(contract.created_at)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Last Updated</span>
-                      <span className="font-medium">{formatDate(contract.updated_at)}</span>
-                    </div>
-                    {editDescription && (
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Description</p>
-                        <p className="text-sm text-gray-800">{editDescription}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-amber-600" />
-                      Template Guidance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-sm text-gray-700">
-                    <div className="space-y-1">
-                      <span className="text-xs uppercase tracking-wide text-gray-500">Usage Notes</span>
-                      <p className={usageNotes ? 'text-gray-800' : 'text-gray-500 italic'}>
-                        {usageNotes || 'Add guidance to help others understand how to use this template.'}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs uppercase tracking-wide text-gray-500">Recommended Cadence</span>
-                      <p className={recommendedCadence ? 'text-gray-800' : 'text-gray-500 italic'}>
-                        {recommendedCadence || 'No recommended cadence provided.'}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <span className="text-xs uppercase tracking-wide text-gray-500">Recommended Services</span>
-                      {recommendedServices.length > 0 ? (
-                        <ul className="space-y-2">
-                          {recommendedServices.map((service, index) => (
-                            <li key={`${service.service_id ?? service.service_name ?? index}`}>
-                              <p className="font-medium text-gray-900">
-                                {service.service_name || service.service_id || 'Unnamed Service'}
-                              </p>
-                              {service.notes && (
-                                <p className="text-xs text-gray-600">{service.notes}</p>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-gray-500 italic">No recommended services listed.</p>
-                      )}
-                    </div>
-                    {templateTags.length > 0 && (
-                      <div className="space-y-2">
-                        <span className="text-xs uppercase tracking-wide text-gray-500">Tags</span>
-                        <div className="flex flex-wrap gap-2">
-                          {templateTags.map((tag) => (
-                            <Badge key={tag} className="border border-gray-200 bg-gray-50 text-gray-700">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold flex items-center gap-2">
-                      <Users className="h-4 w-4 text-emerald-600" />
-                      Client Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-gray-700">
-                    {assignments.length === 0 ? (
-                      <p className="text-gray-500">No client assigned to this contract yet.</p>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span>Client Name</span>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenClientDrawer(assignments[0].client_id)}
-                            className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            {assignments[0].client_name || assignments[0].client_id}
-                          </button>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Assignment Status</span>
-                          <Badge className={
-                            contract.status === 'active' ? 'bg-green-100 text-green-800' :
-                            contract.status === 'terminated' ? 'bg-orange-100 text-orange-800' :
-                            contract.status === 'expired' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }>
-                            {contract.status === 'active' ? 'Active' :
-                             contract.status === 'terminated' ? 'Terminated' :
-                             contract.status === 'expired' ? 'Expired' :
-                             'Draft'}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Start Date</span>
-                          <span className="font-medium">{formatDate(assignments[0].start_date)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>End Date</span>
-                          <span className="font-medium">
-                            {assignments[0].end_date ? formatDate(assignments[0].end_date) : 'Ongoing'}
-                          </span>
-                        </div>
-                        {assignments[0].po_required && (
-                          <>
-                            <div className="flex items-center justify-between">
-                              <span>PO Number</span>
-                              <span className="font-medium">
-                                {assignments[0].po_number || <span className="text-orange-600">Required</span>}
-                              </span>
-                            </div>
-                            {assignments[0].po_amount != null && (
-                              <div className="flex items-center justify-between">
-                                <span>PO Amount</span>
-                                <span className="font-medium">
-                                  ${(Number(assignments[0].po_amount) / 100).toFixed(2)}
-                                </span>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4 text-sky-600" />
-                    Assignment Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {assignments.length === 0 ? (
-                    <div className="py-8 text-center text-sm text-gray-500">
-                      No clients are currently assigned to this contract.
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          <tr>
-                            <th className="px-4 py-3">Client</th>
-                            <th className="px-4 py-3">Start Date</th>
-                            <th className="px-4 py-3">End Date</th>
-                            <th className="px-4 py-3">PO Required</th>
-                            <th className="px-4 py-3">PO Number</th>
-                            <th className="px-4 py-3">PO Amount</th>
-                            <th className="px-4 py-3">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {assignments.map((assignment) => {
-                            const isEditing = editingAssignmentId === assignment.client_contract_id;
-                            const editData = editAssignments[assignment.client_contract_id] || assignment;
-
-                            return (
-                              <tr key={assignment.client_contract_id} className="text-gray-700">
-                                <td className="px-4 py-3">
-                                  <div className="font-medium text-gray-900">
-                                    {assignment.client_name || assignment.client_id}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <div
-                                      className="w-44"
-                                      title={contract.status === 'active' ? 'Start date cannot be changed for active contracts' : undefined}
-                                    >
-                                      <DatePicker
-                                        id={`assignment-start-date-${assignment.client_contract_id}`}
-                                        value={convertToDatePickerValue(editData.start_date)}
-                                        onChange={(date) =>
-                                          handleAssignmentDateChange(
-                                            assignment.client_contract_id,
-                                            'start_date',
-                                            date
-                                          )
-                                        }
-                                        className="w-full"
-                                        placeholder="Select start date"
-                                        label="Assignment start date"
-                                        disabled={contract.status === 'active'}
-                                      />
-                                    </div>
-                                  ) : (
-                                    formatDate(editData.start_date)
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <DatePicker
-                                      id={`assignment-end-date-${assignment.client_contract_id}`}
-                                      value={convertToDatePickerValue(editData.end_date)}
-                                      onChange={(date) =>
-                                        handleAssignmentDateChange(
-                                          assignment.client_contract_id,
-                                          'end_date',
-                                          date
-                                        )
-                                      }
-                                      className="w-44"
-                                      placeholder="Ongoing"
-                                      label="Assignment end date"
-                                      clearable
-                                    />
-                                  ) : (
-                                    editData.end_date ? formatDate(editData.end_date) : 'Ongoing'
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <Switch
-                                      id={`po-required-${assignment.client_contract_id}`}
-                                      checked={editData.po_required}
-                                      onCheckedChange={(checked) => {
-                                        handleAssignmentFieldChange(
-                                          assignment.client_contract_id,
-                                          'po_required',
-                                          checked
-                                        );
-                                      }}
-                                    />
-                                  ) : (
-                                    <span>{editData.po_required ? 'Yes' : 'No'}</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <Input
-                                      value={editData.po_number || ''}
-                                      onChange={(e) => handleAssignmentFieldChange(
-                                        assignment.client_contract_id,
-                                        'po_number',
-                                        e.target.value || null
-                                      )}
-                                      placeholder="PO Number"
-                                      className="w-32"
-                                      disabled={!editData.po_required}
-                                    />
-                                  ) : (
-                                    editData.po_required ? (
-                                      <Badge variant="outline" className="border-orange-300 text-orange-700">
-                                        {editData.po_number ? editData.po_number : 'Required'}
-                                      </Badge>
-                                    ) : (
-                                      <span className="text-gray-500">Not required</span>
-                                    )
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                                      <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={poAmountInputs[assignment.client_contract_id] || ''}
-                                        onChange={(e) => {
-                                          const value = e.target.value.replace(/[^0-9.]/g, '');
-                                          const decimalCount = (value.match(/\./g) || []).length;
-                                          if (decimalCount <= 1) {
-                                            setPoAmountInputs(prev => ({
-                                              ...prev,
-                                              [assignment.client_contract_id]: value
-                                            }));
-                                          }
-                                        }}
-                                        onBlur={() => {
-                                          const input = poAmountInputs[assignment.client_contract_id] || '';
-                                          if (input.trim() === '' || input === '.') {
-                                            setPoAmountInputs(prev => ({
-                                              ...prev,
-                                              [assignment.client_contract_id]: ''
-                                            }));
-                                            handleAssignmentFieldChange(
-                                              assignment.client_contract_id,
-                                              'po_amount',
-                                              null
-                                            );
-                                          } else {
-                                            const dollars = parseFloat(input) || 0;
-                                            const cents = Math.round(dollars * 100);
-                                            handleAssignmentFieldChange(
-                                              assignment.client_contract_id,
-                                              'po_amount',
-                                              cents
-                                            );
-                                            setPoAmountInputs(prev => ({
-                                              ...prev,
-                                              [assignment.client_contract_id]: dollars.toFixed(2)
-                                            }));
-                                          }
-                                        }}
-                                        placeholder="0.00"
-                                        className="w-28 pl-7"
-                                        disabled={!editData.po_required}
-                                      />
-                                    </div>
-                                  ) : (
-                                    editData.po_amount != null ? `$${(Number(editData.po_amount) / 100).toFixed(2)}` : '—'
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <div className="flex gap-2">
-                                      <Button
-                                        id={`confirm-assignment-${assignment.client_contract_id}`}
-                                        type="button"
-                                        size="sm"
-                                        onClick={handleConfirmEditAssignment}
-                                      >
-                                        <Check className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        id={`cancel-assignment-${assignment.client_contract_id}`}
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleCancelEditAssignment(assignment.client_contract_id)}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <Button
-                                      id={`edit-assignment-${assignment.client_contract_id}`}
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleStartEditAssignment(assignment)}
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Package className="h-4 w-4 text-purple-600" />
-                    Quick Actions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-wrap gap-3">
-                  <Button id="edit-manage-lines" variant="outline" onClick={() => setActiveTab('lines')}>
-                    <Layers3 className="mr-2 h-4 w-4" />
-                    Manage Contract Lines
-                  </Button>
-                  <Button id="edit-manage-pricing" variant="outline" onClick={() => setActiveTab('pricing')}>
-                    <CalendarClock className="mr-2 h-4 w-4" />
-                    Manage Pricing Schedules
-                  </Button>
-                  <Button id="edit-view-invoices" variant="outline" onClick={() => setActiveTab('invoices')}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    View Invoices
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  id="cancel-edit-contract-btn"
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancelClick}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  id="save-edit-contract-btn"
-                  type="submit"
-                  disabled={isSaving}
-                  className={!editContractName.trim() || !editBillingFrequency ? 'opacity-50' : ''}
-                >
-                  <span className={hasUnsavedChanges ? 'font-bold' : ''}>
-                    {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
-                  </span>
-                  {!isSaving && <Save className="ml-2 h-4 w-4" />}
-                </Button>
-              </div>
-            </form>
+    <div className="p-6 space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              id="back-to-contracts"
+              variant="ghost"
+              size="sm"
+              onClick={handleNavigateBack}
+              className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Contracts
+            </Button>
+            <Badge
+              className={
+                contract.status === 'active'
+                  ? 'bg-green-100 text-green-800'
+                  : contract.status === 'terminated'
+                    ? 'bg-orange-100 text-orange-800'
+                    : contract.status === 'expired'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-800'
+              }
+            >
+              {humanize(contract.status)}
+            </Badge>
+            <Badge className="border border-blue-200 bg-blue-50 text-blue-800">Template</Badge>
           </div>
-        </TabsContent>
+          <div className="flex flex-wrap items-center gap-3">
+            <Heading as="h2" size="7" className="text-gray-900">
+              {contract.contract_name}
+            </Heading>
+            <Button
+              id="toggle-basics-editor"
+              size="sm"
+              variant={isEditingBasics ? 'default' : 'ghost'}
+              onClick={() => {
+                if (isEditingBasics) {
+                  handleCancelBasics();
+                } else {
+                  resetBasicsForm();
+                  setIsEditingBasics(true);
+                }
+              }}
+              className="h-8 px-2 text-xs gap-1.5"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {isEditingBasics ? 'Close' : 'Edit'}
+            </Button>
+          </div>
+          {contract.contract_description && (
+            <p className="text-sm text-gray-700 max-w-2xl">{contract.contract_description}</p>
+          )}
+        </div>
 
-        <TabsContent value="lines">
-          <ContractLines contract={contract} onContractLinesChanged={handleContractLinesChanged} />
-        </TabsContent>
-
-        <TabsContent value="pricing">
-          <PricingSchedules contractId={contract.contract_id} />
-        </TabsContent>
-
-        <TabsContent value="invoices">
+        {isEditingBasics && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-600" />
-                Contract Invoices
-              </CardTitle>
+              <CardTitle className="text-base font-semibold text-gray-800">Edit Template Basics</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-gray-600">
-              <p className="mb-2">
-                Invoice reporting for this contract is coming soon. Once available, you’ll be able to review invoice history, open balances, and links to generated documents here.
-              </p>
+            <CardContent>
+              {basicsError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{basicsError}</AlertDescription>
+                </Alert>
+              )}
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSaveBasics();
+                }}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="template-name-inline">Template Name *</Label>
+                  <Input
+                    id="template-name-inline"
+                    value={basicsForm.contract_name}
+                    onChange={(event) =>
+                      setBasicsForm((prev) => ({ ...prev, contract_name: event.target.value }))
+                    }
+                    placeholder="Managed Services Starter, Premium Support Bundle, etc."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template-description-inline">Internal Notes</Label>
+                  <TextArea
+                    id="template-description-inline"
+                    value={basicsForm.contract_description}
+                    onChange={(event) =>
+                      setBasicsForm((prev) => ({ ...prev, contract_description: event.target.value }))
+                    }
+                    placeholder="Describe where this template applies, onboarding tips, or approval requirements."
+                    className="min-h-[96px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template-billing-frequency-inline">Recommended Billing Frequency *</Label>
+                  <CustomSelect
+                    id="template-billing-frequency-inline"
+                    options={BILLING_FREQUENCY_OPTIONS}
+                    value={basicsForm.billing_frequency}
+                    onValueChange={(value) =>
+                      setBasicsForm((prev) => ({ ...prev, billing_frequency: value }))
+                    }
+                    placeholder="Select billing cadence"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    id="cancel-template-basics-edit"
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelBasics}
+                    disabled={isSavingBasics}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    id="save-template-basics"
+                    type="submit"
+                    disabled={isSavingBasics}
+                    className="gap-2"
+                  >
+                    {isSavingBasics ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Drawer
-        isOpen={isQuickViewOpen}
-        onClose={() => {
-          setIsQuickViewOpen(false);
-          setQuickViewClient(null);
-        }}
-      >
-        {quickViewClient && (
-          <ClientDetails
-            client={quickViewClient}
-            isInDrawer={true}
-            quickView={true}
-          />
         )}
-      </Drawer>
 
-      <ConfirmationDialog
-        isOpen={showCancelConfirm}
-        onClose={handleCancelDismiss}
-        onConfirm={handleCancelConfirm}
-        title="Discard Changes"
-        message="Are you sure you want to discard all changes? Any unsaved changes will be lost."
-        confirmLabel="Discard Changes"
-        cancelLabel="Continue Editing"
-      />
+        {isEditingGuidance && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold text-gray-800">Edit Template Guidance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {guidanceError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{guidanceError}</AlertDescription>
+                </Alert>
+              )}
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSaveGuidance();
+                }}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="template-usage-notes-inline">Usage Notes</Label>
+                  <TextArea
+                    id="template-usage-notes-inline"
+                    value={guidanceForm.usageNotes}
+                    onChange={(event) =>
+                      setGuidanceForm((prev) => ({ ...prev, usageNotes: event.target.value }))
+                    }
+                    placeholder="Add guidance to help others understand how to use this template."
+                    className="min-h-[96px]"
+                  />
+                </div>
 
-      <ConfirmationDialog
-        isOpen={showNavigateAwayConfirm}
-        onClose={handleNavigateAwayDismiss}
-        onConfirm={handleNavigateAwayConfirm}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
-        confirmLabel="Leave Page"
-        cancelLabel="Stay on Page"
-      />
+                <div className="space-y-2">
+                  <Label htmlFor="template-recommended-cadence-inline">Recommended Cadence</Label>
+                  <CustomSelect
+                    id="template-recommended-cadence-inline"
+                    options={BILLING_FREQUENCY_OPTIONS}
+                    value={guidanceForm.recommendedCadence}
+                    onValueChange={(value) =>
+                      setGuidanceForm((prev) => ({ ...prev, recommendedCadence: value }))
+                    }
+                    placeholder="Select a cadence"
+                    allowClear
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template-tags-inline">Tags</Label>
+                  <Input
+                    id="template-tags-inline"
+                    value={guidanceForm.tags}
+                    onChange={(event) =>
+                      setGuidanceForm((prev) => ({ ...prev, tags: event.target.value }))
+                    }
+                    placeholder="Comma separated (e.g., onboarding, finance)"
+                  />
+                  <p className="text-xs text-gray-500">Tags help teams find relevant templates quickly.</p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    id="cancel-template-guidance-edit"
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelGuidance}
+                    disabled={isSavingGuidance}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    id="save-template-guidance"
+                    type="submit"
+                    disabled={isSavingGuidance}
+                    className="gap-2"
+                  >
+                    {isSavingGuidance ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-gray-700">Template Snapshot</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-gray-700">
+              <div className="flex items-center justify-between">
+                <span>Billing Frequency</span>
+                <span className="font-medium">{humanize(contract.billing_frequency)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Contract Lines</span>
+                <span className="font-medium">{summary?.contractLineCount ?? templateLines.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Services</span>
+                <span className="font-medium">{totalServices}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Created</span>
+                <span className="font-medium">{formatDate(contract.created_at)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Last Updated</span>
+                <span className="font-medium">{formatDate(contract.updated_at)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-gray-700">Client Assignments</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-gray-700">
+              <div className="flex items-center justify-between">
+                <span>Total Assignments</span>
+                <span className="font-medium">{summary?.totalClientAssignments ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Active Clients</span>
+                <span className="font-medium">{summary?.activeClientCount ?? 0}</span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs uppercase tracking-wide text-gray-500">Purchase Orders</span>
+                <p className="text-sm text-gray-800">
+                  {summary?.poRequiredCount ? `${summary.poRequiredCount} assignments require PO` : 'No PO requirements captured.'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm font-semibold text-gray-700">Template Guidance</CardTitle>
+              <Button
+                id="toggle-guidance-editor"
+                size="sm"
+                variant={isEditingGuidance ? 'default' : 'ghost'}
+                onClick={() => {
+                  if (isEditingGuidance) {
+                    handleCancelGuidance();
+                  } else {
+                    resetGuidanceForm();
+                    setIsEditingGuidance(true);
+                  }
+                }}
+                className="h-8 px-2 text-xs gap-1.5"
+              >
+                <StickyNote className="h-3.5 w-3.5" />
+                {isEditingGuidance ? 'Close' : 'Edit'}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-gray-700">
+              <div>
+                <span className="text-xs uppercase tracking-wide text-gray-500">Usage Notes</span>
+                <p className={usageNotes ? 'text-gray-800' : 'text-gray-500 italic'}>
+                  {usageNotes || 'Add guidance to help others understand how to use this template.'}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs uppercase tracking-wide text-gray-500">Recommended Cadence</span>
+                <p className={recommendedCadence ? 'text-gray-800' : 'text-gray-500 italic'}>
+                  {recommendedCadence || 'No recommended cadence provided.'}
+                </p>
+              </div>
+              {templateTags.length > 0 && (
+                <div>
+                  <span className="text-xs uppercase tracking-wide text-gray-500">Tags</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {templateTags.map((tag) => (
+                      <Badge key={tag} className="border border-gray-200 bg-gray-50 text-gray-700">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+
+      {recommendedServices.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold text-gray-800 flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-purple-600" />
+              Recommended Services
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recommendedServices.map((service, index) => (
+              <div key={`${service.service_id ?? index}`} className="border border-gray-200 rounded-md p-3">
+                <p className="font-medium text-gray-900">{service.service_name || service.service_id || 'Unnamed Service'}</p>
+                {service.notes && <p className="text-sm text-gray-600 mt-1">{service.notes}</p>}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {showServicesEditor && contract && (
+        <ContractLinesEditor
+          contract={contract}
+          onContractLinesChanged={() => {
+            if (contract.contract_id) {
+              void loadTemplate(contract.contract_id);
+            }
+          }}
+        />
+      )}
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Layers3 className="h-4 w-4 text-blue-600" />
+            <Heading as="h3" size="5" className="text-gray-900">
+              Template Composition
+            </Heading>
+          </div>
+          <Button
+            id="toggle-services-editor"
+            size="sm"
+            variant={showServicesEditor ? 'default' : 'ghost'}
+            onClick={() => setShowServicesEditor((prev) => !prev)}
+            className="h-8 px-2 text-xs gap-1.5"
+          >
+            <Layers3 className="h-3.5 w-3.5" />
+            {showServicesEditor ? 'Close Manager' : 'Manage Services'}
+          </Button>
+        </div>
+        <div
+          className={
+            showServicesEditor
+              ? 'space-y-4 transition-opacity duration-200 opacity-40 pointer-events-none'
+              : 'space-y-4 transition-opacity duration-200'
+          }
+          aria-hidden={showServicesEditor}
+        >
+          {(['Fixed', 'Hourly', 'Usage', 'Other'] as const).map((type) => {
+            const lines = groupedLines[type];
+            if (!lines || lines.length === 0) {
+              if (type === 'Other') {
+                return null;
+              }
+              return (
+                <Card key={type}>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-semibold">
+                      {type === 'Fixed' ? 'Fixed Fee Bundles' : type === 'Hourly' ? 'Hourly Plans' : 'Usage-Based Plans'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500">
+                      No {type === 'Fixed' ? 'fixed fee' : type === 'Hourly' ? 'hourly' : 'usage-based'} contract lines configured yet.
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            return (
+              <Card key={type}>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">
+                    {type === 'Fixed' ? 'Fixed Fee Bundles' : type === 'Hourly' ? 'Hourly Plans' : type === 'Usage' ? 'Usage-Based Plans' : 'Additional Plans'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {lines.map((line) => (
+                    <div key={line.contract_line_id} className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-gray-900">{line.contract_line_name}</p>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">
+                            {humanize(line.contract_line_type)} • {humanize(line.billing_frequency)}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {line.services.length} service{line.services.length === 1 ? '' : 's'}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {line.services.length === 0 ? (
+                          <p className="text-sm text-gray-600 italic">No services assigned to this contract line.</p>
+                        ) : (
+                          line.services.map((service) => (
+                            <div
+                              key={`${line.contract_line_id}-${service.service_id}`}
+                              className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-md bg-white p-3 border border-gray-200"
+                            >
+                              <div>
+                                <p className="font-medium text-gray-900">{service.service_name}</p>
+                                <p className="text-xs text-gray-500">
+                                  {service.billing_method ? humanize(service.billing_method) : 'Service'} • {service.configuration.configuration_type}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                                {service.quantity != null && (
+                                  <span>Quantity: <span className="font-medium">{service.quantity}</span></span>
+                                )}
+                                {service.unit_of_measure && (
+                                  <span>Unit: <span className="font-medium">{service.unit_of_measure}</span></span>
+                                )}
+                                {service.minimum_billable_time != null && (
+                                  <span>Minimum Time: <span className="font-medium">{service.minimum_billable_time} min</span></span>
+                                )}
+                                {service.round_up_to_nearest != null && (
+                                  <span>Round Up: <span className="font-medium">{service.round_up_to_nearest} min</span></span>
+                                )}
+                                {service.bucket_overlay && (
+                                  <span className="flex items-center gap-1">
+                                    <Package className="h-3 w-3 text-purple-500" />
+                                    Bucket: {service.bucket_overlay.total_minutes ?? 0} min • Overage ${service.bucket_overlay.overage_rate ?? 0}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 };
