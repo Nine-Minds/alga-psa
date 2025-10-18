@@ -16,6 +16,8 @@ interface WizardNavigationProps {
   isSkipDisabled?: boolean;
   isLoading?: boolean;
   showSaveDraft?: boolean;
+  finishLabel?: string;
+  nextLabel?: string;
 }
 
 export function WizardNavigation({
@@ -30,6 +32,8 @@ export function WizardNavigation({
   isSkipDisabled = false,
   isLoading = false,
   showSaveDraft = false,
+  finishLabel = 'Finish Setup',
+  nextLabel = 'Next',
 }: WizardNavigationProps) {
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
@@ -81,7 +85,7 @@ export function WizardNavigation({
             onClick={onFinish}
             disabled={isNextDisabled}
           >
-            {isLoading ? 'Completing...' : 'Finish Setup'}
+            {isLoading ? 'Completing...' : finishLabel}
           </Button>
         ) : (
           <Button
@@ -91,7 +95,7 @@ export function WizardNavigation({
             disabled={isNextDisabled}
             className="flex items-center gap-2"
           >
-            {isLoading ? 'Saving...' : 'Next'}
+            {isLoading ? 'Saving...' : nextLabel}
             {!isLoading && <ChevronRight className="w-4 h-4" />}
           </Button>
         )}

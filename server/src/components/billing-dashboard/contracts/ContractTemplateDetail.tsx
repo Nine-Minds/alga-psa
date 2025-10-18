@@ -14,9 +14,9 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 
-import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
 import { IContractLineServiceBucketConfig, IContractLineServiceConfiguration, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { getContractById, getContractSummary, updateContract } from 'server/src/lib/actions/contractActions';
+import { getContractById, getContractSummary, updateContract, getContractAssignments } from 'server/src/lib/actions/contractActions';
 import { getDetailedContractLines } from 'server/src/lib/actions/contractLineMappingActions';
 import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -149,6 +149,7 @@ const ContractTemplateDetail: React.FC = () => {
   const [contract, setContract] = useState<IContract | null>(null);
   const [summary, setSummary] = useState<TemplateSummary | null>(null);
   const [templateLines, setTemplateLines] = useState<TemplateContractLine[]>([]);
+  const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
 
   const [isEditingBasics, setIsEditingBasics] = useState(false);
   const [basicsForm, setBasicsForm] = useState<BasicsFormState>({
@@ -313,16 +314,18 @@ const ContractTemplateDetail: React.FC = () => {
       setError(null);
 
       try {
-        const [contractData, summaryDataRaw, detailedLinesRaw] = (await Promise.all([
+        const [contractData, summaryDataRaw, detailedLinesRaw, assignmentRows] = (await Promise.all([
           getContractById(id),
           getContractSummary(id),
           getDetailedContractLines(id),
-        ])) as [IContract | null, RawContractSummary, DetailedContractLineRow[]];
+          getContractAssignments(id),
+        ])) as [IContract | null, RawContractSummary, DetailedContractLineRow[], IContractAssignmentSummary[]];
 
         if (!contractData) {
           setContract(null);
           setTemplateLines([]);
           setSummary(null);
+          setAssignments([]);
           setError('Template not found');
           return;
         }
@@ -352,9 +355,11 @@ const ContractTemplateDetail: React.FC = () => {
         setContract(contractData);
         setSummary(normalizedSummary);
         setTemplateLines(linesWithServices);
+        setAssignments(assignmentRows);
       } catch (loadError) {
         console.error('Error loading contract template detail:', loadError);
         setError('Failed to load contract template');
+        setAssignments([]);
       } finally {
         setIsLoading(false);
       }
@@ -815,20 +820,36 @@ const ContractTemplateDetail: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-gray-700">Client Assignments</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-gray-700">
-              <div className="flex items-center justify-between">
-                <span>Total Assignments</span>
-                <span className="font-medium">{summary?.totalClientAssignments ?? 0}</span>
+            <CardContent className="space-y-4 text-sm text-gray-700">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span>Total Assignments</span>
+                  <span className="font-medium">{summary?.totalClientAssignments ?? assignments.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Active Clients</span>
+                  <span className="font-medium">{summary?.activeClientCount ?? assignments.filter((assignment) => assignment.is_active).length}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs uppercase tracking-wide text-gray-500">Purchase Orders</span>
+                  <p className="text-sm text-gray-800">
+                    {summary?.poRequiredCount || assignments.some((assignment) => assignment.po_required)
+                      ? `${summary?.poRequiredCount ?? assignments.filter((assignment) => assignment.po_required).length} assignments require PO`
+                      : 'No PO requirements captured.'}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span>Active Clients</span>
-                <span className="font-medium">{summary?.activeClientCount ?? 0}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs uppercase tracking-wide text-gray-500">Purchase Orders</span>
-                <p className="text-sm text-gray-800">
-                  {summary?.poRequiredCount ? `${summary.poRequiredCount} assignments require PO` : 'No PO requirements captured.'}
-                </p>
+
+              <div className="border-t border-gray-100 pt-3">
+                {assignments.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    No client contracts are currently using this template.
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    Review the full assignment list in the details section below.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -883,6 +904,100 @@ const ContractTemplateDetail: React.FC = () => {
           </Card>
         </section>
       </div>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold text-gray-800">Assignment Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {assignments.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              When client contracts adopt this template they will be listed here with purchase order context.
+            </p>
+          ) : (
+            <div className="rounded-md border border-gray-200">
+              <div className="max-h-96 overflow-y-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                        Client
+                      </th>
+                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                        Status
+                      </th>
+                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                        Start
+                      </th>
+                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                        End
+                      </th>
+                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                        PO Required
+                      </th>
+                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                        PO Number
+                      </th>
+                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-right font-medium">
+                        PO Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {assignments.map((assignment) => {
+                      const poAmount =
+                        assignment.po_required && assignment.po_amount != null
+                          ? `$${(Number(assignment.po_amount) / 100).toFixed(2)}`
+                          : '—';
+
+                      return (
+                        <tr key={assignment.client_contract_id} className="bg-white hover:bg-gray-50">
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-gray-900">
+                                {assignment.client_name || assignment.client_id}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                Contract ID: {assignment.client_contract_id}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge
+                              className={
+                                assignment.is_active
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-700'
+                              }
+                            >
+                              {assignment.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-gray-900">
+                            {assignment.start_date ? formatDate(assignment.start_date) : '—'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-gray-900">
+                            {assignment.end_date ? formatDate(assignment.end_date) : 'Ongoing'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-gray-900">
+                            {assignment.po_required ? 'Yes' : 'No'}
+                          </td>
+                          <td className="px-4 py-3 text-gray-900">
+                            {assignment.po_required ? assignment.po_number || '—' : 'Not required'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-right text-gray-900">
+                            {poAmount}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {recommendedServices.length > 0 && (
         <Card>

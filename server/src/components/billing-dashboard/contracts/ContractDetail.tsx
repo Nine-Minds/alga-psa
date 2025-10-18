@@ -944,92 +944,150 @@ const ContractDetail: React.FC = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Users className="h-4 w-4 text-sky-600" />
-                    Assignment Details
+                    Client Assignment
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   {assignments.length === 0 ? (
-                    <div className="py-8 text-center text-sm text-gray-500">
-                      No clients are currently assigned to this contract.
+                    <div className="py-6 text-sm text-gray-500">
+                      This contract is not assigned to a client yet.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          <tr>
-                            <th className="px-4 py-3">Client</th>
-                            <th className="px-4 py-3">Start Date</th>
-                            <th className="px-4 py-3">End Date</th>
-                            <th className="px-4 py-3">PO Required</th>
-                            <th className="px-4 py-3">PO Number</th>
-                            <th className="px-4 py-3">PO Amount</th>
-                            <th className="px-4 py-3">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {assignments.map((assignment) => {
-                            const isEditing = editingAssignmentId === assignment.client_contract_id;
-                            const editData = editAssignments[assignment.client_contract_id] || assignment;
+                    assignments.map((assignment) => {
+                      const isEditing = editingAssignmentId === assignment.client_contract_id;
+                      const editData = editAssignments[assignment.client_contract_id] || assignment;
+                      const supportsPo = typeof editData.po_required !== 'undefined';
 
-                            return (
-                              <tr key={assignment.client_contract_id} className="text-gray-700">
-                                <td className="px-4 py-3">
-                                  <div className="font-medium text-gray-900">
-                                    {assignment.client_name || assignment.client_id}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <div
-                                      className="w-44"
-                                      title={contract.status === 'active' ? 'Start date cannot be changed for active contracts' : undefined}
-                                    >
-                                      <DatePicker
-                                        id={`assignment-start-date-${assignment.client_contract_id}`}
-                                        value={convertToDatePickerValue(editData.start_date)}
-                                        onChange={(date) =>
-                                          handleAssignmentDateChange(
-                                            assignment.client_contract_id,
-                                            'start_date',
-                                            date
-                                          )
-                                        }
-                                        className="w-full"
-                                        placeholder="Select start date"
-                                        label="Assignment start date"
-                                        disabled={contract.status === 'active'}
-                                      />
-                                    </div>
-                                  ) : (
-                                    formatDate(editData.start_date)
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <DatePicker
-                                      id={`assignment-end-date-${assignment.client_contract_id}`}
-                                      value={convertToDatePickerValue(editData.end_date)}
-                                      onChange={(date) =>
-                                        handleAssignmentDateChange(
-                                          assignment.client_contract_id,
-                                          'end_date',
-                                          date
-                                        )
-                                      }
-                                      className="w-44"
-                                      placeholder="Ongoing"
-                                      label="Assignment end date"
-                                      clearable
-                                    />
-                                  ) : (
-                                    editData.end_date ? formatDate(editData.end_date) : 'Ongoing'
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
+                      return (
+                        <div
+                          key={assignment.client_contract_id}
+                          className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {assignment.client_name || assignment.client_id}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Client Contract ID: {assignment.client_contract_id}
+                              </p>
+                            </div>
+                            {isEditing ? (
+                              <div className="flex gap-2">
+                                <Button
+                                  id={`confirm-assignment-${assignment.client_contract_id}`}
+                                  type="button"
+                                  size="sm"
+                                  onClick={handleConfirmEditAssignment}
+                                  className="gap-2"
+                                >
+                                  <Check className="h-4 w-4" />
+                                  Save
+                                </Button>
+                                <Button
+                                  id={`cancel-assignment-${assignment.client_contract_id}`}
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleCancelEditAssignment(assignment.client_contract_id)}
+                                  className="gap-2"
+                                >
+                                  <X className="h-4 w-4" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                id={`edit-assignment-${assignment.client_contract_id}`}
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleStartEditAssignment(assignment)}
+                                className="gap-2"
+                              >
+                                <Pencil className="h-4 w-4" />
+                                Edit
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div>
+                              <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                Start Date
+                              </Label>
+                              {isEditing ? (
+                                <div
+                                  className="mt-1 w-full md:w-56"
+                                  title={
+                                    contract.status === 'active'
+                                      ? 'Start date cannot be changed for active contracts'
+                                      : undefined
+                                  }
+                                >
+                                  <DatePicker
+                                    id={`assignment-start-date-${assignment.client_contract_id}`}
+                                    value={convertToDatePickerValue(editData.start_date)}
+                                    onChange={(date) =>
+                                      handleAssignmentDateChange(
+                                        assignment.client_contract_id,
+                                        'start_date',
+                                        date
+                                      )
+                                    }
+                                    className="w-full"
+                                    placeholder="Select start date"
+                                    label="Assignment start date"
+                                    disabled={contract.status === 'active'}
+                                  />
+                                </div>
+                              ) : (
+                                <p className="mt-1 text-sm text-gray-800">
+                                  {formatDate(editData.start_date)}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                End Date
+                              </Label>
+                              {isEditing ? (
+                                <div className="mt-1 w-full md:w-56">
+                                  <DatePicker
+                                    id={`assignment-end-date-${assignment.client_contract_id}`}
+                                    value={convertToDatePickerValue(editData.end_date)}
+                                    onChange={(date) =>
+                                      handleAssignmentDateChange(
+                                        assignment.client_contract_id,
+                                        'end_date',
+                                        date
+                                      )
+                                    }
+                                    className="w-full"
+                                    placeholder="Ongoing"
+                                    label="Assignment end date"
+                                    clearable
+                                  />
+                                </div>
+                              ) : (
+                                <p className="mt-1 text-sm text-gray-800">
+                                  {editData.end_date ? formatDate(editData.end_date) : 'Ongoing'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {supportsPo && (
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div>
+                                <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                  PO Required
+                                </Label>
+                                {isEditing ? (
+                                  <div className="mt-2">
                                     <Switch
                                       id={`po-required-${assignment.client_contract_id}`}
-                                      checked={editData.po_required}
+                                      checked={Boolean(editData.po_required)}
                                       onCheckedChange={(checked) => {
                                         handleAssignmentFieldChange(
                                           assignment.client_contract_id,
@@ -1038,125 +1096,114 @@ const ContractDetail: React.FC = () => {
                                         );
                                       }}
                                     />
-                                  ) : (
-                                    <span>{editData.po_required ? 'Yes' : 'No'}</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <Input
-                                      value={editData.po_number || ''}
-                                      onChange={(e) => handleAssignmentFieldChange(
+                                  </div>
+                                ) : (
+                                  <p className="mt-1 text-sm text-gray-800">
+                                    {editData.po_required ? 'Yes' : 'No'}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                  PO Number
+                                </Label>
+                                {isEditing ? (
+                                  <Input
+                                    value={editData.po_number || ''}
+                                    onChange={(e) =>
+                                      handleAssignmentFieldChange(
                                         assignment.client_contract_id,
                                         'po_number',
                                         e.target.value || null
-                                      )}
-                                      placeholder="PO Number"
-                                      className="w-32"
+                                      )
+                                    }
+                                    placeholder="PO Number"
+                                    className="mt-1 w-full max-w-xs"
+                                    disabled={!editData.po_required}
+                                  />
+                                ) : (
+                                  <p className="mt-1 text-sm text-gray-800">
+                                    {editData.po_required
+                                      ? editData.po_number || (
+                                          <span className="text-orange-600">Required</span>
+                                        )
+                                      : 'Not required'}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {supportsPo && (
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div>
+                                <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                  PO Amount
+                                </Label>
+                                {isEditing ? (
+                                  <div className="relative mt-1 w-full max-w-xs">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                                      $
+                                    </span>
+                                    <Input
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={poAmountInputs[assignment.client_contract_id] || ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                                        const decimalCount = (value.match(/\./g) || []).length;
+                                        if (decimalCount <= 1) {
+                                          setPoAmountInputs((prev) => ({
+                                            ...prev,
+                                            [assignment.client_contract_id]: value,
+                                          }));
+                                        }
+                                      }}
+                                      onBlur={() => {
+                                        const input =
+                                          poAmountInputs[assignment.client_contract_id] || '';
+                                        if (input.trim() === '' || input === '.') {
+                                          setPoAmountInputs((prev) => ({
+                                            ...prev,
+                                            [assignment.client_contract_id]: '',
+                                          }));
+                                          handleAssignmentFieldChange(
+                                            assignment.client_contract_id,
+                                            'po_amount',
+                                            null
+                                          );
+                                        } else {
+                                          const dollars = parseFloat(input) || 0;
+                                          const cents = Math.round(dollars * 100);
+                                          handleAssignmentFieldChange(
+                                            assignment.client_contract_id,
+                                            'po_amount',
+                                            cents
+                                          );
+                                          setPoAmountInputs((prev) => ({
+                                            ...prev,
+                                            [assignment.client_contract_id]: dollars.toFixed(2),
+                                          }));
+                                        }
+                                      }}
+                                      placeholder="0.00"
+                                      className="pl-7"
                                       disabled={!editData.po_required}
                                     />
-                                  ) : (
-                                    editData.po_required ? (
-                                      <Badge variant="outline" className="border-orange-300 text-orange-700">
-                                        {editData.po_number ? editData.po_number : 'Required'}
-                                      </Badge>
-                                    ) : (
-                                      <span className="text-gray-500">Not required</span>
-                                    )
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                                      <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={poAmountInputs[assignment.client_contract_id] || ''}
-                                        onChange={(e) => {
-                                          const value = e.target.value.replace(/[^0-9.]/g, '');
-                                          const decimalCount = (value.match(/\./g) || []).length;
-                                          if (decimalCount <= 1) {
-                                            setPoAmountInputs(prev => ({
-                                              ...prev,
-                                              [assignment.client_contract_id]: value
-                                            }));
-                                          }
-                                        }}
-                                        onBlur={() => {
-                                          const input = poAmountInputs[assignment.client_contract_id] || '';
-                                          if (input.trim() === '' || input === '.') {
-                                            setPoAmountInputs(prev => ({
-                                              ...prev,
-                                              [assignment.client_contract_id]: ''
-                                            }));
-                                            handleAssignmentFieldChange(
-                                              assignment.client_contract_id,
-                                              'po_amount',
-                                              null
-                                            );
-                                          } else {
-                                            const dollars = parseFloat(input) || 0;
-                                            const cents = Math.round(dollars * 100);
-                                            handleAssignmentFieldChange(
-                                              assignment.client_contract_id,
-                                              'po_amount',
-                                              cents
-                                            );
-                                            setPoAmountInputs(prev => ({
-                                              ...prev,
-                                              [assignment.client_contract_id]: dollars.toFixed(2)
-                                            }));
-                                          }
-                                        }}
-                                        placeholder="0.00"
-                                        className="w-28 pl-7"
-                                        disabled={!editData.po_required}
-                                      />
-                                    </div>
-                                  ) : (
-                                    editData.po_amount != null ? `$${(Number(editData.po_amount) / 100).toFixed(2)}` : '—'
-                                  )}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {isEditing ? (
-                                    <div className="flex gap-2">
-                                      <Button
-                                        id={`confirm-assignment-${assignment.client_contract_id}`}
-                                        type="button"
-                                        size="sm"
-                                        onClick={handleConfirmEditAssignment}
-                                      >
-                                        <Check className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        id={`cancel-assignment-${assignment.client_contract_id}`}
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleCancelEditAssignment(assignment.client_contract_id)}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <Button
-                                      id={`edit-assignment-${assignment.client_contract_id}`}
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleStartEditAssignment(assignment)}
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="mt-1 text-sm text-gray-800">
+                                    {editData.po_amount != null
+                                      ? `$${(Number(editData.po_amount) / 100).toFixed(2)}`
+                                      : '—'}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </CardContent>
               </Card>

@@ -32,6 +32,8 @@ export interface IContractWithClient extends IContract {
   client_contract_id?: string;
   start_date?: ISO8601String;
   end_date?: ISO8601String | null;
+  template_contract_id?: string | null;
+  template_contract_name?: string | null;
 }
 
 /**

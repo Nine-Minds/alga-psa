@@ -152,6 +152,11 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     }
   };
 
+  const handleSkip = () => {
+    // Template wizard requires each step to be acknowledged, so treat skip as a noop
+    handleNext();
+  };
+
   const handleStepClick = (stepIndex: number) => {
     if (
       stepIndex === 0 ||
@@ -201,55 +206,62 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       isOpen={open}
       onClose={() => onOpenChange(false)}
       title="Create Contract Template"
-      className="max-w-5xl max-h-[90vh]"
+      className="max-w-4xl max-h-[90vh]"
     >
-      <div className="w-full max-w-5xl bg-white rounded-lg shadow-lg">
-        <div className="flex flex-col md:flex-row">
-          <div className="md:w-1/3 border-r border-gray-100 bg-gray-50 p-6">
-            <WizardProgress
-              steps={TEMPLATE_STEPS as readonly string[]}
-              currentStep={currentStep}
-              completedSteps={completedSteps}
-              onStepClick={handleStepClick}
-            />
-          </div>
-          <div className="md:w-2/3 p-6 space-y-4">
-            <div className="space-y-4">
-              {currentStep === 0 && (
-                <TemplateContractBasicsStep data={wizardData} updateData={updateData} />
-              )}
-              {currentStep === 1 && (
-                <TemplateFixedFeeServicesStep data={wizardData} updateData={updateData} />
-              )}
-              {currentStep === 2 && (
-                <TemplateHourlyServicesStep data={wizardData} updateData={updateData} />
-              )}
-              {currentStep === 3 && (
-                <TemplateUsageBasedServicesStep data={wizardData} updateData={updateData} />
-              )}
-              {currentStep === 4 && (
-                <TemplateReviewContractStep data={wizardData} updateData={updateData} />
-              )}
+      <div className="flex flex-col h-full bg-white rounded-lg shadow-lg">
+        <div className="flex-shrink-0 px-6 pt-6">
+          <WizardProgress
+            steps={TEMPLATE_STEPS as readonly string[]}
+            currentStep={currentStep}
+            completedSteps={completedSteps}
+            onStepClick={handleStepClick}
+            canNavigateToStep={(stepIndex) =>
+              stepIndex === 0 ||
+              stepIndex === currentStep ||
+              completedSteps.has(stepIndex) ||
+              (stepIndex > 0 && completedSteps.has(stepIndex - 1))
+            }
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+          {currentStep === 0 && (
+            <TemplateContractBasicsStep data={wizardData} updateData={updateData} />
+          )}
+          {currentStep === 1 && (
+            <TemplateFixedFeeServicesStep data={wizardData} updateData={updateData} />
+          )}
+          {currentStep === 2 && (
+            <TemplateHourlyServicesStep data={wizardData} updateData={updateData} />
+          )}
+          {currentStep === 3 && (
+            <TemplateUsageBasedServicesStep data={wizardData} updateData={updateData} />
+          )}
+          {currentStep === 4 && (
+            <TemplateReviewContractStep data={wizardData} updateData={updateData} />
+          )}
+
+          {errors[currentStep] && (
+            <div className="bg-red-50 text-red-700 px-4 py-3 rounded-md text-sm border border-red-100">
+              {errors[currentStep]}
             </div>
+          )}
+        </div>
 
-            {errors[currentStep] && (
-              <div className="bg-red-50 text-red-700 px-4 py-3 rounded-md text-sm border border-red-100">
-                {errors[currentStep]}
-              </div>
-            )}
-
-            <WizardNavigation
-              currentStep={currentStep}
-              totalSteps={TEMPLATE_STEPS.length}
-              onBack={handleBack}
-              onNext={handleNext}
-              onFinish={handleFinish}
-              isSaving={isSaving}
-              canBack={currentStep > 0}
-              canNext={currentStep < TEMPLATE_STEPS.length - 1}
-              finishLabel="Publish Template"
-            />
-          </div>
+        <div className="flex-shrink-0 px-6 pb-6 border-t bg-white">
+          <WizardNavigation
+            currentStep={currentStep}
+            totalSteps={TEMPLATE_STEPS.length}
+            onBack={handleBack}
+            onNext={handleNext}
+            onSkip={handleSkip}
+            onFinish={handleFinish}
+            isNextDisabled={isSaving}
+            isSkipDisabled
+            isLoading={isSaving}
+            nextLabel="Continue"
+            finishLabel="Publish Template"
+          />
         </div>
       </div>
     </Dialog>

@@ -273,7 +273,10 @@ export async function getContractSummary(contractId: string): Promise<IContractS
     }
 
     const assignmentsRaw = await knex('client_contracts')
-      .where({ contract_id: contractId, tenant })
+      .where(function whereContractOrTemplate(this: any) {
+        this.where({ contract_id: contractId }).orWhere({ template_contract_id: contractId });
+      })
+      .andWhere({ tenant })
       .select(assignmentColumns);
 
     const assignments = assignmentsRaw.map((assignment: any) => ({
@@ -376,7 +379,11 @@ export async function getContractAssignments(contractId: string): Promise<IContr
       .leftJoin('clients as c', function joinClients() {
         this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
       })
-      .where({ 'cc.contract_id': contractId, 'cc.tenant': tenant })
+      .where(function whereContractOrTemplate(this: any) {
+        this.where({ 'cc.contract_id': contractId })
+          .orWhere({ 'cc.template_contract_id': contractId });
+      })
+      .andWhere({ 'cc.tenant': tenant })
       .select(selection)
       .orderBy('cc.start_date', 'asc');
 

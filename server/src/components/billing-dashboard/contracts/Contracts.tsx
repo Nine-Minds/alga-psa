@@ -253,6 +253,16 @@ const Contracts: React.FC = () => {
     },
     {
       title: 'Contract Template',
+      dataIndex: 'template_contract_name',
+      render: (_value: string | null, record) =>
+        record.template_contract_name && record.template_contract_name.trim().length > 0
+          ? record.template_contract_name
+          : record.contract_name && record.contract_name.trim().length > 0
+            ? record.contract_name
+            : '—',
+    },
+    {
+      title: 'Contract Name',
       dataIndex: 'contract_name',
       render: (value: string | null) =>
         typeof value === 'string' && value.trim().length > 0 ? value : '—',
@@ -306,6 +316,7 @@ const Contracts: React.FC = () => {
     const search = clientSearchTerm.toLowerCase();
     return (
       contract.contract_name?.toLowerCase().includes(search) ||
+      contract.template_contract_name?.toLowerCase().includes(search) ||
       contract.client_name?.toLowerCase().includes(search)
     );
   });

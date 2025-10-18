@@ -169,6 +169,10 @@ const Contract = {
           this.on('co.contract_id', '=', 'cc.contract_id')
             .andOn('co.tenant', '=', 'cc.tenant');
         })
+        .leftJoin('contracts as template', function joinTemplateContracts() {
+          this.on('cc.template_contract_id', '=', 'template.contract_id')
+            .andOn('cc.tenant', '=', 'template.tenant');
+        })
         .leftJoin('clients as c', function joinClients() {
           this.on('cc.client_id', '=', 'c.client_id')
             .andOn('cc.tenant', '=', 'c.tenant');
@@ -177,10 +181,12 @@ const Contract = {
         .select(
           'co.*',
           'cc.client_contract_id',
+          'cc.template_contract_id',
           'c.client_id',
           'c.client_name',
           'cc.start_date',
-          'cc.end_date'
+          'cc.end_date',
+          'template.contract_name as template_contract_name'
         )
         .orderBy('co.created_at', 'desc');
 
