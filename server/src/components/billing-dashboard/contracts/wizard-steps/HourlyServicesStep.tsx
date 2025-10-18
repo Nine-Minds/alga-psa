@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
@@ -8,7 +8,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, Clock } from 'lucide-react';
+import { Plus, X, Clock, DollarSign } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 
@@ -20,84 +20,111 @@ interface HourlyServicesStepProps {
 export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps) {
   const [services, setServices] = useState<IService[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    loadServices();
+    const loadServices = async () => {
+      try {
+        const result = await getServices();
+        if (result && Array.isArray(result.services)) {
+          const hourlyServices = result.services.filter(
+            (service) => service.billing_method === 'hourly'
+          );
+          setServices(hourlyServices);
+        }
+      } catch (error) {
+        console.error('Error loading services:', error);
+      } finally {
+        setIsLoadingServices(false);
+      }
+    };
+
+    void loadServices();
   }, []);
 
-  const loadServices = async () => {
-    try {
-      const result = await getServices();
-      if (result && Array.isArray(result.services)) {
-        // Filter to only show services with billing_method === 'hourly'
-        const hourlyServices = result.services.filter(service => service.billing_method === 'hourly');
-        setServices(hourlyServices);
+  useEffect(() => {
+    const inputs: Record<number, string> = {};
+    data.hourly_services.forEach((service, index) => {
+      if (service.hourly_rate !== undefined) {
+        inputs[index] = (service.hourly_rate / 100).toFixed(2);
       }
-    } catch (error) {
-      console.error('Error loading services:', error);
-    } finally {
-      setIsLoadingServices(false);
-    }
-  };
+    });
+    setRateInputs(inputs);
+  }, [data.hourly_services]);
 
-  const serviceOptions = services.map(service => ({
+  const serviceOptions = services.map((service) => ({
     value: service.service_id,
-    label: service.service_name
+    label: service.service_name,
   }));
 
   const handleAddService = () => {
     updateData({
-      hourly_services: [...data.hourly_services, { service_id: '', service_name: '', hourly_rate: undefined }]
+      hourly_services: [
+        ...data.hourly_services,
+        { service_id: '', service_name: '', hourly_rate: undefined, bucket_overlay: undefined },
+      ],
     });
   };
 
   const handleRemoveService = (index: number) => {
-    const newServices = data.hourly_services.filter((_, i) => i !== index);
-    updateData({ hourly_services: newServices });
+    const next = data.hourly_services.filter((_, i) => i !== index);
+    updateData({ hourly_services: next });
   };
 
   const handleServiceChange = (index: number, serviceId: string) => {
-    const service = services.find(s => s.service_id === serviceId);
-    const newServices = [...data.hourly_services];
-    newServices[index] = {
-      ...newServices[index],
+    const service = services.find((s) => s.service_id === serviceId);
+    const next = [...data.hourly_services];
+    next[index] = {
+      ...next[index],
       service_id: serviceId,
-      service_name: service?.service_name || ''
+      service_name: service?.service_name || '',
+      hourly_rate: service?.default_rate ?? next[index].hourly_rate,
     };
-    updateData({ hourly_services: newServices });
+    updateData({ hourly_services: next });
+  };
+
+  const handleRateChange = (index: number, cents: number) => {
+    const next = [...data.hourly_services];
+    next[index] = { ...next[index], hourly_rate: cents };
+    updateData({ hourly_services: next });
   };
 
   const defaultOverlay = (): BucketOverlayInput => ({
     total_minutes: undefined,
     overage_rate: undefined,
     allow_rollover: false,
-    billing_period: 'monthly'
+    billing_period: 'monthly',
   });
 
   const toggleBucketOverlay = (index: number, enabled: boolean) => {
-    const newServices = [...data.hourly_services];
+    const next = [...data.hourly_services];
     if (enabled) {
-      const existing = newServices[index].bucket_overlay;
-      newServices[index] = {
-        ...newServices[index],
-        bucket_overlay: existing ? { ...existing } : defaultOverlay()
+      const existing = next[index].bucket_overlay;
+      next[index] = {
+        ...next[index],
+        bucket_overlay: existing ? { ...existing } : defaultOverlay(),
       };
     } else {
-      newServices[index] = {
-        ...newServices[index],
-        bucket_overlay: undefined
+      next[index] = {
+        ...next[index],
+        bucket_overlay: undefined,
       };
     }
-    updateData({ hourly_services: newServices });
+    updateData({ hourly_services: next });
   };
 
   const updateBucketOverlay = (index: number, overlay: BucketOverlayInput) => {
-    const newServices = [...data.hourly_services];
-    newServices[index] = {
-      ...newServices[index],
-      bucket_overlay: { ...overlay }
+    const next = [...data.hourly_services];
+    next[index] = {
+      ...next[index],
+      bucket_overlay: { ...overlay },
     };
-    updateData({ hourly_services: newServices });
+    updateData({ hourly_services: next });
+  };
+
+  const formatCurrency = (cents: number | undefined) => {
+    if (!cents) return '$0.00';
+    return `$${(cents / 100).toFixed(2)}`;
   };
 
   return (
@@ -105,90 +132,124 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Hourly Services</h3>
         <p className="text-sm text-gray-600">
-          Select time-based services that belong on this template. Pricing is captured later when assigning the template to a client.
+          Configure time-and-materials services. You can recommend hourly rates, rounding rules,
+          and buckets to guide service delivery teams.
         </p>
       </div>
 
-      {/* Info Box */}
-      <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-        <p className="text-sm text-amber-800">
-          <strong>Template guidance:</strong> Configure minimum billable time, rounding preferences, and optional hour buckets. Hourly rates will be entered per client.
-        </p>
-      </div>
-
-      {/* Minimum Billable Time */}
-      {data.hourly_services.length > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="minimum_billable_time" className="flex items-center gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="minimum-billable-time" className="flex items-center gap-2 text-sm">
             <Clock className="h-4 w-4" />
-            Minimum Billable Time (minutes)
+            Minimum Billable Minutes
           </Label>
           <Input
-            id="minimum_billable_time"
+            id="minimum-billable-time"
             type="number"
-            value={data.minimum_billable_time || ''}
-            onChange={(e) => updateData({ minimum_billable_time: parseInt(e.target.value) || undefined })}
-            placeholder="15"
             min="0"
-            step="15"
-            className="w-32"
+            value={data.minimum_billable_time ?? ''}
+            onChange={(event) =>
+              updateData({
+                minimum_billable_time: Math.max(0, Number(event.target.value) || 0),
+              })
+            }
+            placeholder="0"
           />
-          <p className="text-xs text-gray-500">
-            e.g., 15 minutes - any time entry less than this will be rounded up
+          <p className="text-xs text-gray-500 mt-1">
+            Minimum minutes billed per ticket or time entry.
           </p>
         </div>
-      )}
-
-      {/* Round Up Settings */}
-      {data.hourly_services.length > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="round_up_to_nearest" className="flex items-center gap-2">
+        <div>
+          <Label htmlFor="round-up-to" className="flex items-center gap-2 text-sm">
             <Clock className="h-4 w-4" />
             Round Up To Nearest (minutes)
           </Label>
           <Input
-            id="round_up_to_nearest"
+            id="round-up-to"
             type="number"
-            value={data.round_up_to_nearest || ''}
-            onChange={(e) => updateData({ round_up_to_nearest: parseInt(e.target.value) || undefined })}
-            placeholder="15"
             min="0"
-            step="15"
-            className="w-32"
+            value={data.round_up_to_nearest ?? ''}
+            onChange={(event) =>
+              updateData({
+                round_up_to_nearest: Math.max(0, Number(event.target.value) || 0),
+              })
+            }
+            placeholder="0"
           />
-          <p className="text-xs text-gray-500">
-            e.g., 15 minutes - time entries will be rounded up to the nearest interval
+          <p className="text-xs text-gray-500 mt-1">
+            Ensures billing increments align with the chosen granularity.
           </p>
         </div>
-      )}
+      </div>
 
-      {/* Services List */}
       <div className="space-y-4">
-        <Label className="flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          Hourly Services
-        </Label>
+        <Label className="text-sm">Services</Label>
 
         {data.hourly_services.map((service, index) => (
-          <div key={index} className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50">
+          <div
+            key={index}
+            className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+          >
             <div className="flex-1 space-y-3">
               <div className="space-y-2">
                 <Label htmlFor={`hourly-service-${index}`} className="text-sm">
                   Service {index + 1}
                 </Label>
                 <CustomSelect
+                  id={`hourly-service-${index}`}
                   value={service.service_id}
                   onValueChange={(value: string) => handleServiceChange(index, value)}
                   options={serviceOptions}
-                  placeholder={isLoadingServices ? "Loading..." : "Select a service"}
+                  placeholder={isLoadingServices ? 'Loading…' : 'Select a service'}
                   disabled={isLoadingServices}
-                  className="w-full"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
+                  <DollarSign className="h-3 w-3" />
+                  Hourly Rate Guidance
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id={`hourly-rate-${index}`}
+                    type="text"
+                    inputMode="decimal"
+                    value={rateInputs[index] ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setRateInputs((prev) => ({ ...prev, [index]: value }));
+                      }
+                    }}
+                    onBlur={() => {
+                      const inputValue = rateInputs[index] ?? '';
+                      if (inputValue.trim() === '' || inputValue === '.') {
+                        setRateInputs((prev) => ({ ...prev, [index]: '' }));
+                        handleRateChange(index, 0);
+                      } else {
+                        const dollars = parseFloat(inputValue) || 0;
+                        const cents = Math.round(dollars * 100);
+                        handleRateChange(index, cents);
+                        setRateInputs((prev) => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
+                      }
+                    }}
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  {service.hourly_rate
+                    ? `${formatCurrency(service.hourly_rate)}/hour`
+                    : 'Enter the suggested hourly rate'}
+                </p>
               </div>
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                 <SwitchWithLabel
-                  label="Include bucket of hours"
+                  label="Recommend bucket of hours"
                   checked={Boolean(service.bucket_overlay)}
                   onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                 />
@@ -228,26 +289,31 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
         </Button>
       </div>
 
-      {/* Skip hint */}
       {data.hourly_services.length === 0 && (
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
           <p className="text-sm text-gray-600 text-center">
-            No hourly services added yet. Click "Add Hourly Service" above or click "Skip" if you don't need T&M billing.
+            No hourly services added yet. Click “Add Hourly Service” above or “Skip” if you don’t
+            need time & materials billing.
           </p>
         </div>
       )}
 
-      {/* Summary */}
       {data.hourly_services.length > 0 && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
           <h4 className="text-sm font-semibold text-blue-900 mb-2">Hourly Services Summary</h4>
           <div className="text-sm text-blue-800 space-y-1">
-            <p><strong>Services:</strong> {data.hourly_services.length}</p>
-            {data.minimum_billable_time && (
-              <p><strong>Minimum Time:</strong> {data.minimum_billable_time} minutes</p>
+            <p>
+              <strong>Services:</strong> {data.hourly_services.length}
+            </p>
+            {data.minimum_billable_time !== undefined && (
+              <p>
+                <strong>Minimum Time:</strong> {data.minimum_billable_time} minutes
+              </p>
             )}
-            {data.round_up_to_nearest && (
-              <p><strong>Round Up:</strong> Every {data.round_up_to_nearest} minutes</p>
+            {data.round_up_to_nearest !== undefined && (
+              <p>
+                <strong>Round Up:</strong> Every {data.round_up_to_nearest} minutes
+              </p>
             )}
           </div>
         </div>

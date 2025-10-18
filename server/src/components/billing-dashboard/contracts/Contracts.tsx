@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
-import { MoreVertical, Plus, Wand2, Search } from 'lucide-react';
+import { MoreVertical, Plus, Wand2, Search, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,12 +27,14 @@ import {
 } from 'server/src/lib/actions/contractActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
+import { TemplateWizard } from './template-wizard/TemplateWizard';
 
 const Contracts: React.FC = () => {
   const router = useRouter();
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
-  const [showWizard, setShowWizard] = useState(false);
+  const [showTemplateWizard, setShowTemplateWizard] = useState(false);
+  const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<'Templates' | 'Client Contracts'>('Templates');
@@ -310,8 +312,8 @@ const Contracts: React.FC = () => {
 
   const renderTemplateTab = () => (
     <>
-      <div className="mb-4">
-        <div className="relative max-w-md">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="relative max-w-md w-full">
           <Search
             className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
             aria-hidden="true"
@@ -324,6 +326,16 @@ const Contracts: React.FC = () => {
             className="pl-10"
             aria-label="Search contract templates"
           />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            id="create-template-button"
+            onClick={() => setShowTemplateWizard(true)}
+            className="inline-flex items-center gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Create Template
+          </Button>
         </div>
       </div>
 
@@ -339,8 +351,8 @@ const Contracts: React.FC = () => {
 
   const renderClientContractsTab = () => (
     <>
-      <div className="mb-4">
-        <div className="relative max-w-md">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="relative max-w-md w-full">
           <Search
             className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
             aria-hidden="true"
@@ -352,6 +364,27 @@ const Contracts: React.FC = () => {
             onChange={(event) => setClientSearchTerm(event.target.value)}
             className="pl-10"
             aria-label="Search client contracts"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            id="client-wizard-button"
+            onClick={() => setShowClientWizard(true)}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+          >
+            <Wand2 className="h-4 w-4" />
+            Create Contract
+          </Button>
+          <ContractDialog
+            onContractSaved={() => {
+              void fetchContracts();
+            }}
+            triggerButton={
+              <Button id="quick-add-contract-button" variant="outline" className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Quick Add
+              </Button>
+            }
           />
         </div>
       </div>
@@ -379,28 +412,6 @@ const Contracts: React.FC = () => {
             <Heading as="h3" size="4">
               Contracts
             </Heading>
-            <div className="flex gap-2">
-              <Button
-                id="wizard-contract-button"
-                data-automation-id="wizard-contract-button"
-                onClick={() => setShowWizard(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-              >
-                <Wand2 className="h-4 w-4 mr-2" />
-                Create with Wizard
-              </Button>
-              <ContractDialog
-                onContractSaved={() => {
-                  void fetchContracts();
-                }}
-                triggerButton={
-                  <Button id="add-contract-button" variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Quick Add
-                  </Button>
-                }
-              />
-            </div>
           </div>
 
           {error && (
@@ -428,11 +439,19 @@ const Contracts: React.FC = () => {
           )}
         </Box>
       </Card>
-      <ContractWizard
-        open={showWizard}
-        onOpenChange={setShowWizard}
+      <TemplateWizard
+        open={showTemplateWizard}
+        onOpenChange={setShowTemplateWizard}
         onComplete={() => {
-          setShowWizard(false);
+          setShowTemplateWizard(false);
+          void fetchContracts();
+        }}
+      />
+      <ContractWizard
+        open={showClientWizard}
+        onOpenChange={setShowClientWizard}
+        onComplete={() => {
+          setShowClientWizard(false);
           void fetchContracts();
         }}
       />
