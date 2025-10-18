@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { Badge } from 'server/src/components/ui/Badge';
-import { Button } from 'server/src/components/ui/Button';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { IContractSummary } from 'server/src/lib/actions/contractActions';
-import { Calendar, CalendarClock, Check, Copy, FileCheck, Hash, Layers3, Users } from 'lucide-react';
+import { Calendar, CalendarClock, FileCheck, Layers3 } from 'lucide-react';
 
 interface ContractHeaderProps {
   contract: IContract;
@@ -52,18 +51,6 @@ const formatNumber = (value?: number): string => {
 };
 
 const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopyContractId = async () => {
-    try {
-      await navigator.clipboard.writeText(contract.contract_id);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Unable to copy contract ID to clipboard', error);
-    }
-  };
-
   const stats: SummaryStat[] = [
     {
       label: 'Billing Frequency',
@@ -116,6 +103,11 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
              contract.status === 'expired' ? 'Expired' :
              'Draft'}
           </Badge>
+          {contract.is_template !== false && (
+            <Badge className="border border-blue-200 bg-blue-50 text-blue-800">
+              Template
+            </Badge>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

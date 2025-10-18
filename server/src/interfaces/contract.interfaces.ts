@@ -17,6 +17,8 @@ export interface IContract extends TenantEntity {
   billing_frequency: string;
   is_active: boolean;
   status: ContractStatus;
+  is_template?: boolean;
+  template_metadata?: Record<string, unknown> | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }

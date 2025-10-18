@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
@@ -54,7 +54,35 @@ const formatDate = (value?: string | Date | null): string => {
   }
 };
 
-const ContractDetail: React.FC = () => {
+type TemplateMetadataService = {
+  service_id?: string;
+  service_name?: string;
+  notes?: string;
+  [key: string]: unknown;
+};
+
+type TemplateMetadata = {
+  usage_notes?: string;
+  recommended_services?: TemplateMetadataService[];
+  recommended_billing_cadence?: string;
+  tags?: Array<string | null | undefined>;
+  [key: string]: unknown;
+};
+
+const humanizeLabel = (value?: string | null): string => {
+  if (!value) {
+    return '';
+  }
+
+  return value
+    .toString()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+};
+
+const ContractTemplateDetail: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const contractId = searchParams?.get('contractId') as string;
@@ -67,6 +95,43 @@ const ContractDetail: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summary, setSummary] = useState<IContractSummary | null>(null);
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
+
+  const templateMetadata = useMemo<TemplateMetadata>(() => {
+    if (!contract || !contract.template_metadata) {
+      return {};
+    }
+
+    if (typeof contract.template_metadata === 'object' && !Array.isArray(contract.template_metadata)) {
+      return contract.template_metadata as TemplateMetadata;
+    }
+
+    if (typeof contract.template_metadata === 'string') {
+      try {
+        const parsed = JSON.parse(contract.template_metadata);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return parsed as TemplateMetadata;
+        }
+      } catch (error) {
+        console.warn('Unable to parse contract template metadata JSON', error);
+      }
+    }
+
+    return {};
+  }, [contract]);
+
+  const usageNotes = typeof templateMetadata.usage_notes === 'string' ? templateMetadata.usage_notes : '';
+  const recommendedCadence = typeof templateMetadata.recommended_billing_cadence === 'string'
+    ? humanizeLabel(templateMetadata.recommended_billing_cadence)
+    : '';
+  const recommendedServices = Array.isArray(templateMetadata.recommended_services)
+    ? templateMetadata.recommended_services.filter(
+        (service): service is TemplateMetadataService =>
+          Boolean(service) && typeof service === 'object'
+      )
+    : [];
+  const templateTags = Array.isArray(templateMetadata.tags)
+    ? templateMetadata.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+    : [];
 
   // Client drawer state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -873,6 +938,60 @@ const ContractDetail: React.FC = () => {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-600" />
+                      Template Guidance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm text-gray-700">
+                    <div className="space-y-1">
+                      <span className="text-xs uppercase tracking-wide text-gray-500">Usage Notes</span>
+                      <p className={usageNotes ? 'text-gray-800' : 'text-gray-500 italic'}>
+                        {usageNotes || 'Add guidance to help others understand how to use this template.'}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs uppercase tracking-wide text-gray-500">Recommended Cadence</span>
+                      <p className={recommendedCadence ? 'text-gray-800' : 'text-gray-500 italic'}>
+                        {recommendedCadence || 'No recommended cadence provided.'}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <span className="text-xs uppercase tracking-wide text-gray-500">Recommended Services</span>
+                      {recommendedServices.length > 0 ? (
+                        <ul className="space-y-2">
+                          {recommendedServices.map((service, index) => (
+                            <li key={`${service.service_id ?? service.service_name ?? index}`}>
+                              <p className="font-medium text-gray-900">
+                                {service.service_name || service.service_id || 'Unnamed Service'}
+                              </p>
+                              {service.notes && (
+                                <p className="text-xs text-gray-600">{service.notes}</p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-500 italic">No recommended services listed.</p>
+                      )}
+                    </div>
+                    {templateTags.length > 0 && (
+                      <div className="space-y-2">
+                        <span className="text-xs uppercase tracking-wide text-gray-500">Tags</span>
+                        <div className="flex flex-wrap gap-2">
+                          {templateTags.map((tag) => (
+                            <Badge key={tag} className="border border-gray-200 bg-gray-50 text-gray-700">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Users className="h-4 w-4 text-emerald-600" />
                       Client Details
                     </CardTitle>
@@ -1273,4 +1392,4 @@ const ContractDetail: React.FC = () => {
   );
 };
 
-export default ContractDetail;
+export default ContractTemplateDetail;

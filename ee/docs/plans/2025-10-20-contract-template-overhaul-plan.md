@@ -163,7 +163,10 @@ Total estimated duration: ~8.5 weeks including buffer.
   - On template selection, pre-fill line items, services, default descriptions.
   - Prompt user to enter client-specific pricing/quantities before finalizing.
   - Handle optional template metadata hints (e.g., recommended billing cadence) in the UI.
-- Update `ContractDetail.tsx` to show template origin and allow navigation back to template.
+- Split the contract detail surface into dedicated components:
+  - [x] `ContractTemplateDetail.tsx` focused on template metadata, line composition, and recommended usage notes.
+  - [ ] `ClientContractDetail.tsx` focused on client-specific terms (billing cycles, PO info, assignments) with clear linkage back to the originating template.
+  - Update routing so the Billing Dashboard chooses the appropriate detail component based on whether the record is a template or a client assignment, and provide navigation between the two where relevant.
 - Refresh jest/react-testing-library coverage for wizards (`server/src/components/billing-dashboard/contracts/__tests__/`).
 
 ## Phase 4 – Data Migration & Backfill
