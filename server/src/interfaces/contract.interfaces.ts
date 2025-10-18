@@ -29,6 +29,7 @@ export interface IContract extends TenantEntity {
 export interface IContractWithClient extends IContract {
   client_id?: string;
   client_name?: string;
+  client_contract_id?: string;
   start_date?: ISO8601String;
   end_date?: ISO8601String | null;
 }

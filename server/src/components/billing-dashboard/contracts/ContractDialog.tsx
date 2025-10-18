@@ -135,13 +135,16 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
     try {
       // Create the contract template first (without client-specific fields)
-      const contractData = {
+      const contractData: Partial<IContract> = {
         contract_name: contractName,
         contract_description: contractDescription || undefined,
         billing_frequency: billingFrequency,
         status: (saveAsActive ? 'active' : 'draft') as any,
         is_active: saveAsActive,
       };
+      if (!editingContract) {
+        contractData.is_template = false;
+      }
 
       let contract;
       if (editingContract?.contract_id) {

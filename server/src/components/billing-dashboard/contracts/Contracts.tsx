@@ -115,9 +115,15 @@ const Contracts: React.FC = () => {
     }
   };
 
-  const navigateToContract = (contractId?: string) => {
+  const navigateToContract = (contractId?: string, clientContractId?: string) => {
     if (contractId) {
-      router.push(`/msp/billing?tab=contracts&contractId=${contractId}`);
+      const params = new URLSearchParams();
+      params.set('tab', 'contracts');
+      params.set('contractId', contractId);
+      if (clientContractId) {
+        params.set('clientContractId', clientContractId);
+      }
+      router.push(`/msp/billing?${params.toString()}`);
     }
   };
 
@@ -278,16 +284,18 @@ const Contracts: React.FC = () => {
     },
   ];
 
-  const filteredTemplateContracts = templateContracts.filter((contract) => {
-    if (!templateSearchTerm) {
-      return true;
-    }
-    const search = templateSearchTerm.toLowerCase();
-    return (
-      contract.contract_name?.toLowerCase().includes(search) ||
-      contract.contract_description?.toLowerCase().includes(search)
-    );
-  });
+  const filteredTemplateContracts = templateContracts
+    .filter((contract) => contract.is_template !== false)
+    .filter((contract) => {
+      if (!templateSearchTerm) {
+        return true;
+      }
+      const search = templateSearchTerm.toLowerCase();
+      return (
+        contract.contract_name?.toLowerCase().includes(search) ||
+        contract.contract_description?.toLowerCase().includes(search)
+      );
+    });
 
   const filteredClientContracts = clientContracts.filter((contract) => {
     if (!clientSearchTerm) {
@@ -352,7 +360,7 @@ const Contracts: React.FC = () => {
         data={filteredClientContracts}
         columns={clientContractColumns}
         pagination
-        onRowClick={(record) => navigateToContract(record.contract_id)}
+        onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
         rowClassName={() => 'cursor-pointer'}
       />
     </>

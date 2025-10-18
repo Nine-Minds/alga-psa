@@ -176,6 +176,7 @@ const Contract = {
         .where({ 'co.tenant': tenant })
         .select(
           'co.*',
+          'cc.client_contract_id',
           'c.client_id',
           'c.client_name',
           'cc.start_date',

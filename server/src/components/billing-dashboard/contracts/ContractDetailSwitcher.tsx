@@ -7,12 +7,14 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { getContractById } from 'server/src/lib/actions/contractActions';
 import ContractTemplateDetail from './ContractTemplateDetail';
 import ContractDetail from './ContractDetail';
+import { getClientContractById } from 'server/src/lib/actions/client-actions/clientContractActions';
 
 type ViewMode = 'loading' | 'template' | 'client' | 'error';
 
 const ContractDetailSwitcher: React.FC = () => {
   const searchParams = useSearchParams();
   const contractId = searchParams?.get('contractId') ?? null;
+  const clientContractId = searchParams?.get('clientContractId') ?? null;
 
   const [viewMode, setViewMode] = useState<ViewMode>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,17 @@ const ContractDetailSwitcher: React.FC = () => {
       }
 
       try {
+        if (clientContractId) {
+          const clientContract = await getClientContractById(clientContractId);
+          if (!isMounted) {
+            return;
+          }
+          if (clientContract && clientContract.contract_id === contractId) {
+            setViewMode('client');
+            return;
+          }
+        }
+
         const contract = await getContractById(contractId);
 
         if (!isMounted) {
@@ -62,7 +75,7 @@ const ContractDetailSwitcher: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [contractId]);
+  }, [contractId, clientContractId]);
 
   if (!contractId) {
     return (
