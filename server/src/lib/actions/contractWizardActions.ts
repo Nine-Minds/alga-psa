@@ -28,14 +28,12 @@ type FixedServiceInput = {
 type HourlyServiceInput = {
   service_id: string;
   service_name?: string;
-  hourly_rate?: number; // cents
   bucket_overlay?: BucketOverlayInput | null;
 };
 
 type UsageServiceInput = {
   service_id: string;
   service_name?: string;
-  unit_rate?: number;
   unit_of_measure?: string;
   bucket_overlay?: BucketOverlayInput | null;
 };
@@ -43,15 +41,7 @@ type UsageServiceInput = {
 export type ContractWizardSubmission = {
   contract_name: string;
   description?: string;
-  company_id: string;
-  start_date: string;
   billing_frequency?: string;
-  end_date?: string;
-  po_required?: boolean;
-  po_number?: string;
-  po_amount?: number;
-  fixed_base_rate?: number; // cents
-  enable_proration: boolean;
   fixed_services: FixedServiceInput[];
   hourly_services?: HourlyServiceInput[];
   usage_services?: UsageServiceInput[];
@@ -64,10 +54,6 @@ export type ContractWizardResult = {
   contract_line_id?: string;
   contract_line_ids?: string[];
 };
-
-function roundToTwo(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 async function upsertBucketOverlay(
   trx: Knex.Transaction,
@@ -146,21 +132,6 @@ async function upsertBucketOverlay(
     });
 }
 
-function normalizeDateOnly(input?: string): string | undefined {
-  if (!input) return undefined;
-  const trimmed = input.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-  if (trimmed.includes('T')) return trimmed.split('T')[0];
-  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (match) {
-    const [, mmRaw, ddRaw, yyyy] = match;
-    const mm = mmRaw.padStart(2, '0');
-    const dd = ddRaw.padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-  return trimmed;
-}
-
 export async function createContractFromWizard(
   submission: ContractWizardSubmission,
   options?: { isDraft?: boolean }
@@ -195,11 +166,10 @@ export async function createContractFromWizard(
       contract_description: submission.description ?? null,
       billing_frequency: submission.billing_frequency ?? 'monthly',
       is_active: !isDraft,
+      status: isDraft ? 'draft' : 'active',
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
     });
-
-    let createdPlanId: string | undefined;
 
     const filteredFixedServices = (submission.fixed_services || []).filter(
       (service) => service?.service_id
@@ -275,50 +245,24 @@ export async function createContractFromWizard(
       if (!primaryContractLineId) {
         primaryContractLineId = planId;
       }
-      createdPlanId = planId;
-
-      // Upsert fixed config (plan-level)
+      // Persist plan-level defaults (pricing captured per client)
       const planFixedConfigModel = new ContractLineFixedConfig(trx, tenant);
-      const baseRateDollars = submission.fixed_base_rate
-        ? submission.fixed_base_rate / 100
-        : 0;
-
       await planFixedConfigModel.upsert({
         contract_line_id: planId,
-        base_rate: baseRateDollars,
-        enable_proration: submission.enable_proration,
-        billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
-        tenant: tenant,
+        base_rate: null,
+        enable_proration: false,
+        billing_cycle_alignment: 'start',
+        tenant,
       });
 
-      const totalQuantity =
-        filteredFixedServices.reduce((sum, svc) => sum + (svc.quantity ?? 1), 0) ||
-        filteredFixedServices.length;
-      let allocated = 0;
-
-      for (const [index, service] of filteredFixedServices.entries()) {
-        const quantity = service.quantity ?? 1;
-        // Link service to contract line
+      for (const service of filteredFixedServices) {
+        const quantity = service.quantity ?? null;
         await trx('contract_line_services').insert({
           tenant,
           contract_line_id: planId,
           service_id: service.service_id,
         });
 
-        let serviceBaseRate = 0;
-        if (baseRateDollars > 0) {
-          const share = quantity / totalQuantity;
-          const provisionalValue = baseRateDollars * share;
-
-          if (index === filteredFixedServices.length - 1) {
-            serviceBaseRate = roundToTwo(baseRateDollars - allocated);
-          } else {
-            serviceBaseRate = roundToTwo(provisionalValue);
-            allocated = roundToTwo(allocated + serviceBaseRate);
-          }
-        }
-
-        // Create configuration + fixed type details
         await planServiceConfigService.createConfiguration(
           {
             contract_line_id: planId,
@@ -328,7 +272,7 @@ export async function createContractFromWizard(
             tenant,
             custom_rate: undefined,
           },
-          { base_rate: serviceBaseRate }
+          { base_rate: null }
         );
 
         if (service.bucket_overlay) {
@@ -382,7 +326,7 @@ export async function createContractFromWizard(
           hourlyPlanId,
           service.service_id,
           {
-            hourly_rate: service.hourly_rate ?? 0,
+            hourly_rate: 0,
             minimum_billable_time: minimumBillable,
             round_up_to_nearest: roundUp,
           }
@@ -411,28 +355,75 @@ export async function createContractFromWizard(
       });
       nextDisplayOrder += 1;
     }
-    const startDate = normalizeDateOnly(submission.start_date);
-    if (!startDate) {
-      throw new Error('Contract start date is required');
+
+    if (filteredUsageServices.length > 0) {
+      const createdUsageLine = await ContractLine.create(trx, {
+        contract_line_name: `${submission.contract_name} - Usage`,
+        billing_frequency: 'monthly',
+        is_custom: true,
+        service_category: null as any,
+        contract_line_type: 'Usage',
+        hourly_rate: null,
+        minimum_billable_time: null,
+        round_up_to_nearest: null,
+        enable_overtime: null,
+        overtime_rate: null,
+        overtime_threshold: null,
+        enable_after_hours_rate: null,
+        after_hours_multiplier: null,
+      } as any);
+      const usagePlanId = createdUsageLine.contract_line_id!;
+      createdContractLineIds.push(usagePlanId);
+      if (!primaryContractLineId) {
+        primaryContractLineId = usagePlanId;
+      }
+
+      for (const service of filteredUsageServices) {
+        await trx('contract_line_services').insert({
+          tenant,
+          contract_line_id: usagePlanId,
+          service_id: service.service_id,
+        });
+
+        await planServiceConfigService.createConfiguration(
+          {
+            contract_line_id: usagePlanId,
+            service_id: service.service_id,
+            configuration_type: 'Usage',
+            tenant,
+            quantity: null,
+            custom_rate: undefined,
+          },
+          {
+            unit_of_measure: service.unit_of_measure ?? 'unit',
+            enable_tiered_pricing: false,
+            minimum_usage: null,
+          }
+        );
+
+        if (service.bucket_overlay) {
+          await upsertBucketOverlay(
+            trx,
+            tenant,
+            usagePlanId,
+            service.service_id,
+            service.bucket_overlay,
+            null,
+            null
+          );
+        }
+      }
+
+      await trx('contract_line_mappings').insert({
+        tenant,
+        contract_id: contractId,
+        contract_line_id: usagePlanId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        created_at: now.toISOString(),
+      });
+      nextDisplayOrder += 1;
     }
-
-    const endDate = normalizeDateOnly(submission.end_date) ?? null;
-
-    await trx('client_contracts').insert({
-      tenant,
-      client_contract_id: uuidv4(),
-      client_id: submission.company_id,
-      contract_id: contractId,
-      start_date: startDate,
-      end_date: endDate,
-      is_active: !isDraft,
-      po_required: submission.po_required ?? false,
-      po_number: submission.po_number ?? null,
-      po_amount: submission.po_amount ?? null,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
-    });
-
     return {
       contract_id: contractId,
       contract_line_id: primaryContractLineId,

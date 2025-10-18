@@ -7,6 +7,7 @@ import { IClientContractLine } from '../../../interfaces/billing.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '../../utils/dateTimeUtils';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { cloneTemplateContractLine } from '../../billing/utils/templateClone';
 
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
@@ -152,8 +153,16 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
         throw new Error('A contract line with the same details already exists for this client');
       }
 
+      const templateContract = newBilling.client_contract_id
+        ? await trx('client_contracts')
+            .where({ tenant, client_contract_id: newBilling.client_contract_id })
+            .first('template_contract_id', 'contract_id')
+        : null;
+
+      const templateContractId = templateContract?.template_contract_id ?? templateContract?.contract_id ?? null;
+
       // Only include service_category in insert if it's provided
-      const insertData = {
+      const insertData: Record<string, unknown> = {
         ...newBilling,
         tenant,
         // Convert string date to Date object if it's a string
@@ -166,7 +175,22 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
         delete insertData.service_category;
       }
 
-      return await trx('client_contract_lines').insert(insertData);
+      insertData.template_contract_line_id = newBilling.contract_line_id;
+
+      const [created] = await trx('client_contract_lines')
+        .insert(insertData)
+        .returning('client_contract_line_id');
+
+      await cloneTemplateContractLine(trx, {
+        tenant,
+        templateContractLineId: newBilling.contract_line_id,
+        clientContractLineId: created.client_contract_line_id,
+        templateContractId,
+        overrideRate: newBilling.custom_rate ?? null,
+        effectiveDate: insertData.start_date instanceof Date ? insertData.start_date.toISOString() : null
+      });
+
+      return created;
     });
   } catch (error: any) {
     console.error('Error adding client contract line:', error);

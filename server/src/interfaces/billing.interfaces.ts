@@ -89,6 +89,7 @@ export interface IClientContractLine extends TenantEntity {
   client_contract_line_id: string;
   client_id: string;
   contract_line_id: string;
+  template_contract_line_id?: string;
   service_category?: string;
   service_category_name?: string; // Added field from join with service_categories
   start_date: ISO8601String;
@@ -96,6 +97,7 @@ export interface IClientContractLine extends TenantEntity {
   is_active: boolean;
   custom_rate?: number;
   client_contract_id?: string; // Reference to the client contract assignment
+  template_contract_id?: string;
   contract_id?: string; // Reference to the contract (for pricing schedule lookups)
   // Added fields from join with contract_lines
   contract_line_name?: string;

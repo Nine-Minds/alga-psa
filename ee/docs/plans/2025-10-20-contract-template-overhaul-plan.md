@@ -124,6 +124,11 @@ Total estimated duration: ~8.5 weeks including buffer.
 - Create forward migration scripts under `server/migrations` (e.g., `YYYYMMDDHHMM_contract_template_overhaul.cjs`), run locally with `npm run migrate`, and document verification queries for teardown.
 - Write migration rollback strategy and add to `ee/docs/plans/...` appendix.
 
+**Phase 1 Status – 2025-02-14**
+- [x] Drafted initial Knex migration (`server/migrations/20250214090000_contract_templates_phase1.cjs`) that introduces template flags, template metadata JSON, and scaffolds client-specific tables for pricing/config cloning.
+- [ ] Update existing migrations/services to remove legacy pricing fields once data migration completes (tracked in Phase 4).
+- [ ] Align migration with rip-and-replace approach (no dual-write): adjust contract assignment services once data backfill happens.
+
 ## Phase 2 – Backend Domain Updates
 **Goals:** Ensure services treat templates as blueprints and client contracts as concrete instances.
 
@@ -139,6 +144,11 @@ Total estimated duration: ~8.5 weeks including buffer.
 - Extend unit/integration tests:
   - New tests in `server/src/test/unit/contracts` verifying template CRUD.
   - Adjust existing tests in `server/src/test/integration/api/storageHandlers.test.ts` and `server/src/test/e2e/api/services.e2e.test.ts` to use client contract rates only.
+
+**Phase 2 Status – 2025-02-14**
+- [x] Implemented `cloneTemplateContractLine` utility and integrated it with API and server-action entry points for client contract assignments (`ContractLineService.assignPlanToClient`, client contract apply/add flows). Assignments now populate the new `client_contract_*` tables directly (rip-and-replace path).
+- [x] Updated shared interfaces/schemas to expose template linkage fields consumed by the revised services.
+- [ ] Update billing engine/report consumers to rely on `client_contract_line_pricing` and related tables (pending once data migration completes).
 
 ## Phase 3 – Frontend Template Wizard & Client Wizard Enhancements
 **Goals:** Provide UX for managing templates and applying them when creating client contracts.
@@ -159,7 +169,7 @@ Total estimated duration: ~8.5 weeks including buffer.
 ## Phase 4 – Data Migration & Backfill
 **Goals:** Move existing pricing data from templates to client contracts and link instances to their originating templates.
 
-- Author migration script in `server/src/scripts/migrations/2025-10-contract-template-decoupling.ts`:
+- [x] Author migration script in `server/scripts/contract-template-decoupling.ts`:
   - For each `client_contract` referencing a `contract_id`, set `template_contract_id`.
   - For each `client_contract_line`, set `template_contract_line_id`.
   - Copy pricing fields from template tables into new client-instance tables: `contract_line_fixed_config.base_rate`, `contract_line_services.quantity/custom_rate`, `contract_line_service_bucket_config.total_minutes/overage_rate`, hourly configs, usage configs, and discount links.

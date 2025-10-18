@@ -8,7 +8,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, Clock, DollarSign } from 'lucide-react';
+import { Plus, X, Clock } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 
@@ -20,22 +20,10 @@ interface HourlyServicesStepProps {
 export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps) {
   const [services, setServices] = useState<IService[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
-  const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     loadServices();
   }, []);
-
-  useEffect(() => {
-    // Initialize rate inputs from data
-    const inputs: Record<number, string> = {};
-    data.hourly_services.forEach((service, index) => {
-      if (service.hourly_rate !== undefined) {
-        inputs[index] = (service.hourly_rate / 100).toFixed(2);
-      }
-    });
-    setRateInputs(inputs);
-  }, [data.hourly_services]);
 
   const loadServices = async () => {
     try {
@@ -74,21 +62,9 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     newServices[index] = {
       ...newServices[index],
       service_id: serviceId,
-      service_name: service?.service_name || '',
-      hourly_rate: service?.default_rate || undefined
+      service_name: service?.service_name || ''
     };
     updateData({ hourly_services: newServices });
-  };
-
-  const handleRateChange = (index: number, rate: number) => {
-    const newServices = [...data.hourly_services];
-    newServices[index] = { ...newServices[index], hourly_rate: rate };
-    updateData({ hourly_services: newServices });
-  };
-
-  const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return '$0.00';
-    return `$${(cents / 100).toFixed(2)}`;
   };
 
   const defaultOverlay = (): BucketOverlayInput => ({
@@ -129,15 +105,14 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Hourly Services</h3>
         <p className="text-sm text-gray-600">
-          Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.
+          Select time-based services that belong on this template. Pricing is captured later when assigning the template to a client.
         </p>
       </div>
 
       {/* Info Box */}
       <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
         <p className="text-sm text-amber-800">
-          <strong>What are Hourly Services?</strong> These services are billed based on actual time tracked.
-          Each time entry will be multiplied by the hourly rate to calculate the invoice amount.
+          <strong>Template guidance:</strong> Configure minimum billable time, rounding preferences, and optional hour buckets. Hourly rates will be entered per client.
         </p>
       </div>
 
@@ -209,47 +184,6 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   disabled={isLoadingServices}
                   className="w-full"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
-                  <DollarSign className="h-3 w-3" />
-                  Hourly Rate
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                  <Input
-                    id={`hourly-rate-${index}`}
-                    type="text"
-                    inputMode="decimal"
-                    value={rateInputs[index] || ''}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9.]/g, '');
-                      // Allow only one decimal point
-                      const decimalCount = (value.match(/\./g) || []).length;
-                      if (decimalCount <= 1) {
-                        setRateInputs(prev => ({ ...prev, [index]: value }));
-                      }
-                    }}
-                    onBlur={() => {
-                      const inputValue = rateInputs[index] || '';
-                      if (inputValue.trim() === '' || inputValue === '.') {
-                        setRateInputs(prev => ({ ...prev, [index]: '' }));
-                        handleRateChange(index, 0);
-                      } else {
-                        const dollars = parseFloat(inputValue) || 0;
-                        const cents = Math.round(dollars * 100);
-                        handleRateChange(index, cents);
-                        setRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
-                      }
-                    }}
-                    placeholder="0.00"
-                    className="pl-7"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">
-                  {service.hourly_rate ? `${formatCurrency(service.hourly_rate)}/hour` : 'Enter hourly rate'}
-                </p>
               </div>
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">

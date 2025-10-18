@@ -5,11 +5,10 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, DollarSign, Package, HelpCircle } from 'lucide-react';
+import { Plus, X, Package } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { BucketOverlayFields } from '../BucketOverlayFields';
@@ -22,18 +21,10 @@ interface FixedFeeServicesStepProps {
 export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepProps) {
   const [services, setServices] = useState<IService[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
-  const [baseRateInput, setBaseRateInput] = useState<string>('');
 
   useEffect(() => {
     loadServices();
   }, []);
-
-  useEffect(() => {
-    // Initialize input from data
-    if (data.fixed_base_rate !== undefined) {
-      setBaseRateInput((data.fixed_base_rate / 100).toFixed(2));
-    }
-  }, [data.fixed_base_rate]);
 
   const loadServices = async () => {
     try {
@@ -134,72 +125,10 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
       {/* Info Box */}
       <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
         <p className="text-sm text-amber-800">
-          <strong>What are Fixed Fee Services?</strong> These services have a set monthly price. You'll still track time entries
-          for these services, but billing is based on the fixed rate, not hours worked.
+          <strong>Template guidance:</strong> Select which services belong in this fixed-fee bundle.
+          Billing amounts will be entered when a client is assigned to the template.
         </p>
       </div>
-
-      {/* Monthly Base Rate */}
-      {data.fixed_services.length > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="fixed_base_rate" className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            Monthly Base Rate *
-          </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-            <Input
-              id="fixed_base_rate"
-              type="text"
-              inputMode="decimal"
-              value={baseRateInput}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9.]/g, '');
-                // Allow only one decimal point
-                const decimalCount = (value.match(/\./g) || []).length;
-                if (decimalCount <= 1) {
-                  setBaseRateInput(value);
-                }
-              }}
-              onBlur={() => {
-                if (baseRateInput.trim() === '' || baseRateInput === '.') {
-                  setBaseRateInput('');
-                  updateData({ fixed_base_rate: undefined });
-                } else {
-                  const dollars = parseFloat(baseRateInput) || 0;
-                  const cents = Math.round(dollars * 100);
-                  updateData({ fixed_base_rate: cents });
-                  setBaseRateInput((cents / 100).toFixed(2));
-                }
-              }}
-              placeholder="0.00"
-              className="pl-7"
-            />
-          </div>
-          <p className="text-xs text-gray-500">
-            The total monthly fee for all fixed services combined
-          </p>
-        </div>
-      )}
-
-      {/* Proration Toggle */}
-      {data.fixed_services.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <SwitchWithLabel
-              label="Enable Proration"
-              checked={data.enable_proration}
-              onCheckedChange={(checked) => updateData({ enable_proration: checked })}
-            />
-            <Tooltip content="Proration automatically adjusts the monthly fee for partial months. For example, if a contract starts mid-month, the client is only charged for the days active that month.">
-              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-            </Tooltip>
-          </div>
-          <p className="text-xs text-gray-500">
-            When enabled, the monthly fee will be prorated for partial months based on the start/end date
-          </p>
-        </div>
-      )}
 
       {/* Services List */}
       <div className="space-y-4">
@@ -291,17 +220,6 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         </div>
       )}
 
-      {/* Summary */}
-      {data.fixed_services.length > 0 && data.fixed_base_rate && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Fixed Fee Summary</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <p><strong>Services:</strong> {data.fixed_services.length}</p>
-            <p><strong>Monthly Rate:</strong> {formatCurrency(data.fixed_base_rate)}</p>
-            <p><strong>Proration:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}</p>
-          </div>
-        </div>
-      )}
       </div>
     </ReflectionContainer>
   );

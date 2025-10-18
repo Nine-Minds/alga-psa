@@ -29,35 +29,22 @@ export interface BucketOverlayInput {
 }
 
 export interface ContractWizardData {
-  // Step 1: Contract Basics
-  company_id: string;
-  client_id?: string;
   contract_name: string;
-  start_date: string;
-  end_date?: string;
   description?: string;
   billing_frequency: string;
-
-  // Purchase Order fields
-  po_number?: string;
-  po_amount?: number;
-  po_required?: boolean;
 
   // Step 2: Fixed Fee Services
   fixed_services: Array<{
     service_id: string;
     service_name?: string;
-    quantity: number;
+    quantity?: number;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
-  fixed_base_rate?: number;
-  enable_proration: boolean;
 
   // Step 3: Hourly Services
   hourly_services: Array<{
     service_id: string;
     service_name?: string;
-    hourly_rate?: number;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   minimum_billable_time?: number;
@@ -67,13 +54,12 @@ export interface ContractWizardData {
   usage_services?: Array<{
     service_id: string;
     service_name?: string;
-    unit_rate?: number;
     unit_of_measure?: string;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
 
   // Internal tracking
-  contract_id?: string; // Set after creation
+  contract_id?: string;
   is_draft?: boolean;
 }
 
@@ -96,34 +82,20 @@ export function ContractWizard({
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const [wizardData, setWizardData] = useState<ContractWizardData>({
-    company_id: '',
-    client_id: '',
     contract_name: '',
-    start_date: '',
-    end_date: undefined,
     description: '',
     billing_frequency: 'monthly',
     fixed_services: [],
-    fixed_base_rate: undefined,
-    enable_proration: true,
     hourly_services: [],
+    usage_services: [],
     minimum_billable_time: undefined,
     round_up_to_nearest: undefined,
-    usage_services: [],
     ...editingContract
   });
 
-  const buildSubmissionData = (clientIdentifier: string): ContractWizardSubmission => ({
+  const buildSubmissionData = (): ContractWizardSubmission => ({
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
-    company_id: clientIdentifier,
-    start_date: wizardData.start_date,
-    end_date: wizardData.end_date,
-    po_required: wizardData.po_required,
-    po_number: wizardData.po_number,
-    po_amount: wizardData.po_amount,
-    fixed_base_rate: wizardData.fixed_base_rate,
-    enable_proration: wizardData.enable_proration,
     fixed_services: wizardData.fixed_services ?? [],
     hourly_services: wizardData.hourly_services ?? [],
     usage_services: wizardData.usage_services ?? [],
@@ -134,24 +106,12 @@ export function ContractWizard({
 
   useEffect(() => {
     if (editingContract) {
-      setWizardData({ ...wizardData, ...editingContract });
+      setWizardData((prev) => ({ ...prev, ...editingContract }));
     }
   }, [editingContract]);
 
   const updateData = (data: Partial<ContractWizardData>) => {
-    setWizardData((prev) => {
-      const next = { ...prev, ...data };
-
-      if ('client_id' in data && !('company_id' in data)) {
-        next.company_id = data.client_id ?? '';
-      }
-
-      if ('company_id' in data && !('client_id' in data)) {
-        next.client_id = data.company_id ?? '';
-      }
-
-      return next;
-    });
+    setWizardData((prev) => ({ ...prev, ...data }));
   };
 
   const validateStep = (stepIndex: number): boolean => {
@@ -159,10 +119,6 @@ export function ContractWizard({
 
     switch (stepIndex) {
       case 0: // Contract Basics
-        if (!(wizardData.client_id || wizardData.company_id)) {
-          setErrors(prev => ({ ...prev, [stepIndex]: 'Client is required' }));
-          return false;
-        }
         if (!wizardData.contract_name?.trim()) {
           setErrors(prev => ({ ...prev, [stepIndex]: 'Contract name is required' }));
           return false;
@@ -171,17 +127,9 @@ export function ContractWizard({
           setErrors(prev => ({ ...prev, [stepIndex]: 'Billing frequency is required' }));
           return false;
         }
-        if (!wizardData.start_date) {
-          setErrors(prev => ({ ...prev, [stepIndex]: 'Start date is required' }));
-          return false;
-        }
         return true;
 
       case 1: // Fixed Fee Services
-        if (wizardData.fixed_services.length > 0 && !wizardData.fixed_base_rate) {
-          setErrors(prev => ({ ...prev, [stepIndex]: 'Base rate is required when services are selected' }));
-          return false;
-        }
         return true;
 
       case 2: // Hourly Services
@@ -246,8 +194,7 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const clientIdentifier = wizardData.company_id || wizardData.client_id || '';
-      const submission = buildSubmissionData(clientIdentifier);
+      const submission = buildSubmissionData();
 
       const contractResult = await createContractFromWizard(submission);
 
@@ -257,7 +204,6 @@ export function ContractWizard({
       };
 
       setWizardData(completedData);
-      console.log('Creating contract with data:', completedData);
       onComplete?.(completedData);
       onOpenChange(false);
     } catch (error) {
@@ -278,22 +224,14 @@ export function ContractWizard({
       return;
     }
 
-    if (!(wizardData.client_id || wizardData.company_id)) {
-      setErrors(prev => ({ ...prev, [currentStep]: 'Select a client before saving as draft' }));
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const clientIdentifier = wizardData.company_id || wizardData.client_id || '';
-      const submission = buildSubmissionData(clientIdentifier);
+      const submission = buildSubmissionData();
       const contractResult = await createContractFromWizard(submission, { isDraft: true });
 
       const draftData: ContractWizardData = {
         ...wizardData,
         contract_id: contractResult.contract_id,
-        company_id: clientIdentifier ?? '',
-        client_id: clientIdentifier,
         is_draft: true,
       };
 
@@ -332,7 +270,7 @@ export function ContractWizard({
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title={editingContract ? "Edit Contract" : "Create New Contract"}
+      title={editingContract ? "Edit Template" : "Create Contract Template"}
       className="max-w-4xl max-h-[90vh]"
     >
       <div className="flex flex-col h-full">
