@@ -609,10 +609,10 @@ const ContractDetail: React.FC = () => {
       <div className="p-4 space-y-4">
         <Button
           id="back-to-contracts-error"
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={() => router.push('/msp/billing?tab=contracts')}
-          className="gap-2 hover:bg-gray-50"
+          className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Contracts
@@ -632,10 +632,10 @@ const ContractDetail: React.FC = () => {
       <div className="flex flex-col gap-4">
         <Button
           id="back-to-contracts"
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={() => router.push('/msp/billing?tab=contracts')}
-          className="gap-2 self-start hover:bg-gray-50"
+          className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Contracts

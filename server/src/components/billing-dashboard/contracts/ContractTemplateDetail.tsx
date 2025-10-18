@@ -528,16 +528,6 @@ const ContractTemplateDetail: React.FC = () => {
   if (isLoading) {
     return (
       <div className="p-6">
-        <Button
-          id="back-to-contracts-loading"
-          variant="outline"
-          size="sm"
-          onClick={handleNavigateBack}
-          className="gap-2 mb-6"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Contracts
-        </Button>
         <LoadingIndicator
           className="py-12 text-gray-600"
           layout="stacked"
@@ -553,10 +543,10 @@ const ContractTemplateDetail: React.FC = () => {
       <div className="p-6 space-y-4">
         <Button
           id="back-to-contracts-error"
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={handleNavigateBack}
-          className="gap-2"
+          className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Contracts
