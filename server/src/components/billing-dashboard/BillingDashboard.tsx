@@ -17,7 +17,7 @@ import UsageTracking from './UsageTracking';
 import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
 import Contracts from './contracts/Contracts';
-import ContractTemplateDetail from './contracts/ContractTemplateDetail';
+import ContractDetailSwitcher from './contracts/ContractDetailSwitcher';
 import { ContractLineTypeRouter } from './contract-lines/ContractLineTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 import ContractReports from './reports/ContractReports';
@@ -114,7 +114,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="contracts">
           {searchParams?.has('contractId') ? (
-            <ContractTemplateDetail />
+            <ContractDetailSwitcher />
           ) : (
             <Contracts />
           )}
