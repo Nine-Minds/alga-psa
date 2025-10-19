@@ -421,8 +421,9 @@ exports.up = async function up(knex) {
   `);
 
   // Comparison helpers for legacy vs new template storage
-  await knex.raw(`
-    CREATE VIEW contract_template_compare_view AS
+  const hasLegacyTemplateFlag = await knex.schema.hasColumn('contracts', 'is_template');
+  const legacyContractsSelect = hasLegacyTemplateFlag
+    ? `
     SELECT
       'legacy'::text AS source,
       c.tenant,
@@ -430,12 +431,30 @@ exports.up = async function up(knex) {
       c.contract_name AS template_name,
       c.contract_description AS template_description,
       c.billing_frequency AS cadence,
-      c.status,
-      c.template_metadata,
+      CASE WHEN c.is_active = true THEN 'active' ELSE 'inactive' END AS status,
+      NULL::jsonb AS template_metadata,
       c.created_at,
       c.updated_at
     FROM contracts c
-    WHERE c.is_template = true
+    WHERE c.is_template = true`
+    : `
+    SELECT
+      'legacy'::text AS source,
+      c.tenant,
+      c.contract_id AS template_identifier,
+      c.contract_name AS template_name,
+      c.contract_description AS template_description,
+      c.billing_frequency AS cadence,
+      CASE WHEN c.is_active = true THEN 'active' ELSE 'inactive' END AS status,
+      NULL::jsonb AS template_metadata,
+      c.created_at,
+      c.updated_at
+    FROM contracts c
+    WHERE 1 = 0`;
+
+  await knex.raw(`
+    CREATE VIEW contract_template_compare_view AS
+    ${legacyContractsSelect}
     UNION ALL
     SELECT
       'new'::text AS source,
@@ -451,8 +470,11 @@ exports.up = async function up(knex) {
     FROM contract_templates t
   `);
 
-  await knex.raw(`
-    CREATE VIEW contract_template_lines_compare_view AS
+  const hasLegacyTemplateLineFlag = await knex.schema.hasColumn('contract_lines', 'is_template');
+  const hasLegacyTemplateTerms = await knex.schema.hasTable('contract_line_template_terms');
+
+  const legacyTemplateLinesSelect = hasLegacyTemplateLineFlag
+    ? `
     SELECT
       'legacy'::text AS source,
       cl.tenant,
@@ -466,15 +488,39 @@ exports.up = async function up(knex) {
       cl.overtime_threshold,
       cl.enable_after_hours_rate,
       cl.after_hours_multiplier,
-      terms.minimum_billable_time,
-      terms.round_up_to_nearest,
+      ${hasLegacyTemplateTerms ? 'terms.minimum_billable_time' : 'NULL::integer'} AS minimum_billable_time,
+      ${hasLegacyTemplateTerms ? 'terms.round_up_to_nearest' : 'NULL::integer'} AS round_up_to_nearest,
       cl.created_at,
       cl.updated_at
     FROM contract_lines cl
-    LEFT JOIN contract_line_template_terms terms
+    ${hasLegacyTemplateTerms ? `LEFT JOIN contract_line_template_terms terms
       ON terms.tenant = cl.tenant
-     AND terms.contract_line_id = cl.contract_line_id
-    WHERE cl.is_template = true
+     AND terms.contract_line_id = cl.contract_line_id` : ''}
+    WHERE cl.is_template = true`
+    : `
+    SELECT
+      'legacy'::text AS source,
+      cl.tenant,
+      cl.contract_line_id AS template_line_identifier,
+      cl.contract_line_name AS template_line_name,
+      cl.contract_line_type AS line_type,
+      cl.billing_frequency,
+      cl.is_active,
+      cl.enable_overtime,
+      cl.overtime_rate,
+      cl.overtime_threshold,
+      cl.enable_after_hours_rate,
+      cl.after_hours_multiplier,
+      NULL::integer AS minimum_billable_time,
+      NULL::integer AS round_up_to_nearest,
+      cl.created_at,
+      cl.updated_at
+    FROM contract_lines cl
+    WHERE 1 = 0`;
+
+  await knex.raw(`
+    CREATE VIEW contract_template_lines_compare_view AS
+    ${legacyTemplateLinesSelect}
     UNION ALL
     SELECT
       'new'::text AS source,
