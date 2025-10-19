@@ -25,7 +25,6 @@
 - **Feature inventory (UI + services)**
   - `server/src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx` – parses `template_metadata`, drives inline edit + services editor, and depends on `getContractAssignments`.
   - `server/src/components/billing-dashboard/contracts/Contracts.tsx:300` and `ContractDetailSwitcher.tsx:63` – filter/switch views with `contract.is_template`.
-  - `server/src/components/billing-dashboard/contracts/ContractDialog.tsx:146` – forces `is_template=false` when cloning into a client contract.
   - `server/src/components/billing-dashboard/contracts/ContractHeader.tsx:106` – badge logic toggled by `contract.is_template`.
   - Server actions: `contractActions.ts` (`getContracts`, `updateContract`, etc.), `contractWizardActions.ts:805-831`, `contractLineAction.ts`, and `contractLineMappingActions.ts` all branch on `is_template` or expect template rows inside shared tables.
   - Billing utilities: `server/src/lib/billing/utils/templateClone.ts` reads from `contract_lines`/`contract_line_services` assuming template rows live alongside instance data.

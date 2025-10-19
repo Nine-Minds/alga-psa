@@ -188,7 +188,8 @@ const ContractTemplateModel = {
           .delete();
 
         await trx('contract_template_line_mappings')
-          .where({ tenant, template_id: templateId })
+          .where({ tenant })
+          .whereIn('template_line_id', lineIds)
           .delete();
 
         await trx('contract_template_lines')
