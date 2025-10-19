@@ -552,7 +552,7 @@ export class ContractLineServiceConfigurationService {
           service_id: serviceId,
           configuration_type: 'Usage',
           custom_rate: normalizedUnitRate,
-          quantity: null,
+          quantity: undefined,
           tenant: this.tenant,
         };
         configId = await planServiceConfigModel.create(newBaseConfig);

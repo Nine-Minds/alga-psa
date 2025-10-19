@@ -211,7 +211,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       <div className="flex flex-col h-full bg-white rounded-lg shadow-lg">
         <div className="flex-shrink-0 px-6 pt-6">
           <WizardProgress
-            steps={TEMPLATE_STEPS as readonly string[]}
+            steps={TEMPLATE_STEPS.slice()}
             currentStep={currentStep}
             completedSteps={completedSteps}
             onStepClick={handleStepClick}

@@ -233,19 +233,21 @@ const ContractLineMapping = {
         return updatedMapping;
       }
 
+      const templateUpdatePayload: Record<string, unknown> = {};
+      if (dataToUpdate.custom_rate !== undefined) {
+        templateUpdatePayload.custom_rate = dataToUpdate.custom_rate;
+      }
+      if (dataToUpdate.display_order !== undefined) {
+        templateUpdatePayload.display_order = dataToUpdate.display_order;
+      }
+
       const [updatedTemplateMapping] = await db('contract_template_line_mappings')
         .where({
           template_id: contractId,
           template_line_id: contractLineId,
           tenant,
         })
-        .update({
-          custom_rate:
-            dataToUpdate.custom_rate !== undefined ? dataToUpdate.custom_rate : undefined,
-          display_order:
-            dataToUpdate.display_order !== undefined ? dataToUpdate.display_order : undefined,
-          created_at: dataToUpdate.created_at ?? undefined,
-        })
+        .update(templateUpdatePayload)
         .returning([
           'tenant',
           'template_id as contract_id',

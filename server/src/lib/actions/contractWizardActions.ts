@@ -17,6 +17,11 @@ import {
 } from 'server/src/lib/actions/contractLineServiceActions';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { ensureTemplateLineSnapshot } from 'server/src/lib/actions/contractLineMappingActions';
+import {
+  IContractLineServiceBucketConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 
 // Shared bucket overlay input used by both template and client workflows
 export type BucketOverlayInput = {
@@ -38,6 +43,7 @@ type TemplateFixedServiceInput = {
 type TemplateHourlyServiceInput = {
   service_id: string;
   service_name?: string;
+  hourly_rate?: number | null;
   bucket_overlay?: BucketOverlayInput | null;
 };
 
@@ -57,6 +63,8 @@ export type ContractTemplateWizardSubmission = {
   usage_services?: TemplateUsageServiceInput[];
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
+  fixed_base_rate?: number;
+  enable_proration?: boolean;
 };
 
 type TemplateOption = {
@@ -143,6 +151,21 @@ const normalizeDateOnly = (input?: string): string | undefined => {
   }
   return trimmed;
 };
+
+const isBucketConfig = (
+  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+): config is IContractLineServiceBucketConfig =>
+  Boolean(config && 'total_minutes' in config && 'overage_rate' in config && 'allow_rollover' in config);
+
+const isHourlyConfig = (
+  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+): config is IContractLineServiceHourlyConfig =>
+  Boolean(config && 'hourly_rate' in config && 'minimum_billable_time' in config);
+
+const isUsageConfig = (
+  config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
+): config is IContractLineServiceUsageConfig =>
+  Boolean(config && 'unit_of_measure' in config && 'enable_tiered_pricing' in config);
 
 async function upsertBucketOverlay(
   trx: Knex.Transaction,
@@ -306,7 +329,7 @@ export async function createContractTemplateFromWizard(
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
 
     const recordTemplateMapping = async (lineId: string, customRate?: number | null) => {
-      await ensureTemplateLineSnapshot(trx, tenant, templateId, lineId, customRate);
+      await ensureTemplateLineSnapshot(trx, tenant, templateId, lineId, customRate ?? undefined);
 
       await trx('contract_template_line_mappings')
         .insert({
@@ -351,6 +374,7 @@ export async function createContractTemplateFromWizard(
 
       const totalQuantity = filteredFixedServices.reduce((sum, svc) => sum + (svc.quantity ?? 1), 0) || filteredFixedServices.length;
       let allocated = 0;
+      const fixedBaseRateCents = submission.fixed_base_rate ?? 0;
 
       for (const [index, service] of filteredFixedServices.entries()) {
         const quantity = service.quantity ?? 1;
@@ -362,11 +386,11 @@ export async function createContractTemplateFromWizard(
         });
 
         let serviceBaseRate = 0;
-        if (submission.fixed_base_rate) {
+        if (fixedBaseRateCents) {
           const share = quantity / totalQuantity;
-          const provisionalValue = submission.fixed_base_rate * share;
+          const provisionalValue = fixedBaseRateCents * share;
           if (index === filteredFixedServices.length - 1) {
-            serviceBaseRate = submission.fixed_base_rate - allocated;
+            serviceBaseRate = fixedBaseRateCents - allocated;
           } else {
             serviceBaseRate = Math.round(provisionalValue);
             allocated = Math.round(allocated + serviceBaseRate);
@@ -399,11 +423,12 @@ export async function createContractTemplateFromWizard(
       }
 
       const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
+      const enableProrationFlag = Boolean(submission.enable_proration);
       await fixedConfigModel.upsert({
         contract_line_id: planId,
-        base_rate: (submission.fixed_base_rate ?? 0) / 100,
-        enable_proration: submission.enable_proration,
-        billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
+        base_rate: fixedBaseRateCents / 100,
+        enable_proration: enableProrationFlag,
+        billing_cycle_alignment: enableProrationFlag ? 'prorated' : 'start',
         tenant,
       });
 
@@ -900,83 +925,91 @@ export async function getContractTemplateSnapshotForClientWizard(
       servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
         const quantity =
           configuration?.quantity != null ? Number(configuration.quantity) : 1;
+        const bucketConfig =
+          configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig) ? typeConfig : null;
+
         fixedServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
           quantity,
           bucket_overlay:
-            configuration.configuration_type === 'Bucket' && typeConfig
+            bucketConfig
               ? {
-                  total_minutes: typeConfig.total_minutes ?? undefined,
+                  total_minutes: bucketConfig.total_minutes ?? undefined,
                   overage_rate:
-                    typeConfig.overage_rate != null ? Math.round(Number(typeConfig.overage_rate)) : undefined,
-                  allow_rollover: Boolean(typeConfig.allow_rollover),
-                  billing_period: typeConfig.billing_period ?? 'monthly',
+                    bucketConfig.overage_rate != null ? Math.round(Number(bucketConfig.overage_rate)) : undefined,
+                  allow_rollover: Boolean(bucketConfig.allow_rollover),
+                  billing_period: bucketConfig.billing_period === 'weekly' ? 'weekly' : 'monthly',
                 }
               : undefined,
         });
       });
     } else if (line.contract_line_type === 'Hourly') {
       servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
+        const hourlyConfig = isHourlyConfig(typeConfig) ? typeConfig : null;
         const hourlyRateSource =
-          (typeConfig && 'hourly_rate' in typeConfig && typeConfig.hourly_rate != null
-            ? typeConfig.hourly_rate
-            : configuration?.custom_rate) ?? null;
+          (hourlyConfig && hourlyConfig.hourly_rate != null ? hourlyConfig.hourly_rate : configuration?.custom_rate) ??
+          null;
         const hourlyRateCents =
           hourlyRateSource != null ? Math.round(Number(hourlyRateSource)) : undefined;
 
         const minimumBillable =
-          typeConfig && 'minimum_billable_time' in typeConfig && typeConfig.minimum_billable_time != null
-            ? Number(typeConfig.minimum_billable_time)
+          hourlyConfig && hourlyConfig.minimum_billable_time != null
+            ? Number(hourlyConfig.minimum_billable_time)
             : minimumBillableTime;
         const roundUp =
-          typeConfig && 'round_up_to_nearest' in typeConfig && typeConfig.round_up_to_nearest != null
-            ? Number(typeConfig.round_up_to_nearest)
+          hourlyConfig && hourlyConfig.round_up_to_nearest != null
+            ? Number(hourlyConfig.round_up_to_nearest)
             : roundUpToNearest;
         minimumBillableTime = minimumBillable;
         roundUpToNearest = roundUp;
+
+        const hourlyBucket =
+          configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig) ? typeConfig : null;
 
         hourlyServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
           hourly_rate: hourlyRateCents,
           bucket_overlay:
-            configuration.configuration_type === 'Bucket' && typeConfig
+            hourlyBucket
               ? {
-                  total_minutes: typeConfig.total_minutes ?? undefined,
+                  total_minutes: hourlyBucket.total_minutes ?? undefined,
                   overage_rate:
-                    typeConfig.overage_rate != null ? Math.round(Number(typeConfig.overage_rate)) : undefined,
-                  allow_rollover: Boolean(typeConfig.allow_rollover),
-                  billing_period: typeConfig.billing_period ?? 'monthly',
+                    hourlyBucket.overage_rate != null ? Math.round(Number(hourlyBucket.overage_rate)) : undefined,
+                  allow_rollover: Boolean(hourlyBucket.allow_rollover),
+                  billing_period: hourlyBucket.billing_period === 'weekly' ? 'weekly' : 'monthly',
                 }
               : undefined,
         });
       });
     } else if (line.contract_line_type === 'Usage') {
       servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
+        const usageConfig = isUsageConfig(typeConfig) ? typeConfig : null;
         const unitRateSource =
-          (typeConfig && 'base_rate' in typeConfig && typeConfig.base_rate != null
-            ? typeConfig.base_rate
-            : configuration?.custom_rate) ?? null;
+          (usageConfig && usageConfig.base_rate != null ? usageConfig.base_rate : configuration?.custom_rate) ?? null;
         const unitRateCents =
           unitRateSource != null ? Math.round(Number(unitRateSource)) : undefined;
+
+        const usageBucket =
+          configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig) ? typeConfig : null;
 
         usageServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
           unit_rate: unitRateCents,
           unit_of_measure:
-            (typeConfig && 'unit_of_measure' in typeConfig && typeConfig.unit_of_measure) ||
+            usageConfig?.unit_of_measure ||
             service.unit_of_measure ||
             'unit',
           bucket_overlay:
-            configuration.configuration_type === 'Bucket' && typeConfig
+            usageBucket
               ? {
-                  total_minutes: typeConfig.total_minutes ?? undefined,
+                  total_minutes: usageBucket.total_minutes ?? undefined,
                   overage_rate:
-                    typeConfig.overage_rate != null ? Math.round(Number(typeConfig.overage_rate)) : undefined,
-                  allow_rollover: Boolean(typeConfig.allow_rollover),
-                  billing_period: typeConfig.billing_period ?? 'monthly',
+                    usageBucket.overage_rate != null ? Math.round(Number(usageBucket.overage_rate)) : undefined,
+                  allow_rollover: Boolean(usageBucket.allow_rollover),
+                  billing_period: usageBucket.billing_period === 'weekly' ? 'weekly' : 'monthly',
                 }
               : undefined,
         });

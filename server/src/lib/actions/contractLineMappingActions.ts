@@ -424,11 +424,18 @@ export async function addContractLine(
 
     const template = await isTemplateContract(knex, tenant, contractId);
     if (template) {
-      const [{ count }] = await knex('contract_template_line_mappings')
+      const countResult = await knex('contract_template_line_mappings')
         .where({ tenant, template_id: contractId })
-        .count<{ count: string | number }>('template_line_id as count');
-      const displayOrder =
-        typeof count === 'string' ? Number.parseInt(count, 10) : Number(count ?? 0);
+        .count<{ count: string | number }>('template_line_id as count')
+        .first();
+
+      const existingCount =
+        countResult?.count != null
+          ? typeof countResult.count === 'string'
+            ? Number.parseInt(countResult.count, 10)
+            : Number(countResult.count)
+          : 0;
+      const displayOrder = existingCount;
 
       await ensureTemplateLineSnapshot(knex, tenant, contractId, contractLineId, customRate);
 
@@ -437,13 +444,13 @@ export async function addContractLine(
           tenant,
           template_id: contractId,
           template_line_id: contractLineId,
-          display_order,
+          display_order: displayOrder,
           custom_rate: customRate ?? null,
           created_at: knex.fn.now(),
         })
         .onConflict(['tenant', 'template_id', 'template_line_id'])
         .merge({
-          display_order,
+          display_order: displayOrder,
           custom_rate: customRate ?? null,
         });
 

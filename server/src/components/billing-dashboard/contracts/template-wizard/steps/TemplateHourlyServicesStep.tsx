@@ -199,6 +199,7 @@ export function TemplateHourlyServicesStep({
               </div>
 
               <Button
+                id={`template-hourly-remove-service-${index}`}
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -211,6 +212,7 @@ export function TemplateHourlyServicesStep({
           ))}
 
           <Button
+            id="template-hourly-add-service"
             type="button"
             variant="secondary"
             onClick={handleAddService}

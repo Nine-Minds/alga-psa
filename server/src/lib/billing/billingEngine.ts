@@ -369,8 +369,12 @@ export class BillingEngine {
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
+    const knex = this.knex;
+    if (!knex) {
+      throw new Error('Database connection not initialized');
+    }
 
-    const client = await this.knex('clients')
+    const client = await knex('clients')
       .where({
         client_id: clientId,
         tenant: this.tenant
@@ -383,9 +387,14 @@ export class BillingEngine {
     const billingCycle = await this.getBillingCycle(clientId, billingPeriod.startDate);
     const tenant = this.tenant; // Capture tenant value here
 
-    const clientContractLines = await this.knex('client_contract_lines as ccl')
+    const clientContractLines = await knex('client_contract_lines as ccl')
       .leftJoin('contract_lines as cl', (join) => {
-        join.onRaw('cl.contract_line_id = coalesce(ccl.template_contract_line_id, ccl.contract_line_id)')
+        join
+          .on(
+            'cl.contract_line_id',
+            '=',
+            knex.raw('coalesce(ccl.template_contract_line_id, ccl.contract_line_id)')
+          )
           .andOn('cl.tenant', '=', 'ccl.tenant');
       })
       .leftJoin('client_contracts as cc', function () {
@@ -393,7 +402,8 @@ export class BillingEngine {
           .andOn('cc.tenant', '=', 'ccl.tenant');
       })
       .leftJoin('contracts as c', (join) => {
-        join.onRaw('c.contract_id = coalesce(cc.template_contract_id, cc.contract_id)')
+        join
+          .on('c.contract_id', '=', knex.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
           .andOn('c.tenant', '=', 'cc.tenant');
       })
       .leftJoin('client_contract_line_pricing as pricing', function () {
@@ -728,6 +738,15 @@ export class BillingEngine {
       return [];
     }
 
+    const normalizedPlanServices = planServices.map((service: any) => {
+      const quantityValue =
+        service.configuration_quantity ?? service.service_quantity ?? service.quantity ?? 1;
+      return {
+        ...service,
+        quantity: Number(quantityValue ?? 1) || 1,
+      };
+    });
+
     if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
       let derivedBaseRate = 0;
       let hasServiceBaseRate = false;
@@ -737,7 +756,7 @@ export class BillingEngine {
         if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
           const parsedServiceBaseRate = typeof rawServiceBaseRate === 'string' ? parseFloat(rawServiceBaseRate) : Number(rawServiceBaseRate);
           if (!Number.isNaN(parsedServiceBaseRate)) {
-            const quantity = Number(service.quantity ?? 1) || 1;
+            const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
             derivedBaseRate += parsedServiceBaseRate * quantity;
             hasServiceBaseRate = true;
           }
@@ -753,7 +772,7 @@ export class BillingEngine {
     if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
       const totalDefaultRateCents = planServices.reduce((sum: number, service: any) => {
         const rate = Number(service.default_rate ?? 0);
-        const quantity = Number(service.quantity ?? 1) || 1;
+        const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
         return sum + rate * quantity;
       }, 0);
 

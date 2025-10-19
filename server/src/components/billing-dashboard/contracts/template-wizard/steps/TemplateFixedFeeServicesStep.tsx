@@ -187,6 +187,7 @@ export function TemplateFixedFeeServicesStep({
               </div>
 
               <Button
+                id={`template-fixed-remove-service-${index}`}
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -199,6 +200,7 @@ export function TemplateFixedFeeServicesStep({
           ))}
 
           <Button
+            id="template-fixed-add-service"
             type="button"
             variant="secondary"
             onClick={handleAddService}

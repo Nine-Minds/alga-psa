@@ -177,6 +177,7 @@ export function TemplateUsageBasedServicesStep({
               </div>
 
               <Button
+                id={`template-usage-remove-service-${index}`}
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -189,6 +190,7 @@ export function TemplateUsageBasedServicesStep({
           ))}
 
           <Button
+            id="template-usage-add-service"
             type="button"
             variant="secondary"
             onClick={handleAddService}
