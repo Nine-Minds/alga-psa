@@ -4,7 +4,7 @@ import { ISO8601String } from '../types/types.d';
 /**
  * Contract status types
  */
-export type ContractStatus = 'active' | 'draft' | 'terminated' | 'expired';
+export type ContractStatus = 'active' | 'draft' | 'terminated' | 'expired' | 'published' | 'archived';
 
 /**
  * Interface for a Contract
@@ -13,7 +13,7 @@ export type ContractStatus = 'active' | 'draft' | 'terminated' | 'expired';
 export interface IContract extends TenantEntity {
   contract_id: string;
   contract_name: string;
-  contract_description?: string;
+  contract_description?: string | null;
   billing_frequency: string;
   is_active: boolean;
   status: ContractStatus;

@@ -11,8 +11,12 @@ import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
 import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
 import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
-import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions';
+import {
+  getContractLineServicesWithConfigurations,
+  getTemplateLineServicesWithConfigurations,
+} from 'server/src/lib/actions/contractLineServiceActions';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { ensureTemplateLineSnapshot } from 'server/src/lib/actions/contractLineMappingActions';
 
 // Shared bucket overlay input used by both template and client workflows
 export type BucketOverlayInput = {
@@ -247,18 +251,19 @@ export async function createContractTemplateFromWizard(
     }
 
     const now = new Date();
-    const contractId = uuidv4();
-    await trx('contracts').insert({
+    const nowIso = now.toISOString();
+    const templateId = uuidv4();
+
+    await trx('contract_templates').insert({
       tenant,
-      contract_id: contractId,
-      contract_name: submission.contract_name,
-      contract_description: submission.description ?? null,
-      billing_frequency: submission.billing_frequency ?? 'monthly',
-      is_active: !isDraft,
-      status: isDraft ? 'draft' : 'active',
-      is_template: true,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
+      template_id: templateId,
+      template_name: submission.contract_name,
+      template_description: submission.description ?? null,
+      default_billing_frequency: submission.billing_frequency ?? 'monthly',
+      template_status: isDraft ? 'draft' : 'published',
+      template_metadata: null,
+      created_at: nowIso,
+      updated_at: nowIso,
     });
 
     const filteredFixedServices = (submission.fixed_services || []).filter((service) => service?.service_id);
@@ -300,10 +305,31 @@ export async function createContractTemplateFromWizard(
     let nextDisplayOrder = 0;
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
 
+    const recordTemplateMapping = async (lineId: string, customRate?: number | null) => {
+      await ensureTemplateLineSnapshot(trx, tenant, templateId, lineId, customRate);
+
+      await trx('contract_template_line_mappings')
+        .insert({
+          tenant,
+          template_id: templateId,
+          template_line_id: lineId,
+          display_order: nextDisplayOrder,
+          custom_rate: customRate ?? null,
+          created_at: nowIso,
+        })
+        .onConflict(['tenant', 'template_id', 'template_line_id'])
+        .merge({
+          display_order: nextDisplayOrder,
+          custom_rate: customRate ?? null,
+        });
+
+      nextDisplayOrder += 1;
+    };
+
     if (filteredFixedServices.length > 0) {
       const createdFixedLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Fixed Fee`,
-        billing_frequency: 'monthly',
+        billing_frequency: submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Fixed',
@@ -315,6 +341,7 @@ export async function createContractTemplateFromWizard(
         overtime_threshold: null,
         enable_after_hours_rate: null,
         after_hours_multiplier: null,
+        is_template: true,
       } as any);
       const planId = createdFixedLine.contract_line_id!;
       createdContractLineIds.push(planId);
@@ -322,23 +349,40 @@ export async function createContractTemplateFromWizard(
         primaryContractLineId = planId;
       }
 
-      for (const service of filteredFixedServices) {
+      const totalQuantity = filteredFixedServices.reduce((sum, svc) => sum + (svc.quantity ?? 1), 0) || filteredFixedServices.length;
+      let allocated = 0;
+
+      for (const [index, service] of filteredFixedServices.entries()) {
+        const quantity = service.quantity ?? 1;
+
         await trx('contract_line_services').insert({
           tenant,
           contract_line_id: planId,
           service_id: service.service_id,
         });
 
+        let serviceBaseRate = 0;
+        if (submission.fixed_base_rate) {
+          const share = quantity / totalQuantity;
+          const provisionalValue = submission.fixed_base_rate * share;
+          if (index === filteredFixedServices.length - 1) {
+            serviceBaseRate = submission.fixed_base_rate - allocated;
+          } else {
+            serviceBaseRate = Math.round(provisionalValue);
+            allocated = Math.round(allocated + serviceBaseRate);
+          }
+        }
+
         await planServiceConfigService.createConfiguration(
           {
             contract_line_id: planId,
             service_id: service.service_id,
             configuration_type: 'Fixed',
-            quantity: service.quantity ?? 1,
+            quantity,
             tenant,
             custom_rate: undefined,
           },
-          { base_rate: 0 }
+          { base_rate: (serviceBaseRate ?? 0) / 100 }
         );
 
         if (service.bucket_overlay) {
@@ -348,30 +392,32 @@ export async function createContractTemplateFromWizard(
             planId,
             service.service_id,
             service.bucket_overlay,
-            service.quantity ?? null,
+            quantity ?? null,
             null
           );
         }
       }
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
+      const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
+      await fixedConfigModel.upsert({
         contract_line_id: planId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
+        base_rate: (submission.fixed_base_rate ?? 0) / 100,
+        enable_proration: submission.enable_proration,
+        billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
+        tenant,
       });
-      nextDisplayOrder += 1;
+
+      await recordTemplateMapping(planId, null);
     }
 
     if (filteredHourlyServices.length > 0) {
       const createdHourlyLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Hourly`,
-        billing_frequency: 'monthly',
+        billing_frequency: submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
+        is_template: true,
       } as any);
       const hourlyPlanId = createdHourlyLine.contract_line_id!;
       createdContractLineIds.push(hourlyPlanId);
@@ -380,6 +426,8 @@ export async function createContractTemplateFromWizard(
       }
 
       for (const service of filteredHourlyServices) {
+        const normalizedHourlyRate = Math.max(0, Math.round(service.hourly_rate ?? 0));
+
         await trx('contract_line_services').insert({
           tenant,
           contract_line_id: hourlyPlanId,
@@ -387,7 +435,7 @@ export async function createContractTemplateFromWizard(
         });
 
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(hourlyPlanId, service.service_id, {
-          hourly_rate: 0,
+          hourly_rate: normalizedHourlyRate,
           minimum_billable_time: submission.minimum_billable_time ?? 0,
           round_up_to_nearest: submission.round_up_to_nearest ?? 0,
         });
@@ -405,24 +453,17 @@ export async function createContractTemplateFromWizard(
         }
       }
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
-        contract_line_id: hourlyPlanId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
-      });
-      nextDisplayOrder += 1;
+      await recordTemplateMapping(hourlyPlanId, null);
     }
 
     if (filteredUsageServices.length > 0) {
       const createdUsageLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Usage`,
-        billing_frequency: 'monthly',
+        billing_frequency: submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Usage',
+        is_template: true,
       } as any);
       const usagePlanId = createdUsageLine.contract_line_id!;
       createdContractLineIds.push(usagePlanId);
@@ -455,19 +496,11 @@ export async function createContractTemplateFromWizard(
         }
       }
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
-        contract_line_id: usagePlanId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
-      });
-      nextDisplayOrder += 1;
+      await recordTemplateMapping(usagePlanId, null);
     }
 
     return {
-      contract_id: contractId,
+      contract_id: templateId,
       contract_line_id: primaryContractLineId,
       contract_line_ids: createdContractLineIds,
     };
@@ -801,16 +834,21 @@ export async function listContractTemplatesForWizard(): Promise<TemplateOption[]
     throw new Error('Tenant not found');
   }
 
-  const templates = await knex('contracts')
-    .where({ tenant, is_template: true })
-    .orderBy('contract_name', 'asc')
-    .select('contract_id', 'contract_name', 'contract_description', 'billing_frequency');
+  const templates = await knex('contract_templates')
+    .where({ tenant })
+    .orderBy('template_name', 'asc')
+    .select(
+      'template_id',
+      'template_name',
+      'template_description',
+      'default_billing_frequency'
+    );
 
   return templates.map((template) => ({
-    contract_id: template.contract_id,
-    contract_name: template.contract_name,
-    contract_description: template.contract_description,
-    billing_frequency: template.billing_frequency,
+    contract_id: template.template_id,
+    contract_name: template.template_name,
+    contract_description: template.template_description,
+    billing_frequency: template.default_billing_frequency,
   }));
 }
 
@@ -827,8 +865,8 @@ export async function getContractTemplateSnapshotForClientWizard(
     throw new Error('Tenant not found');
   }
 
-  const template = await knex('contracts')
-    .where({ tenant, contract_id: templateId, is_template: true })
+  const template = await knex('contract_templates')
+    .where({ tenant, template_id: templateId })
     .first();
 
   if (!template) {
@@ -846,11 +884,11 @@ export async function getContractTemplateSnapshotForClientWizard(
   let fixedBaseRateCents: number | undefined;
 
   for (const line of detailedLines) {
-    const servicesWithConfig = await getContractLineServicesWithConfigurations(line.contract_line_id);
+    const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
 
     if (line.contract_line_type === 'Fixed') {
-      const fixedConfig = await knex('contract_line_fixed_config')
-        .where({ tenant, contract_line_id: line.contract_line_id })
+      const fixedConfig = await knex('contract_template_line_fixed_config')
+        .where({ tenant, template_line_id: line.contract_line_id })
         .first();
       if (fixedConfig) {
         const baseRateValue =
@@ -947,9 +985,9 @@ export async function getContractTemplateSnapshotForClientWizard(
   }
 
   return {
-    contract_name: template.contract_name,
-    description: template.contract_description,
-    billing_frequency: template.billing_frequency,
+    contract_name: template.template_name,
+    description: template.template_description,
+    billing_frequency: template.default_billing_frequency,
     fixed_services: fixedServices,
     fixed_base_rate: fixedBaseRateCents,
     enable_proration: enableProration,

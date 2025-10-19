@@ -21,7 +21,7 @@ import { IContract, IContractWithClient } from 'server/src/interfaces/contract.i
 import {
   checkClientHasActiveContract,
   deleteContract,
-  getContracts,
+  getContractTemplates,
   getContractsWithClients,
   updateContract,
 } from 'server/src/lib/actions/contractActions';
@@ -49,7 +49,7 @@ const Contracts: React.FC = () => {
     try {
       setIsLoading(true);
       const [fetchedTemplates, fetchedAssignments] = await Promise.all([
-        getContracts(),
+        getContractTemplates(),
         getContractsWithClients(),
       ]);
       setTemplateContracts(fetchedTemplates);
@@ -129,16 +129,19 @@ const Contracts: React.FC = () => {
     }
   };
 
-  const renderStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: { className: 'bg-green-100 text-green-800', label: 'Active' },
-      draft: { className: 'bg-gray-100 text-gray-800', label: 'Draft' },
-      terminated: { className: 'bg-orange-100 text-orange-800', label: 'Terminated' },
-      expired: { className: 'bg-red-100 text-red-800', label: 'Expired' },
-    };
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-    return <Badge className={config.className}>{config.label}</Badge>;
+const renderStatusBadge = (status: string) => {
+  const normalized = (status || 'draft').toLowerCase();
+  const statusConfig: Record<string, { className: string; label: string }> = {
+    active: { className: 'bg-green-100 text-green-800', label: 'Active' },
+    draft: { className: 'bg-gray-100 text-gray-800', label: 'Draft' },
+    terminated: { className: 'bg-orange-100 text-orange-800', label: 'Terminated' },
+    expired: { className: 'bg-red-100 text-red-800', label: 'Expired' },
+    published: { className: 'bg-green-100 text-green-800', label: 'Published' },
+    archived: { className: 'bg-gray-200 text-gray-700', label: 'Archived' },
   };
+  const config = statusConfig[normalized] ?? statusConfig.draft;
+  return <Badge className={config.className}>{config.label}</Badge>;
+};
 
   const templateColumns: ColumnDefinition<IContract>[] = [
     {
@@ -184,48 +187,6 @@ const Contracts: React.FC = () => {
             >
               Edit
             </DropdownMenuItem>
-            {record.status === 'active' && (
-              <DropdownMenuItem
-                id="terminate-contract-menu-item"
-                className="text-orange-600 focus:text-orange-600"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleTerminateContract(record.contract_id);
-                  }
-                }}
-              >
-                Terminate
-              </DropdownMenuItem>
-            )}
-            {record.status === 'terminated' && (
-              <DropdownMenuItem
-                id="restore-contract-menu-item"
-                className="text-green-600 focus:text-green-600"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleRestoreContract(record.contract_id);
-                  }
-                }}
-              >
-                Restore
-              </DropdownMenuItem>
-            )}
-            {record.status === 'draft' && (
-              <DropdownMenuItem
-                id="set-to-active-menu-item"
-                className="text-green-600 focus:text-green-600"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleSetToActive(record.contract_id);
-                  }
-                }}
-              >
-                Set to Active
-              </DropdownMenuItem>
-            )}
             <DropdownMenuItem
               id="delete-contract-menu-item"
               className="text-red-600 focus:text-red-600"
@@ -296,18 +257,16 @@ const Contracts: React.FC = () => {
     },
   ];
 
-  const filteredTemplateContracts = templateContracts
-    .filter((contract) => contract.is_template !== false)
-    .filter((contract) => {
-      if (!templateSearchTerm) {
-        return true;
-      }
-      const search = templateSearchTerm.toLowerCase();
-      return (
-        contract.contract_name?.toLowerCase().includes(search) ||
-        contract.contract_description?.toLowerCase().includes(search)
-      );
-    });
+  const filteredTemplateContracts = templateContracts.filter((contract) => {
+    if (!templateSearchTerm) {
+      return true;
+    }
+    const search = templateSearchTerm.toLowerCase();
+    return (
+      contract.contract_name?.toLowerCase().includes(search) ||
+      contract.contract_description?.toLowerCase().includes(search)
+    );
+  });
 
   const filteredClientContracts = clientContracts.filter((contract) => {
     if (!clientSearchTerm) {

@@ -375,3 +375,89 @@ export async function getContractLineServicesWithConfigurations(contractLineId: 
     return result;
   });
 }
+
+export async function getTemplateLineServicesWithConfigurations(templateLineId: string): Promise<{
+  service: IService & { service_type_name?: string };
+  configuration: IContractLineServiceConfiguration;
+  typeConfig: IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+}[]> {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const configurations = await trx('contract_template_line_service_configuration')
+      .where({
+        tenant,
+        template_line_id: templateLineId,
+      })
+      .select('*');
+
+    const results: Array<{
+      service: IService & { service_type_name?: string };
+      configuration: IContractLineServiceConfiguration;
+      typeConfig:
+        | IContractLineServiceHourlyConfig
+        | IContractLineServiceUsageConfig
+        | IContractLineServiceBucketConfig
+        | null;
+    }> = [];
+
+    for (const config of configurations) {
+      const service = await trx('service_catalog as sc')
+        .leftJoin('service_types as st', function joinTypes() {
+          this.on('sc.custom_service_type_id', '=', 'st.id')
+            .andOn('sc.tenant', '=', 'st.tenant');
+        })
+        .where({
+          'sc.service_id': config.service_id,
+          'sc.tenant': tenant,
+        })
+        .select('sc.*', 'st.name as service_type_name')
+        .first() as (IService & { service_type_name?: string }) | undefined;
+
+      if (!service) {
+        continue;
+      }
+
+      let typeConfig:
+        | IContractLineServiceHourlyConfig
+        | IContractLineServiceUsageConfig
+        | IContractLineServiceBucketConfig
+        | null = null;
+
+      if (config.configuration_type === 'Bucket') {
+        typeConfig = await trx('contract_template_line_service_bucket_config')
+          .where({
+            tenant,
+            config_id: config.config_id,
+          })
+          .first();
+      } else if (config.configuration_type === 'Hourly') {
+        typeConfig = await trx('contract_template_line_service_hourly_config')
+          .where({
+            tenant,
+            config_id: config.config_id,
+          })
+          .first();
+      } else if (config.configuration_type === 'Usage') {
+        typeConfig = await trx('contract_template_line_service_usage_config')
+          .where({
+            tenant,
+            config_id: config.config_id,
+          })
+          .first();
+      }
+
+      const configuration: IContractLineServiceConfiguration = {
+        ...config,
+        contract_line_id: config.template_line_id,
+      };
+
+      results.push({
+        service,
+        configuration,
+        typeConfig,
+      });
+    }
+
+    return results;
+  });
+}

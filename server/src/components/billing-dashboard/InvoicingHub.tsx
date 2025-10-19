@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CustomTabs } from '../ui/CustomTabs';
 import { IService } from '../../interfaces';
@@ -38,10 +38,16 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleTabChange = (value: string) => {
-    const params = new URLSearchParams();
+    const targetSubtab = labelToSubtab[value] || value.toLowerCase();
+
+    if (targetSubtab === activeSubTab) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', 'invoicing');
     // Convert label back to URL format
-    params.set('subtab', labelToSubtab[value] || value.toLowerCase());
+    params.set('subtab', targetSubtab);
     router.push(`/msp/billing?${params.toString()}`);
   };
 
@@ -56,7 +62,6 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
       </div>
 
       <CustomTabs
-        key={`invoicing-tabs-${activeSubTab}`}
         tabs={[
           {
             label: 'Generate',

@@ -18,7 +18,10 @@ import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/con
 import { IContractLineServiceBucketConfig, IContractLineServiceConfiguration, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { getContractById, getContractSummary, updateContract, getContractAssignments } from 'server/src/lib/actions/contractActions';
 import { getDetailedContractLines } from 'server/src/lib/actions/contractLineMappingActions';
-import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions';
+import {
+  getContractLineServicesWithConfigurations,
+  getTemplateLineServicesWithConfigurations,
+} from 'server/src/lib/actions/contractLineServiceActions';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import ContractLinesEditor from './ContractLines';
@@ -257,9 +260,11 @@ const ContractTemplateDetail: React.FC = () => {
   };
 
   const enrichServices = useCallback(
-    async (contractLineId: string): Promise<TemplateLineService[]> => {
+    async (contractLineId: string, isTemplateContext: boolean): Promise<TemplateLineService[]> => {
       try {
-        const servicesWithConfig = await getContractLineServicesWithConfigurations(contractLineId);
+        const servicesWithConfig = isTemplateContext
+          ? await getTemplateLineServicesWithConfigurations(contractLineId)
+          : await getContractLineServicesWithConfigurations(contractLineId);
         const serviceMap = new Map<string, TemplateLineService>();
 
         servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
@@ -339,9 +344,11 @@ const ContractTemplateDetail: React.FC = () => {
             }
           : null;
 
+        const isTemplateContext = Boolean(contractData?.is_template);
+
         const linesWithServices = await Promise.all(
           detailedLinesRaw.map(async (line) => {
-            const services = await enrichServices(line.contract_line_id);
+            const services = await enrichServices(line.contract_line_id, isTemplateContext);
             return {
               contract_line_id: line.contract_line_id,
               contract_line_name: line.contract_line_name,
@@ -574,15 +581,18 @@ const ContractTemplateDetail: React.FC = () => {
               Back to Contracts
             </Button>
             <Badge
-              className={
-                contract.status === 'active'
-                  ? 'bg-green-100 text-green-800'
-                  : contract.status === 'terminated'
-                    ? 'bg-orange-100 text-orange-800'
-                    : contract.status === 'expired'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-gray-100 text-gray-800'
-              }
+              className={(() => {
+                const normalized = contract.status?.toLowerCase() ?? 'draft';
+                const map: Record<string, string> = {
+                  active: 'bg-green-100 text-green-800',
+                  draft: 'bg-gray-100 text-gray-800',
+                  terminated: 'bg-orange-100 text-orange-800',
+                  expired: 'bg-red-100 text-red-800',
+                  published: 'bg-green-100 text-green-800',
+                  archived: 'bg-gray-200 text-gray-700',
+                };
+                return map[normalized] ?? map.draft;
+              })()}
             >
               {humanize(contract.status)}
             </Badge>

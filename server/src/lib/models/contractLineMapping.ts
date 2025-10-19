@@ -14,14 +14,28 @@ const ContractLineMapping = {
     }
 
     try {
-      const mappings = await db<IContractLineMapping>('contract_line_mappings')
-        .where({ 
-          contract_id: contractId,
-          tenant 
-        })
-        .select('*');
+      const templateRecord = await db('contract_templates')
+        .where({ tenant, template_id: contractId })
+        .first('template_id');
 
-      return mappings;
+      if (templateRecord) {
+        const templateMappings = await db('contract_template_line_mappings')
+          .where({ tenant, template_id: contractId })
+          .select(
+            'tenant',
+            'template_id as contract_id',
+            'template_line_id as contract_line_id',
+            'display_order',
+            'custom_rate',
+            'created_at'
+          );
+
+        return templateMappings as IContractLineMapping[];
+      }
+
+      return await db<IContractLineMapping>('contract_line_mappings')
+        .where({ contract_id: contractId, tenant })
+        .select('*');
     } catch (error) {
       console.error(`Error fetching contract line mappings for contract ${contractId}:`, error);
       throw error;
@@ -47,7 +61,19 @@ const ContractLineMapping = {
         })
         .first();
       
-      return !!result;
+      if (result) {
+        return true;
+      }
+
+      const templateResult = await db('contract_template_line_mappings')
+        .where({
+          template_id: contractId,
+          template_line_id: contractLineId,
+          tenant,
+        })
+        .first();
+
+      return !!templateResult;
     } catch (error) {
       console.error(`Error checking if contract line ${contractLineId} is associated with contract ${contractId}:`, error);
       throw error;
@@ -203,11 +229,37 @@ const ContractLineMapping = {
         .update(dataToUpdate)
         .returning('*');
 
-      if (!updatedMapping) {
+      if (updatedMapping) {
+        return updatedMapping;
+      }
+
+      const [updatedTemplateMapping] = await db('contract_template_line_mappings')
+        .where({
+          template_id: contractId,
+          template_line_id: contractLineId,
+          tenant,
+        })
+        .update({
+          custom_rate:
+            dataToUpdate.custom_rate !== undefined ? dataToUpdate.custom_rate : undefined,
+          display_order:
+            dataToUpdate.display_order !== undefined ? dataToUpdate.display_order : undefined,
+          created_at: dataToUpdate.created_at ?? undefined,
+        })
+        .returning([
+          'tenant',
+          'template_id as contract_id',
+          'template_line_id as contract_line_id',
+          'display_order',
+          'custom_rate',
+          'created_at',
+        ]);
+
+      if (!updatedTemplateMapping) {
         throw new Error(`Failed to update contract line ${contractLineId} for contract ${contractId}`);
       }
 
-      return updatedMapping;
+      return updatedTemplateMapping as IContractLineMapping;
     } catch (error) {
       console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
       throw error;
@@ -225,7 +277,42 @@ const ContractLineMapping = {
     }
 
     try {
-      const mappings = await db('contract_line_mappings as clm')
+      const templateRecord = await db('contract_templates')
+        .where({ tenant, template_id: contractId })
+        .first('template_id');
+
+      if (templateRecord) {
+        return await db('contract_template_line_mappings as map')
+          .join('contract_template_lines as lines', function joinTemplateLines() {
+            this.on('map.template_line_id', '=', 'lines.template_line_id')
+              .andOn('map.tenant', '=', 'lines.tenant');
+          })
+          .leftJoin('contract_lines as base', function joinBaseLines() {
+            this.on('lines.template_line_id', '=', 'base.contract_line_id')
+              .andOn('lines.tenant', '=', 'base.tenant');
+          })
+          .where({
+            'map.template_id': contractId,
+            'map.tenant': tenant,
+          })
+          .select(
+            'map.tenant as tenant',
+            'map.template_id as contract_id',
+            'map.template_line_id as contract_line_id',
+            'map.display_order',
+            'map.custom_rate',
+            'map.created_at',
+            'lines.template_line_name as contract_line_name',
+            'lines.billing_frequency',
+            db.raw('COALESCE(base.is_custom, false) as is_custom'),
+            'lines.line_type as contract_line_type',
+            'lines.minimum_billable_time',
+            'lines.round_up_to_nearest'
+          )
+          .orderBy('map.display_order', 'asc');
+      }
+
+      return await db('contract_line_mappings as clm')
         .join('contract_lines as cl', function() {
           this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
               .andOn('clm.tenant', '=', 'cl.tenant');
@@ -241,8 +328,6 @@ const ContractLineMapping = {
           'cl.is_custom',
           'cl.contract_line_type'
         );
-
-      return mappings;
     } catch (error) {
       console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);
       throw error;

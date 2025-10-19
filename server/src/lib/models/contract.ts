@@ -70,6 +70,7 @@ const Contract = {
           'cc.tenant': tenant,
           'c.status': 'active'
         });
+      query = query.andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false));
 
       if (excludeContractId) {
         query = query.andWhere('c.contract_id', '!=', excludeContractId);
@@ -111,6 +112,7 @@ const Contract = {
         // Delete the contract itself
         const deleted = await trx('contracts')
           .where({ contract_id: contractId, tenant })
+          .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
           .delete();
 
         if (deleted === 0) {
@@ -130,7 +132,10 @@ const Contract = {
     }
 
     try {
-      const rows = await db('contracts').where({ tenant }).select('*');
+      const rows = await db('contracts')
+        .where({ tenant })
+        .whereNot('is_template', true)
+        .select('*');
 
       // Check and update expired status for all contracts
       await Promise.all(rows.map(contract =>
@@ -138,7 +143,10 @@ const Contract = {
       ));
 
       // Re-fetch to get updated statuses
-      const updatedRows = await db('contracts').where({ tenant }).select('*');
+      const updatedRows = await db('contracts')
+        .where({ tenant })
+        .whereNot('is_template', true)
+        .select('*');
       return updatedRows;
     } catch (error) {
       console.error('Error fetching contracts:', error);
@@ -169,8 +177,8 @@ const Contract = {
           this.on('co.contract_id', '=', 'cc.contract_id')
             .andOn('co.tenant', '=', 'cc.tenant');
         })
-        .leftJoin('contracts as template', function joinTemplateContracts() {
-          this.on('cc.template_contract_id', '=', 'template.contract_id')
+        .leftJoin('contract_templates as template', function joinTemplateContracts() {
+          this.on('cc.template_contract_id', '=', 'template.template_id')
             .andOn('cc.tenant', '=', 'template.tenant');
         })
         .leftJoin('clients as c', function joinClients() {
@@ -178,6 +186,7 @@ const Contract = {
             .andOn('cc.tenant', '=', 'c.tenant');
         })
         .where({ 'co.tenant': tenant })
+        .andWhere((builder) => builder.whereNull('co.is_template').orWhere('co.is_template', false))
         .select(
           'co.*',
           'cc.client_contract_id',
@@ -186,7 +195,7 @@ const Contract = {
           'c.client_name',
           'cc.start_date',
           'cc.end_date',
-          'template.contract_name as template_contract_name'
+          'template.template_name as template_contract_name'
         )
         .orderBy('co.created_at', 'desc');
 
@@ -209,6 +218,7 @@ const Contract = {
 
       const contract = await db('contracts')
         .where({ contract_id: contractId, tenant })
+        .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
         .first();
 
       return contract ?? null;
@@ -259,6 +269,7 @@ const Contract = {
 
       const [updated] = await db<IContract>('contracts')
         .where({ contract_id: contractId, tenant })
+        .andWhere((builder) => builder.whereNull('is_template').orWhere('is_template', false))
         .update(sanitized)
         .returning('*');
 
@@ -316,6 +327,14 @@ const Contract = {
         .first();
 
       if (!contract) {
+        return;
+      }
+
+      if (contract.is_template === true) {
+        return;
+      }
+
+      if (contract.is_template === true) {
         return;
       }
 
