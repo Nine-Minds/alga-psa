@@ -395,7 +395,6 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
             totalDuration={totalDurations[0] || 0}
             isEditable={isEditable}
             lastNoteInputRef={lastNoteInputRef}
-            onSave={handleSaveEntry}
             onDelete={handleDeleteEntry}
             onUpdateEntry={updateEntry}
             onUpdateTimeInputs={updateTimeInputs}
