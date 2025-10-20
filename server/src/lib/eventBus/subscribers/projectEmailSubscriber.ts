@@ -12,7 +12,6 @@ import {
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from '../../db';
-import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 
 /**
  * Wrapper function that checks notification preferences before sending email
@@ -72,7 +71,6 @@ async function sendNotificationIfEnabled(
       // Check user preferences
       const preference = await knex('user_notification_preferences')
         .where({
-          tenant: params.tenantId,
           user_id: recipientUserId,
           subtype_id: subtype.id
         })
@@ -204,24 +202,15 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
           .first();
         return contact_name ? contact_name.full_name : String(value);
 
-  default:
-    if (typeof value === 'boolean') {
-      return value ? 'Yes' : 'No';
-    }
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      if (trimmed.startsWith('[') && trimmed.includes('"type"')) {
-        const { text } = formatBlockNoteContent(value);
-        return text;
+    default:
+      if (typeof value === 'boolean') {
+        return value ? 'Yes' : 'No';
       }
-      return value;
-    }
-    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-      const { text } = formatBlockNoteContent(value);
-      return text;
-    }
-    return value !== undefined && value !== null ? String(value) : '';
-}
+      if (typeof value === 'object') {
+        return JSON.stringify(value);
+      }
+      return String(value);
+  }
 }
 
 /**
@@ -342,10 +331,6 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       return;
     }
 
-    const descriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
-    const projectDescriptionText = descriptionFormatting ? descriptionFormatting.text : '';
-    const projectDescriptionHtml = descriptionFormatting ? descriptionFormatting.html : '';
-
     // Collect all recipient emails
     const recipients: string[] = [];
 
@@ -384,9 +369,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       project: {
         id: project.project_number,
         name: project.project_name,
-        description: projectDescriptionText,
-        descriptionText: projectDescriptionText,
-        descriptionHtml: projectDescriptionHtml,
+        description: project.description || '',
         status: project.status_name || 'Unknown',
         manager: project.manager_first_name && project.manager_last_name ?
           `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
@@ -814,10 +797,6 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
       return;
     }
 
-    const closedDescriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
-    const closedDescriptionText = closedDescriptionFormatting ? closedDescriptionFormatting.text : '';
-    const closedDescriptionHtml = closedDescriptionFormatting ? closedDescriptionFormatting.html : '';
-
     const emailContext = {
       project: {
         id: project.project_number,
@@ -825,9 +804,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         status: project.status_name || 'Unknown',
         manager: project.manager_first_name && project.manager_last_name ?
           `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
-        description: closedDescriptionText,
-        descriptionText: closedDescriptionText,
-        descriptionHtml: closedDescriptionHtml,
+        description: project.description || '',
         startDate: project.start_date,
         endDate: project.end_date,
         changes: await formatChanges(db, payload.changes || {}),
@@ -965,10 +942,6 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       return;
     }
 
-    const projectDescriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
-    const projectDescriptionText = projectDescriptionFormatting ? projectDescriptionFormatting.text : '';
-    const projectDescriptionHtml = projectDescriptionFormatting ? projectDescriptionFormatting.html : '';
-
     await sendNotificationIfEnabled({
       tenantId,
       to: project.user_email,
@@ -977,9 +950,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       context: {
         project: {
           name: project.project_name,
-          description: projectDescriptionText,
-          descriptionText: projectDescriptionText,
-          descriptionHtml: projectDescriptionHtml,
+          description: project.description || '',
           startDate: project.start_date,
           assignedBy: `${project.assigner_first_name} ${project.assigner_last_name}`,
           url: `/projects/${project.project_number}`,
@@ -1099,41 +1070,29 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
       }, 'Project Task Assigned', assignedTo);
     }
 
-    // Send emails to additional users (deduplicate by user_id/email)
-    const uniqueAdditionalUsers = additionalUserEmails.reduce<Map<string, typeof additionalUserEmails[number]>>(
-      (acc, user) => {
-        if (!user.email) {
-          return acc;
-        }
-        const key = user.user_id || user.email;
-        if (!acc.has(key)) {
-          acc.set(key, user);
-        }
-        return acc;
-      },
-      new Map()
-    );
-
-    for (const additionalUser of uniqueAdditionalUsers.values()) {
-      await sendNotificationIfEnabled({
-        tenantId,
-        to: additionalUser.email!,
-        subject: `You have been added as additional agent to task: ${task.task_name}`,
-        template: 'project-task-assigned-additional',
-        context: {
-          task: {
-            name: task.task_name,
-            project: task.project_name,
-            dueDate: task.due_date,
-            assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
-            url: `/projects/${task.project_number}/tasks/${task.task_id}`,
-            role: 'Additional Agent'
+    // Send emails to additional users
+    for (const additionalUser of additionalUserEmails) {
+      if (additionalUser.email && additionalUser.user_id) {
+        await sendNotificationIfEnabled({
+          tenantId,
+          to: additionalUser.email,
+          subject: `You have been added as additional agent to task: ${task.task_name}`,
+          template: 'project-task-assigned-additional',
+          context: {
+            task: {
+              name: task.task_name,
+              project: task.project_name,
+              dueDate: task.due_date,
+              assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
+              url: `/projects/${task.project_number}/tasks/${task.task_id}`,
+              role: 'Additional Agent'
+            }
+          },
+          replyContext: {
+            projectId: task.project_id || payload.projectId
           }
-        },
-        replyContext: {
-          projectId: task.project_id || payload.projectId
-        }
-      }, 'Project Task Assigned', additionalUser.user_id);
+        }, 'Project Task Assigned', additionalUser.user_id);
+      }
     }
 
   } catch (error) {
