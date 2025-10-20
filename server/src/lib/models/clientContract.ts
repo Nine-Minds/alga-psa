@@ -155,7 +155,7 @@ const ClientContract = {
         client_contract_id: uuidv4(),
         client_id: clientId,
         contract_id: contractId,
-        template_contract_id: contractId,
+        template_contract_id: null,
         start_date: startDate,
         end_date: endDate,
         is_active: true,
