@@ -23,6 +23,7 @@ import { getInvoiceTemplates } from '../../../lib/actions/invoiceTemplates';
 import { unfinalizeInvoice } from '../../../lib/actions/invoiceModification';
 import { scheduleInvoiceZipAction } from '../../../lib/actions/job-actions/scheduleInvoiceZipAction';
 import { scheduleInvoiceEmailAction } from '../../../lib/actions/job-actions/scheduleInvoiceEmailAction';
+import { downloadInvoicePDF } from '../../../lib/actions/invoiceGeneration';
 import { toPlainDate } from '../../../lib/utils/dateTimeUtils';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '../../ui/LoadingIndicator';
@@ -139,7 +140,23 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     if (!selectedInvoice) return;
     setError(null);
     try {
-      await scheduleInvoiceZipAction([selectedInvoice.invoice_id]);
+      // Call server action to get PDF data as plain array
+      const { pdfData, invoiceNumber } = await downloadInvoicePDF(selectedInvoice.invoice_id);
+
+      // Convert plain array to Uint8Array and create blob
+      const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
+
+      // Create a blob URL and trigger download
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', `${invoiceNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       setError('Failed to generate PDF. Please try again.');
@@ -374,7 +391,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       {isLoading ? (
         <Card>
           <div className="p-12 flex items-center justify-center">
-            <LoadingIndicator text="Loading invoices..." />
+            <LoadingIndicator text="Loading invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-gray-600" />
           </div>
         </Card>
       ) : filteredInvoices.length === 0 ? (

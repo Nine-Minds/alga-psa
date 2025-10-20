@@ -6,11 +6,12 @@
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { withTransaction } from '@shared/db';
-import { IContractLine, IContractLineFixedConfig, IClientContractLine, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
+import { IContractLine, IContractLineFixedConfig, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
 import { IContract, IContractLineMapping, IClientContract } from 'server/src/interfaces/contract.interfaces';
 import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
+import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/templateClone';
 
 // Import existing models and actions for integration
 import ContractLine from 'server/src/lib/models/contractLine';
@@ -801,16 +802,49 @@ export class ContractLineService extends BaseService<IContractLine> {
       
       // Check for overlapping assignments
       await this.validateNoOverlappingAssignments(data, context, trx);
+
+      let templateContractId: string | null = null;
+      if (data.client_contract_id) {
+        const clientContract = await trx('client_contracts')
+          .where('client_contract_id', data.client_contract_id)
+          .where('tenant', context.tenant)
+          .first('template_contract_id', 'contract_id');
+
+        if (clientContract) {
+          templateContractId = clientContract.template_contract_id ?? clientContract.contract_id ?? null;
+
+          if (!clientContract.template_contract_id && clientContract.contract_id) {
+            await trx('client_contracts')
+              .where('tenant', context.tenant)
+              .where('client_contract_id', data.client_contract_id)
+              .update({
+                template_contract_id: clientContract.contract_id,
+                updated_at: trx.fn.now(),
+                updated_by: context.userId
+              });
+          }
+        }
+      }
       
       // Create assignment
       const assignmentData = this.addCreateAuditFields({
         client_contract_line_id: uuidv4(),
-        ...data
+        ...data,
+        template_contract_line_id: data.contract_line_id
       }, context);
       
       const [assignment] = await trx('client_contract_lines')
         .insert(assignmentData)
         .returning('*');
+
+      await cloneTemplateContractLine(trx, {
+        tenant: context.tenant,
+        templateContractLineId: data.contract_line_id,
+        clientContractLineId: assignment.client_contract_line_id,
+        templateContractId,
+        overrideRate: data.custom_rate ?? null,
+        effectiveDate: data.start_date
+      });
       
       return addHateoasLinks(assignment, this.generateClientPlanLinks(assignment.client_contract_line_id, context)) as ClientContractLineResponse;
     });

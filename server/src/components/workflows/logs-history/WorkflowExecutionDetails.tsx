@@ -169,7 +169,7 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
           id="refresh-workflow-details-button"
         >
           {refreshing ? (
-            <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Refreshing..." />
+            <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Refreshing..." />
           ) : (
             <>
               <RefreshCw className="h-4 w-4 mr-2" />

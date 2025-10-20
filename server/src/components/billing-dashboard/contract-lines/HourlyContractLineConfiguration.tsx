@@ -10,13 +10,14 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, Trash2, Info, ChevronDown } from 'lucide-react';
 import { Button, ButtonProps } from 'server/src/components/ui/Button'; // Import ButtonProps
-import { ContractLineDialog } from '../ContractLineDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from 'server/src/components/ui/Tooltip';
 import { getContractLineById, updateContractLine } from 'server/src/lib/actions/contractLineAction';
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { useTenant } from '../../TenantProvider';
 import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Corrected import path
 import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IContractLine, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
@@ -106,11 +107,25 @@ export function HourlyPlanConfiguration({
   // Plan-wide state
   const [plan, setPlan] = useState<HourlyPlanData | null>(null);
   const [initialPlanData, setInitialPlanData] = useState<Partial<HourlyPlanData>>({}); // For plan-wide change detection
+
+  // Plan basics state for inline editing
+  const [planName, setPlanName] = useState('');
+  const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
+  const [isCustom, setIsCustom] = useState(false);
+  const [planBasicsErrors, setPlanBasicsErrors] = useState<string[]>([]);
+  const [isSavingBasics, setIsSavingBasics] = useState(false);
+  const [isBasicsDirty, setIsBasicsDirty] = useState(false);
+  const tenant = useTenant()!;
+
+  const markBasicsDirty = () => setIsBasicsDirty(true);
+
   const [enableOvertime, setEnableOvertime] = useState<boolean>(false);
   const [overtimeRate, setOvertimeRate] = useState<number | undefined>(undefined);
+  const [overtimeRateInput, setOvertimeRateInput] = useState<string>('');
   const [overtimeThreshold, setOvertimeThreshold] = useState<number | undefined>(40);
   const [enableAfterHoursRate, setEnableAfterHoursRate] = useState<boolean>(false);
   const [afterHoursMultiplier, setAfterHoursMultiplier] = useState<number | undefined>(1.5);
+  const [afterHoursMultiplierInput, setAfterHoursMultiplierInput] = useState<string>('');
   // Removed plan-wide userTypeRates state: const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
 
   // Service-specific config state (using locally defined interface)
@@ -152,6 +167,12 @@ export function HourlyPlanConfiguration({
       }
       setPlan(fetchedPlan);
 
+      // Populate plan basics form fields
+      setPlanName(fetchedPlan.contract_line_name);
+      setBillingFrequency(fetchedPlan.billing_frequency);
+      setIsCustom(fetchedPlan.is_custom);
+      setIsBasicsDirty(false);
+
       // Set initial plan-wide states
       const initialData: Partial<HourlyPlanData> = {
           enable_overtime: fetchedPlan.enable_overtime ?? false,
@@ -166,9 +187,15 @@ export function HourlyPlanConfiguration({
       setInitialPlanData(initialData);
       setEnableOvertime(initialData.enable_overtime!);
       setOvertimeRate(initialData.overtime_rate);
+      if (initialData.overtime_rate !== undefined && initialData.overtime_rate !== null) {
+        setOvertimeRateInput((initialData.overtime_rate / 100).toFixed(2));
+      }
       setOvertimeThreshold(initialData.overtime_threshold);
       setEnableAfterHoursRate(initialData.enable_after_hours_rate!);
       setAfterHoursMultiplier(initialData.after_hours_multiplier);
+      if (initialData.after_hours_multiplier !== undefined && initialData.after_hours_multiplier !== null) {
+        setAfterHoursMultiplierInput(initialData.after_hours_multiplier.toFixed(2));
+      }
       // Removed setting plan-wide userTypeRates state: setUserTypeRates(initialData.user_type_rates!);
 
       // Fetch services and their configurations using the correct action
@@ -178,9 +205,9 @@ export function HourlyPlanConfiguration({
       const processedConfigs: IPlanServiceWithHourlyConfig[] = servicesWithConfigsResult.map((item) => {
         // Determine if the service *should* be hourly configurable
         const isHourlyService =
-          item.service.billing_method === 'per_unit' &&
-          item.service.unit_of_measure?.toLowerCase().includes('hour');
-        // Add || item.service.billing_method === 'hourly' if that method exists
+          item.service.billing_method === 'hourly' ||
+          (item.service.billing_method === 'usage' &&
+            item.service.unit_of_measure?.toLowerCase().includes('hour'));
 
         let hourlyConfig: IContractLineServiceHourlyConfig | null = null;
         let userTypeRatesForConfig: IUserTypeRate[] = []; // Initialize as empty array
@@ -289,6 +316,55 @@ export function HourlyPlanConfiguration({
       );
   }, []);
 
+  // Plan basics save/reset handlers
+  const validatePlanBasics = (): string[] => {
+    const errors: string[] = [];
+    if (!planName.trim()) errors.push('Contract line name');
+    if (!billingFrequency) errors.push('Billing frequency');
+    return errors;
+  };
+
+  const handleSavePlanBasics = async () => {
+    const errors = validatePlanBasics();
+    if (errors.length > 0) {
+      setPlanBasicsErrors(errors);
+      return;
+    }
+
+    setIsSavingBasics(true);
+    setPlanBasicsErrors([]);
+    try {
+      const planData: Partial<HourlyPlanData> = {
+        contract_line_name: planName,
+        billing_frequency: billingFrequency,
+        is_custom: isCustom,
+        tenant,
+      };
+
+      if (plan?.contract_line_id) {
+        await updateContractLine(plan.contract_line_id, planData);
+      }
+
+      await fetchPlanData();
+      setIsBasicsDirty(false);
+    } catch (error) {
+      console.error('Error saving contract line basics:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line';
+      setPlanBasicsErrors([errorMessage]);
+    } finally {
+      setIsSavingBasics(false);
+    }
+  };
+
+  const handleResetPlanBasics = () => {
+    if (plan) {
+      setPlanName(plan.contract_line_name);
+      setBillingFrequency(plan.billing_frequency);
+      setIsCustom(plan.is_custom);
+      setIsBasicsDirty(false);
+      setPlanBasicsErrors([]);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -519,13 +595,36 @@ export function HourlyPlanConfiguration({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-8">
                                     <div>
                                     <Label htmlFor="overtime-rate">Overtime Rate ($/hr)</Label>
-                                    <Input
-                                        id="overtime-rate" type="number"
-                                        value={overtimeRate?.toString() || ''}
-                                        onChange={handleNumberInputChange(setOvertimeRate)}
-                                        placeholder="Enter overtime rate" disabled={saving} min={0} step={0.01}
-                                        className={planValidationErrors.overtimeRate ? 'border-red-500' : ''}
-                                    />
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                      <Input
+                                        id="overtime-rate"
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={overtimeRateInput}
+                                        onChange={(e) => {
+                                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                                          const decimalCount = (value.match(/\./g) || []).length;
+                                          if (decimalCount <= 1) {
+                                            setOvertimeRateInput(value);
+                                          }
+                                        }}
+                                        onBlur={() => {
+                                          if (overtimeRateInput.trim() === '' || overtimeRateInput === '.') {
+                                            setOvertimeRateInput('');
+                                            setOvertimeRate(undefined);
+                                          } else {
+                                            const dollars = parseFloat(overtimeRateInput) || 0;
+                                            const cents = Math.round(dollars * 100);
+                                            setOvertimeRate(cents);
+                                            setOvertimeRateInput((cents / 100).toFixed(2));
+                                          }
+                                        }}
+                                        placeholder="0.00"
+                                        disabled={saving}
+                                        className={`pl-7 ${planValidationErrors.overtimeRate ? 'border-red-500' : ''}`}
+                                      />
+                                    </div>
                                     {planValidationErrors.overtimeRate && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeRate}</p>}
                                     {!planValidationErrors.overtimeRate && <p className="text-sm text-muted-foreground mt-1">Rate applied after threshold.</p>}
                                     </div>
@@ -567,11 +666,30 @@ export function HourlyPlanConfiguration({
                                 <div className="pl-8">
                                     <Label htmlFor="after-hours-multiplier">After-Hours Multiplier</Label>
                                     <Input
-                                    id="after-hours-multiplier" type="number"
-                                    value={afterHoursMultiplier?.toString() || ''}
-                                    onChange={handleNumberInputChange(setAfterHoursMultiplier)}
-                                    placeholder="1.5" disabled={saving} min={1} step={0.1}
-                                    className={`w-full md:w-1/2 ${planValidationErrors.afterHoursMultiplier ? 'border-red-500' : ''}`}
+                                      id="after-hours-multiplier"
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={afterHoursMultiplierInput}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                                        const decimalCount = (value.match(/\./g) || []).length;
+                                        if (decimalCount <= 1) {
+                                          setAfterHoursMultiplierInput(value);
+                                        }
+                                      }}
+                                      onBlur={() => {
+                                        if (afterHoursMultiplierInput.trim() === '' || afterHoursMultiplierInput === '.') {
+                                          setAfterHoursMultiplierInput('1.5');
+                                          setAfterHoursMultiplier(1.5);
+                                        } else {
+                                          const multiplier = parseFloat(afterHoursMultiplierInput) || 1.5;
+                                          setAfterHoursMultiplier(multiplier);
+                                          setAfterHoursMultiplierInput(multiplier.toFixed(2));
+                                        }
+                                      }}
+                                      placeholder="1.5"
+                                      disabled={saving}
+                                      className={`w-full md:w-1/2 ${planValidationErrors.afterHoursMultiplier ? 'border-red-500' : ''}`}
                                     />
                                     {planValidationErrors.afterHoursMultiplier && <p className="text-sm text-red-500 mt-1">{planValidationErrors.afterHoursMultiplier}</p>}
                                     {!planValidationErrors.afterHoursMultiplier && <p className="text-sm text-muted-foreground mt-1">Multiplier for non-business hours (e.g., 1.5x).</p>}
@@ -583,18 +701,86 @@ export function HourlyPlanConfiguration({
                 </Accordion.Item>
             </Accordion.Root>
 
+            {/* Contract Line Basics - Inline Editing */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Hourly)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {planBasicsErrors.length > 0 && (
+                        <Alert variant="destructive">
+                            <AlertDescription>
+                                <p className="font-medium mb-2">Please correct the following:</p>
+                                <ul className="list-disc list-inside space-y-1">
+                                    {planBasicsErrors.map((err, idx) => (
+                                        <li key={idx}>{err}</li>
+                                    ))}
+                                </ul>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
+                    <section className="space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+                            <p className="text-sm text-gray-600">
+                                Name the contract line and choose how it should bill by default.
+                            </p>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <Label htmlFor="hourly-name">Contract Line Name *</Label>
+                                <Input
+                                    id="hourly-name"
+                                    value={planName}
+                                    onChange={(e) => {
+                                        setPlanName(e.target.value);
+                                        markBasicsDirty();
+                                    }}
+                                    placeholder="e.g. Time & Materials Support"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="hourly-frequency">Billing Frequency *</Label>
+                                <CustomSelect
+                                    id="hourly-frequency"
+                                    value={billingFrequency}
+                                    onValueChange={(value) => {
+                                        setBillingFrequency(value);
+                                        markBasicsDirty();
+                                    }}
+                                    options={BILLING_FREQUENCY_OPTIONS}
+                                    placeholder="Select billing frequency"
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t">
+                        <Button
+                            id="reset-hourly-plan-basics"
+                            variant="outline"
+                            onClick={handleResetPlanBasics}
+                            disabled={isSavingBasics || !isBasicsDirty}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            id="save-hourly-plan-basics"
+                            onClick={handleSavePlanBasics}
+                            disabled={isSavingBasics || !isBasicsDirty}
+                        >
+                            {isSavingBasics ? 'Saving…' : 'Save Changes'}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Service Specific Settings */}
             <Card>
-                <CardHeader className="flex items-center justify-between">
-                    <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
-                    {plan && (
-                        <ContractLineDialog
-                            editingPlan={plan}
-                            onPlanAdded={() => fetchPlanData()}
-                            triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
-                            allServiceTypes={[]}
-                        />
-                    )}
+                <CardHeader>
+                    <CardTitle>Service Rates & Settings</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {serviceConfigs.length > 0 ? (
@@ -645,7 +831,7 @@ export function HourlyPlanConfiguration({
                     // Disable save if saving, no changes, or plan-wide errors exist. Service errors handled by action.
                     disabled={saving || !hasUnsavedChanges || Object.values(planValidationErrors).some(e => e)}
                 >
-                {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save Configuration" /> : "Save Configuration"}
+                {saving ? <LoadingIndicator spinnerProps={{ size: "sm" }} text="Save Configuration" /> : "Save Configuration"}
                 </Button>
             </div>
 

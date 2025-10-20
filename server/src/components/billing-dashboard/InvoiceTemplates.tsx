@@ -23,6 +23,7 @@ import { FileTextIcon, PencilIcon, MoreVertical } from 'lucide-react'; // Added 
 import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const InvoiceTemplates: React.FC = () => {
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
@@ -31,6 +32,7 @@ const InvoiceTemplates: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null); // State for delete-specific errors
   const [templateToDeleteId, setTemplateToDeleteId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter(); // Initialize router
 
   const handleCloneTemplate = async (template: IInvoiceTemplate) => {
@@ -53,7 +55,20 @@ const InvoiceTemplates: React.FC = () => {
 
   const handleSetDefaultTemplate = async (template: IInvoiceTemplate) => {
     try {
-      await setDefaultTemplate(template.template_id);
+      if (template.templateSource === 'standard' || template.isStandard) {
+        if (!template.standard_invoice_template_code) {
+          throw new Error('Standard template is missing a template code');
+        }
+        await setDefaultTemplate({
+          templateSource: 'standard',
+          standardTemplateCode: template.standard_invoice_template_code,
+        });
+      } else {
+        await setDefaultTemplate({
+          templateSource: 'custom',
+          templateId: template.template_id,
+        });
+      }
       await fetchTemplates();
       setError(null);
     } catch (error) {
@@ -67,6 +82,7 @@ const InvoiceTemplates: React.FC = () => {
   }, []);
 
   const fetchTemplates = async () => {
+    setIsLoading(true);
     try {
       const templates = await getInvoiceTemplates();
       setInvoiceTemplates(templates);
@@ -74,6 +90,8 @@ const InvoiceTemplates: React.FC = () => {
     } catch (error) {
       console.error('Error fetching invoice templates:', error);
       setError('Failed to fetch invoice templates');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -109,8 +127,15 @@ const InvoiceTemplates: React.FC = () => {
     },
     {
       title: 'Default',
-      dataIndex: 'is_default',
-      render: (value) => value ? <CheckCircledIcon className="w-4 h-4 text-blue-500" /> : null,
+      dataIndex: 'isTenantDefault',
+      headerClassName: 'text-center align-middle',
+      cellClassName: 'text-center align-middle max-w-none',
+      render: (_, record) =>
+        record.isTenantDefault ? (
+          <div className="flex justify-center items-center">
+            <CheckCircledIcon className="h-4 w-4 text-primary-500" />
+          </div>
+        ) : null,
     },
     {
       title: 'Actions',
@@ -149,18 +174,16 @@ const InvoiceTemplates: React.FC = () => {
               >
                 Clone
               </DropdownMenuItem>
-              {!record.isStandard && (
-                <DropdownMenuItem
-                  id="set-default-invoice-template-menu-item" // Per standard: set-default-{object}-menu-item
-                  disabled={record.is_default}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSetDefaultTemplate(record);
-                  }}
-                >
-                  Set as Default
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem
+                id="set-default-invoice-template-menu-item" // Per standard: set-default-{object}-menu-item
+                disabled={record.isTenantDefault}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSetDefaultTemplate(record);
+                }}
+              >
+                Set as Default
+              </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-invoice-template-menu-item" // Per standard: delete-{object}-menu-item
               className="text-red-600 focus:text-red-600" // Destructive styling
@@ -212,27 +235,36 @@ return (
             {error}
           </div>
         )}
-        <div className="space-y-4">
-           <div className="flex justify-end">
-             <Button
-               id="create-new-template-button"
-               onClick={() => handleNavigateToEditor('new')}
-             >
-               Create New Template
-             </Button>
-           </div>
-          <DataTable
-            data={invoiceTemplates}
-            columns={templateColumns}
-            pagination={false}
-            onRowClick={(record) => {
-              if (!record.isStandard) {
-                handleNavigateToEditor(record.template_id);
-              }
-            }}
-            // Ensure InvoiceTemplateManager rendering is removed
+        {isLoading ? (
+          <LoadingIndicator
+            layout="stacked"
+            className="py-10 text-gray-600"
+            spinnerProps={{ size: 'md' }}
+            text="Loading invoice templates"
           />
-        </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button
+                id="create-new-template-button"
+                onClick={() => handleNavigateToEditor('new')}
+              >
+                Create New Template
+              </Button>
+            </div>
+            <DataTable
+              data={invoiceTemplates}
+              columns={templateColumns}
+              pagination={false}
+              onRowClick={(record) => {
+                if (!record.isStandard) {
+                  handleNavigateToEditor(record.template_id);
+                }
+              }}
+              // Ensure InvoiceTemplateManager rendering is removed
+            />
+          </div>
+        )}
       </CardContent>
       {/* Confirmation Dialog */}
       <Dialog 

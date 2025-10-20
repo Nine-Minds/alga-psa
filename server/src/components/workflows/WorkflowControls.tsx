@@ -69,7 +69,7 @@ export default function WorkflowControls({ execution }: WorkflowControlsProps) {
         disabled={isLoading['refresh']}
       >
         {isLoading['refresh'] ? (
-          <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Refreshing..." />
+          <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Refreshing..." />
         ) : (
           <>
             <RefreshCw className="h-4 w-4 mr-2" /> Refresh

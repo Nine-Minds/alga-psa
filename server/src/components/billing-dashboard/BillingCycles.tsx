@@ -19,6 +19,7 @@ import { getContracts } from 'server/src/lib/actions/contractActions';
 import { BillingCycleType, IClient } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IClientContract, IContract } from 'server/src/interfaces/contract.interfaces';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
@@ -300,7 +301,12 @@ const BillingCycles: React.FC = () => {
             </div>
           )}
           {loading ? (
-            <div className="text-center py-4">Loading billing cycles...</div>
+            <LoadingIndicator
+              layout="stacked"
+              className="py-10 text-gray-600"
+              spinnerProps={{ size: 'md' }}
+              text="Loading billing cycles"
+            />
           ) : (
             <DataTable
               data={clients}

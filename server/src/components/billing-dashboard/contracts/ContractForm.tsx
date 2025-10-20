@@ -6,7 +6,6 @@ import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Save } from 'lucide-react';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
@@ -23,7 +22,7 @@ interface ContractFormProps {
 const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated }) => {
   const [contractName, setContractName] = useState(contract.contract_name);
   const [description, setDescription] = useState(contract.contract_description ?? '');
-  const [isActive, setIsActive] = useState<boolean>(contract.is_active);
+  const [status, setStatus] = useState<string>(contract.status);
   const [billingFrequency, setBillingFrequency] = useState(contract.billing_frequency);
   const [isSaving, setIsSaving] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -57,13 +56,20 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
     setIsSaving(true);
 
     try {
-      await updateContract(contract.contract_id, {
+      const updatePayload: any = {
         contract_name: contractName,
         contract_description: description || undefined,
         billing_frequency: billingFrequency,
-        is_active: isActive,
         tenant
-      });
+      };
+
+      // Only include status if the contract is not expired
+      // Expired contracts cannot have their status changed manually
+      if (contract.status !== 'expired') {
+        updatePayload.status = status;
+      }
+
+      await updateContract(contract.contract_id, updatePayload);
 
       onContractUpdated();
     } catch (error) {
@@ -135,13 +141,25 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
             />
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="is-active"
-              checked={isActive}
-              onChange={(checked) => setIsActive(!!checked)}
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <CustomSelect
+              id="status"
+              value={status}
+              onValueChange={(value) => setStatus(value)}
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'draft', label: 'Draft' },
+                { value: 'terminated', label: 'Terminated' },
+                ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
+              ]}
+              disabled={contract.status === 'expired'}
             />
-            <Label htmlFor="is-active" className="cursor-pointer">Active</Label>
+            {contract.status === 'expired' && (
+              <p className="text-xs text-gray-500 mt-1">
+                Expired contracts cannot be changed to another status
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end">

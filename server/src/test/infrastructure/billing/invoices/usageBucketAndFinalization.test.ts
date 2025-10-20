@@ -12,7 +12,8 @@ import {
   createTestService,
   createFixedPlanAssignment,
   createBucketOverlayForPlan,
-  createBucketUsageRecord
+  createBucketUsageRecord,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
@@ -159,6 +160,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
     mockedUserId = mockContext.userId;
 
     await ensureDefaultTaxConfiguration();
+    await ensureClientPlanBundlesTable(context);
   }, 60000);
 
   beforeEach(async () => {
@@ -182,6 +184,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
     });
 
     await ensureDefaultTaxConfiguration();
+    await ensureClientPlanBundlesTable(context);
   }, 30000);
 
   afterEach(async () => {
@@ -197,7 +200,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       // Arrange - Create usage-based service
       const serviceId = await createTestService(context, {
         service_name: 'Data Transfer',
-        billing_method: 'per_unit',
+        billing_method: 'usage',
         default_rate: 1000, // $10.00 per GB
         unit_of_measure: 'GB',
         tax_region: 'US-NY'
@@ -311,7 +314,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       // Arrange - Create service for bucket overlay contract line
       const serviceId = await createTestService(context, {
         service_name: 'Consulting Hours',
-        billing_method: 'per_unit',
+        billing_method: 'usage',
         default_rate: 7500, // $75.00 per hour overage
         unit_of_measure: 'hour',
         tax_region: 'US-NY'
@@ -374,28 +377,29 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
-      expect(invoiceItems).toHaveLength(1);
-      expect(invoiceItems[0]).toMatchObject({
-        description: expect.stringContaining('Consulting Hours'),
-        quantity: expect.stringMatching(/^5(?:\.0+)?$/),
-        unit_price: '7500',
-        net_amount: '37500'
-      });
+      const billableItems = invoiceItems.filter((item) => Number(item.net_amount ?? 0) !== 0 || Number(item.total_price ?? 0) !== 0);
+
+      expect(billableItems).toHaveLength(1);
+      expect(billableItems[0].description).toContain('Consulting Hours');
+      expect(Number(billableItems[0].unit_price)).toBe(7500);
+      expect(Number(billableItems[0].net_amount)).toBe(37500);
+      expect(Number(billableItems[0].tax_amount)).toBe(3750);
     });
   });
 
   describe('Invoice Finalization', () => {
     it('should finalize an invoice correctly', async () => {
       // Arrange
-      const serviceId = await context.createEntity('service_catalog', {
+      const serviceId = await createTestService(context, {
         service_name: 'Basic Service',
         description: 'Test service: Basic Service',
-        service_type: 'Fixed',
         default_rate: 20000,
-        unit_of_measure: 'unit'
-      }, 'service_id');
+        unit_of_measure: 'unit',
+        billing_method: 'fixed',
+        tax_region: 'US-NY'
+      });
 
-      const { planId: contractLineId } = await createFixedPlanAssignment(context, serviceId, {
+      const { contractLineId, clientContractLineId } = await createFixedPlanAssignment(context, serviceId, {
         planName: 'Simple Contract Line',
         billingFrequency: 'monthly',
         baseRateCents: 20000,
@@ -413,14 +417,18 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: contractLineId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      });
+      await context.db('client_contract_lines')
+        .where({
+          tenant: context.tenantId,
+          client_contract_line_id: clientContractLineId
+        })
+        .update({
+          client_id: context.clientId,
+          contract_line_id: contractLineId,
+          start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+          end_date: null,
+          is_active: true
+        });
 
       // Generate draft invoice
       let invoice = await generateInvoice(billingCycleId);

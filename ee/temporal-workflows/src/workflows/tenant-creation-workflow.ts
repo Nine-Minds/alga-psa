@@ -25,7 +25,17 @@ import type {
 
 // Define activity proxies with appropriate timeouts and retry policies
 const activities = proxyActivities<{
-  createTenant(input: { tenantName: string; email: string; companyName?: string; clientName?: string; licenseCount?: number }): Promise<CreateTenantActivityResult>;
+  createTenant(input: {
+    tenantName: string;
+    email: string;
+    companyName?: string;
+    clientName?: string;
+    licenseCount?: number;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    stripeSubscriptionItemId?: string;
+    stripePriceId?: string;
+  }): Promise<CreateTenantActivityResult>;
   createAdminUser(input: {
     tenantId: string;
     firstName: string;
@@ -201,6 +211,11 @@ export async function tenantCreationWorkflow(
       companyName: tenantCompanyName,
       clientName: tenantDefaultClientName,
       licenseCount: input.licenseCount,
+      // Pass through Stripe integration data
+      stripeCustomerId: input.stripeCustomerId,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+      stripeSubscriptionItemId: input.stripeSubscriptionItemId,
+      stripePriceId: input.stripePriceId,
     });
     
     tenantCreated = true;

@@ -375,7 +375,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
             </svg>
             {isSearching && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <Spinner size="xs" />
+                <Spinner size="sm" className="scale-75" />
               </div>
             )}
           </div>

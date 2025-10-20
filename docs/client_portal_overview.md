@@ -15,7 +15,7 @@ The Client Portal is a secure, multi-tenant web application that allows MSP clie
 - `/client-portal/billing` - Billing and invoice management
 - `/client-portal/account` - Account settings and profile management
 - `/client-portal/profile` - User profile management
-- `/client-portal/company-settings` - Company-level settings
+- `/client-portal/client-settings` - Company-level settings
 
 **Authentication Routes:**
 - `/auth/client-portal/signin` - Client portal login

@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { Badge } from 'server/src/components/ui/Badge';
-import { Button } from 'server/src/components/ui/Button';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { IContractSummary } from 'server/src/lib/actions/contractActions';
-import { Calendar, CalendarClock, Check, Copy, FileCheck, Hash, Layers3, Users } from 'lucide-react';
+import { Calendar, CalendarClock, FileCheck, Layers3 } from 'lucide-react';
 
 interface ContractHeaderProps {
   contract: IContract;
@@ -52,18 +51,6 @@ const formatNumber = (value?: number): string => {
 };
 
 const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopyContractId = async () => {
-    try {
-      await navigator.clipboard.writeText(contract.contract_id);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Unable to copy contract ID to clipboard', error);
-    }
-  };
-
   const stats: SummaryStat[] = [
     {
       label: 'Billing Frequency',
@@ -76,17 +63,12 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
       icon: Layers3,
     },
     {
-      label: 'Active Clients',
-      value: summary ? formatNumber(summary.activeClientCount) : '—',
-      icon: Users,
-    },
-    {
-      label: 'Earliest Start',
+      label: 'Start Date',
       value: summary?.earliestStartDate ? formatDate(summary.earliestStartDate) : summary ? '—' : '—',
       icon: Calendar,
     },
     {
-      label: 'Latest End',
+      label: 'End Date',
       value: summary
         ? summary.latestEndDate
           ? formatDate(summary.latestEndDate)
@@ -107,72 +89,58 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
 
   return (
     <div className="w-full rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900">{contract.contract_name}</h1>
-            <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-              {contract.is_active ? 'Active' : 'Inactive'}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900">{contract.contract_name}</h1>
+          <Badge className={
+            contract.status === 'active' ? 'bg-green-100 text-green-800' :
+            contract.status === 'terminated' ? 'bg-orange-100 text-orange-800' :
+            contract.status === 'expired' ? 'bg-red-100 text-red-800' :
+            'bg-gray-100 text-gray-800'
+          }>
+            {contract.status === 'active' ? 'Active' :
+             contract.status === 'terminated' ? 'Terminated' :
+             contract.status === 'expired' ? 'Expired' :
+             'Draft'}
+          </Badge>
+          {contract.is_template !== false && (
+            <Badge className="border border-blue-200 bg-blue-50 text-blue-800">
+              Template
             </Badge>
-          </div>
+          )}
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-            <span className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-gray-400" />
-              <span className="font-medium text-gray-800">{contract.contract_id}</span>
-              <Button
-                id="copy-contract-id"
-                variant="ghost"
-                size="xs"
-                onClick={handleCopyContractId}
-                className="h-7 px-2"
-              >
-                {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-              </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {stats.map(({ label, value, icon: Icon }, index) => (
+            <React.Fragment key={label}>
+              <span className="flex items-center gap-1.5 text-sm text-gray-600">
+                <Icon className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-500">{label}:</span>
+                <span className="font-medium text-gray-900">{value}</span>
+              </span>
+              {index < stats.length - 1 && <span className="text-gray-400">•</span>}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {contract.contract_description && (
+          <p className="text-sm text-gray-700">{contract.contract_description}</p>
+        )}
+
+        {hasSummary && summary?.poRequiredCount ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800">
+            <FileCheck className="h-4 w-4" />
+            <span>
+              Purchase order required for this contract.
             </span>
-            <span className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-400" />
-              <span>Created {formatDate(contract.created_at)}</span>
-            </span>
-            {summary && (
-              <span className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-gray-400" />
-                <span>Total Assignments: {formatNumber(summary.totalClientAssignments)}</span>
+            {summary.poNumbers.length > 0 && (
+              <span className="font-medium text-orange-900">
+                PO: {summary.poNumbers.join(', ')}
               </span>
             )}
           </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          {stats.map(({ label, value, icon: Icon }) => (
-            <div key={label} className="flex items-start gap-2 text-sm">
-              <Icon className="mt-0.5 h-4 w-4 text-gray-400" />
-              <div>
-                <p className="text-gray-500">{label}</p>
-                <p className="font-semibold text-gray-900">{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        ) : null}
       </div>
-
-      {contract.contract_description && (
-        <p className="mt-4 text-sm text-gray-700">{contract.contract_description}</p>
-      )}
-
-      {hasSummary && summary?.poRequiredCount ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800">
-          <FileCheck className="h-4 w-4" />
-          <span>
-            {summary.poRequiredCount} assignment{summary.poRequiredCount === 1 ? '' : 's'} require a purchase order.
-          </span>
-          {summary.poNumbers.length > 0 && (
-            <span className="font-medium text-orange-900">
-              PO Numbers: {summary.poNumbers.join(', ')}
-            </span>
-          )}
-        </div>
-      ) : null}
     </div>
   );
 };

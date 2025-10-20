@@ -244,6 +244,7 @@ export default class Invoice {
         'template_id',
         'name',
         'version',
+        'standard_invoice_template_code',
         'assemblyScriptSource', // Add assemblyScriptSource
         'sha' // Add sha
         // wasmBinary is intentionally excluded from the list view/clone source
@@ -253,28 +254,58 @@ export default class Invoice {
 
   static async getAllTemplates(knexOrTrx: Knex | Knex.Transaction): Promise<IInvoiceTemplate[]> {
     const tenant = await getCurrentTenantId();
-    const [tenantTemplates, standardTemplates] = await Promise.all([
-      // Explicitly select necessary fields for tenant templates
+    const [tenantTemplates, standardTemplates, tenantAssignment] = await Promise.all([
       knexOrTrx('invoice_templates')
         .where({ tenant })
         .select(
-            'template_id',
-            'name',
-            'version',
-            'is_default',
-            'assemblyScriptSource', // Add AS source
-            // 'wasmBinary', // Exclude wasmBinary from list view
-            // Add any other necessary fields from IInvoiceTemplate that aren't covered by '*' implicitly
-            'created_at',
-            'updated_at'
-            // Note: 'dsl' might not exist on tenant templates table, adjust if needed
+          'template_id',
+          'name',
+          'version',
+          'is_default',
+          'assemblyScriptSource',
+          'created_at',
+          'updated_at'
         ),
-      this.getStandardTemplates(knexOrTrx)
+      this.getStandardTemplates(knexOrTrx),
+      knexOrTrx('invoice_template_assignments')
+        .select('template_source', 'standard_invoice_template_code', 'invoice_template_id')
+        .where({ tenant, scope_type: 'tenant' })
+        .whereNull('scope_id')
+        .first()
     ]);
 
     return [
-      ...standardTemplates.map((t): IInvoiceTemplate => ({ ...t, isStandard: true })),
-      ...tenantTemplates.map((t): IInvoiceTemplate => ({ ...t, isStandard: false }))
+      ...standardTemplates.map((t): IInvoiceTemplate => {
+        const isTenantDefault =
+          tenantAssignment?.template_source === 'standard' &&
+          tenantAssignment.standard_invoice_template_code === t.standard_invoice_template_code;
+
+        return {
+          ...t,
+          isStandard: true,
+          templateSource: 'standard',
+          standard_invoice_template_code: t.standard_invoice_template_code,
+          isTenantDefault,
+          is_default: isTenantDefault,
+          selectValue: t.standard_invoice_template_code
+            ? `standard:${t.standard_invoice_template_code}`
+            : `standard:${t.template_id}`
+        };
+      }),
+      ...tenantTemplates.map((t): IInvoiceTemplate => {
+        const isTenantDefault =
+          tenantAssignment?.template_source === 'custom' &&
+          tenantAssignment.invoice_template_id === t.template_id;
+
+        return {
+          ...t,
+          isStandard: false,
+          templateSource: 'custom',
+          isTenantDefault,
+          is_default: isTenantDefault,
+          selectValue: `custom:${t.template_id}`
+        };
+      })
     ];
   }
 

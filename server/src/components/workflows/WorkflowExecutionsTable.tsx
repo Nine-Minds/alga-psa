@@ -250,7 +250,7 @@ export default function WorkflowExecutionsTable({
             disabled={isLoading}
           >
             {isLoading ? (
-              <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Refresh" />
+              <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Refresh" />
             ) : (
               <>
                 <RefreshCw className="h-4 w-4 mr-2" />

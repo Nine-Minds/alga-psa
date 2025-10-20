@@ -3,19 +3,17 @@
     width: 100%;
     max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
-    background-color: #f0f0f0;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    padding: 12px;
+    background-color: rgba(15, 23, 42, 0.04);
+    border-radius: 12px;
   }
   
   .paper {
     background-color: white;
-    padding: 40px;
+    padding: 32px;
     min-height: 1123px; /* A4 height in pixels */
     width: 100%;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
+    border-radius: 8px;
   }
   
   @media print {

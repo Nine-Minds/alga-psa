@@ -381,6 +381,9 @@ spec:
           # Public base URL for links in emails and client-side code
           - name: NEXT_PUBLIC_BASE_URL
             value: "https://{{ .Values.host }}"
+          # App URL for Stripe redirects (can differ from host for blue/green testing)
+          - name: NEXT_PUBLIC_APP_URL
+            value: "https://{{ .Values.appUrl | default .Values.host }}"
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -454,6 +457,46 @@ spec:
           {{- if .Values.microsoft_integration.redirect_uri }}
           - name: MICROSOFT_REDIRECT_URI
             value: "{{ .Values.microsoft_integration.redirect_uri }}"
+          {{- end }}
+          {{- end }}
+
+          # ----------- STRIPE INTEGRATION ----------------
+          # Sensitive keys (read from secrets via secret provider)
+          {{- if .Values.secrets.stripe_secret_key }}
+          - name: STRIPE_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: stripe_secret_key
+          {{- end }}
+          {{- if .Values.secrets.stripe_publishable_key }}
+          - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: stripe_publishable_key
+          {{- end }}
+          {{- if .Values.secrets.stripe_webhook_secret }}
+          - name: STRIPE_WEBHOOK_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: stripe_webhook_secret
+          {{- end }}
+
+          # Non-sensitive Stripe configuration
+          {{- if .Values.stripe }}
+          {{- if .Values.stripe.master_billing_tenant_id }}
+          - name: MASTER_BILLING_TENANT_ID
+            value: "{{ .Values.stripe.master_billing_tenant_id }}"
+          {{- end }}
+          {{- if .Values.stripe.license_product_id }}
+          - name: STRIPE_LICENSE_PRODUCT_ID
+            value: "{{ .Values.stripe.license_product_id }}"
+          {{- end }}
+          {{- if .Values.stripe.license_price_id }}
+          - name: STRIPE_LICENSE_PRICE_ID
+            value: "{{ .Values.stripe.license_price_id }}"
           {{- end }}
           {{- end }}
 

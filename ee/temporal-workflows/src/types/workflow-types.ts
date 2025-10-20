@@ -13,6 +13,12 @@ export interface TenantCreationInput {
   contractLine?: string;
   licenseCount?: number; // Number of licenses for the tenant
   checkoutSessionId?: string; // Stripe checkout session ID for status updates
+
+  // Stripe integration fields
+  stripeCustomerId?: string;        // Stripe customer ID (cus_...)
+  stripeSubscriptionId?: string;    // Stripe subscription ID (sub_...)
+  stripeSubscriptionItemId?: string; // Subscription item ID (si_...)
+  stripePriceId?: string;           // Price ID (price_...)
 }
 
 export interface TenantCreationResult {
@@ -34,6 +40,12 @@ export interface CreateTenantActivityInput {
   companyName?: string;
   clientName?: string;
   licenseCount?: number; // Number of licenses for the tenant
+
+  // Stripe integration fields
+  stripeCustomerId?: string;        // Stripe customer ID (cus_...)
+  stripeSubscriptionId?: string;    // Stripe subscription ID (sub_...)
+  stripeSubscriptionItemId?: string; // Subscription item ID (si_...)
+  stripePriceId?: string;           // Price ID (price_...)
 }
 
 export interface CreateTenantActivityResult {

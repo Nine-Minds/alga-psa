@@ -698,7 +698,7 @@ export async function setupBilling(data: BillingData): Promise<OnboardingActionR
         tenant,
         service_name: data.serviceName,
         description: data.serviceDescription,
-        billing_method: serviceType.billing_method || 'per_unit',
+        billing_method: serviceType.billing_method || 'usage',
         custom_service_type_id: serviceType.id,
         default_rate: parseFloat(data.servicePrice) || 0,
         unit_of_measure: 'hour'

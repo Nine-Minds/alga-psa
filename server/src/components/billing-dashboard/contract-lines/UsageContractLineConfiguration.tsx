@@ -4,9 +4,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { ContractLineDialog } from '../ContractLineDialog';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Label } from 'server/src/components/ui/Label';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Switch } from 'server/src/components/ui/Switch';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import * as Accordion from '@radix-ui/react-accordion'; // Import Radix Accordion
@@ -17,10 +20,12 @@ import { getContractLineServicesWithConfigurations } from 'server/src/lib/action
 import { getContractLineConfigurationForService } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
 import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLine } from 'server/src/interfaces';
-import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
+import { getContractLineById, updateContractLine } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
 import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Import the upsert action
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { useTenant } from '../../TenantProvider';
 
 // Keep GenericPlanServicesList for now, might remove in Phase 3
 import GenericPlanServicesList from './GenericContractLineServicesList';
@@ -60,6 +65,17 @@ export function UsagePlanConfiguration({
 }: UsagePlanConfigurationProps) {
   // State for the base plan details
   const [plan, setPlan] = useState<IContractLine | null>(null);
+
+  // Plan basics state for inline editing
+  const [planName, setPlanName] = useState('');
+  const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
+  const [isCustom, setIsCustom] = useState(false);
+  const [planBasicsErrors, setPlanBasicsErrors] = useState<string[]>([]);
+  const [isSavingBasics, setIsSavingBasics] = useState(false);
+  const [isBasicsDirty, setIsBasicsDirty] = useState(false);
+  const tenant = useTenant()!;
+
+  const markBasicsDirty = () => setIsBasicsDirty(true);
   // State for the list of services associated with the plan
   const [planServices, setPlanServices] = useState<PlanServiceWithConfig[]>([]);
   // State to hold configuration for each service, keyed by serviceId (current state)
@@ -92,6 +108,12 @@ export function UsagePlanConfiguration({
         return;
       }
       setPlan(fetchedPlan); // Store base plan details
+
+      // Populate plan basics form fields
+      setPlanName(fetchedPlan.contract_line_name);
+      setBillingFrequency(fetchedPlan.billing_frequency);
+      setIsCustom(fetchedPlan.is_custom);
+      setIsBasicsDirty(false);
 
       // 1. Fetch the list of services associated with the plan
       const servicesList = await getContractLineServicesWithConfigurations(contractLineId);
@@ -163,6 +185,56 @@ export function UsagePlanConfiguration({
   useEffect(() => {
     fetchPlanData();
   }, [fetchPlanData]);
+
+  // --- Plan Basics Handlers ---
+  const validatePlanBasics = (): string[] => {
+    const errors: string[] = [];
+    if (!planName.trim()) errors.push('Contract line name');
+    if (!billingFrequency) errors.push('Billing frequency');
+    return errors;
+  };
+
+  const handleSavePlanBasics = async () => {
+    const errors = validatePlanBasics();
+    if (errors.length > 0) {
+      setPlanBasicsErrors(errors);
+      return;
+    }
+
+    setIsSavingBasics(true);
+    setPlanBasicsErrors([]);
+    try {
+      const planData: Partial<IContractLine> = {
+        contract_line_name: planName,
+        billing_frequency: billingFrequency,
+        is_custom: isCustom,
+        tenant,
+      };
+
+      if (plan?.contract_line_id) {
+        await updateContractLine(plan.contract_line_id, planData);
+      }
+
+      await fetchPlanData();
+      setIsBasicsDirty(false);
+    } catch (error) {
+      console.error('Error saving contract line basics:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line';
+      setPlanBasicsErrors([errorMessage]);
+    } finally {
+      setIsSavingBasics(false);
+    }
+  };
+
+  const handleResetPlanBasics = () => {
+    if (plan) {
+      setPlanName(plan.contract_line_name);
+      setBillingFrequency(plan.billing_frequency);
+      setIsCustom(plan.is_custom);
+      setIsBasicsDirty(false);
+      setPlanBasicsErrors([]);
+    }
+  };
 
   // --- Event Handlers ---
   const handleConfigChange = useCallback((serviceId: string, field: keyof ServiceUsageConfig, value: any) => {
@@ -404,17 +476,87 @@ export function UsagePlanConfiguration({
   if (planServices.length === 0) {
       return (
           <div className={`space-y-6 ${className}`}>
+              {/* Contract Line Basics - Inline Editing */}
               <Card>
-                  <CardHeader className="flex items-center justify-between">
+                  <CardHeader>
                       <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Usage)</CardTitle>
-                      {plan && (
-                        <ContractLineDialog
-                          editingPlan={plan}
-                          onPlanAdded={() => fetchPlanData()}
-                          triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
-                          allServiceTypes={[]}
-                        />
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                      {planBasicsErrors.length > 0 && (
+                          <Alert variant="destructive">
+                              <AlertDescription>
+                                  <p className="font-medium mb-2">Please correct the following:</p>
+                                  <ul className="list-disc list-inside space-y-1">
+                                      {planBasicsErrors.map((err, idx) => (
+                                          <li key={idx}>{err}</li>
+                                      ))}
+                                  </ul>
+                              </AlertDescription>
+                          </Alert>
                       )}
+
+                      <section className="space-y-4">
+                          <div>
+                              <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+                              <p className="text-sm text-gray-600">
+                                  Name the contract line and choose how it should bill by default.
+                              </p>
+                          </div>
+                          <div className="space-y-3">
+                              <div>
+                                  <Label htmlFor="name">Contract Line Name *</Label>
+                                  <Input
+                                      id="name"
+                                      value={planName}
+                                      onChange={(e) => {
+                                          setPlanName(e.target.value);
+                                          markBasicsDirty();
+                                      }}
+                                      placeholder="e.g. Usage-Based Services"
+                                      required
+                                  />
+                              </div>
+                              <div className="grid gap-4 md:grid-cols-2">
+                                  <div>
+                                      <Label htmlFor="frequency">Billing Frequency *</Label>
+                                      <CustomSelect
+                                          id="frequency"
+                                          value={billingFrequency}
+                                          onValueChange={(value) => {
+                                              setBillingFrequency(value);
+                                              markBasicsDirty();
+                                          }}
+                                          options={BILLING_FREQUENCY_OPTIONS}
+                                          placeholder="Select billing frequency"
+                                      />
+                                  </div>
+                              </div>
+                          </div>
+                      </section>
+
+                      <div className="flex justify-end gap-2 pt-4 border-t">
+                          <Button
+                              id="reset-usage-plan-basics"
+                              variant="outline"
+                              onClick={handleResetPlanBasics}
+                              disabled={isSavingBasics || !isBasicsDirty}
+                          >
+                              Reset
+                          </Button>
+                          <Button
+                              id="save-usage-plan-basics"
+                              onClick={handleSavePlanBasics}
+                              disabled={isSavingBasics || !isBasicsDirty}
+                          >
+                              {isSavingBasics ? 'Saving…' : 'Save Changes'}
+                          </Button>
+                      </div>
+                  </CardContent>
+              </Card>
+
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Manage Contract Line Services</CardTitle>
                   </CardHeader>
                   <CardContent>
                       <p className="text-muted-foreground mb-4">No services are currently associated with this contract line. Add services below to configure their pricing.</p>
@@ -428,17 +570,86 @@ export function UsagePlanConfiguration({
 
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Contract Line Basics - Inline Editing */}
       <Card>
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Usage) - Service Pricing</CardTitle>
-          {plan && (
-            <ContractLineDialog
-              editingPlan={plan}
-              onPlanAdded={() => fetchPlanData()}
-              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
-              allServiceTypes={[]}
-            />
+        <CardHeader>
+          <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Usage)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {planBasicsErrors.length > 0 && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                <p className="font-medium mb-2">Please correct the following:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {planBasicsErrors.map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
           )}
+
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+              <p className="text-sm text-gray-600">
+                Name the contract line and choose how it should bill by default.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="name">Contract Line Name *</Label>
+                <Input
+                  id="name"
+                  value={planName}
+                  onChange={(e) => {
+                    setPlanName(e.target.value);
+                    markBasicsDirty();
+                  }}
+                  placeholder="e.g. Usage-Based Services"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="frequency">Billing Frequency *</Label>
+                <CustomSelect
+                  id="frequency"
+                  value={billingFrequency}
+                  onValueChange={(value) => {
+                    setBillingFrequency(value);
+                    markBasicsDirty();
+                  }}
+                  options={BILLING_FREQUENCY_OPTIONS}
+                  placeholder="Select billing frequency"
+                />
+              </div>
+            </div>
+          </section>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              id="reset-usage-plan-basics"
+              variant="outline"
+              onClick={handleResetPlanBasics}
+              disabled={isSavingBasics || !isBasicsDirty}
+            >
+              Reset
+            </Button>
+            <Button
+              id="save-usage-plan-basics"
+              onClick={handleSavePlanBasics}
+              disabled={isSavingBasics || !isBasicsDirty}
+            >
+              {isSavingBasics ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Service Pricing Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Pricing</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {saveError && (
@@ -509,7 +720,7 @@ export function UsagePlanConfiguration({
           {/* Save Button */}
           <div className="flex justify-end pt-4">
             <Button id="save-all-service-configs-button" onClick={handleSave} disabled={saving || loading}>
-              {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save All Configurations" /> : "Save All Configurations"}
+              {saving ? <LoadingIndicator spinnerProps={{ size: "sm" }} text="Save All Configurations" /> : "Save All Configurations"}
             </Button>
           </div>
         </CardContent>

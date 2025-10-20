@@ -195,8 +195,6 @@ const nextConfig = {
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
-      '@product/extension-storage-api/records': '../packages/product-extension-storage-api/records',
-      '@product/extension-storage-api/record': '../packages/product-extension-storage-api/record',
       '@product/auth-ee/entry': isEE
         ? '@product/auth-ee/ee/entry'
         : '@product/auth-ee/oss/entry',
@@ -235,7 +233,6 @@ const nextConfig = {
     '@product/email-providers',
     '@product/client-portal-domain',
     '@product/billing',
-    '@product/extension-storage-api',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
@@ -320,14 +317,6 @@ const nextConfig = {
         '@product/billing/entry': isEE
           ? path.join(__dirname, '../packages/product-billing/ee/entry.ts')
           : path.join(__dirname, '../packages/product-billing/oss/entry.ts'),
-        '@product/extension-storage-api/records': path.join(
-          __dirname,
-          '../packages/product-extension-storage-api/records.ts',
-        ),
-        '@product/extension-storage-api/record': path.join(
-          __dirname,
-          '../packages/product-extension-storage-api/record.ts',
-        ),
         // Point stable specifiers to exact entry files to avoid conditional exports in package index
         '@alga-psa/product-extension-initialization': isEE
           ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')

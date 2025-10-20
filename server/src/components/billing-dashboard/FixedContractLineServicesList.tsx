@@ -32,9 +32,10 @@ import EditPlanServiceQuantityDialog from './contract-lines/EditContractLineServ
 // Removed ContractLineServiceForm import as 'Configure' is removed
 
 // Define billing method options
-const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string }> = [
+const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
   { value: 'fixed', label: 'Fixed Price' },
-  { value: 'per_unit', label: 'Per Unit' }
+  { value: 'hourly', label: 'Hourly' },
+  { value: 'usage', label: 'Usage Based' }
 ];
 
 interface FixedPlanServicesListProps {
@@ -46,7 +47,7 @@ interface FixedPlanServicesListProps {
 interface SimplePlanService extends IContractLineService {
   service_name?: string;
   service_category?: string; // This will now hold the name
-  billing_method?: 'fixed' | 'per_unit' | null; // Allow null to match IService
+  billing_method?: 'fixed' | 'hourly' | 'usage' | null; // Allow null to match IService
   default_rate?: number;
   quantity?: number; // Added quantity field
 }

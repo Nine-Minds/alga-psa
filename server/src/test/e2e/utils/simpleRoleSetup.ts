@@ -10,35 +10,44 @@ export async function setupTestUserWithPermissions(
   tenantId: string
 ): Promise<void> {
   // Check if user already has roles
-  const existingRoles = await db('user_roles')
-    .where('user_id', userId)
-    .count('* as count');
-  
-  if (existingRoles[0].count > 0) {
-    console.log('User already has roles, skipping setup');
-    return;
+  const existingRole = await db('user_roles')
+    .where({ user_id: userId, tenant: tenantId })
+    .first<{ role_id: string }>();
+
+  let roleId = existingRole?.role_id ?? null;
+
+  if (!roleId) {
+    roleId = require('crypto').randomUUID();
+    await db('roles').insert({
+      role_id: roleId,
+      role_name: 'Test Admin',
+      description: 'Test role with all permissions',
+      tenant: tenantId,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    await db('user_roles').insert({
+      user_id: userId,
+      role_id: roleId,
+      tenant: tenantId
+    });
   }
 
-  // Create a simple test role
-  const roleId = require('crypto').randomUUID();
-  await db('roles').insert({
-    role_id: roleId,
-    role_name: 'Test Admin',
-    description: 'Test role with all permissions',
-    tenant: tenantId,
-    created_at: new Date(),
-    updated_at: new Date()
-  });
-
-  // Assign role to user
-  await db('user_roles').insert({
-    user_id: userId,
-    role_id: roleId,
-    tenant: tenantId
-  });
-
   // Create basic permissions for the tenant
-  const resources = ['contact', 'client', 'client', 'user', 'ticket', 'project', 'team', 'role', 'permission', 'time_entry'];
+  const resources = [
+    'contact',
+    'client',
+    'user',
+    'ticket',
+    'project',
+    'team',
+    'role',
+    'permission',
+    'time_entry',
+    'service',
+    'storage',
+  ];
   const actions = ['create', 'read', 'update', 'delete'];
   
   for (const resource of resources) {
@@ -46,43 +55,32 @@ export async function setupTestUserWithPermissions(
       // Create tenant-specific permission
       const permissionId = require('crypto').randomUUID();
       
-      try {
+      const existingPermission = await db('permissions')
+        .where({ resource, action, tenant: tenantId })
+        .first<{ permission_id: string }>();
+
+      const targetPermissionId = existingPermission?.permission_id ?? permissionId;
+
+      if (!existingPermission) {
         await db('permissions').insert({
-          permission_id: permissionId,
+          permission_id: targetPermissionId,
           resource,
           action,
           tenant: tenantId
         });
-        
-        // Assign to role
-        await db('role_permissions').insert({
-          role_id: roleId,
-          permission_id: permissionId,
-          tenant: tenantId
-        });
-        
-        console.log(`✅ Created permission ${resource}:${action} for tenant ${tenantId}`);
-      } catch (error) {
-        console.error(`❌ Error creating permission ${resource}:${action}:`, error);
-        
-        // If permission already exists for this tenant, try to find it and link to role
-        try {
-          const existingPermission = await db('permissions')
-            .where({ resource, action, tenant: tenantId })
-            .first();
-            
-          if (existingPermission) {
-            await db('role_permissions').insert({
-              role_id: roleId,
-              permission_id: existingPermission.permission_id,
-              tenant: tenantId
-            });
-            console.log(`✅ Linked existing permission ${resource}:${action} to role`);
-          }
-        } catch (linkError) {
-          console.error(`❌ Error linking permission:`, linkError);
-        }
       }
+
+      await db('role_permissions')
+        .insert({
+          role_id: roleId!,
+          permission_id: targetPermissionId,
+          tenant: tenantId
+        })
+        .catch((error: any) => {
+          if (error?.code !== '23505') {
+            throw error;
+          }
+        });
     }
   }
 }

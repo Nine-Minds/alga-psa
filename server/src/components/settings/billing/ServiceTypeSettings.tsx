@@ -36,7 +36,7 @@ import { toast } from 'react-hot-toast';
 type ServiceTypeSelectionItem = {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'per_unit';
+  billing_method: 'fixed' | 'hourly' | 'usage';
   is_standard: boolean;
 };
 
@@ -282,7 +282,11 @@ const ServiceTypeSettings: React.FC = () => {
       title: 'Billing Method', 
       dataIndex: 'billing_method',
       width: '20%', 
-      render: (value) => value === 'fixed' ? 'Fixed' : 'Per Unit'
+      render: (value) => {
+        if (value === 'fixed') return 'Fixed';
+        if (value === 'hourly') return 'Hourly';
+        return 'Usage';
+      }
     },
     { 
       title: 'Description',
@@ -432,12 +436,13 @@ const ServiceTypeSettings: React.FC = () => {
                 id="billing-method-select"
                 options={[
                   { value: 'fixed', label: 'Fixed' },
-                  { value: 'per_unit', label: 'Per Unit' },
+                  { value: 'hourly', label: 'Hourly' },
+                  { value: 'usage', label: 'Usage Based' },
                 ]}
                 value={editingType?.billing_method || ''}
                 onValueChange={(value: string) => {
-                  if (value === 'fixed' || value === 'per_unit') {
-                    setEditingType({ ...editingType, billing_method: value as 'fixed' | 'per_unit' });
+                  if (value === 'fixed' || value === 'hourly' || value === 'usage') {
+                    setEditingType({ ...editingType, billing_method: value as 'fixed' | 'hourly' | 'usage' });
                     clearErrorIfSubmitted();
                   }
                 }}
@@ -547,7 +552,11 @@ const ServiceTypeSettings: React.FC = () => {
                         </div>
                         <div className="flex-1">{type.name}</div>
                         <div className="w-24 text-center text-sm text-muted-foreground">
-                          {type.billing_method === 'fixed' ? 'Fixed' : 'Per Unit'}
+                          {type.billing_method === 'fixed'
+                            ? 'Fixed'
+                            : type.billing_method === 'hourly'
+                              ? 'Hourly'
+                              : 'Usage'}
                         </div>
                         <div className="w-16 text-center text-sm text-muted-foreground">
                           {type.display_order}

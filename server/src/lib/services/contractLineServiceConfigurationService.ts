@@ -523,6 +523,72 @@ export class ContractLineServiceConfigurationService {
   }
 
   /**
+   * Upserts the usage-specific configuration for a service within a plan.
+   * Ensures the base configuration exists and has type 'Usage'.
+   */
+  async upsertPlanServiceUsageConfiguration(
+    contractLineId: string,
+    serviceId: string,
+    usageConfigData: {
+      unit_rate?: number;
+      unit_of_measure?: string;
+      enable_tiered_pricing?: boolean;
+      minimum_usage?: number | null;
+    }
+  ): Promise<string> {
+    await this.initKnex();
+
+    return await this.knex.transaction(async (trx) => {
+      const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
+      const usageConfigModel = new ContractLineServiceUsageConfig(trx);
+
+      const normalizedUnitRate = Math.max(0, Math.round(usageConfigData.unit_rate ?? 0));
+      let baseConfig = await planServiceConfigModel.getByContractLineIdAndServiceId(contractLineId, serviceId);
+      let configId: string;
+
+      if (!baseConfig) {
+        const newBaseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+          contract_line_id: contractLineId,
+          service_id: serviceId,
+          configuration_type: 'Usage',
+          custom_rate: normalizedUnitRate,
+          quantity: undefined,
+          tenant: this.tenant,
+        };
+        configId = await planServiceConfigModel.create(newBaseConfig);
+      } else {
+        configId = baseConfig.config_id;
+        const updatePayload: Partial<IContractLineServiceConfiguration> = {
+          custom_rate: normalizedUnitRate,
+        };
+        if (baseConfig.configuration_type !== 'Usage') {
+          updatePayload.configuration_type = 'Usage';
+        }
+        await planServiceConfigModel.update(configId, updatePayload);
+      }
+
+      const usagePayload = {
+        unit_of_measure: usageConfigData.unit_of_measure ?? 'unit',
+        enable_tiered_pricing: usageConfigData.enable_tiered_pricing ?? false,
+        minimum_usage: usageConfigData.minimum_usage ?? 0,
+        base_rate: normalizedUnitRate,
+      };
+
+      const existingUsage = await usageConfigModel.getByConfigId(configId);
+      if (existingUsage) {
+        await usageConfigModel.update(configId, usagePayload);
+      } else {
+        await usageConfigModel.create({
+          config_id: configId,
+          ...usagePayload,
+        });
+      }
+
+      return configId;
+    });
+  }
+
+  /**
    * Upserts (replaces) all user type rates for a specific hourly configuration.
    * Deletes existing rates and inserts the provided ones within a transaction.
    */

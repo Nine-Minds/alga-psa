@@ -1,6 +1,0 @@
-{
-  "name": "@product/extension-storage-api",
-  "version": "0.1.0",
-  "description": "Extension storage API wrappers with OSS and EE variants",
-  "type": "module"
-}

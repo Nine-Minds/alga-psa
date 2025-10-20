@@ -118,12 +118,6 @@
       ],
       "@product/billing/*": [
         "../packages/product-billing/*"
-      ],
-      "@product/extension-storage-api/records": [
-        "../packages/product-extension-storage-api/records"
-      ],
-      "@product/extension-storage-api/record": [
-        "../packages/product-extension-storage-api/record"
       ]
     }
   },

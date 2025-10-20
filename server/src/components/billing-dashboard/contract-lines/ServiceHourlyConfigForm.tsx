@@ -58,6 +58,7 @@ export function ServiceHourlyConfigForm({
   // State for adding a new user type rate within this form
   const [newUserType, setNewUserType] = useState('');
   const [newUserTypeRateValue, setNewUserTypeRateValue] = useState<number | undefined>(undefined);
+  const [newUserTypeRateInput, setNewUserTypeRateInput] = useState<string>('');
   const [userTypeError, setUserTypeError] = useState<string | null>(null);
 
   // Sync local display state with props
@@ -144,6 +145,7 @@ export function ServiceHourlyConfigForm({
     // Reset form
     setNewUserType('');
     setNewUserTypeRateValue(undefined);
+    setNewUserTypeRateInput('');
     setUserTypeError(null);
   };
 
@@ -154,10 +156,23 @@ export function ServiceHourlyConfigForm({
   };
 
    const handleNewRateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value === '' ? undefined : Number(e.target.value);
-      if (value === undefined || (!isNaN(value) && value >= 0)) { // Allow 0 rate
-          setNewUserTypeRateValue(value);
-          if (userTypeError) setUserTypeError(null); // Clear error on input change
+      const value = e.target.value.replace(/[^0-9.]/g, '');
+      const decimalCount = (value.match(/\./g) || []).length;
+      if (decimalCount <= 1) {
+        setNewUserTypeRateInput(value);
+        if (userTypeError) setUserTypeError(null); // Clear error on input change
+      }
+    };
+
+    const handleNewRateInputBlur = () => {
+      if (newUserTypeRateInput.trim() === '' || newUserTypeRateInput === '.') {
+        setNewUserTypeRateInput('');
+        setNewUserTypeRateValue(undefined);
+      } else {
+        const dollars = parseFloat(newUserTypeRateInput) || 0;
+        const cents = Math.round(dollars * 100);
+        setNewUserTypeRateValue(cents);
+        setNewUserTypeRateInput((cents / 100).toFixed(2));
       }
     };
 
@@ -198,18 +213,20 @@ export function ServiceHourlyConfigForm({
         </div>
 
         {/* This section was incorrectly placed here by the previous diff, removing it */}
-        <Input
-          id="hourly-rate"
-          type="number"
-          value={displayHourlyRate} // Use local state for display formatting
-          onChange={handleHourlyRateChange} // Update display state on change
-          onBlur={handleHourlyRateBlur} // Process value and update parent on blur
-          placeholder="e.g., 100.00"
-          disabled={disabled}
-          min={0}
-          step={0.01}
-          className={validationErrors.hourly_rate ? 'border-red-500' : ''}
-        />
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+          <Input
+            id="hourly-rate"
+            type="text"
+            inputMode="decimal"
+            value={displayHourlyRate} // Use local state for display formatting
+            onChange={handleHourlyRateChange} // Update display state on change
+            onBlur={handleHourlyRateBlur} // Process value and update parent on blur
+            placeholder="0.00"
+            disabled={disabled}
+            className={`pl-7 ${validationErrors.hourly_rate ? 'border-red-500' : ''}`}
+          />
+        </div>
         {validationErrors.hourly_rate && (
           <p className="text-sm text-red-500 mt-1">{validationErrors.hourly_rate}</p>
         )}
@@ -300,17 +317,20 @@ export function ServiceHourlyConfigForm({
                    </div>
                    <div className="mt-2"> {/* Removed flex-1 and min-w, added margin */}
                        <Label htmlFor={`new-user-type-rate-${configId}`} className="sr-only">Rate ($/hr)</Label>
-                       <Input
-                           id={`new-user-type-rate-${configId}`}
-                           type="number"
-                           value={newUserTypeRateValue?.toString() || ''}
-                           onChange={handleNewRateInputChange}
-                           placeholder="Rate"
-                           disabled={disabled}
-                           min={0}
-                           step={0.01}
-                           className={`mt-1 ${userTypeError ? 'border-red-500' : ''}`}
-                       />
+                       <div className="relative">
+                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                         <Input
+                             id={`new-user-type-rate-${configId}`}
+                             type="text"
+                             inputMode="decimal"
+                             value={newUserTypeRateInput}
+                             onChange={handleNewRateInputChange}
+                             onBlur={handleNewRateInputBlur}
+                             placeholder="0.00"
+                             disabled={disabled}
+                             className={`pl-7 mt-1 ${userTypeError ? 'border-red-500' : ''}`}
+                         />
+                       </div>
                    </div>
                    <Button
                        id={`add-user-type-rate-button-${configId}`}

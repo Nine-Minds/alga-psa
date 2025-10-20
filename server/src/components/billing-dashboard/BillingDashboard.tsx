@@ -4,11 +4,10 @@ import React, { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IService } from 'server/src/interfaces';
+import { AlertCircle } from 'lucide-react';
 
 // Import all the components
 import ContractLinesOverview from './contract-lines/ContractLinesOverview';
-import Overview from './Overview';
-import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
@@ -18,12 +17,13 @@ import UsageTracking from './UsageTracking';
 import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
 import Contracts from './contracts/Contracts';
-import ContractDetail from './contracts/ContractDetail';
+import ContractDetailSwitcher from './contracts/ContractDetailSwitcher';
 import { ContractLineTypeRouter } from './contract-lines/ContractLineTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
+import ServiceCatalogManager from 'server/src/components/settings/billing/ServiceCatalogManager';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -74,6 +74,21 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Billing Dashboard</h1>
+
+      {/* Beta Warning Banner */}
+      <div className="bg-blue-50 border-l-4 border-blue-500 px-4 py-3 rounded mb-4" role="alert">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-blue-800">Beta Release</p>
+            <p className="text-sm text-blue-700">
+              Our revamped billing system is currently in beta. You may encounter issues or incomplete features.
+              We appreciate your patience as we continue to improve the experience.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
           <strong className="font-bold">Error: </strong>
@@ -99,7 +114,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="contracts">
           {searchParams?.has('contractId') ? (
-            <ContractDetail />
+            <ContractDetailSwitcher />
           ) : (
             <Contracts />
           )}
@@ -146,6 +161,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="usage-tracking">
           <UsageTracking initialServices={initialServices} />
+        </Tabs.Content>
+
+        <Tabs.Content value="service-catalog">
+          <ServiceCatalogManager />
         </Tabs.Content>
       </Tabs.Root>
     </div>

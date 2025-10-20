@@ -71,6 +71,37 @@
   }
 }
 
+@layer components {
+  .spinner {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-style: solid;
+    border-radius: 9999px;
+    border-color: rgba(var(--color-primary-500));
+    border-top-color: rgb(var(--color-secondary-500));
+    animation: spinner-spin 0.9s linear infinite;
+    background-color: transparent;
+  }
+
+  .spinner-inner {
+    position: absolute;
+    inset: 28%;
+    border-radius: inherit;
+    background: rgba(var(--color-primary-500), 0.2);
+  }
+}
+
+@keyframes spinner-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 html,
 body,
 #__next {

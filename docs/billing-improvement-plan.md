@@ -6,10 +6,10 @@ Completed rename: Plan Bundles → Contracts and Billing Plans → Contract Line
 ## Current State - Database & Code
 
 ### Existing Tables (Front End Uses)
-- `contracts` - Contract headers
-- `contract_line_mappings` - Links contract lines to contracts (has `custom_rate` field)
-- `company_contracts` - Contract assignments to companies (has start_date, end_date)
-- `company_contract_lines` - Contract line assignments to companies (via `company_contract_id`)
+- `contract_templates` - Reusable contract blueprints managed by template authoring flows
+- `contracts` - Client-specific contract instances (one row per agreement)
+- `client_contracts` - Assignment table that links contracts to clients and stores lifecycle metadata (start/end dates, PO info)
+- `contract_line_mappings` - Links contract lines to contract instances (includes `custom_rate`)
 - `contract_lines` - Contract line definitions
 
 ### Existing Code Patterns to Reuse:

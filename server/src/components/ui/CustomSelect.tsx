@@ -55,12 +55,24 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   const generatedId = useId();
   const selectId = id || generatedId;
   
+  // Ensure option values are unique to avoid duplicate keys in Radix lists
+  const uniqueOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return options.filter((option) => {
+      if (seen.has(option.value)) {
+        return false;
+      }
+      seen.add(option.value);
+      return true;
+    });
+  }, [options]);
+
   // Register with UI reflection system if id is provided
   // Memoize the mapped options to prevent recreating on every render
-  const mappedOptions = useMemo(() => options.map((opt): { value: string; label: string } => ({
+  const mappedOptions = useMemo(() => uniqueOptions.map((opt): { value: string; label: string } => ({
     value: opt.value,
     label: typeof opt.label === 'string' ? opt.label : 'Complex Label'
-  })), [options]);
+  })), [uniqueOptions]);
   
   
   // Use provided data-automation-id or register normally
@@ -93,7 +105,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
 
   // Ensure value is never undefined/null/empty string for Radix
   const safeValue = value || 'placeholder';
-  const selectedOption = options.find(option => option.value === value);
+  const selectedOption = uniqueOptions.find(option => option.value === value);
 
   return (
     <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType}>
@@ -165,7 +177,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             
             <RadixSelect.Viewport className="p-1">
               {/* Add a placeholder option if needed */}
-              {!options.some(opt => opt.value === 'placeholder') && (
+              {!uniqueOptions.some(opt => opt.value === 'placeholder') && (
                 <RadixSelect.Item
                   value="placeholder"
                   className={`
@@ -195,7 +207,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
                   <RadixSelect.ItemText>Clear Selection</RadixSelect.ItemText>
                 </RadixSelect.Item>
               )}
-              {options.map((option): JSX.Element => (
+              {uniqueOptions.map((option): JSX.Element => (
                 <RadixSelect.Item
                   key={option.value}
                   value={option.value}
