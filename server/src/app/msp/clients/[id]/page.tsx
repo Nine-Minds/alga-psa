@@ -30,6 +30,7 @@ const ClientPage = async ({ params }: { params: { id: string } }) => {
           client={client}
           documents={documents}
           contacts={contacts}
+          isInDrawer={false}
         />
       </div>
     );
