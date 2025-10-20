@@ -132,16 +132,21 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Hourly Services</h3>
         <p className="text-sm text-gray-600">
-          Configure time-and-materials services. You can recommend hourly rates, rounding rules,
-          and buckets to guide service delivery teams.
+          Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="minimum-billable-time" className="flex items-center gap-2 text-sm">
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-6">
+        <p className="text-sm text-amber-800">
+          <strong>What are Hourly Services?</strong> These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="minimum-billable-time" className="flex items-center gap-2 font-semibold">
             <Clock className="h-4 w-4" />
-            Minimum Billable Minutes
+            Minimum Billable Time (minutes)
           </Label>
           <Input
             id="minimum-billable-time"
@@ -153,14 +158,14 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 minimum_billable_time: Math.max(0, Number(event.target.value) || 0),
               })
             }
-            placeholder="0"
+            placeholder="15"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Minimum minutes billed per ticket or time entry.
+          <p className="text-xs text-gray-500">
+            e.g., 15 minutes - any time entry less than this will be rounded up
           </p>
         </div>
-        <div>
-          <Label htmlFor="round-up-to" className="flex items-center gap-2 text-sm">
+        <div className="space-y-2">
+          <Label htmlFor="round-up-to" className="flex items-center gap-2 font-semibold">
             <Clock className="h-4 w-4" />
             Round Up To Nearest (minutes)
           </Label>
@@ -174,16 +179,19 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 round_up_to_nearest: Math.max(0, Number(event.target.value) || 0),
               })
             }
-            placeholder="0"
+            placeholder="15"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Ensures billing increments align with the chosen granularity.
+          <p className="text-xs text-gray-500">
+            e.g., 15 minutes - time entries will be rounded up to the nearest interval
           </p>
         </div>
       </div>
 
       <div className="space-y-4">
-        <Label className="text-sm">Services</Label>
+        <Label className="flex items-center gap-2 font-semibold">
+          <Clock className="h-4 w-4" />
+          Hourly Services
+        </Label>
 
         {data.hourly_services.map((service, index) => (
           <div

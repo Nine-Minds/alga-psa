@@ -116,8 +116,13 @@ export function TemplateUsageBasedServicesStep({
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Usage-Based Services</h3>
           <p className="text-sm text-gray-600">
-            Capture meter-based services and document the recommended unit of measure.
-            Guidance here helps teams understand how to price and monitor consumption.
+            Configure services that are billed based on usage or consumption. Perfect for metered services like data transfer, API calls, or storage.
+          </p>
+        </div>
+
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-6">
+          <p className="text-sm text-amber-800">
+            <strong>What are Usage-Based Services?</strong> These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.
           </p>
         </div>
 
