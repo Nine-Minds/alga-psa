@@ -211,7 +211,6 @@
     "eslint": "^9.18.0",
     "eslint-plugin-react": "^7.37.3",
     "globals": "^15.14.0",
-    "ngrok": "^4.3.3",
     "nodemon": "^3.1.10",
     "null-loader": "^4.0.1",
     "ts-command-line-args": "^2.5.1",
