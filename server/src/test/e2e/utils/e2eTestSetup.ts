@@ -31,7 +31,24 @@ export async function setupE2ETestEnvironment(options: {
   clientName?: string;
   userName?: string;
 } = {}): Promise<E2ETestEnvironment> {
+  const resolvedDbHost = process.env.E2E_DB_HOST
+    || process.env.PGBOUNCER_HOST
+    || process.env.DB_HOST
+    || '127.0.0.1';
+  const resolvedDbPort = process.env.E2E_DB_PORT
+    || process.env.PGBOUNCER_PORT
+    || process.env.DB_PORT
+    || (resolvedDbHost === '127.0.0.1' ? '5432' : '6432');
+
+  process.env.DB_HOST = resolvedDbHost;
+  process.env.DB_PORT = resolvedDbPort;
+  process.env.DB_DIRECT_HOST = process.env.E2E_DB_DIRECT_HOST || process.env.DB_DIRECT_HOST || resolvedDbHost;
+  process.env.DB_DIRECT_PORT = process.env.E2E_DB_DIRECT_PORT || process.env.DB_DIRECT_PORT || resolvedDbPort;
+  process.env.DB_NAME_SERVER = process.env.E2E_DB_NAME || process.env.DB_NAME_SERVER || 'server';
+
   const db = await createTestDbConnection();
+
+  await normalizeServiceBillingConstraints(db);
 
   try {
     // Create test environment with tenant, client, address and user
@@ -53,7 +70,6 @@ export async function setupE2ETestEnvironment(options: {
     const apiClient = new ApiTestClient({
       baseUrl: options.baseUrl || process.env.TEST_API_BASE_URL || 'http://127.0.0.1:3000',
       apiKey: apiKeyRecord.api_key,
-      tenantId: tenantId
     });
 
     // Create cleanup function
@@ -212,6 +228,16 @@ export async function setupE2ETestEnvironment(options: {
     await db.destroy();
     throw error;
   }
+}
+
+async function normalizeServiceBillingConstraints(db: Knex): Promise<void> {
+  await db.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS service_types_billing_method_check');
+  await db.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS billing_method_check');
+  await db.raw("ALTER TABLE service_types ADD CONSTRAINT service_types_billing_method_check CHECK (billing_method IN ('fixed','per_unit','hourly','usage'))");
+
+  await db.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS service_catalog_billing_method_check');
+  await db.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS billing_method_check');
+  await db.raw("ALTER TABLE service_catalog ADD CONSTRAINT service_catalog_billing_method_check CHECK (billing_method IN ('fixed','per_unit','hourly','usage'))");
 }
 
 /**

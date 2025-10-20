@@ -10,7 +10,8 @@ import {
   createFixedPlanAssignment,
   addServiceToFixedPlan,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
@@ -112,6 +113,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       taxPercentage: 8.875
     });
     await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+    await ensureClientPlanBundlesTable(context);
   }
 
   beforeAll(async () => {
@@ -291,7 +293,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       // Arrange - Create time-based service and configuration
       const serviceId = await createTestService(context, {
         service_name: 'Hourly Consultation',
-        billing_method: 'per_unit',
+        billing_method: 'usage',
         default_rate: 10000,
         unit_of_measure: 'hour',
         tax_region: 'US-NY'

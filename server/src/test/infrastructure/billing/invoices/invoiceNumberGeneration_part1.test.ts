@@ -12,7 +12,8 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
-  clearServiceTypeCache
+  clearServiceTypeCache,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
@@ -115,6 +116,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       taxPercentage: 8.875
     });
     await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: false });
+    await ensureClientPlanBundlesTable(context);
   }
 
   beforeAll(async () => {

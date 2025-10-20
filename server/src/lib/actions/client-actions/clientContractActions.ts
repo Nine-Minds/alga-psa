@@ -9,6 +9,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/templateClone';
 
 /**
  * Get all active contracts for a client.
@@ -196,6 +197,12 @@ export async function updateClientContract(
     // Remove tenant field if present in updateData to prevent override
     const { tenant: _, ...safeUpdateData } = updateData as any;
     const updatedClientContract = await ClientContract.updateClientContract(clientContractId, safeUpdateData);
+
+    // After updating the client contract, check if the parent contract should be reactivated
+    // This handles the case where an expired contract's end dates are extended
+    const Contract = (await import('server/src/lib/models/contract')).default;
+    await Contract.checkAndReactivateExpiredContract(updatedClientContract.contract_id);
+
     return updatedClientContract;
   } catch (error) {
     console.error(`Error updating client contract ${clientContractId}:`, error);
@@ -295,6 +302,8 @@ export async function applyContractToClient(clientContractId: string): Promise<v
     // Start a transaction to ensure all client contract lines are created
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // For each contract line in the contract, create a client contract line
+      const templateContractId = clientContract.template_contract_id ?? clientContract.contract_id ?? null;
+
       for (const plan of contractLines) {
         // Check if the client already has this plan
         const existingPlan = await trx('client_contract_lines')
@@ -306,6 +315,8 @@ export async function applyContractToClient(clientContractId: string): Promise<v
           })
           .first();
 
+        let targetClientContractLineId: string;
+
         if (existingPlan) {
           // If the contract line exists but isn't linked to this contract, update it
           if (!existingPlan.client_contract_id) {
@@ -315,22 +326,40 @@ export async function applyContractToClient(clientContractId: string): Promise<v
                 tenant 
               })
               .update({ 
-                client_contract_id: clientContractId
+                client_contract_id: clientContractId,
+                template_contract_line_id: plan.contract_line_id,
+                updated_at: trx.fn.now()
               });
           }
+
+          targetClientContractLineId = existingPlan.client_contract_line_id;
         } else {
           // Create a new client contract line
-          await trx('client_contract_lines').insert({
-            client_contract_line_id: trx.raw('gen_random_uuid()'),
-            client_id: clientContract.client_id,
-            contract_line_id: plan.contract_line_id,
-            start_date: clientContract.start_date,
-            end_date: clientContract.end_date,
-            is_active: true,
-            client_contract_id: clientContractId,
-            tenant
-          });
+          const [created] = await trx('client_contract_lines')
+            .insert({
+              client_contract_line_id: trx.raw('gen_random_uuid()'),
+              client_id: clientContract.client_id,
+              contract_line_id: plan.contract_line_id,
+              template_contract_line_id: plan.contract_line_id,
+              start_date: clientContract.start_date,
+              end_date: clientContract.end_date,
+              is_active: true,
+              client_contract_id: clientContractId,
+              tenant
+            })
+            .returning('client_contract_line_id');
+
+          targetClientContractLineId = created.client_contract_line_id;
         }
+
+        await cloneTemplateContractLine(trx, {
+          tenant,
+          templateContractLineId: plan.contract_line_id,
+          clientContractLineId: targetClientContractLineId,
+          templateContractId,
+          overrideRate: existingPlan?.custom_rate ?? null,
+          effectiveDate: clientContract.start_date ?? null
+        });
       }
     });
   } catch (error) {

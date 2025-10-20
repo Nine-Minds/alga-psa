@@ -3,6 +3,8 @@
 - If you need to see any additional files before you are sure you have enough context, ask the user to provide the file to the context before continuing.
 - If you would like to search for the contents to files, offer to use the run command and grep command to search for the contents.
 - Do not proceed to updating files until you have enough context to do so.
+- When working in the billing domain, prefer the renamed terminology (`contract lines`, `contracts`) and alias any remaining helper imports that include `plan`/`bundle` to the new schema names in your edits.
+- Default invoice template selections must flow through the `invoice_template_assignments` table. Do **not** add new usages of `invoice_templates.is_default` or `companies.invoice_template_id`; those fields are legacy-only until they are removed.
 
 
 # Failure Handling Philosophy
@@ -460,8 +462,47 @@ When working with PostgreSQL JSON and JSONB columns in Knex.js, follow these gui
     Example:
     ```sql
       INSERT INTO my_table (id, tenant, ...)
-      VALUES (gen_random_uuid(), 'tenant_value', ...);   
+      VALUES (gen_random_uuid(), 'tenant_value', ...);
     ```
+
+6. **Schema Changes on Distributed Tables**
+    - Standard `ALTER TABLE` commands from the coordinator may fail even when data is valid
+    - Use `run_command_on_shards()` to apply schema changes directly to each shard
+    - After applying to shards, you must also sync the coordinator's catalog metadata
+    - This is especially important for NOT NULL constraints
+
+    Example workflow for adding NOT NULL constraint:
+    ```sql
+    -- Step 1: Verify and update any NULL values on each shard
+    SELECT run_command_on_shards('table_name',
+      'UPDATE %s SET column = ''default_value'' WHERE column IS NULL');
+
+    -- Step 2: Check for remaining NULLs
+    SELECT run_command_on_shards('table_name',
+      'SELECT COUNT(*) FROM %s WHERE column IS NULL');
+
+    -- Step 3: Apply NOT NULL constraint on each shard
+    SELECT run_command_on_shards('table_name',
+      'ALTER TABLE %s ALTER COLUMN column SET NOT NULL');
+
+    -- Step 4: Sync the coordinator's system catalog
+    -- This is CRITICAL - without this, the coordinator still thinks the column is nullable
+    UPDATE pg_attribute
+    SET attnotnull = true
+    WHERE attrelid = 'table_name'::regclass
+      AND attname = 'column';
+
+    -- Step 5: Now standard ALTER TABLE commands work from the coordinator
+    ALTER TABLE table_name
+    ALTER COLUMN column SET NOT NULL,
+    ALTER COLUMN column SET DEFAULT 'default_value';
+    ```
+
+    **Important notes:**
+    - The `%s` placeholder in `run_command_on_shards()` is automatically replaced with each shard table name (e.g., `table_name_111544`)
+    - The `pg_attribute` update in Step 4 is essential to sync coordinator metadata with shard state
+    - Without Step 4, ALTER TABLE from the coordinator will continue to fail with "contains null values"
+    - After completing Steps 3 and 4, standard DDL commands can be used normally
 
 ## Foreign Key Constraints
 

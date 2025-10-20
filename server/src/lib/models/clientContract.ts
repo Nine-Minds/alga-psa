@@ -155,6 +155,7 @@ const ClientContract = {
         client_contract_id: uuidv4(),
         client_id: clientId,
         contract_id: contractId,
+        template_contract_id: null,
         start_date: startDate,
         end_date: endDate,
         is_active: true,
@@ -196,12 +197,25 @@ const ClientContract = {
         updated_at: new Date().toISOString(),
       };
 
-      const effectiveStart = updateData.start_date ?? existing.start_date;
-      const effectiveEnd = updateData.end_date ?? existing.end_date;
+      // Check if trying to change start_date on an active contract
+      if (updateData.start_date !== undefined && updateData.start_date !== existing.start_date) {
+        // Get the contract to check if it's active
+        const contract = await db('contracts')
+          .where({ contract_id: existing.contract_id, tenant })
+          .first();
 
-      if (updateData.start_date || updateData.end_date) {
+        if (contract && contract.is_active) {
+          throw new Error('Start date cannot be changed for active contracts. Set the contract to draft first.');
+        }
+      }
+
+      const effectiveStart = updateData.start_date ?? existing.start_date;
+      const effectiveEnd = updateData.end_date !== undefined ? updateData.end_date : existing.end_date;
+
+      if (updateData.start_date !== undefined || updateData.end_date !== undefined) {
+        // Check for overlapping contracts with the same contract_id (multiple assignments to same contract)
         const overlapping = await db('client_contracts')
-          .where({ client_id: existing.client_id, tenant, is_active: true })
+          .where({ client_id: existing.client_id, contract_id: existing.contract_id, tenant, is_active: true })
           .whereNot({ client_contract_id: clientContractId })
           .where(function overlap() {
             this.where(function overlapsExistingEnd() {

@@ -7,12 +7,13 @@ import { IClientContractLine } from '../../../interfaces/billing.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '../../utils/dateTimeUtils';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { cloneTemplateContractLine } from '../../billing/utils/templateClone';
 
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
-  // First, get the client_id and contract_line_id associated with the clientContractLineId
+  // First, get the client_contract_id associated with the clientContractLineId
   const planInfo = await db('client_contract_lines')
-    .select('client_id', 'contract_line_id')
+    .select('client_id', 'contract_line_id', 'client_contract_id')
     .where({ client_contract_line_id: clientContractLineId, tenant: tenant })
     .first();
 
@@ -21,69 +22,26 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
     return null; // No contract line assignment found
   }
 
-  const { client_id, contract_line_id } = planInfo;
+  const { client_id, contract_line_id, client_contract_id } = planInfo;
 
-  // We need to check two types of invoices:
-  // 1. Invoices with items linked to this plan through contract_line_services (traditional path)
-  // 2. Invoices with items linked to this plan through invoice_item_details and contract_line_service_configuration (fixed fee path)
-
-  // Query 1: Check for invoices linked through contract_line_services (traditional path)
-  const traditionalPathQuery = db('invoices as i')
+  // Check for invoices with items linked to this specific client_contract via client_contract_id
+  // This ensures we only check invoices generated from THIS specific contract assignment
+  const latestInvoice = await db('invoices as i')
     .join('invoice_items as ii', function(this: Knex.JoinClause) {
       this.on('i.invoice_id', '=', 'ii.invoice_id')
           .andOn('i.tenant', '=', 'ii.tenant');
     })
-    .join('contract_line_services as ps', function(this: Knex.JoinClause) {
-      this.on('ii.service_id', '=', 'ps.service_id')
-          .andOn('ii.tenant', '=', 'ps.tenant');
+    .join('client_contracts as cc', function(this: Knex.JoinClause) {
+      this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
+          .andOn('ii.tenant', '=', 'cc.tenant');
     })
     .where({
-      'i.client_id': client_id,
-      'ps.contract_line_id': contract_line_id,
-      'i.tenant': tenant
+      'cc.client_contract_id': client_contract_id,
+      'cc.tenant': tenant
     })
     .orderBy('i.invoice_date', 'desc')
     .select('i.billing_period_end', 'i.invoice_date')
     .first();
-
-  // Query 2: Check for invoices linked through invoice_item_details and contract_line_service_configuration (fixed fee path)
-  const fixedFeePathQuery = db('invoices as i')
-    .join('invoice_items as ii', function(this: Knex.JoinClause) {
-      this.on('i.invoice_id', '=', 'ii.invoice_id')
-          .andOn('i.tenant', '=', 'ii.tenant');
-    })
-    .join('invoice_item_details as iid', function(this: Knex.JoinClause) {
-      this.on('ii.item_id', '=', 'iid.item_id')
-          .andOn('ii.tenant', '=', 'iid.tenant');
-    })
-    .join('contract_line_service_configuration as psc', function(this: Knex.JoinClause) {
-      this.on('iid.config_id', '=', 'psc.config_id')
-          .andOn('iid.tenant', '=', 'psc.tenant');
-    })
-    .where({
-      'i.client_id': client_id,
-      'psc.contract_line_id': contract_line_id,
-      'i.tenant': tenant
-    })
-    .orderBy('i.invoice_date', 'desc')
-    .select('i.billing_period_end', 'i.invoice_date')
-    .first();
-
-  // Execute both queries in parallel
-  const [traditionalPathInvoice, fixedFeePathInvoice] = await Promise.all([
-    traditionalPathQuery,
-    fixedFeePathQuery
-  ]);
-
-  // Determine which invoice is more recent (if both exist)
-  let latestInvoice: any = null;
-  if (traditionalPathInvoice && fixedFeePathInvoice) {
-    const traditionalDate = new Date(traditionalPathInvoice.invoice_date);
-    const fixedFeeDate = new Date(fixedFeePathInvoice.invoice_date);
-    latestInvoice = traditionalDate >= fixedFeeDate ? traditionalPathInvoice : fixedFeePathInvoice;
-  } else {
-    latestInvoice = traditionalPathInvoice || fixedFeePathInvoice;
-  }
 
   // If we found an invoice, determine the appropriate date to return
   if (latestInvoice) {
@@ -195,8 +153,16 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
         throw new Error('A contract line with the same details already exists for this client');
       }
 
+      const templateContract = newBilling.client_contract_id
+        ? await trx('client_contracts')
+            .where({ tenant, client_contract_id: newBilling.client_contract_id })
+            .first('template_contract_id', 'contract_id')
+        : null;
+
+      const templateContractId = templateContract?.template_contract_id ?? templateContract?.contract_id ?? null;
+
       // Only include service_category in insert if it's provided
-      const insertData = {
+      const insertData: Record<string, unknown> = {
         ...newBilling,
         tenant,
         // Convert string date to Date object if it's a string
@@ -209,7 +175,22 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
         delete insertData.service_category;
       }
 
-      return await trx('client_contract_lines').insert(insertData);
+      insertData.template_contract_line_id = newBilling.contract_line_id;
+
+      const [created] = await trx('client_contract_lines')
+        .insert(insertData)
+        .returning('client_contract_line_id');
+
+      await cloneTemplateContractLine(trx, {
+        tenant,
+        templateContractLineId: newBilling.contract_line_id,
+        clientContractLineId: created.client_contract_line_id,
+        templateContractId,
+        overrideRate: newBilling.custom_rate ?? null,
+        effectiveDate: insertData.start_date instanceof Date ? insertData.start_date.toISOString() : null
+      });
+
+      return created;
     });
   } catch (error: any) {
     console.error('Error adding client contract line:', error);

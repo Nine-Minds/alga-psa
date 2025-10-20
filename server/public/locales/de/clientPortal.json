@@ -7,6 +7,7 @@
     "assets": "Assets",
     "clientSettings": "Unternehmenseinstellungen",
     "profile": "Profil",
+    "account": "Konto",
     "signOut": "Abmelden",
     "clientPortal": "Kundenportal",
     "portal": "Portal"
@@ -201,6 +202,7 @@
     "failedToLoad": "Rechnungen konnten nicht geladen werden. Bitte versuche es erneut.",
     "invoices": "Rechnungen",
     "payments": "Zahlungen",
+    "contractLines": "Servicevertragslinien",
     "plans": "Servicepläne",
     "usage": "Nutzungsmetriken",
     "hoursByService": "Stunden nach Service",
@@ -461,6 +463,7 @@
       "website": "Website",
       "industry": "Branche",
       "companySize": "Unternehmensgröße",
+      "company_size": "Unternehmensgröße",
       "annualRevenue": "Jahresumsatz",
       "size": "Unternehmensgröße",
       "taxId": "Steuer-ID",
@@ -520,6 +523,21 @@
     }
   },
   "account": {
+    "title": "Konto",
+    "licenseManagement": {
+      "title": "Konto",
+      "subtitle": "Die Lizenzverwaltung ist im MSP-Portal verfügbar",
+      "howToPurchaseTitle": "So kaufst du zusätzliche Lizenzen:",
+      "step1": "Melde dich im MSP-Portal an (wenn du Administratorzugriff hast)",
+      "step2": "Navigiere zu Einstellungen → Kontoverwaltung",
+      "step3": "Klicke auf \"Lizenzen hinzufügen\", um weitere Lizenzen zu kaufen",
+      "step4": "Schließe den Checkout-Prozess ab",
+      "needHelpTitle": "Brauchst du Hilfe?",
+      "needHelpDescription": "Nur Benutzer mit Berechtigungen für die Kontoverwaltung können Lizenzen kaufen. Wenn du keinen Zugriff hast, wende dich bitte an deine AlgaPSA-Administratorin oder deinen Administrator.",
+      "backToDashboard": "Zurück zum Dashboard",
+      "goToMSPPortal": "Zum MSP-Portal",
+      "signingOut": "Abmelden..."
+    },
     "services": {
       "loadError": "Dienste konnten nicht geladen werden",
       "loadContractLinesError": "Servicepläne konnten nicht geladen werden",
@@ -606,8 +624,7 @@
         "status": "Status",
         "empty": "Keine Abrechnungshistorie verfügbar"
       }
-    },
-    "title": "Konto"
+    }
   },
   "documents": {
     "title": "Dokumente",

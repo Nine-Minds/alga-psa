@@ -48,7 +48,7 @@
  - [ ] server/src/app/auth/signin/page.tsx
  - [ ] server/src/app/auth/verify/page.tsx
  - [ ] server/src/app/auth/verify_email/page.tsx
- - [ ] server/src/app/client-portal/company-settings/page.tsx
+ - [ ] server/src/app/client-portal/client-settings/page.tsx
  - [ ] server/src/app/client-portal/dashboard/page.tsx
  - [ ] server/src/app/client-portal/layout.tsx
  - [ ] server/src/app/client-portal/profile/page.tsx

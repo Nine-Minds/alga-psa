@@ -481,12 +481,13 @@ export async function deleteContactAvatar(
 
 /**
  * Check client portal permissions for navigation
- * Returns permissions for billing, user management, and client settings
+ * Returns permissions for billing, user management, client settings, and account
  */
 export async function checkClientPortalPermissions(): Promise<{
   hasBillingAccess: boolean;
   hasUserManagementAccess: boolean;
   hasClientSettingsAccess: boolean;
+  hasAccountAccess: boolean;
 }> {
   try {
     const currentUser = await getCurrentUser();
@@ -494,28 +495,42 @@ export async function checkClientPortalPermissions(): Promise<{
       return {
         hasBillingAccess: false,
         hasUserManagementAccess: false,
-        hasClientSettingsAccess: false
+        hasClientSettingsAccess: false,
+        hasAccountAccess: false
       };
     }
 
+    const { knex } = await createTenantKnex();
+
+    // Check if this is a hosted tenant (has Stripe customer record)
+    const isHosted = await knex('stripe_customers')
+      .where({ tenant: currentUser.tenant })
+      .first()
+      .then(result => !!result)
+      .catch(() => false);
+
     // Check permissions using the hasPermission function from rbac
-    const [hasBilling, hasUser, hasClient] = await Promise.all([
+    const [hasBilling, hasUser, hasClient, hasSettings] = await Promise.all([
       hasPermission(currentUser, 'billing', 'read'),
       hasPermission(currentUser, 'user', 'read'),
-      hasPermission(currentUser, 'client', 'read')
+      hasPermission(currentUser, 'client', 'read'),
+      hasPermission(currentUser, 'settings', 'read')
     ]);
 
     return {
       hasBillingAccess: hasBilling,
       hasUserManagementAccess: hasUser,
-      hasClientSettingsAccess: hasClient
+      hasClientSettingsAccess: hasClient,
+      // Account access requires both hosted tenant and settings permission
+      hasAccountAccess: isHosted && hasSettings
     };
   } catch (error) {
     console.error('Error checking client portal permissions:', error);
     return {
       hasBillingAccess: false,
       hasUserManagementAccess: false,
-      hasClientSettingsAccess: false
+      hasClientSettingsAccess: false,
+      hasAccountAccess: false
     };
   }
 }

@@ -445,7 +445,7 @@ const fetchContacts = async (): Promise<void> => {
       <CardContent>
         {/* License Usage Banner for MSP Portal */}
         {portalType === 'msp' && licenseUsage && (
-          <div 
+          <div
             id="msp-licence-usage-banner"
             className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -687,7 +687,7 @@ const fetchContacts = async (): Promise<void> => {
                   </div>
                 </div>
               </div>
-<div className="flex gap-2 justify-end">
+              <div className="flex gap-2 justify-end">
                 <Button
                   id={`submit-new-${portalType}-user-btn`}
                   variant={
@@ -697,10 +697,7 @@ const fetchContacts = async (): Promise<void> => {
                   }
                   onClick={
                     portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
-                      ? () => {
-                          // Placeholder for adding licenses
-                          toast('Add license functionality coming soon', { icon: 'ℹ️', duration: 3000 });
-                        }
+                      ? () => window.location.href = '/msp/licenses/purchase'
                       : handleCreateUser
                   }
                   disabled={portalType === 'client' && !newUser.password && !!contactValidationError}

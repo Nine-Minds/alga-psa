@@ -6,15 +6,18 @@ import { expect, Page, test } from '@playwright/test';
 import type { Knex } from 'knex';
 import { knex as createKnex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { encode } from '@auth/core/jwt';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
-import { createTestTenant, type TenantTestData } from '../../lib/testing/tenant-test-factory';
+import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
+import {
+  applyPlaywrightAuthEnvDefaults,
+  createTenantAndLogin,
+  resolvePlaywrightBaseUrl,
+} from './helpers/playwrightAuthSessionHelper';
 
-// Ensure hashing utilities can retrieve an encryption key
-process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
+applyPlaywrightAuthEnvDefaults();
 
 const TEST_CONFIG = {
-  baseUrl: process.env.EE_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000',
+  baseUrl: resolvePlaywrightBaseUrl(),
 };
 
 type UIComponentNode = {
@@ -67,59 +70,6 @@ async function findComponent(
   throw new Error('UI component not found');
 }
 
-async function setupAuthenticatedSession(page: Page, tenantData: TenantTestData): Promise<void> {
-  const secret = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
-  const cookieName = process.env.NODE_ENV === 'production'
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token';
-
-  const sessionUser = {
-    id: tenantData.adminUser.userId,
-    email: tenantData.adminUser.email.toLowerCase(),
-    name: `${tenantData.adminUser.firstName} ${tenantData.adminUser.lastName}`.trim() || tenantData.adminUser.email,
-    username: tenantData.adminUser.email.toLowerCase(),
-    proToken: 'playwright-mock-token',
-    tenant: tenantData.tenant.tenantId,
-    user_type: 'internal',
-  };
-
-  const token = await encode({
-    token: { ...sessionUser, sub: sessionUser.id },
-    secret,
-    maxAge: 60 * 60,
-    salt: cookieName,
-  });
-
-  const expiresAtSeconds = Math.floor(Date.now() / 1000) + 60 * 60;
-  await page.context().addCookies([
-    {
-      name: cookieName,
-      value: token,
-      url: TEST_CONFIG.baseUrl,
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-      expires: expiresAtSeconds,
-    },
-  ]);
-}
-
-async function markOnboardingComplete(db: Knex, tenantId: string, now: Date): Promise<void> {
-  await db('tenant_settings')
-    .insert({
-      tenant: tenantId,
-      onboarding_completed: true,
-      onboarding_completed_at: now,
-      onboarding_skipped: false,
-      onboarding_data: null,
-      settings: {},
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict('tenant')
-    .merge({ onboarding_completed: true, onboarding_completed_at: now, onboarding_skipped: false, updated_at: now });
-}
-
 async function seedHourlyServiceForTenant(
   db: Knex,
   tenantId: string,
@@ -134,7 +84,7 @@ async function seedHourlyServiceForTenant(
     id: serviceTypeId,
     tenant: tenantId,
     name: `Hourly Type ${serviceName}`,
-    billing_method: 'per_unit',
+    billing_method: 'hourly',
     is_active: true,
     description: 'Playwright hourly service type',
     order_number: 2,
@@ -147,7 +97,7 @@ async function seedHourlyServiceForTenant(
     service_name: serviceName,
     description: 'Playwright hourly service',
     custom_service_type_id: serviceTypeId,
-    billing_method: 'per_unit',
+    billing_method: 'hourly',
     default_rate: defaultRateCents,
     unit_of_measure: 'hour',
     category_id: null,
@@ -155,36 +105,6 @@ async function seedHourlyServiceForTenant(
   });
 
   return { serviceTypeId, serviceId };
-}
-
-async function ensureRoleHasPermission(
-  db: Knex,
-  tenantId: string,
-  roleName: string,
-  permissionTuples: Array<{ resource: string; action: string }>
-): Promise<void> {
-  const role = await db('roles').where({ tenant: tenantId, role_name: roleName }).first();
-  if (!role) throw new Error(`Role ${roleName} not found for tenant ${tenantId}`);
-
-  for (const { resource, action } of permissionTuples) {
-    let permission = await db('permissions').where({ tenant: tenantId, resource, action }).first();
-    if (!permission) {
-      permission = {
-        permission_id: uuidv4(),
-        tenant: tenantId,
-        resource,
-        action,
-        created_at: new Date(),
-      };
-      await db('permissions').insert(permission);
-    }
-    const link = await db('role_permissions')
-      .where({ tenant: tenantId, role_id: role.role_id, permission_id: permission.permission_id })
-      .first();
-    if (!link) {
-      await db('role_permissions').insert({ tenant: tenantId, role_id: role.role_id, permission_id: permission.permission_id });
-    }
-  }
 }
 
 test('Hourly Contract Line Happy Path', async ({ page }) => {
@@ -199,20 +119,24 @@ test('Hourly Contract Line Happy Path', async ({ page }) => {
   const roundUpMinutes = 15;
 
   try {
-    tenantData = await createTestTenant(db, {
-      companyName: `Hourly Contract Client ${uuidv4().slice(0, 6)}`,
+    tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: {
+        companyName: `Hourly Contract Client ${uuidv4().slice(0, 6)}`,
+      },
+      completeOnboarding: { completedAt: now },
+      permissions: [
+        {
+          roleName: 'Admin',
+          permissions: [
+            { resource: 'client', action: 'read' },
+            { resource: 'billing', action: 'create' },
+            { resource: 'billing', action: 'update' },
+          ],
+        },
+      ],
     });
     const tenantId = tenantData.tenant.tenantId;
-    await markOnboardingComplete(db, tenantId, now);
     await seedHourlyServiceForTenant(db, tenantId, serviceName, now, hourlyRateCents);
-    await ensureRoleHasPermission(db, tenantId, 'Admin', [
-      { resource: 'client', action: 'read' },
-      { resource: 'billing', action: 'create' },
-      { resource: 'billing', action: 'update' },
-    ]);
-
-    // Auth
-    await setupAuthenticatedSession(page, tenantData);
 
     // Go to Contracts tab
     await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts`, { waitUntil: 'domcontentloaded', timeout: 60_000 });

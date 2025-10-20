@@ -39,7 +39,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const [error, setError] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
   // Add state for all service types (standard + tenant-specific)
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
   const tenant = useTenant();
 
   useEffect(() => {

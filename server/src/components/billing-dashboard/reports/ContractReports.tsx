@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from 'server/src/components/ui/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -14,162 +14,60 @@ import {
   Building2,
   AlertCircle
 } from 'lucide-react';
-
-// Mock data interfaces
-interface ContractRevenue {
-  contract_name: string;
-  client_name: string;
-  monthly_recurring: number;
-  total_billed_ytd: number;
-  status: 'active' | 'upcoming' | 'expired';
-}
-
-interface ContractExpiration {
-  contract_name: string;
-  client_name: string;
-  end_date: string;
-  days_until_expiration: number;
-  monthly_value: number;
-  auto_renew: boolean;
-}
-
-interface BucketUsage {
-  contract_name: string;
-  client_name: string;
-  total_hours: number;
-  used_hours: number;
-  remaining_hours: number;
-  utilization_percentage: number;
-  overage_hours: number;
-}
-
-interface Profitability {
-  contract_name: string;
-  client_name: string;
-  revenue: number;
-  cost: number;
-  profit: number;
-  margin_percentage: number;
-}
-
-// Mock data generators
-const generateMockRevenueData = (): ContractRevenue[] => [
-  {
-    contract_name: 'Standard MSP Services',
-    client_name: 'Acme Corp',
-    monthly_recurring: 500000, // $5,000.00
-    total_billed_ytd: 4500000, // $45,000.00
-    status: 'active'
-  },
-  {
-    contract_name: 'Premium Support Package',
-    client_name: 'TechStart Inc',
-    monthly_recurring: 750000,
-    total_billed_ytd: 6750000,
-    status: 'active'
-  },
-  {
-    contract_name: 'Enterprise Agreement',
-    client_name: 'Global Industries',
-    monthly_recurring: 1200000,
-    total_billed_ytd: 10800000,
-    status: 'active'
-  },
-  {
-    contract_name: 'Basic Monitoring',
-    client_name: 'Local Business LLC',
-    monthly_recurring: 250000,
-    total_billed_ytd: 2250000,
-    status: 'active'
-  }
-];
-
-const generateMockExpirationData = (): ContractExpiration[] => [
-  {
-    contract_name: 'Standard MSP Services',
-    client_name: 'Acme Corp',
-    end_date: '2025-11-15',
-    days_until_expiration: 46,
-    monthly_value: 500000,
-    auto_renew: true
-  },
-  {
-    contract_name: 'Premium Support Package',
-    client_name: 'TechStart Inc',
-    end_date: '2025-10-31',
-    days_until_expiration: 31,
-    monthly_value: 750000,
-    auto_renew: false
-  },
-  {
-    contract_name: 'Project-Based Services',
-    client_name: 'StartUp Co',
-    end_date: '2025-10-15',
-    days_until_expiration: 15,
-    monthly_value: 300000,
-    auto_renew: false
-  }
-];
-
-const generateMockBucketUsageData = (): BucketUsage[] => [
-  {
-    contract_name: 'Standard MSP Services',
-    client_name: 'Acme Corp',
-    total_hours: 40,
-    used_hours: 32,
-    remaining_hours: 8,
-    utilization_percentage: 80,
-    overage_hours: 0
-  },
-  {
-    contract_name: 'Premium Support Package',
-    client_name: 'TechStart Inc',
-    total_hours: 80,
-    used_hours: 95,
-    remaining_hours: 0,
-    utilization_percentage: 119,
-    overage_hours: 15
-  },
-  {
-    contract_name: 'Enterprise Agreement',
-    client_name: 'Global Industries',
-    total_hours: 160,
-    used_hours: 142,
-    remaining_hours: 18,
-    utilization_percentage: 89,
-    overage_hours: 0
-  }
-];
-
-const generateMockProfitabilityData = (): Profitability[] => [
-  {
-    contract_name: 'Standard MSP Services',
-    client_name: 'Acme Corp',
-    revenue: 4500000,
-    cost: 2700000,
-    profit: 1800000,
-    margin_percentage: 40
-  },
-  {
-    contract_name: 'Premium Support Package',
-    client_name: 'TechStart Inc',
-    revenue: 6750000,
-    cost: 4050000,
-    profit: 2700000,
-    margin_percentage: 40
-  },
-  {
-    contract_name: 'Enterprise Agreement',
-    client_name: 'Global Industries',
-    revenue: 10800000,
-    cost: 5400000,
-    profit: 5400000,
-    margin_percentage: 50
-  }
-];
+import {
+  getContractRevenueReport,
+  getContractExpirationReport,
+  getBucketUsageReport,
+  getProfitabilityReport,
+  getContractReportSummary,
+  ContractRevenue,
+  ContractExpiration,
+  BucketUsage,
+  Profitability,
+  ContractReportSummary
+} from 'server/src/lib/actions/contractReportActions';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 const ContractReports: React.FC = () => {
   const [activeReport, setActiveReport] = useState('revenue');
+  const [revenueData, setRevenueData] = useState<ContractRevenue[]>([]);
+  const [expirationData, setExpirationData] = useState<ContractExpiration[]>([]);
+  const [bucketUsageData, setBucketUsageData] = useState<BucketUsage[]>([]);
+  const [profitabilityData, setProfitabilityData] = useState<Profitability[]>([]);
+  const [summary, setSummary] = useState<ContractReportSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load report data on component mount
+  useEffect(() => {
+    const loadReportData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const [revenue, expiration, bucketUsage, profitability, summaryData] = await Promise.all([
+          getContractRevenueReport(),
+          getContractExpirationReport(),
+          getBucketUsageReport(),
+          getProfitabilityReport(),
+          getContractReportSummary()
+        ]);
+
+        setRevenueData(revenue);
+        setExpirationData(expiration);
+        setBucketUsageData(bucketUsage);
+        setProfitabilityData(profitability);
+        setSummary(summaryData);
+      } catch (err) {
+        console.error('Error loading report data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load report data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadReportData();
+  }, []);
 
   // Format currency
   const formatCurrency = (cents: number): string => {
@@ -362,10 +260,74 @@ const ContractReports: React.FC = () => {
     }
   ];
 
-  // Calculate summary stats
-  const revenueData = generateMockRevenueData();
-  const totalMRR = revenueData.reduce((sum, item) => sum + item.monthly_recurring, 0);
-  const totalYTD = revenueData.reduce((sum, item) => sum + item.total_billed_ytd, 0);
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Card key={`summary-skeleton-${index}`} className="p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Skeleton className="h-5 w-5 rounded-full" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+
+          <div className="mb-4">
+            <Skeleton className="h-4 w-64" />
+          </div>
+
+          <div className="flex gap-2 mb-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={`tab-pill-${index}`} className="h-8 w-28 rounded-full" />
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={`table-row-${index}`} className="h-4 w-full rounded" />
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Contract Reports</h2>
+          <p className="text-gray-600 text-sm">
+            Analyze contract performance, revenue, and utilization metrics
+          </p>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-red-800">
+            <p className="font-semibold mb-1">Error Loading Reports</p>
+            <p>{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -383,7 +345,7 @@ const ContractReports: React.FC = () => {
             <DollarSign className="h-5 w-5 text-green-600" />
             <h3 className="font-semibold">Total MRR</h3>
           </div>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(totalMRR)}</p>
+          <p className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalMRR ?? 0)}</p>
           <p className="text-xs text-gray-500 mt-1">Monthly Recurring Revenue</p>
         </Card>
 
@@ -392,7 +354,7 @@ const ContractReports: React.FC = () => {
             <TrendingUp className="h-5 w-5 text-blue-600" />
             <h3 className="font-semibold">YTD Revenue</h3>
           </div>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalYTD)}</p>
+          <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalYTD ?? 0)}</p>
           <p className="text-xs text-gray-500 mt-1">Year to Date</p>
         </Card>
 
@@ -401,18 +363,9 @@ const ContractReports: React.FC = () => {
             <Building2 className="h-5 w-5 text-purple-600" />
             <h3 className="font-semibold">Active Contracts</h3>
           </div>
-          <p className="text-2xl font-bold text-purple-600">{revenueData.length}</p>
+          <p className="text-2xl font-bold text-purple-600">{summary?.activeContractCount ?? 0}</p>
           <p className="text-xs text-gray-500 mt-1">Billable clients</p>
         </Card>
-      </div>
-
-      {/* Info Alert */}
-      <div className="bg-blue-50 border border-blue-200 rounded-md p-4 flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-blue-800">
-          <p className="font-semibold mb-1">Using Mock Data</p>
-          <p>These reports are currently displaying sample data for demonstration purposes. Connect to your actual billing data to see real-time insights.</p>
-        </div>
       </div>
 
       {/* Report Tabs */}
@@ -433,10 +386,14 @@ const ContractReports: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">
               Overview of monthly recurring revenue and year-to-date billing by contract
             </p>
-            <DataTable
-              data={revenueData}
-              columns={revenueColumns}
-            />
+            {revenueData.length === 0 ? (
+              <p className="text-sm text-gray-500 py-8 text-center">No contract revenue data available</p>
+            ) : (
+              <DataTable
+                data={revenueData}
+                columns={revenueColumns}
+              />
+            )}
           </Card>
         </TabsContent>
 
@@ -449,10 +406,14 @@ const ContractReports: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">
               Track upcoming contract expirations and renewal opportunities
             </p>
-            <DataTable
-              data={generateMockExpirationData()}
-              columns={expirationColumns}
-            />
+            {expirationData.length === 0 ? (
+              <p className="text-sm text-gray-500 py-8 text-center">No contracts expiring in the near future</p>
+            ) : (
+              <DataTable
+                data={expirationData}
+                columns={expirationColumns}
+              />
+            )}
           </Card>
         </TabsContent>
 
@@ -465,10 +426,14 @@ const ContractReports: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">
               Monitor bucket hours usage and identify overage situations
             </p>
-            <DataTable
-              data={generateMockBucketUsageData()}
-              columns={bucketUsageColumns}
-            />
+            {bucketUsageData.length === 0 ? (
+              <p className="text-sm text-gray-500 py-8 text-center">No bucket-based contracts found</p>
+            ) : (
+              <DataTable
+                data={bucketUsageData}
+                columns={bucketUsageColumns}
+              />
+            )}
           </Card>
         </TabsContent>
 
@@ -481,10 +446,14 @@ const ContractReports: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">
               Basic profit margins and revenue vs. cost analysis by contract
             </p>
-            <DataTable
-              data={generateMockProfitabilityData()}
-              columns={profitabilityColumns}
-            />
+            {profitabilityData.length === 0 ? (
+              <p className="text-sm text-gray-500 py-8 text-center">No profitability data available</p>
+            ) : (
+              <DataTable
+                data={profitabilityData}
+                columns={profitabilityColumns}
+              />
+            )}
           </Card>
         </TabsContent>
       </Tabs>

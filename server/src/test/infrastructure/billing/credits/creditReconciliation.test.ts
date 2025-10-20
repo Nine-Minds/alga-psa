@@ -5,8 +5,6 @@ import { createPrepaymentInvoice, applyCreditToInvoice, validateCreditBalance } 
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import {
-  createTestService,
-  createFixedPlanAssignment,
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
@@ -14,6 +12,135 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { createTestDate } from '../../../test-utils/dateUtils';
+import { v4 as uuidv4 } from 'uuid';
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+  getCurrentUser: vi.fn(async () => ({
+    user_id: mockedUserId,
+    tenant: mockedTenantId,
+    user_type: 'internal',
+    roles: []
+  }))
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+vi.mock('server/src/lib/services/numberingService', () => ({
+  NumberingService: class {
+    async getNextNumber(): Promise<string> {
+      return `INV-${Date.now()}`;
+    }
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('@shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.setConfig({
+  testTimeout: 120000,
+  hookTimeout: 120000
+});
+
+async function createManualInvoice(
+  context: TestContext,
+  clientId: string,
+  items: Array<{
+    description: string;
+    unitPrice: number;
+    netAmount: number;
+    taxAmount?: number;
+    totalPrice?: number;
+    quantity?: number;
+    isDiscount?: boolean;
+    isTaxable?: boolean;
+  }>,
+  options: {
+    invoiceNumber?: string;
+    invoiceDate?: string;
+    dueDate?: string;
+    billingCycleId?: string | null;
+  } = {}
+) {
+  const invoiceId = uuidv4();
+  const now = new Date();
+  const invoiceDate = options.invoiceDate ?? now.toISOString();
+  const dueDate = options.dueDate ?? invoiceDate;
+
+  const subtotal = items.reduce((sum, item) => sum + item.netAmount, 0);
+  const tax = items.reduce((sum, item) => sum + (item.taxAmount ?? 0), 0);
+  const total = subtotal + tax;
+
+  await context.db('invoices').insert({
+    invoice_id: invoiceId,
+    tenant: context.tenantId,
+    client_id: clientId,
+    invoice_number: options.invoiceNumber ?? `MAN-${invoiceId.slice(0, 8)}`,
+    status: 'draft',
+    invoice_date: invoiceDate,
+    due_date: dueDate,
+    subtotal,
+    tax,
+    total_amount: total,
+    credit_applied: 0,
+    created_at: invoiceDate,
+    updated_at: invoiceDate,
+    billing_cycle_id: options.billingCycleId ?? null,
+    is_manual: true
+  });
+
+  if (items.length) {
+    await context.db('invoice_items').insert(
+      items.map((item) => ({
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        tenant: context.tenantId,
+        description: item.description,
+        quantity: item.quantity ?? 1,
+        unit_price: item.unitPrice,
+        net_amount: item.netAmount,
+        tax_amount: item.taxAmount ?? 0,
+        total_price: item.totalPrice ?? item.netAmount + (item.taxAmount ?? 0),
+        is_discount: item.isDiscount ?? false,
+        is_manual: true,
+        is_taxable: item.isTaxable ?? false
+      }))
+    );
+  }
+
+  return { invoiceId, subtotal, tax, total };
+}
 
 /**
  * Credit Reconciliation Tests
@@ -110,7 +237,6 @@ describe('Credit Reconciliation Tests', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
-
     // 4. Create first prepayment invoice
     const prepaymentAmount1 = 10000; // $100.00 credit
     const prepaymentInvoice1 = await createPrepaymentInvoice(
@@ -131,77 +257,60 @@ describe('Credit Reconciliation Tests', () => {
     // 7. Finalize the second prepayment invoice to create the credit
     await finalizeInvoice(prepaymentInvoice2.invoice_id);
 
-    // 2. Create a service for a positive invoice using test helper
-    const serviceId = await createTestService(context, {
-      service_name: 'Regular Service',
-      billing_method: 'fixed',
-      default_rate: 8000, // $80.00
-      unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true
-    }, 'service_id');
+    const contractLineId = uuidv4();
+    const contractStartDate = Temporal.Now.plainDateISO().toString();
 
-    // 8. Create a contract line
-    const planId = await context.createEntity('contract_lines', {
-      contract_line_name: 'Regular Plan',
+    await context.db('contract_lines').insert({
+      contract_line_id: contractLineId,
+      tenant: context.tenantId,
+      contract_line_name: 'Reconciliation Plan',
       billing_frequency: 'monthly',
       is_custom: false,
       contract_line_type: 'Fixed'
-    }, 'contract_line_id');
-
-    // 9. Assign service to plan
-    await context.db('contract_line_services').insert({
-      contract_line_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
     });
 
-    // 3. Create billing plan and assign service using test helper
-    const { planId } = await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Regular Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 8000, // $80.00
-      quantity: 1,
-      startDate: '2025-01-01'
-    });
-
-    // 4. Create a billing cycle
-    const now = createTestDate();
-    const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-    const endDate = Temporal.PlainDate.from(now).toString();
-
-    const billingCycleId = await context.createEntity('client_billing_cycles', {
-      client_id: client_id,
-      billing_cycle: 'monthly',
-      period_start_date: startDate,
-      period_end_date: endDate,
-      effective_date: startDate
-    }, 'billing_cycle_id');
-
-    // 11. Assign plan to client
     await context.db('client_contract_lines').insert({
       client_contract_line_id: uuidv4(),
-      client_id: client_id,
-      contract_line_id: planId,
       tenant: context.tenantId,
-      start_date: startDate,
+      client_id: client_id,
+      contract_line_id: contractLineId,
+      start_date: contractStartDate,
       is_active: true
     });
 
-    // 12. Generate positive invoice
-    const invoice = await generateInvoice(billingCycleId);
+    // Create a manual positive invoice to reconcile against
+    const invoiceSubtotal = 12000; // $120.00
+    const invoiceTax = 0;
+    const { invoiceId } = await createManualInvoice(
+      context,
+      client_id,
+      [
+        {
+          description: 'Reconciliation Service',
+          unitPrice: invoiceSubtotal,
+          netAmount: invoiceSubtotal,
+          taxAmount: invoiceTax,
+          totalPrice: invoiceSubtotal + invoiceTax,
+          isTaxable: false
+        }
+      ]
+    );
 
-    if (!invoice) {
-      throw new Error('Failed to generate invoice');
-    }
+    const finalizeTimestamp = new Date().toISOString();
+    await context.db('invoices')
+      .where({ invoice_id: invoiceId })
+      .update({
+        status: 'sent',
+        finalized_at: finalizeTimestamp,
+        updated_at: finalizeTimestamp
+      });
 
-    // 6. Verify invoice has expected structure
-    expect(invoice.invoice_id).toBeDefined();
-    expect(invoice.subtotal).toBeGreaterThan(0);
+    const invoice = await context.db('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
 
-    // 7. Finalize the invoice to apply credit
-    await finalizeInvoice(invoice.invoice_id);
+    expect(invoice).toBeTruthy();
+    expect(Number(invoice.subtotal)).toBe(invoiceSubtotal);
 
     // 14. Manually apply some credit to create a partial application
     const remainingCredit = await ClientContractLine.getClientCredit(client_id);

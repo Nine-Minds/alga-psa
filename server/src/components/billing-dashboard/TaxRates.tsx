@@ -22,6 +22,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const TaxRates: React.FC = () => {
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
@@ -37,6 +38,7 @@ const TaxRates: React.FC = () => {
   const [affectedServicesForConfirmation, setAffectedServicesForConfirmation] = useState<Pick<IService, 'service_id' | 'service_name'>[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchTaxRates();
@@ -44,6 +46,7 @@ const TaxRates: React.FC = () => {
   }, []);
 
   const fetchTaxRates = async () => {
+    setIsLoading(true);
     try {
       const rates = await getTaxRates();
       setTaxRates(rates);
@@ -51,6 +54,8 @@ const TaxRates: React.FC = () => {
     } catch (error) {
       console.error('Error fetching tax rates:', error);
       setError('Failed to fetch tax rates');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -110,7 +115,7 @@ const TaxRates: React.FC = () => {
       setIsDialogOpen(false);
       setCurrentTaxRate({}); // Reverted: Clear state
       setIsEditing(false);
-      fetchTaxRates();
+      await fetchTaxRates();
       setError(null);
     } catch (error: any) {
       console.error('Error adding/updating tax rate:', error);
@@ -144,7 +149,7 @@ const TaxRates: React.FC = () => {
       const result: DeleteTaxRateResult = await deleteTaxRate(taxRateId);
 
       if (result.deleted) {
-        fetchTaxRates();
+        await fetchTaxRates();
       } else if (result.affectedServices && result.affectedServices.length > 0) {
         setAffectedServicesForConfirmation(result.affectedServices);
         setTaxRateIdToDelete(taxRateId);
@@ -167,7 +172,7 @@ const TaxRates: React.FC = () => {
       setIsConfirmDeleteDialogOpen(false);
       setTaxRateIdToDelete(null);
       setAffectedServicesForConfirmation([]);
-      fetchTaxRates();
+      await fetchTaxRates();
     } catch (error: any) {
       console.error('Error confirming tax rate deletion:', error);
       setError(error.message || 'Failed to confirm tax rate deletion.');
@@ -262,11 +267,20 @@ const TaxRates: React.FC = () => {
               Add New Tax Rate
             </Button>
           </div>
-          <DataTable
-            data={taxRates}
-            columns={columns}
-            onRowClick={handleEditTaxRate}
-          />
+          {isLoading ? (
+            <LoadingIndicator
+              layout="stacked"
+              className="py-10 text-gray-600"
+              spinnerProps={{ size: 'md' }}
+              text="Loading tax rates"
+            />
+          ) : (
+            <DataTable
+              data={taxRates}
+              columns={columns}
+              onRowClick={handleEditTaxRate}
+            />
+          )}
         </CardContent>
       </Card>
 

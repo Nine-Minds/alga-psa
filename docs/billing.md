@@ -4,6 +4,16 @@
 
 The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price contract lines, time-based billing, usage-based billing, hybrid models, bucket of minutes/retainer models, discounts and promotions, multi-currency support, tax handling, contracts, refunds and adjustments, and approval workflows. The system supports multiple simultaneous contract lines per client, enabling granular and flexible billing arrangements. Contracts provide a way to group related contract lines together for easier management and clearer client invoicing.
 
+### Contract Entity Roles
+
+The platform uses three related tables to represent the contract lifecycle:
+
+- `contract_templates` store reusable blueprints. Templates contain default lines, rates, and guidance, and are never tied directly to a client.
+- `contracts` hold live contract instances. Each row represents an agreement with a specific client and anchors the related line mappings, schedules, and usage.
+- `client_contracts` link a contract to a client while carrying assignment metadata (start/end dates, purchase-order requirements, status). Keeping this join layer gives us flexibility to support multiple concurrent assignments in the future without reshaping the instance table.
+
+When a template becomes an active agreement we create a row in `contracts`, link it via `client_contracts`, and clone the template’s composition into the contract line mapping tables.
+
 ## Manual Invoicing
 
 ### Purpose
@@ -91,6 +101,13 @@ await updateManualInvoice(invoiceId, {
 #### UI Components
 - `ManualInvoices.tsx`: A form-based UI that lets users pick a company, add line items, compute a quick total, and create/update the invoice.
 - `Invoices.tsx`: Lists all invoices (manual or automated). For manual invoices, an "Edit" button is available if the invoice is still in a modifiable state.
+
+### API Sample: Create Service and Manual Invoice
+- A runnable Node.js example lives at `sdk/samples/node/create-service-and-manual-invoice.ts`.
+- It demonstrates how to create a service catalog entry via `POST /api/v1/services` and immediately generate a manual invoice for that service using `POST /api/v1/invoices/manual`.
+- Run `npm run sample:create-service-manual-invoice -- --client-id <client-uuid> --service-type-id <service-type-uuid>` with the usual `ALGA_API_URL`, `ALGA_API_KEY`, and `ALGA_TENANT_ID` environment variables.
+- When `--service-type-id` is omitted, the script reuses the service type from the first service it finds; specify the flag if your tenant has not created services yet.
+- Provide `--rate` (dollars) or `--rate-cents` to control the line amount; rates are converted to cents before being sent to the API.
 
 #### Database Fields (relevant to manual invoicing):
 - `invoices.is_manual` (boolean)
@@ -437,6 +454,31 @@ The system allows for customization of the visual appearance and layout of gener
 For comprehensive information on the architecture, components (UI and backend), database schema, compilation/execution process, and workflows, please refer to the dedicated documentation:
 
 [Invoice Template System Documentation](./invoice_templates.md)
+
+### Default Template Resolution
+
+Standard templates are global across every tenant, while custom templates are namespaced per tenant. To support tenant-specific defaults without duplicating the standard template rows, we introduce the `invoice_template_assignments` table. Each record captures the tenant, the scope the default applies to, and whether the selection points to a standard template (`standard_invoice_template_code`) or a custom template (`invoice_template_id`).
+
+- `assignment_id` (UUID, PK)
+- `tenant` (UUID, FK to `tenants`)
+- `scope_type` (`tenant`, `company`, extensible to future scopes like `contract`)
+- `scope_id` (UUID, nullable; `NULL` for tenant-wide defaults, `company_id` when `scope_type = 'company'`)
+- `template_source` (`standard` | `custom`)
+- `standard_invoice_template_code` (TEXT, FK to `standard_invoice_templates.standard_invoice_template_code`, nullable)
+- `invoice_template_id` (UUID, FK to `invoice_templates.template_id`, nullable)
+- `created_by` (UUID, FK to `users.user_id`, nullable)
+- `created_at` / `updated_at` (TIMESTAMPTZ)
+
+**Constraints and behavior:**
+
+- Unique index on `(tenant, scope_type, scope_id)` guarantees a single active default per scope.
+- CHECK constraints ensure `standard_invoice_template_code` is populated when `template_source = 'standard'` and `invoice_template_id` is populated when `template_source = 'custom'`.
+- When fetching a template for rendering:
+  1. Query for a company-scoped assignment (`scope_type = 'company'` + `scope_id = company_id`).
+  2. If none, fall back to the tenant-scoped assignment.
+  3. If still none, fall back to the platform-wide default standard template.
+- The previous `invoice_templates.is_default` flag becomes read-only legacy metadata and should be removed once all flows rely on `invoice_template_assignments`.
+- The `companies.invoice_template_id` FK becomes optional and will be retired after backfilling `invoice_template_assignments`. Retrieval code must ignore it in favor of the new table.
 ## Service Types
 
 The billing system uses service configurations to determine billing logic. Key types include:
@@ -508,10 +550,27 @@ The billing system uses service configurations to determine billing logic. Key t
 2.  **`companies`**
     - **Purpose:** Represents clients of the MSP
     - **Key Fields:** `tenant` (UUID, PK), `company_id` (UUID, PK), `company_name`, `billing_type`, `is_tax_exempt` (boolean)
+    - **Notes:** `invoice_template_id` is now legacy-only; tenant defaults are resolved through `invoice_template_assignments`.
 
 3.  **`users`**
     - **Purpose:** Stores information about MSP staff and client contacts
     - **Key Fields:** `tenant` (UUID, PK), `user_id` (UUID, PK), `email`, `role`, `rate`
+
+### Invoice Template Tables
+
+- **`invoice_templates`**
+  - **Purpose:** Stores tenant-scoped custom invoice templates alongside their compiled Wasm payloads.
+  - **Key Fields:** `template_id` (UUID, PK), `tenant` (UUID, FK), `name`, `source_code`, `compiled_wasm`, `sha`, `created_at`, `updated_at`.
+  - **Notes:** The historical `is_default` flag is deprecated in favor of `invoice_template_assignments`.
+
+- **`standard_invoice_templates`**
+  - **Purpose:** Stores system-provided template definitions shared across all tenants.
+  - **Key Fields:** `standard_invoice_template_code` (TEXT, PK), `name`, `source_code`, `compiled_wasm`, `sha`, `updated_at`.
+
+- **`invoice_template_assignments`**
+  - **Purpose:** Records default template selections per tenant and optional scopes (tenant-wide, company-specific, future extensions).
+  - **Key Fields:** `assignment_id` (UUID, PK), `tenant` (UUID, FK), `scope_type`, `scope_id`, `template_source`, `standard_invoice_template_code`, `invoice_template_id`, `created_at`, `updated_at`.
+  - **Constraints:** Unique `(tenant, scope_type, scope_id)`; CHECK constraints enforce mutual exclusivity between standard and custom references.
 
 ### Billing-Specific Tables
 

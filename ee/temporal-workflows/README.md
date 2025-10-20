@@ -317,6 +317,8 @@ The worker uses environment variables for configuration:
 | `TEMPORAL_TASK_QUEUE` | Task queue name | `tenant-workflows` |
 | `DATABASE_URL` | PostgreSQL connection string | Required |
 | `ADMIN_DATABASE_URL` | Admin database connection | Required |
+| `STRIPE_SECRET_KEY` | Stripe API secret key for billing integration | Required for Stripe |
+| `MASTER_BILLING_TENANT_ID` | Nine Minds billing tenant UUID | Required for Stripe |
 | `LOG_LEVEL` | Logging level | `info` |
 | `MAX_CONCURRENT_ACTIVITIES` | Max concurrent activities | `10` |
 | `MAX_CONCURRENT_WORKFLOWS` | Max concurrent workflows | `10` |

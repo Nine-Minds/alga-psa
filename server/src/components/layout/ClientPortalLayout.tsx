@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from "next-auth/react";
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, CreditCard } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -24,6 +24,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const [hasClientSettingsAccess, setHasClientSettingsAccess] = useState(false);
   const [hasBillingAccess, setHasBillingAccess] = useState(false);
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
+  const [hasAccountAccess, setHasAccountAccess] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
   const { t } = useTranslation('clientPortal');
@@ -55,6 +56,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
         setHasClientSettingsAccess(permissions.hasClientSettingsAccess);
         setHasBillingAccess(permissions.hasBillingAccess);
         setHasUserManagementAccess(permissions.hasUserManagementAccess);
+        setHasAccountAccess(permissions.hasAccountAccess);
 
         if (user.contact_id) {
           await fetchAvatarUrl(user.contact_id, user.tenant);
@@ -188,6 +190,15 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                         <User className="mr-2 h-3.5 w-3.5" />
                         <span>{t('nav.profile')}</span>
                       </DropdownMenu.Item>
+                      {hasAccountAccess && (
+                        <DropdownMenu.Item
+                          className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
+                          onSelect={() => router.push('/client-portal/account')}
+                        >
+                          <CreditCard className="mr-2 h-3.5 w-3.5" />
+                          <span>{t('nav.account')}</span>
+                        </DropdownMenu.Item>
+                      )}
                       <DropdownMenu.Item
                         className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                         onSelect={handleSignOut}

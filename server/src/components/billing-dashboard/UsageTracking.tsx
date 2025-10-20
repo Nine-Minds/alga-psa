@@ -32,6 +32,7 @@ import {
 import { getRemainingBucketUnits, RemainingBucketUnitsResult } from 'server/src/lib/actions/report-actions';
 import BucketUsageChart from './BucketUsageChart';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface UsageTrackingProps {
   initialServices: IService[];
@@ -453,9 +454,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
             </div>
 
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-              </div>
+              <LoadingIndicator
+                layout="stacked"
+                className="py-10 text-gray-600"
+                spinnerProps={{ size: 'md' }}
+                text="Loading usage records"
+              />
             ) : (
               <DataTable
                 data={usageRecords}
@@ -510,7 +514,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 onValueChange={(value: string) => setNewUsage({ ...newUsage, service_id: value })}
                 placeholder="Select service"
                 options={initialServices
-                  .filter(service => service.billing_method === 'per_unit')
+                  .filter(service => service.billing_method === 'usage')
                   .map(service => ({
                     label: service.service_name,
                     value: service.service_id

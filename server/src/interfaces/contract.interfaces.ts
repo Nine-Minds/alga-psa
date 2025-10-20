@@ -2,17 +2,38 @@ import { TenantEntity } from './index';
 import { ISO8601String } from '../types/types.d';
 
 /**
+ * Contract status types
+ */
+export type ContractStatus = 'active' | 'draft' | 'terminated' | 'expired' | 'published' | 'archived';
+
+/**
  * Interface for a Contract
  * Represents a collection of contract lines (formerly contract lines) assignable to clients.
  */
 export interface IContract extends TenantEntity {
   contract_id: string;
   contract_name: string;
-  contract_description?: string;
+  contract_description?: string | null;
   billing_frequency: string;
   is_active: boolean;
+  status: ContractStatus;
+  is_template?: boolean;
+  template_metadata?: Record<string, unknown> | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
+}
+
+/**
+ * Extended contract interface with client information for list views
+ */
+export interface IContractWithClient extends IContract {
+  client_id?: string;
+  client_name?: string;
+  client_contract_id?: string;
+  start_date?: ISO8601String;
+  end_date?: ISO8601String | null;
+  template_contract_id?: string | null;
+  template_contract_name?: string | null;
 }
 
 /**
@@ -35,10 +56,14 @@ export interface IClientContract extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   contract_id: string;
+  template_contract_id?: string | null;
   billing_frequency?: string;
   start_date: ISO8601String;
   end_date: ISO8601String | null;
   is_active: boolean;
+  po_required?: boolean;
+  po_number?: string | null;
+  po_amount?: number | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
@@ -55,6 +80,7 @@ export interface IContractAssignmentSummary extends TenantEntity {
   is_active: boolean;
   po_required: boolean;
   po_number?: string | null;
+  po_amount?: number | null;
 }
 
 /**

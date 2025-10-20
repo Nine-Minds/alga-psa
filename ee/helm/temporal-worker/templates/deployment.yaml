@@ -145,7 +145,21 @@ spec:
                   name: {{ .Values.email.resendApiKeySecret.name }}
                   key: {{ .Values.email.resendApiKeySecret.key }}
                   optional: true
-            
+
+            # Stripe Configuration (for billing integration)
+            {{- if .Values.stripe }}
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.stripe.secretKeySecret.name }}
+                  key: {{ .Values.stripe.secretKeySecret.key }}
+                  optional: true
+            {{- if .Values.stripe.masterBillingTenantId }}
+            - name: MASTER_BILLING_TENANT_ID
+              value: "{{ .Values.stripe.masterBillingTenantId }}"
+            {{- end }}
+            {{- end }}
+
             # Encryption Configuration
             - name: SALT_BYTES
               value: "{{ .Values.encryption.saltBytes }}"

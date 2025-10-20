@@ -19,12 +19,14 @@ import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActio
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const ContractLinesOverview: React.FC = () => {
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
   const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]); // Added state for service types
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]); // Added state for service types
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -33,6 +35,7 @@ const ContractLinesOverview: React.FC = () => {
   }, []);
 
   const fetchContractLines = async () => {
+    setIsLoading(true);
     try {
       const plans = await getContractLines();
       setContractLines(plans);
@@ -40,6 +43,8 @@ const ContractLinesOverview: React.FC = () => {
     } catch (error) {
       console.error('Error fetching contract lines:', error);
       setError('Failed to fetch contract lines');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -57,7 +62,7 @@ const ContractLinesOverview: React.FC = () => {
   const handleDeletePlan = async (planId: string) => {
     try {
       await deleteContractLine(planId);
-      fetchContractLines();
+      await fetchContractLines();
     } catch (error) {
       console.error('Error deleting contract line:', error); // Keep console log for debugging
       if (error instanceof Error) {
@@ -180,13 +185,22 @@ const ContractLinesOverview: React.FC = () => {
           </div>
         )}
 
-        <DataTable
-          data={contractLines.filter(plan => plan.contract_line_id !== undefined)}
-          columns={contractLineColumns}
-          pagination={true}
-          onRowClick={handleContractLineClick}
-          rowClassName={() => "cursor-pointer"}
-        />
+        {isLoading ? (
+          <LoadingIndicator
+            layout="stacked"
+            className="py-10 text-gray-600"
+            spinnerProps={{ size: 'md' }}
+            text="Loading contract lines"
+          />
+        ) : (
+          <DataTable
+            data={contractLines.filter(plan => plan.contract_line_id !== undefined)}
+            columns={contractLineColumns}
+            pagination={true}
+            onRowClick={handleContractLineClick}
+            rowClassName={() => "cursor-pointer"}
+          />
+        )}
       </Box>
     </Card>
   );

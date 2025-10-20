@@ -7,8 +7,10 @@
     "assets": "Activos",
     "clientSettings": "Configuración de la empresa",
     "profile": "Perfil",
+    "account": "Cuenta",
     "signOut": "Cerrar sesión",
-    "clientPortal": "Portal del cliente"
+    "clientPortal": "Portal del cliente",
+    "portal": "Portal"
   },
   "dashboard": {
     "title": "Panel",
@@ -200,6 +202,7 @@
     "failedToLoad": "No se pudieron cargar las facturas. Inténtalo de nuevo.",
     "invoices": "Facturas",
     "payments": "Pagos",
+    "contractLines": "Líneas de contrato de servicio",
     "plans": "Planes de servicio",
     "usage": "Métricas de uso",
     "hoursByService": "Horas por servicio",
@@ -460,6 +463,7 @@
       "website": "Sitio web",
       "industry": "Industria",
       "companySize": "Tamaño de la empresa",
+      "company_size": "Tamaño de la empresa",
       "annualRevenue": "Ingresos anuales",
       "size": "Tamaño de la empresa",
       "taxId": "ID fiscal",
@@ -520,6 +524,20 @@
   },
   "account": {
     "title": "Cuenta",
+    "licenseManagement": {
+      "title": "Cuenta",
+      "subtitle": "La gestión de licencias está disponible en el Portal MSP",
+      "howToPurchaseTitle": "Cómo comprar licencias adicionales:",
+      "step1": "Inicia sesión en el Portal MSP (si tienes acceso de administrador)",
+      "step2": "Ve a Configuración → Gestión de cuentas",
+      "step3": "Haz clic en \"Agregar licencias\" para comprar más licencias",
+      "step4": "Completa el proceso de compra",
+      "needHelpTitle": "¿Necesitas ayuda?",
+      "needHelpDescription": "Solo los usuarios con permisos de gestión de cuentas pueden comprar licencias. Si no tienes acceso, ponte en contacto con tu administrador de AlgaPSA.",
+      "backToDashboard": "Volver al panel",
+      "goToMSPPortal": "Ir al Portal MSP",
+      "signingOut": "Cerrando sesión..."
+    },
     "services": {
       "loadError": "No se pudieron cargar los servicios",
       "loadContractLinesError": "No se pudieron cargar los planes de servicio",

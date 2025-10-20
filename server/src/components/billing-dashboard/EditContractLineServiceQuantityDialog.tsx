@@ -160,7 +160,7 @@ export function EditContractLineServiceQuantityDialog({
           >
             {isSaving ? (
               <>
-                <LoadingIndicator spinnerProps={{ size: "xs" }} text="Saving..." className="mr-2" />
+                <LoadingIndicator spinnerProps={{ size: "sm" }} text="Saving..." className="mr-2" />
               </>
             ) : (
               'Save Quantity'

@@ -48,6 +48,16 @@ export function ServiceUsageConfigForm({
     onConfigChange,
     onTiersChange,
 }: ServiceUsageConfigFormProps) {
+    // Local state for formatted rate input
+    const [baseRateInput, setBaseRateInput] = React.useState<string>('');
+
+    // Sync local input state with config prop
+    React.useEffect(() => {
+        const rateInDollars = config?.base_rate !== null && config?.base_rate !== undefined
+            ? (config.base_rate / 100).toFixed(2)
+            : '';
+        setBaseRateInput(rateInDollars);
+    }, [config?.base_rate]);
 
     const handleInputChange = (field: keyof ServiceUsageConfig) =>
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,16 +98,36 @@ export function ServiceUsageConfigForm({
                             <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
                         </Tooltip>
                     </Label>
-                    <Input
-                        id={`usage-contract-line-base-rate-${serviceId}`}
-                        type="number"
-                        value={config.base_rate?.toString() || ''}
-                        onChange={handleNumberInputChange('base_rate')}
-                        placeholder="Enter base rate"
-                        disabled={disabled || isTiered}
-                        min={0} step={0.01}
-                        className={saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''}
-                    />
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <Input
+                            id={`usage-contract-line-base-rate-${serviceId}`}
+                            type="text"
+                            inputMode="decimal"
+                            value={baseRateInput}
+                            onChange={(e) => {
+                                const value = e.target.value.replace(/[^0-9.]/g, '');
+                                const decimalCount = (value.match(/\./g) || []).length;
+                                if (decimalCount <= 1) {
+                                    setBaseRateInput(value);
+                                }
+                            }}
+                            onBlur={() => {
+                                if (baseRateInput.trim() === '' || baseRateInput === '.') {
+                                    setBaseRateInput('');
+                                    onConfigChange(serviceId, 'base_rate', undefined);
+                                } else {
+                                    const dollars = parseFloat(baseRateInput) || 0;
+                                    const cents = Math.round(dollars * 100);
+                                    onConfigChange(serviceId, 'base_rate', cents);
+                                    setBaseRateInput((cents / 100).toFixed(2));
+                                }
+                            }}
+                            placeholder="0.00"
+                            disabled={disabled || isTiered}
+                            className={`pl-7 ${saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''}`}
+                        />
+                    </div>
                     {saveAttempted && validationErrors.base_rate && <p className="text-sm text-red-500 mt-1">{validationErrors.base_rate}</p>}
                 </div>
                 <div>

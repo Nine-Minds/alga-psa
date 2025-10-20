@@ -17,6 +17,13 @@ import { createTestDbConnection, type DbTestConfig } from '../../lib/testing/db-
 import { createTestTenant, type TenantTestData } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
 import { applyPlaywrightDatabaseEnv, PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';
+import {
+  applyPlaywrightAuthEnvDefaults,
+  prepareTenantForPlaywright,
+  resolvePlaywrightBaseUrl,
+  setupAuthenticatedSession,
+  type TenantPermissionTuple,
+} from './helpers/playwrightAuthSessionHelper';
 
 type UIComponentNode = {
   id: string;
@@ -27,10 +34,9 @@ type UIComponentNode = {
   children?: UIComponentNode[];
 };
 
-// Ensure a consistent host that matches the dev server's NEXTAUTH_URL
-process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
-  baseUrl: process.env.EE_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000',
+  baseUrl: resolvePlaywrightBaseUrl(),
 };
 
 const EE_SERVER_PATH_SUFFIX = `${path.sep}ee${path.sep}server`;
@@ -39,123 +45,9 @@ const WORKSPACE_ROOT = process.cwd().endsWith(EE_SERVER_PATH_SUFFIX)
   : process.cwd();
 
 applyPlaywrightDatabaseEnv();
-process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
-process.env.E2E_AUTH_BYPASS = process.env.E2E_AUTH_BYPASS || 'true';
 
 let adminDb: Knex | null = null;
 let databaseReadyPromise: Promise<void> | null = null;
-
-const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
-
-function getSessionMaxAgeSeconds(): number {
-  const raw = process.env.NEXTAUTH_SESSION_EXPIRES;
-  if (!raw) {
-    return DEFAULT_SESSION_MAX_AGE_SECONDS;
-  }
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isNaN(parsed) ? DEFAULT_SESSION_MAX_AGE_SECONDS : parsed;
-}
-
-function getSessionCookieName(): string {
-  return process.env.NODE_ENV === 'production'
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token';
-}
-
-async function setupAuthenticatedSession(
-  page: Page,
-  tenantData: TenantTestData
-): Promise<void> {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    throw new Error('NEXTAUTH_SECRET must be defined for Playwright auth mocking.');
-  }
-
-  const { encode } = await import('@auth/core/jwt');
-  const cookieName = process.env.NODE_ENV === 'production'
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token';
-  const isHttps = TEST_CONFIG.baseUrl.startsWith('https://');
-  const allCookieNames = [
-    cookieName,
-    'authjs.session-token',
-    'next-auth.session-token',
-    // only include __Secure-* variants when using HTTPS and secure cookies
-    ...(isHttps ? ['__Secure-authjs.session-token', '__Secure-next-auth.session-token'] : []),
-  ];
-
-  const sessionUser = {
-    id: tenantData.adminUser.userId,
-    email: tenantData.adminUser.email.toLowerCase(),
-    name: `${tenantData.adminUser.firstName} ${tenantData.adminUser.lastName}`.trim() ||
-      tenantData.adminUser.email,
-    username: tenantData.adminUser.email.toLowerCase(),
-    proToken: 'playwright-mock-token',
-    tenant: tenantData.tenant.tenantId,
-    user_type: 'internal',
-  };
-
-  const maxAge = 60 * 60 * 24; // 24 hours
-
-  // Create a proper JWT token that NextAuth can validate
-  const token = await encode({
-    token: {
-      ...sessionUser,
-      sub: sessionUser.id,
-    },
-    secret,
-    maxAge,
-    salt: cookieName,
-  });
-
-  const issuedAtSeconds = Math.floor(Date.now() / 1000);
-  const expiresAtSeconds = issuedAtSeconds + maxAge;
-
-  const context = page.context();
-
-  // Set the properly signed session cookie
-  // Add cookie for both localhost and canonical.localhost to survive redirects
-  const cookieHosts = new Set<string>([
-    TEST_CONFIG.baseUrl,
-    'http://localhost:3000',
-    'http://canonical.localhost:3000',
-  ]);
-
-  const cookiesByUrl: any[] = [];
-  const cookiesByDomain: any[] = [];
-  for (const url of cookieHosts) {
-    for (const name of allCookieNames) {
-      cookiesByUrl.push({
-        name,
-        value: token,
-        url,
-        httpOnly: true,
-        secure: isHttps,
-        sameSite: 'Lax',
-        expires: expiresAtSeconds,
-      });
-    }
-  }
-  // Also set domain-scoped cookies for localhost/canonical.localhost
-  const domains = ['localhost', 'canonical.localhost'];
-  for (const domain of domains) {
-    for (const name of allCookieNames) {
-      cookiesByDomain.push({
-        name,
-        value: token,
-        domain,
-        path: '/',
-        httpOnly: true,
-        secure: isHttps,
-        sameSite: 'Lax',
-        expires: expiresAtSeconds,
-      });
-    }
-  }
-  await context.addCookies([...cookiesByUrl, ...cookiesByDomain]);
-
-  console.log('[Playwright Auth] Valid session JWT cookie set');
-}
 
 
 // Database is prepared once per session by Playwright webServer bootstrap.
@@ -214,55 +106,6 @@ async function getUIComponents(page: Page): Promise<UIComponentNode[]> {
   })) as UIComponentNode[];
 }
 
-async function ensureRoleHasPermission(
-  db: Knex,
-  tenantId: string,
-  roleName: string,
-  permissionTuples: Array<{ resource: string; action: string }>
-): Promise<void> {
-  const role = await db('roles')
-    .where({ tenant: tenantId, role_name: roleName })
-    .first();
-
-  if (!role) {
-    throw new Error(`Role ${roleName} not found for tenant ${tenantId}`);
-  }
-
-  for (const { resource, action } of permissionTuples) {
-    let permission = await db('permissions')
-      .where({ tenant: tenantId, resource, action })
-      .first();
-
-    if (!permission) {
-      permission = {
-        permission_id: uuidv4(),
-        tenant: tenantId,
-        resource,
-        action,
-        created_at: new Date(),
-      };
-
-      await db('permissions').insert(permission);
-    }
-
-    const existingLink = await db('role_permissions')
-      .where({
-        tenant: tenantId,
-        role_id: role.role_id,
-        permission_id: permission.permission_id,
-      })
-      .first();
-
-    if (!existingLink) {
-      await db('role_permissions').insert({
-        tenant: tenantId,
-        role_id: role.role_id,
-        permission_id: permission.permission_id,
-      });
-    }
-  }
-}
-
 function dfsFindComponent(
   nodes: UIComponentNode[] | undefined,
   predicate: (component: UIComponentNode) => boolean
@@ -297,27 +140,6 @@ async function findComponent(
     await page.waitForTimeout(delayMs);
   }
   throw new Error('UI component matching predicate was not found within the allotted time.');
-}
-
-async function markOnboardingComplete(db: Knex, tenantId: string, now: Date): Promise<void> {
-  await db('tenant_settings')
-    .insert({
-      tenant: tenantId,
-      onboarding_completed: true,
-      onboarding_completed_at: now,
-      onboarding_skipped: false,
-      onboarding_data: null,
-      settings: {},
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict('tenant')
-    .merge({
-      onboarding_completed: true,
-      onboarding_completed_at: now,
-      onboarding_skipped: false,
-      updated_at: now,
-    });
 }
 
 async function seedFixedServiceForTenant(
@@ -374,7 +196,7 @@ async function seedHourlyServiceForTenant(
     id: serviceTypeId,
     tenant: tenantId,
     name: `Hourly Type ${serviceName}`,
-    billing_method: 'per_unit',
+    billing_method: 'hourly',
     is_active: true,
     description: 'Playwright hourly service type',
     order_number: orderNumber,
@@ -389,7 +211,7 @@ async function seedHourlyServiceForTenant(
     service_name: serviceName,
     description: 'Playwright hourly service',
     custom_service_type_id: serviceTypeId,
-    billing_method: 'per_unit',
+    billing_method: 'hourly',
     default_rate: defaultRateCents,
     unit_of_measure: 'hour',
     category_id: null,
@@ -414,7 +236,7 @@ async function seedUsageServiceForTenant(
     id: serviceTypeId,
     tenant: tenantId,
     name: `Usage Type ${serviceName}`,
-    billing_method: 'per_unit',
+    billing_method: 'usage',
     is_active: true,
     description: 'Playwright usage service type',
     order_number: orderNumber,
@@ -429,7 +251,7 @@ async function seedUsageServiceForTenant(
     service_name: serviceName,
     description: 'Playwright usage service',
     custom_service_type_id: serviceTypeId,
-    billing_method: 'per_unit',
+    billing_method: 'usage',
     default_rate: defaultRateCents,
     unit_of_measure: 'unit',
     category_id: null,
@@ -513,6 +335,27 @@ async function getContractLineContext(
     : [];
 
   return { contract, contractLineIds, contractLines };
+}
+
+const DEFAULT_ADMIN_PERMISSIONS: TenantPermissionTuple[] = [
+  { resource: 'client', action: 'read' },
+  { resource: 'service', action: 'read' },
+  { resource: 'billing', action: 'create' },
+  { resource: 'billing', action: 'update' },
+];
+
+async function prepareWizardTenant(
+  db: Knex,
+  tenantId: string,
+  completedAt: Date,
+  permissions: TenantPermissionTuple[] = DEFAULT_ADMIN_PERMISSIONS
+): Promise<void> {
+  await prepareTenantForPlaywright(db, tenantId, {
+    completeOnboarding: { completedAt },
+    permissions: permissions.length
+      ? [{ roleName: 'Admin', permissions }]
+      : undefined,
+  });
 }
 
 async function completeContractWizardFlow(
@@ -830,14 +673,8 @@ test.describe('Contract Wizard Happy Path', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, serviceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
 
       const contractName = 'Playwright Automation Contract';
       await completeContractWizardFlow(page, tenantData, serviceName, contractName);
@@ -868,14 +705,8 @@ test.describe('Contract Wizard Happy Path', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, serviceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
 
       await completeContractWizardFlow(page, tenantData, serviceName, contractName);
 
@@ -913,14 +744,8 @@ test.describe('Contract Wizard Happy Path', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       const { serviceId } = await seedFixedServiceForTenant(db, tenantId, serviceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
 
       await completeContractWizardFlow(page, tenantData, serviceName, contractName, {
         baseRate: 500,
@@ -1008,7 +833,7 @@ test.describe('Contract Wizard Happy Path', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       const usageServiceName = `Usage Service ${uuidv4().slice(0, 8)}`;
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
       await seedUsageServiceForTenant(db, tenantId, usageServiceName, now, 50);
@@ -1019,13 +844,6 @@ test.describe('Contract Wizard Happy Path', () => {
         now,
         hourlyRateCents
       );
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
-
       await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
         baseRate: 500,
         hourlyService: {
@@ -1103,15 +921,8 @@ test.describe('Contract Wizard Happy Path', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, serviceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
-
       if (!tenantData.client) {
         throw new Error('Test tenant missing client data required for purchase order verification.');
       }
@@ -1164,15 +975,8 @@ test.describe('Contract Wizard Happy Path', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
-      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
-      await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+      await prepareWizardTenant(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);      await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
         baseRate: 500,
         fixedBucketOverlay: {
           hours: 40,
@@ -1252,15 +1056,8 @@ test.describe('Contract Wizard Happy Path', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
-
       await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
         baseRate: 500,
         fixedBucketOverlay: {
@@ -1332,15 +1129,8 @@ test.describe('Contract Wizard Happy Path', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
-
       await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
         baseRate: 500,
         usageBucketOverlay: {
@@ -1435,14 +1225,8 @@ test.describe('Contract Wizard Invalid Numeric Inputs', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardOnContracts(page, tenantId);
       await selectClientAndName(page, tenantData.client!.clientName, contractName);
@@ -1500,15 +1284,8 @@ test.describe('Date Picker Timezone Regression', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
-
       // Go to the Contracts tab and open the wizard
       const tenantQuery2 = `&tenantId=${tenantData.tenant.tenantId}`;
       await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts${tenantQuery2}`, { waitUntil: 'domcontentloaded' });
@@ -1594,15 +1371,8 @@ test.describe('Date Picker Timezone Regression', () => {
       });
 
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, new Date());
+      await prepareWizardTenant(db, tenantId, new Date());
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, new Date());
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-        { resource: 'billing', action: 'update' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardForTenant(page, tenantId);
       await selectClientAndNameLocal(page, tenantData.client!.clientName, contractName);
@@ -1708,14 +1478,8 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, serviceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardOnContracts(page, tenantId);
 
@@ -1757,14 +1521,8 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardOnContracts(page, tenantId);
       await selectClientAndName(page, tenantData.client!.clientName, `Skip Logic ${uuidv4().slice(0, 4)}`);
@@ -1805,14 +1563,8 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       const { serviceId } = await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardOnContracts(page, tenantId);
       await selectClientAndName(page, tenantData.client!.clientName, contractName);
@@ -1874,14 +1626,8 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, new Date());
+      await prepareWizardTenant(db, tenantId, new Date());
       await seedFixedServiceForTenant(db, tenantId, fixedServiceName, new Date());
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardOnContracts(page, tenantId);
       await selectClientAndName(page, tenantData.client!.clientName, contractName);
@@ -1924,15 +1670,9 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       const { serviceId: serviceIdA } = await seedFixedServiceForTenant(db, tenantId, serviceA, now);
       const { serviceId: serviceIdB } = await seedFixedServiceForTenant(db, tenantId, serviceB, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardOnContracts(page, tenantId);
       await selectClientAndName(page, tenantData.client!.clientName, contractName);
@@ -1999,16 +1739,10 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, fixedName, now);
       const { serviceId: hourlyIdA } = await seedHourlyServiceForTenant(db, tenantId, hourlyA, now, 15000);
       const { serviceId: hourlyIdB } = await seedHourlyServiceForTenant(db, tenantId, hourlyB, now, 20000);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardOnContracts(page, tenantId);
       await selectClientAndName(page, tenantData.client!.clientName, contractName);
@@ -2092,14 +1826,8 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, serviceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       const service = await db('service_catalog')
         .where({ tenant: tenantId, service_name: serviceName })
         .first();
@@ -2174,15 +1902,9 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, fixedName, now);
       const { serviceId: hourlyServiceId } = await seedHourlyServiceForTenant(db, tenantId, hourlyName, now, 12500);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await completeContractWizardFlow(page, tenantData, fixedName, contractName, {
         baseRate: 600,
         hourlyService: { serviceId: hourlyServiceId, serviceName: hourlyName, hourlyRate: 12500 },
@@ -2215,14 +1937,8 @@ test.describe('Contract Wizard Corner Cases', () => {
     try {
       tenantData = await createTestTenant(db, { companyName: `Client ${uuidv4().slice(0, 6)}` });
       const tenantId = tenantData.tenant.tenantId;
-      await markOnboardingComplete(db, tenantId, now);
+      await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, serviceName, now);
-      await ensureRoleHasPermission(db, tenantId, 'Admin', [
-        { resource: 'client', action: 'read' },
-        { resource: 'service', action: 'read' },
-        { resource: 'billing', action: 'create' },
-      ]);
-
       await setupAuthenticatedSession(page, tenantData);
       await openWizardOnContracts(page, tenantId);
       await selectClientAndName(page, tenantData.client!.clientName, contractName);

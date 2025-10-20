@@ -18,6 +18,7 @@ This document provides a high-level architectural overview of the open-source MS
     - Tax Calculation: Supports flexible tax rules via a dedicated TaxService that looks up tax rates from the database.
     - Transactions: Each invoice generation, payment, or adjustment is recorded in the transactions table for auditing and financial tracking.
     - Credits, Refunds, and Adjustments: Systematically apply credits to invoices or record partial/full refunds.
+    - Invoice Templates: Standard templates are shared across tenants, while custom templates are tenant-scoped. Default selections are persisted in `invoice_template_assignments`, which records the scope (`tenant`, `company`, future types) and whether the assignment references a standard template code or a custom template ID.
 
   * Key Files:
     - Core Logic: `server/src/lib/billing/billingEngine.ts`

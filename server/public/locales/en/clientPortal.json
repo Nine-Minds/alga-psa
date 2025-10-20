@@ -7,6 +7,7 @@
     "assets": "Assets",
     "clientSettings": "Client Settings",
     "profile": "Profile",
+    "account": "Account",
     "signOut": "Sign out",
     "clientPortal": "Client Portal",
     "portal": "Portal"
@@ -461,6 +462,7 @@
       "website": "Website",
       "industry": "Industry",
       "companySize": "Company Size",
+      "company_size": "Company Size",
       "annualRevenue": "Annual Revenue",
       "size": "Company Size",
       "taxId": "Tax ID",
@@ -521,6 +523,20 @@
   },
   "account": {
     "title": "Account",
+    "licenseManagement": {
+      "title": "Account",
+      "subtitle": "License management is available in the MSP Portal",
+      "howToPurchaseTitle": "How to Purchase Additional Licenses:",
+      "step1": "Sign in to the MSP Portal (if you have admin access)",
+      "step2": "Navigate to Settings → Account Management",
+      "step3": "Click \"Add Licenses\" to purchase more licenses",
+      "step4": "Complete the checkout process",
+      "needHelpTitle": "Need Help?",
+      "needHelpDescription": "Only users with Account Management permissions can purchase licenses. If you don't have access, please contact your AlgaPSA administrator.",
+      "backToDashboard": "Back to Dashboard",
+      "goToMSPPortal": "Go to MSP Portal",
+      "signingOut": "Signing out..."
+    },
     "services": {
       "loadError": "Failed to load services",
       "loadContractLinesError": "Failed to load service contract lines",
