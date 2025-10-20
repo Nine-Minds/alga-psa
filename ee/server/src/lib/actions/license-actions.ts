@@ -240,18 +240,26 @@ export async function getLicensePricingAction(): Promise<{
       };
     }
 
-    // Get pricing from environment variables
-    const unitAmountCents = parseInt(process.env.STRIPE_LICENSE_UNIT_AMOUNT || '5000', 10);
-    const currency = process.env.STRIPE_LICENSE_CURRENCY || 'usd';
-    const interval = process.env.STRIPE_LICENSE_INTERVAL || 'month';
+    // Fetch pricing from Stripe API using the price ID
+    const stripeService = getStripeService();
+    const stripe = (stripeService as any).stripe;
+
+    const price = await stripe.prices.retrieve(licensePriceId);
+
+    if (!price) {
+      return {
+        success: false,
+        error: 'Failed to retrieve price from Stripe',
+      };
+    }
 
     return {
       success: true,
       data: {
-        priceId: licensePriceId,
-        unitAmount: unitAmountCents,
-        currency,
-        interval,
+        priceId: price.id,
+        unitAmount: price.unit_amount || 0,
+        currency: price.currency,
+        interval: price.recurring?.interval || 'month',
       },
     };
   } catch (error) {
