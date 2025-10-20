@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { DocumentFilters as DocumentFilterType } from 'server/src/interfaces/document.interface';
 import Documents from 'server/src/components/documents/Documents';
 import { Card } from 'server/src/components/ui/Card';
@@ -13,8 +13,30 @@ import DocumentsPagination from 'server/src/components/documents/DocumentsPagina
 import DocumentFilters from 'server/src/components/documents/DocumentFilters';
 import DocumentsPageSkeleton from 'server/src/components/documents/DocumentsPageSkeleton';
 import { useDocuments } from 'server/src/hooks/useDocuments';
+import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+
+const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
 
 export default function DocumentsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const currentFolder = searchParams.get('folder');
+
+  // Use user preference for filters pane collapsed state
+  const {
+    value: isFiltersPaneCollapsed,
+    setValue: setIsFiltersPaneCollapsed
+  } = useUserPreference<boolean>(
+    FILTERS_PANE_COLLAPSED_SETTING,
+    {
+      defaultValue: false,
+      localStorageKey: FILTERS_PANE_COLLAPSED_SETTING,
+      debounceMs: 300
+    }
+  );
+
   const [initialized, setInitialized] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [allUsersData, setAllUsersData] = useState<IUserWithRoles[]>([]);
@@ -77,6 +99,17 @@ export default function DocumentsPage() {
 
   const handleDocumentUpdate = async () => {
     await refetchDocuments();
+  };
+
+  const handleFolderNavigate = (folderPath: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (folderPath) {
+      params.set('folder', folderPath);
+    } else {
+      params.delete('folder');
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    router.replace(newUrl);
   };
 
 
@@ -152,20 +185,70 @@ export default function DocumentsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Documents</h1>
+        <div className="flex items-center gap-2 text-2xl font-semibold">
+          <button
+            onClick={() => handleFolderNavigate(null)}
+            className="flex items-center gap-2 hover:text-blue-600 transition-colors"
+          >
+            <span>Documents</span>
+          </button>
+          {currentFolder && (
+            <>
+              {currentFolder.split('/').filter(p => p).map((part, index, parts) => {
+                const path = '/' + parts.slice(0, index + 1).join('/');
+                return (
+                  <React.Fragment key={path}>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <button
+                      onClick={() => handleFolderNavigate(path)}
+                      className="hover:text-blue-600 transition-colors"
+                    >
+                      {part}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-6">
+        {/* Collapsed Filters Button */}
+        {isFiltersPaneCollapsed && (
+          <div className="flex-shrink-0">
+            <button
+              onClick={() => setIsFiltersPaneCollapsed(false)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border border-gray-200 flex items-center gap-2"
+              title="Show filters"
+            >
+              <Filter className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Left Column - Filters */}
-        <div className="w-80">
-          <DocumentFilters
-            filters={filterInputs}
-            onFiltersChange={handleFiltersChange}
-            onClearFilters={handleClearFilters}
-            entityTypeOptions={entityTypeOptions}
-            allUsersData={allUsersData}
-          />
-        </div>
+        {!isFiltersPaneCollapsed && (
+          <div className="w-80 relative">
+            <div className="absolute top-2 right-2 z-10">
+              <button
+                onClick={() => setIsFiltersPaneCollapsed(true)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                title="Collapse filters"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+            <DocumentFilters
+              filters={filterInputs}
+              onFiltersChange={handleFiltersChange}
+              onClearFilters={handleClearFilters}
+              entityTypeOptions={entityTypeOptions}
+              allUsersData={allUsersData}
+            />
+          </div>
+        )}
 
         {/* Right Column - Documents */}
         <div className="flex-1">

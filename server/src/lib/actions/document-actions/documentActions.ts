@@ -21,7 +21,9 @@ import {
     DocumentFilters,
     PreviewResponse,
     DocumentInput,
-    PaginatedDocumentsResponse
+    PaginatedDocumentsResponse,
+    IFolderNode,
+    IFolderStats
 } from 'server/src/interfaces/document.interface';
 import { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from 'server/src/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
@@ -32,6 +34,7 @@ import { deleteBlockContent } from './documentBlockContentActions';
 import { DocumentHandlerRegistry } from 'server/src/lib/document-handlers/DocumentHandlerRegistry';
 import { getCurrentUser } from '../user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getEntityTypesForUser } from 'server/src/lib/utils/documentPermissionUtils';
 
 // Add new document
 export async function addDocument(data: DocumentInput) {
@@ -1433,6 +1436,7 @@ export async function uploadDocument(
     contactNameId?: string;
     assetId?: string;
     projectTaskId?: string;
+    folder_path?: string | null;
   }
 ): Promise<
   | { success: true; document: IDocument }
@@ -1487,7 +1491,8 @@ export async function uploadDocument(
         file_id: uploadResult.file_id,
         storage_path: uploadResult.storage_path,
         mime_type: fileData.type,
-        file_size: fileData.size
+        file_size: fileData.size,
+        folder_path: options.folder_path || null
       };
 
       // Use transaction for document creation and associations
@@ -1783,4 +1788,395 @@ export async function getDistinctEntityTypes(): Promise<string[]> {
     console.error('Error fetching distinct entity types:', error);
     throw new Error('Failed to fetch distinct entity types');
   }
+}
+
+// ============================================================================
+// FOLDER OPERATIONS
+// ============================================================================
+
+/**
+ * Build a hierarchical folder tree from document folder_paths
+ *
+ * @returns Promise<IFolderNode[]> - Root level folders with nested children
+ */
+export async function getFolderTree(): Promise<IFolderNode[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Get explicit folders from document_folders table
+  const explicitFolders = await knex('document_folders')
+    .select('folder_path')
+    .where('tenant', tenant)
+    .orderBy('folder_path', 'asc');
+
+  const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
+
+  // Get implicit folder paths from documents
+  const implicitFolders = await knex('documents')
+    .select('folder_path')
+    .where('tenant', tenant)
+    .whereNotNull('folder_path')
+    .andWhere('folder_path', '!=', '')
+    .groupBy('folder_path');
+
+  const implicitPaths = implicitFolders.map((row: any) => row.folder_path);
+
+  // Merge both lists (remove duplicates)
+  const allPaths = Array.from(new Set([...explicitPaths, ...implicitPaths]));
+
+  // Build tree structure
+  const tree = buildFolderTreeFromPaths(allPaths);
+
+  // Get document counts for each folder (single query)
+  await enrichFolderTreeWithCounts(tree, knex, tenant);
+
+  return tree;
+}
+
+/**
+ * Get documents in a specific folder (OPTIMIZED - filters at DB level)
+ *
+ * @param folderPath - Path to folder (e.g., '/Legal/Contracts')
+ * @param includeSubfolders - Whether to include documents from subfolders
+ * @param page - Page number
+ * @param limit - Items per page
+ * @returns Promise with documents and pagination info
+ */
+export async function getDocumentsByFolder(
+  folderPath: string | null,
+  includeSubfolders: boolean = false,
+  page: number = 1,
+  limit: number = 15
+): Promise<{ documents: IDocument[]; total: number }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+    throw new Error('Permission denied');
+  }
+
+  // Build list of entity types user has permission for
+  const allowedEntityTypes = await getEntityTypesForUser(currentUser);
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Build base query with permission filtering at DB level
+  let query = knex('documents as d')
+    .where('d.tenant', tenant)
+    .where(function() {
+      // Option 1: Document has no associations (tenant-level doc)
+      this.whereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant);
+      })
+      // Option 2: Document has associations user has permission for
+      .orWhereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant)
+          .whereIn('da.entity_type', allowedEntityTypes);
+      });
+    });
+
+  // Add folder filtering
+  if (folderPath) {
+    if (includeSubfolders) {
+      query = query.where(function() {
+        this.where('d.folder_path', folderPath)
+          .orWhere('d.folder_path', 'like', `${folderPath}/%`);
+      });
+    } else {
+      query = query.where('d.folder_path', folderPath);
+    }
+  } else {
+    // Root folder - documents with no folder_path
+    query = query.whereNull('d.folder_path');
+  }
+
+  // Get total count
+  const countResult = await query.clone().count('* as count');
+  const total = parseInt(countResult[0].count as string);
+
+  // Get paginated results
+  const offset = (page - 1) * limit;
+  const documents = await query
+    .select('d.*')
+    .limit(limit)
+    .offset(offset)
+    .orderBy('d.document_name', 'asc');
+
+  return {
+    documents,
+    total,
+  };
+}
+
+/**
+ * Move documents to a different folder
+ *
+ * @param documentIds - Array of document IDs to move
+ * @param newFolderPath - Destination folder path
+ */
+export async function moveDocumentsToFolder(
+  documentIds: string[],
+  newFolderPath: string | null
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'update'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await knex('documents')
+    .whereIn('document_id', documentIds)
+    .andWhere('tenant', tenant)
+    .update({
+      folder_path: newFolderPath,
+      updated_at: new Date(),
+    });
+}
+
+/**
+ * Get folder statistics (document count, total size)
+ *
+ * @param folderPath - Path to folder
+ * @returns Promise<IFolderStats> - Folder statistics
+ */
+export async function getFolderStats(
+  folderPath: string
+): Promise<IFolderStats> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  const result = await knex('documents')
+    .where('tenant', tenant)
+    .where(function() {
+      this.where('folder_path', folderPath)
+        .orWhere('folder_path', 'like', `${folderPath}/%`);
+    })
+    .count('* as count')
+    .sum('file_size as size')
+    .first();
+
+  return {
+    path: folderPath,
+    documentCount: parseInt(result?.count as string) || 0,
+    totalSize: parseInt(result?.size as string) || 0,
+  };
+}
+
+/**
+ * Create a new folder explicitly
+ *
+ * @param folderPath - Full path to the folder (e.g., '/Legal/Contracts')
+ * @returns Promise<void>
+ */
+export async function createFolder(folderPath: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'create'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Validate folder path
+  if (!folderPath || !folderPath.startsWith('/')) {
+    throw new Error('Folder path must start with /');
+  }
+
+  // Extract folder name from path
+  const parts = folderPath.split('/').filter(p => p.length > 0);
+  if (parts.length === 0) {
+    throw new Error('Invalid folder path');
+  }
+  const folderName = parts[parts.length - 1];
+
+  // Get parent folder path
+  const parentPath = parts.length > 1
+    ? '/' + parts.slice(0, -1).join('/')
+    : null;
+
+  // Get parent folder ID if exists
+  let parentFolderId = null;
+  if (parentPath) {
+    const parentFolder = await knex('document_folders')
+      .where('tenant', tenant)
+      .where('folder_path', parentPath)
+      .first();
+
+    if (parentFolder) {
+      parentFolderId = parentFolder.folder_id;
+    }
+  }
+
+  // Check if folder already exists
+  const existingFolder = await knex('document_folders')
+    .where('tenant', tenant)
+    .where('folder_path', folderPath)
+    .first();
+
+  if (existingFolder) {
+    // Folder already exists, that's fine
+    return;
+  }
+
+  // Create folder
+  await knex('document_folders').insert({
+    tenant,
+    folder_path: folderPath,
+    folder_name: folderName,
+    parent_folder_id: parentFolderId,
+    created_by: currentUser.user_id,
+  });
+}
+
+/**
+ * Delete a folder (only if it's empty - no documents and no subfolders)
+ *
+ * @param folderPath - Path to the folder to delete
+ * @returns Promise<void>
+ */
+export async function deleteFolder(folderPath: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'delete'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Check if folder has documents
+  const docCount = await knex('documents')
+    .where('tenant', tenant)
+    .where('folder_path', folderPath)
+    .count('* as count')
+    .first();
+
+  if (parseInt(docCount?.count as string) > 0) {
+    throw new Error('Cannot delete folder: contains documents');
+  }
+
+  // Check if folder has subfolders
+  const subfolderCount = await knex('document_folders')
+    .where('tenant', tenant)
+    .where('folder_path', 'like', `${folderPath}/%`)
+    .count('* as count')
+    .first();
+
+  if (parseInt(subfolderCount?.count as string) > 0) {
+    throw new Error('Cannot delete folder: contains subfolders');
+  }
+
+  // Delete folder
+  await knex('document_folders')
+    .where('tenant', tenant)
+    .where('folder_path', folderPath)
+    .delete();
+}
+
+// Helper functions
+function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
+  const root: IFolderNode[] = [];
+
+  for (const path of paths) {
+    const parts = path.split('/').filter(p => p.length > 0);
+    let currentLevel = root;
+    let currentPath = '';
+
+    for (const part of parts) {
+      currentPath += '/' + part;
+
+      let node = currentLevel.find(n => n.name === part);
+      if (!node) {
+        node = {
+          path: currentPath,
+          name: part,
+          children: [],
+          documentCount: 0,
+        };
+        currentLevel.push(node);
+      }
+
+      currentLevel = node.children;
+    }
+  }
+
+  return root;
+}
+
+async function enrichFolderTreeWithCounts(
+  nodes: IFolderNode[],
+  knex: Knex,
+  tenant: string
+): Promise<void> {
+  // Collect all folder paths in the tree (including nested)
+  const allPaths: string[] = [];
+  function collectPaths(nodeList: IFolderNode[]) {
+    for (const node of nodeList) {
+      allPaths.push(node.path);
+      if (node.children.length > 0) {
+        collectPaths(node.children);
+      }
+    }
+  }
+  collectPaths(nodes);
+
+  if (allPaths.length === 0) {
+    return;
+  }
+
+  // Single query to get counts for ALL folders at once
+  const counts = await knex('documents')
+    .where('tenant', tenant)
+    .whereIn('folder_path', allPaths)
+    .groupBy('folder_path')
+    .select('folder_path')
+    .count('* as count');
+
+  // Build map of path -> count
+  const countMap = new Map<string, number>();
+  for (const row of counts) {
+    const count = typeof row.count === 'string' ? parseInt(row.count) : Number(row.count);
+    countMap.set(String(row.folder_path), count);
+  }
+
+  // Apply counts to nodes recursively
+  function applyCounts(nodeList: IFolderNode[]) {
+    for (const node of nodeList) {
+      node.documentCount = countMap.get(node.path) || 0;
+      if (node.children.length > 0) {
+        applyCounts(node.children);
+      }
+    }
+  }
+  applyCounts(nodes);
 }

@@ -15,6 +15,7 @@ interface DocumentUploadProps {
     userId: string;
     entityId?: string;
     entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task';
+    folderPath?: string | null;
     onUploadComplete: (result: { success: boolean; document: IDocument }) => void;
     onCancel: () => void;
 }
@@ -26,6 +27,7 @@ interface UploadOptions {
     contactNameId?: string;
     assetId?: string;
     projectTaskId?: string;
+    folder_path?: string | null;
 }
 
 export default function DocumentUpload({
@@ -33,6 +35,7 @@ export default function DocumentUpload({
     userId,
     entityId,
     entityType,
+    folderPath,
     onUploadComplete,
     onCancel
 }: DocumentUploadProps): JSX.Element {
@@ -75,7 +78,8 @@ export default function DocumentUpload({
             formData.append('file', file);
 
             const options: UploadOptions = {
-                userId
+                userId,
+                folder_path: folderPath
             };
 
             // Add the appropriate entity ID based on type if both are provided

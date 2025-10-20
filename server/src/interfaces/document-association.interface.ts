@@ -1,6 +1,6 @@
 import { TenantEntity } from ".";
 
-export type DocumentAssociationEntityType = 'user' | 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'tenant';
+export type DocumentAssociationEntityType = 'user' | 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'tenant';
 
 export interface IDocumentAssociation extends TenantEntity {
     association_id: string;

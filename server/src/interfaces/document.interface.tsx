@@ -23,6 +23,14 @@ export interface IDocument extends TenantEntity {
     mime_type?: string;
     file_size?: number;
 
+    // Folder organization
+    folder_path?: string;
+
+    // Preview/thumbnail system
+    thumbnail_file_id?: string;
+    preview_file_id?: string;
+    preview_generated_at?: Date;
+
     // Additional fields (not in the database)
     created_by_full_name?: string;
     type_name?: string;
@@ -71,6 +79,7 @@ export interface DocumentFilters {
     excludeEntityType?: string;
     updated_at_start?: string;
     updated_at_end?: string;
+    folder_path?: string;
     sortBy?: 'document_name' | 'updated_at' | 'file_size' | 'created_by_full_name';
     sortOrder?: 'asc' | 'desc';
 }
@@ -108,4 +117,18 @@ export interface PaginatedDocumentsResponse {
   totalCount: number;
   currentPage: number;
   totalPages: number;
+}
+
+// Folder-related interfaces
+export interface IFolderNode {
+  path: string;
+  name: string;
+  children: IFolderNode[];
+  documentCount: number;
+}
+
+export interface IFolderStats {
+  path: string;
+  documentCount: number;
+  totalSize: number;
 }

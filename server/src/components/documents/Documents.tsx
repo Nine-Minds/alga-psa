@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { IDocument, DocumentFilters } from 'server/src/interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
@@ -14,18 +15,23 @@ import Drawer from 'server/src/components/ui/Drawer';
 import { Input } from 'server/src/components/ui/Input';
 import TextEditor from 'server/src/components/editor/TextEditor';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
-import { Plus, Link, FileText, Edit3, Download } from 'lucide-react';
+import FolderTreeView from './FolderTreeView';
+import FolderManager from './FolderManager';
+import DocumentListView from './DocumentListView';
+import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
+import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { downloadDocument } from 'server/src/lib/utils/documentUtils';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import toast from 'react-hot-toast';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
-import { 
+import {
   getDocumentsByEntity,
+  getDocumentsByFolder,
+  moveDocumentsToFolder,
+  createFolder,
   deleteDocument,
   removeDocumentAssociations,
-  updateDocument,
-  uploadDocument
+  updateDocument
 } from 'server/src/lib/actions/document-actions/documentActions';
 import {
   getBlockContent,
@@ -75,6 +81,8 @@ const Documents = ({
   searchTermFromParent = ''
 }: DocumentsProps): JSX.Element => {
   const { t } = useTranslation('clientPortal');
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [documentsToDisplay, setDocumentsToDisplay] = useState<IDocument[]>(initialDocuments);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -99,6 +107,25 @@ const Documents = ({
   const [editedDocumentId, setEditedDocumentId] = useState<string | null>(null);
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
 
+  // Folder functionality state (only used when no entity is specified)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentFolder, setCurrentFolder] = useState<string | null>(() => {
+    // Initialize from URL on mount (only in folder mode)
+    if (!entityId && !entityType) {
+      const folderParam = searchParams.get('folder');
+      return folderParam || null;
+    }
+    return null;
+  });
+  const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
+  const [showFolderManager, setShowFolderManager] = useState(false);
+  const [folderTreeKey, setFolderTreeKey] = useState(0); // For forcing tree refresh
+  const [isFoldersPaneCollapsed, setIsFoldersPaneCollapsed] = useState(false);
+  const [isFiltersPaneCollapsed, setIsFiltersPaneCollapsed] = useState(false);
+
+  // Determine if we're in folder mode (no entity specified)
+  const inFolderMode = !entityId && !entityType;
+
   useEffect(() => {
     if (initialDocuments && initialDocuments.length > 0) {
         setDocumentsToDisplay(initialDocuments);
@@ -107,6 +134,34 @@ const Documents = ({
 
 
   const fetchDocuments = useCallback(async (page: number, searchTerm?: string) => {
+    // Folder mode: fetch by folder
+    if (inFolderMode) {
+      try {
+        const response = await getDocumentsByFolder(currentFolder, false, page, pageSize);
+        let docs = response.documents;
+
+        // Apply client-side search filter if needed
+        if (searchTerm) {
+          docs = docs.filter(doc =>
+            doc.document_name.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+
+        setDocumentsToDisplay(docs);
+        setTotalDocuments(response.total);
+        setTotalPages(Math.ceil(response.total / pageSize));
+        setCurrentPage(page);
+      } catch (err) {
+        console.error('Error fetching documents by folder:', err);
+        setError('Failed to fetch documents.');
+        setDocumentsToDisplay([]);
+        setTotalPages(1);
+        setCurrentPage(1);
+      }
+      return;
+    }
+
+    // Entity mode: fetch by entity (existing behavior)
     if (!entityId || !entityType) {
       if (searchTerm) {
         const filtered = initialDocuments.filter(doc =>
@@ -139,7 +194,7 @@ const Documents = ({
       setTotalPages(1);
       setCurrentPage(1);
     }
-  }, [entityId, entityType, pageSize, initialDocuments]);
+  }, [entityId, entityType, pageSize, initialDocuments, inFolderMode, currentFolder]);
 
 
   useEffect(() => {
@@ -149,6 +204,71 @@ const Documents = ({
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
+  };
+
+  // Folder-specific handlers
+  const handleFolderSelect = (folderPath: string | null) => {
+    setCurrentFolder(folderPath);
+    setCurrentPage(1); // Reset to first page when changing folders
+
+    // Update URL to persist folder selection
+    if (inFolderMode) {
+      const params = new URLSearchParams(searchParams.toString());
+      if (folderPath) {
+        params.set('folder', folderPath);
+      } else {
+        params.delete('folder');
+      }
+      const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+      router.replace(newUrl);
+    }
+  };
+
+  const handleFolderCreated = async (folderPath: string) => {
+    try {
+      // Create the folder in the database
+      await createFolder(folderPath);
+
+      // Show success toast
+      toast.success(`Folder "${folderPath}" created successfully`);
+
+      // Navigate to the new folder
+      setCurrentFolder(folderPath);
+      setShowFolderManager(false);
+
+      // Refresh the folder tree to show the new folder immediately
+      setFolderTreeKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create folder';
+      toast.error(errorMessage);
+      setError(errorMessage);
+    }
+  };
+
+  const handleMoveDocuments = async () => {
+    if (selectedDocumentsForMove.size === 0) return;
+
+    try {
+      await moveDocumentsToFolder(
+        Array.from(selectedDocumentsForMove),
+        currentFolder
+      );
+
+      const count = selectedDocumentsForMove.size;
+      toast.success(`${count} document${count > 1 ? 's' : ''} moved successfully`);
+
+      setSelectedDocumentsForMove(new Set());
+      fetchDocuments(currentPage, searchTermFromParent);
+
+      // Refresh folder tree to update counts
+      setFolderTreeKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Failed to move documents:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to move documents';
+      toast.error(errorMessage);
+      setError(errorMessage);
+    }
   };
 
   const handleCreateDocument = async () => {
@@ -167,15 +287,22 @@ const Documents = ({
   };
 
   const handleDelete = useCallback(async (document: IDocument) => {
+    if (!confirm(`Are you sure you want to delete "${document.document_name}"?`)) {
+      return;
+    }
+
     try {
       await deleteDocument(document.document_id, userId);
       setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
+      toast.success(`Document "${document.document_name}" deleted successfully`);
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
     } catch (error) {
       console.error('Error deleting document:', error);
-      setError('Failed to delete document');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete document';
+      toast.error(errorMessage);
+      setError(errorMessage);
     }
   }, [userId, onDocumentCreated]);
 
@@ -369,6 +496,329 @@ const Documents = ({
     });
   };
 
+  // Folder mode: show folder tree sidebar and new layout
+  if (inFolderMode) {
+    return (
+      <ReflectionContainer id={id} label="Documents">
+        <div className="flex flex-col h-[calc(100vh-200px)]">
+          {/* Header with Actions */}
+          <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+
+              {/* New Document Button */}
+              <Button
+                id={`${id}-new-document-btn`}
+                variant="default"
+                onClick={handleCreateDocument}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                New Document
+              </Button>
+
+              {/* Upload Button */}
+              <Button
+                id={`${id}-upload-btn`}
+                variant="default"
+                onClick={() => setShowUpload(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Upload
+              </Button>
+
+              {/* Create Folder Button */}
+              <Button
+                id={`${id}-new-folder-btn`}
+                variant="outline"
+                onClick={() => setShowFolderManager(true)}
+              >
+                <FolderPlus className="w-4 h-4 mr-2" />
+                New Folder
+              </Button>
+            </div>
+
+            {/* View Mode Switcher */}
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={setViewMode}
+              options={[
+                { value: 'grid', label: 'Grid', icon: Grid },
+                { value: 'list', label: 'List', icon: ListIcon },
+              ]}
+            />
+          </div>
+
+          {/* Content with sidebars */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Collapsed Folders Button */}
+            {isFoldersPaneCollapsed && (
+              <div className="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex items-start p-2">
+                <button
+                  onClick={() => setIsFoldersPaneCollapsed(false)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  title="Show folders"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Folder Navigation Sidebar */}
+            {!isFoldersPaneCollapsed && (
+              <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700">
+                <FolderTreeView
+                  key={folderTreeKey}
+                  selectedFolder={currentFolder}
+                  onFolderSelect={handleFolderSelect}
+                  onFolderDeleted={() => {
+                    fetchDocuments(currentPage, searchTermFromParent);
+                  }}
+                  isCollapsed={isFoldersPaneCollapsed}
+                  onToggleCollapse={() => setIsFoldersPaneCollapsed(!isFoldersPaneCollapsed)}
+                />
+              </div>
+            )}
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+
+            {showUpload && (
+              <div ref={uploadFormRef} className="m-4 p-4 border border-gray-200 rounded-md bg-white">
+                <DocumentUpload
+                  id={`${id}-upload`}
+                  userId={userId}
+                  entityId={entityId}
+                  entityType={entityType}
+                  folderPath={currentFolder}
+                  onUploadComplete={async () => {
+                    setShowUpload(false);
+                    fetchDocuments(currentPage, searchTermFromParent);
+                  }}
+                  onCancel={() => setShowUpload(false)}
+                />
+              </div>
+            )}
+
+            {/* Document Display */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {isLoading ? (
+                <DocumentsGridSkeleton gridColumns={3} />
+              ) : error ? (
+                <div className="text-center py-4 text-red-500 bg-red-50 rounded-md">
+                  {error}
+                </div>
+              ) : viewMode === 'list' ? (
+                <DocumentListView
+                  documents={documentsToDisplay}
+                  selectedDocuments={selectedDocumentsForMove}
+                  onSelectionChange={setSelectedDocumentsForMove}
+                  onDelete={(doc) => handleDelete(doc)}
+                  onClick={(doc) => {
+                    setSelectedDocument(doc);
+                    setDocumentName(doc.document_name);
+                    setIsCreatingNew(false);
+                    const isEditableContentDoc = (!doc.file_id && (doc.type_name === 'text/plain' || doc.type_name === 'text/markdown' || !doc.type_name));
+                    setIsEditModeInDrawer(isEditableContentDoc);
+                    setIsDrawerOpen(true);
+                  }}
+                />
+              ) : (
+                documentsToDisplay.length > 0 ? (
+                  <div className={`grid ${gridColumnsClass} gap-4`}>
+                    {renderDocumentCards()}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
+                    No documents found in this folder
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Pagination */}
+            {documentsToDisplay.length > 0 && totalPages > 1 && (
+              <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                <DocumentsPagination
+                  id={`${id}-pagination`}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Folder Manager Dialog */}
+          <FolderManager
+            open={showFolderManager}
+            onClose={() => setShowFolderManager(false)}
+            currentFolder={currentFolder}
+            onFolderCreated={handleFolderCreated}
+          />
+        </div>
+
+        {/* Document Drawer (keep existing drawer functionality) */}
+        <div className="document-drawer">
+          <Drawer
+            id={`${id}-document-drawer`}
+            isOpen={isDrawerOpen}
+            onClose={() => {
+              setIsDrawerOpen(false);
+              setDrawerError(null);
+            }}
+            isInDrawer={isInDrawer}
+            hideCloseButton={true}
+            drawerVariant="document"
+          >
+          <div className="flex flex-col h-full">
+            <div className="flex justify-between items-center mb-4 pb-4">
+              <h2 className="text-lg font-semibold">
+                {isCreatingNew ? t('documents.newDocument', 'New Document') : (isEditModeInDrawer ? t('documents.editDocument', 'Edit Document') : t('documents.viewDocument', 'View Document'))}
+              </h2>
+              <div className="flex items-center space-x-2">
+                {selectedDocument &&
+                  (selectedDocument.type_name === 'text/plain' ||
+                   selectedDocument.type_name === 'text/markdown' ||
+                   (!selectedDocument.type_name && !selectedDocument.file_id)
+                  ) && (
+                  <Button
+                    id={`${id}-download-pdf-btn`}
+                    onClick={async () => {
+                      if (selectedDocument) {
+                        const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
+                        const filename = `${selectedDocument.document_name || 'document'}.pdf`;
+                        try {
+                          await downloadDocument(downloadUrl, filename, true);
+                        } catch (error) {
+                          console.error('Download failed:', error);
+                        }
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    PDF
+                  </Button>
+                )}
+                {!isCreatingNew && !isEditModeInDrawer && selectedDocument && (
+                  <Button
+                    id={`${id}-edit-document-btn`}
+                    onClick={() => setIsEditModeInDrawer(true)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+                {!isInDrawer && (
+                  <Button
+                    id={`${id}-close-drawer-btn`}
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      setDrawerError(null);
+                      if (!isCreatingNew) {
+                        setIsEditModeInDrawer(false);
+                      }
+                    }}
+                    variant="ghost"
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {drawerError && (
+                <div className="mb-4 bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded">
+                  {drawerError}
+                </div>
+              )}
+              <div className="mb-4 relative p-0.5">
+                <Input
+                  id={`${id}-document-name`}
+                  type="text"
+                  placeholder="Document Name *"
+                  value={isCreatingNew ? newDocumentName : documentName}
+                  onChange={(e) => {
+                    if (isCreatingNew || isEditModeInDrawer) {
+                      if (isCreatingNew) {
+                        setNewDocumentName(e.target.value);
+                        setDrawerError(null);
+                      } else {
+                        setDocumentName(e.target.value);
+                      }
+                    }
+                  }}
+                  readOnly={!isCreatingNew && !isEditModeInDrawer}
+                  className={(!isCreatingNew && !isEditModeInDrawer) ? "bg-gray-100 cursor-default" : ""}
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto mb-4 p-2">
+                <div className="h-full w-full">
+                  {isLoadingContent ? (
+                    <div className="flex justify-center items-center h-full">
+                      <Spinner size="sm" />
+                    </div>
+                  ) : isCreatingNew || (selectedDocument && isEditModeInDrawer) ? (
+                    <TextEditor
+                      key={isCreatingNew ? "editor-new" : `editor-${selectedDocument?.document_id}`}
+                      id={`${id}-editor`}
+                      initialContent={currentContent}
+                      onContentChange={handleContentChange}
+                      editorRef={editorRef}
+                    />
+                  ) : selectedDocument ? (
+                    <RichTextViewer
+                      id={`${id}-viewer`}
+                      content={currentContent}
+                    />
+                  ) : (
+                    <div className="flex justify-center items-center h-full text-gray-500">
+                      Select a document or create a new one.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  id={`${id}-cancel-btn`}
+                  onClick={() => {
+                    setIsDrawerOpen(false);
+                    setDrawerError(null);
+                    if (!isCreatingNew) {
+                      setIsEditModeInDrawer(false);
+                    }
+                  }}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+                {(isCreatingNew || isEditModeInDrawer) && (
+                  <Button
+                    id={`${id}-save-btn`}
+                    onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
+                    disabled={isSaving || (!hasContentChanged && !isCreatingNew && documentName === selectedDocument?.document_name)}
+                    variant="default"
+                    className={isCreatingNew && !newDocumentName.trim() ? 'opacity-50' : ''}
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+          </Drawer>
+        </div>
+        </div>
+      </ReflectionContainer>
+    );
+  }
+
+  // Entity mode: existing layout
   return (
     <ReflectionContainer id={id} label="Documents">
       <div className="w-full space-y-4">
