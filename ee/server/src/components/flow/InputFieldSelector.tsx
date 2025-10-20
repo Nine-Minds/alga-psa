@@ -72,11 +72,12 @@ const InputFieldSelector: React.FC<InputFieldSelectorProps> = ({ value, onChange
   return (
     <div style={styles.container}>
       <div style={styles.inputContainer}>
-        <Input 
+        <Input
+          id="input-field-selector"
           ref={inputRef}
-          type="text" 
-          value={value.template ?? ''} 
-          onChange={(e) => onChange(e.target.value)} 
+          type="text"
+          value={value.template ?? ''}
+          onChange={(e) => onChange(e.target.value)}
           style={styles.input}
         />
         <button onClick={() => setIsPopupOpen(true)} style={styles.pickerButton}>
