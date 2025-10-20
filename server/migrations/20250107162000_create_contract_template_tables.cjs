@@ -2,9 +2,11 @@
  * Contract template separation — schema introduction (Phase 2)
  *
  * Creates dedicated tables for contract templates and establishes helper views
- * to compare legacy template rows (still stored in `contracts`/`contract_lines`)
- * with the new structure. Foreign keys are created as NOT VALID so we can backfill
- * data before enforcing referential integrity during the cutover window.
+ * to compare legacy template rows (previously stored in `contracts`/`contract_lines`)
+ * with the new structure. After this phase, `contracts` focuses on client-specific
+ * agreements while `contract_templates` owns reusable blueprints. Foreign keys are
+ * created as NOT VALID so we can backfill data before enforcing referential integrity
+ * during the cutover window.
  *
  * @param { import('knex').Knex } knex
  * @returns { Promise<void> }

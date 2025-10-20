@@ -1,10 +1,11 @@
 /**
  * Backfill dedicated contract template tables from legacy combined schema.
  *
- * This migration copies all existing template data (rows where `contracts.is_template = true`)
- * into the new `contract_template_*` tables so that subsequent code can rely solely on
- * the separated structure. It preserves original UUIDs for templates and template lines
- * to maintain referential integrity with client contract records.
+ * This migration copies any legacy template data (rows where `contracts.is_template = true`)
+ * into the new `contract_template_*` tables so that subsequent code can rely solely on the
+ * separated structure. After backfill, `contracts` is free to represent only client-specific
+ * agreements while templates live independently. Original UUIDs are preserved to maintain
+ * referential integrity with client contract records.
  *
  * @param { import('knex').Knex } knex
  * @returns { Promise<void> }

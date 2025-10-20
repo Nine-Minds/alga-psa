@@ -4,6 +4,16 @@
 
 The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price contract lines, time-based billing, usage-based billing, hybrid models, bucket of minutes/retainer models, discounts and promotions, multi-currency support, tax handling, contracts, refunds and adjustments, and approval workflows. The system supports multiple simultaneous contract lines per client, enabling granular and flexible billing arrangements. Contracts provide a way to group related contract lines together for easier management and clearer client invoicing.
 
+### Contract Entity Roles
+
+The platform uses three related tables to represent the contract lifecycle:
+
+- `contract_templates` store reusable blueprints. Templates contain default lines, rates, and guidance, and are never tied directly to a client.
+- `contracts` hold live contract instances. Each row represents an agreement with a specific client and anchors the related line mappings, schedules, and usage.
+- `client_contracts` link a contract to a client while carrying assignment metadata (start/end dates, purchase-order requirements, status). Keeping this join layer gives us flexibility to support multiple concurrent assignments in the future without reshaping the instance table.
+
+When a template becomes an active agreement we create a row in `contracts`, link it via `client_contracts`, and clone the template’s composition into the contract line mapping tables.
+
 ## Manual Invoicing
 
 ### Purpose

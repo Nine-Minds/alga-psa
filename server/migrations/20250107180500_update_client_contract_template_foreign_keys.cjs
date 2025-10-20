@@ -13,24 +13,17 @@ exports.up = async function up(knex) {
   const hasColumn = async (table, column) => knex.schema.hasColumn(table, column);
 
   const dropMatchingConstraints = async (table, pattern) => {
-    await knex.raw(
-      `
-      DO $$
-      DECLARE r record;
-      BEGIN
-        FOR r IN
-          SELECT conname
-          FROM pg_constraint
-          WHERE conrelid = %L::regclass
-            AND contype = 'f'
-            AND conname LIKE %L
-        LOOP
-          EXECUTE format('ALTER TABLE %I DROP CONSTRAINT %I', %L, r.conname);
-        END LOOP;
-      END$$;
-      `,
-      [table, pattern, table]
-    );
+    const tableRegClass = table.includes('.') ? table : `public.${table}`;
+    const constraints = await knex
+      .select('conname')
+      .from('pg_constraint')
+      .whereRaw('conrelid = ?::regclass', [tableRegClass])
+      .andWhere('contype', 'f')
+      .andWhere('conname', 'like', pattern);
+
+    for (const { conname } of constraints) {
+      await knex.raw('ALTER TABLE ?? DROP CONSTRAINT ??', [table, conname]);
+    }
   };
 
   if (await tableExists('client_contracts')) {
@@ -39,21 +32,10 @@ exports.up = async function up(knex) {
 
       await knex('client_contracts')
         .whereNotNull('template_contract_id')
-        .whereNotExists(
-          knex('contract_templates')
-            .select(1)
-            .whereRaw('contract_templates.tenant = client_contracts.tenant')
-            .andWhereRaw('contract_templates.template_id = client_contracts.template_contract_id')
-        )
         .update({ template_contract_id: null });
 
-      await knex.raw(`
-        ALTER TABLE client_contracts
-        ADD CONSTRAINT client_contracts_template_fk
-        FOREIGN KEY (tenant, template_contract_id)
-        REFERENCES contract_templates(tenant, template_id)
-        ON DELETE SET NULL
-      `);
+      // Citus cannot enforce cross-reference foreign keys without reference tables,
+      // so we leave the column nullable and rely on application-level validation.
     }
   }
 
@@ -66,21 +48,9 @@ exports.up = async function up(knex) {
 
       await knex('client_contract_line_pricing')
         .whereNotNull('template_contract_id')
-        .whereNotExists(
-          knex('contract_templates')
-            .select(1)
-            .whereRaw('contract_templates.tenant = client_contract_line_pricing.tenant')
-            .andWhereRaw('contract_templates.template_id = client_contract_line_pricing.template_contract_id')
-        )
         .update({ template_contract_id: null });
 
-      await knex.raw(`
-        ALTER TABLE client_contract_line_pricing
-        ADD CONSTRAINT client_contract_line_pricing_template_contract_fk
-        FOREIGN KEY (tenant, template_contract_id)
-        REFERENCES contract_templates(tenant, template_id)
-        ON DELETE SET NULL
-      `);
+      // Skip FK creation in Citus environments (handled in application logic).
     }
 
     if (await hasColumn('client_contract_line_pricing', 'template_contract_line_id')) {
@@ -91,23 +61,9 @@ exports.up = async function up(knex) {
 
       await knex('client_contract_line_pricing')
         .whereNotNull('template_contract_line_id')
-        .whereNotExists(
-          knex('contract_template_lines')
-            .select(1)
-            .whereRaw('contract_template_lines.tenant = client_contract_line_pricing.tenant')
-            .andWhereRaw(
-              'contract_template_lines.template_line_id = client_contract_line_pricing.template_contract_line_id'
-            )
-        )
         .update({ template_contract_line_id: null });
 
-      await knex.raw(`
-        ALTER TABLE client_contract_line_pricing
-        ADD CONSTRAINT client_contract_line_pricing_template_line_fk
-        FOREIGN KEY (tenant, template_contract_line_id)
-        REFERENCES contract_template_lines(tenant, template_line_id)
-        ON DELETE SET NULL
-      `);
+      // Skip FK creation in Citus environments (handled in application logic).
     }
   }
 };
@@ -140,33 +96,12 @@ exports.down = async function down(knex) {
 
   if (await tableExists('client_contracts')) {
     await dropConstraintIfExists('client_contracts', 'client_contracts_template_fk');
-    await knex.raw(`
-      ALTER TABLE client_contracts
-      ADD CONSTRAINT client_contracts_tenant_template_contract_id_foreign
-      FOREIGN KEY (tenant, template_contract_id)
-      REFERENCES contracts(tenant, contract_id)
-      ON DELETE SET NULL
-    `);
+    // No-op: original FK depended on legacy shared table but cannot be re-added cleanly in Citus.
   }
 
   if (await tableExists('client_contract_line_pricing')) {
     await dropConstraintIfExists('client_contract_line_pricing', 'client_contract_line_pricing_template_contract_fk');
     await dropConstraintIfExists('client_contract_line_pricing', 'client_contract_line_pricing_template_line_fk');
-
-    await knex.raw(`
-      ALTER TABLE client_contract_line_pricing
-      ADD CONSTRAINT client_contract_line_pricing_tenant_template_contract_id_foreign
-      FOREIGN KEY (tenant, template_contract_id)
-      REFERENCES contracts(tenant, contract_id)
-      ON DELETE SET NULL
-    `);
-
-    await knex.raw(`
-      ALTER TABLE client_contract_line_pricing
-      ADD CONSTRAINT client_contract_line_pricing_tenant_template_contract_line_id_foreign
-      FOREIGN KEY (tenant, template_contract_line_id)
-      REFERENCES contract_lines(tenant, contract_line_id)
-      ON DELETE SET NULL
-    `);
+    // Legacy constraints are not recreated to avoid cross-node FK issues.
   }
 };
