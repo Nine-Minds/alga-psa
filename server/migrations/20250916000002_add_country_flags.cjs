@@ -310,12 +310,19 @@ exports.up = async function(knex) {
     ['ZW', '🇿🇼'], // Zimbabwe
   ];
 
-  // Update countries with flag emojis
+  // Update countries with flag emojis using bulk UPDATE with CASE WHEN
   // Note: countries is a reference table (shared across all tenants), so no tenant filter needed
-  for (const [countryCode, flagEmoji] of flagUpdates) {
-    await knex('countries')
-      .where('code', countryCode)
-      .update({ flag_emoji: flagEmoji });
+  if (flagUpdates.length > 0) {
+    const codes = flagUpdates.map(([code]) => code);
+    const caseWhen = flagUpdates
+      .map(([code, emoji]) => `WHEN '${code}' THEN '${emoji}'`)
+      .join(' ');
+
+    await knex.raw(`
+      UPDATE countries
+      SET flag_emoji = CASE code ${caseWhen} END
+      WHERE code IN (${codes.map(code => `'${code}'`).join(', ')})
+    `);
   }
 };
 

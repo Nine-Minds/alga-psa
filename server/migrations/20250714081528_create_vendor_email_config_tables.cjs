@@ -126,3 +126,7 @@ exports.down = async function(knex) {
   await knex.schema.dropTableIfExists('microsoft_email_provider_config');
   console.log('✅ Dropped vendor-specific email configuration tables');
 };
+
+// Disable transaction for Citus DB compatibility
+// create_distributed_table cannot run inside a transaction block
+exports.config = { transaction: false };

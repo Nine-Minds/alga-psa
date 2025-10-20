@@ -40,14 +40,28 @@ exports.up = async function(knex) {
 
     // Missing sovereign countries
     ['TL', '+670'], // Timor-Leste
+
+    // Missing special territories (from deleted migration 20250915000001)
+    ['BV', '+47'], // Bouvet Island (uses Norway routing)
+    ['HM', '+672'], // Heard Island and McDonald Islands
+    ['IO', '+246'], // British Indian Ocean Territory
+    ['SJ', '+47'], // Svalbard and Jan Mayen (uses Norway routing)
+    ['TF', '+262'], // French Southern Territories
   ];
 
-  // Update countries with missing phone codes
+  // Update countries with missing phone codes using bulk UPDATE with CASE WHEN
   // Note: countries is a reference table (shared across all tenants), so no tenant filter needed
-  for (const [countryCode, phoneCode] of missingPhoneCodeUpdates) {
-    await knex('countries')
-      .where('code', countryCode)
-      .update({ phone_code: phoneCode });
+  if (missingPhoneCodeUpdates.length > 0) {
+    const codes = missingPhoneCodeUpdates.map(([code]) => code);
+    const caseWhen = missingPhoneCodeUpdates
+      .map(([code, phone]) => `WHEN '${code}' THEN '${phone}'`)
+      .join(' ');
+
+    await knex.raw(`
+      UPDATE countries
+      SET phone_code = CASE code ${caseWhen} END
+      WHERE code IN (${codes.map(code => `'${code}'`).join(', ')})
+    `);
   }
 };
 
@@ -62,7 +76,8 @@ exports.down = async function(knex) {
     'AX', 'FO', 'GG', 'IM', 'JE', 'GI', 'GL',
     'EH', 'MR',
     'CC', 'CX', 'NF', 'PN', 'UM',
-    'GS', 'TL'
+    'GS', 'TL',
+    'BV', 'HM', 'IO', 'SJ', 'TF'
   ];
 
   // Note: countries is a reference table (shared across all tenants), so no tenant filter needed
