@@ -85,6 +85,7 @@ export async function createTenant(
           client_id: uuidv4(),
           client_name: input.clientName ?? tenantCompanyName,
           tenant: tenantId,
+          is_inactive: false,
           created_at: new Date(),
           updated_at: new Date()
         })

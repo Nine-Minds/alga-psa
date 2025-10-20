@@ -4,6 +4,7 @@ import path from 'path';
 import { applyPlaywrightDatabaseEnv } from './src/__tests__/integration/utils/playwrightDatabaseConfig';
 
 // Load environment variables from the correct path
+dotenv.config({ path: path.resolve(__dirname, '.env.test') });
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 // If Postgres runs in Docker and is published to a different host port,

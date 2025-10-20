@@ -31,12 +31,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, '../shared'),
+      '@shared': path.resolve(__dirname, '../../shared'),
       '@main-server': path.resolve(__dirname, '../../server/src'),
       '@main-test-utils': path.resolve(__dirname, '../../server/test-utils'),
       'server': path.resolve(__dirname, '../../server'),
-      '@shared/core/secretProvider': path.resolve(__dirname, '../shared/core/secretProvider.ts'),
-      '@shared/core/logger': path.resolve(__dirname, '../shared/core/logger.ts'),
+      '@shared/core/secretProvider': path.resolve(__dirname, '../../shared/core/secretProvider.ts'),
+      '@shared/core/logger': path.resolve(__dirname, '../../shared/core/logger.ts'),
     },
   },
 });

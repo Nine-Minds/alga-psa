@@ -1,18 +1,32 @@
 /**
  * Playwright happy path focused on creating an Hours-based (Hourly) contract line via the wizard.
+ * Salient details:
+ * - Test seeds tenants/services directly via Knex helpers and cleans up afterward.
+ * - UI interactions are driven through automation IDs and semantic locators.
+ * - Fail-fast listeners surface client/network/server errors immediately.
+ * - Database assertions validate that finishing the wizard persists hourly plan configurations.
  */
 
-import { expect, Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import type { Knex } from 'knex';
-import { knex as createKnex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
-import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
+import { createTestTenant, type TenantTestData } from '../../lib/testing/tenant-test-factory';
+import { rollbackTenant } from '../../lib/testing/tenant-creation';
 import {
   applyPlaywrightAuthEnvDefaults,
-  createTenantAndLogin,
+  prepareTenantForPlaywright,
   resolvePlaywrightBaseUrl,
+  setupAuthenticatedSession,
+  type TenantPermissionTuple,
 } from './helpers/playwrightAuthSessionHelper';
+import {
+  attachFailFastHandlers,
+  waitForUIState,
+  findComponent,
+  seedHourlyServiceForTenant,
+  cleanupContractArtifacts,
+} from './helpers/playwrightContractHelpers';
 
 applyPlaywrightAuthEnvDefaults();
 
@@ -20,92 +34,13 @@ const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
 
-type UIComponentNode = {
-  id: string;
-  type: string;
-  label?: string;
-  fieldType?: string;
-  options?: Array<{ label: string; value: string }>;
-  children?: UIComponentNode[];
-};
+const DEFAULT_ADMIN_PERMISSIONS: TenantPermissionTuple[] = [
+  { resource: 'client', action: 'read' },
+  { resource: 'billing', action: 'create' },
+  { resource: 'billing', action: 'update' },
+];
 
-async function waitForUIState(page: Page): Promise<void> {
-  await page.waitForFunction(() => Boolean((window as any).__UI_STATE__), null, {
-    timeout: 10_000,
-  });
-}
-
-async function getUIComponents(page: Page): Promise<UIComponentNode[]> {
-  return (await page.evaluate(() => {
-    const state = (window as any).__UI_STATE__;
-    return state?.components ?? [];
-  })) as UIComponentNode[];
-}
-
-function dfsFindComponent(
-  nodes: UIComponentNode[] | undefined,
-  predicate: (component: UIComponentNode) => boolean
-): UIComponentNode | null {
-  if (!nodes) return null;
-  for (const node of nodes) {
-    if (predicate(node)) return node;
-    const child = dfsFindComponent(node.children, predicate);
-    if (child) return child;
-  }
-  return null;
-}
-
-async function findComponent(
-  page: Page,
-  predicate: (component: UIComponentNode) => boolean,
-  retries = 20,
-  delayMs = 250
-): Promise<UIComponentNode> {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    const components = await getUIComponents(page);
-    const match = dfsFindComponent(components, predicate);
-    if (match) return match;
-    await page.waitForTimeout(delayMs);
-  }
-  throw new Error('UI component not found');
-}
-
-async function seedHourlyServiceForTenant(
-  db: Knex,
-  tenantId: string,
-  serviceName: string,
-  now: Date,
-  defaultRateCents = 12500
-): Promise<{ serviceTypeId: string; serviceId: string }> {
-  const serviceTypeId = uuidv4();
-  const serviceId = uuidv4();
-
-  await db('service_types').insert({
-    id: serviceTypeId,
-    tenant: tenantId,
-    name: `Hourly Type ${serviceName}`,
-    billing_method: 'hourly',
-    is_active: true,
-    description: 'Playwright hourly service type',
-    order_number: 2,
-    standard_service_type_id: null,
-  });
-
-  await db('service_catalog').insert({
-    service_id: serviceId,
-    tenant: tenantId,
-    service_name: serviceName,
-    description: 'Playwright hourly service',
-    custom_service_type_id: serviceTypeId,
-    billing_method: 'hourly',
-    default_rate: defaultRateCents,
-    unit_of_measure: 'hour',
-    category_id: null,
-    tax_rate_id: null,
-  });
-
-  return { serviceTypeId, serviceId };
-}
+// Removed duplicate helper functions - now imported from playwrightContractHelpers
 
 test('Hourly Contract Line Happy Path', async ({ page }) => {
   test.setTimeout(300000);
@@ -119,38 +54,79 @@ test('Hourly Contract Line Happy Path', async ({ page }) => {
   const roundUpMinutes = 15;
 
   try {
-    tenantData = await createTenantAndLogin(db, page, {
-      tenantOptions: {
-        companyName: `Hourly Contract Client ${uuidv4().slice(0, 6)}`,
-      },
+    // Attach fail-fast error handlers
+    attachFailFastHandlers(page, TEST_CONFIG.baseUrl);
+
+    // Create tenant with modern factory pattern
+    tenantData = await createTestTenant(db, {
+      companyName: `Hourly Contract Client ${uuidv4().slice(0, 6)}`,
+    });
+
+    const tenantId = tenantData.tenant.tenantId;
+
+    // Prepare tenant for Playwright (onboarding + permissions)
+    await prepareTenantForPlaywright(db, tenantId, {
       completeOnboarding: { completedAt: now },
       permissions: [
         {
           roleName: 'Admin',
-          permissions: [
-            { resource: 'client', action: 'read' },
-            { resource: 'billing', action: 'create' },
-            { resource: 'billing', action: 'update' },
-          ],
+          permissions: DEFAULT_ADMIN_PERMISSIONS,
         },
       ],
     });
-    const tenantId = tenantData.tenant.tenantId;
-    await seedHourlyServiceForTenant(db, tenantId, serviceName, now, hourlyRateCents);
 
-    // Go to Contracts tab
-    await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    // Setup authenticated session
+    await setupAuthenticatedSession(page, tenantData, {
+      baseUrl: TEST_CONFIG.baseUrl,
+    });
+
+    // Warm up on canonical host to ensure cookie domain matches before protected route
+    await page.goto(`${TEST_CONFIG.baseUrl}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
     await page.waitForLoadState('networkidle', { timeout: 30_000 });
 
+    // Seed hourly service for this tenant
+    const { serviceId: hourlyServiceId } = await seedHourlyServiceForTenant(
+      db,
+      tenantId,
+      serviceName,
+      now,
+      hourlyRateCents
+    );
+
+    // Navigate to billing page - under bypass, pass tenantId for server actions
+    const tenantQuery = process.env.E2E_AUTH_BYPASS === 'true' && tenantData?.tenant?.tenantId
+      ? `?tenantId=${tenantData.tenant.tenantId}`
+      : '';
+    await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing${tenantQuery}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 });
+
+    // Switch to Client Contracts tab
+    const clientContractsTab = page.locator('[data-automation-id="tab-client-contracts"], [role="tab"]').filter({ hasText: /Client Contracts/i });
+    await clientContractsTab.waitFor({ timeout: 15_000 });
+    await clientContractsTab.click();
+    await page.waitForLoadState('networkidle', { timeout: 10_000 });
+
     // Open wizard
-    await page.locator('[data-automation-id="wizard-contract-button"]').click();
+    const wizardButtonLocator = page.locator('[data-automation-id="wizard-contract-button"]').or(page.getByRole('button', { name: /Create Contract/i }));
+    await wizardButtonLocator.click();
     await page.locator('[data-automation-id="contract-basics-step"]').waitFor({ state: 'attached', timeout: 10000 });
     await waitForUIState(page);
 
-    // Select client
-    const clientSelect = page.getByRole('combobox', { name: /Select a client|Loading clients/i });
-    await clientSelect.click();
-    await page.getByRole('option', { name: tenantData.client!.clientName }).click();
+    // Select client - ClientPicker renders as a button
+    const clientButton = page.getByRole('button', { name: /Select a client/i });
+    await clientButton.waitFor({ timeout: 10_000 });
+    await clientButton.click();
+
+    // Wait for client options to appear and click the test client
+    const clientOption = page.getByText(tenantData.client!.clientName, { exact: true });
+    await clientOption.waitFor({ state: 'visible', timeout: 5_000 });
+    await clientOption.click();
 
     // Name + Start Date
     await page.locator('[data-automation-id="contract_name"]').fill(contractName);
@@ -171,6 +147,10 @@ test('Hourly Contract Line Happy Path', async ({ page }) => {
     await page.locator('[data-automation-id="wizard-next"]').click();
     await expect(page.getByRole('heading', { name: 'Hourly Services' }).first()).toBeVisible({ timeout: 3000 });
 
+    // Configure global hourly settings BEFORE adding service
+    await page.fill('#minimum-billable-time', String(minimumBillableTime));
+    await page.fill('#round-up-to', String(roundUpMinutes));
+
     // Add Hourly Service and configure
     await page.getByRole('button', { name: /Add Hourly Service/i }).click();
     const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).last();
@@ -178,11 +158,9 @@ test('Hourly Contract Line Happy Path', async ({ page }) => {
     await page.getByRole('option', { name: serviceName }).click();
     await page.fill('#hourly-rate-0', (hourlyRateCents / 100).toFixed(2));
     await page.locator('#hourly-rate-0').press('Tab');
-    await page.fill('#minimum_billable_time', String(minimumBillableTime));
-    await page.fill('#round_up_to_nearest', String(roundUpMinutes));
 
     // Proceed through remaining steps
-    const remaining: string[] = ['Usage-Based Services', 'Bucket Services', 'Review Contract'];
+    const remaining: string[] = ['Usage-Based Services', 'Review Contract'];
     for (const heading of remaining) {
       await page.locator('[data-automation-id="wizard-next"]').click();
       await expect(page.getByRole('heading', { name: heading }).first()).toBeVisible({ timeout: 3000 });
@@ -194,46 +172,56 @@ test('Hourly Contract Line Happy Path', async ({ page }) => {
     await page.locator('[data-automation-id="wizard-finish"]').click();
     await expect(page.locator('[data-automation-id="wizard-finish"]')).toBeHidden({ timeout: 10000 });
 
-    // Validate DB
-    const bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
-    expect(bundle).toBeDefined();
-
-    const linkTable = (await db.schema.hasTable('client_plan_bundles')) ? 'client_plan_bundles' : 'company_plan_bundles';
-    const link = await db(linkTable)
-      .where({ tenant: tenantId, bundle_id: bundle.bundle_id })
+    // Validate DB: Contract was created
+    const contract = await db('contracts')
+      .where({ tenant: tenantId, contract_name: contractName })
       .first();
-    expect(link).toBeDefined();
+    expect(contract).toBeDefined();
 
-    const hourlyPlan = await db('billing_plans')
-      .where({ tenant: tenantId, plan_type: 'Hourly' })
-      .orderBy('created_at', 'desc')
+    // Find contract line mappings
+    const contractLineMappings = await db('contract_line_mappings')
+      .where({ tenant: tenantId, contract_id: contract?.contract_id });
+    expect(contractLineMappings.length).toBeGreaterThanOrEqual(1);
+
+    // Find the hourly contract line
+    const contractLineIds = contractLineMappings.map((m: any) => m.contract_line_id);
+    const hourlyLine = await db('contract_lines')
+      .whereIn('contract_line_id', contractLineIds)
+      .andWhere({ tenant: tenantId, contract_line_type: 'Hourly' })
       .first();
-    expect(hourlyPlan).toBeDefined();
+    expect(hourlyLine).toBeDefined();
 
-    const ps = await db('plan_services').where({ tenant: tenantId, plan_id: hourlyPlan.plan_id }).first();
-    expect(ps).toBeDefined();
+    const hourlyLineId = hourlyLine?.contract_line_id;
 
-    const hourlyConfig = await db('plan_service_hourly_configs')
-      .where({ tenant: tenantId, config_id: db('plan_service_configuration').where({ tenant: tenantId, plan_id: hourlyPlan.plan_id }).first().select('config_id') })
-      .first()
-      .catch(() => null);
+    // Validate hourly service was linked
+    const lineService = await db('contract_line_services')
+      .where({ tenant: tenantId, contract_line_id: hourlyLineId, service_id: hourlyServiceId })
+      .first();
+    expect(lineService).toBeDefined();
 
-    // If subquery approach above is not supported by the DB client, do a two-step fetch
-    let hourlyConfigRow = hourlyConfig;
-    if (!hourlyConfigRow) {
-      const configRow = await db('plan_service_configuration')
-        .where({ tenant: tenantId, plan_id: hourlyPlan.plan_id, configuration_type: 'Hourly' })
-        .first();
-      expect(configRow).toBeDefined();
-      hourlyConfigRow = await db('plan_service_hourly_configs')
-        .where({ tenant: tenantId, config_id: configRow!.config_id })
-        .first();
-    }
+    // Validate hourly configuration
+    const hourlyConfigRow = await db('contract_line_service_configuration')
+      .where({ tenant: tenantId, contract_line_id: hourlyLineId, service_id: hourlyServiceId })
+      .andWhere({ configuration_type: 'Hourly' })
+      .first();
     expect(hourlyConfigRow).toBeDefined();
-    expect(Number(hourlyConfigRow!.hourly_rate)).toBe(hourlyRateCents);
-    expect(hourlyConfigRow!.minimum_billable_time).toBe(minimumBillableTime);
-    expect(hourlyConfigRow!.round_up_to_nearest).toBe(roundUpMinutes);
+
+    // Validate hourly config details
+    const hourlyConfigDetails = await db('contract_line_service_hourly_configs')
+      .where({ tenant: tenantId, config_id: hourlyConfigRow?.config_id })
+      .first();
+    expect(hourlyConfigDetails).toBeDefined();
+    expect(Number(hourlyConfigDetails?.hourly_rate)).toBe(hourlyRateCents);
+    expect(hourlyConfigDetails?.minimum_billable_time).toBe(minimumBillableTime);
+    expect(hourlyConfigDetails?.round_up_to_nearest).toBe(roundUpMinutes);
   } finally {
-    await db.destroy().catch(() => undefined);
+    if (tenantData) {
+      const tenantId = tenantData.tenant.tenantId;
+      await cleanupContractArtifacts(db, tenantId);
+      await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+      await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+      await rollbackTenant(db, tenantId).catch(() => {});
+    }
+    await db.destroy();
   }
 });

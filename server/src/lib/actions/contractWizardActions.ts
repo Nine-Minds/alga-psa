@@ -383,6 +383,7 @@ export async function createContractTemplateFromWizard(
           tenant,
           contract_line_id: planId,
           service_id: service.service_id,
+          quantity,
         });
 
         let serviceBaseRate = 0;
@@ -457,6 +458,7 @@ export async function createContractTemplateFromWizard(
           tenant,
           contract_line_id: hourlyPlanId,
           service_id: service.service_id,
+          quantity: 1,
         });
 
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(hourlyPlanId, service.service_id, {
@@ -501,6 +503,7 @@ export async function createContractTemplateFromWizard(
           tenant,
           contract_line_id: usagePlanId,
           service_id: service.service_id,
+          quantity: 1,
         });
 
         await planServiceConfigService.upsertPlanServiceUsageConfiguration(usagePlanId, service.service_id, {
@@ -657,6 +660,7 @@ export async function createClientContractFromWizard(
           tenant,
           contract_line_id: planId,
           service_id: service.service_id,
+          quantity,
         });
 
         let serviceBaseRate = 0;
@@ -736,6 +740,7 @@ export async function createClientContractFromWizard(
           tenant,
           contract_line_id: hourlyPlanId,
           service_id: service.service_id,
+          quantity: 1,
         });
 
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(hourlyPlanId, service.service_id, {
@@ -788,6 +793,7 @@ export async function createClientContractFromWizard(
           tenant,
           contract_line_id: usagePlanId,
           service_id: service.service_id,
+          quantity: 1,
         });
 
         await planServiceConfigService.upsertPlanServiceUsageConfiguration(usagePlanId, service.service_id, {
