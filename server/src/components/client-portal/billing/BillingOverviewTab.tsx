@@ -6,7 +6,7 @@ import { Card } from 'server/src/components/ui/Card';
 import { Package, FileText, AlertCircle } from 'lucide-react';
 import BucketUsageChart from './BucketUsageChart';
 import type {
-  IClientBillingPlan
+  IClientContractLine
 } from 'server/src/interfaces/billing.interfaces';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
@@ -15,10 +15,10 @@ import PlanDetailsDialog from './PlanDetailsDialog';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 // Flag to control visibility of bucket usage metrics
-const SHOW_USAGE_FEATURES = false;
+const SHOW_USAGE_FEATURES = true;
 
 interface BillingOverviewTabProps {
-  billingPlan: IClientBillingPlan | null;
+  contractLine: IClientContractLine | null;
   invoices: InvoiceViewModel[];
   bucketUsage: ClientBucketUsageResult[];
   isBucketUsageLoading: boolean;
@@ -29,7 +29,7 @@ interface BillingOverviewTabProps {
 }
 
 const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
-  billingPlan,
+  contractLine,
   invoices,
   bucketUsage,
   isBucketUsageLoading,
@@ -47,11 +47,11 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
     <Card className="p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-500">{t('billing.currentPlan')}</p>
-          {billingPlan ? (
+          <p className="text-sm font-medium text-gray-500">{t('billing.currentContractLine')}</p>
+          {contractLine ? (
             <>
-              <p className="mt-2 text-3xl font-semibold">{billingPlan.plan_name}</p>
-              <p className="mt-1 text-sm text-gray-500">{t(`billing.frequency.${billingPlan.billing_frequency?.toLowerCase() || 'monthly'}`)}</p>
+              <p className="mt-2 text-3xl font-semibold">{contractLine.contract_line_name}</p>
+              <p className="mt-1 text-sm text-gray-500">{t(`billing.frequency.${contractLine.billing_frequency?.toLowerCase() || 'monthly'}`)}</p>
             </>
           ) : (
             <>
@@ -68,10 +68,10 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         variant="outline"
         onClick={() => setIsPlanDialogOpen(true)}
       >
-        {t('billing.viewPlanDetails')}
+        {t('billing.viewContractLineDetails')}
       </Button>
     </Card>
-  ), [billingPlan]);
+  ), [contractLine]);
 
   // Memoize the invoice card to prevent unnecessary re-renders
   const invoiceCard = useMemo(() => (
@@ -145,9 +145,9 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
                 <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.bucket.noPlanTitle')}</h3>
+                <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.bucket.noContractLineTitle')}</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {t('billing.bucket.noPlanDescription')}
+                  {t('billing.bucket.noContractLineDescription')}
                 </p>
               </div>
             </div>
@@ -155,7 +155,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
             // Bucket usage charts - only rendered client-side
             <div className="grid gap-6 md:grid-cols-2">
               {bucketUsage.map((bucket, index) => (
-                <BucketUsageChart key={`${bucket.plan_id}-${bucket.service_id}-${index}`} bucketData={bucket} />
+                <BucketUsageChart key={`${bucket.contract_line_id}-${bucket.service_id}-${index}`} bucketData={bucket} />
               ))}
             </div>
           )}
@@ -165,7 +165,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
 
       {/* Plan Details Dialog */}
       <PlanDetailsDialog
-        plan={billingPlan}
+        contractLine={contractLine}
         isOpen={isPlanDialogOpen}
         onClose={() => setIsPlanDialogOpen(false)}
         formatCurrency={formatCurrency}

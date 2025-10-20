@@ -134,7 +134,17 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
     afterCreate: (conn: any, done: Function) => {
       console.log(`Creating new connection for tenant: ${tenant}`);
       conn.on('error', (err: Error) => {
+        const msg = String((err && (err as any).message) || err || '');
         console.error('Database connection error:', err);
+        if (/SCRAM|wrong password type|SASL|password authentication failed/i.test(msg)) {
+          console.error('=== DB Troubleshooter Hint ===');
+          console.error('Possible PgBouncer/Postgres auth mismatch or secret drift.');
+          console.error('If using PgBouncer, ensure Postgres stores md5 hashes for roles used via PgBouncer.');
+          console.error('Quick fix (run in Postgres container):');
+          console.error("  psql -U postgres -d postgres -c \"SET password_encryption = 'md5'; ALTER ROLE postgres WITH PASSWORD '<admin secret>';\"");
+          console.error('Also verify app_user password matches secret db_password_server.');
+          console.error('See docs/setup_guide.md (Troubleshooting → Postgres authentication loop).');
+        }
       });
       // With CitusDB, tenant isolation is handled automatically at the shard level
       // No need to set app.current_tenant session variable

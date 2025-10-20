@@ -4,18 +4,18 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Table } from 'server/src/components/ui/Table';
 import { getClientClient } from 'server/src/lib/actions/client-portal-actions/client-client';
-import { getClientBillingPlan, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
+import { getClientContractLine, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 import type { IClient } from 'server/src/interfaces/client.interfaces';
-import type { IClientBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import type { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 
 export default function ClientAccount() {
   const { t } = useTranslation('clientPortal');
   const [isLoading, setIsLoading] = useState(true);
   const [client, setClient] = useState<IClient | null>(null);
-  const [billingPlan, setBillingPlan] = useState<IClientBillingPlan | null>(null);
+  const [contractLine, setContractLine] = useState<IClientContractLine | null>(null);
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,12 +45,12 @@ export default function ClientAccount() {
       try {
         const [clientData, plan] = await Promise.all([
           getClientClient(),
-          getClientBillingPlan(),
+          getClientContractLine(),
         ]);
 
         if (!mounted) return;
         setClient(clientData);
-        setBillingPlan(plan);
+        setContractLine(plan);
 
         try {
           const inv = await getClientInvoices();
@@ -80,7 +80,7 @@ export default function ClientAccount() {
     return (
       <div className="space-y-6">
         <Card id="client-details-card" className="p-6"><div>{t('common.loading')}</div></Card>
-        <Card id="billing-plan-card" className="p-6"><div>{t('common.loading')}</div></Card>
+        <Card id="contract-line-card" className="p-6"><div>{t('common.loading')}</div></Card>
         <Card className="p-6"><div>{t('common.loading')}</div></Card>
       </div>
     );
@@ -119,17 +119,17 @@ export default function ClientAccount() {
         </CardContent>
       </Card>
 
-      {/* Billing Plan */}
-      <Card id="billing-plan-card" className="bg-white">
+      {/* Contract Line */}
+      <Card id="contract-line-card" className="bg-white">
         <CardHeader>
-          <CardTitle>{t('billing.currentPlan')}</CardTitle>
+          <CardTitle>{t('billing.currentContractLine')}</CardTitle>
         </CardHeader>
         <CardContent>
-          {billingPlan ? (
+          {contractLine ? (
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <div className="text-base font-medium">{billingPlan.plan_name}</div>
-                <div className="text-sm text-gray-600">{billingPlan.billing_frequency || '—'}</div>
+                <div className="text-base font-medium">{contractLine.contract_line_name}</div>
+                <div className="text-sm text-gray-600">{contractLine.billing_frequency || '—'}</div>
               </div>
               {/* <div className="flex items-center gap-2">
                 <Button id="cancel-subscription-button" variant="outline" onClick={onCancelSubscription}>

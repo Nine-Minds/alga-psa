@@ -8,7 +8,7 @@ import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput'
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse } from 'server/src/lib/actions/serviceActions';
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
 // Import action to get tax rates
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { QuickAddService } from './QuickAddService';
+import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServiceTypeSelect';
 import { MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
@@ -26,13 +27,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 // Removed old SERVICE_TYPE_OPTIONS
 
-// Define billing method options (as per plan)
+// Define billing method options (as per contract line)
 const BILLING_METHOD_OPTIONS = [
-  { value: 'fixed', label: 'Fixed Price' },
-  { value: 'per_unit', label: 'Per Unit' }
+  { value: 'fixed', label: 'Fixed Fee' },
+  { value: 'hourly', label: 'Hourly' },
+  { value: 'usage', label: 'Usage Based' }
 ];
 
 // Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
@@ -48,7 +51,7 @@ const ServiceCatalogManager: React.FC = () => {
   // Note: Categories are currently hidden in favor of using Service Types for organization
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   // Update state type to match what getServiceTypesForSelection returns
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
   // Use IService directly, extended with optional UI fields
   const [editingService, setEditingService] = useState<(IService & {
     sku?: string; // These might need to be added to IService if they are persisted
@@ -70,15 +73,19 @@ const ServiceCatalogManager: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // Default page size
   const [totalCount, setTotalCount] = useState(0);
+  // State for rate input (display value while typing)
+  const [rateInput, setRateInput] = useState<string>('');
   const filteredServices = services.filter(service => {
     // Filter by Service Type
     const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
     const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
     return serviceTypeMatch && billingMethodMatch;
   });
+  const memoizedFilteredServices = useMemo(() => filteredServices, [JSON.stringify(filteredServices)]);
 
   // Track when page changes are from user interaction vs. programmatic updates
   const [userChangedPage, setUserChangedPage] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Add effect to refetch data when page changes from user interaction
   useEffect(() => {
@@ -142,6 +149,7 @@ const ServiceCatalogManager: React.FC = () => {
   const [isUpdatingService, setIsUpdatingService] = useState(false);
   
   const fetchServices = async (preservePage = false) => {
+    setIsLoading(true);
     try {
       const pageToFetch = preservePage ? currentPage : 1;
       console.log(`Fetching services for page: ${pageToFetch}, preserve page: ${preservePage}, filters: serviceType=${selectedServiceType}, billingMethod=${selectedBillingMethod}`);
@@ -183,6 +191,8 @@ const ServiceCatalogManager: React.FC = () => {
     } catch (error) {
       console.error('Error fetching services:', error);
       setError('Failed to fetch services');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -341,7 +351,7 @@ const ServiceCatalogManager: React.FC = () => {
       {
         title: 'Unit', // Shortened title
         dataIndex: 'unit_of_measure',
-        render: (value, record) => record.billing_method === 'per_unit' ? value || 'N/A' : 'N/A',
+        render: (value, record) => record.billing_method === 'usage' ? value || 'N/A' : 'N/A',
       },
       // Updated Tax Column
       {
@@ -363,40 +373,41 @@ const ServiceCatalogManager: React.FC = () => {
 
     // Removed conditional columns based on old service_type
     // TODO: Re-add conditional columns based on new category/billing method if needed
-    baseColumns.push(
-      {
-        title: 'SKU',
-        dataIndex: 'sku',
-        render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name === 'Hardware' ? value || 'N/A' : 'N/A';
-        },
-      },
-      {
-        title: 'Inventory',
-        dataIndex: 'inventory_count',
-        render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name === 'Hardware' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-        },
-      },
-      {
-        title: 'Seat Limit',
-        dataIndex: 'seat_limit',
-        render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-        },
-      },
-      {
-        title: 'License Term',
-        dataIndex: 'license_term',
-        render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-          return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-        }
-      }
-    );
+    // Hidden columns: SKU, Inventory, Seat Limit, License Term
+    // baseColumns.push(
+    //   {
+    //     title: 'SKU',
+    //     dataIndex: 'sku',
+    //     render: (value, record) => {
+    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
+    //       return type?.name === 'Hardware' ? value || 'N/A' : 'N/A';
+    //     },
+    //   },
+    //   {
+    //     title: 'Inventory',
+    //     dataIndex: 'inventory_count',
+    //     render: (value, record) => {
+    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
+    //       return type?.name === 'Hardware' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
+    //     },
+    //   },
+    //   {
+    //     title: 'Seat Limit',
+    //     dataIndex: 'seat_limit',
+    //     render: (value, record) => {
+    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
+    //       return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
+    //     },
+    //   },
+    //   {
+    //     title: 'License Term',
+    //     dataIndex: 'license_term',
+    //     render: (value, record) => {
+    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
+    //       return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
+    //     }
+    //   }
+    // );
 
     // Always add actions column at the end
     baseColumns.push({
@@ -421,6 +432,7 @@ const ServiceCatalogManager: React.FC = () => {
               id={`edit-service-${record.service_id}`}
               onClick={() => {
                 setEditingService(record);
+                setRateInput((record.default_rate / 100).toFixed(2));
                 setIsEditDialogOpen(true);
               }}
             >
@@ -480,33 +492,47 @@ const ServiceCatalogManager: React.FC = () => {
                   className="w-[200px]"
                 />
               </div>
-              <QuickAddService onServiceAdded={fetchServices} allServiceTypes={allServiceTypes} /> {/* Pass prop */}
+              <QuickAddService
+                onServiceAdded={fetchServices}
+                allServiceTypes={allServiceTypes}
+                onServiceTypesChange={fetchAllServiceTypes}
+              /> {/* Pass prop */}
             </div>
-            <DataTable
-              // Memoize filteredServices to prevent unnecessary rerenders
-              data={useMemo(() => filteredServices, [JSON.stringify(filteredServices)])}
-              columns={columns}
-              pagination={true} // Keep this to enable pagination UI
-              currentPage={currentPage}
-              pageSize={pageSize}
-              totalItems={totalCount} // Pass total count for server-side pagination
-              onPageChange={handlePageChange}
-              onRowClick={(record: IService) => { // Use updated IService
-                // Store the current page before opening the dialog
-                const currentPageBeforeDialog = currentPage;
-                
-                // Add optional UI fields if needed when setting state
-                setEditingService({
-                  ...record,
-                  // sku: record.sku || '', // Example if sku was fetched
-                });
-                setIsEditDialogOpen(true);
-                
-                // Ensure the current page is preserved
-                setCurrentPage(currentPageBeforeDialog);
-              }}
-              key={`service-catalog-table-${currentPage}`} // Include currentPage in the key to force proper re-rendering
-            />
+            {isLoading ? (
+              <LoadingIndicator
+                layout="stacked"
+                className="py-10 text-gray-600"
+                spinnerProps={{ size: 'md' }}
+                text="Loading services"
+              />
+            ) : (
+              <DataTable
+                data={memoizedFilteredServices}
+                columns={columns}
+                pagination={true} // Keep this to enable pagination UI
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalItems={totalCount} // Pass total count for server-side pagination
+                onPageChange={handlePageChange}
+                onRowClick={(record: IService) => { // Use updated IService
+                  // Store the current page before opening the dialog
+                  const currentPageBeforeDialog = currentPage;
+
+                  // Add optional UI fields if needed when setting state
+                  setEditingService({
+                    ...record,
+                    // sku: record.sku || '', // Example if sku was fetched
+                  });
+                  // Initialize rate input with formatted value
+                  setRateInput((record.default_rate / 100).toFixed(2));
+                  setIsEditDialogOpen(true);
+
+                  // Ensure the current page is preserved
+                  setCurrentPage(currentPageBeforeDialog);
+                }}
+                key={`service-catalog-table-${currentPage}`} // Include currentPage in the key to force proper re-rendering
+              />
+            )}
           </div>
         </CardContent>
       </Card>
@@ -526,18 +552,29 @@ const ServiceCatalogManager: React.FC = () => {
                 onChange={(e) => setEditingService({ ...editingService!, service_name: e.target.value })}
               />
             </div>
-            {/* Updated CustomSelect to use custom_service_type_id */}
+            {/* Updated to use EditableServiceTypeSelect */}
             <div>
-              <label htmlFor="service-type" className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
-              <CustomSelect
-                id="service-type"
-                options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
+              <EditableServiceTypeSelect
+                label="Service Type"
                 value={editingService?.custom_service_type_id || ''}
-                onValueChange={(value) => {
+                onChange={(value) => {
                   setEditingService({
                     ...editingService!,
                     custom_service_type_id: value
                   });
+                }}
+                serviceTypes={allServiceTypes}
+                onCreateType={async (name) => {
+                  await createServiceTypeInline(name);
+                  fetchAllServiceTypes(); // Refresh the service types list
+                }}
+                onUpdateType={async (id, name) => {
+                  await updateServiceTypeInline(id, name);
+                  fetchAllServiceTypes(); // Refresh the service types list
+                }}
+                onDeleteType={async (id) => {
+                  await deleteServiceTypeInline(id);
+                  fetchAllServiceTypes(); // Refresh the service types list
                 }}
                 placeholder="Select service type..."
               />
@@ -549,7 +586,7 @@ const ServiceCatalogManager: React.FC = () => {
                 id="billing-method"
                 options={BILLING_METHOD_OPTIONS}
                 value={editingService?.billing_method || 'fixed'}
-                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'per_unit' })}
+                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'hourly' | 'usage' })}
                 placeholder="Select billing method..."
               />
             </div>
@@ -563,50 +600,139 @@ const ServiceCatalogManager: React.FC = () => {
                 onChange={(e) => setEditingService({ ...editingService!, description: e.target.value })}
               />
             </div>
-            <div>
-              <label htmlFor="default-rate" className="block text-sm font-medium text-gray-700 mb-1">Default Rate ($)</label>
-              <Input
-                id="default-rate"
-                type="number"
-                placeholder="Default Rate"
-                // Display dollars, allow user to type decimals freely.
-                // The browser's number input might still show trailing zeros based on step, but typing isn't blocked.
-                value={(editingService?.default_rate ?? 0) / 100}
-                step="0.01" // Hint to the browser about expected precision
-                onChange={(e) => {
-                  const rawValue = e.target.value;
-                  // Allow empty string -> 0 cents
-                  if (rawValue === '') {
-                    // Ensure editingService is not null before updating
-                    if (editingService) {
-                      setEditingService({ ...editingService, default_rate: 0 });
-                    }
-                    return;
-                  }
-                  // Try parsing, update cents only if valid number
-                  const dollarValue = parseFloat(rawValue);
-                  if (!isNaN(dollarValue) && editingService) {
-                    const centsValue = Math.round(dollarValue * 100);
-                    setEditingService({ ...editingService, default_rate: centsValue });
-                  }
-                  // If input is invalid (e.g., "abc", "1..2"), do nothing to the cents state.
-                  // The input field itself might show the invalid input temporarily depending on browser behavior.
-                }}
-              />
-            </div>
-            {/* Category dropdown removed - using Service Types for organization */}
-            {/* Conditional Unit of Measure */}
-            {editingService?.billing_method === 'per_unit' && (
+            {/* Conditional Rate Fields Based on Billing Method */}
+            {editingService?.billing_method === 'fixed' && (
               <div>
-                <label htmlFor="unit-of-measure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure</label>
-                <UnitOfMeasureInput
-                  value={editingService?.unit_of_measure || ''}
-                  onChange={(value) => setEditingService({ ...editingService!, unit_of_measure: value })}
-                  placeholder="Unit of Measure"
-                  className="w-full"
-                />
+                <label htmlFor="fixed-rate" className="block text-sm font-medium text-gray-700 mb-1">Monthly Base Rate *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="fixed-rate"
+                    type="text"
+                    inputMode="decimal"
+                    value={rateInput}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setRateInput(value);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rateInput.trim() === '' || rateInput === '.') {
+                        setRateInput('');
+                        if (editingService) {
+                          setEditingService({ ...editingService, default_rate: 0 });
+                        }
+                      } else {
+                        const dollars = parseFloat(rateInput) || 0;
+                        const cents = Math.round(dollars * 100);
+                        if (editingService) {
+                          setEditingService({ ...editingService, default_rate: cents });
+                        }
+                        setRateInput((cents / 100).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">The monthly fee for this service</p>
               </div>
             )}
+
+            {editingService?.billing_method === 'hourly' && (
+              <div>
+                <label htmlFor="hourly-rate" className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="hourly-rate"
+                    type="text"
+                    inputMode="decimal"
+                    value={rateInput}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setRateInput(value);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rateInput.trim() === '' || rateInput === '.') {
+                        setRateInput('');
+                        if (editingService) {
+                          setEditingService({ ...editingService, default_rate: 0 });
+                        }
+                      } else {
+                        const dollars = parseFloat(rateInput) || 0;
+                        const cents = Math.round(dollars * 100);
+                        if (editingService) {
+                          setEditingService({ ...editingService, default_rate: cents });
+                        }
+                        setRateInput((cents / 100).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Rate charged per hour</p>
+              </div>
+            )}
+
+            {editingService?.billing_method === 'usage' && (
+              <>
+                <div>
+                  <label htmlFor="unit-rate" className="block text-sm font-medium text-gray-700 mb-1">Unit Rate *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <Input
+                      id="unit-rate"
+                      type="text"
+                      inputMode="decimal"
+                      value={rateInput}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                        const decimalCount = (value.match(/\./g) || []).length;
+                        if (decimalCount <= 1) {
+                          setRateInput(value);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (rateInput.trim() === '' || rateInput === '.') {
+                          setRateInput('');
+                          if (editingService) {
+                            setEditingService({ ...editingService, default_rate: 0 });
+                          }
+                        } else {
+                          const dollars = parseFloat(rateInput) || 0;
+                          const cents = Math.round(dollars * 100);
+                          if (editingService) {
+                            setEditingService({ ...editingService, default_rate: cents });
+                          }
+                          setRateInput((cents / 100).toFixed(2));
+                        }
+                      }}
+                      placeholder="0.00"
+                      className="pl-7"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Price per unit</p>
+                </div>
+                <div>
+                  <label htmlFor="unit-of-measure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</label>
+                  <UnitOfMeasureInput
+                    value={editingService?.unit_of_measure || ''}
+                    onChange={(value) => setEditingService({ ...editingService!, unit_of_measure: value })}
+                    placeholder="e.g., GB, API call, user"
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
+                </div>
+              </>
+            )}
+            {/* Category dropdown removed - using Service Types for organization */}
             {/* Replaced Tax Region/Is Taxable with Tax Rate Selector */}
             <CustomSelect
                 id="edit-service-tax-rate-select"
@@ -716,6 +842,7 @@ const ServiceCatalogManager: React.FC = () => {
             <Button id='cancel-button' variant="outline" onClick={() => {
               setIsEditDialogOpen(false);
               setEditingService(null);
+              setRateInput('');
             }}>Cancel</Button>
             <Button id='save-button' onClick={() => {
               // Just call handleUpdateService - it will close the dialog

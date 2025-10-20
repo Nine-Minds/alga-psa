@@ -8,40 +8,58 @@ import path from 'path';
 import util from 'util';
 import { createTenantKnex } from 'server/src/lib/db';
 import Invoice from 'server/src/lib/models/invoice'; // Assuming Invoice model has template methods
-import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
 import {
     IInvoiceTemplate,
     ICustomField,
     IConditionalRule,
-    IInvoiceAnnotation
+    IInvoiceAnnotation,
+    InvoiceTemplateSource
 } from 'server/src/interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTemplate | null> {
     const { knex, tenant } = await createTenantKnex();
-    // Select specific columns, excluding wasmBinary
     const template = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoice_templates')
-          .select(
-              'template_id',
-              'tenant',
-              'name',
-              'version',
-              'is_default',
-              'created_at',
-              'updated_at',
-              'assemblyScriptSource'
-              // Explicitly exclude 'wasmBinary'
-          )
-          .where({
-              template_id: templateId,
-              tenant
-          })
-          .first() as Omit<IInvoiceTemplate, 'wasmBinary'> | undefined; // Adjust return type hint
+      const record = await trx('invoice_templates')
+        .select(
+          'template_id',
+          'tenant',
+          'name',
+          'version',
+          'is_default',
+          'created_at',
+          'updated_at',
+          'assemblyScriptSource'
+        )
+        .where({
+          template_id: templateId,
+          tenant
+        })
+        .first();
+
+      if (!record) {
+        return undefined;
+      }
+
+      const tenantAssignment = await trx('invoice_template_assignments')
+        .select('template_source', 'invoice_template_id')
+        .where({ tenant, scope_type: 'tenant' })
+        .whereNull('scope_id')
+        .first();
+
+      const isTenantDefault =
+        tenantAssignment?.template_source === 'custom' &&
+        tenantAssignment.invoice_template_id === record.template_id;
+
+      return {
+        ...record,
+        isTenantDefault,
+        is_default: isTenantDefault,
+        templateSource: 'custom'
+      } as IInvoiceTemplate;
     });
 
-    // No parsing needed here anymore as we are moving away from DSL
-    return template || null;
+    return template ?? null;
 }
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
@@ -55,44 +73,62 @@ export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
     return templates;
 }
 
-export async function setDefaultTemplate(templateId: string): Promise<void> {
+type SetDefaultTemplatePayload =
+    | { templateSource: Extract<InvoiceTemplateSource, 'custom'>; templateId: string }
+    | { templateSource: Extract<InvoiceTemplateSource, 'standard'>; standardTemplateCode: string };
+
+export async function setDefaultTemplate(payload: SetDefaultTemplatePayload): Promise<void> {
     const { knex, tenant } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // First, unset any existing default template
+        await trx('invoice_template_assignments')
+            .where({ tenant, scope_type: 'tenant' })
+            .whereNull('scope_id')
+            .del();
+
         await trx('invoice_templates')
-            .where({
-                is_default: true,
-                tenant
-            })
+            .where({ tenant })
             .update({ is_default: false });
 
-        // Then set the new default template
-        await trx('invoice_templates')
-            .where({
-                template_id: templateId,
-                tenant
-            })
-            .update({ is_default: true });
+        if (payload.templateSource === 'standard' && !payload.standardTemplateCode) {
+            throw new Error('standard template selection requires a standard template code');
+        }
+
+        if (payload.templateSource === 'custom') {
+            await trx('invoice_templates')
+                .where({ tenant, template_id: payload.templateId })
+                .update({ is_default: true });
+        }
+
+        const baseAssignment = {
+            tenant,
+            scope_type: 'tenant' as const,
+            scope_id: null,
+            template_source: payload.templateSource,
+            standard_invoice_template_code: null,
+            invoice_template_id: null,
+            created_by: null
+        };
+
+        const assignmentRecord =
+            payload.templateSource === 'standard'
+                ? {
+                      ...baseAssignment,
+                      standard_invoice_template_code: payload.standardTemplateCode
+                  }
+                : {
+                      ...baseAssignment,
+                      invoice_template_id: payload.templateId
+                  };
+
+        await trx('invoice_template_assignments').insert(assignmentRecord);
     });
 }
 
 export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
-    const { knex, tenant } = await createTenantKnex();
-    const template = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoice_templates')
-          .where({
-              is_default: true,
-              tenant
-          })
-          .first();
-    });
-
-    if (template) {
-        template.parsed = template.dsl ? parseInvoiceTemplate(template.dsl) : null;
-    }
-
-    return template;
+    const { knex } = await createTenantKnex();
+    const templates = await Invoice.getAllTemplates(knex);
+    return templates.find((template) => template.isTenantDefault) ?? null;
 }
 
 export async function setClientTemplate(clientId: string, templateId: string | null): Promise<void> {
@@ -142,7 +178,15 @@ export async function saveInvoiceTemplate(
 
     // Remove the temporary flags before saving
     // Explicitly remove isStandard as it's not part of the DB schema
-    const { isClone, isStandard, ...templateToSaveWithoutFlags } = templateToSave;
+    const {
+        isClone,
+        isStandard,
+        isTenantDefault: _isTenantDefault,
+        templateSource: _templateSource,
+        standard_invoice_template_code: _standardInvoiceTemplateCode,
+        selectValue: _selectValue,
+        ...templateToSaveWithoutFlags
+    } = templateToSave;
 
     console.log('Calling Invoice.saveTemplate with:', {
         id: templateToSaveWithoutFlags.template_id,
@@ -225,7 +269,7 @@ export async function saveInvoiceTemplate(
 
 // --- Custom Fields, Conditional Rules, Annotations ---
 // These seem like placeholders in the original file.
-// Keeping them here as per the plan, but they might need actual implementation.
+// Keeping them here as per the contract line, but they might need actual implementation.
 
 export async function getCustomFields(): Promise<ICustomField[]> {
     // Implementation to fetch custom fields
@@ -587,11 +631,31 @@ export async function compileAndSaveTemplate(
                 .first();
              });
 
-             if (!savedTemplate) {
-                 // This shouldn't happen if updatedCount > 0, but handle defensively
-                 throw new Error('Failed to fetch updated template metadata from the database.');
-             }
+        if (!savedTemplate) {
+             // This shouldn't happen if updatedCount > 0, but handle defensively
+             throw new Error('Failed to fetch updated template metadata from the database.');
+         }
+    }
+
+        if (templateData.is_default) {
+            await setDefaultTemplate({
+                templateSource: 'custom',
+                templateId: templateId
+            });
         }
+
+        const tenantAssignment = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await trx('invoice_template_assignments')
+                .select('template_source', 'invoice_template_id')
+                .where({ tenant, scope_type: 'tenant' })
+                .whereNull('scope_id')
+                .first();
+        });
+        const isTenantDefault =
+            tenantAssignment?.template_source === 'custom' &&
+            tenantAssignment.invoice_template_id === templateId;
+        savedTemplate.is_default = isTenantDefault;
+        savedTemplate.isTenantDefault = isTenantDefault;
 
 
         // 6. Return success response
@@ -756,67 +820,127 @@ export async function deleteInvoiceTemplate(templateId: string): Promise<{ succe
     }
 
     try {
-        // 1. Check if the template is assigned to any client within the tenant
-        const clientUsingTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('clients')
-            .where({
-                invoice_template_id: templateId,
-                tenant: tenant
-            })
-            .first();
+        let templateWasTenantDefault = false;
+
+        await knex.transaction(async (trx) => {
+            const clientUsingTemplate = await trx('clients')
+                .where({
+                    invoice_template_id: templateId,
+                    tenant
+                })
+                .first();
+
+            if (clientUsingTemplate) {
+                throw new Error('TEMPLATE_IN_USE_BY_CLIENT');
+            }
+
+            const ruleUsingTemplate = await trx('conditional_display_rules')
+                .where({
+                    template_id: templateId,
+                    tenant
+                })
+                .first();
+
+            if (ruleUsingTemplate) {
+                throw new Error('TEMPLATE_IN_USE_BY_RULE');
+            }
+
+            const tenantAssignment = await trx('invoice_template_assignments')
+                .select('assignment_id')
+                .where({
+                    tenant,
+                    scope_type: 'tenant',
+                    template_source: 'custom',
+                    invoice_template_id: templateId
+                })
+                .whereNull('scope_id')
+                .first();
+
+            templateWasTenantDefault = Boolean(tenantAssignment);
+
+            await trx('invoice_template_assignments')
+                .where({
+                    tenant,
+                    template_source: 'custom',
+                    invoice_template_id: templateId
+                })
+                .del();
+
+            const deletedCount = await trx('invoice_templates')
+                .where({
+                    template_id: templateId,
+                    tenant
+                })
+                .del();
+
+            if (deletedCount === 0) {
+                throw new Error('TEMPLATE_NOT_FOUND');
+            }
         });
 
-        if (clientUsingTemplate) {
-            return {
-                success: false,
-                error: 'Template is currently assigned to one or more clients and cannot be deleted.'
-            };
+        if (templateWasTenantDefault) {
+            const fallbackCustom = await knex('invoice_templates')
+                .where({ tenant })
+                .select('template_id')
+                .orderBy('name')
+                .first();
+
+            if (fallbackCustom) {
+                await setDefaultTemplate({
+                    templateSource: 'custom',
+                    templateId: fallbackCustom.template_id
+                });
+            } else {
+                const fallbackStandard = await knex('standard_invoice_templates')
+                    .select('standard_invoice_template_code')
+                    .orderByRaw("CASE WHEN standard_invoice_template_code = 'standard-default' THEN 0 ELSE 1 END")
+                    .orderBy('name')
+                    .first();
+
+                if (fallbackStandard) {
+                    await setDefaultTemplate({
+                        templateSource: 'standard',
+                        standardTemplateCode: fallbackStandard.standard_invoice_template_code
+                    });
+                } else {
+                    await knex('invoice_template_assignments')
+                        .where({ tenant, scope_type: 'tenant' })
+                        .whereNull('scope_id')
+                        .del();
+
+                    await knex('invoice_templates')
+                        .where({ tenant })
+                        .update({ is_default: false });
+                }
+            }
         }
 
-        // Check if the template is referenced by any conditional display rules within the tenant
-        const ruleUsingTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('conditional_display_rules')
-            .where({
-                template_id: templateId,
-                tenant: tenant
-            })
-            .first();
-        });
-
-        if (ruleUsingTemplate) {
-            return {
-                success: false,
-                error: 'Template is currently used by one or more conditional display rules and cannot be deleted.'
-            };
-        }
-
-        // 2. Attempt to delete the template from the tenant's invoice_templates table
-        // Standard templates are not in this table for a specific tenant, so they won't be deleted.
-        const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('invoice_templates')
-            .where({
-                template_id: templateId,
-                tenant: tenant
-            })
-            .del();
-        });
-
-        // 3. Check if any rows were actually deleted
-        if (deletedCount > 0) {
-            console.log(`Successfully deleted template ${templateId} for tenant ${tenant}`);
-            return { success: true };
-        } else {
-            // If no rows were deleted, it means the template didn't exist for this tenant
-            // (or it was a standard template, which is handled implicitly).
-            console.warn(`Template ${templateId} not found for tenant ${tenant} during delete attempt.`);
-            return { success: false, error: 'Template not found or cannot be deleted.' };
-        }
-
+        console.log(`Successfully deleted template ${templateId} for tenant ${tenant}`);
+        return { success: true };
     } catch (error: any) {
+        if (error instanceof Error) {
+            switch (error.message) {
+                case 'TEMPLATE_IN_USE_BY_CLIENT':
+                    return {
+                        success: false,
+                        error: 'Template is currently assigned to one or more clients and cannot be deleted.'
+                    };
+                case 'TEMPLATE_IN_USE_BY_RULE':
+                    return {
+                        success: false,
+                        error: 'Template is currently used by one or more conditional display rules and cannot be deleted.'
+                    };
+                case 'TEMPLATE_NOT_FOUND':
+                    return { success: false, error: 'Template not found or cannot be deleted.' };
+                default:
+                    break;
+            }
+        }
+
         console.error(`Error deleting invoice template ${templateId} for tenant ${tenant}:`, error);
         return {
             success: false,
-            error: `An unexpected error occurred: ${error.message || String(error)}`, // Provide more specific error details
+            error: `An unexpected error occurred: ${error?.message || String(error)}`,
         };
     }
 }

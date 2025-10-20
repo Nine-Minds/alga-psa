@@ -4,14 +4,27 @@ import React, { useMemo, useState } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
-import { BarChart } from 'lucide-react';
+import { BarChart, Clock } from 'lucide-react';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import type { ClientUsageMetricResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
+import BucketUsageHistoryChart from './BucketUsageHistoryChart';
 
 interface UsageMetricsTabProps {
   usageMetrics: ClientUsageMetricResult[];
   isUsageMetricsLoading: boolean;
+  bucketUsageHistory?: Array<{
+    service_id: string;
+    service_name: string;
+    history: Array<{
+      period_start: string;
+      period_end: string;
+      percentage_used: number;
+      hours_used: number;
+      hours_total: number;
+    }>;
+  }>;
+  isBucketHistoryLoading?: boolean;
   dateRange: {
     startDate: string;
     endDate: string;
@@ -22,6 +35,8 @@ interface UsageMetricsTabProps {
 const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
   usageMetrics,
   isUsageMetricsLoading,
+  bucketUsageHistory = [],
+  isBucketHistoryLoading = false,
   dateRange,
   handleDateRangeChange
 }) => {
@@ -94,41 +109,75 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
   ), [dateRange, handleDateRangeChange]);
 
   return (
-    <div id="usage-metrics-content" className="py-4">
-      {dateFilterCard}
-      
-      {isUsageMetricsLoading ? (
-        <div id="usage-metrics-loading-skeleton" className="space-y-3">
-          <Skeleton className="h-10 w-full" />
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
-      ) : usageMetrics.length === 0 ? (
-        <Card id="usage-metrics-empty-state" className="p-6">
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <BarChart className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">No usage metrics available</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                There are no usage metrics recorded for the selected date range.
-              </p>
-            </div>
+    <div id="usage-metrics-content" className="py-4 space-y-6">
+      {/* Bucket Usage History Section */}
+      {bucketUsageHistory.length > 0 && (
+        <div>
+          <div className="flex items-center mb-4">
+            <Clock className="h-5 w-5 text-blue-600 mr-2" />
+            <h3 className="text-lg font-medium">Bucket Hours Usage History</h3>
           </div>
-        </Card>
-      ) : (
-        <div id="usage-metrics-table-container">
-          <DataTable
-            id="usage-metrics-table"
-            data={usageMetrics}
-            columns={usageMetricsColumns}
-            pagination={true}
-            pageSize={pageSize}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-          />
+          {isBucketHistoryLoading ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {[...Array(2)].map((_, i) => (
+                <Skeleton key={i} className="h-64 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              {bucketUsageHistory.map((service) => (
+                <BucketUsageHistoryChart
+                  key={service.service_id}
+                  serviceName={service.service_name}
+                  historyData={service.history}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Usage Metrics Table Section */}
+      <div>
+        <div className="flex items-center mb-4">
+          <BarChart className="h-5 w-5 text-blue-600 mr-2" />
+          <h3 className="text-lg font-medium">Usage Metrics</h3>
+        </div>
+        {dateFilterCard}
+
+        {isUsageMetricsLoading ? (
+          <div id="usage-metrics-loading-skeleton" className="space-y-3">
+            <Skeleton className="h-10 w-full" />
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : usageMetrics.length === 0 ? (
+          <Card id="usage-metrics-empty-state" className="p-6">
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <BarChart className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-lg font-medium text-gray-900">No usage metrics available</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  There are no usage metrics recorded for the selected date range.
+                </p>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <div id="usage-metrics-table-container">
+            <DataTable
+              id="usage-metrics-table"
+              data={usageMetrics}
+              columns={usageMetricsColumns}
+              pagination={true}
+              pageSize={pageSize}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 });

@@ -56,7 +56,7 @@ export const ServiceTypeModel = {
   },
 
   // Find all tenant-specific service types (only returns tenant-specific types, not standard ones)
-  async findAllIncludingStandard(knexOrTrx: Knex | Knex.Transaction): Promise<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]> {
+  async findAllIncludingStandard(knexOrTrx: Knex | Knex.Transaction): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> {
     const tenant = await getCurrentTenantId();
 
     // Fetch all active tenant-specific service types
@@ -64,10 +64,10 @@ export const ServiceTypeModel = {
       .where('tenant', tenant)
       .andWhere('is_active', true)
       .select('id', 'name', 'billing_method')
-      .then(types => types.map(type => ({ 
-        id: type.id, 
-        name: type.name, 
-        billing_method: type.billing_method, 
+      .then(types => types.map(type => ({
+        id: type.id,
+        name: type.name,
+        billing_method: type.billing_method,
         is_standard: false // All tenant-specific types are marked as non-standard
       })));
 
@@ -75,6 +75,6 @@ export const ServiceTypeModel = {
     tenantTypes.sort((a, b) => a.name.localeCompare(b.name));
 
     // Ensure the return type matches the promise signature
-    return tenantTypes as { id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[];
+    return tenantTypes as { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[];
   }
 };

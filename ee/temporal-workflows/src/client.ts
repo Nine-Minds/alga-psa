@@ -295,7 +295,7 @@ async function exampleUsage(): Promise<void> {
       },
       companyName: 'Example Client',
       clientName: 'Example Client',
-      billingPlan: 'Standard',
+      contractLine: 'Standard',
     };
 
     // Start workflow

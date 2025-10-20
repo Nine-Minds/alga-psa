@@ -6,10 +6,21 @@
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
-  console.log('Fixing primary keys to include tenant column for Citus distribution...');
+  console.log('Checking if Citus is enabled...');
   
-  // This migration is safe to run on non-Citus databases as well
-  // It ensures primary keys include tenant for proper multi-tenancy
+  // Check if Citus is enabled by looking for the citus extension
+  const citusCheck = await knex.raw(`
+    SELECT 1
+    FROM pg_extension
+    WHERE extname = 'citus'
+  `);
+  
+  if (!citusCheck.rows.length) {
+    console.log('Citus extension not found, skipping primary key fixes');
+    return;
+  }
+  
+  console.log('Citus detected, fixing primary keys to include tenant column for distribution...');
   
   // List of tables that need their primary key fixed to include tenant
   // Note: These tables need to have their existing single-column PK replaced with composite (tenant, id)
@@ -150,7 +161,21 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
-  console.log('Reverting primary key changes...');
+  console.log('Checking if Citus is enabled before reverting...');
+  
+  // Check if Citus is enabled by looking for the citus extension
+  const citusCheck = await knex.raw(`
+    SELECT 1
+    FROM pg_extension
+    WHERE extname = 'citus'
+  `);
+  
+  if (!citusCheck.rows.length) {
+    console.log('Citus extension not found, skipping primary key reversion');
+    return;
+  }
+  
+  console.log('Citus detected, reverting primary key changes...');
   
   // Revert primary keys to exclude tenant (original state)
   const tablesToRevert = [

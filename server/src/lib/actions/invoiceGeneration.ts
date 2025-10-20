@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { Session } from 'next-auth';
 import {
   IInvoiceItem,
@@ -37,6 +37,17 @@ import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated imp
 import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateActions';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
+const POSTGRES_UNDEFINED_TABLE = '42P01';
+
+function isMissingRelationError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === POSTGRES_UNDEFINED_TABLE
+  );
+}
+
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
   return charge.type === 'fixed';
 }
@@ -234,7 +245,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   }
 
   const { knex, tenant } = await createTenantKnex();
-  
+
   if (!tenant) {
     return {
       success: false,
@@ -291,33 +302,33 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     const client = await getClientDetails(knex, tenant, client_id);
     const due_date = await getDueDate(client_id, cycleEnd); // Uses temporary import
 
-    // Group charges by bundle if they have bundle information
-    const chargesByBundle: { [key: string]: IBillingCharge[] } = {};
-    const nonBundleCharges: IBillingCharge[] = [];
+    // Group charges by contract association if they have contract association information
+    const chargesByContractGroup: { [key: string]: IBillingCharge[] } = {};
+    const nonContractAssociatedCharges: IBillingCharge[] = [];
 
     for (const charge of billingResult.charges) {
-      if (charge.client_bundle_id && charge.bundle_name) {
-        // Use only the bundle_name as the key to avoid including the ID in the description
-        const bundleKey = charge.bundle_name;
-        if (!chargesByBundle[bundleKey]) {
-          chargesByBundle[bundleKey] = [];
+      if (charge.client_contract_id && charge.contract_name) {
+        // Use only the contract_name as the key to avoid including the ID in the description
+        const contractKey = charge.contract_name;
+        if (!chargesByContractGroup[contractKey]) {
+          chargesByContractGroup[contractKey] = [];
         }
-        chargesByBundle[bundleKey].push(charge);
+        chargesByContractGroup[contractKey].push(charge);
       } else {
-        nonBundleCharges.push(charge);
+        nonContractAssociatedCharges.push(charge);
       }
     }
 
     // Prepare invoice items
     const invoiceItems: IInvoiceItem[] = [];
 
-    // Add non-bundle charges
-    nonBundleCharges.forEach(charge => {
+    // Add non-contract-associated charges
+    nonContractAssociatedCharges.forEach(charge => {
       invoiceItems.push({
         item_id: 'preview-' + uuidv4(),
         invoice_id: 'preview-' + billing_cycle_id,
         service_id: charge.serviceId,
-        description: charge.serviceName,
+        description: charge.serviceName || 'Charge',
         quantity: getChargeQuantity(charge), // Uses local helper
         unit_price: getChargeUnitPrice(charge), // Uses local helper
         total_price: charge.total,
@@ -330,18 +341,18 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       });
     });
 
-    // Add bundle charges
-    for (const [bundleKey, charges] of Object.entries(chargesByBundle)) {
-      // Get the bundle name and client_bundle_id from the first charge
-      const bundleName = bundleKey; // Now bundleKey is just the bundle_name
-      const clientBundleId = charges[0].client_bundle_id; // Get client_bundle_id from the first charge
+    // Add contract-associated charges
+    for (const [contractKey, charges] of Object.entries(chargesByContractGroup)) {
+      // Determine the contract grouping label and client_contract_id from the first charge
+      const contractGroupName = contractKey; // Now contractKey is just the contract_name
+      const clientContractGroupId = charges[0].client_contract_id; // Get client_contract_id from the first charge
 
-      // Create a group header for the bundle
-      const bundleHeaderId = 'preview-' + uuidv4();
+      // Create a group header for the contract grouping
+      const contractGroupHeaderId = 'preview-' + uuidv4();
       invoiceItems.push({
-        item_id: bundleHeaderId,
+        item_id: contractGroupHeaderId,
         invoice_id: 'preview-' + billing_cycle_id,
-        description: `Bundle: ${bundleName}`, // Use only the bundle name, not the ID
+        description: `Contract: ${contractGroupName}`, // Use only the contract name, not the ID
         quantity: 1,
         unit_price: 0, // This is just a header, not a charged item
         total_price: 0,
@@ -350,18 +361,29 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         tax_rate: 0,
         is_manual: false,
         is_bundle_header: true,
-        client_bundle_id: clientBundleId,
-        bundle_name: bundleName,
+        client_contract_id: clientContractGroupId,
+        contract_name: contractGroupName,
         rate: 0
       });
 
-      // Add each charge in the bundle as a child item
+      // Add each charge in the contract group as a child item
       charges.forEach(charge => {
+        // Enhanced description for bucket charges
+        let description = charge.serviceName;
+        if (isBucketCharge(charge)) {
+          const hoursIncluded = charge.hoursUsed - charge.overageHours;
+          if (charge.overageHours > 0) {
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ $${(charge.overageRate / 100).toFixed(2)}/hr)`;
+          } else {
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
+          }
+        }
+
         invoiceItems.push({
           item_id: 'preview-' + uuidv4(),
           invoice_id: 'preview-' + billing_cycle_id,
           service_id: charge.serviceId,
-          description: charge.serviceName,
+          description: description,
           quantity: getChargeQuantity(charge), // Uses local helper
           unit_price: getChargeUnitPrice(charge), // Uses local helper
           total_price: charge.total,
@@ -370,9 +392,9 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
           tax_region: charge.tax_region || '',
           net_amount: charge.total - (charge.tax_amount || 0),
           is_manual: false,
-          client_bundle_id: clientBundleId,
-          bundle_name: bundleName,
-          parent_item_id: bundleHeaderId,
+          client_contract_id: clientContractGroupId,
+          contract_name: contractGroupName,
+          parent_item_id: contractGroupHeaderId,
           rate: charge.rate,
         });
       });
@@ -474,7 +496,38 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   });
 
   if (existingInvoice) {
-    throw new Error('No active billing plans for this period');
+    throw new Error('No active contract lines for this period');
+  }
+
+  // Check for Purchase Order requirements
+  let clientContracts: Array<{ po_required?: boolean; po_number?: string }> = [];
+  try {
+    clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('client_plan_bundles')
+        .where({
+          client_id,
+          tenant,
+          is_active: true
+        })
+        .where(function() {
+          this.where('start_date', '<=', cycleEnd)
+            .where(function() {
+              this.whereNull('end_date')
+                .orWhere('end_date', '>=', cycleStart);
+            });
+        });
+    });
+  } catch (error) {
+    if (!isMissingRelationError(error)) {
+      throw error;
+    }
+  }
+
+  // Validate PO requirements for active contracts
+  for (const contract of clientContracts) {
+    if (contract.po_required && !contract.po_number) {
+      throw new Error(`Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.`);
+    }
   }
 
   const billingEngine = new BillingEngine();
@@ -549,11 +602,11 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
 
   // Get the next billing date as a PlainDate string (YYYY-MM-DD)
   const nextBillingDateStr = await getNextBillingDate(client_id, cycleEnd); // Uses temporary import
-  
+
   // Convert the PlainDate string to a proper ISO 8601 timestamp for rolloverUnapprovedTime
   const nextBillingDate = toPlainDate(nextBillingDateStr);
   const nextBillingTimestamp = toISOTimestamp(nextBillingDate);
-  
+
   // Pass the ISO timestamp to rolloverUnapprovedTime
   await billingEngine.rolloverUnapprovedTime(client_id, cycleEnd, nextBillingTimestamp);
 
@@ -617,6 +670,59 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
   return { file_id: fileRecord.file_id };
 }
 
+export async function downloadInvoicePDF(invoiceId: string): Promise<{ pdfData: number[]; invoiceNumber: string }> {
+  try {
+    console.log('[downloadInvoicePDF] Called with invoiceId:', invoiceId);
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized: No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Check permissions within transaction
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'invoice', 'read', trx)) {
+        throw new Error('Permission denied: Cannot download invoice PDFs');
+      }
+    });
+
+    // Get invoice details
+    const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .first();
+    });
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    console.log('[downloadInvoicePDF] Generating PDF for invoice:', invoice.invoice_number);
+    // Use the PDF generation service to generate the PDF
+    const pdfGenerationService = createPDFGenerationService(tenant);
+
+    const pdfBuffer = await pdfGenerationService.generatePDF({
+      invoiceId,
+      userId: currentUser.user_id
+    });
+
+    console.log('[downloadInvoicePDF] PDF generated, size:', pdfBuffer.length, 'bytes');
+    // Convert Buffer to plain array for serialization across server/client boundary
+    return {
+      pdfData: Array.from(pdfBuffer),
+      invoiceNumber: invoice.invoice_number
+    };
+  } catch (error) {
+    console.error('[downloadInvoicePDF] Error:', error);
+    console.error('[downloadInvoicePDF] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    throw error;
+  }
+}
+
 export async function createInvoiceFromBillingResult(
   billingResult: IBillingResult,
   clientId: string,
@@ -642,7 +748,7 @@ export async function createInvoiceFromBillingResult(
 
   const client = await getClientDetails(knex, tenant, clientId);
   let region_code = await getClientDefaultTaxRegionCode(clientId);
-  
+
   // --- Add Check for Client Default Tax Region ---
   if (!region_code) {
     console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code).`);
@@ -780,15 +886,12 @@ export async function createInvoiceFromBillingResult(
     const finalSubtotal = Math.ceil(subtotal);
     const finalTax = Math.ceil(calculatedTax);
     const totalAmount = finalSubtotal + finalTax;
-    const availableCredit = await ClientBillingPlan.getClientCredit(clientId);
+    const availableCredit = await ClientContractLine.getClientCredit(clientId);
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
 
     // Update the invoice with subtotal, tax, and total amount
     await trx('invoices')
-      .where({
-        invoice_id: newInvoice!.invoice_id,
-        tenant
-      })
+      .where({ invoice_id: newInvoice!.invoice_id, tenant })
       .update({
         subtotal: finalSubtotal,
         tax: finalTax,

@@ -81,8 +81,8 @@ export class TimeEntryService extends BaseService<any> {
     if (filters.time_sheet_id) {
       query.where(`${this.tableName}.time_sheet_id`, filters.time_sheet_id);
     }
-    if (filters.billing_plan_id) {
-      query.where(`${this.tableName}.billing_plan_id`, filters.billing_plan_id);
+    if (filters.contract_line_id) {
+      query.where(`${this.tableName}.contract_line_id`, filters.contract_line_id);
     }
     if (filters.client_id) {
       query.leftJoin('tickets', function() {
@@ -993,7 +993,7 @@ export class TimeEntryService extends BaseService<any> {
     // This would integrate with billing system
     // For now, return basic structure
     return {
-      billing_plan_id: null,
+      contract_line_id: null,
       tax_rate_id: null,
       tax_region: timeEntry.tax_region || null
     };
@@ -1061,9 +1061,9 @@ export class TimeEntryService extends BaseService<any> {
   private async getBillingInfo(timeEntry: any, context: ServiceContext): Promise<any> {
     // Calculate billing information
     return {
-      billing_plan_id: timeEntry.billing_plan_id,
-      billing_plan_name: null, // Would join with billing plans
-      rate: null, // Would calculate from service/billing plan
+      contract_line_id: timeEntry.contract_line_id,
+      contract_line_name: null, // Would join with contract lines
+      rate: null, // Would calculate from service/contract line
       tax_rate: timeEntry.tax_percentage,
       total_amount: null // Would calculate total
     };

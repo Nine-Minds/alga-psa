@@ -13,12 +13,6 @@
       "@ee/*": [
         "ee/server/src/*"
       ],
-      "@main-test-utils": [
-        "server/test-utils"
-      ],
-      "@main-test-utils/*": [
-        "server/test-utils/*"
-      ],
       "@shared": [
         "shared"
       ],
@@ -30,7 +24,65 @@
       ],
       "@alga-psa/shared/*": [
         "shared/*"
-      ]
+      ],
+      "@main-test-utils": [
+        "server/test-utils"
+      ],
+      "@main-test-utils/*": [
+        "server/test-utils/*"
+      ],
+      "@/lib/*": [
+        "ee/server/src/lib/*",
+        "server/src/lib/*"
+      ],
+      "@/components/*": [
+        "server/src/components/*"
+      ],
+      "@/utils/*": [
+        "server/src/utils/*",
+        "server/src/lib/utils/*"
+      ],
+      "@/config/*": [
+        "server/src/config/*"
+      ],
+      "@/interfaces/*": [
+        "server/src/interfaces/*"
+      ],
+      "@/models/*": [
+        "server/src/models/*",
+        "server/src/lib/models/*"
+      ],
+      "@/services/*": [
+        "server/src/services/*",
+        "server/src/lib/services/*"
+      ],
+      "@/hooks/*": [
+        "server/src/hooks/*"
+      ],
+      "@/constants/*": [
+        "server/src/constants/*"
+      ],
+      "@/context/*": [
+        "server/src/context/*"
+      ],
+      "@/middleware/*": [
+        "server/src/middleware/*"
+      ],
+      "@/pages/*": [
+        "server/src/pages/*"
+      ],
+      "@product/chat/entry": ["server/src/services/chatStreamService"],
+      "@product/workflows/entry": ["server/src/empty/components/flow/DnDFlow"],
+      "@product/extensions/entry": ["packages/product-extensions/oss/entry"],
+      "@product/extensions/*": ["packages/product-extensions/*"],
+      "@product/settings-extensions/entry": ["packages/product-settings-extensions/oss/entry"],
+      "@product/settings-extensions/*": ["packages/product-settings-extensions/*"],
+      "@product/email-providers/entry": ["packages/product-email-providers/oss/entry"],
+      "@product/email-providers/*": ["packages/product-email-providers/*"],
+      "@product/client-portal-domain/entry": ["packages/product-client-portal-domain/oss/entry"],
+      "@product/client-portal-domain/*": ["packages/product-client-portal-domain/*"],
+      "@product/billing/entry": ["packages/product-billing/oss/entry"],
+      "@product/billing/*": ["packages/product-billing/*"]
     },
     "lib": [
       "dom",
@@ -55,21 +107,19 @@
     ]
   },
   "include": [
-    "ee/server/src/**/*.ts",
-    "ee/server/src/**/*.tsx",
-    "server/src/**/*.ts",
-    "server/src/**/*.tsx",
-    ".next/types/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../../server/src/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "src/components/flow",
-    // Skip tests
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.ts",
-    "src/**/*.spec.tsx",
-    "src/**/*.playwright.test.ts"
+    
+    "../../server/src/test/**",
+    "../../server/test-utils/**",
+    // Skip unit tests/specs but keep Playwright (handled via include paths)
+    
+    ".next/types/**"
   ]
 }

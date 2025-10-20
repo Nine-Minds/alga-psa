@@ -216,11 +216,6 @@ export class ActionRegistry {
     } catch (error) {
       console.error(`[ActionRegistry] Error in action execution process:`, error);
       throw error;
-    } finally {
-      // CRITICAL: Close the database connection to prevent pool exhaustion
-      if (knex) {
-        await knex.destroy();
-      }
     }
   }
   

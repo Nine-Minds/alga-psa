@@ -5,10 +5,10 @@ import { Button } from 'server/src/components/ui/Button'
 import { Input } from 'server/src/components/ui/Input'
 import { Label } from 'server/src/components/ui/Label'
 import CustomSelect from 'server/src/components/ui/CustomSelect'
-import { SearchableSelect } from 'server/src/components/ui/SearchableSelect'
+import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServiceTypeSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
-import { createService, type CreateServiceInput } from 'server/src/lib/actions/serviceActions'
+import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Removed getActiveTaxRegions
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITaxRegion
@@ -20,7 +20,8 @@ import { useTenant } from 'server/src/components/TenantProvider'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'per_unit' }[]; // Removed is_standard
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]; // Updated billing methods
+  onServiceTypesChange: () => void; // Add callback to refresh service types
 }
 
 // Updated interface to use custom_service_type_id
@@ -28,7 +29,7 @@ interface QuickAddServiceProps {
 interface ServiceFormData {
   service_name: string;
   custom_service_type_id: string; // Required for form state
-  billing_method: 'fixed' | 'per_unit' | '';
+  billing_method: 'fixed' | 'hourly' | 'usage' | '';
   default_rate: number;
   unit_of_measure: string;
   tax_rate_id?: string | null;
@@ -52,11 +53,12 @@ const LICENSE_TERM_OPTIONS = [
 ];
 
 const BILLING_METHOD_OPTIONS = [
-  { value: 'fixed', label: 'Fixed Price' },
-  { value: 'per_unit', label: 'Per Unit' }
+  { value: 'fixed', label: 'Fixed Fee' },
+  { value: 'hourly', label: 'Hourly' },
+  { value: 'usage', label: 'Usage Based' }
 ];
 
-export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddServiceProps) { // Destructure new prop
+export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceTypesChange }: QuickAddServiceProps) { // Destructure new prop
   const [open, setOpen] = useState(false)
   const [triggerButton, setTriggerButton] = useState<HTMLButtonElement | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -69,6 +71,8 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const tenant = useTenant()
+  // State for rate input (display value while typing)
+  const [rateInput, setRateInput] = useState<string>('')
 
   // Initialize service state
   const [serviceData, setServiceData] = useState<ServiceFormData>({
@@ -180,7 +184,7 @@ if (!selectedServiceType) {
 // Create base data without the service type IDs
 const baseData = {
   service_name: serviceData.service_name,
-  billing_method: serviceData.billing_method as 'fixed' | 'per_unit', // Cast to remove empty string type
+  billing_method: serviceData.billing_method as 'fixed' | 'hourly' | 'usage', // Cast to remove empty string type
   default_rate: serviceData.default_rate,
   unit_of_measure: serviceData.unit_of_measure,
   // is_taxable and region_code removed
@@ -220,6 +224,7 @@ console.log('[QuickAddService] Service created successfully');
         seat_limit: 0,
         license_term: 'monthly'
       })
+      setRateInput('')
       setError(null)
       setHasAttemptedSubmit(false)
       setValidationErrors([])
@@ -242,10 +247,11 @@ console.log('[QuickAddService] Service created successfully');
       >
         Add Service
       </Button>
-      <Dialog 
-        isOpen={open} 
+      <Dialog
+        isOpen={open}
         onClose={() => {
           setOpen(false);
+          setRateInput('');
           setHasAttemptedSubmit(false);
           setValidationErrors([]);
         }}
@@ -280,17 +286,15 @@ console.log('[QuickAddService] Service created successfully');
               />
             </div>
 
-            {/* Updated to Service Type dropdown using allServiceTypes */}
+            {/* Updated to Service Type dropdown using EditableServiceTypeSelect */}
             <div>
-              <Label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-1">Service Type *</Label>
-              <SearchableSelect
-                id="serviceType"
-                options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))}
+              <EditableServiceTypeSelect
+                label="Service Type *"
                 value={serviceData.custom_service_type_id}
                 onChange={(value) => {
                   // Find the selected service type to get its billing method
                   const selectedType = allServiceTypes.find(t => t.id === value);
-                  
+
                   // Update service data with the selected type ID and its billing method
                   setServiceData({
                     ...serviceData,
@@ -299,8 +303,20 @@ console.log('[QuickAddService] Service created successfully');
                     billing_method: selectedType?.billing_method || serviceData.billing_method,
                   });
                 }}
+                serviceTypes={allServiceTypes}
+                onCreateType={async (name) => {
+                  await createServiceTypeInline(name);
+                  onServiceTypesChange(); // Refresh the service types list
+                }}
+                onUpdateType={async (id, name) => {
+                  await updateServiceTypeInline(id, name);
+                  onServiceTypesChange(); // Refresh the service types list
+                }}
+                onDeleteType={async (id) => {
+                  await deleteServiceTypeInline(id);
+                  onServiceTypesChange(); // Refresh the service types list
+                }}
                 placeholder="Select service type..."
-                emptyMessage="No service types found"
                 className={`w-full ${hasAttemptedSubmit && !serviceData.custom_service_type_id ? 'ring-1 ring-red-500' : ''}`}
               />
             </div>
@@ -310,7 +326,7 @@ console.log('[QuickAddService] Service created successfully');
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
                 value={serviceData.billing_method}
-                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'per_unit' | '' })}
+                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'usage' | '' })}
                 placeholder="Select billing method..."
                 className={`w-full ${hasAttemptedSubmit && !serviceData.billing_method ? 'ring-1 ring-red-500' : ''}`}
               />
@@ -326,33 +342,131 @@ console.log('[QuickAddService] Service created successfully');
               />
             </div>
 
-            <div>
-              <Label htmlFor="defaultRate" className="block text-sm font-medium text-gray-700 mb-1">Default Rate *</Label>
-              <Input
-                id="defaultRate"
-                type="number"
-                step="0.01" // Allow cents
-                value={serviceData.default_rate / 100} // Display in dollars
-                onChange={(e) => setServiceData({ ...serviceData, default_rate: Math.round(parseFloat(e.target.value) * 100) || 0 })} // Store in cents, default to 0 if invalid
-                placeholder="Default Rate ($) *"
-                required
-                className={hasAttemptedSubmit && (!serviceData.default_rate || serviceData.default_rate === 0) ? 'border-red-500' : ''}
-              />
-            </div>
-            {/* Conditional Unit of Measure */}
-            {serviceData.billing_method === 'per_unit' && (
+            {/* Conditional Rate Fields Based on Billing Method */}
+            {serviceData.billing_method === 'fixed' && (
               <div>
-                <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure</Label>
-                <UnitOfMeasureInput
-                  value={serviceData.unit_of_measure}
-                  onChange={(value) => {
-                    console.log('[QuickAddService] UnitOfMeasureInput onChange called with:', value);
-                    setServiceData({ ...serviceData, unit_of_measure: value });
-                  }}
-                  placeholder="Select unit of measure..."
-                  serviceType={allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name}
-                />
+                <Label htmlFor="fixedRate" className="block text-sm font-medium text-gray-700 mb-1">Monthly Base Rate *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="fixedRate"
+                    type="text"
+                    inputMode="decimal"
+                    value={rateInput}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setRateInput(value);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rateInput.trim() === '' || rateInput === '.') {
+                        setRateInput('');
+                        setServiceData({ ...serviceData, default_rate: 0 });
+                      } else {
+                        const dollars = parseFloat(rateInput) || 0;
+                        const cents = Math.round(dollars * 100);
+                        setServiceData({ ...serviceData, default_rate: cents });
+                        setRateInput((cents / 100).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.00"
+                    required
+                    className={`pl-7 ${hasAttemptedSubmit && (!serviceData.default_rate || serviceData.default_rate === 0) ? 'border-red-500' : ''}`}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">The monthly fee for this service</p>
               </div>
+            )}
+
+            {serviceData.billing_method === 'hourly' && (
+              <div>
+                <Label htmlFor="hourlyRate" className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="hourlyRate"
+                    type="text"
+                    inputMode="decimal"
+                    value={rateInput}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setRateInput(value);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rateInput.trim() === '' || rateInput === '.') {
+                        setRateInput('');
+                        setServiceData({ ...serviceData, default_rate: 0 });
+                      } else {
+                        const dollars = parseFloat(rateInput) || 0;
+                        const cents = Math.round(dollars * 100);
+                        setServiceData({ ...serviceData, default_rate: cents });
+                        setRateInput((cents / 100).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.00"
+                    required
+                    className={`pl-7 ${hasAttemptedSubmit && (!serviceData.default_rate || serviceData.default_rate === 0) ? 'border-red-500' : ''}`}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Rate charged per hour</p>
+              </div>
+            )}
+
+            {serviceData.billing_method === 'usage' && (
+              <>
+                <div>
+                  <Label htmlFor="unitRate" className="block text-sm font-medium text-gray-700 mb-1">Unit Rate *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <Input
+                      id="unitRate"
+                      type="text"
+                      inputMode="decimal"
+                      value={rateInput}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                        const decimalCount = (value.match(/\./g) || []).length;
+                        if (decimalCount <= 1) {
+                          setRateInput(value);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (rateInput.trim() === '' || rateInput === '.') {
+                          setRateInput('');
+                          setServiceData({ ...serviceData, default_rate: 0 });
+                        } else {
+                          const dollars = parseFloat(rateInput) || 0;
+                          const cents = Math.round(dollars * 100);
+                          setServiceData({ ...serviceData, default_rate: cents });
+                          setRateInput((cents / 100).toFixed(2));
+                        }
+                      }}
+                      placeholder="0.00"
+                      required
+                      className={`pl-7 ${hasAttemptedSubmit && (!serviceData.default_rate || serviceData.default_rate === 0) ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Price per unit</p>
+                </div>
+                <div>
+                  <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</Label>
+                  <UnitOfMeasureInput
+                    value={serviceData.unit_of_measure}
+                    onChange={(value) => {
+                      console.log('[QuickAddService] UnitOfMeasureInput onChange called with:', value);
+                      setServiceData({ ...serviceData, unit_of_measure: value });
+                    }}
+                    placeholder="e.g., GB, API call, user"
+                    serviceType={allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
+                </div>
+              </>
             )}
 
             {/* Removed separate Category dropdown (category_id) */}
@@ -443,6 +557,7 @@ console.log('[QuickAddService] Service created successfully');
             <div className="flex justify-end space-x-2 pt-4">
               <Button id='cancel-button' type="button" variant="outline" onClick={() => {
                 setOpen(false);
+                setRateInput('');
                 setHasAttemptedSubmit(false);
                 setValidationErrors([]);
               }}>

@@ -7,59 +7,132 @@
     "noImplicitAny": false,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/lib/*": ["src/lib/*"],
-      "@/middleware/*": ["src/middleware/*"],
-      "@/components/*": ["src/components/*"],
-      "@/pages/*": ["src/pages/*"],
-      "@/interfaces/*": ["src/interfaces/*"],
-      "@/hooks/*": ["src/hooks/*"],
-      "@/config/*": ["src/config/*"],
-      "@/constants/*": ["src/constants/*"],
-      "@/context/*": ["src/context/*"],
-      "@/models/*": ["src/models/*"],
-      "@/services/*": ["src/services/*"],
-      "@shared": ["../shared"],
-      "@shared/*": ["../shared/*"],
-      "@alga-psa/shared": ["../shared"],
-      "@alga-psa/shared/*": ["../shared/*"],
-      "@shared/db": ["../shared/db"],
-      "@shared/workflow": ["../shared/workflow"],
-      "@shared/workflow/*": ["../shared/workflow/*"],
-      "@shared/core": ["../shared/core"],
-      "@shared/core/*": ["../shared/core/*"],
-      "@shared/types": ["../shared/types"],
-      "@shared/types/*": ["../shared/types/*"],
+      "@/*": [
+        "src/*"
+      ],
+      "@/lib/*": [
+        "src/lib/*"
+      ],
+      "@/middleware/*": [
+        "src/middleware/*"
+      ],
+      "@/components/*": [
+        "src/components/*"
+      ],
+      "@/pages/*": [
+        "src/pages/*"
+      ],
+      "@/interfaces/*": [
+        "src/interfaces/*"
+      ],
+      "@/hooks/*": [
+        "src/hooks/*"
+      ],
+      "@/config/*": [
+        "src/config/*"
+      ],
+      "@/constants/*": [
+        "src/constants/*"
+      ],
+      "@/context/*": [
+        "src/context/*"
+      ],
+      "@/models/*": [
+        "src/models/*"
+      ],
+      "@/services/*": [
+        "src/services/*"
+      ],
+      "@shared": [
+        "../shared"
+      ],
+      "@shared/*": [
+        "../shared/*"
+      ],
+      "@alga-psa/shared": [
+        "../shared"
+      ],
+      "@alga-psa/shared/*": [
+        "../shared/*"
+      ],
+      "@shared/db": [
+        "../shared/db"
+      ],
+      "@shared/workflow": [
+        "../shared/workflow"
+      ],
+      "@shared/workflow/*": [
+        "../shared/workflow/*"
+      ],
+      "@shared/core": [
+        "../shared/core"
+      ],
+      "@shared/core/*": [
+        "../shared/core/*"
+      ],
+      "@shared/types": [
+        "../shared/types"
+      ],
+      "@shared/types/*": [
+        "../shared/types/*"
+      ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
-      "@ee": ["src/empty"],
-      "@ee/*": ["src/empty/*"],
-      "@product/chat/entry": ["src/services/chatStreamService"],
-      "@product/workflows/entry": ["src/empty/components/flow/DnDFlow"],
-      "@product/extensions/entry": ["../packages/product-extensions/oss/entry"],
-      "@product/extensions/*": ["../packages/product-extensions/*"],
-      "@product/settings-extensions/entry": ["../packages/product-settings-extensions/oss/entry"],
-      "@product/settings-extensions/*": ["../packages/product-settings-extensions/*"],
-      "@product/email-providers/entry": ["../packages/product-email-providers/oss/entry"],
-      "@product/email-providers/*": ["../packages/product-email-providers/*"],
-      "@product/client-portal-domain/entry": ["../packages/product-client-portal-domain/oss/entry"],
-      "@product/client-portal-domain/*": ["../packages/product-client-portal-domain/*"],
-      "@product/billing/entry": ["../packages/product-billing/oss/entry"],
-      "@product/billing/*": ["../packages/product-billing/*"],
-      "@product/extension-storage-api/records": ["../packages/product-extension-storage-api/records"],
-      "@product/extension-storage-api/record": ["../packages/product-extension-storage-api/record"]
+      "@ee": [
+        "src/empty"
+      ],
+      "@ee/*": [
+        "src/empty/*"
+      ],
+      "@product/chat/entry": [
+        "src/services/chatStreamService"
+      ],
+      "@product/workflows/entry": [
+        "src/empty/components/flow/DnDFlow"
+      ],
+      "@product/extensions/entry": [
+        "../packages/product-extensions/oss/entry"
+      ],
+      "@product/extensions/*": [
+        "../packages/product-extensions/*"
+      ],
+      "@product/settings-extensions/entry": [
+        "../packages/product-settings-extensions/oss/entry"
+      ],
+      "@product/settings-extensions/*": [
+        "../packages/product-settings-extensions/*"
+      ],
+      "@product/email-providers/entry": [
+        "../packages/product-email-providers/oss/entry"
+      ],
+      "@product/email-providers/*": [
+        "../packages/product-email-providers/*"
+      ],
+      "@product/client-portal-domain/entry": [
+        "../packages/product-client-portal-domain/oss/entry"
+      ],
+      "@product/client-portal-domain/*": [
+        "../packages/product-client-portal-domain/*"
+      ],
+      "@product/billing/entry": [
+        "../packages/product-billing/oss/entry"
+      ],
+      "@product/billing/*": [
+        "../packages/product-billing/*"
+      ]
     }
   },
   "include": [
-    "next-env.d.ts",
     "*.ts",
+    "migrations/*.cjs",
+    "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/types/**/*.d.ts",
-    ".next/types/**/*.ts",
-    "migrations/*.cjs"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
+    ".next/types/**/*",
     "dist",
     "src/invoice-templates/assemblyscript",
     "src/lib/workflows",

@@ -4,6 +4,7 @@
  */
 
 import { Knex, knex } from 'knex';
+import path from 'node:path';
 import { rollbackTenant } from './tenant-creation';
 
 export interface DbTestConfig {
@@ -19,12 +20,19 @@ export interface DbTestConfig {
  * Create a test database connection
  */
 export function createTestDbConnection(config?: Partial<DbTestConfig>): Knex {
+  const repoSuffix = `${path.sep}ee${path.sep}server`;
+  const workspaceRoot = process.cwd().endsWith(repoSuffix)
+    ? path.resolve(process.cwd(), '..', '..')
+    : process.cwd();
+  const migrationsDir = path.resolve(workspaceRoot, 'server/migrations');
+  const seedsDir = path.resolve(workspaceRoot, 'server/seeds');
+
   const defaultConfig: DbTestConfig = {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),
-    database: process.env.DB_NAME || 'alga_test',
-    user: process.env.DB_USER || 'postgres',
-    password: String(process.env.DB_PASSWORD || ''),
+    database: process.env.DB_NAME_SERVER || process.env.DB_NAME || 'server',
+    user: process.env.DB_USER_SERVER || 'app_user',
+    password: String(process.env.DB_PASSWORD_SERVER || ''),
     ssl: process.env.DB_SSL === 'true',
   };
 
@@ -55,10 +63,10 @@ export function createTestDbConnection(config?: Partial<DbTestConfig>): Knex {
       idleTimeoutMillis: 30000,
     },
     migrations: {
-      directory: '../../../../../server/migrations',
+      directory: migrationsDir,
     },
     seeds: {
-      directory: '../../../../../server/seeds',
+      directory: seedsDir,
     },
   });
 }

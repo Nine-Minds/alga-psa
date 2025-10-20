@@ -11,7 +11,8 @@ import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -132,13 +133,11 @@ describe('Credit Expiration Core Tests', () => {
         'transactions',
         'credit_tracking',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
-        'plan_service_bucket_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'bucket_usage',
         'tax_rates',
         'tax_regions',
@@ -274,7 +273,7 @@ describe('Credit Expiration Core Tests', () => {
     expect(Number(expirationTransaction.amount)).toBe(-prepaymentAmount);
     
     // Verify the client credit balance was updated
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
   });
 
@@ -341,7 +340,7 @@ describe('Credit Expiration Core Tests', () => {
     console.log('Test: Prepayment invoice finalized');
     
     // Step 3: Verify initial credit balance and credit tracking entry
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
     console.log('Test: Initial credit balance verified:', initialCredit);
     
@@ -421,7 +420,7 @@ describe('Credit Expiration Core Tests', () => {
     expect(expirationTransaction.description).toContain('Credit expired');
     
     // Step 7: Verify client credit balance was updated
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
   });
 
@@ -476,7 +475,7 @@ describe('Credit Expiration Core Tests', () => {
     await finalizeInvoice(prepaymentInvoice2.invoice_id);
     
     // Step 4: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(12000); // $120.00 total credit
     
     // Get the credit transactions
@@ -548,7 +547,7 @@ describe('Credit Expiration Core Tests', () => {
     expect(nonExpirationTransaction).toBeUndefined();
     
     // Step 8: Verify client credit balance was updated correctly
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(7000); // Only the non-expired credit remains
   });
 

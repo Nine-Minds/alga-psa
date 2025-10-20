@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from './dbConfig';
 import { resetDatabase } from './dbReset';
 import { createTenant, createClient, createUser } from './testDataFactory';
-import { IClient } from '../src/interfaces/client.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IUserWithRoles } from '../src/interfaces/auth.interfaces';
 
 /**

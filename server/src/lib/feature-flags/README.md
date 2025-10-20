@@ -227,6 +227,8 @@ featureFlags.clearCache();
 
 ### Environment-Based Flags
 
+Set these environment variables to adjust feature-flag behavior without touching PostHog:
+
 ```env
 # .env.development
 NEXT_PUBLIC_FORCE_FEATURE_FLAGS=new_ui:true,ai_features:false
@@ -234,6 +236,9 @@ NEXT_PUBLIC_FORCE_FEATURE_FLAGS=new_ui:true,ai_features:false
 # .env.test
 NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=true
 ```
+
+- `NEXT_PUBLIC_FORCE_FEATURE_FLAGS` lets you hard-code specific flag values for client-side testing.
+- `NEXT_PUBLIC_DISABLE_FEATURE_FLAGS` bypasses PostHog entirely and treats every flag check as enabled, which is helpful when you need to surface all gated UI locally. Server-side code will honor the same behavior if you set `DISABLE_FEATURE_FLAGS=true`.
 
 ## Best Practices
 

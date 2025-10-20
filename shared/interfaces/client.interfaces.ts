@@ -27,7 +27,7 @@ export interface IClient {
   updated_at: string;
   properties?: Record<string, any> | null;
   parent_client_id?: string | null;
-  plan_id?: string | null;
+  contract_line_id?: string | null;
   is_default?: boolean | null;
   [key: string]: any; // Allow additional properties for database fields
 }
@@ -50,7 +50,7 @@ export interface CreateClientInput {
   notes?: string;
   properties?: Record<string, any>;
   parent_client_id?: string;
-  plan_id?: string;
+  contract_line_id?: string;
   is_default?: boolean;
 }
 
@@ -73,7 +73,7 @@ export interface UpdateClientInput {
   is_inactive?: boolean;
   properties?: Record<string, any>;
   parent_client_id?: string;
-  plan_id?: string;
+  contract_line_id?: string;
 }
 
 /**

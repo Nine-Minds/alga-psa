@@ -7,6 +7,7 @@
     "assets": "Assets",
     "clientSettings": "Bedrijfsinstellingen",
     "profile": "Profiel",
+    "account": "Account",
     "signOut": "Afmelden",
     "clientPortal": "Klantenportaal",
     "portal": "Portal"
@@ -194,13 +195,14 @@
       "overview": "Overzicht",
       "invoices": "Facturen"
     },
-    "currentPlan": "Huidig abonnement",
+    "currentContractLine": "Huidig abonnement",
     "nextInvoice": "Volgende factuur",
-    "viewPlanDetails": "Abonnementsdetails bekijken",
+    "viewContractLineDetails": "Abonnementsdetails bekijken",
     "viewAllInvoices": "Alle facturen bekijken",
     "failedToLoad": "Facturen laden is mislukt. Probeer het opnieuw.",
     "invoices": "Facturen",
     "payments": "Betalingen",
+    "contractLines": "Service-abonnementen",
     "plans": "Service-abonnementen",
     "usage": "Verbruiksstatistieken",
     "hoursByService": "Uren per dienst",
@@ -246,7 +248,7 @@
       "weekly": "Wekelijks",
       "biweekly": "Tweewekelijks"
     },
-    "plan": {
+    "contractLine": {
       "detailsTitle": "Abonnementsdetails",
       "name": "Naam abonnement",
       "frequency": "Facturatiefrequentie",
@@ -274,8 +276,8 @@
       "total": "Totaal uren",
       "usage": "Verbruik",
       "overage": "Overschrijding",
-      "noPlanTitle": "Geen urenbundels beschikbaar",
-      "noPlanDescription": "Er zijn geen actieve urenbundels voor je account."
+      "noContractLineTitle": "Geen urenbundels beschikbaar",
+      "noContractLineDescription": "Er zijn geen actieve urenbundels voor je account."
     },
     "messages": {
       "noInvoices": "Geen facturen gevonden",
@@ -461,6 +463,7 @@
       "website": "Website",
       "industry": "Sector",
       "companySize": "Bedrijfsgrootte",
+      "company_size": "Bedrijfsgrootte",
       "annualRevenue": "Jaarlijkse omzet",
       "size": "Bedrijfsgrootte",
       "taxId": "BTW-nummer",
@@ -520,9 +523,24 @@
     }
   },
   "account": {
+    "title": "Account",
+    "licenseManagement": {
+      "title": "Account",
+      "subtitle": "Licentiebeheer is beschikbaar in het MSP-portaal",
+      "howToPurchaseTitle": "Zo koop je extra licenties:",
+      "step1": "Meld je aan bij het MSP-portaal (als je beheerdersrechten hebt)",
+      "step2": "Ga naar Instellingen → Accountbeheer",
+      "step3": "Klik op \"Licenties toevoegen\" om extra licenties te kopen",
+      "step4": "Rond het afrekenproces af",
+      "needHelpTitle": "Hulp nodig?",
+      "needHelpDescription": "Alleen gebruikers met accountbeheerrechten kunnen licenties kopen. Neem contact op met je AlgaPSA-beheerder als je geen toegang hebt.",
+      "backToDashboard": "Terug naar dashboard",
+      "goToMSPPortal": "Ga naar MSP-portaal",
+      "signingOut": "Bezig met afmelden..."
+    },
     "services": {
       "loadError": "Services konden niet worden geladen",
-      "loadPlansError": "Serviceplannen konden niet worden geladen",
+      "loadContractLinesError": "Serviceplannen konden niet worden geladen",
       "updateError": "Service kon niet worden bijgewerkt",
       "loading": "Services worden geladen...",
       "activeTitle": "Actieve services",
@@ -531,7 +549,7 @@
         "service": "Service",
         "description": "Beschrijving",
         "status": "Status",
-        "currentPlan": "Huidig pakket",
+        "currentContractLine": "Huidig pakket",
         "nextBilling": "Volgende facturatie"
       },
       "actions": {
@@ -541,8 +559,8 @@
       },
       "manageTitle": "{{service}} beheren",
       "genericServiceLabel": "Service",
-      "currentPlan": "Huidig pakket",
-      "availablePlans": "Beschikbare pakketten",
+      "currentContractLine": "Huidig pakket",
+      "availableContractLines": "Beschikbare pakketten",
       "catalog": {
         "title": "Beschikbare services",
         "learnMore": "Meer info",
@@ -606,8 +624,7 @@
         "status": "Status",
         "empty": "Geen facturatiegeschiedenis beschikbaar"
       }
-    },
-    "title": "Account"
+    }
   },
   "documents": {
     "title": "Documenten",

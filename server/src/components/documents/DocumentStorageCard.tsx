@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -48,9 +48,14 @@ function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPre
     }, [mimeType]);
 
     // Browser-supported video formats (common ones)
-    const isBrowserSupported = mimeType === 'video/mp4' || 
-                               mimeType === 'video/webm' || 
-                               mimeType === 'video/ogg';
+    // QuickTime/MOV is supported on Safari and most modern browsers
+    // AVI support varies by browser and codec
+    const isBrowserSupported = mimeType === 'video/mp4' ||
+                               mimeType === 'video/webm' ||
+                               mimeType === 'video/ogg' ||
+                               mimeType === 'video/quicktime' ||
+                               mimeType === 'video/x-msvideo' ||
+                               mimeType === 'video/avi';
 
     if (canPlay === false || !isBrowserSupported) {
         // Show fallback for unsupported formats
@@ -111,22 +116,30 @@ interface VideoModalProps {
 
 function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
     const { t } = useTranslation('clientPortal');
-    const [canPlay, setCanPlay] = useState<boolean | null>(null);
+    const [videoError, setVideoError] = useState(false);
+    const videoRef = React.useRef<HTMLVideoElement>(null);
 
-    useEffect(() => {
-        // Check if browser can play this video format
-        const video = document.createElement('video');
-        const canPlayResult = video.canPlayType(mimeType);
-        setCanPlay(canPlayResult === 'probably' || canPlayResult === 'maybe');
-    }, [mimeType]);
+    // Handle source error - check if video element can play this format
+    const handleSourceError = () => {
+        if (videoRef.current) {
+            const canPlayType = videoRef.current.canPlayType(mimeType);
+            if (canPlayType === '') {
+                setVideoError(true);
+            } else {
+                // Format is supported but source failed - might be a network issue
+                // Give it a moment and then show error
+                setTimeout(() => {
+                    if (videoRef.current && videoRef.current.readyState === 0) {
+                        setVideoError(true);
+                    }
+                }, 1000);
+            }
+        }
+    };
 
-    // Browser-supported video formats (common ones)
-    const isBrowserSupported = mimeType === 'video/mp4' || 
-                               mimeType === 'video/webm' || 
-                               mimeType === 'video/ogg';
-
-    if (canPlay === false || !isBrowserSupported) {
-        // Show download option for unsupported formats
+    // Show video player by default - let the browser determine if it can play
+    // Only show download fallback if video actually fails to load
+    if (videoError) {
         return (
             <div className="text-center p-8">
                 <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -134,7 +147,10 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                     {fileName}
                 </p>
                 <p className="text-[rgb(var(--color-text-500))] mb-4 text-sm">
-                    {t('documents.videoUnsupported', 'Video format ({{mimeType}}) not supported for browser playback', { mimeType })}
+                    {t('documents.videoPlaybackFailed', 'Unable to play this video in the browser')}
+                </p>
+                <p className="text-xs text-[rgb(var(--color-text-500))] mb-4">
+                    Chrome may not support this video codec. Try downloading or use Safari/Edge.
                 </p>
                 <Button
                     id={`download-video-${fileId}`}
@@ -142,7 +158,6 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                         const downloadUrl = getDocumentDownloadUrl(documentId);
                         const filename = fileName || 'download';
                         try {
-                            // Try using File System Access API for modern browsers
                             await downloadDocument(downloadUrl, filename, true);
                         } catch (error) {
                             console.error('Download failed:', error);
@@ -160,16 +175,47 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
         );
     }
 
-    // Show native video player for supported formats
+    // Try to play the video - the browser will handle compatibility
     return (
-        <video
-            className="max-w-full max-h-[70vh] object-contain"
-            controls
-            autoPlay={false}
-        >
-            <source src={`/api/documents/view/${fileId}`} type={mimeType} />
-            {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
-        </video>
+        <div>
+            <video
+                ref={videoRef}
+                className="max-w-full max-h-[70vh] object-contain"
+                controls
+                autoPlay={false}
+                preload="metadata"
+                onError={() => setVideoError(true)}
+            >
+                <source
+                    src={`/api/documents/view/${fileId}`}
+                    type={mimeType}
+                    onError={handleSourceError}
+                />
+                {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
+            </video>
+            <div className="text-center mt-4">
+                <p className="text-sm text-gray-600 mb-2">
+                    {t('documents.videoPlaybackIssue', 'Having trouble playing the video?')}
+                </p>
+                <Button
+                    id={`download-video-fallback-${fileId}`}
+                    onClick={async () => {
+                        const downloadUrl = getDocumentDownloadUrl(documentId);
+                        const filename = fileName || 'download';
+                        try {
+                            await downloadDocument(downloadUrl, filename, true);
+                        } catch (error) {
+                            console.error('Download failed:', error);
+                        }
+                    }}
+                    variant="outline"
+                    size="sm"
+                >
+                    <Download className="w-4 h-4 mr-2" />
+                    {t('documents.downloadVideo', 'Download Video')}
+                </Button>
+            </div>
+        </div>
     );
 }
 
@@ -512,7 +558,8 @@ function DocumentStorageCardComponent({
                         </div>
                     ) : (
                         <div className="mt-4 preview-container">
-                            {document.mime_type?.startsWith('video/') ? (
+                            {/* For videos, show FFmpeg thumbnail if available, otherwise show video preview */}
+                            {document.mime_type?.startsWith('video/') && !previewContent.previewImage ? (
                                 <VideoPreviewComponent
                                     fileId={document.file_id || ''}
                                     mimeType={document.mime_type || ''}
@@ -607,7 +654,7 @@ function DocumentStorageCardComponent({
                                 className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-50 inline-flex items-center"
                             >
                                 <Unlink className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading') : t('documents.remove', 'Remove')}
+                                {isLoading ? t('common.loading', 'Loading...') : t('documents.remove', 'Remove')}
                             </Button>
                         )}
                         {onDelete && (
@@ -623,7 +670,7 @@ function DocumentStorageCardComponent({
                                 className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-50 inline-flex items-center"
                             >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading') : t('documents.delete', 'Delete')}
+                                {isLoading ? t('common.loading', 'Loading...') : t('documents.delete', 'Delete')}
                             </Button>
                         )}
                     </div>

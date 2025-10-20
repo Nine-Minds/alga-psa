@@ -59,9 +59,15 @@ import {
   PreviewInvoiceResponse
 } from '../../../interfaces/invoice.interfaces';
 
-import { IBillingResult, IBillingCharge, IClientBillingCycle } from '../../../interfaces/billing.interfaces';
+import { IBillingResult, IBillingCharge, IClientContractLineCycle } from '../../../interfaces/billing.interfaces';
 import { IClient } from '../../../interfaces/client.interfaces';
 import { ISO8601String } from '../../../types/types.d';
+import {
+  getClientDetails,
+  persistManualInvoiceItems,
+  calculateAndDistributeTax,
+  updateInvoiceTotalsAndRecordTransaction
+} from '../../services/invoiceService';
 
 export interface InvoiceServiceContext extends ServiceContext {
   permissions?: string[];
@@ -440,7 +446,17 @@ export class InvoiceService extends BaseService<IInvoice> {
           .where({ invoice_id: id, tenant: context.tenant })
           .del();
         
-        await this.createInvoiceLineItems(id, data.items, trx, context);
+      // Normalize header alias: prefer is_bundle_header, but accept is_bundle_header
+      const normalizedItems = data.items.map((it: any) => {
+        if (it && typeof it === 'object') {
+          if (it.is_bundle_header !== undefined && it.is_bundle_header === undefined) {
+            return { ...it, is_bundle_header: it.is_bundle_header };
+          }
+        }
+        return it;
+      });
+
+      await this.createInvoiceLineItems(id, normalizedItems, trx, context);
       }
 
       // Audit log
@@ -1050,7 +1066,133 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   async generateManualInvoice(data: ManualInvoiceRequest, context: InvoiceServiceContext): Promise<IInvoice> {
-    throw new Error('generateManualInvoice not yet implemented');
+    await this.validatePermissions(context, 'invoice', 'create');
+
+    const { knex, tenant } = await this.getKnex();
+    const invoiceId = uuidv4();
+    const numberingService = new NumberingService();
+    const invoiceNumber = await numberingService.getNextNumber('INVOICE');
+    const currentDate = Temporal.Now.plainDateISO().toString();
+    const sessionLike = { user: { id: context.userId } } as { user: { id: string } };
+
+    let createdInvoice: InvoiceViewModel | null = null;
+
+    await withTransaction(knex, async (trx) => {
+      const client = await getClientDetails(trx, tenant, data.clientId);
+
+      await trx('invoices').insert({
+        invoice_id: invoiceId,
+        tenant,
+        client_id: data.clientId,
+        invoice_number: invoiceNumber,
+        invoice_date: currentDate,
+        due_date: currentDate,
+        status: 'draft',
+        subtotal: 0,
+        tax: 0,
+        total_amount: 0,
+        credit_applied: 0,
+        is_manual: true,
+        is_prepayment: data.isPrepayment ?? false
+      });
+
+      await persistManualInvoiceItems(
+        trx,
+        invoiceId,
+        data.items.map((item) => ({
+          ...item,
+          rate: Math.round(item.rate)
+        })),
+        client,
+        sessionLike as any,
+        tenant
+      );
+
+      await calculateAndDistributeTax(trx, invoiceId, client, this.taxService, tenant);
+
+      await updateInvoiceTotalsAndRecordTransaction(
+        trx,
+        invoiceId,
+        client,
+        tenant,
+        invoiceNumber,
+        data.expirationDate,
+        {
+          transactionType: 'invoice_generated',
+          description: `Generated manual invoice ${invoiceNumber}`
+        }
+      );
+
+      const invoiceRecord = await trx('invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .first();
+
+      const updatedItems = await trx('invoice_items')
+        .where({ invoice_id: invoiceId, tenant })
+        .orderBy('created_at', 'asc');
+
+      if (!invoiceRecord) {
+        throw new Error('Failed to load created invoice record');
+      }
+
+      const invoiceDate = typeof invoiceRecord.invoice_date === 'string'
+        ? Temporal.PlainDate.from(invoiceRecord.invoice_date)
+        : Temporal.PlainDate.from(invoiceRecord.invoice_date.toISOString().split('T')[0]);
+
+      const dueDate = typeof invoiceRecord.due_date === 'string'
+        ? Temporal.PlainDate.from(invoiceRecord.due_date)
+        : Temporal.PlainDate.from(invoiceRecord.due_date.toISOString().split('T')[0]);
+
+      createdInvoice = {
+        invoice_id: invoiceId,
+        invoice_number: invoiceNumber,
+        client_id: data.clientId,
+        client: {
+          name: client.client_name,
+          logo: client.logoUrl || '',
+          address: client.location_address || ''
+        },
+        contact: {
+          name: '',
+          address: ''
+        },
+        invoice_date: invoiceDate,
+        due_date: dueDate,
+        status: invoiceRecord.status,
+        subtotal: Number(invoiceRecord.subtotal ?? 0),
+        tax: Number(invoiceRecord.tax ?? 0),
+        total: Number(invoiceRecord.total_amount ?? 0),
+        total_amount: Number(invoiceRecord.total_amount ?? 0),
+        invoice_items: updatedItems.map((item: any): IInvoiceItem => ({
+          item_id: item.item_id,
+          invoice_id: invoiceId,
+          service_id: item.service_id,
+          description: item.description,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          total_price: Number(item.total_price),
+          tax_amount: Number(item.tax_amount),
+          net_amount: Number(item.net_amount),
+          tenant,
+          is_manual: true,
+          is_discount: item.is_discount || false,
+          discount_type: item.discount_type,
+          applies_to_item_id: item.applies_to_item_id,
+          applies_to_service_id: item.applies_to_service_id,
+          created_by: item.created_by,
+          created_at: item.created_at,
+          rate: Number(item.unit_price)
+        })),
+        credit_applied: Number(invoiceRecord.credit_applied ?? 0),
+        is_manual: true
+      };
+    });
+
+    if (!createdInvoice) {
+      throw new Error('Failed to create manual invoice');
+    }
+
+    return createdInvoice;
   }
 
   async approve(id: string, context: InvoiceServiceContext, executionId?: string): Promise<IInvoice> {
@@ -1339,7 +1481,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: item.service_id,
-      plan_id: item.plan_id,
+      contract_line_id: item.contract_line_id,
       description: item.description,
       quantity: item.quantity || 1,
       unit_price: item.unit_price,
@@ -1355,9 +1497,9 @@ export class InvoiceService extends BaseService<IInvoice> {
       discount_percentage: item.discount_percentage,
       applies_to_item_id: item.applies_to_item_id,
       applies_to_service_id: item.applies_to_service_id,
-      client_bundle_id: item.client_bundle_id,
-      bundle_name: item.bundle_name,
-      is_bundle_header: item.is_bundle_header || false,
+      client_contract_id: item.client_contract_id,
+      contract_name: item.contract_name,
+      is_bundle_header: (item.is_bundle_header ?? item.is_bundle_header) || false,
       parent_item_id: item.parent_item_id,
       rate: item.rate,
       tenant: context.tenant,

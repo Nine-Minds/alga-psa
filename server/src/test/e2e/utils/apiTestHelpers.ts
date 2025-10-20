@@ -20,7 +20,6 @@ interface ApiKeyRecord {
 export interface ApiTestConfig {
   baseUrl: string;
   apiKey?: string;
-  tenantId?: string;
   headers?: Record<string, string>;
 }
 
@@ -130,10 +129,6 @@ export class ApiTestClient {
     }
 
     // Add tenant ID if set
-    if (this.config.tenantId) {
-      headers['x-tenant-id'] = this.config.tenantId;
-    }
-
     // Add content-type for body requests
     if (body && !headers['content-type']) {
       headers['content-type'] = 'application/json';

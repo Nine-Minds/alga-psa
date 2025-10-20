@@ -4,6 +4,7 @@ import { AppSessionProvider } from "server/src/components/providers/AppSessionPr
 import DefaultLayout from "server/src/components/layout/DefaultLayout";
 import { TagProvider } from "server/src/context/TagContext";
 import { PostHogUserIdentifier } from "server/src/components/PostHogUserIdentifier";
+import { ClientUIStateProvider } from "server/src/types/ui-reflection/ClientUIStateProvider";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Session } from "next-auth";
@@ -34,7 +35,15 @@ export function MspLayoutClient({ children, session, needsOnboarding, initialSid
     <AppSessionProvider session={session}>
       <PostHogUserIdentifier />
       <TagProvider>
-        {isOnboardingPage ? children : <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>{children}</DefaultLayout>}
+        <ClientUIStateProvider
+          initialPageState={{
+            id: 'msp-portal',
+            title: 'MSP Portal',
+            components: []
+          }}
+        >
+          {isOnboardingPage ? children : <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>{children}</DefaultLayout>}
+        </ClientUIStateProvider>
       </TagProvider>
     </AppSessionProvider>
   );

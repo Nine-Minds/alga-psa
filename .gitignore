@@ -112,7 +112,9 @@ debug-*.sql
 check-*.sql
 update-*.sql
 
-*draft*
+*draft*.md
+*draft*.txt
+*draft*.doc*
 .vscode
 
 

@@ -7,7 +7,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
 import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
 // import { auditLog } from 'server/src/lib/logging/auditLog';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions'; // Assuming this stays or moves appropriately
 import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
@@ -113,7 +113,7 @@ export async function finalizeInvoiceWithKnex(
   // Check if this is a prepayment invoice (no billing_cycle_id)
   if (invoice && !invoice.billing_cycle_id) {
     // For prepayment invoices, update the client's credit balance
-    await ClientBillingPlan.updateClientCredit(invoice.client_id, invoice.subtotal);
+    await ClientContractLine.updateClientCredit(invoice.client_id, invoice.subtotal);
 
     // Log the credit update
     console.log(`Updated credit balance for client ${invoice.client_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
@@ -124,7 +124,7 @@ export async function finalizeInvoiceWithKnex(
     const creditAmount = Math.abs(invoice.total_amount);
 
     // Update client credit balance and record transaction in a single transaction
-    // We handle this directly without using ClientBillingPlan.updateClientCredit to avoid validation issues
+    // We handle this directly without using ClientContractLine.updateClientCredit to avoid validation issues
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get current credit balance
       const client = await trx('clients')
@@ -234,7 +234,7 @@ export async function finalizeInvoiceWithKnex(
   }
   // For regular invoices, check if there's available credit to apply
   else if (invoice && invoice.client_id) {
-    const availableCredit = await ClientBillingPlan.getClientCredit(invoice.client_id);
+    const availableCredit = await ClientContractLine.getClientCredit(invoice.client_id);
 
     if (availableCredit > 0) {
       // Get the current invoice with updated totals
@@ -279,8 +279,22 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
       throw new Error('Invoice not found');
     }
 
-    if (!invoice.finalized_at) {
+    const normalizedStatus = invoice.status ? invoice.status.toLowerCase() : null;
+    const isFinalized = Boolean(invoice.finalized_at) || (normalizedStatus && normalizedStatus !== 'draft');
+
+    if (!isFinalized) {
       throw new Error('Invoice is not finalized');
+    }
+
+    // When unfinalizing make sure the invoice returns to draft status even if some
+    // environments only toggle the status flag without storing finalized_at.
+    const updatedFields: Record<string, unknown> = {
+      finalized_at: null,
+      updated_at: toISODate(Temporal.Now.plainDateISO())
+    };
+
+    if (normalizedStatus && normalizedStatus !== 'draft') {
+      updatedFields.status = 'draft';
     }
 
     await trx('invoices')
@@ -288,10 +302,7 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
         invoice_id: invoiceId,
         tenant
       })
-      .update({
-        finalized_at: null,
-        updated_at: toISODate(Temporal.Now.plainDateISO())
-      });
+      .update(updatedFields);
 
     // Record audit log
     // await auditLog(
@@ -813,7 +824,7 @@ export async function hardDeleteInvoice(invoiceId: string) {
             .delete();
 
         // Update the client's credit balance
-        await ClientBillingPlan.updateClientCredit(
+        await ClientContractLine.updateClientCredit(
             invoice.client_id,
             invoice.credit_applied // Add the credit back
         );
@@ -849,7 +860,7 @@ export async function hardDeleteInvoice(invoiceId: string) {
                     .where({ credit_id: creditTrackingEntry.credit_id })
                     .delete();
                 // Also update client balance back
-                 await ClientBillingPlan.updateClientCredit(
+                 await ClientContractLine.updateClientCredit(
                     invoice.client_id,
                     -creditTrackingEntry.amount // Subtract the credit that was issued
                 );

@@ -11,17 +11,17 @@ export interface IUsageRecord extends TenantEntity {
   tax_region?: string;
   client_name?: string; // Joined from clients table
   service_name?: string; // Joined from service_catalog table
-  billing_plan_id?: string;
+  contract_line_id?: string;
 }
 
 export interface ICreateUsageRecord extends Pick<IUsageRecord, 'client_id' | 'service_id' | 'quantity' | 'usage_date'> {
   comments?: string;
-  billing_plan_id?: string;
+  contract_line_id?: string;
 }
 
 export interface IUpdateUsageRecord extends Partial<ICreateUsageRecord> {
   usage_id: string;
-  billing_plan_id?: string;
+  contract_line_id?: string;
 }
 
 export interface IUsageFilter {

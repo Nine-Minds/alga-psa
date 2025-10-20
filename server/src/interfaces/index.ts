@@ -23,4 +23,6 @@ export * from './interaction.interfaces';
 export * from './ticketResource.interfaces';
 export * from './asset.interfaces';
 export * from './status.interface';
-export * from './planServiceConfiguration.interfaces';
+export * from './contractLineServiceConfiguration.interfaces';
+export * from './contract.interfaces';
+export * from './contractTemplate.interfaces';

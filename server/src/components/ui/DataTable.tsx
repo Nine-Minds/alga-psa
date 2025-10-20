@@ -85,8 +85,16 @@ const caseInsensitiveSort: SortingFn<any> = (rowA, rowB, columnId) => {
   const b = rowB.getValue(columnId);
 
   // Try to parse as dates - if both are valid dates, compare as timestamps
-  const aDate = a ? new Date(a) : null;
-  const bDate = b ? new Date(b) : null;
+  const parseDate = (val: unknown): Date | null => {
+    if (val instanceof Date) return val;
+    if (typeof val === 'string' || typeof val === 'number') {
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  };
+  const aDate = parseDate(a);
+  const bDate = parseDate(b);
 
   if (aDate && !isNaN(aDate.getTime()) && bDate && !isNaN(bDate.getTime())) {
     return aDate.getTime() - bDate.getTime();
@@ -160,6 +168,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     sortDirection,
     onSortChange,
     rowClassName,
+    initialSorting,
     onVisibleRowsChange,
   } = props;
 
@@ -357,18 +366,29 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         desc: sortDirection === 'desc'
       }];
     }
+    if (initialSorting && initialSorting.length > 0) {
+      return initialSorting;
+    }
     return [];
   });
 
   // Update sorting state when props change (for manual sorting)
   React.useEffect(() => {
     if (manualSorting && sortBy) {
-      setSorting([{
-        id: sortBy,
-        desc: sortDirection === 'desc'
-      }]);
+      setSorting([
+        {
+          id: sortBy,
+          desc: sortDirection === 'desc'
+        }
+      ]);
     }
   }, [manualSorting, sortBy, sortDirection]);
+
+  React.useEffect(() => {
+    if (!manualSorting && initialSorting && initialSorting.length > 0) {
+      setSorting(prev => (prev.length === 0 ? initialSorting : prev));
+    }
+  }, [initialSorting, manualSorting]);
 
   const table = useReactTable({
     data,
@@ -506,10 +526,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     <th
                       key={`header_${columnId}_${headerIndex}`}
                       onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
-                      className={`px-6 py-3 text-left text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-gray-50' : ''} ${colDef?.headerClassName ?? ''}`}
+                      className={`px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-gray-50' : ''} ${colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left'} ${colDef?.headerClassName ?? ''}`}
                       style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
                     >
-                        <div className="flex items-center space-x-1">
+                        <div className={`flex space-x-1 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''} items-center`}>
                           <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                           {isSortable && (
                             <span className="text-gray-400">

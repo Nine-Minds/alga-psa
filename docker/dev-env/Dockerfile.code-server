@@ -25,6 +25,7 @@ RUN apt-get update && \
         tree \
         unzip \
         sudo \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Give coder user sudo privileges for development tasks

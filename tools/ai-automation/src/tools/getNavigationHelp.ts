@@ -31,7 +31,7 @@ class GetNavigationHelpTool implements Tool {
           "billing": {
             route: "/msp/billing",
             navigation: "Click 'Billing' in sidebar (menu-billing)",
-            tabs: ["overview", "invoices", "plans", "service-catalog", "tax-rates"]
+            tabs: ["overview", "invoices", "contract-lines", "service-catalog", "tax-rates"]
           },
           "projects": {
             route: "/msp/projects", 

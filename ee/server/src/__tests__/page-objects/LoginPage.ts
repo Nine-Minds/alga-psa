@@ -28,9 +28,9 @@ export class LoginPage {
   /**
    * Navigate to the login page (or root path for Alga PSA)
    */
-  async goto(): Promise<void> {
-    // For Alga PSA, we navigate to root path and login form appears
-    await this.page.goto('/');
+  async goto(loginPath: string = '/'): Promise<void> {
+    // For Alga PSA, we navigate to root path by default
+    await this.page.goto(loginPath);
   }
 
   /**

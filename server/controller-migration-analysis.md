@@ -30,8 +30,8 @@ These controllers still extend `BaseController` and do NOT have V2 versions:
    - Routes: `/api/v1/automation/*`
    - Status: Still using old controller
 
-3. **BillingPlanController** - Billing plans management
-   - Routes: `/api/v1/billing-plans/*`
+3. **ContractLineController** - Contract Lines management
+   - Routes: `/api/v1/contract-lines/*`
    - Status: Still using old controller
 
 4. **CategoryController** - Category management (tickets/services)
@@ -92,7 +92,7 @@ Based on usage patterns and complexity:
 
 ### Low Priority
 9. **AutomationController** - Advanced feature
-10. **BillingPlanController** - Configuration-focused
+10. **ContractLineController** - Configuration-focused
 11. **MetadataController** - API documentation
 12. **PermissionRoleController** - Admin feature
 13. **QuickBooksController** - External integration

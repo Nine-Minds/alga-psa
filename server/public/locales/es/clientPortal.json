@@ -7,8 +7,10 @@
     "assets": "Activos",
     "clientSettings": "Configuración de la empresa",
     "profile": "Perfil",
+    "account": "Cuenta",
     "signOut": "Cerrar sesión",
-    "clientPortal": "Portal del cliente"
+    "clientPortal": "Portal del cliente",
+    "portal": "Portal"
   },
   "dashboard": {
     "title": "Panel",
@@ -193,13 +195,14 @@
       "overview": "Resumen",
       "invoices": "Facturas"
     },
-    "currentPlan": "Plan actual",
+    "currentContractLine": "Línea de contrato actual",
     "nextInvoice": "Próxima factura",
-    "viewPlanDetails": "Ver detalles del plan",
+    "viewContractLineDetails": "Ver detalles de la línea de contrato",
     "viewAllInvoices": "Ver todas las facturas",
     "failedToLoad": "No se pudieron cargar las facturas. Inténtalo de nuevo.",
     "invoices": "Facturas",
     "payments": "Pagos",
+    "contractLines": "Líneas de contrato de servicio",
     "plans": "Planes de servicio",
     "usage": "Métricas de uso",
     "hoursByService": "Horas por servicio",
@@ -245,9 +248,9 @@
       "weekly": "Semanal",
       "biweekly": "Quincenal"
     },
-    "plan": {
-      "detailsTitle": "Detalles del plan",
-      "name": "Nombre del plan",
+    "contractLine": {
+      "detailsTitle": "Detalles de la línea de contrato",
+      "name": "Nombre de la línea de contrato",
       "frequency": "Frecuencia de facturación",
       "startDate": "Fecha de inicio",
       "endDate": "Fecha de finalización",
@@ -255,7 +258,7 @@
       "status": "Estado",
       "customRate": "Tarifa personalizada",
       "serviceCategory": "Categoría del servicio",
-      "statusDescription": "Este plan está actualmente {{status}} y {{expiry}}.",
+      "statusDescription": "Esta línea de contrato está actualmente {{status}} y {{expiry}}.",
       "expiresOn": "expira el {{date}}",
       "noExpiry": "no expira"
     },
@@ -273,8 +276,8 @@
       "total": "Horas totales",
       "usage": "Uso",
       "overage": "Exceso",
-      "noPlanTitle": "No hay planes de horas disponibles",
-      "noPlanDescription": "No existen planes de horas activos para tu cuenta."
+      "noContractLineTitle": "No hay planes de horas disponibles",
+      "noContractLineDescription": "No existen planes de horas activos para tu cuenta."
     },
     "messages": {
       "noInvoices": "No se encontraron facturas",
@@ -460,6 +463,7 @@
       "website": "Sitio web",
       "industry": "Industria",
       "companySize": "Tamaño de la empresa",
+      "company_size": "Tamaño de la empresa",
       "annualRevenue": "Ingresos anuales",
       "size": "Tamaño de la empresa",
       "taxId": "ID fiscal",
@@ -520,9 +524,23 @@
   },
   "account": {
     "title": "Cuenta",
+    "licenseManagement": {
+      "title": "Cuenta",
+      "subtitle": "La gestión de licencias está disponible en el Portal MSP",
+      "howToPurchaseTitle": "Cómo comprar licencias adicionales:",
+      "step1": "Inicia sesión en el Portal MSP (si tienes acceso de administrador)",
+      "step2": "Ve a Configuración → Gestión de cuentas",
+      "step3": "Haz clic en \"Agregar licencias\" para comprar más licencias",
+      "step4": "Completa el proceso de compra",
+      "needHelpTitle": "¿Necesitas ayuda?",
+      "needHelpDescription": "Solo los usuarios con permisos de gestión de cuentas pueden comprar licencias. Si no tienes acceso, ponte en contacto con tu administrador de AlgaPSA.",
+      "backToDashboard": "Volver al panel",
+      "goToMSPPortal": "Ir al Portal MSP",
+      "signingOut": "Cerrando sesión..."
+    },
     "services": {
       "loadError": "No se pudieron cargar los servicios",
-      "loadPlansError": "No se pudieron cargar los planes de servicio",
+      "loadContractLinesError": "No se pudieron cargar los planes de servicio",
       "updateError": "No se pudo actualizar el servicio",
       "loading": "Cargando servicios...",
       "activeTitle": "Servicios activos",
@@ -531,18 +549,18 @@
         "service": "Servicio",
         "description": "Descripción",
         "status": "Estado",
-        "currentPlan": "Plan actual",
+        "currentContractLine": "Línea de contrato actual",
         "nextBilling": "Próxima facturación"
       },
       "actions": {
         "manage": "Administrar",
         "upgrade": "Actualizar",
-        "downgrade": "Reducir plan"
+        "downgrade": "Reducir línea de contrato"
       },
       "manageTitle": "Administrar {{service}}",
       "genericServiceLabel": "Servicio",
-      "currentPlan": "Plan actual",
-      "availablePlans": "Planes disponibles",
+      "currentContractLine": "Línea de contrato actual",
+      "availableContractLines": "Planes disponibles",
       "catalog": {
         "title": "Servicios disponibles",
         "learnMore": "Más información",

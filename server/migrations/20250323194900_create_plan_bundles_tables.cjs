@@ -1,6 +1,6 @@
 /**
  * Migration to create Plan Bundles feature tables
- * This implements the schema for plan bundles, bundle billing plans, and company plan bundles
+ * This implements the schema for plan bundles, bundle contract lines, and company plan bundles
  */
 exports.up = function(knex) {
   return knex.schema

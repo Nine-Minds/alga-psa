@@ -108,6 +108,13 @@ ee/temporal-workflows/src/__tests__/
 - Often require seed data and complex fixtures
 - **Split large test suites** by aspect using underscore notation
 
+**Database bring-up pattern (Billing suites):**
+- Override pgbouncer defaults to connect directly to PostgreSQL in test runs (`process.env.DB_PORT = '5432'` and remap `DB_HOST` to `localhost` when necessary).
+- Use the shared context harness: `const { beforeAll, beforeEach, afterEach, afterAll } = TestContext.createHelpers();`
+- In `beforeAll`, call `setupContext({ runSeeds: true, cleanupTables: [...] })` to provision the tenant, preload reference data, and register table cleanups.
+- Refresh the scoped context in `beforeEach` via `resetContext()`, then reseed tenant-scoped data (e.g., tax regions, numbering seeds) needed for each test.
+- Roll back with `rollbackContext()` in `afterEach` and tear everything down with `cleanupContext()` in `afterAll` so temporary schemas/tables are dropped cleanly.
+
 **When to split tests:**
 - Test file exceeds 500 lines
 - Multiple distinct concerns (tax, discounts, edge cases, etc.)
@@ -171,6 +178,126 @@ ee/temporal-workflows/src/__tests__/
 
 **Note:** Playwright is configured but not widely used. Most E2E testing uses Vitest.
 
+### Playwright E2E (EE) With Fresh DB
+
+For Enterprise Playwright browser tests (VS Code runner and CLI), we keep a clean, migrated, and seeded database at test-session startup. This avoids flakiness and makes tests deterministic.
+
+- Where: `ee/server/src/__tests__/integration/**`
+- Config: `ee/server/playwright.config.ts`, `ee/server/playwright.global-setup.ts`
+- Bootstrap: `scripts/bootstrap-playwright-db.ts`
+
+How It Works
+- Fresh DB per Playwright session, before the web server starts:
+  - `ee/server/playwright.config.ts` runs the DB bootstrap script in `webServer.command` before `npm run dev`:
+    - `cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev`
+  - In VS Code Playwright UI mode this runs once per “Restart” of the runner (session start). Click “Restart” in the Playwright panel to rebuild the DB.
+- The bootstrap script:
+  - Drops and recreates the Playwright test database, runs all migrations and seeds.
+  - Provisions `app_user` and grants privileges.
+  - Reads credentials from `server/.env` (override with `PLAYWRIGHT_DB_*`).
+- globalSetup applies Playwright DB env so the dev server connects to the right DB.
+
+Authentication in Playwright (avoiding login flakiness)
+- Problem: Interactive login during Playwright runs is slow and brittle (middleware redirects, cookie domain/host, edge-runtime session token decoding, etc.).
+- Solution: For UI automation we bypass interactive auth and keep routes accessible in test runs:
+  - Add a targeted bypass in middleware for MSP routes when `E2E_AUTH_BYPASS=true`.
+    - Code: `server/src/middleware.ts` guards `/msp/*` with `if (process.env.E2E_AUTH_BYPASS === 'true') return NextResponse.next()`.
+  - Enable the bypass only for Playwright’s dev server:
+    - `ee/server/playwright.config.ts` sets `env: { E2E_AUTH_BYPASS: 'true' }` in `webServer.env`.
+  - Keep prod/staging secure: do not set `E2E_AUTH_BYPASS` outside of test/dev.
+- Why this approach:
+  - Eliminates cookie/host mismatch issues between `localhost` vs. `canonical.localhost`.
+  - Avoids edge vs. node token decoding differences.
+  - Focuses Playwright on UI correctness instead of auth.
+
+Notes
+- If a specific test must exercise auth flows, disable bypass for that test run (unset `E2E_AUTH_BYPASS`) and use a test-only auth helper to seed a valid session cookie on the expected host.
+- For API E2E tests prefer `x-api-key` with per-test keys rather than browser sessions.
+
+Test File Pattern (seeded data; no DB writes)
+- Use an admin Knex connection to query seed data for test setup (bypasses RLS/ACL).
+- Do not create tenants/users in tests. Pick a seeded user and mint a valid Auth.js cookie.
+
+Template
+```ts
+// ee/server/src/__tests__/integration/my-feature.playwright.test.ts
+import { test, expect } from '@playwright/test';
+import { encode } from '@auth/core/jwt';
+import { knex as createKnex } from 'knex';
+import { PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';
+
+function adminDb() {
+  return createKnex({
+    client: 'pg',
+    connection: {
+      host: PLAYWRIGHT_DB_CONFIG.host,
+      port: PLAYWRIGHT_DB_CONFIG.port,
+      database: PLAYWRIGHT_DB_CONFIG.database,
+      user: PLAYWRIGHT_DB_CONFIG.adminUser,   // admin for read access to seeds
+      password: PLAYWRIGHT_DB_CONFIG.adminPassword,
+    },
+    pool: { min: 0, max: 5 },
+  });
+}
+
+async function getSeededUser(db, email?: string) {
+  if (email) {
+    const row = await db('users').where({ email: email.toLowerCase() }).first();
+    if (row) return row;
+  }
+  const any = await db('users').first();
+  if (!any) throw new Error('No seeded users found. Check seeds.');
+  return any;
+}
+
+async function setSessionCookie(page, user) {
+  const token = await encode({
+    token: {
+      sub: user.user_id,
+      id: user.user_id,
+      email: user.email,
+      tenant: user.tenant,
+      user_type: user.user_type || 'client',
+    },
+    secret: process.env.NEXTAUTH_SECRET!,
+    maxAge: 60 * 60,
+    salt: 'authjs.session-token',
+  });
+  await page.context().addCookies([{
+    name: 'authjs.session-token',
+    value: token,
+    url: 'http://localhost:3000',
+    httpOnly: true,
+    secure: false,
+    sameSite: 'Lax',
+  }]);
+}
+
+test.describe('My Feature', () => {
+  test.setTimeout(180_000); // allow time for first-run migrations
+  let db;
+  test.beforeAll(async () => { db = adminDb(); });
+  test.afterAll(async () => { await db?.destroy().catch(() => undefined); });
+
+  test('happy path', async ({ page }) => {
+    const seeded = await getSeededUser(db, process.env.CLIENT_PORTAL_TEST_EMAIL);
+    await setSessionCookie(page, seeded);
+    await page.goto('http://localhost:3000/some/route');
+    await expect(page.getByText('Welcome')).toBeVisible();
+  });
+});
+```
+
+Running
+- VS Code Playwright panel:
+  - Click “Restart” to start a new session; the Runner executes the DB bootstrap and then starts Next. Subsequent runs reuse the server/DB until you restart.
+- CLI:
+  - `npx playwright test ee/server/src/__tests__/integration/<file>.playwright.test.ts`
+  - The DB bootstrap runs before `npm run dev` (per session).
+
+Variations
+- Reset every run: set `reuseExistingServer: false` in `ee/server/playwright.config.ts`; the server restarts and the DB bootstrap re-runs on every test run.
+- Per‑fixture reset (advanced): add a dev-only reset endpoint and POST it from `beforeAll`. Use only if you need frequent resets while keeping the server running.
 ## File Naming Patterns
 
 | Test Type | Pattern | Example |
@@ -384,7 +511,7 @@ describe('Invoice Generation Infrastructure Tests', () => {
         'invoice_items',
         'invoices',
         'time_entries',
-        'company_billing_plans'
+        'company_contract_lines'
       ],
       companyName: 'Test Company',
       userType: 'internal'
@@ -528,6 +655,10 @@ describe('Companies API E2E Tests', () => {
 - Test both happy path and error cases
 - Verify side effects (database changes, API calls, etc.)
 - Use `toThrow()` for error testing
+
+### 11. Use Updated Billing Terminology
+- Refer to billing `contract lines` and `contracts` instead of the legacy `plans` and `bundles`.
+- When bringing in legacy helpers (e.g., `createFixedPlanAssignment`), alias them to the new naming in your test files so intent stays aligned with the schema.
 
 ## Additional Resources
 

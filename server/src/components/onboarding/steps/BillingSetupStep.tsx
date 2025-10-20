@@ -38,7 +38,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
   const [serviceTypeForm, setServiceTypeForm] = useState({
     name: '',
     description: '',
-    billingMethod: 'fixed' as 'fixed' | 'per_unit',
+    billingMethod: 'fixed' as 'fixed' | 'hourly' | 'usage',
     isActive: true,
     displayOrder: 0
   });
@@ -215,7 +215,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
           <div className="border rounded-lg p-4 space-y-4">
             <div className="rounded-md bg-blue-50 p-4 mb-4">
               <p className="text-sm text-blue-800">
-                <span className="font-semibold">Note:</span> Service types define how services are billed. Fixed billing means a flat rate, while Per Unit billing charges based on quantity (e.g., hours worked).
+                <span className="font-semibold">Note:</span> Service types define how services are billed. Fixed billing means a flat rate, hourly billing tracks time-based work, and usage billing charges per unit consumed.
               </p>
             </div>
             
@@ -292,11 +292,12 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                       id="billingMethod"
                       options={[
                         { value: 'fixed', label: 'Fixed' },
-                        { value: 'per_unit', label: 'Per Unit' },
+                        { value: 'hourly', label: 'Hourly' },
+                        { value: 'usage', label: 'Usage Based' },
                       ]}
                       value={serviceTypeForm.billingMethod}
                       onValueChange={(value: string) => 
-                        setServiceTypeForm(prev => ({ ...prev, billingMethod: value as 'fixed' | 'per_unit' }))
+                        setServiceTypeForm(prev => ({ ...prev, billingMethod: value as 'fixed' | 'hourly' | 'usage' }))
                       }
                     />
                   </div>
@@ -476,7 +477,13 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         />
                       </td>
                       <td className="px-4 py-2 text-sm">{type.name}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{type.billing_method === 'fixed' ? 'Fixed' : 'Per Unit'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600">
+                        {type.billing_method === 'fixed'
+                          ? 'Fixed'
+                          : type.billing_method === 'hourly'
+                            ? 'Hourly'
+                            : 'Usage'}
+                      </td>
                       <td className="px-4 py-2 text-sm text-gray-600">{type.display_order || 0}</td>
                     </tr>
                   ))}
@@ -516,7 +523,11 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         <tr key={type.id}>
                           <td className="px-2 py-1 text-xs">{type.name}</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
-                            {type.billing_method === 'fixed' ? 'Fixed' : 'Per Unit'}
+                            {type.billing_method === 'fixed'
+                              ? 'Fixed'
+                              : type.billing_method === 'hourly'
+                                ? 'Hourly'
+                                : 'Usage'}
                           </td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
                             {(type as any).order_number || (type as any).display_order || '-'}

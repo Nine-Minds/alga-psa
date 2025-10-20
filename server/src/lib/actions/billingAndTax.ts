@@ -13,7 +13,7 @@ import {
     ITimeBasedCharge,
     IFixedPriceCharge,
     BillingCycleType,
-    IClientBillingCycle
+    IClientContractLineCycle
 } from 'server/src/interfaces/billing.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
@@ -80,7 +80,7 @@ export async function getClientTaxRate(taxRegion: string, date: ISO8601String): 
     return totalTaxRate;
 }
 
-export async function getAvailableBillingPeriods(): Promise<(IClientBillingCycle & {
+export async function getAvailableBillingPeriods(): Promise<(IClientContractLineCycle & {
     client_name: string;
     total_unbilled: number;
     period_start_date: ISO8601String;
@@ -125,7 +125,7 @@ export async function getAvailableBillingPeriods(): Promise<(IClientBillingCycle
 
         // For each period, calculate the total unbilled amount
         console.log('Calculating unbilled amounts for each period');
-        const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<IClientBillingCycle & {
+        const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<IClientContractLineCycle & {
             client_name: string;
             total_unbilled: number;
             period_start_date: ISO8601String;

@@ -61,7 +61,7 @@ const baseInvoiceItemSchema = z.object({
   item_id: uuidSchema,
   invoice_id: uuidSchema,
   service_id: uuidSchema.optional(),
-  plan_id: uuidSchema.optional(),
+  contract_line_id: uuidSchema.optional(),
   description: z.string().min(1).max(500),
   quantity: z.number().min(0),
   unit_price: monetaryAmountSchema,
@@ -77,9 +77,10 @@ const baseInvoiceItemSchema = z.object({
   discount_percentage: z.number().min(0).max(100).optional(),
   applies_to_item_id: uuidSchema.optional(),
   applies_to_service_id: uuidSchema.optional(),
-  client_bundle_id: uuidSchema.optional(),
-  bundle_name: z.string().optional(),
-  is_bundle_header: z.boolean().default(false),
+  client_contract_id: uuidSchema.optional(),
+  contract_name: z.string().optional(),
+  // Accept both names during transition
+  is_bundle_header: z.boolean().optional().default(false),
   parent_item_id: uuidSchema.optional(),
   rate: z.number().min(0)
 });

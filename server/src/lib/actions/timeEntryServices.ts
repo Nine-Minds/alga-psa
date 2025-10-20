@@ -232,8 +232,8 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
 
   // For ad_hoc entries, only show Time-based services
   if (workItemType === 'ad_hoc') {
-    // Assuming 'Time' service type maps to 'per_unit' billing method based on migrations
-    query = query.where('sc.billing_method', 'per_unit');
+    // Assuming 'Time' service type maps to 'usage' billing method based on migrations
+    query = query.where('sc.billing_method', 'usage');
   }
 
   const services = await query;

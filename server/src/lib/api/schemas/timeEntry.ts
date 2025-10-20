@@ -70,7 +70,7 @@ export const timeEntryFilterSchema = baseFilterSchema.extend({
   date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   time_sheet_id: uuidSchema.optional(),
-  billing_plan_id: uuidSchema.optional(),
+  contract_line_id: uuidSchema.optional(),
   client_id: uuidSchema.optional(),
   duration_min: z.string().transform(val => parseInt(val)).optional(),
   duration_max: z.string().transform(val => parseInt(val)).optional()
@@ -93,7 +93,7 @@ export const timeEntryResponseSchema = z.object({
   approval_status: approvalStatusSchema,
   service_id: uuidSchema.nullable(),
   tax_region: z.string().nullable(),
-  billing_plan_id: uuidSchema.nullable(),
+  contract_line_id: uuidSchema.nullable(),
   tax_rate_id: uuidSchema.nullable(),
   tax_percentage: z.number().nullable(),
   created_at: z.string().datetime(),
@@ -142,8 +142,8 @@ export const timeEntryWithDetailsResponseSchema = timeEntryResponseSchema.extend
   }).optional(),
   
   billing_info: z.object({
-    billing_plan_id: uuidSchema.nullable(),
-    billing_plan_name: z.string().nullable(),
+    contract_line_id: uuidSchema.nullable(),
+    contract_line_name: z.string().nullable(),
     rate: z.number().nullable(),
     tax_rate: z.number().nullable(),
     total_amount: z.number().nullable()

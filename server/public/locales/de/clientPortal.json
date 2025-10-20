@@ -7,6 +7,7 @@
     "assets": "Assets",
     "clientSettings": "Unternehmenseinstellungen",
     "profile": "Profil",
+    "account": "Konto",
     "signOut": "Abmelden",
     "clientPortal": "Kundenportal",
     "portal": "Portal"
@@ -194,13 +195,14 @@
       "overview": "Übersicht",
       "invoices": "Rechnungen"
     },
-    "currentPlan": "Aktueller Tarif",
+    "currentContractLine": "Aktueller Tarif",
     "nextInvoice": "Nächste Rechnung",
-    "viewPlanDetails": "Tarifdetails anzeigen",
+    "viewContractLineDetails": "Tarifdetails anzeigen",
     "viewAllInvoices": "Alle Rechnungen anzeigen",
     "failedToLoad": "Rechnungen konnten nicht geladen werden. Bitte versuche es erneut.",
     "invoices": "Rechnungen",
     "payments": "Zahlungen",
+    "contractLines": "Servicevertragslinien",
     "plans": "Servicepläne",
     "usage": "Nutzungsmetriken",
     "hoursByService": "Stunden nach Service",
@@ -246,7 +248,7 @@
       "weekly": "Wöchentlich",
       "biweekly": "Zweiwöchentlich"
     },
-    "plan": {
+    "contractLine": {
       "detailsTitle": "Tarifdetails",
       "name": "Name des Tarifs",
       "frequency": "Abrechnungshäufigkeit",
@@ -274,8 +276,8 @@
       "total": "Gesamtstunden",
       "usage": "Nutzung",
       "overage": "Überschreitung",
-      "noPlanTitle": "Keine Stundenpläne verfügbar",
-      "noPlanDescription": "Für dein Konto sind keine aktiven Stundenpläne vorhanden."
+      "noContractLineTitle": "Keine Stundenpläne verfügbar",
+      "noContractLineDescription": "Für dein Konto sind keine aktiven Stundenpläne vorhanden."
     },
     "messages": {
       "noInvoices": "Keine Rechnungen gefunden",
@@ -461,6 +463,7 @@
       "website": "Website",
       "industry": "Branche",
       "companySize": "Unternehmensgröße",
+      "company_size": "Unternehmensgröße",
       "annualRevenue": "Jahresumsatz",
       "size": "Unternehmensgröße",
       "taxId": "Steuer-ID",
@@ -520,9 +523,24 @@
     }
   },
   "account": {
+    "title": "Konto",
+    "licenseManagement": {
+      "title": "Konto",
+      "subtitle": "Die Lizenzverwaltung ist im MSP-Portal verfügbar",
+      "howToPurchaseTitle": "So kaufst du zusätzliche Lizenzen:",
+      "step1": "Melde dich im MSP-Portal an (wenn du Administratorzugriff hast)",
+      "step2": "Navigiere zu Einstellungen → Kontoverwaltung",
+      "step3": "Klicke auf \"Lizenzen hinzufügen\", um weitere Lizenzen zu kaufen",
+      "step4": "Schließe den Checkout-Prozess ab",
+      "needHelpTitle": "Brauchst du Hilfe?",
+      "needHelpDescription": "Nur Benutzer mit Berechtigungen für die Kontoverwaltung können Lizenzen kaufen. Wenn du keinen Zugriff hast, wende dich bitte an deine AlgaPSA-Administratorin oder deinen Administrator.",
+      "backToDashboard": "Zurück zum Dashboard",
+      "goToMSPPortal": "Zum MSP-Portal",
+      "signingOut": "Abmelden..."
+    },
     "services": {
       "loadError": "Dienste konnten nicht geladen werden",
-      "loadPlansError": "Servicepläne konnten nicht geladen werden",
+      "loadContractLinesError": "Servicepläne konnten nicht geladen werden",
       "updateError": "Service konnte nicht aktualisiert werden",
       "loading": "Dienste werden geladen...",
       "activeTitle": "Aktive Dienste",
@@ -531,7 +549,7 @@
         "service": "Dienst",
         "description": "Beschreibung",
         "status": "Status",
-        "currentPlan": "Aktueller Plan",
+        "currentContractLine": "Aktuelle Vertragslinie",
         "nextBilling": "Nächste Abrechnung"
       },
       "actions": {
@@ -541,8 +559,8 @@
       },
       "manageTitle": "Dienst {{service}} verwalten",
       "genericServiceLabel": "Dienst",
-      "currentPlan": "Aktueller Plan",
-      "availablePlans": "Verfügbare Pläne",
+      "currentContractLine": "Aktuelle Vertragslinie",
+      "availableContractLines": "Verfügbare Pläne",
       "catalog": {
         "title": "Verfügbare Dienste",
         "learnMore": "Mehr erfahren",
@@ -606,8 +624,7 @@
         "status": "Status",
         "empty": "Keine Abrechnungshistorie verfügbar"
       }
-    },
-    "title": "Konto"
+    }
   },
   "documents": {
     "title": "Dokumente",

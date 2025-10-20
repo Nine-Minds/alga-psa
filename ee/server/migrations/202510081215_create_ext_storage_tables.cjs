@@ -71,15 +71,25 @@ exports.up = async function up(knex) {
     });
   });
 
-  await knex.schema.raw(`
-    SELECT create_distributed_table('ext_storage_records', 'tenant', 'hash');
+  // Distribute tables only if Citus is installed
+  const citusEnabled = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_extension WHERE extname = 'citus'
+    ) as enabled
   `);
-  await knex.schema.raw(`
-    SELECT create_distributed_table('ext_storage_schemas', 'tenant', 'hash');
-  `);
-  await knex.schema.raw(`
-    SELECT create_distributed_table('ext_storage_usage', 'tenant', 'hash');
-  `);
+  if (citusEnabled.rows?.[0]?.enabled) {
+    await knex.schema.raw(`
+      SELECT create_distributed_table('ext_storage_records', 'tenant', 'hash');
+    `);
+    await knex.schema.raw(`
+      SELECT create_distributed_table('ext_storage_schemas', 'tenant', 'hash');
+    `);
+    await knex.schema.raw(`
+      SELECT create_distributed_table('ext_storage_usage', 'tenant', 'hash');
+    `);
+  } else {
+    console.log('Citus not enabled; skipping distribution of ext_storage_* tables');
+  }
 
   await knex.schema.raw(`
     CREATE INDEX IF NOT EXISTS ext_storage_records_namespace_idx
@@ -104,3 +114,6 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('ext_storage_schemas');
   await knex.schema.dropTableIfExists('ext_storage_records');
 };
+
+// Run outside a transaction to support Citus DDL if enabled
+exports.config = { transaction: false };

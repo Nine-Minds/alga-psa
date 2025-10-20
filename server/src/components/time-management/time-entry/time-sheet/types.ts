@@ -12,7 +12,7 @@ export interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isNew?: boolean;
   isDirty?: boolean;
   tempId?: string;
-  client_id?: string; // Added for billing plan selection
+  client_id?: string; // Added for contract line selection
 }
 
 export interface TimeInputs {

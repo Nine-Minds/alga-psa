@@ -9,10 +9,10 @@ import { Button } from 'server/src/components/ui/Button';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
 import ContactModel from 'server/src/lib/models/contact';
-import { getClientBillingPlan, updateClientBillingPlan, addClientBillingPlan, removeClientBillingPlan, editClientBillingPlan } from '../../lib/actions/client-actions/clientBillingPlanActions';
-import { getBillingPlans } from '../../lib/actions/billingPlanAction';
+import { getClientContractLine, updateClientContractLine, addClientContractLine, removeClientContractLine, editClientContractLine } from '../../lib/actions/client-actions/clientContractLineActions';
+import { getContractLines } from '../../lib/actions/contractLineAction';
 import { getServiceCategories } from '../../lib/actions/serviceCategoryActions';
-import { IClientBillingPlan, IBillingPlan, IServiceCategory, BillingCycleType } from '../../interfaces/billing.interfaces';
+import { IClientContractLine, IContractLine, IServiceCategory, BillingCycleType } from '../../interfaces/billing.interfaces';
 import { getServices, createService, updateService, deleteService } from '../../lib/actions/serviceActions';
 import { IService } from '../../interfaces/billing.interfaces';
 import { getTaxRates } from '../../lib/actions/taxRateActions';
@@ -22,12 +22,12 @@ import { getBillingCycle, updateBillingCycle } from '../../lib/actions/billingCy
 import { setClientTemplate } from '../../lib/actions/invoiceTemplates';
 import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
-import BillingPlans from './BillingPlans';
+import ContractLines from './ContractLines';
 import ClientZeroDollarInvoiceSettings from './ClientZeroDollarInvoiceSettings';
 import ClientCreditExpirationSettings from './ClientCreditExpirationSettings';
 import ClientServiceOverlapMatrix from './ClientServiceOverlapMatrix';
 import ClientPlanDisambiguationGuide from './ClientPlanDisambiguationGuide';
-import ClientBundleAssignment from './ClientBundleAssignment'; // Added import
+import ClientContractAssignment from './ClientContractAssignment'; // Added import
 import { IClientTaxRateAssociation } from 'server/src/interfaces/tax.interfaces';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
 
@@ -39,7 +39,7 @@ interface BillingConfigurationProps {
 
 type DateString = string;
 
-interface ClientBillingPlanWithStringDates extends Omit<IClientBillingPlan, 'start_date' | 'end_date'> {
+interface ClientContractLineWithStringDates extends Omit<IClientContractLine, 'start_date' | 'end_date'> {
     start_date: DateString;
     end_date: DateString | null;
 }
@@ -59,14 +59,14 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         region_code: client.region_code || null, // Added region_code from client data
     });
 
-    const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
+    const [contractLines, setContractLines] = useState<IContractLine[]>([]);
     const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [clientBillingPlans, setClientBillingPlans] = useState<ClientBillingPlanWithStringDates[]>([]);
-    const [editingBillingPlan, setEditingBillingPlan] = useState<ClientBillingPlanWithStringDates | null>(null);
-    const [billingPlanToDelete, setBillingPlanToDelete] = useState<string | null>(null);
+    const [clientContractLines, setClientContractLines] = useState<ClientContractLineWithStringDates[]>([]);
+    const [editingContractLine, setEditingContractLine] = useState<ClientContractLineWithStringDates | null>(null);
+    const [contractLineToDelete, setContractLineToDelete] = useState<string | null>(null);
     const [services, setServices] = useState<IService[]>([]);
-    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
+    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',
         custom_service_type_id: '', // Will be set after fetching service types
@@ -118,16 +118,16 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
     useEffect(() => {
         const fetchData = async () => {
-            const billingPlans = await getClientBillingPlan(client.client_id);
-            const billingPlansWithStringDates: ClientBillingPlanWithStringDates[] = billingPlans.map((plan: IClientBillingPlan): ClientBillingPlanWithStringDates => ({
+            const contractLines = await getClientContractLine(client.client_id);
+            const contractLinesWithStringDates: ClientContractLineWithStringDates[] = contractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
-            setClientBillingPlans(billingPlansWithStringDates);
+            setClientContractLines(contractLinesWithStringDates);
 
-            const plans = await getBillingPlans();
-            setBillingPlans(plans);
+            const plans = await getContractLines();
+            setContractLines(plans);
 
             const categories = await getServiceCategories();
             setServiceCategories(categories);
@@ -214,86 +214,86 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         }
     };
 
-    const handleClientPlanChange = async (clientBillingPlanId: string, planId: string) => {
+    const handleClientPlanChange = async (clientContractLineId: string, planId: string) => {
         try {
-            await updateClientBillingPlan(clientBillingPlanId, { plan_id: planId });
-            const updatedBillingPlans = await getClientBillingPlan(client.client_id);
-            const updatedBillingPlansWithStringDates: ClientBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: IClientBillingPlan): ClientBillingPlanWithStringDates => ({
+            await updateClientContractLine(clientContractLineId, { contract_line_id: planId });
+            const updatedContractLines = await getClientContractLine(client.client_id);
+            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
-            setClientBillingPlans(updatedBillingPlansWithStringDates);
+            setClientContractLines(updatedContractLinesWithStringDates);
         } catch (error) {
-            setErrorMessage('Failed to update billing plan. Please try again.');
+            setErrorMessage('Failed to update contract line. Please try again.');
         }
     };
 
-    const handleServiceCategoryChange = async (clientBillingPlanId: string, categoryId: string | null) => {
+    const handleServiceCategoryChange = async (clientContractLineId: string, categoryId: string | null) => {
         try {
-            await updateClientBillingPlan(clientBillingPlanId, { service_category: categoryId === null ? undefined : categoryId });
-            const updatedBillingPlans = await getClientBillingPlan(client.client_id);
-            const updatedBillingPlansWithStringDates: ClientBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: IClientBillingPlan): ClientBillingPlanWithStringDates => ({
+            await updateClientContractLine(clientContractLineId, { service_category: categoryId === null ? undefined : categoryId });
+            const updatedContractLines = await getClientContractLine(client.client_id);
+            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
-            setClientBillingPlans(updatedBillingPlansWithStringDates);
+            setClientContractLines(updatedContractLinesWithStringDates);
         } catch (error) {
             setErrorMessage('Failed to update service category. Please try again.');
         }
     };
 
-    const handleAddBillingPlan = async (newBillingPlan: Omit<IClientBillingPlan, "client_billing_plan_id" | "tenant">) => {
+    const handleAddContractLine = async (newContractLine: Omit<IClientContractLine, "client_contract_line_id" | "tenant">) => {
         try {
-            await addClientBillingPlan(newBillingPlan);
-            const updatedBillingPlans = await getClientBillingPlan(client.client_id);
-            const updatedBillingPlansWithStringDates: ClientBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: IClientBillingPlan): ClientBillingPlanWithStringDates => ({
+            await addClientContractLine(newContractLine);
+            const updatedContractLines = await getClientContractLine(client.client_id);
+            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
-            setClientBillingPlans(updatedBillingPlansWithStringDates);
+            setClientContractLines(updatedContractLinesWithStringDates);
         } catch (error: any) {
-            setErrorMessage(error.message || 'Failed to add billing plan. Please try again.');
+            setErrorMessage(error.message || 'Failed to add contract line. Please try again.');
         }
     };
 
-    const handleRemoveBillingPlan = async (clientBillingPlanId: string) => {
-        setBillingPlanToDelete(clientBillingPlanId);
+    const handleRemoveContractLine = async (clientContractLineId: string) => {
+        setContractLineToDelete(clientContractLineId);
     };
 
-    const confirmRemoveBillingPlan = async () => {
-        if (!billingPlanToDelete) return;
+    const confirmRemoveContractLine = async () => {
+        if (!contractLineToDelete) return;
 
         try {
-            await removeClientBillingPlan(billingPlanToDelete);
-            const updatedBillingPlans = await getClientBillingPlan(client.client_id);
-            const updatedBillingPlansWithStringDates: ClientBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: IClientBillingPlan): ClientBillingPlanWithStringDates => ({
+            await removeClientContractLine(contractLineToDelete);
+            const updatedContractLines = await getClientContractLine(client.client_id);
+            const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
-            setClientBillingPlans(updatedBillingPlansWithStringDates);
+            setClientContractLines(updatedContractLinesWithStringDates);
         } catch (error: any) {
             // Display the actual error message from the server if available
-            setErrorMessage(error.message || 'Failed to remove billing plan. Please try again.');
+            setErrorMessage(error.message || 'Failed to remove contract line. Please try again.');
         } finally {
-            setBillingPlanToDelete(null);
+            setContractLineToDelete(null);
         }
     };
 
-    const handleEditBillingPlan = (billing: ClientBillingPlanWithStringDates) => {
-        setEditingBillingPlan({ ...billing });
+    const handleEditContractLine = (billing: ClientContractLineWithStringDates) => {
+        setEditingContractLine({ ...billing });
     };
 
-    const handleSaveEditBillingPlan = async (planToSave: ClientBillingPlanWithStringDates) => {
+    const handleSaveEditContractLine = async (planToSave: ClientContractLineWithStringDates) => {
         if (planToSave) {
             try {
                 // Log the data being saved
-                console.log('Saving billing plan with end_date:', planToSave.end_date);
+                console.log('Saving contract line with end_date:', planToSave.end_date);
 
-                const updatedBilling: IClientBillingPlan = {
+                const updatedBilling: IClientContractLine = {
                     ...planToSave,
                     start_date: planToSave.start_date || '',
                     // Explicitly set end_date to null if it's falsy to ensure ongoing plans are properly saved
@@ -302,16 +302,16 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
                 // Log the data being sent to the server
                 console.log('Sending to server:', updatedBilling);
-                await editClientBillingPlan(updatedBilling.client_billing_plan_id, updatedBilling);
+                await editClientContractLine(updatedBilling.client_contract_line_id, updatedBilling);
 
-                const updatedBillingPlans = await getClientBillingPlan(client.client_id);
-                const updatedBillingPlansWithStringDates: ClientBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: IClientBillingPlan): ClientBillingPlanWithStringDates => ({
+                const updatedContractLines = await getClientContractLine(client.client_id);
+                const updatedContractLinesWithStringDates: ClientContractLineWithStringDates[] = updatedContractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
                     ...plan,
                     start_date: formatStartDate(plan.start_date),
                     end_date: plan.end_date ? formatStartDate(plan.end_date) : null
                 }));
-                setClientBillingPlans(updatedBillingPlansWithStringDates);
-                setEditingBillingPlan(null);
+                setClientContractLines(updatedContractLinesWithStringDates);
+                setEditingContractLine(null);
                 setErrorMessage(null);
             } catch (error: any) {
                 // Display the actual error message from the server if available
@@ -498,9 +498,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="mb-4">
                     <TabsTrigger value="general">General</TabsTrigger>
-                    <TabsTrigger value="plans">Billing Plans</TabsTrigger>
+                    <TabsTrigger value="plans">Contract Lines</TabsTrigger>
                     <TabsTrigger value="taxRates">Tax Rates</TabsTrigger>
-                    <TabsTrigger value="overlaps">Plan Overlaps</TabsTrigger>
+                    <TabsTrigger value="overlaps">Contract Line Overlaps</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general">
                     <BillingConfigForm
@@ -530,18 +530,18 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 </TabsContent>
 
                 <TabsContent value="plans" className="space-y-6"> {/* Added space-y for layout */}
-                    {/* Added ClientBundleAssignment component */}
-                    <ClientBundleAssignment clientId={client.client_id} />
+                    {/* Added ClientContractAssignment component */}
+                    <ClientContractAssignment clientId={client.client_id} />
 
-                    {/* Existing BillingPlans component */}
-                    <BillingPlans
-                        clientBillingPlans={clientBillingPlans}
-                        billingPlans={billingPlans}
+                    {/* Existing ContractLines component */}
+                    <ContractLines
+                        clientContractLines={clientContractLines}
+                        contractLines={contractLines}
                         serviceCategories={serviceCategories}
                         clientId={client.client_id}
-                        onEdit={handleEditBillingPlan}
-                        onDelete={handleRemoveBillingPlan}
-                        onAdd={handleAddBillingPlan}
+                        onEdit={handleEditContractLine}
+                        onDelete={handleRemoveContractLine}
+                        onAdd={handleAddContractLine}
                         onClientPlanChange={handleClientPlanChange}
                         onServiceCategoryChange={handleServiceCategoryChange}
                         formatDateForDisplay={formatDateForDisplay}
@@ -564,9 +564,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                     <div className="space-y-6">
                         <ClientServiceOverlapMatrix
                             clientId={client.client_id}
-                            clientBillingPlans={clientBillingPlans}
+                            clientContractLines={clientContractLines}
                             services={services}
-                            onEdit={handleEditBillingPlan}
+                            onEdit={handleEditContractLine}
                             className="mb-6"
                         />
 
@@ -575,42 +575,42 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 </TabsContent>
             </Tabs>
 
-            {editingBillingPlan && (
+            {editingContractLine && (
                 <PlanPickerDialog
-                    isOpen={!!editingBillingPlan}
-                    onClose={() => setEditingBillingPlan(null)}
-                    onSelect={(plan: IBillingPlan, serviceCategory: string | undefined, startDate: string, endDate: string | null) => {
-                        if (editingBillingPlan) {
+                    isOpen={!!editingContractLine}
+                    onClose={() => setEditingContractLine(null)}
+                    onSelect={(plan: IContractLine, serviceCategory: string | undefined, startDate: string, endDate: string | null) => {
+                        if (editingContractLine) {
                             const updatedPlan = {
-                                ...editingBillingPlan,
-                                plan_id: plan.plan_id!,
+                                ...editingContractLine,
+                                contract_line_id: plan.contract_line_id!,
                                 service_category: serviceCategory,
                                 start_date: startDate,
                                 end_date: endDate
                             };
                             // Don't update the state here, pass directly to save function
-                            // setEditingBillingPlan(updatedPlan);
-                            handleSaveEditBillingPlan(updatedPlan);
+                            // setEditingContractLine(updatedPlan);
+                            handleSaveEditContractLine(updatedPlan);
                         }
                     }}
-                    availablePlans={billingPlans}
+                    availablePlans={contractLines}
                     serviceCategories={serviceCategories}
                     initialValues={{
-                        planId: editingBillingPlan.plan_id,
-                        categoryId: editingBillingPlan.service_category || '',
-                        startDate: editingBillingPlan.start_date,
-                        endDate: editingBillingPlan.end_date,
-                        ongoing: !editingBillingPlan.end_date
+                        planId: editingContractLine.contract_line_id,
+                        categoryId: editingContractLine.service_category || '',
+                        startDate: editingContractLine.start_date,
+                        endDate: editingContractLine.end_date,
+                        ongoing: !editingContractLine.end_date
                     }}
                 />
             )}
 
             <ConfirmationDialog
-                isOpen={!!billingPlanToDelete}
-                onClose={() => setBillingPlanToDelete(null)}
-                onConfirm={confirmRemoveBillingPlan}
-                title="Remove Billing Plan Assignment"
-                message="Are you sure you want to remove this billing plan assignment from the client? The billing plan itself will not be deleted."
+                isOpen={!!contractLineToDelete}
+                onClose={() => setContractLineToDelete(null)}
+                onConfirm={confirmRemoveContractLine}
+                title="Remove Contract Line Assignment"
+                message="Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted."
             />
 
         </form>

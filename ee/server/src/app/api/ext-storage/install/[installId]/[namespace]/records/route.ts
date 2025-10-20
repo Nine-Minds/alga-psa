@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { StorageServiceError, StorageValidationError } from '@/lib/extensions/storage/v2/errors';
 import { getStorageServiceForInstall } from '@/lib/extensions/storage/v2/factory';
 import type { StorageBulkPutRequest, StorageListRequest } from '@/lib/extensions/storage/v2/types';
-import { isStorageApiEnabled } from '@/lib/extensions/storage/v2/config';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import type { Knex } from 'knex';
@@ -131,9 +130,6 @@ export async function GET(
   { params }: { params: { installId: string; namespace: string } },
 ) {
   try {
-    if (!isStorageApiEnabled()) {
-      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
-    }
     const search = listQuerySchema.parse(Object.fromEntries(new URL(req.url).searchParams.entries()));
     const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);
@@ -160,9 +156,6 @@ export async function POST(
   { params }: { params: { installId: string; namespace: string } },
 ) {
   try {
-    if (!isStorageApiEnabled()) {
-      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
-    }
     const body = bulkPutSchema.parse(await req.json());
     const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);

@@ -36,6 +36,6 @@ export async function getClientIdForWorkItem(trx: Knex.Transaction, tenant: stri
         return interaction?.client_id || null;
     }
     // Add other work item types if they can be associated with clients and buckets (e.g., ad_hoc if linked to a client)
-    // For now, tickets, project tasks, and interactions are assumed to link to clients for billing plans.
+    // For now, tickets, project tasks, and interactions are assumed to link to clients for contract lines.
     return null;
 }

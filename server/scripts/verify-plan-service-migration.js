@@ -35,7 +35,7 @@ async function verifyMigration() {
       console.log(`\nVerifying tenant: ${tenant}`);
       
       // Get all billing plans for this tenant
-      const plans = await db('billing_plans')
+      const plans = await db('contract_lines')
         .where({ tenant })
         .select('*');
       
@@ -47,7 +47,7 @@ async function verifyMigration() {
         // Get original services
         const oldServices = await db('plan_services')
           .where({
-            'plan_id': plan.plan_id,
+            'contract_line_id': plan.contract_line_id,
             'tenant': tenant
           })
           .select('*');
@@ -57,27 +57,27 @@ async function verifyMigration() {
         // Get new configurations
         const newConfigurations = await db('plan_service_configuration')
           .where({
-            'plan_id': plan.plan_id,
+            'contract_line_id': plan.contract_line_id,
             'tenant': tenant
           })
           .select('*');
         
         totalNewConfigurations += newConfigurations.length;
         
-        console.log(`Plan ${plan.plan_name} (${plan.plan_id}): ${oldServices.length} old services, ${newConfigurations.length} new configurations`);
+        console.log(`Plan ${plan.contract_line_name} (${plan.contract_line_id}): ${oldServices.length} old services, ${newConfigurations.length} new configurations`);
         
         // Check for missing configurations
         if (oldServices.length !== newConfigurations.length) {
-          console.log(`  WARNING: Service count mismatch for plan ${plan.plan_name}`);
+          console.log(`  WARNING: Service count mismatch for plan ${plan.contract_line_name}`);
           missingConfigurations += Math.abs(oldServices.length - newConfigurations.length);
         }
         
         // Check configuration types
         for (const config of newConfigurations) {
           // Verify configuration type matches plan type
-          if (plan.plan_type !== config.configuration_type) {
-            console.log(`  WARNING: Type mismatch for service ${config.service_id} in plan ${plan.plan_name}`);
-            console.log(`    Plan type: ${plan.plan_type}, Configuration type: ${config.configuration_type}`);
+          if (plan.contract_line_type !== config.configuration_type) {
+            console.log(`  WARNING: Type mismatch for service ${config.service_id} in plan ${plan.contract_line_name}`);
+            console.log(`    Plan type: ${plan.contract_line_type}, Configuration type: ${config.configuration_type}`);
             typeMismatches++;
           }
           
@@ -127,7 +127,7 @@ async function verifyMigration() {
           }
           
           if (!typeConfigExists) {
-            console.log(`  WARNING: Missing type-specific configuration for service ${config.service_id} in plan ${plan.plan_name}`);
+            console.log(`  WARNING: Missing type-specific configuration for service ${config.service_id} in plan ${plan.contract_line_name}`);
           }
         }
       }

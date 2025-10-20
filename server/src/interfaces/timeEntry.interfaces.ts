@@ -42,7 +42,7 @@ export interface ITimeEntry extends TenantEntity  {
   approval_status: TimeSheetStatus;
   service_id?: string;
   tax_region?: string;
-  billing_plan_id?: string;
+  contract_line_id?: string;
   tax_rate_id?: string | null; // ID of the applied tax rate
   tax_percentage?: number | null; // Percentage of the applied tax rate
 }

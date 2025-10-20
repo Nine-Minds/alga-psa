@@ -336,7 +336,8 @@ async function createDatabase(retryCount = 0) {
     console.error('Error during database setup:', error);
     
     // Log additional debugging information for authentication errors
-    if (error.code === '08P01' || error.message?.includes('SASL') || error.message?.includes('authentication')) {
+    const emsg = String(error?.message || '');
+    if (error.code === '08P01' || /SCRAM|SASL|authentication|wrong password type/i.test(emsg)) {
       console.error('=== AUTHENTICATION ERROR DEBUG INFO ===');
       console.error(`Database Host: ${process.env.DB_HOST}`);
       console.error(`Database Port: ${process.env.DB_PORT}`);
@@ -348,6 +349,10 @@ async function createDatabase(retryCount = 0) {
       console.error(`  - DB_PASSWORD_ADMIN: ${process.env.DB_PASSWORD_ADMIN ? 'Set' : 'Not set'}`);
       console.error(`  - DB_HOST: ${process.env.DB_HOST || 'Not set'}`);
       console.error(`  - DB_PORT: ${process.env.DB_PORT || 'Not set'}`);
+      console.error('Tip: If using PgBouncer and seeing SCRAM/wrong password type, Postgres likely needs md5 hashes.');
+      console.error("Run in Postgres:  SET password_encryption = 'md5'; ALTER ROLE postgres WITH PASSWORD '<admin secret>';\nThen ensure app_user password matches the db_password_server secret.");
+      console.error('For setup, prefer direct Postgres by setting DB_HOST_ADMIN=postgres and DB_PORT_ADMIN=5432.');
+      console.error('See docs/setup_guide.md → Troubleshooting → Postgres authentication loop.');
       console.error('=======================================');
     }
     

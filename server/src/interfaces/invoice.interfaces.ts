@@ -32,7 +32,7 @@ export interface IInvoiceItem extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
   service_id?: string;
-  plan_id?: string; // Added for consolidated fixed items
+  contract_line_id?: string; // Added for consolidated fixed items
   description: string;
   quantity: number;
   unit_price: number;
@@ -48,10 +48,10 @@ export interface IInvoiceItem extends TenantEntity, NetAmountItem {
   discount_percentage?: number;
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
-  client_bundle_id?: string; // Reference to the client plan bundle
-  bundle_name?: string; // Name of the bundle
-  is_bundle_header?: boolean; // Whether this item is a bundle header
-  parent_item_id?: string; // Reference to the parent bundle header item
+  client_contract_id?: string; // Reference to the client contract assignment
+  contract_name?: string; // Contract name
+  is_bundle_header?: boolean; // Whether this item is a contract group header
+  parent_item_id?: string; // Reference to the parent contract group header item
   created_by?: string;
   updated_by?: string;
   created_at?: ISO8601String;
@@ -100,6 +100,8 @@ export type ParsedTemplate = {
   globals: Calculation[];
 };
 
+export type InvoiceTemplateSource = 'standard' | 'custom';
+
 export interface IInvoiceTemplate extends TenantEntity {
   template_id: string;
   name: string;
@@ -108,7 +110,11 @@ export interface IInvoiceTemplate extends TenantEntity {
   wasmBinary?: Buffer;
   isStandard?: boolean;
   isClone?: boolean;
-  is_default?: boolean;
+  is_default?: boolean; // Legacy flag retained for compatibility
+  isTenantDefault?: boolean;
+  templateSource?: InvoiceTemplateSource;
+  standard_invoice_template_code?: string;
+  selectValue?: string;
   created_at?: ISO8601String; // Added timestamp
   updated_at?: ISO8601String; // Added timestamp
   parsed?: ParsedTemplate; // Added for backward compatibility with tests

@@ -53,7 +53,7 @@ export interface BillingData {
   serviceName: string;
   serviceDescription: string;
   servicePrice: string;
-  planName: string;
+  contractLineName: string;
   serviceTypeId?: string;
 }
 
@@ -95,41 +95,48 @@ export async function saveClientInfo(data: ClientInfoData): Promise<OnboardingAc
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Update current user with client owner information
-      const updateData: any = {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email.toLowerCase(),
-        updated_at: new Date()
-      };
-      
-      // If new password is provided, hash and update it
-      if (data.newPassword) {
-        updateData.hashed_password = await hashPassword(data.newPassword);
-      }
-      
-      await trx('users')
-        .where({ user_id: currentUser.user_id, tenant })
-        .update(updateData);
-      
-      // If password was changed, mark it as reset
-      if (data.newPassword) {
-        const UserPreferences = await import('server/src/lib/models/userPreferences').then(m => m.default);
-        await UserPreferences.upsert(trx, {
-          user_id: currentUser.user_id,
-          setting_name: 'has_reset_password',
-          setting_value: true,
+      // Only update user info if data is provided (for first-time users)
+      // For returning users, these fields won't be in the data
+      if (data.firstName || data.lastName || data.email) {
+        const updateData: any = {
           updated_at: new Date()
-        });
+        };
+
+        if (data.firstName) updateData.first_name = data.firstName;
+        if (data.lastName) updateData.last_name = data.lastName;
+        if (data.email) updateData.email = data.email.toLowerCase();
+
+        // If new password is provided, hash and update it
+        if (data.newPassword) {
+          updateData.hashed_password = await hashPassword(data.newPassword);
+        }
+
+        await trx('users')
+          .where({ user_id: currentUser.user_id, tenant })
+          .update(updateData);
+
+        // If password was changed, mark it as reset
+        if (data.newPassword) {
+          const UserPreferences = await import('server/src/lib/models/userPreferences').then(m => m.default);
+          await UserPreferences.upsert(trx, {
+            user_id: currentUser.user_id,
+            setting_name: 'has_reset_password',
+            setting_value: true,
+            updated_at: new Date()
+          });
+        }
       }
 
       // Save progress to tenant settings
-      await saveTenantOnboardingProgress({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        clientName: data.clientName,
-        email: data.email
-      });
+      const progressData: any = {
+        clientName: data.clientName
+      };
+
+      if (data.firstName) progressData.firstName = data.firstName;
+      if (data.lastName) progressData.lastName = data.lastName;
+      if (data.email) progressData.email = data.email;
+
+      await saveTenantOnboardingProgress(progressData);
     });
 
     revalidatePath('/msp/onboarding');
@@ -691,7 +698,7 @@ export async function setupBilling(data: BillingData): Promise<OnboardingActionR
         tenant,
         service_name: data.serviceName,
         description: data.serviceDescription,
-        billing_method: serviceType.billing_method || 'per_unit',
+        billing_method: serviceType.billing_method || 'usage',
         custom_service_type_id: serviceType.id,
         default_rate: parseFloat(data.servicePrice) || 0,
         unit_of_measure: 'hour'
@@ -702,7 +709,7 @@ export async function setupBilling(data: BillingData): Promise<OnboardingActionR
         serviceName: data.serviceName,
         serviceDescription: data.serviceDescription,
         servicePrice: data.servicePrice,
-        planName: data.planName
+        contractLineName: data.contractLineName
       });
     });
 

@@ -2,16 +2,26 @@
 
 ## System Purpose
 
-The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price plans, time-based billing, usage-based billing, hybrid models, bucket of minutes/retainer models, discounts and promotions, multi-currency support, tax handling, service bundling, plan bundles, refunds and adjustments, and approval workflows. The system supports multiple simultaneous billing plans per client, enabling granular and flexible billing arrangements. Plan bundles provide a way to group related billing plans together for easier management and clearer client invoicing.
+The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price contract lines, time-based billing, usage-based billing, hybrid models, bucket of minutes/retainer models, discounts and promotions, multi-currency support, tax handling, contracts, refunds and adjustments, and approval workflows. The system supports multiple simultaneous contract lines per client, enabling granular and flexible billing arrangements. Contracts provide a way to group related contract lines together for easier management and clearer client invoicing.
+
+### Contract Entity Roles
+
+The platform uses three related tables to represent the contract lifecycle:
+
+- `contract_templates` store reusable blueprints. Templates contain default lines, rates, and guidance, and are never tied directly to a client.
+- `contracts` hold live contract instances. Each row represents an agreement with a specific client and anchors the related line mappings, schedules, and usage.
+- `client_contracts` link a contract to a client while carrying assignment metadata (start/end dates, purchase-order requirements, status). Keeping this join layer gives us flexibility to support multiple concurrent assignments in the future without reshaping the instance table.
+
+When a template becomes an active agreement we create a row in `contracts`, link it via `client_contracts`, and clone the template’s composition into the contract line mapping tables.
 
 ## Manual Invoicing
 
 ### Purpose
-Manual Invoices allow MSPs to create ad-hoc invoices that do not rely on automated billing plans, time entries, or usage records. They are especially useful for:
+Manual Invoices allow MSPs to create ad-hoc invoices that do not rely on automated contract lines, time entries, or usage records. They are especially useful for:
 
 - One-off charges (e.g., custom project fees, expenses, pass-through costs)
 - Correcting or adjusting client charges before finalization
-- Invoicing for services not represented in the main service catalog or billing plans
+- Invoicing for services not represented in the main service catalog or contract lines
 
 ### Key Characteristics
 
@@ -92,6 +102,13 @@ await updateManualInvoice(invoiceId, {
 - `ManualInvoices.tsx`: A form-based UI that lets users pick a company, add line items, compute a quick total, and create/update the invoice.
 - `Invoices.tsx`: Lists all invoices (manual or automated). For manual invoices, an "Edit" button is available if the invoice is still in a modifiable state.
 
+### API Sample: Create Service and Manual Invoice
+- A runnable Node.js example lives at `sdk/samples/node/create-service-and-manual-invoice.ts`.
+- It demonstrates how to create a service catalog entry via `POST /api/v1/services` and immediately generate a manual invoice for that service using `POST /api/v1/invoices/manual`.
+- Run `npm run sample:create-service-manual-invoice -- --client-id <client-uuid> --service-type-id <service-type-uuid>` with the usual `ALGA_API_URL`, `ALGA_API_KEY`, and `ALGA_TENANT_ID` environment variables.
+- When `--service-type-id` is omitted, the script reuses the service type from the first service it finds; specify the flag if your tenant has not created services yet.
+- Provide `--rate` (dollars) or `--rate-cents` to control the line amount; rates are converted to cents before being sent to the API.
+
 #### Database Fields (relevant to manual invoicing):
 - `invoices.is_manual` (boolean)
 - `invoices.status` (e.g. draft, open, paid)
@@ -104,79 +121,79 @@ await updateManualInvoice(invoiceId, {
 - Leverage the Service Catalog to pre-fill default rates and descriptions, ensuring consistency.
 - Use Transactions as the single source of truth for any financial adjustments made via manual invoices.
 
-## Plan Bundles
+## Contracts
 
 ### Purpose
-Plan Bundles allow MSPs to create named collections of billing plans that can be managed as a single entity. They provide a higher-level abstraction over the existing billing plans system, making it easier to manage complex billing arrangements while maintaining flexibility. Plan Bundles are especially useful for:
+Contracts allow MSPs to create named collections of contract lines that can be managed as a single entity. They provide a higher-level abstraction over the existing contract lines system, making it easier to manage complex billing arrangements while maintaining flexibility. Contracts are especially useful for:
 
 - Grouping related services that are commonly sold together
-- Simplifying the assignment of multiple plans to clients
+- Simplifying the assignment of multiple contract lines to clients
 - Creating standardized service packages with consistent pricing
 - Providing clearer organization on client invoices
-- Managing multiple billing plans as a cohesive unit
+- Managing multiple contract lines as a cohesive unit
 
 ### Key Characteristics
 
-#### Bundle Structure
-- Each bundle has a unique ID, name, and optional description
-- Bundles contain one or more billing plans
-- Plans within a bundle maintain their individual configuration
-- Plans can have custom rates (in cents) when included in a bundle (`bundle_billing_plans.custom_rate`)
-- Bundles can be assigned to companies with specific start and end dates
+#### Contract Structure
+- Each contract has a unique ID, name, and optional description
+- Contracts contain one or more contract lines
+- Contract lines within a contract maintain their individual configuration
+- Contract lines can have custom rates (in cents) when included in a contract (`contract_line_mappings.custom_rate`)
+- Contracts can be assigned to companies with specific start and end dates
 
-#### Bundle Assignment
-- When a bundle is assigned to a company, all plans within the bundle are automatically assigned
-- Bundle assignments create individual `company_billing_plans` entries for each plan in the bundle, linked via `company_bundle_id`.
-- All plans in a bundle share the same start and end dates when assigned via `company_plan_bundles`.
-- Plans from bundles are clearly identified on invoices with bundle information.
+#### Contract Assignment
+- When a contract is assigned to a company, all contract lines within the contract are automatically assigned
+- Contract assignments create individual `company_contract_lines` entries for each contract line in the contract, linked via `company_contract_id`.
+- All contract lines in a contract share the same start and end dates when assigned via `company_contracts`.
+- Contract lines from contracts are clearly identified on invoices with contract information.
 
 #### Billing Integration
-- The billing engine recognizes plans that are part of bundles (`company_billing_plans.company_bundle_id`).
-- If a `custom_rate` is defined in `bundle_billing_plans`, the billing engine uses this rate (assumed to be in cents) for the entire plan, bypassing individual service calculations for that plan within the bundle context.
-- Invoice items from bundled plans are grouped together on invoices.
-- Bundle information is included in billing calculations and reports.
+- The billing engine recognizes contract lines that are part of contracts (`company_contract_lines.company_contract_id`).
+- If a `custom_rate` is defined in `contract_line_mappings`, the billing engine uses this rate (assumed to be in cents) for the entire contract line, bypassing individual service calculations for that contract line within the contract context.
+- Invoice items from contracts are grouped together on invoices.
+- Contract information is included in billing calculations and reports.
 
 ### Usage
 - Creating standardized service packages
-- Simplifying client onboarding with predefined plan collections
+- Simplifying client onboarding with predefined contract line collections
 - Organizing related services for clearer client billing
-- Managing multiple billing plans as a single unit
+- Managing multiple contract lines as a single unit
 
 ### Implementation Details
 
-#### Creating and Managing Bundles
+#### Creating and Managing Contracts
 ```typescript
-import { createPlanBundle, addPlanToBundle } from 'lib/actions/planBundleActions';
+import { createContract, addContractLine } from 'lib/actions/contractActions';
 
-// Create a new bundle
-const bundle = await createPlanBundle({
-  bundle_name: 'Standard MSP Package',
-  bundle_description: 'Basic monitoring and support services',
+// Create a new contract
+const contract = await createContract({
+  contract_name: 'Standard MSP Package',
+  contract_description: 'Basic monitoring and support services',
   is_active: true
 });
 
-// Add plans to the bundle
-await addPlanToBundle({
-  bundle_id: bundle.bundle_id,
-  plan_id: 'monitoring-plan-id',
+// Add contract lines to the contract
+await addContractLine({
+  contract_id: contract.contract_id,
+  contract_line_id: 'monitoring-contract-line-id',
   display_order: 1
 });
 
-await addPlanToBundle({
-  bundle_id: bundle.bundle_id,
-  plan_id: 'support-plan-id',
+await addContractLine({
+  contract_id: contract.contract_id,
+  contract_line_id: 'support-contract-line-id',
   display_order: 2,
-  custom_rate: 12500 // Optional custom rate (in cents) for this plan in this bundle
+  custom_rate: 12500 // Optional custom rate (in cents) for this contract line in this contract
 });
 ```
 
-#### Assigning Bundles to Companies
+#### Assigning Contracts to Companies
 ```typescript
-import { assignBundleToCompany } from 'lib/actions/companyPlanBundleActions';
+import { assignContractToCompany } from 'lib/actions/companyContractActions';
 
-await assignBundleToCompany({
+await assignContractToCompany({
   company_id: 'client-company-id',
-  bundle_id: 'standard-msp-package-id',
+  contract_id: 'standard-msp-package-id',
   start_date: '2025-01-01T00:00:00Z',
   end_date: '2025-12-31T23:59:59Z', // Optional
   is_active: true
@@ -184,63 +201,62 @@ await assignBundleToCompany({
 ```
 
 #### UI Components
-- `PlanBundles.tsx`: Main component for managing plan bundles
-- `PlanBundlesList.tsx`: Lists all available plan bundles
-- `PlanBundleDetail.tsx`: Shows details of a specific bundle and its plans
-- `PlanBundleForm.tsx`: Form for creating and editing bundles
-- `CompanyBundleAssignment.tsx`: Component for assigning bundles to companies
+- `Contracts.tsx`: Main component for managing contracts
+- `ContractsList.tsx`: Lists all available contracts
+- `ContractDetail.tsx`: Shows details of a specific contract and its contract lines
+- `ContractForm.tsx`: Form for creating and editing contracts
+- `CompanyContractAssignment.tsx`: Component for assigning contracts to companies
 
-#### Database Fields (relevant to plan bundles):
-- `plan_bundles.bundle_id` (UUID)
-- `plan_bundles.bundle_name` (string)
-- `plan_bundles.bundle_description` (text)
-- `bundle_billing_plans.bundle_id` (UUID)
-- `bundle_billing_plans.plan_id` (UUID)
-- `bundle_billing_plans.display_order` (integer)
-- `bundle_billing_plans.custom_rate` (integer, cents)
-- `company_plan_bundles.company_bundle_id` (UUID)
-- `company_plan_bundles.company_id` (UUID)
-- `company_plan_bundles.bundle_id` (UUID)
-- `company_plan_bundles.start_date` (timestamp)
-- `company_plan_bundles.end_date` (timestamp)
-- `company_billing_plans.company_bundle_id` (UUID, FK to `company_plan_bundles`)
+#### Database Fields (relevant to contracts):
+- `contracts.contract_id` (UUID)
+- `contracts.contract_name` (string)
+- `contracts.contract_description` (text)
+- `contract_line_mappings.contract_id` (UUID)
+- `contract_line_mappings.contract_line_id` (UUID)
+- `contract_line_mappings.display_order` (integer)
+- `contract_line_mappings.custom_rate` (integer, cents)
+- `company_contracts.company_contract_id` (UUID)
+- `company_contracts.company_id` (UUID)
+- `company_contracts.contract_id` (UUID)
+- `company_contracts.start_date` (timestamp)
+- `company_contracts.end_date` (timestamp)
+- `company_contract_lines.company_contract_id` (UUID, FK to `company_contracts`)
 
 ### Best Practices
-- **Create Logical Groupings**: Bundle plans that naturally belong together or are commonly sold as a package
-- **Use Descriptive Names**: Give bundles clear, descriptive names that indicate their purpose or target client type
-- **Maintain Consistent Pricing**: When using custom rates in bundles, ensure they align with your overall pricing strategy
-- **Consider Bundle Lifecycle**: Plan for how bundles will be updated or retired over time
-- **Document Bundle Contents**: Keep clear documentation of what each bundle includes for sales and support teams
+- **Create Logical Groupings**: Group contract lines that naturally belong together or are commonly sold as a package
+- **Use Descriptive Names**: Give contracts clear, descriptive names that indicate their purpose or target client type
+- **Maintain Consistent Pricing**: When using custom rates in contracts, ensure they align with your overall pricing strategy
+- **Consider Contract Lifecycle**: Plan for how contracts will be updated or retired over time
+- **Document Contract Contents**: Keep clear documentation of what each contract includes for sales and support teams
 
-## Fixed Fee Plan Billing
+## Fixed Fee Contract Line Billing
 
 ### Purpose
-Fixed Fee Plans allow MSPs to offer clients a predictable, flat-rate billing option that covers multiple services for a single price. This model simplifies client billing while providing flexibility in how services are allocated and taxed internally.
+Fixed Fee Contract Lines allow MSPs to offer clients a predictable, flat-rate billing option that covers multiple services for a single price. This model simplifies client billing while providing flexibility in how services are allocated and taxed internally.
 
 ### Key Characteristics
 
 #### Fixed Fee Structure
-- A single base rate covers multiple services included in the plan.
-- The plan's base rate is stored in the `billing_plan_fixed_config` table, linked to the `billing_plans` record.
-- Proration settings (`enable_proration`, `billing_cycle_alignment`) are also defined in `billing_plan_fixed_config`.
-- The billing engine generates *detailed* invoice items for each service within the fixed plan, rather than a single consolidated line item.
+- A single base rate covers multiple services included in the contract line.
+- The contract line's base rate is stored in the `contract_line_fixed_config` table, linked to the `contract_lines` record.
+- Proration settings (`enable_proration`, `billing_cycle_alignment`) are also defined in `contract_line_fixed_config`.
+- The billing engine generates *detailed* invoice items for each service within the fixed contract line, rather than a single consolidated line item.
 
 #### Tax Allocation and Charge Calculation
-- The system uses a weighted allocation method based on the Fair Market Value (FMV) of each service within the plan.
-- FMV for each service is calculated using its `default_rate` from `service_catalog` and its configured `quantity` from `plan_service_configuration`.
-- Each service's proportion of the total FMV determines its share of the total plan `base_rate` (from `billing_plan_fixed_config`).
-- This allocated portion (potentially prorated based on `billing_plan_fixed_config.enable_proration`) becomes the `allocated_amount` for the service.
+- The system uses a weighted allocation method based on the Fair Market Value (FMV) of each service within the contract line.
+- FMV for each service is calculated using its `default_rate` from `service_catalog` and its configured `quantity` from `contract_line_service_configuration`.
+- Each service's proportion of the total FMV determines its share of the total contract-line base rate (from `contract_line_fixed_config`).
+- This allocated portion (potentially prorated based on `contract_line_fixed_config.enable_proration`) becomes the `allocated_amount` for the service.
 - Tax is calculated separately for each service based on its:
   - `allocated_amount` (the actual charge for that service line)
   - Tax status (derived from `service_catalog.tax_rate_id`)
   - Applicable tax region (from `service_catalog.tax_rate_id` or company default) and rate (`TaxService`).
-- This approach ensures accurate tax calculation per service while reflecting the fixed-price nature of the plan.
+- This approach ensures accurate tax calculation per service while reflecting the fixed-price nature of the contract line.
 
-#### Detailed Invoice Items
-- The system creates individual `invoice_items` and corresponding `invoice_item_details` / `invoice_item_fixed_details` records for each service within the fixed plan.
+- The system creates individual `invoice_items` and corresponding `invoice_item_details` / `invoice_item_fixed_details` records for each service within the fixed contract line.
 - This provides a clear breakdown for internal reporting and auditing.
 - Key fields stored in `invoice_item_fixed_details` include:
-    - `base_rate`: The *plan-level* base rate (from `billing_plan_fixed_config`) used for the calculation (stored in cents).
+    - `base_rate`: The contract-line-level base rate (from `contract_line_fixed_config`) used for the calculation (stored in cents).
     - `fmv`: The calculated FMV for this service (in cents).
     - `proportion`: The calculated FMV proportion for this service.
     - `allocated_amount`: The final calculated charge for this service line (in cents), after allocation and proration.
@@ -251,14 +267,14 @@ Fixed Fee Plans allow MSPs to offer clients a predictable, flat-rate billing opt
 #### Fixed Fee Allocation and Charge Generation (`BillingEngine::calculateFixedPriceCharges`)
 The system uses the following algorithm:
 
-1.  **Fetch Plan Config:** Retrieve `base_rate`, `enable_proration`, and `billing_cycle_alignment` from `billing_plan_fixed_config` for the given `plan_id`.
-2.  **Fetch Plan Services:** Get all services associated with the plan from `plan_service_configuration`, joining with `service_catalog` to get `service_name` and `default_rate`.
-3.  **Calculate Total FMV:** Sum the FMV ( `service.default_rate` * `service.quantity`) for all services in the plan. Rates are assumed to be in cents.
+1.  **Fetch Contract Line Config:** Retrieve `base_rate`, `enable_proration`, and `billing_cycle_alignment` from `contract_line_fixed_config` for the given `contract_line_id`.
+2.  **Fetch Contract Line Services:** Get all services associated with the contract line from `contract_line_service_configuration`, joining with `service_catalog` to get `service_name` and `default_rate`.
+3.  **Calculate Total FMV:** Sum the FMV ( `service.default_rate` * `service.quantity`) for all services in the contract line. Rates are assumed to be in cents.
 4.  **Iterate Through Services:** For each service:
     a.  **Calculate Proportion:** Determine the service's FMV proportion (`serviceFMVCents / totalFMVCents`).
-    b.  **Calculate Proration Factor:** If `enable_proration` is true, calculate the proration factor based on plan/billing period dates.
-    c.  **Calculate Effective Plan Rate:** Apply the proration factor to the plan-level `base_rate` (converted to cents).
-    d.  **Calculate Allocated Amount:** Multiply the effective plan rate by the service's proportion. This is the charge amount for this service line (in cents).
+    b.  **Calculate Proration Factor:** If `enable_proration` is true, calculate the proration factor based on contract-line/billing period dates.
+    c.  **Calculate Effective Contract Line Rate:** Apply the proration factor to the contract-line `base_rate` (converted to cents).
+    d.  **Calculate Allocated Amount:** Multiply the effective contract line rate by the service's proportion. This is the charge amount for this service line (in cents).
     e.  **Determine Taxability:** Check `service_catalog.tax_rate_id` and company tax exemption status.
     f.  **Calculate Tax:** If taxable, use `TaxService` to calculate `taxAmount` and `taxRate` based on the `allocatedAmount` and the effective tax region.
     g.  **Create Detailed Charge Object (`IFixedPriceCharge`):** Populate the object with:
@@ -266,35 +282,35 @@ The system uses the following algorithm:
         - `rate`: `allocatedAmount`
         - `total`: `allocatedAmount`
         - `tax_amount`, `tax_rate`, `tax_region`, `is_taxable`
-        - `config_id` (from `plan_service_configuration`)
-        - `base_rate`: The *plan-level* base rate (converted to cents) for context.
-        - `enable_proration`, `billing_cycle_alignment` (from plan config)
+        - `config_id` (from `contract_line_service_configuration`)
+        - `base_rate`: The contract-line-level base rate (converted to cents) for context.
+        - `enable_proration`, `billing_cycle_alignment` (from contract line config)
         - `fmv`, `proportion`, `allocated_amount` (calculated values)
-5.  **Return Detailed Charges:** Return the array of `IFixedPriceCharge` objects, one for each service in the plan.
+5.  **Return Detailed Charges:** Return the array of `IFixedPriceCharge` objects, one for each service in the contract line.
 
 #### Database Structure (V1 Enhancements)
-- `billing_plan_fixed_config`: Stores plan-level `base_rate`, `enable_proration`, `billing_cycle_alignment`.
-- `plan_service_fixed_config`: Currently exists but its `base_rate` is not used for fixed plan calculations.
+- `contract_line_fixed_config`: Stores contract-line-level `base_rate`, `enable_proration`, `billing_cycle_alignment`.
+- `contract_line_service_fixed_config`: Defines per-service fixed-fee metadata where applicable; base rate comes from `contract_line_fixed_config`.
 - `invoice_items`: Stores the main line item data (references `service_id`, `description`, `quantity`, `net_amount`, `tax_amount`, `total_price`).
 - `invoice_item_details` (Parent Table):
   - `item_detail_id` (UUID, PK)
   - `item_id` (UUID, FK to `invoice_items`)
   - `service_id` (UUID, FK to `service_catalog`)
-  - `config_id` (UUID, FK to `plan_service_configuration`) - Snapshot of config used.
+  - `config_id` (UUID, FK to `contract_line_service_configuration`) - Snapshot of config used.
   - `quantity` (INTEGER)
   - `rate` (INTEGER, cents) - Represents the calculated `allocated_amount` for this item.
   - `created_at`, `updated_at`, `tenant`
 - `invoice_item_fixed_details` (Specific Details):
   - `item_detail_id` (UUID, PK, FK to `invoice_item_details`)
-  - `base_rate` (INTEGER, cents) - The *plan's* base rate at the time.
+  - `base_rate` (INTEGER, cents) - The contract line's base rate at the time.
   - `enable_proration` (BOOLEAN) - Proration setting at the time.
   - `fmv` (INTEGER, cents) - Calculated FMV for allocation.
   - `proportion` (NUMERIC) - Calculated proportion for allocation.
   - `allocated_amount` (INTEGER, cents) - Calculated allocated amount (matches `invoice_item_details.rate`).
 
 #### UI Components
-- `FixedPlanConfiguration.tsx`: Allows setting the plan-level base rate and proration options in `billing_plan_fixed_config`.
-- `FixedPlanServicesList.tsx`: Manages services included in the fixed fee plan via `plan_service_configuration`.
+- `FixedContractLineConfiguration.tsx`: Allows setting the contract-line-level base rate and proration options in `contract_line_fixed_config`.
+- `FixedContractLineServicesList.tsx`: Manages services included in the fixed fee contract line via `contract_line_service_configuration`.
 
 ### Benefits
 - **Simplified Client Billing**: Clients see a predictable charge (though potentially broken down by service on the invoice depending on the template).
@@ -304,7 +320,7 @@ The system uses the following algorithm:
 - **Consistent Pricing**: Fixed fee remains stable regardless of minor usage fluctuations (unless prorated).
 
 ### Best Practices
-- **Set Appropriate Plan Base Rate**: Ensure the fixed fee in `billing_plan_fixed_config` covers the expected service costs plus margin.
+- **Set Appropriate Contract Line Base Rate**: Ensure the fixed fee in `contract_line_fixed_config` covers the expected service costs plus margin.
 - **Review Service Default Rates**: Keep `default_rate` in the `service_catalog` updated to ensure accurate FMV calculation for allocation.
 - **Document Tax Allocation**: Maintain records of how fixed fees are allocated for tax purposes (now stored in detail tables).
 - **Consider Service Mix**: Include complementary services that make sense as a package.
@@ -353,7 +369,7 @@ The system follows these key principles for tax calculation:
 1.  **Line Item Basis**: Tax is calculated individually for each taxable line item based on its net amount.
 2.  **Pre-Discount Basis**: Tax is calculated on the full pre-discount charge amounts. Discounts themselves are not taxed.
 3.  **Tax Rate Determination**: Rates are fetched from `tax_rates` based on the effective region and date.
-4.  **Tax Allocation (Fixed Plans)**: For fixed-price plans, the total plan fee is allocated to individual services based on FMV *before* tax is calculated on each allocated amount.
+4.  **Tax Allocation (Fixed Contract Lines)**: For fixed-price contract lines, the total contract-line fee is allocated to individual services based on FMV *before* tax is calculated on each allocated amount.
 5.  **Tax Distribution (Invoice Level)**: The `calculateAndDistributeTax` function in `invoiceService` ensures the sum of `tax_amount` on individual `invoice_items` accurately reflects the total calculated tax for the invoice, handling potential rounding differences across multiple items and regions.
 
 ### Tax Distribution Algorithm (`calculateAndDistributeTax`)
@@ -438,38 +454,63 @@ The system allows for customization of the visual appearance and layout of gener
 For comprehensive information on the architecture, components (UI and backend), database schema, compilation/execution process, and workflows, please refer to the dedicated documentation:
 
 [Invoice Template System Documentation](./invoice_templates.md)
+
+### Default Template Resolution
+
+Standard templates are global across every tenant, while custom templates are namespaced per tenant. To support tenant-specific defaults without duplicating the standard template rows, we introduce the `invoice_template_assignments` table. Each record captures the tenant, the scope the default applies to, and whether the selection points to a standard template (`standard_invoice_template_code`) or a custom template (`invoice_template_id`).
+
+- `assignment_id` (UUID, PK)
+- `tenant` (UUID, FK to `tenants`)
+- `scope_type` (`tenant`, `company`, extensible to future scopes like `contract`)
+- `scope_id` (UUID, nullable; `NULL` for tenant-wide defaults, `company_id` when `scope_type = 'company'`)
+- `template_source` (`standard` | `custom`)
+- `standard_invoice_template_code` (TEXT, FK to `standard_invoice_templates.standard_invoice_template_code`, nullable)
+- `invoice_template_id` (UUID, FK to `invoice_templates.template_id`, nullable)
+- `created_by` (UUID, FK to `users.user_id`, nullable)
+- `created_at` / `updated_at` (TIMESTAMPTZ)
+
+**Constraints and behavior:**
+
+- Unique index on `(tenant, scope_type, scope_id)` guarantees a single active default per scope.
+- CHECK constraints ensure `standard_invoice_template_code` is populated when `template_source = 'standard'` and `invoice_template_id` is populated when `template_source = 'custom'`.
+- When fetching a template for rendering:
+  1. Query for a company-scoped assignment (`scope_type = 'company'` + `scope_id = company_id`).
+  2. If none, fall back to the tenant-scoped assignment.
+  3. If still none, fall back to the platform-wide default standard template.
+- The previous `invoice_templates.is_default` flag becomes read-only legacy metadata and should be removed once all flows rely on `invoice_template_assignments`.
+- The `companies.invoice_template_id` FK becomes optional and will be retired after backfilling `invoice_template_assignments`. Retrieval code must ignore it in favor of the new table.
 ## Service Types
 
 The billing system uses service configurations to determine billing logic. Key types include:
 
 ### Fixed Price Services
-- Associated with a plan having `plan_type = 'Fixed'`.
-- Plan has a `base_rate` in `billing_plan_fixed_config`.
-- Billed based on FMV allocation of the plan's base rate.
-- Proration controlled by `billing_plan_fixed_config.enable_proration`.
+- Associated with a contract line having `contract_line_type = 'Fixed'`.
+- Contract line has a `base_rate` in `contract_line_fixed_config`.
+- Billed based on FMV allocation of the contract line's base rate.
+- Proration controlled by `contract_line_fixed_config.enable_proration`.
 - Calculated by `BillingEngine::calculateFixedPriceCharges()`.
 
 ### Time-Based Services
-- Configured via `plan_service_configuration` with `configuration_type = 'Hourly'`.
-- Detailed settings (min time, rounding) in `plan_service_hourly_config`.
+- Configured via `contract_line_service_configuration` with `configuration_type = 'Hourly'`.
+- Detailed settings (min time, rounding) in `contract_line_service_hourly_config`.
 - Billed based on approved `time_entries`.
 - Rate determined by user type rates (`user_type_rates`), service config custom rate, or service default rate.
 - Calculated by `BillingEngine::calculateTimeBasedCharges()`.
 
 ### Usage-Based Services
-- Configured via `plan_service_configuration` with `configuration_type = 'Usage'`.
-- Detailed settings (min usage, tiered pricing flag) in `plan_service_usage_config`.
-- Tiered rates defined in `plan_service_rate_tiers`.
+- Configured via `contract_line_service_configuration` with `configuration_type = 'Usage'`.
+- Detailed settings (min usage, tiered pricing flag) in `contract_line_service_usage_config`.
+- Tiered rates defined in `contract_line_service_rate_tiers`.
 - Billed based on `usage_tracking` records.
 - Rate determined by tiers (if enabled), service config custom rate, or service default rate.
 - Calculated by `BillingEngine::calculateUsageBasedCharges()`.
 
-### Bucket Services
-- Configured via `plan_service_configuration` with `configuration_type = 'Bucket'`.
-- Detailed settings (total hours, overage rate, rollover) in `plan_service_bucket_config`.
+-### Bucket Services
+- Configured via `contract_line_service_configuration` with `configuration_type = 'Bucket'`.
+- Detailed settings (total hours, overage rate, rollover) in `contract_line_service_bucket_config`.
 - Usage tracked automatically in `bucket_usage` based on `time_entries`.
 - Overage calculated based on `hours_used` vs `total_hours`.
-- Calculated by `BillingEngine::calculateBucketPlanCharges()`.
+- Calculated by `BillingEngine::calculateBucketContractLineCharges()`.
 
 ### Product Services
 - Billed as a one-time charge.
@@ -485,19 +526,19 @@ The billing system uses service configurations to determine billing logic. Key t
 
 ## Database Schema
 
-### Plan Bundle Tables
+### Contract Tables
 
-1.  **`plan_bundles`**
-    - **Purpose:** Stores information about plan bundles
-    - **Key Fields:** `tenant` (UUID, PK), `bundle_id` (UUID, PK), `bundle_name`, `bundle_description`, `is_active`
+1.  **`contracts`**
+    - **Purpose:** Stores information about contracts
+    - **Key Fields:** `tenant` (UUID, PK), `contract_id` (UUID, PK), `contract_name`, `contract_description`, `is_active`
 
-2.  **`bundle_billing_plans`**
-    - **Purpose:** Maps billing plans to bundles
-    - **Key Fields:** `tenant` (UUID, PK), `bundle_id` (UUID, PK), `plan_id` (UUID, PK), `display_order`, `custom_rate` (integer, cents)
+2.  **`contract_line_mappings`**
+    - **Purpose:** Maps contract lines to contracts
+    - **Key Fields:** `tenant` (UUID, PK), `contract_id` (UUID, PK), `contract_line_id` (UUID, PK), `display_order`, `custom_rate` (integer, cents)
 
-3.  **`company_plan_bundles`**
-    - **Purpose:** Associates companies with plan bundles
-    - **Key Fields:** `tenant` (UUID, PK), `company_bundle_id` (UUID, PK), `company_id`, `bundle_id`, `start_date`, `end_date`, `is_active`
+3.  **`company_contracts`**
+    - **Purpose:** Associates companies with contracts
+    - **Key Fields:** `tenant` (UUID, PK), `company_contract_id` (UUID, PK), `company_id`, `contract_id`, `start_date`, `end_date`, `is_active`
 
 
 ### Core Tables
@@ -509,10 +550,27 @@ The billing system uses service configurations to determine billing logic. Key t
 2.  **`companies`**
     - **Purpose:** Represents clients of the MSP
     - **Key Fields:** `tenant` (UUID, PK), `company_id` (UUID, PK), `company_name`, `billing_type`, `is_tax_exempt` (boolean)
+    - **Notes:** `invoice_template_id` is now legacy-only; tenant defaults are resolved through `invoice_template_assignments`.
 
 3.  **`users`**
     - **Purpose:** Stores information about MSP staff and client contacts
     - **Key Fields:** `tenant` (UUID, PK), `user_id` (UUID, PK), `email`, `role`, `rate`
+
+### Invoice Template Tables
+
+- **`invoice_templates`**
+  - **Purpose:** Stores tenant-scoped custom invoice templates alongside their compiled Wasm payloads.
+  - **Key Fields:** `template_id` (UUID, PK), `tenant` (UUID, FK), `name`, `source_code`, `compiled_wasm`, `sha`, `created_at`, `updated_at`.
+  - **Notes:** The historical `is_default` flag is deprecated in favor of `invoice_template_assignments`.
+
+- **`standard_invoice_templates`**
+  - **Purpose:** Stores system-provided template definitions shared across all tenants.
+  - **Key Fields:** `standard_invoice_template_code` (TEXT, PK), `name`, `source_code`, `compiled_wasm`, `sha`, `updated_at`.
+
+- **`invoice_template_assignments`**
+  - **Purpose:** Records default template selections per tenant and optional scopes (tenant-wide, company-specific, future extensions).
+  - **Key Fields:** `assignment_id` (UUID, PK), `tenant` (UUID, FK), `scope_type`, `scope_id`, `template_source`, `standard_invoice_template_code`, `invoice_template_id`, `created_at`, `updated_at`.
+  - **Constraints:** Unique `(tenant, scope_type, scope_id)`; CHECK constraints enforce mutual exclusivity between standard and custom references.
 
 ### Billing-Specific Tables
 
@@ -524,25 +582,25 @@ The billing system uses service configurations to determine billing logic. Key t
     - **Purpose:** Categorizes services for more organized billing
     - **Key Fields:** `tenant`, `category_id` (UUID, PK), `category_name`, `description`
 
-6.  **`billing_plans`**
-    - **Purpose:** Defines billing plans that can be assigned to clients
-    - **Key Fields:** `tenant`, `plan_id` (UUID, PK), `plan_name`, `billing_frequency`, `is_custom`, `plan_type` ('Fixed', 'Hourly', 'Usage', 'Bucket')
+6.  **`contract_lines`**
+    - **Purpose:** Defines contract lines that can be assigned to clients
+    - **Key Fields:** `tenant`, `contract_line_id` (UUID, PK), `contract_line_name`, `billing_frequency`, `is_custom`, `contract_line_type` ('Fixed', 'Hourly', 'Usage', 'Bucket')
 
-7.  **`billing_plan_fixed_config`** *(New/Refined)*
-    - **Purpose:** Stores plan-level configuration specific to Fixed Fee plans.
-    - **Key Fields:** `tenant` (UUID, PK), `plan_id` (UUID, PK, FK to `billing_plans`), `base_rate` (numeric(16,2)), `enable_proration` (boolean), `billing_cycle_alignment` ('start' | 'end' | 'prorated')
+7.  **`contract_line_fixed_config`** *(New/Refined)*
+    - **Purpose:** Stores contract-line-level configuration specific to Fixed Fee contract lines.
+    - **Key Fields:** `tenant` (UUID, PK), `contract_line_id` (UUID, PK, FK to `contract_lines`), `base_rate` (numeric(16,2)), `enable_proration` (boolean), `billing_cycle_alignment` ('start' | 'end' | 'prorated')
 
-8.  **`company_billing_plans`**
-    - **Purpose:** Associates clients with multiple billing plans and tracks plan history
-    - **Key Fields:** `tenant`, `company_billing_plan_id` (UUID, PK), `company_id`, `plan_id`, `start_date`, `end_date`, `is_active`, `company_bundle_id` (FK to `company_plan_bundles`)
+8.  **`company_contract_lines`**
+    - **Purpose:** Associates clients with multiple contract lines and tracks contract line assignment history
+    - **Key Fields:** `tenant`, `company_contract_line_id` (UUID, PK), `company_id`, `contract_line_id`, `start_date`, `end_date`, `is_active`, `company_contract_id` (FK to `company_contracts`)
 
 9.  **`time_entries`**
     - **Purpose:** Tracks billable time for time-based billing
-    - **Key Fields:** `tenant`, `entry_id` (UUID, PK), `user_id`, `work_item_id`, `work_item_type`, `service_id`, `start_time`, `end_time`, `duration`, `billable`, `invoiced` (boolean), `approval_status`, `billing_plan_id` (FK)
+    - **Key Fields:** `tenant`, `entry_id` (UUID, PK), `user_id`, `work_item_id`, `work_item_type`, `service_id`, `start_time`, `end_time`, `duration`, `billable`, `invoiced` (boolean), `approval_status`, `contract_line_id` (FK)
 
 10. **`usage_tracking`**
     - **Purpose:** Tracks usage for consumption-based billing
-    - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `company_id`, `service_id`, `usage_date`, `quantity`, `invoiced` (boolean), `billing_plan_id` (FK)
+    - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `company_id`, `service_id`, `usage_date`, `quantity`, `invoiced` (boolean), `contract_line_id` (FK)
 
 11. **`invoices`**
     - **Purpose:** Stores invoice header information
@@ -554,51 +612,51 @@ The billing system uses service configurations to determine billing logic. Key t
 
 13. **`invoice_item_details`** *(V1 Enhancement)*
     - **Purpose:** Parent table storing common details for each generated invoice item, linking back to the source configuration.
-    - **Key Fields:** `item_detail_id` (UUID, PK), `item_id` (UUID, FK to `invoice_items`), `service_id` (UUID, FK to `service_catalog`), `config_id` (UUID, FK to `plan_service_configuration`), `quantity` (INTEGER), `rate` (INTEGER, cents), `created_at`, `updated_at`, `tenant`
+    - **Key Fields:** `item_detail_id` (UUID, PK), `item_id` (UUID, FK to `invoice_items`), `service_id` (UUID, FK to `service_catalog`), `config_id` (UUID, FK to `contract_line_service_configuration`), `quantity` (INTEGER), `rate` (INTEGER, cents), `created_at`, `updated_at`, `tenant`
 
 14. **`invoice_item_fixed_details`** *(V1 Enhancement)*
     - **Purpose:** Stores specific calculation details for fixed-fee invoice items.
-    - **Key Fields:** `item_detail_id` (UUID, PK, FK to `invoice_item_details`), `base_rate` (INTEGER, cents - Plan's rate), `enable_proration` (BOOLEAN), `fmv` (INTEGER, cents), `proportion` (NUMERIC), `allocated_amount` (INTEGER, cents)
+    - **Key Fields:** `item_detail_id` (UUID, PK, FK to `invoice_item_details`), `base_rate` (INTEGER, cents - Contract line rate), `enable_proration` (BOOLEAN), `fmv` (INTEGER, cents), `proportion` (NUMERIC), `allocated_amount` (INTEGER, cents)
 
-15. **`plan_service_configuration`**
-    - **Purpose:** Links a specific service within a plan to its configuration settings. Acts as the parent for specific config types.
-    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK), `plan_id` (FK to `billing_plans`), `service_id` (FK to `service_catalog`), `configuration_type` ('Usage', 'Fixed', 'Hourly', 'Bucket'), `quantity` (integer, default 1), `custom_rate` (integer, cents, nullable)
+15. **`contract_line_service_configuration`**
+    - **Purpose:** Links a specific service within a contract line to its configuration settings. Acts as the parent for specific config types.
+    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK), `contract_line_id` (FK to `contract_lines`), `service_id` (FK to `service_catalog`), `configuration_type` ('Usage', 'Fixed', 'Hourly', 'Bucket'), `quantity` (integer, default 1), `custom_rate` (integer, cents, nullable)
 
-16. **`plan_service_fixed_config`**
-    - **Purpose:** Stores configuration specific to Fixed services within a plan (currently minimal use for fixed plans).
-    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `plan_service_configuration`), `base_rate` (numeric(16,2), nullable - *Note: Plan-level rate from `billing_plan_fixed_config` is used for actual fixed plan calculations*)
+16. **`contract_line_service_fixed_config`**
+    - **Purpose:** Stores configuration specific to Fixed services within a contract line (currently minimal; base rate comes from `contract_line_fixed_config`).
+    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `contract_line_service_configuration`), `base_rate` (numeric(16,2), nullable)
 
-17. **`plan_service_hourly_config`**
-    - **Purpose:** Stores configuration specific to Hourly services within a plan.
-    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `plan_service_configuration`), `minimum_billable_time` (integer, minutes), `round_up_to_nearest` (integer, minutes)
+17. **`contract_line_service_hourly_config`**
+    - **Purpose:** Stores configuration specific to Hourly services within a contract line.
+    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `contract_line_service_configuration`), `minimum_billable_time` (integer, minutes), `round_up_to_nearest` (integer, minutes)
 
 18. **`user_type_rates`**
     - **Purpose:** Defines specific hourly rates based on user type for a given hourly service config.
-    - **Key Fields:** `tenant` (UUID, PK), `rate_id` (UUID, PK), `config_id` (UUID, FK to `plan_service_configuration`), `user_type` (string), `rate` (integer, cents)
+    - **Key Fields:** `tenant` (UUID, PK), `rate_id` (UUID, PK), `config_id` (UUID, FK to `contract_line_service_configuration`), `user_type` (string), `rate` (integer, cents)
 
-19. **`plan_service_usage_config`**
-    - **Purpose:** Stores detailed configuration for usage-based services within a plan.
-    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `plan_service_configuration`), `unit_of_measure`, `minimum_usage` (integer), `enable_tiered_pricing` (boolean)
+19. **`contract_line_service_usage_config`**
+    - **Purpose:** Stores detailed configuration for usage-based services within a contract line.
+    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `contract_line_service_configuration`), `unit_of_measure`, `minimum_usage` (integer), `enable_tiered_pricing` (boolean)
 
-20. **`plan_service_rate_tiers`**
+20. **`contract_line_service_rate_tiers`**
     - **Purpose:** Defines the pricing tiers for usage-based services when tiered pricing is enabled.
-    - **Key Fields:** `tenant` (UUID, PK), `tier_id` (UUID, PK), `config_id` (FK to `plan_service_configuration`), `min_quantity` (integer), `max_quantity` (integer, nullable), `rate` (integer, cents)
+    - **Key Fields:** `tenant` (UUID, PK), `tier_id` (UUID, PK), `config_id` (FK to `contract_line_service_configuration`), `min_quantity` (integer), `max_quantity` (integer, nullable), `rate` (integer, cents)
 
-21. **`plan_service_bucket_config`**
-    - **Purpose:** Stores configuration specific to Bucket services within a plan.
-    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `plan_service_configuration`), `total_hours` (integer), `overage_rate` (integer, cents), `allow_rollover` (boolean)
+21. **`contract_line_service_bucket_config`**
+    - **Purpose:** Stores configuration specific to Bucket services within a contract line.
+    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `contract_line_service_configuration`), `total_hours` (integer), `overage_rate` (integer, cents), `allow_rollover` (boolean)
 
 22. **`bucket_usage`**
-    - **Purpose:** Tracks usage against bucket plans for specific billing periods.
-    - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `config_id` (FK to `plan_service_configuration`), `company_id` (FK), `period_start`, `period_end`, `hours_used` (decimal), `overage_hours` (decimal), `rolled_over_hours` (decimal)
+    - **Purpose:** Tracks usage against bucket contract lines for specific billing periods.
+    - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `config_id` (FK to `contract_line_service_configuration`), `company_id` (FK), `period_start`, `period_end`, `hours_used` (decimal), `overage_hours` (decimal), `rolled_over_hours` (decimal)
 
 23. **`discounts`**
     - **Purpose:** Defines discounts and promotions
     - **Key Fields:** `tenant`, `discount_id` (UUID, PK), `discount_name`, `discount_type` ('percentage' | 'fixed'), `value` (numeric), `start_date`, `end_date`, `is_active`
 
-24. **`plan_discounts`**
-    - **Purpose:** Associates discounts with billing plans or clients
-    - **Key Fields:** `tenant`, `plan_id` (FK), `company_id` (FK), `discount_id` (FK)
+24. **`contract_line_discounts`**
+    - **Purpose:** Associates discounts with contract lines or clients
+    - **Key Fields:** `tenant`, `contract_line_id` (FK), `company_id` (FK), `discount_id` (FK)
 
 25. **`tax_rates`**
     - **Purpose:** Stores tax rates based on regions or services
@@ -638,64 +696,64 @@ The billing system uses service configurations to determine billing logic. Key t
 
 ### Key Relationships
 
-- **`companies`** are associated with multiple **`billing_plans`** through **`company_billing_plans`**.
-- **`companies`** are associated with **`plan_bundles`** through **`company_plan_bundles`**.
-- **`plan_bundles`** contain multiple **`billing_plans`** through **`bundle_billing_plans`**.
-- **`company_billing_plans`** can be linked to **`company_plan_bundles`** via `company_bundle_id`.
-- **`billing_plans`** and **`service_catalog`** are linked via **`plan_service_configuration`** to define service-specific settings.
-- **`plan_service_configuration`** connects to specific config tables (`plan_service_usage_config`, `plan_service_fixed_config`, `plan_service_hourly_config`, `plan_service_bucket_config`) based on `configuration_type`.
-- **`plan_service_usage_config`** links to **`plan_service_rate_tiers`** when tiered pricing is enabled.
-- **`billing_plans`** can have a plan-level fixed config via **`billing_plan_fixed_config`**.
+- **`companies`** are associated with multiple **`contract_lines`** through **`company_contract_lines`**.
+- **`companies`** are associated with **`contracts`** through **`company_contracts`**.
+- **`contracts`** contain multiple **`contract_lines`** through **`contract_line_mappings`**.
+- **`company_contract_lines`** can be linked to **`company_contracts`** via `company_contract_id`.
+- **`contract_lines`** and **`service_catalog`** are linked via **`contract_line_service_configuration`** to define service-specific settings.
+- **`contract_line_service_configuration`** connects to specific config tables (`contract_line_service_usage_config`, `contract_line_service_fixed_config`, `contract_line_service_hourly_config`, `contract_line_service_bucket_config`) based on `configuration_type`.
+- **`contract_line_service_usage_config`** links to **`contract_line_service_rate_tiers`** when tiered pricing is enabled.
+- **`contract_lines`** can have a contract-line-level fixed config via **`contract_line_fixed_config`**.
 - **`time_entries`** and **`usage_tracking`** link to **`companies`** and **`service_catalog`**.
 - **`invoices`** contain **`invoice_items`**.
 - **`invoice_items`** link to **`invoice_item_details`** (V1), which link to type-specific detail tables like **`invoice_item_fixed_details`**.
-- **Fixed Fee Invoices** follow a special path: `invoices → invoice_items → invoice_item_details → plan_service_configuration → billing_plans`.
+- **Fixed Fee Invoices** follow a special path: `invoices → invoice_items → invoice_item_details → contract_line_service_configuration → contract_lines`.
 
-## Validation Paths for Invoiced Plans
+## Validation Paths for Invoiced Contract Lines
 
-When validating if a company billing plan has been invoiced (to prevent removal or modification), the system must check multiple paths:
+When validating if a company contract line has been invoiced (to prevent removal or modification), the system must check multiple paths:
 
 ### Traditional Path
-For most invoice items, the system looks for invoices with items linked to the plan through:
+For most invoice items, the system looks for invoices with items linked to the contract line through:
 ```
-invoices → invoice_items → plan_services → billing_plans
+invoices → invoice_items → contract_line_services → contract_lines
 ```
 
 ### Fixed Fee Path
-For fixed fee invoices, the system must look for invoices with items linked to the plan through:
+For fixed fee invoices, the system must look for invoices with items linked to the contract line through:
 ```
-invoices → invoice_items → invoice_item_details → plan_service_configuration → billing_plans
+invoices → invoice_items → invoice_item_details → contract_line_service_configuration → contract_lines
 ```
 
 This is necessary because fixed fee invoices have a special structure:
 
 1. The `invoice_items` table contains a consolidated item with:
    - `service_id` = null
-   - A description like "Fixed Plan: [Plan Name]"
-   - The total amount for all services in the plan
+   - A description like "Fixed Contract Line: [Contract Line Name]"
+   - The total amount for all services in the contract line
 
 2. The `invoice_item_details` table contains detailed records for each service included in the fixed fee:
    - Each record links to the consolidated item via `item_id`
    - Each record specifies a `service_id` and `config_id`
-   - The `config_id` links to `plan_service_configuration`, which contains the `plan_id`
+   - The `config_id` links to `contract_line_service_configuration`, which contains the `contract_line_id`
 
-Both paths must be checked to ensure proper validation, as fixed fee invoices don't have a direct link from invoice_items to the plan.
+Both paths must be checked to ensure proper validation, as fixed fee invoices don't have a direct link from invoice_items to the contract line.
 
 ### Handling Null Billing Period Dates
 
-Some invoices may have null `billing_period_start` and `billing_period_end` dates. In these cases, the `invoice_date` should be used as a fallback for validation purposes. This ensures that even invoices without explicit billing periods are properly considered when validating plan modifications.
+Some invoices may have null `billing_period_start` and `billing_period_end` dates. In these cases, the `invoice_date` should be used as a fallback for validation purposes. This ensures that even invoices without explicit billing periods are properly considered when validating contract line modifications.
 
-The validation logic in `getLatestInvoicedEndDate` (in `companyBillingPlanActions.ts`) implements this approach by:
+The validation logic in `getLatestInvoicedEndDate` (in `companyContractLineActions.ts`) implements this approach by:
 1. Checking both traditional and fixed fee paths
 2. Using `invoice_date` as a fallback when `billing_period_end` is null
 3. Comparing dates to find the most recent invoice across both paths
 - **`transactions`** record financial activities related to **`invoices`** and **`companies`**.
-- **`bucket_usage`** tracks usage against **`plan_service_bucket_config`**.
+- **`bucket_usage`** tracks usage against **`contract_line_service_bucket_config`**.
 - **`tax_rates`** are linked via `tax_rate_id` on **`service_catalog`** and **`company_tax_rates`**.
 
 ## Data Models and Interfaces
 
-The billing system uses several key data structures defined in TypeScript interfaces (`server/src/interfaces/billing.interfaces.ts`, `server/src/interfaces/planServiceConfiguration.interfaces.ts`, etc.). Understanding these is crucial.
+The billing system uses several key data structures defined in TypeScript interfaces (`server/src/interfaces/billing.interfaces.ts`, `server/src/interfaces/contractLineServiceConfiguration.interfaces.ts`, etc.). Understanding these is crucial.
 
 ### Key Interfaces (Examples)
 
@@ -704,7 +762,7 @@ The billing system uses several key data structures defined in TypeScript interf
 interface IBillingCharge extends TenantEntity {
   type: 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
   serviceId?: string;
-  company_billing_plan_id?: string;
+  company_contract_line_id?: string;
   serviceName: string;
   rate: number; // In cents
   total: number; // In cents
@@ -713,8 +771,8 @@ interface IBillingCharge extends TenantEntity {
   tax_rate: number; // Decimal rate (e.g., 0.065)
   tax_region?: string;
   is_taxable?: boolean;
-  company_bundle_id?: string;
-  bundle_name?: string;
+  company_contract_id?: string;
+  contract_name?: string;
 }
 ```
 
@@ -722,41 +780,41 @@ interface IBillingCharge extends TenantEntity {
 ```typescript
 interface IFixedPriceCharge extends IBillingCharge {
   type: 'fixed';
-  quantity: number; // From plan_service_configuration
+  quantity: number; // From contract_line_service_configuration
   // Fields derived from allocation
-  config_id?: string; // FK to plan_service_configuration
-  base_rate?: number; // Plan-level base rate (cents)
+  config_id?: string; // FK to contract_line_service_configuration
+  base_rate?: number; // Contract-line-level base rate (cents)
   fmv?: number; // Service FMV (cents)
   proportion?: number; // FMV proportion
   allocated_amount?: number; // Allocated charge (cents) - should match rate/total
-  // Plan settings snapshot
+  // Contract line settings snapshot
   enable_proration?: boolean;
   billing_cycle_alignment?: string;
 }
 ```
 
-#### ICompanyBillingPlan
+#### ICompanyContractLine
 ```typescript
-interface ICompanyBillingPlan extends TenantEntity {
-  company_billing_plan_id: string;
+interface ICompanyContractLine extends TenantEntity {
+  company_contract_line_id: string;
   company_id: string;
-  plan_id: string;
+  contract_line_id: string;
   start_date: ISO8601String;
   end_date: ISO8601String | null;
   is_active: boolean;
-  custom_rate?: number; // In cents (used for bundles)
-  company_bundle_id?: string;
-  plan_name?: string; // Joined from billing_plans
-  billing_frequency?: string; // Joined from billing_plans
-  bundle_name?: string; // Joined from plan_bundles
+  custom_rate?: number; // In cents (used for contracts)
+  company_contract_id?: string;
+  contract_line_name?: string; // Joined from contract_lines
+  billing_frequency?: string; // Joined from contract_lines
+  contract_name?: string; // Joined from contracts
 }
 ```
 
 ### Relationships Between Data Models
-- `ICompanyBillingPlan` determines how `IBillingCharge` objects are calculated by the `BillingEngine`.
-- Multiple `IBillingCharge` objects are generated based on plan configurations, time entries, usage records, etc.
+- `ICompanyContractLine` determines how `IBillingCharge` objects are calculated by the `BillingEngine`.
+- Multiple `IBillingCharge` objects are generated based on contract line configurations, time entries, usage records, etc.
 - These charges are then used to create `invoice_items` (and associated `invoice_item_details`) when an invoice is finalized.
-- `IPlanBundle` and related interfaces manage grouped plan assignments.
+- `IContract` and related interfaces manage grouped contract line assignments.
 
 ## Credit System and Reconciliation
 
@@ -897,15 +955,15 @@ Ensures integrity of credit balances by detecting and reporting discrepancies.
 
 2.  **Billing Calculations (`BillingEngine`)**
     - Calculates charges based on various configurations:
-        - Fixed-price plans (`billing_plan_fixed_config`, FMV allocation)
-        - Time-based (`time_entries`, `plan_service_hourly_config`, `user_type_rates`)
-        - Usage-based (`usage_tracking`, `plan_service_usage_config`, `plan_service_rate_tiers`)
-        - Bucket plans (`bucket_usage`, `plan_service_bucket_config`)
-        - Discounts (`discounts`, `plan_discounts`)
-        - Plan Bundles (`company_plan_bundles`, `bundle_billing_plans`)
+        - Fixed-price contract lines (`contract_line_fixed_config`, FMV allocation)
+        - Time-based (`time_entries`, `contract_line_service_hourly_config`, `user_type_rates`)
+        - Usage-based (`usage_tracking`, `contract_line_service_usage_config`, `contract_line_service_rate_tiers`)
+        - Bucket contract lines (`bucket_usage`, `contract_line_service_bucket_config`)
+        - Discounts (`discounts`, `contract_line_discounts`)
+        - Contracts (`company_contracts`, `contract_line_mappings`)
         - Tax calculations (`TaxService`, `tax_rates`, `company_tax_rates`)
         - Multi-currency (`currencies`)
-        - Handles multiple simultaneous plans.
+        - Handles multiple simultaneous contract lines.
 
 3.  **Bucket of Hours/Retainer Billing**
     - **Automatic Tracking:** `BucketUsageService` updates `bucket_usage.hours_used` based on linked `time_entries`.
@@ -916,17 +974,17 @@ Ensures integrity of credit balances by detecting and reporting discrepancies.
 
 4.  **Proration**
     - Logic exists in `BillingEngine._calculateProrationFactor`.
-    - Applied to fixed-fee plans if `billing_plan_fixed_config.enable_proration` is true.
-    - Factor calculated based on plan active dates within the billing period.
+    - Applied to fixed-fee contract lines if `contract_line_fixed_config.enable_proration` is true.
+    - Factor calculated based on contract line active dates within the billing period.
 
 5.  **Recurring Billing**
-    - Uses `billing_frequency` from `billing_plans`.
+    - Uses `billing_frequency` from `contract_lines`.
     - Job scheduler automates invoice generation.
 
 6.  **Custom Pricing**
-    - `plan_service_configuration.custom_rate` (cents) overrides service default rates.
-    - `plan_service_bucket_config.overage_rate` (cents) for bucket overages.
-    - `bundle_billing_plans.custom_rate` (cents) for plans within bundles.
+    - `contract_line_service_configuration.custom_rate` (cents) overrides service default rates.
+    - `contract_line_service_bucket_config.overage_rate` (cents) for bucket overages.
+    - `contract_line_mappings.custom_rate` (cents) for contract lines within contracts.
 
 7.  **Audit Trail**
     - `audit_logs` table captures detailed changes.
@@ -936,7 +994,7 @@ Ensures integrity of credit balances by detecting and reporting discrepancies.
     - Partitioning large tables (time_entries, usage_tracking, transactions, audit_logs) recommended.
 
 9.  **API Design**
-    - Comprehensive API for managing plans, services, bundles, time/usage, invoices, calculations, previews, discounts, taxes, approvals, notifications.
+    - Comprehensive API for managing contract lines, services, contracts, time/usage, invoices, calculations, previews, discounts, taxes, approvals, notifications.
 
 10. **Extensibility**
     - Designed for adding new billing models.
@@ -949,12 +1007,12 @@ Ensures integrity of credit balances by detecting and reporting discrepancies.
     - Store currency info (`currency_code`). Use `currencies` table.
     - Flexible tax system (`tax_rates`, `company_tax_rates`, `TaxService`).
 
-13. **Plan Management**
-    - Interfaces for managing multiple plans per client.
-    - Logic handles plan activation/deactivation and date ranges.
+13. **Contract Line Management**
+    - Interfaces for managing multiple contract lines per client.
+    - Logic handles contract line activation/deactivation and date ranges.
 
 14. **Reporting**
-    - Tools needed for breakdown by plan, service, category, discounts, taxes.
+    - Tools needed for breakdown by contract line, service, category, discounts, taxes.
     - Bucket usage reports.
 
 ## Mermaid Diagram (ERD)
@@ -964,22 +1022,22 @@ erDiagram
     tenants ||--o{ companies : has
     tenants ||--o{ users : has
     tenants ||--o{ service_catalog : defines
-    tenants ||--o{ billing_plans : offers
+    tenants ||--o{ contract_lines : offers
     tenants ||--o{ service_categories : defines
     tenants ||--o{ discounts : provides
     tenants ||--o{ tax_rates : sets
     tenants ||--o{ currencies : uses
     tenants ||--o{ notifications : sends
     tenants ||--o{ audit_logs : records
-    tenants ||--o{ plan_bundles : defines
+    tenants ||--o{ contracts : defines
 
-    companies ||--o{ company_billing_plans : subscribes_to
+    companies ||--o{ company_contract_lines : subscribes_to
     companies ||--o{ usage_tracking : tracks
     companies ||--o{ invoices : receives
     companies ||--o{ bucket_usage : uses
     companies ||--o{ transactions : involved_in
     companies ||--o{ approvals : requests
-    companies ||--o{ company_plan_bundles : assigned
+    companies ||--o{ company_contracts : assigned
     companies ||--o{ company_tax_rates : has_rates
 
     users ||--o{ time_entries : logs
@@ -995,19 +1053,19 @@ erDiagram
     service_catalog ||--o{ invoice_item_details : references_service
     service_catalog ||--o{ company_tax_rates : can_override_tax_for
 
-    billing_plans ||--o{ company_billing_plans : assigned_to
-    billing_plans ||--o{ plan_service_configuration : has_config_for
-    billing_plans ||--o{ bundle_billing_plans : part_of
-    billing_plans ||--o{ plan_discounts : has
-    billing_plans ||--o{ billing_plan_fixed_config : has_fixed_config
+    contract_lines ||--o{ company_contract_lines : assigned_to
+    contract_lines ||--o{ plan_service_configuration : has_config_for
+    contract_lines ||--o{ contract_line_mappings : part_of
+    contract_lines ||--o{ contract_line_discounts : has
+    contract_lines ||--o{ contract_line_fixed_config : has_fixed_config
 
     invoices ||--o{ invoice_items : contains
     invoices ||--o{ transactions : linked_to
 
-    plan_bundles ||--o{ bundle_billing_plans : contains_plans
-    plan_bundles ||--o{ company_plan_bundles : assigned_via
+    contracts ||--o{ contract_line_mappings : contains_plans
+    contracts ||--o{ company_contracts : assigned_via
 
-    company_plan_bundles ||--o{ company_billing_plans : creates_assignments
+    company_contracts ||--o{ company_contract_lines : creates_assignments
 
     plan_service_configuration ||--|{ plan_service_usage_config : usage_details
     plan_service_configuration ||--|{ plan_service_fixed_config : fixed_details
@@ -1019,7 +1077,7 @@ erDiagram
 
     plan_service_bucket_config ||--o{ bucket_usage : tracks_usage_against
 
-    plan_discounts }o--|| discounts : applies
+    contract_line_discounts }o--|| discounts : applies
 
     currencies ||--o{ invoices : denominates
     currencies ||--o{ invoice_items : denominates
@@ -1048,16 +1106,16 @@ companies { UUID company_id PK, UUID tenant FK, boolean is_tax_exempt }
 users { UUID user_id PK, UUID tenant FK }
 service_catalog { UUID service_id PK, UUID tenant FK, integer default_rate, UUID tax_rate_id FK }
 service_categories { UUID category_id PK, UUID tenant FK }
-billing_plans { UUID plan_id PK, UUID tenant FK, string plan_type }
-billing_plan_fixed_config { UUID plan_id PK,FK, numeric base_rate, boolean enable_proration }
-plan_service_configuration { UUID config_id PK, UUID tenant FK, UUID plan_id FK, UUID service_id FK, string configuration_type, integer quantity, integer custom_rate }
+contract_lines { UUID contract_line_id PK, UUID tenant FK, string contract_line_type }
+contract_line_fixed_config { UUID contract_line_id PK,FK, numeric base_rate, boolean enable_proration }
+plan_service_configuration { UUID config_id PK, UUID tenant FK, UUID contract_line_id FK, UUID service_id FK, string configuration_type, integer quantity, integer custom_rate }
 plan_service_fixed_config { UUID config_id PK,FK, numeric base_rate }
 plan_service_hourly_config { UUID config_id PK,FK, integer minimum_billable_time, integer round_up_to_nearest }
 user_type_rates { UUID rate_id PK, UUID config_id FK, string user_type, integer rate }
 plan_service_usage_config { UUID config_id PK,FK, boolean enable_tiered_pricing }
 plan_service_rate_tiers { UUID tier_id PK, UUID config_id FK, integer min_quantity, integer max_quantity, integer rate }
 plan_service_bucket_config { UUID config_id PK,FK, integer total_hours, integer overage_rate, boolean allow_rollover }
-company_billing_plans { UUID company_billing_plan_id PK, UUID tenant FK, UUID company_id FK, UUID plan_id FK, UUID company_bundle_id FK }
+company_contract_lines { UUID company_contract_line_id PK, UUID tenant FK, UUID company_id FK, UUID contract_line_id FK, UUID company_contract_id FK }
 time_entries { UUID entry_id PK, UUID tenant FK, UUID user_id FK, UUID service_id FK, boolean invoiced }
 usage_tracking { UUID usage_id PK, UUID tenant FK, UUID company_id FK, UUID service_id FK, boolean invoiced }
 invoices { UUID invoice_id PK, UUID tenant FK, UUID company_id FK, integer total_amount, integer subtotal, integer tax_total, boolean is_manual }
@@ -1066,7 +1124,7 @@ invoice_item_details { UUID item_detail_id PK, UUID item_id FK, UUID service_id 
 invoice_item_fixed_details { UUID item_detail_id PK,FK, integer base_rate, integer fmv, numeric proportion, integer allocated_amount }
 bucket_usage { UUID usage_id PK, UUID tenant FK, UUID config_id FK, UUID company_id FK, decimal hours_used, decimal overage_hours, decimal rolled_over_hours }
 discounts { UUID discount_id PK, UUID tenant FK }
-plan_discounts { UUID plan_id FK, UUID company_id FK, UUID discount_id FK }
+contract_line_discounts { UUID contract_line_id FK, UUID company_id FK, UUID discount_id FK }
 tax_rates { UUID tax_rate_id PK, UUID tenant FK, string region_code, numeric tax_percentage }
 company_tax_rates { UUID company_tax_rate_id PK, UUID company_id FK, UUID tax_rate_id FK, boolean is_default }
 currencies { string currency_code PK }
@@ -1076,6 +1134,6 @@ credit_reconciliation_reports { UUID report_id PK, UUID tenant FK, UUID company_
 approvals { UUID approval_id PK, UUID tenant FK }
 notifications { UUID notification_id PK, UUID tenant FK }
 audit_logs { UUID audit_id PK, UUID tenant FK }
-plan_bundles { UUID bundle_id PK, UUID tenant FK }
-bundle_billing_plans { UUID bundle_id PK,FK, UUID plan_id PK,FK, integer custom_rate }
-company_plan_bundles { UUID company_bundle_id PK, UUID tenant FK, UUID company_id FK, UUID bundle_id FK }
+contracts { UUID contract_id PK, UUID tenant FK }
+contract_line_mappings { UUID contract_id PK,FK, UUID contract_line_id PK,FK, integer custom_rate }
+company_contracts { UUID company_contract_id PK, UUID tenant FK, UUID company_id FK, UUID contract_id FK }

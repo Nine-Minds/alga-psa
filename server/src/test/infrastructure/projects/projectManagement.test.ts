@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vites
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
 import { Knex } from 'knex';
-import { TestContext } from '../../../test-utils/testContext';
+import { TestContext } from '../../../../test-utils/testContext';
 import {
     setupCommonMocks,
     mockNextHeaders,
@@ -10,10 +10,10 @@ import {
     mockRBAC,
     mockGetCurrentUser,
     createMockUser
-} from '../../../test-utils/testMocks';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createTestEnvironment, createClient } from '../../../test-utils/testDataFactory';
-import { resetDatabase, cleanupTables, createCleanupHook } from '../../../test-utils/dbReset';
+} from '../../../../test-utils/testMocks';
+import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { createTestEnvironment, createClient } from '../../../../test-utils/testDataFactory';
+import { resetDatabase, cleanupTables, createCleanupHook } from '../../../../test-utils/dbReset';
 import {
     createProject,
     addProjectPhase,

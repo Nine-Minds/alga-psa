@@ -33,7 +33,7 @@ export async function getEmailDomains(): Promise<DomainStatus[]> {
 
   try {
     const domains = await knex('email_domains')
-      .where({ tenant: tenant })
+      .where({ tenant_id: tenant })
       .select('*')
       .orderBy('created_at', 'desc');
 
@@ -71,7 +71,7 @@ export async function addEmailDomain(domainName: string): Promise<{ success: boo
   try {
     // Check if domain already exists
     const existing = await knex('email_domains')
-      .where({ tenant_id: tenant, domain_name: domainName })
+      .where({ tenant: tenant, domain_name: domainName })
       .first();
 
     if (existing) {
@@ -80,7 +80,7 @@ export async function addEmailDomain(domainName: string): Promise<{ success: boo
 
     // Insert domain record
     const domainData = {
-      tenant_id: tenant,
+      tenant: tenant,
       domain_name: domainName,
       status: 'pending',
       created_at: new Date(),
@@ -131,7 +131,7 @@ export async function verifyEmailDomain(domainName: string): Promise<{ success: 
   try {
     // Check if domain exists
     const domain = await knex('email_domains')
-      .where({ tenant_id: tenant, domain_name: domainName })
+      .where({ tenant: tenant, domain_name: domainName })
       .first();
 
     if (!domain) {
@@ -206,7 +206,7 @@ export async function deleteEmailDomain(domainName: string): Promise<{ success: 
   try {
     // Check if domain exists
     const domain = await knex('email_domains')
-      .where({ tenant_id: tenant, domain_name: domainName })
+      .where({ tenant: tenant, domain_name: domainName })
       .first();
 
     if (!domain) {
@@ -227,7 +227,7 @@ export async function deleteEmailDomain(domainName: string): Promise<{ success: 
 
     // Delete from database
     await knex('email_domains')
-      .where({ tenant_id: tenant, domain_name: domainName })
+      .where({ tenant: tenant, domain_name: domainName })
       .del();
 
     return {

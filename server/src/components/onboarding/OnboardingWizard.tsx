@@ -30,6 +30,7 @@ interface OnboardingWizardProps {
   initialData?: Partial<WizardData>;
   onComplete?: (data: WizardData) => void;
   fullPage?: boolean;
+  isRevisit?: boolean;
 }
 
 export function OnboardingWizard({
@@ -40,6 +41,7 @@ export function OnboardingWizard({
   initialData = {},
   onComplete,
   fullPage = false,
+  isRevisit = false,
 }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +75,7 @@ export function OnboardingWizard({
     serviceName: '',
     serviceDescription: '',
     servicePrice: '',
-    planName: 'hourly',
+    contractLineName: 'hourly',
 
     // Ticketing
     boardName: '',
@@ -196,7 +198,7 @@ export function OnboardingWizard({
                 serviceName: wizardData.serviceName,
                 serviceDescription: wizardData.serviceDescription,
                 servicePrice: wizardData.servicePrice,
-                planName: wizardData.planName,
+                contractLineName: wizardData.contractLineName,
                 serviceTypeId: wizardData.serviceTypeId
               });
               if (!billingResult.success) {
@@ -319,21 +321,27 @@ export function OnboardingWizard({
 
   const isFirstStepValid = () => {
     const { firstName, lastName, clientName, email, newPassword, confirmPassword } = wizardData;
-    
+
+    // For returning users, only validate company name
+    if (isRevisit) {
+      return !!clientName;
+    }
+
+    // For first-time users, validate all fields including password
     // Basic field validation
     if (!firstName || !lastName || !clientName || !email || !newPassword || !confirmPassword) {
       return false;
     }
-    
+
     // Password validation
     if (newPassword.length < 8) {
       return false;
     }
-    
+
     if (newPassword !== confirmPassword) {
       return false;
     }
-    
+
     return true;
   };
 
@@ -392,7 +400,7 @@ export function OnboardingWizard({
   const renderStep = () => {
     switch (currentStep) {
       case 0:
-        return <ClientInfoStep data={wizardData} updateData={updateData} />;
+        return <ClientInfoStep data={wizardData} updateData={updateData} isRevisit={isRevisit} />;
       case 1:
         return <TeamMembersStep data={wizardData} updateData={updateData} />;
       case 2:

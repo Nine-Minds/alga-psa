@@ -302,11 +302,11 @@ CompanyDetails
     │       └── Tickets DataTable
     ├── Billing Tab
     │   └── BillingConfiguration (server/src/components/companies/BillingConfiguration.tsx)
-    │       ├── Billing plans management
+    │       ├── Contract Lines management
     │       ├── Tax settings
     │       └── Payment configuration
     ├── Billing Dashboard Tab
-    │   └── ClientBillingDashboard
+    │   └── ClientContractLineDashboard
     │       ├── Invoice summaries
     │       ├── Payment history
     │       └── Billing analytics
@@ -396,8 +396,8 @@ CompanyDetails
   - **Invoices**: `?tab=invoices`
   - **Invoice Templates**: `?tab=invoice-templates`
   - **Tax Rates**: `?tab=tax-rates`
-  - **Plans**: `?tab=plans`
-  - **Plan Bundles**: `?tab=plan-bundles`
+  - **Contract Lines**: `?tab=contract-lines`
+  - **Contracts**: `?tab=contracts`
   - **Service Catalog**: `?tab=service-catalog`
   - **Billing Cycles**: `?tab=billing-cycles`
   - **Time Periods**: `?tab=time-periods`

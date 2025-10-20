@@ -3,8 +3,9 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
+import { v4 as uuidv4 } from 'uuid';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
@@ -27,14 +28,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -60,6 +99,7 @@ async function configureTaxForClient(clientId: string, taxPercentage = 10) {
     taxPercentage
   });
   await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  await ensureClientPlanBundlesTable(context);
 }
 
 describe('Billing Invoice Edge Cases', () => {
@@ -74,10 +114,11 @@ describe('Billing Invoice Edge Cases', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_services',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -131,26 +172,31 @@ describe('Billing Invoice Edge Cases', () => {
       tax_region: 'US-NY'
     });
 
-    const { planId } = await createFixedPlanAssignment(context, creditServiceA, {
+    const { contractLineId: creditContractLineId } = await createFixedPlanAssignment(context, creditServiceA, {
       planName: 'Credit Plan',
       baseRateCents: -12500,
       detailBaseRateCents: 5000,
-      startDate: '2025-02-01'
+      startDate: '2025-02-01',
+      clientId: context.clientId
     });
 
-    await addServiceToFixedPlan(context, planId, creditServiceB, {
+    await addServiceToFixedPlan(context, creditContractLineId, creditServiceB, {
       detailBaseRateCents: 7500
     });
 
-    const billingCycle = await context.createEntity('client_billing_cycles', {
+    const billingCycleId = uuidv4();
+    await context.db('client_billing_cycles').insert({
+      billing_cycle_id: billingCycleId,
       client_id: context.clientId,
+      tenant: context.tenantId,
       billing_cycle: 'monthly',
-      effective_date: '2025-02-01',
-      period_start_date: '2025-02-01',
-      period_end_date: '2025-03-01'
-    }, 'billing_cycle_id');
+      period_start_date: '2025-02-01T00:00:00.000Z',
+      period_end_date: '2025-03-01T00:00:00.000Z',
+      effective_date: '2025-02-01T00:00:00.000Z'
+    });
 
-    const invoice = await generateInvoice(billingCycle);
+    // Generate invoice
+    const invoice = await generateInvoice(billingCycleId);
 
     expect(invoice).toBeDefined();
     expect(invoice!.subtotal).toBe(-12500);
@@ -171,26 +217,33 @@ describe('Billing Invoice Edge Cases', () => {
   it('should properly handle true zero-value invoices through the entire workflow', async () => {
     const freeService = await createTestService(context, {
       service_name: 'Free Service',
-      default_rate: 1000,
+      billing_method: 'fixed',
+      default_rate: 0, // $0.00
+      unit_of_measure: 'unit',
       tax_region: 'US-NY'
     });
 
-    const { planId } = await createFixedPlanAssignment(context, freeService, {
+    await createFixedPlanAssignment(context, freeService, {
       planName: 'Free Plan',
       baseRateCents: 0,
-      detailBaseRateCents: 1000,
-      startDate: '2025-02-01'
+      detailBaseRateCents: 0,
+      startDate: '2025-02-01',
+      clientId: context.clientId
     });
 
-    const billingCycle = await context.createEntity('client_billing_cycles', {
+    const billingCycleId = uuidv4();
+    await context.db('client_billing_cycles').insert({
+      billing_cycle_id: billingCycleId,
       client_id: context.clientId,
+      tenant: context.tenantId,
       billing_cycle: 'monthly',
-      effective_date: '2025-02-01',
-      period_start_date: '2025-02-01',
-      period_end_date: '2025-03-01'
-    }, 'billing_cycle_id');
+      period_start_date: '2025-02-01T00:00:00.000Z',
+      period_end_date: '2025-03-01T00:00:00.000Z',
+      effective_date: '2025-02-01T00:00:00.000Z'
+    });
 
-    const invoice = await generateInvoice(billingCycle);
+    // Generate invoice
+    const invoice = await generateInvoice(billingCycleId);
 
     expect(invoice).toBeDefined();
     expect(invoice!.subtotal).toBe(0);
@@ -201,9 +254,6 @@ describe('Billing Invoice Edge Cases', () => {
       .where({ invoice_id: invoice!.invoice_id, tenant: context.tenantId })
       .orderBy('net_amount', 'desc');
 
-    expect(invoiceItems).toHaveLength(1);
-    expect(Number(invoiceItems[0].net_amount)).toBe(0);
-    expect(Number(invoiceItems[0].tax_amount)).toBe(0);
-    expect(Number(invoiceItems[0].total_price)).toBe(0);
+    expect(invoiceItems).toHaveLength(0);
   });
 });

@@ -9,8 +9,8 @@ import {
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate } from '../../../../../test-utils/dateUtils';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { createClient } from '../../../../../test-utils/testDataFactory';
@@ -91,12 +91,12 @@ describe('Credit Expiration Effects Tests', () => {
         'credit_tracking',
         'credit_allocations',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
+        'bucket_usage',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -299,8 +299,8 @@ describe('Credit Expiration Effects Tests', () => {
     expect(expirationTransaction2).toBeUndefined();
     
     // Verify client credit balances
-    const client1Credit = await ClientBillingPlan.getClientCredit(client1_id);
-    const client2Credit = await ClientBillingPlan.getClientCredit(client2_id);
+    const client1Credit = await ClientContractLine.getClientCredit(client1_id);
+    const client2Credit = await ClientContractLine.getClientCredit(client2_id);
     
     expect(client1Credit).toBe(0); // Credit expired
     expect(client2Credit).toBe(7000); // Credit still active
@@ -414,7 +414,7 @@ describe('Credit Expiration Effects Tests', () => {
     expect(Number(initialCreditTracking2.remaining_amount)).toBe(prepaymentAmount2);
     
     // Verify initial client credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount1 + prepaymentAmount2);
     
     // Run the expired credits handler
@@ -444,7 +444,7 @@ describe('Credit Expiration Effects Tests', () => {
     expect(Number(updatedCreditTracking2.remaining_amount)).toBe(prepaymentAmount2);
     
     // Verify the client credit balance was reduced by the expired credit amount
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(prepaymentAmount2);
     
     // Verify the expiration transaction was created with the correct amount
@@ -527,7 +527,7 @@ describe('Credit Expiration Effects Tests', () => {
       .first();
     
     // Verify initial state
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
     
     // Run the expired credits handler to process expired credits
@@ -565,7 +565,7 @@ describe('Credit Expiration Effects Tests', () => {
     expect(expirationTransaction.created_at).toBeTruthy();
     
     // Verify the client credit balance was updated
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
     
     // Verify the credit tracking entry is marked as expired
@@ -636,7 +636,7 @@ describe('Credit Expiration Effects Tests', () => {
     await finalizeInvoice(prepaymentInvoice.invoice_id);
     
     // Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
     
     // Get the credit transaction
@@ -652,7 +652,7 @@ describe('Credit Expiration Effects Tests', () => {
     await expiredCreditsHandler({ tenantId: context.tenantId });
     
     // Verify client credit balance is reduced to zero
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
     
     // Verify the expiration transaction was created with the correct amount

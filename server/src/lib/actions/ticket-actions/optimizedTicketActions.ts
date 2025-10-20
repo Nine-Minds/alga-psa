@@ -164,24 +164,11 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           tenant: tenant
         }),
       
-      // Users
-      trx('users as u')
-        .distinct('u.user_id')
-        .select(
-          'u.*',
-          'd.file_id as avatar_file_id'
-        )
-        .leftJoin('document_associations as da', function() {
-          this.on('da.entity_id', '=', 'u.user_id')
-              .andOn('da.tenant', '=', 'u.tenant')
-              .andOnVal('da.entity_type', '=', 'user');
-        })
-        .leftJoin('documents as d', function() {
-           this.on('d.document_id', '=', 'da.document_id')
-              .andOn('d.tenant', '=', 'u.tenant');
-        })
-        .where({ 'u.tenant': tenant })
-        .orderBy('u.first_name', 'asc'),
+      // Users - removed document joins that were causing duplicates
+      // Avatar URLs are fetched later using getUserAvatarUrl()
+      trx('users')
+        .where({ tenant })
+        .orderBy('first_name', 'asc'),
       
       // Statuses
       trx('statuses')
@@ -330,7 +317,6 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         })
         .first() : null;
 
-    // Process user data for userMap
     // Process user data for userMap, including avatar URLs
     const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
       let avatarUrl: string | null = null;
@@ -340,11 +326,9 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         console.error(`Error fetching avatar URL for user ${user.user_id}:`, imgError);
         avatarUrl = null;
       }
-      
-      // Remove the temporary avatar_file_id if it exists from the old join logic
-      const { avatar_file_id, ...userData } = user;
+
       return {
-        ...userData,
+        ...user,
         avatarUrl,
       };
     }));

@@ -7,13 +7,13 @@ import { Card } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
-import { IPlanServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { Trash2 } from 'lucide-react';
 
 interface HourlyServiceConfigPanelProps {
-  configuration: Partial<IPlanServiceHourlyConfig>;
+  configuration: Partial<IContractLineServiceHourlyConfig>;
   userTypeRates?: IUserTypeRate[];
-  onConfigurationChange: (updates: Partial<IPlanServiceHourlyConfig>) => void;
+  onConfigurationChange: (updates: Partial<IContractLineServiceHourlyConfig>) => void;
   onUserTypeRatesChange?: (rates: IUserTypeRate[]) => void;
   className?: string;
   disabled?: boolean;

@@ -7,15 +7,19 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Info, Search } from 'lucide-react';
-import { 
-  getAllBillingCycles, 
+import {
+  getAllBillingCycles,
   updateBillingCycle,
   canCreateNextBillingCycle,
   createNextBillingCycle
 } from 'server/src/lib/actions/billingCycleActions';
 import { getAllClientsPaginated } from 'server/src/lib/actions/client-actions/clientActions';
+import { getClientContracts } from 'server/src/lib/actions/client-actions/clientContractActions';
+import { getContracts } from 'server/src/lib/actions/contractActions';
 import { BillingCycleType, IClient } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { IClientContract, IContract } from 'server/src/interfaces/contract.interfaces';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
@@ -52,6 +56,8 @@ const BillingCycles: React.FC = () => {
     show: boolean;
     error?: string;
   } | null>(null);
+  const [clientContracts, setClientContracts] = useState<{ [clientId: string]: string }>({});
+  const [contracts, setContracts] = useState<{ [contractId: string]: IContract }>({});
 
   // Debounce search term
   useEffect(() => {
@@ -71,7 +77,7 @@ const BillingCycles: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [cycles, clientsResponse] = await Promise.all([
+      const [cycles, clientsResponse, allContracts] = await Promise.all([
         getAllBillingCycles(),
         getAllClientsPaginated({
           page: currentPage,
@@ -80,14 +86,24 @@ const BillingCycles: React.FC = () => {
           includeInactive: true,
           sortBy,
           sortDirection
-        })
+        }),
+        getContracts()
       ]);
 
       setBillingCycles(cycles);
       setClients(clientsResponse.clients);
       setTotalCount(clientsResponse.totalCount);
 
-      // Check which clients can have cycles created
+      // Create a map of contracts by contract_id
+      const contractsMap: { [contractId: string]: IContract } = {};
+      (allContracts as unknown as IContract[]).forEach(contract => {
+        if (contract.contract_id) {
+          contractsMap[contract.contract_id] = contract;
+        }
+      });
+      setContracts(contractsMap);
+
+      // Fetch contracts for each client and check cycle creation status
       const cycleCreationStatus: {
         [clientId: string]: {
           canCreate: boolean;
@@ -95,14 +111,29 @@ const BillingCycles: React.FC = () => {
           periodEndDate?: string;
         }
       } = {};
-      
+      const clientContractsMap: { [clientId: string]: string } = {};
+
       for (const client of clientsResponse.clients) {
         if (client.client_id) {
+          // Fetch contract info
+          try {
+            const clientAssignedContracts = await getClientContracts(client.client_id);
+            // Get the active contract (if any)
+            const active = (clientAssignedContracts as unknown as IClientContract[]).find(c => c.is_active);
+            if (active && active.contract_id) {
+              clientContractsMap[client.client_id] = active.contract_id;
+            }
+          } catch (error) {
+            console.error(`Error fetching contracts for client ${client.client_id}:`, error);
+          }
+
+          // Check cycle creation status
           const status = await canCreateNextBillingCycle(client.client_id);
           cycleCreationStatus[client.client_id] = status;
         }
       }
-      
+
+      setClientContracts(clientContractsMap);
       setCycleStatus(cycleCreationStatus);
       setError(null);
     } catch (error) {
@@ -172,14 +203,24 @@ const BillingCycles: React.FC = () => {
       dataIndex: 'client_name',
     },
     {
+      title: 'Contract',
+      dataIndex: 'client_id',
+      render: (value: string) => {
+        const contractId = clientContracts[value];
+        if (!contractId) return <span className="text-gray-400">No active contract</span>;
+        const contract = contracts[contractId];
+        return contract?.contract_name || <span className="text-gray-400">Unknown</span>;
+      },
+    },
+    {
       title: 'Current Billing Cycle',
       dataIndex: 'client_id',
       render: (value: string, record: Partial<IClient>) => {
         const cycle = billingCycles[value];
         if (!cycle) return 'Not set';
-        
+
         // Convert to title case for display
-        return cycle.split('-').map((word):string => 
+        return cycle.split('-').map((word):string =>
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join('-');
       },
@@ -227,56 +268,63 @@ const BillingCycles: React.FC = () => {
   }, []);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-4">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex items-center">
-            <h3 className="text-lg font-semibold">Billing Cycles</h3>
-            <Tooltip content="Configure billing cycles for clients and create new billing periods.">
-              <Info className="ml-2 h-4 w-4 text-gray-500" />
-            </Tooltip>
-          </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-bold">Billing Cycles</h2>
+          <Tooltip content="Configure billing cycles for clients and create new billing periods.">
+            <Info className="h-4 w-4 text-gray-500" />
+          </Tooltip>
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search clients..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page on new search
-            }}
-            className="pl-10 pr-4 py-2 w-full md:w-80"
-          />
-        </div>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            {error}
-          </div>
-        )}
-        {loading ? (
-          <div className="text-center py-4">Loading billing cycles...</div>
-        ) : (
-          <DataTable
-            data={clients}
-            columns={columns}
-            pagination={true}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalItems={totalCount}
-            onPageChange={handlePageChange}
-            manualSorting={true}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            onSortChange={handleSortChange}
-          />
-        )}
+      </div>
 
-      </CardContent>
-    </Card>
+      <Card>
+        <CardHeader className="flex flex-col gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search clients..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page on new search
+              }}
+              className="pl-10"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+          {loading ? (
+            <LoadingIndicator
+              layout="stacked"
+              className="py-10 text-gray-600"
+              spinnerProps={{ size: 'md' }}
+              text="Loading billing cycles"
+            />
+          ) : (
+            <DataTable
+              data={clients}
+              columns={columns}
+              pagination={true}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={totalCount}
+              onPageChange={handlePageChange}
+              manualSorting={true}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSortChange={handleSortChange}
+            />
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

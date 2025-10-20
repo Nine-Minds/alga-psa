@@ -63,7 +63,7 @@ export interface Service {
     display: string;
   };
   billing: {
-    type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+    type: 'Fixed' | 'Hourly' | 'Usage';
     frequency: string;
     isCustom: boolean;
     description?: string;
@@ -441,7 +441,7 @@ export async function getBillingCycles(): Promise<BillingCycle[]> {
   const { knex } = await createTenantKnex();
   
   const cycles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_plans')
+    return await trx('client_contract_lines')
       .where({ 
         client_id: session.user.clientId,
         tenant: session.user.tenant
@@ -452,11 +452,11 @@ export async function getBillingCycles(): Promise<BillingCycle[]> {
   });
 
   return cycles.map((cycle: {
-    client_billing_plan_id: string;
+    client_contract_line_id: string;
     start_date: string;
     end_date: string | null;
   }): BillingCycle => ({
-    id: cycle.client_billing_plan_id,
+    id: cycle.client_contract_line_id,
     period: determineBillingPeriod(cycle.start_date, cycle.end_date),
     startDate: formatDate(cycle.start_date),
     endDate: formatDate(cycle.end_date),
@@ -474,41 +474,41 @@ export async function getActiveServices(): Promise<Service[]> {
   const now = new Date().toISOString();
   
   const services = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_plans as cbp')
-      .join('billing_plans as bp', function(this: Knex.JoinClause) {
-        this.on('cbp.plan_id', '=', 'bp.plan_id')
-            .andOn('cbp.tenant', '=', 'bp.tenant');
+    return await trx('client_contract_lines as ccl')
+      .join('contract_lines as cl', function(this: Knex.JoinClause) {
+        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      .join('plan_services as ps', function(this: Knex.JoinClause) {
-        this.on('bp.plan_id', '=', 'ps.plan_id')
-            .andOn('bp.tenant', '=', 'ps.tenant');
+      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
+        this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
+            .andOn('cl.tenant', '=', 'ps.tenant');
       })
       .join('service_catalog as sc', function(this: Knex.JoinClause) {
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
       // Removed old join to bucket_plans
-      .leftJoin('plan_service_configurations as psc', function(this: Knex.JoinClause) { // Added join for configurations
-        this.on('ps.plan_id', '=', 'psc.plan_id')
+      .leftJoin('contract_line_service_configuration as psc', function(this: Knex.JoinClause) { // Added join for configurations
+        this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
-      .leftJoin('plan_service_bucket_configs as psbc', function(this: Knex.JoinClause) { // Added join for bucket specifics
+      .leftJoin('contract_line_service_bucket_config as psbc', function(this: Knex.JoinClause) { // Added join for bucket specifics
         this.on('psc.config_id', '=', 'psbc.config_id')
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
       .where({
-        'cbp.client_id': session.user.clientId,
-        'cbp.tenant': session.user.tenant,
-        'bp.tenant': session.user.tenant,
+        'ccl.client_id': session.user.clientId,
+        'ccl.tenant': session.user.tenant,
+        'cl.tenant': session.user.tenant,
         'ps.tenant': session.user.tenant,
         'sc.tenant': session.user.tenant
       })
-      .whereIn('bp.plan_type', ['Fixed', 'Hourly', 'Usage', 'Bucket'])
-      .andWhere('cbp.start_date', '<=', now)
+      .whereIn('cl.contract_line_type', ['Fixed', 'Hourly', 'Usage'])
+      .andWhere('ccl.start_date', '<=', now)
       .andWhere(function(this: Knex.QueryBuilder) {
-        this.where('cbp.end_date', '>', now)
-            .orWhereNull('cbp.end_date');
+        this.where('ccl.end_date', '>', now)
+            .orWhereNull('ccl.end_date');
       })
       .select(
         'sc.service_id as id',
@@ -519,10 +519,10 @@ export async function getActiveServices(): Promise<Service[]> {
         'sc.unit_of_measure',
         'ps.custom_rate',
         'ps.quantity',
-        'bp.plan_type',
-        'bp.is_custom',
-        'bp.billing_frequency',
-        'bp.description as plan_description',
+        'cl.contract_line_type',
+        'cl.is_custom',
+        'cl.billing_frequency',
+        'cl.description as contract_line_description',
         // 'bucket.total_hours', // Removed old bucket field
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period as bucket_period', // Removed old bucket field
@@ -531,8 +531,8 @@ export async function getActiveServices(): Promise<Service[]> {
         'psbc.overage_rate as psbc_overage_rate', // Added new bucket field
         'psbc.allow_rollover as psbc_allow_rollover', // Added new bucket field
         trx.raw("'active' as status"),
-        'cbp.start_date',
-        'cbp.end_date'
+        'ccl.start_date',
+        'ccl.end_date'
       )
       .groupBy(
         'sc.service_id',
@@ -543,10 +543,10 @@ export async function getActiveServices(): Promise<Service[]> {
         'sc.unit_of_measure',
         'ps.custom_rate',
         'ps.quantity',
-        'bp.plan_type',
-        'bp.is_custom',
-        'bp.billing_frequency',
-        'bp.description',
+        'cl.contract_line_type',
+        'cl.is_custom',
+        'cl.billing_frequency',
+        'cl.description',
         // 'bucket.total_hours', // Removed old bucket field
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period', // Removed old bucket field
@@ -554,8 +554,8 @@ export async function getActiveServices(): Promise<Service[]> {
         'psbc.total_hours', // Added new bucket field
         'psbc.overage_rate', // Added new bucket field
         'psbc.allow_rollover', // Added new bucket field
-        'cbp.start_date',
-        'cbp.end_date'
+        'ccl.start_date',
+        'ccl.end_date'
       );
   });
 
@@ -565,7 +565,7 @@ export async function getActiveServices(): Promise<Service[]> {
     description: string;
     status: string;
     service_type: string;
-    plan_type: Service['billing']['type'];
+    contract_line_type: Service['billing']['type'];
     is_custom: boolean;
     billing_frequency: string;
     plan_description: string | null;
@@ -584,7 +584,7 @@ export async function getActiveServices(): Promise<Service[]> {
   }): Service => {
     const hasCustomRate = service.custom_rate !== null;
     const rate = hasCustomRate ? service.custom_rate : service.default_rate;
-    const isBucketPlan = service.plan_type === 'Bucket';
+    const isBucketPlan = Boolean(service.psbc_total_hours);
 
     // Determine base status
     const status = determineServiceStatus(service.start_date, service.end_date);
@@ -605,7 +605,7 @@ export async function getActiveServices(): Promise<Service[]> {
       'N/A';
 
     // Format billing display
-    const billingDisplay = `${service.plan_type}${service.is_custom ? ' (Custom)' : ''} - ${service.billing_frequency || 'Contact for details'}`;
+    const billingDisplay = `${service.contract_line_type}${service.is_custom ? ' (Custom)' : ''} - ${service.billing_frequency || 'Contact for details'}`;
 
     return {
       id: service.id,
@@ -630,7 +630,7 @@ export async function getActiveServices(): Promise<Service[]> {
         overageRate: service.psbc_overage_rate ? // Use new field
           `$${(service.psbc_overage_rate / 100).toFixed(2)}` :
           'N/A',
-        // periodStart/End are derived from the client_billing_plan dates
+        // periodStart/End are derived from the client_contract_line dates
         periodStart: formatDate(service.start_date),
         periodEnd: formatDate(service.end_date),
         display: bucketDisplay
@@ -638,14 +638,14 @@ export async function getActiveServices(): Promise<Service[]> {
         // allowRollover: service.psbc_allow_rollover ?? false,
       } : undefined,
       billing: {
-        type: service.plan_type,
+        type: service.contract_line_type,
         frequency: service.billing_frequency,
         isCustom: service.is_custom,
         description: service.plan_description || undefined,
         display: billingDisplay
       },
       serviceType: service.service_type,
-      displayStatus: `${status} - ${service.plan_type}${service.is_custom ? ' Custom' : ''}`,
+      displayStatus: `${status} - ${service.contract_line_type}${service.is_custom ? ' Custom' : ''}`,
       canManage: status === 'active' // Only allow management of active services
     };
   });
@@ -682,19 +682,19 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
   
   // Get current service details
   const currentService = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_plans as cbp')
-      .join('billing_plans as bp', function(this: Knex.JoinClause) {
-        this.on('cbp.plan_id', '=', 'bp.plan_id')
-            .andOn('cbp.tenant', '=', 'bp.tenant');
+    return await trx('client_contract_lines as ccl')
+      .join('contract_lines as cl', function(this: Knex.JoinClause) {
+        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      .join('plan_services as ps', function(this: Knex.JoinClause) {
-        this.on('bp.plan_id', '=', 'ps.plan_id')
-            .andOn('bp.tenant', '=', 'ps.tenant');
+      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
+        this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
+            .andOn('cl.tenant', '=', 'ps.tenant');
       })
       .where({ 
         'ps.service_id': serviceId,
-        'cbp.client_id': session.user.clientId,
-        'cbp.tenant': session.user.tenant
+        'ccl.client_id': session.user.clientId,
+        'ccl.tenant': session.user.tenant
       })
       .first();
   });
@@ -703,10 +703,10 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
 
   // Get available plans for this service
   const plans = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('billing_plans as bp')
-      .join('plan_services as ps', function(this: Knex.JoinClause) {
-        this.on('bp.plan_id', '=', 'ps.plan_id')
-            .andOn('bp.tenant', '=', 'ps.tenant');
+    return await trx('contract_lines as cl')
+      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
+        this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
+            .andOn('cl.tenant', '=', 'ps.tenant');
       })
       .join('service_catalog as sc', function(this: Knex.JoinClause) {
         this.on('ps.service_id', '=', 'sc.service_id')
@@ -714,13 +714,13 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
       })
       .where({ 
         'ps.service_id': serviceId,
-        'bp.tenant': session.user.tenant,
-        'bp.is_active': true
+        'cl.tenant': session.user.tenant,
+        'cl.is_active': true
       })
       .select(
-        'bp.plan_id as id',
-        'bp.plan_name as name',
-        'bp.description',
+        'cl.contract_line_id as id',
+        'cl.contract_line_name as name',
+        'cl.description',
         'sc.default_rate'
       );
   });
@@ -733,7 +733,7 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
       amount: plan.default_rate.toString(),
       displayAmount: `$${(plan.default_rate / 100).toFixed(2)}/mo`
     },
-    isCurrentPlan: plan.id === currentService.plan_id
+    isCurrentPlan: plan.id === currentService.contract_line_id
   }));
 }
 
@@ -747,17 +747,17 @@ export async function upgradeService(serviceId: string, planId: string): Promise
   // Start a transaction
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get current service plan
-    const currentPlan = await trx('client_billing_plans as cbp')
-      .join('plan_services as ps', function(this: Knex.JoinClause) {
-        this.on('cbp.plan_id', '=', 'ps.plan_id')
-            .andOn('cbp.tenant', '=', 'ps.tenant');
+    const currentPlan = await trx('client_contract_lines as ccl')
+      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
+        this.on('ccl.contract_line_id', '=', 'ps.contract_line_id')
+            .andOn('ccl.tenant', '=', 'ps.tenant');
       })
       .where({ 
         'ps.service_id': serviceId,
-        'cbp.client_id': session.user.clientId,
-        'cbp.tenant': session.user.tenant
+        'ccl.client_id': session.user.clientId,
+        'ccl.tenant': session.user.tenant
       })
-      .whereNull('cbp.end_date')
+      .whereNull('ccl.end_date')
       .first();
 
     if (!currentPlan) throw new Error('No active plan found for this service');
@@ -766,9 +766,9 @@ export async function upgradeService(serviceId: string, planId: string): Promise
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     
     // End current plan at the end of the billing cycle
-    await trx('client_billing_plans')
+    await trx('client_contract_lines')
       .where({ 
-        client_billing_plan_id: currentPlan.client_billing_plan_id,
+        client_contract_line_id: currentPlan.client_contract_line_id,
         tenant: session.user.tenant
       })
       .update({ 
@@ -778,9 +778,9 @@ export async function upgradeService(serviceId: string, planId: string): Promise
 
     // Start new plan from the beginning of next month
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    return await trx('client_billing_plans').insert({
+    return await trx('client_contract_lines').insert({
       client_id: session.user.clientId,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: session.user.tenant,
       start_date: startOfNextMonth.toISOString(),
       created_at: now.toISOString()

@@ -3,7 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, createFixedPlanAssignment } from '../../../../../test-utils/billingTestHelpers';
+import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, createFixedPlanAssignment, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
@@ -28,14 +28,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -64,9 +102,27 @@ async function ensureDefaultTaxConfiguration() {
   });
 }
 
+async function ensureDefaultBillingSettings() {
+  await context.db('default_billing_settings')
+    .insert({
+      tenant: context.tenantId,
+      zero_dollar_invoice_handling: 'normal',
+      suppress_zero_dollar_invoices: false,
+      enable_credit_expiration: false,
+      credit_expiration_days: 365,
+      credit_expiration_notification_days: context.db.raw('ARRAY[30,7,1]::INTEGER[]')
+    })
+    .onConflict('tenant')
+    .merge({
+      zero_dollar_invoice_handling: 'normal',
+      suppress_zero_dollar_invoices: false,
+      enable_credit_expiration: false
+    });
+}
+
   beforeAll(async () => {
     context = await setupContext({
-      runSeeds: true,
+      runSeeds: false,
       cleanupTables: [
         'invoice_items',
         'invoices',
@@ -75,10 +131,11 @@ async function ensureDefaultTaxConfiguration() {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_services',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings'
@@ -95,6 +152,8 @@ async function ensureDefaultTaxConfiguration() {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
     await ensureDefaultTaxConfiguration();
+    await ensureDefaultBillingSettings();
+    await ensureClientPlanBundlesTable(context);
   }, 60000);
 
   beforeEach(async () => {
@@ -107,6 +166,8 @@ async function ensureDefaultTaxConfiguration() {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
     await ensureDefaultTaxConfiguration();
+    await ensureDefaultBillingSettings();
+    await ensureClientPlanBundlesTable(context);
   }, 30000);
 
   afterAll(async () => {
@@ -128,12 +189,6 @@ async function ensureDefaultTaxConfiguration() {
 
       await assignServiceTaxRate(context, serviceId, 'US-NY', { onlyUnset: true });
 
-      const { planId } = await createFixedPlanAssignment(context, serviceId, {
-        planName: 'Test Plan',
-        baseRateCents: 1000,
-        startDate: '2025-02-01'
-      });
-
       // Create billing cycle for automatic invoice
       const billingCycle = await context.createEntity('client_billing_cycles', {
         client_id: context.clientId,
@@ -142,6 +197,16 @@ async function ensureDefaultTaxConfiguration() {
         period_start_date: '2025-02-01',
         period_end_date: '2025-03-01'
       }, 'billing_cycle_id');
+
+      await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Test Plan',
+        baseRateCents: 1000,
+        detailBaseRateCents: 1000,
+        quantity: 1,
+        billingFrequency: 'monthly',
+        startDate: '2025-02-01',
+        clientId: context.clientId
+      });
 
       // Generate automatic invoice
       const autoInvoice = await generateInvoice(billingCycle);

@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { ensureDefaultBillingSettings } from '../../../../../test-utils/billingTestHelpers';
 import { expectNotFound } from '../../../../../test-utils/errorUtils';
 import type { ITransaction } from '../../../../interfaces/billing.interfaces';
 
@@ -29,14 +30,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {}
+  })
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {}
+  })
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn()
+  }
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn()
+  }),
+  toStreamEvent: (event: unknown) => event
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -54,21 +93,22 @@ const {
 } = TestContext.createHelpers();
 
 let context: TestContext;
-const serviceTypeCache: Record<string, string> = {};
+let serviceTypeCache: Record<string, string> = {};
 let clientTaxSettingsColumns: Record<string, unknown> | null = null;
 let clientTaxRatesColumns: Record<string, unknown> | null = null;
 
 beforeAll(async () => {
   // Initialize test context and set up mocks
   context = await setupContext({
+    runSeeds: false,
     cleanupTables: [
       'invoice_annotations',
       'invoice_items',
       'transactions',
       'invoices',
-      'plan_service_rate_tiers',
-      'plan_service_usage_config',
-      'plan_services',
+      'contract_line_service_rate_tiers',
+      'contract_line_service_usage_config',
+      'contract_line_services',
       'usage_tracking',
       'service_catalog',
       'tax_rates',
@@ -83,10 +123,15 @@ beforeAll(async () => {
   });
   mockedTenantId = mockContext.tenantId;
   mockedUserId = mockContext.userId;
+  await ensureDefaultBillingSettings(context);
 }, 60000);
 
 beforeEach(async () => {
   context = await resetContext();
+
+  // Clear service type cache when context is reset to prevent using stale IDs from previous tenant
+  serviceTypeCache = {};
+
   const mockContext = setupCommonMocks({
     tenantId: context.tenantId,
     userId: context.userId,
@@ -94,6 +139,7 @@ beforeEach(async () => {
   });
   mockedTenantId = mockContext.tenantId;
   mockedUserId = mockContext.userId;
+  await ensureDefaultBillingSettings(context);
 }, 30000);
 
 afterAll(async () => {
@@ -109,7 +155,7 @@ afterEach(async () => {
  */
 async function createTestService(overrides = {}) {
   const serviceId = uuidv4();
-  const billingMethod = (overrides as { billing_method?: 'fixed' | 'per_unit' }).billing_method ?? 'fixed';
+  const billingMethod = (overrides as { billing_method?: 'fixed' | 'hourly' | 'usage' }).billing_method ?? 'fixed';
   const serviceTypeId = await ensureServiceType(billingMethod);
 
   const serviceData: Record<string, unknown> = {
@@ -135,7 +181,7 @@ async function createTestService(overrides = {}) {
   return serviceId;
 }
 
-async function ensureServiceType(billingMethod: 'fixed' | 'per_unit' = 'fixed') {
+async function ensureServiceType(billingMethod: 'fixed' | 'hourly' | 'usage' = 'fixed') {
   if (serviceTypeCache[billingMethod]) {
     return serviceTypeCache[billingMethod];
   }
@@ -226,7 +272,7 @@ async function setupTaxConfiguration() {
   await upsertClientTaxSettings(taxRateId);
   await upsertClientDefaultTaxRate(taxRateId);
 
-  await assignServiceTaxRate('*', 'US-NY', { onlyUnset: true });
+  await assignServiceTaxRate('*', 'US-NY', { onlyUnset: false });
 
   return taxRateId;
 }
@@ -289,12 +335,6 @@ async function upsertClientDefaultTaxRate(taxRateId: string) {
     return;
   }
 
-  if ('is_default' in clientTaxRatesColumns) {
-    await context.db('client_tax_rates')
-      .where({ tenant: context.tenantId, client_id: context.clientId })
-      .update({ is_default: false });
-  }
-
   const rateData: Record<string, unknown> = {
     tenant: context.tenantId,
     client_id: context.clientId,
@@ -309,10 +349,15 @@ async function upsertClientDefaultTaxRate(taxRateId: string) {
     rateData.location_id = null;
   }
 
+  if ('client_tax_rate_id' in clientTaxRatesColumns) {
+    rateData.client_tax_rate_id = uuidv4();
+  }
+
   await context.db('client_tax_rates')
-    .insert(rateData)
-    .onConflict(['client_id', 'tax_rate_id', 'tenant'])
-    .merge(rateData);
+    .where({ tenant: context.tenantId, client_id: context.clientId })
+    .delete();
+
+  await context.db('client_tax_rates').insert(rateData);
 }
 
 describe('Manual Invoice Generation', () => {

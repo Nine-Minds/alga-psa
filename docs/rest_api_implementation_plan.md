@@ -93,7 +93,7 @@ This document outlines the comprehensive implementation plan for creating REST A
 
 ### Phase 4: Billing & Financial APIs
 **Duration**: 3 weeks
-**Focus**: Invoicing, billing plans, payments, and financial reporting
+**Focus**: Invoicing, contract lines, payments, and financial reporting
 
 ### Phase 5: Configuration & Admin APIs
 **Duration**: 2 weeks
@@ -328,25 +328,25 @@ This document outlines the comprehensive implementation plan for creating REST A
   - ✅ `GET /api/v1/invoices/recurring` - Recurring templates
 
 #### Week 9: Billing Configuration ✅
-- [x] **API-018**: Billing Plans API ✅ (19 endpoints complete)
-  - ✅ `GET /api/v1/billing-plans` - List billing plans
-  - ✅ `POST /api/v1/billing-plans` - Create new billing plan
-  - ✅ `GET /api/v1/billing-plans/{id}` - Get billing plan details
-  - ✅ `PUT /api/v1/billing-plans/{id}` - Update billing plan
-  - ✅ `DELETE /api/v1/billing-plans/{id}` - Delete billing plan
-  - ✅ `GET /api/v1/billing-plans/{id}/services` - List plan services
-  - ✅ `POST /api/v1/billing-plans/{id}/services` - Add service to plan
-  - ✅ `GET /api/v1/billing-plans/{planId}/services/{serviceId}` - Service config
-  - ✅ `PUT /api/v1/billing-plans/{planId}/services/{serviceId}` - Update service config
-  - ✅ `DELETE /api/v1/billing-plans/{planId}/services/{serviceId}` - Remove service
-  - ✅ `PUT /api/v1/billing-plans/{id}/activation` - Activate/deactivate plan
-  - ✅ `POST /api/v1/billing-plans/{id}/copy` - Copy billing plan
-  - ✅ `GET /api/v1/billing-plans/{id}/analytics` - Plan analytics
-  - ✅ `GET /api/v1/billing-plans/{id}/usage-metrics` - Usage metrics
-  - ✅ `POST /api/v1/billing-plans/bulk` - Bulk operations
-  - ✅ `POST /api/v1/plan-templates` - Create plan template
-  - ✅ `POST /api/v1/plan-bundles` - Create plan bundle
-  - ✅ `POST /api/v1/company-billing-plans` - Assign plan to company
+- [x] **API-018**: Contract Lines API ✅ (19 endpoints complete)
+  - ✅ `GET /api/v1/contract-lines` - List contract lines
+  - ✅ `POST /api/v1/contract-lines` - Create new contract line
+  - ✅ `GET /api/v1/contract-lines/{id}` - Get contract line details
+  - ✅ `PUT /api/v1/contract-lines/{id}` - Update contract line
+  - ✅ `DELETE /api/v1/contract-lines/{id}` - Delete contract line
+  - ✅ `GET /api/v1/contract-lines/{id}/services` - List contract line services
+  - ✅ `POST /api/v1/contract-lines/{id}/services` - Add service to contract line
+  - ✅ `GET /api/v1/contract-lines/{planId}/services/{serviceId}` - Service config
+  - ✅ `PUT /api/v1/contract-lines/{planId}/services/{serviceId}` - Update service config
+  - ✅ `DELETE /api/v1/contract-lines/{planId}/services/{serviceId}` - Remove service
+  - ✅ `PUT /api/v1/contract-lines/{id}/activation` - Activate or deactivate a contract line
+  - ✅ `POST /api/v1/contract-lines/{id}/copy` - Copy contract line
+  - ✅ `GET /api/v1/contract-lines/{id}/analytics` - Contract line analytics
+  - ✅ `GET /api/v1/contract-lines/{id}/usage-metrics` - Usage metrics
+  - ✅ `POST /api/v1/contract-lines/bulk` - Bulk operations
+  - ✅ `POST /api/v1/contract-line-templates` - Create contract line template
+  - ✅ `POST /api/v1/contracts` - Create contract
+  - ✅ `POST /api/v1/company-contract-lines` - Assign contract line to company
   - ✅ `GET /api/v1/billing-analytics/overview` - Billing overview
 
 #### Week 10: Financial Management ✅
@@ -583,7 +583,7 @@ This document outlines the comprehensive implementation plan for creating REST A
 - **Schedules**: 5 endpoints ✅ (Schemas & Service Complete)
 - **Time Configuration**: 8 endpoints ✅ (Schemas & Service Complete)
 - **Invoices**: 25 endpoints ✅
-- **Billing Plans**: 19 endpoints ✅
+- **Contract Lines**: 19 endpoints ✅
 - **Financial Management**: 23 endpoints ✅
 
 ### Administration & Configuration ✅ COMPLETED (63 endpoints)
@@ -646,7 +646,7 @@ This document outlines the comprehensive implementation plan for creating REST A
 The REST API implementation has achieved **near-complete implementation** with all major functionality accessible through well-designed, secure REST endpoints:
 
 1. ✅ **All Core Business APIs** - Companies, Contacts, Tickets, Projects, Assets, Time Management (100% Complete)
-2. ✅ **All Financial APIs** - Invoices, Billing Plans, Financial Management, Credit Tracking (100% Complete)
+2. ✅ **All Financial APIs** - Invoices, Contract Lines, Financial Management, Credit Tracking (100% Complete)
 3. ✅ **All Administrative APIs** - Users, Teams, Permissions, Roles, Categories, Tags (100% Complete)
 4. ✅ **All Advanced Features** - Workflows, Automation, QuickBooks Integration, Webhooks (100% Complete)
 5. ✅ **Production Quality** - Error handling, validation, security, audit logging (100% Complete)

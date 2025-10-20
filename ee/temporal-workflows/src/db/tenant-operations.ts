@@ -7,6 +7,8 @@ import type {
   SetupTenantDataActivityInput,
   SetupTenantDataActivityResult
 } from '../types/workflow-types.js';
+import { updateSubscriptionMetadata } from '../services/stripe-service.js';
+import { getSecret } from '@alga-psa/shared/core';
 
 const logger = () => Context.current().log;
 
@@ -52,6 +54,91 @@ export async function createTenantInDB(
         tenantId,
         licenseCount: input.licenseCount
       });
+
+      // Insert Stripe customer and subscription if provided
+      if (input.stripeCustomerId) {
+        const MASTER_TENANT_ID = await getSecret('master_billing_tenant_id', 'MASTER_BILLING_TENANT_ID');
+
+        if (!MASTER_TENANT_ID) {
+          throw new Error('MASTER_BILLING_TENANT_ID not configured');
+        }
+
+        log.info('Creating Stripe customer record', {
+          tenantId,
+          stripeCustomerId: input.stripeCustomerId
+        });
+
+        const [stripeCustomer] = await trx('stripe_customers')
+          .insert({
+            tenant: tenantId,
+            stripe_customer_id: trx.raw('gen_random_uuid()'), // Internal UUID
+            stripe_customer_external_id: input.stripeCustomerId, // Stripe's ID (cus_...)
+            billing_tenant: MASTER_TENANT_ID,
+            email: input.email,
+            name: input.clientName || input.companyName || input.tenantName,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now(),
+          })
+          .returning('*');
+
+        log.info('Stripe customer created successfully', {
+          stripeCustomerId: input.stripeCustomerId,
+          internalId: stripeCustomer.stripe_customer_id
+        });
+
+        // Insert Stripe subscription if provided
+        if (input.stripeSubscriptionId && input.stripePriceId) {
+          log.info('Looking up Stripe price', {
+            stripePriceId: input.stripePriceId
+          });
+
+          // Check if price exists in our database
+          const price = await trx('stripe_prices')
+            .where({
+              stripe_price_external_id: input.stripePriceId,
+              tenant: MASTER_TENANT_ID
+            })
+            .first();
+
+          if (!price) {
+            log.warn(
+              `Price ${input.stripePriceId} not found in database. ` +
+              `Subscription will not be created. Ensure prices are pre-populated.`
+            );
+          } else {
+            log.info('Creating Stripe subscription record', {
+              tenantId,
+              stripeSubscriptionId: input.stripeSubscriptionId,
+              quantity: input.licenseCount || 1
+            });
+
+            await trx('stripe_subscriptions')
+              .insert({
+                tenant: tenantId,
+                stripe_subscription_id: trx.raw('gen_random_uuid()'), // Internal UUID
+                stripe_subscription_external_id: input.stripeSubscriptionId, // Stripe's ID (sub_...)
+                stripe_subscription_item_id: input.stripeSubscriptionItemId, // For quantity updates
+                stripe_customer_id: stripeCustomer.stripe_customer_id, // FK to our stripe_customers
+                stripe_price_id: price.stripe_price_id, // FK to our stripe_prices
+                status: 'active',
+                quantity: input.licenseCount || 1,
+                current_period_start: knex.fn.now(),
+                current_period_end: trx.raw(`NOW() + INTERVAL '1 month'`),
+                created_at: knex.fn.now(),
+                updated_at: knex.fn.now(),
+              })
+              .returning('*');
+
+            log.info('Stripe subscription created successfully', {
+              stripeSubscriptionId: input.stripeSubscriptionId
+            });
+          }
+        }
+      } else {
+        log.info('No Stripe customer ID provided, skipping Stripe integration', {
+          tenantId
+        });
+      }
 
       // Create client if name is provided (now with tenant ID)
       let clientId: string | undefined;
@@ -104,6 +191,35 @@ export async function createTenantInDB(
       return { tenantId, clientId };
     });
 
+    // Update Stripe subscription metadata with tenant ID (outside transaction)
+    // This links the Stripe subscription to our tenant
+    if (input.stripeSubscriptionId && result.tenantId) {
+      try {
+        log.info('Updating Stripe subscription metadata with tenant ID', {
+          stripeSubscriptionId: input.stripeSubscriptionId,
+          tenantId: result.tenantId
+        });
+
+        await updateSubscriptionMetadata(input.stripeSubscriptionId, {
+          tenant_id: result.tenantId,
+          tenant_name: input.clientName || input.companyName || input.tenantName,
+        });
+
+        log.info('Stripe subscription metadata updated successfully', {
+          stripeSubscriptionId: input.stripeSubscriptionId,
+          tenantId: result.tenantId
+        });
+      } catch (metadataError) {
+        // Log the error but don't fail the tenant creation
+        // The subscription exists in our DB, metadata update is optional
+        log.error('Failed to update Stripe subscription metadata (non-fatal)', {
+          error: metadataError instanceof Error ? metadataError.message : 'Unknown error',
+          stripeSubscriptionId: input.stripeSubscriptionId,
+          tenantId: result.tenantId
+        });
+      }
+    }
+
     return {
       tenantId: result.tenantId,
       clientId: result.clientId,
@@ -117,7 +233,7 @@ export async function createTenantInDB(
 }
 
 /**
- * Set up initial tenant data (billing plans, default settings, etc.)
+ * Set up initial tenant data (contract lines, default settings, etc.)
  */
 export async function setupTenantDataInDB(
   input: SetupTenantDataActivityInput
@@ -134,15 +250,20 @@ export async function setupTenantDataInDB(
       try {
         await trx('tenant_email_settings')
           .insert({
-            tenant_id: input.tenantId,
+            tenant: input.tenantId,
             email_provider: 'resend',
             fallback_enabled: true,
             tracking_enabled: false
           });
         setupSteps.push('email_settings');
+        log.info('Tenant email settings created successfully', { tenantId: input.tenantId });
       } catch (error) {
-        // If it already exists, that's fine
-        log.info('Tenant email settings already exist, skipping', { tenantId: input.tenantId });
+        // If it already exists, that's fine - log but don't block tenant creation
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        log.warn('Failed to create tenant email settings (non-blocking)', {
+          tenantId: input.tenantId,
+          error: errorMessage
+        });
       }
 
       // Initialize tenant settings with onboarding flags set to false
@@ -158,9 +279,14 @@ export async function setupTenantDataInDB(
             updated_at: knex.fn.now()
           });
         setupSteps.push('tenant_settings');
+        log.info('Tenant settings created successfully', { tenantId: input.tenantId });
       } catch (error) {
-        // If it already exists, that's fine
-        log.info('Tenant settings already exist, skipping', { tenantId: input.tenantId });
+        // If it already exists, that's fine - log but don't block tenant creation
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        log.warn('Failed to create tenant settings (non-blocking)', {
+          tenantId: input.tenantId,
+          error: errorMessage
+        });
       }
 
       // Create tenant-client association if we have a client/company id
@@ -173,9 +299,15 @@ export async function setupTenantDataInDB(
               is_default: true
             });
           setupSteps.push('tenant_client_association');
+          log.info('Tenant-client association created successfully', { tenantId: input.tenantId, clientId: input.clientId });
         } catch (error) {
-          // If it already exists, that's fine
-          log.info('Tenant-client association already exists, skipping', { tenantId: input.tenantId, clientId: input.clientId });
+          // If it already exists, that's fine - log but don't block tenant creation
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          log.warn('Failed to create tenant-client association (non-blocking)', {
+            tenantId: input.tenantId,
+            clientId: input.clientId,
+            error: errorMessage
+          });
         }
       }
 

@@ -13,8 +13,9 @@ import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate } from '../../../../../test-utils/dateUtils';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
+import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
@@ -222,12 +223,12 @@ describe('Credit Expiration Integration Tests', () => {
         'transactions',
         'credit_tracking',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
+        'bucket_usage',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -293,75 +294,64 @@ describe('Credit Expiration Integration Tests', () => {
         updated_at: new Date().toISOString()
       });
 
-    // Ensure client billing settings are present (adhere to defaults for expiration)
-    await ensureClientBillingSettings(context, {
-      enable_credit_expiration: true
-    });
+    const clientId = context.clientId;
 
-    // Create a billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
 
+    const nyTaxRateId = await setupClientTaxConfiguration(context, {
+      clientId,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY Test Tax'
+    });
+
+    const negativeService = await createTestService(context, {
+      service_name: 'Credit Service',
+      default_rate: -5000, // -$50.00
+      billing_method: 'fixed',
+      unit_of_measure: 'unit',
+      tax_rate_id: nyTaxRateId,
+      tax_region: 'US-NY'
+    });
+
+    const { contractLineId: planId } = await createFixedPlanAssignment(context, negativeService, {
+      planName: 'Credit Plan',
+      baseRateCents: -5000,
+      detailBaseRateCents: -5000,
+      quantity: 1,
+      billingFrequency: 'monthly',
+      startDate
+    });
+
+    // Create a billing cycle
     const billingCycleId = await context.createEntity('client_billing_cycles', {
-      client_id: context.clientId,
+      client_id: clientId,
       billing_cycle: 'monthly',
       period_start_date: startDate,
       period_end_date: endDate,
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    // Ensure the client has an active billing plan so credit application can proceed
-    const service = await createTestService(context, {
-      service_name: 'Standard Service',
-      default_rate: 10000,
-      tax_region: 'US-NY'
-    });
-
-    const { planId, clientBillingPlanId } = await createFixedPlanAssignment(context, service, {
-      planName: 'Standard Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      detailBaseRateCents: 0,
-      quantity: 1,
-      startDate: startDate
-    });
-
-    const existingPlan = await context.db('client_billing_plans')
-      .where({ client_id: context.clientId, tenant: context.tenantId })
-      .first();
-    expect(existingPlan).toBeTruthy();
-    expect(existingPlan.tenant).toBe(context.tenantId);
-
-    await runWithTenant(context.tenantId, async () => {
-      const { knex } = await createTenantKnex();
-      const planForTenant = await knex('client_billing_plans')
-        .where({ client_id: context.clientId, tenant: context.tenantId })
-        .first();
-
-      if (!planForTenant) {
-        await knex('client_billing_plans').insert({
-          tenant: context.tenantId,
-          client_billing_plan_id: clientBillingPlanId,
-          client_id: context.clientId,
-          plan_id: planId,
-          service_category: null,
-          is_active: true,
-          start_date: startDate,
-          end_date: null,
-          client_bundle_id: null
-        });
-      }
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: clientId,
+      contract_line_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
     });
 
     // Check initial credit balance is zero
-    const initialCredit = await ClientBillingPlan.getClientCredit(context.clientId);
+    const initialCredit = await ClientContractLine.getClientCredit(clientId);
     expect(initialCredit).toBe(0);
 
     // Create a manual negative invoice to simulate a credit-issuing invoice
     const { invoiceId, total } = await createManualInvoice(
       context,
-      context.clientId,
+      clientId,
       [
         {
           description: 'Credit Service',
@@ -380,13 +370,13 @@ describe('Credit Expiration Integration Tests', () => {
     await runWithTenant(context.tenantId, async () => finalizeInvoice(invoiceId));
 
     // Verify the client credit balance has increased
-    const updatedCredit = await ClientBillingPlan.getClientCredit(context.clientId);
+    const updatedCredit = await ClientContractLine.getClientCredit(clientId);
     expect(updatedCredit).toBe(5000); // $50.00 credit
 
     // Verify credit issuance transaction
     const creditTransaction = await context.db('transactions')
       .where({
-        client_id: context.clientId,
+        client_id: clientId,
         invoice_id: invoiceId,
         type: 'credit_issuance_from_negative_invoice'
       })
@@ -429,19 +419,40 @@ describe('Credit Expiration Integration Tests', () => {
   });
 
   it('should verify that expired credits are excluded from credit application', async () => {
-    await ensureClientBillingSettings(context, {
-      enable_credit_expiration: true,
-      credit_expiration_days: 60,
-      credit_expiration_notification_days: [30, 14, 7]
-    });
+    const clientId = context.clientId;
 
-    // Create a billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
 
+    const nyTaxRateId = await setupClientTaxConfiguration(context, {
+      clientId,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY Test Tax'
+    });
+
+    const service = await createTestService(context, {
+      service_name: 'Standard Service',
+      default_rate: 10000, // $100.00
+      billing_method: 'fixed',
+      unit_of_measure: 'unit',
+      tax_rate_id: nyTaxRateId,
+      tax_region: 'US-NY'
+    });
+
+    await createFixedPlanAssignment(context, service, {
+      planName: 'Standard Plan',
+      baseRateCents: 10000,
+      detailBaseRateCents: 10000,
+      quantity: 1,
+      billingFrequency: 'monthly',
+      startDate
+    });
+
+    // Create a billing cycle
     const billingCycleId = await context.createEntity('client_billing_cycles', {
-      client_id: context.clientId,
+      client_id: clientId,
       billing_cycle: 'monthly',
       period_start_date: startDate,
       period_end_date: endDate,
@@ -455,7 +466,7 @@ describe('Credit Expiration Integration Tests', () => {
 
     const expiredCreditAmount = 5000; // $50.00 credit
     const expiredPrepaymentInvoice = await createPrepaymentInvoice(
-      context.clientId,
+      clientId,
       expiredCreditAmount,
       expiredDate
     );
@@ -467,7 +478,7 @@ describe('Credit Expiration Integration Tests', () => {
 
     const activeCreditAmount = 7000; // $70.00 credit
     const activePrepaymentInvoice = await createPrepaymentInvoice(
-      context.clientId,
+      clientId,
       activeCreditAmount,
       activeDate
     );
@@ -479,7 +490,7 @@ describe('Credit Expiration Integration Tests', () => {
     // Step 4: Get the credit transactions
     const expiredCreditTransaction = await context.db('transactions')
       .where({
-        client_id: context.clientId,
+        client_id: clientId,
         invoice_id: expiredPrepaymentInvoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -487,7 +498,7 @@ describe('Credit Expiration Integration Tests', () => {
 
     const activeCreditTransaction = await context.db('transactions')
       .where({
-        client_id: context.clientId,
+        client_id: clientId,
         invoice_id: activePrepaymentInvoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -508,7 +519,7 @@ describe('Credit Expiration Integration Tests', () => {
     // Create an expiration transaction
     await context.db('transactions').insert({
       transaction_id: uuidv4(),
-      client_id: context.clientId,
+      client_id: clientId,
       amount: -expiredCreditAmount,
       type: 'credit_expiration',
       status: 'completed',
@@ -520,14 +531,14 @@ describe('Credit Expiration Integration Tests', () => {
 
     // Update client credit balance to reflect the expired credit
     await context.db('clients')
-      .where({ client_id: context.clientId, tenant: context.tenantId })
+      .where({ client_id: clientId, tenant: context.tenantId })
       .update({
         credit_balance: activeCreditAmount, // Only the active credit remains
         updated_at: new Date().toISOString()
       });
 
     // Step 6: Verify initial credit balance (should only include active credit)
-    const initialCredit = await ClientBillingPlan.getClientCredit(context.clientId);
+    const initialCredit = await ClientContractLine.getClientCredit(clientId);
     expect(initialCredit).toBe(activeCreditAmount);
 
     // Step 7: Create a manual positive invoice for the billing cycle
@@ -535,7 +546,7 @@ describe('Credit Expiration Integration Tests', () => {
     const tax = 1000; // $10.00 (10%)
     const { invoiceId: positiveInvoiceId } = await createManualInvoice(
       context,
-      context.clientId,
+      clientId,
       [
         {
           description: 'Standard Service',
@@ -586,7 +597,7 @@ describe('Credit Expiration Integration Tests', () => {
 
       await context.db('transactions').insert({
         transaction_id: creditApplicationTransactionId,
-        client_id: context.clientId,
+        client_id: clientId,
         invoice_id: positiveInvoiceId,
         amount: -activeCreditAmount,
         type: 'credit_application',
@@ -600,7 +611,7 @@ describe('Credit Expiration Integration Tests', () => {
 
       await context.db('transactions').insert({
         transaction_id: uuidv4(),
-        client_id: context.clientId,
+        client_id: clientId,
         amount: -activeCreditAmount,
         type: 'credit_adjustment',
         status: 'completed',
@@ -634,7 +645,7 @@ describe('Credit Expiration Integration Tests', () => {
         });
 
       await context.db('clients')
-        .where({ client_id: context.clientId, tenant: context.tenantId })
+        .where({ client_id: clientId, tenant: context.tenantId })
         .update({
           credit_balance: newBalance,
           updated_at: nowIso
@@ -657,7 +668,7 @@ describe('Credit Expiration Integration Tests', () => {
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await context.db('transactions')
       .where({
-        client_id: context.clientId,
+        client_id: clientId,
         invoice_id: positiveInvoiceId,
         type: 'credit_application'
       })
@@ -701,7 +712,7 @@ describe('Credit Expiration Integration Tests', () => {
     expect(Number(activeCreditTracking.remaining_amount)).toBe(0); // Fully used
 
     // Step 15: Verify final credit balance is zero
-    const finalCredit = await ClientBillingPlan.getClientCredit(context.clientId);
+    const finalCredit = await ClientContractLine.getClientCredit(clientId);
     expect(finalCredit).toBe(0);
   });
 });

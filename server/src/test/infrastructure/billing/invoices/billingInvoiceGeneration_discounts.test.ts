@@ -3,7 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createTestService, assignServiceTaxRate } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, ensureDefaultBillingSettings, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -28,14 +28,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -62,54 +100,15 @@ async function getInvoiceItems(invoiceId: string) {
 }
 
 async function configureNyTax(taxPercentage = 10) {
-  const taxRateId = uuidv4();
-
-  await context.db('tax_regions')
-    .insert({
-      tenant: context.tenantId,
-      region_code: 'US-NY',
-      region_name: 'New York',
-      is_active: true
-    })
-    .onConflict(['tenant', 'region_code'])
-    .ignore();
-
-  await context.db('tax_rates').insert({
-    tax_rate_id: taxRateId,
-    tenant: context.tenantId,
-    region_code: 'US-NY',
-    tax_percentage: taxPercentage,
-    description: `US-NY ${taxPercentage}% Tax`,
-    start_date: '2025-01-01T00:00:00.000Z'
+  const taxRateId = await setupClientTaxConfiguration(context, {
+    regionCode: 'US-NY',
+    regionName: 'New York',
+    taxPercentage,
+    startDate: '2025-01-01T00:00:00.000Z'
   });
 
-  await context.db('client_tax_settings')
-    .insert({
-      tenant: context.tenantId,
-      client_id: context.clientId,
-      is_reverse_charge_applicable: false
-    })
-    .onConflict(['tenant', 'client_id'])
-    .merge({ is_reverse_charge_applicable: false });
-
-  await context.db('client_tax_rates')
-    .where({ tenant: context.tenantId, client_id: context.clientId })
-    .update({ is_default: false })
-    .catch(() => undefined);
-
-  await context.db('client_tax_rates')
-    .insert({
-      client_tax_rates_id: uuidv4(),
-      tenant: context.tenantId,
-      client_id: context.clientId,
-      tax_rate_id: taxRateId,
-      is_default: true,
-      location_id: null
-    })
-    .onConflict(['client_id', 'tax_rate_id', 'tenant'])
-    .merge({ is_default: true, location_id: null });
-
-  await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: false });
+  await ensureClientPlanBundlesTable(context);
 
   return taxRateId;
 }
@@ -117,7 +116,7 @@ async function configureNyTax(taxPercentage = 10) {
 describe('Billing Invoice Discount Applications', () => {
   beforeAll(async () => {
     context = await setupContext({
-      runSeeds: true,
+      runSeeds: false,
       cleanupTables: [
         'invoice_items',
         'invoices',
@@ -126,10 +125,11 @@ describe('Billing Invoice Discount Applications', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_services',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -147,6 +147,7 @@ describe('Billing Invoice Discount Applications', () => {
     });
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
+    await ensureDefaultBillingSettings(context);
   }, 60000);
 
   beforeEach(async () => {
@@ -160,6 +161,7 @@ describe('Billing Invoice Discount Applications', () => {
     mockedUserId = mockContext.userId;
 
     expect(context.client.is_tax_exempt).toBe(false);
+    await ensureDefaultBillingSettings(context);
   }, 30000);
 
   afterEach(async () => {

@@ -84,7 +84,7 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): JSX.Ele
         return (
             <div className={`relative w-full h-48 ${className}`}>
                 <Image
-                    src={`/api/files/${document.file_id}/preview`}
+                    src={`/api/documents/view/${document.file_id}/preview`}
                     alt={document.document_name}
                     fill
                     className="object-contain rounded-md"
@@ -142,6 +142,41 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): JSX.Ele
                 <pre className="text-sm whitespace-pre-wrap font-mono">
                     {preview.content}
                 </pre>
+            </div>
+        );
+    }
+
+    // Video preview with thumbnail
+    if (mime.startsWith('video/')) {
+        if (preview?.previewImage) {
+            return (
+                <div className={`relative w-full h-48 ${className}`}>
+                    <Image
+                        src={preview.previewImage}
+                        alt={`Thumbnail of ${document.document_name}`}
+                        fill
+                        className="object-contain rounded-md bg-black"
+                    />
+                    {/* Video play icon overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-black bg-opacity-50 rounded-full p-4">
+                            <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        // Fallback for videos without thumbnails
+        return (
+            <div className={`flex items-center justify-center h-48 bg-gray-900 rounded-md ${className}`}>
+                <div className="text-center">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span className="text-gray-400">Video File</span>
+                </div>
             </div>
         );
     }

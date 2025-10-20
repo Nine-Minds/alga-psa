@@ -5,8 +5,8 @@ import { Table } from "server/src/components/ui/Table";
 import { Button } from "server/src/components/ui/Button";
 import { Dialog, DialogContent } from "server/src/components/ui/Dialog";
 import { useState, useEffect } from 'react';
-import { 
-  getActiveServices, 
+import {
+  getActiveServices,
   getServiceUpgrades,
   upgradeService,
   downgradeService,
@@ -21,7 +21,7 @@ export default function ServicesSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [availablePlans, setAvailablePlans] = useState<ServicePlan[]>([]);
+  const [availableContractLines, setAvailableContractLines] = useState<ServicePlan[]>([]);
   const [isManaging, setIsManaging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -47,15 +47,15 @@ export default function ServicesSection() {
     setIsProcessing(false);
 
     try {
-      const plans = await getServiceUpgrades(service.id);
-      setAvailablePlans(plans);
+      const contractLines = await getServiceUpgrades(service.id);
+      setAvailableContractLines(contractLines);
       setIsManaging(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('account.services.loadPlansError', 'Failed to load service plans'));
+      setError(err instanceof Error ? err.message : t('account.services.loadContractLinesError', 'Failed to load service contract lines'));
     }
   };
 
-  const handleServiceChange = async (planId: string, isUpgrade: boolean) => {
+  const handleServiceChange = async (contractLineId: string, isUpgrade: boolean) => {
     if (!selectedService) return;
     
     setIsProcessing(true);
@@ -63,9 +63,9 @@ export default function ServicesSection() {
 
     try {
       if (isUpgrade) {
-        await upgradeService(selectedService.id, planId);
+        await upgradeService(selectedService.id, contractLineId);
       } else {
-        await downgradeService(selectedService.id, planId);
+        await downgradeService(selectedService.id, contractLineId);
       }
 
       // Refresh services list
@@ -75,7 +75,7 @@ export default function ServicesSection() {
       // Close dialog
       setIsManaging(false);
       setSelectedService(null);
-      setAvailablePlans([]);
+      setAvailableContractLines([]);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : t('account.services.updateError', 'Failed to update service'));
     } finally {
@@ -106,7 +106,7 @@ export default function ServicesSection() {
               <th>{t('account.services.columns.service', 'Service')}</th>
               <th>{t('account.services.columns.description', 'Description')}</th>
               <th>{t('account.services.columns.status', 'Status')}</th>
-              <th>{t('account.services.columns.currentPlan', 'Current Plan')}</th>
+              <th>{t('account.services.columns.currentContractLine', 'Current Contract Line')}</th>
               <th>{t('account.services.columns.nextBilling', 'Next Billing')}</th>
               <th>{t('clientPortal.common.actions', 'Actions')}</th>
             </tr>
@@ -163,7 +163,7 @@ export default function ServicesSection() {
       <Dialog isOpen={isManaging} onClose={() => {
         setIsManaging(false);
         setSelectedService(null);
-        setAvailablePlans([]);
+        setAvailableContractLines([]);
         setActionError('');
       }}>
         <DialogContent>
@@ -176,7 +176,7 @@ export default function ServicesSection() {
             </h3>
 
             <div>
-              <h4 className="text-sm font-medium mb-2">{t('account.services.currentPlan', 'Current Plan')}</h4>
+              <h4 className="text-sm font-medium mb-2">{t('account.services.currentContractLine', 'Current Contract Line')}</h4>
               <div className="text-sm text-gray-600">
                 {selectedService?.billing.display}
                 {selectedService?.rate && (
@@ -186,33 +186,33 @@ export default function ServicesSection() {
             </div>
 
             <div>
-              <h4 className="text-sm font-medium mb-4">{t('account.services.availablePlans', 'Available Plans')}</h4>
+              <h4 className="text-sm font-medium mb-4">{t('account.services.availableContractLines', 'Available Contract Lines')}</h4>
               <div className="space-y-4">
-                {availablePlans.map((plan):JSX.Element => (
-                  <Card key={plan.id} className="p-4">
+                {availableContractLines.map((contractLine):JSX.Element => (
+                  <Card key={contractLine.id} className="p-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h5 className="font-medium">{plan.name}</h5>
-                        <p className="text-sm text-gray-600 mt-1">{plan.description}</p>
+                        <h5 className="font-medium">{contractLine.name}</h5>
+                        <p className="text-sm text-gray-600 mt-1">{contractLine.description}</p>
                         <div className="mt-2">
-                          <span className="text-sm font-medium">{plan.rate.displayAmount}</span>
+                          <span className="text-sm font-medium">{contractLine.rate.displayAmount}</span>
                         </div>
                       </div>
                       <div>
-                        {!plan.isCurrentPlan && (
+                        {!contractLine.isCurrentPlan && (
                           <Button
-                            id={`plan-change-${plan.id}`}
+                            id={`contract-line-change-${contractLine.id}`}
                             variant="outline"
                             size="sm"
                             onClick={() => handleServiceChange(
-                              plan.id,
-                              Number(plan.rate.amount) > Number(selectedService?.rate?.amount || 0)
+                              contractLine.id,
+                              Number(contractLine.rate.amount) > Number(selectedService?.rate?.amount || 0)
                             )}
                             disabled={isProcessing}
                           >
                             {isProcessing
                               ? t('common:status.processing', 'Processing...')
-                              : Number(plan.rate.amount) > Number(selectedService?.rate?.amount || 0)
+                              : Number(contractLine.rate.amount) > Number(selectedService?.rate?.amount || 0)
                                 ? t('account.services.actions.upgrade', 'Upgrade')
                                 : t('account.services.actions.downgrade', 'Downgrade')
                             }
@@ -236,7 +236,7 @@ export default function ServicesSection() {
                 onClick={() => {
                   setIsManaging(false);
                   setSelectedService(null);
-                  setAvailablePlans([]);
+                  setAvailableContractLines([]);
                   setActionError('');
                 }}
                 disabled={isProcessing}

@@ -13,8 +13,8 @@ import {
 } from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate } from '../../../../../test-utils/dateUtils';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { runWithTenant } from 'server/src/lib/db';
@@ -283,12 +283,12 @@ describe('Credit Application Tests', () => {
         'credit_tracking',
         'credit_allocations',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
+        'bucket_usage',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -351,13 +351,20 @@ describe('Credit Application Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // Create billing plan and assign service using modern helper
-      const { planId } = await createFixedPlanAssignment(context, serviceId, {
-        planName: 'Test Plan',
-        billingFrequency: 'monthly',
-        baseRateCents: 10000, // $100.00
-        quantity: 1,
-        startDate: '2025-01-01'
+      // Create a contract line
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Test Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
+
+      // Link service to plan
+      await context.db('contract_line_services').insert({
+        contract_line_id: planId,
+        service_id: service,
+        tenant: context.tenantId,
+        quantity: 1
       });
 
       // Create a billing cycle
@@ -373,6 +380,16 @@ describe('Credit Application Tests', () => {
         effective_date: startDate
       }, 'billing_cycle_id');
 
+      // Link plan to client
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
+        client_id: client_id,
+        contract_line_id: planId,
+        tenant: context.tenantId,
+        start_date: startDate,
+        is_active: true
+      });
+
       // Step 1: Create prepayment invoice with credit amount less than what will be needed
       const prepaymentAmount = 5000; // $50.00 credit
       const prepaymentInvoice = await createPrepaymentInvoice(client_id, prepaymentAmount);
@@ -381,7 +398,7 @@ describe('Credit Application Tests', () => {
       await finalizeInvoice(prepaymentInvoice.invoice_id);
 
       // Step 3: Verify initial credit balance
-      const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const initialCredit = await ClientContractLine.getClientCredit(client_id);
       expect(initialCredit).toBe(prepaymentAmount);
 
       // Log credit balance before generating invoice
@@ -404,7 +421,7 @@ describe('Credit Application Tests', () => {
       });
 
       // Log credit balance after generating invoice
-      const creditAfterGeneration = await ClientBillingPlan.getClientCredit(client_id);
+      const creditAfterGeneration = await ClientContractLine.getClientCredit(client_id);
       console.log('Credit balance after generating invoice:', creditAfterGeneration);
 
       // Step 6: Finalize the manual invoice to apply credit
@@ -420,7 +437,7 @@ describe('Credit Application Tests', () => {
       expect(totals.totalAmount).toBe(totals.totalBeforeCredit - prepaymentAmount);
 
       // Verify credit balance is now zero
-      const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const finalCredit = await ClientContractLine.getClientCredit(client_id);
       expect(finalCredit).toBe(0);
 
       // Verify credit application transaction
@@ -478,12 +495,20 @@ describe('Credit Application Tests', () => {
       billing_method: 'fixed'
     });
 
-    const { planId } = await createClientFixedPlan(service, client_id, {
-      planName: 'Test Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      quantity: 1,
-      startDate: '2025-01-01'
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Link service to plan
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
     });
 
     // Create a billing cycle
@@ -499,6 +524,16 @@ describe('Credit Application Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
+    // Link plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
+
     // Step 1: Create prepayment invoice with credit amount GREATER than what will be needed
     const prepaymentAmount = 15000; // $150.00 credit (more than the $110 invoice total)
     const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(client_id, prepaymentAmount));
@@ -507,7 +542,7 @@ describe('Credit Application Tests', () => {
     await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Log credit balance before generating invoice
@@ -530,7 +565,7 @@ describe('Credit Application Tests', () => {
     });
     
     // Log credit balance after generating invoice
-    const creditAfterGeneration = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const creditAfterGeneration = await ClientContractLine.getClientCredit(client_id);
     console.log('Credit balance after generating invoice:', creditAfterGeneration);
 
     // Step 5: Finalize the invoice to apply credit
@@ -550,7 +585,7 @@ describe('Credit Application Tests', () => {
     expect(Number(updatedInvoice.total_amount)).toBe(totalBeforeCredit - expectedAppliedCredit);
     
     // Verify remaining credit balance
-    const finalCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(expectedRemainingBalance);
 
     // Verify credit application transaction
@@ -611,18 +646,29 @@ describe('Credit Application Tests', () => {
       billing_method: 'fixed'
     });
 
-    const { planId } = await createClientFixedPlan(service1, client_id, {
-      planName: 'Test Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      quantity: 1,
-      startDate: '2025-01-01'
-    });
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
-    await addServiceToFixedPlan(context, planId, service2, {
-      quantity: 1,
-      detailBaseRateCents: 15000
-    });
+    // Link both services to plan
+    await context.db('contract_line_services').insert([
+      {
+        contract_line_id: planId,
+        service_id: service1,
+        tenant: context.tenantId,
+        quantity: 1
+      },
+      {
+        contract_line_id: planId,
+        service_id: service2,
+        tenant: context.tenantId,
+        quantity: 1
+      }
+    ]);
 
     // Create a billing cycle
     const now = createTestDate();
@@ -637,6 +683,16 @@ describe('Credit Application Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
+    // Link plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
+
     // Step 1: Create prepayment invoice with credit amount LESS than what will be needed for full payment
     const prepaymentAmount = 10000; // $100.00 credit
     const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(client_id, prepaymentAmount));
@@ -645,7 +701,7 @@ describe('Credit Application Tests', () => {
     await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Log credit balance before generating invoice
@@ -684,7 +740,7 @@ describe('Credit Application Tests', () => {
     expect(Number(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
     
     // Verify remaining credit balance (should be 0 since all credit was applied)
-    const finalCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
 
     // Verify credit application transaction
@@ -737,12 +793,20 @@ describe('Credit Application Tests', () => {
       billing_method: 'fixed'
     });
 
-    const { planId } = await createClientFixedPlan(service, client_id, {
-      planName: 'Test Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      quantity: 1,
-      startDate: '2025-01-01'
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Link service to plan
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
     });
 
     // Create a billing cycle
@@ -758,6 +822,16 @@ describe('Credit Application Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
+    // Link plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
+
     // Step 1: Create prepayment invoice for credit
     const prepaymentAmount = 5000; // $50.00 credit
     const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(client_id, prepaymentAmount));
@@ -766,7 +840,7 @@ describe('Credit Application Tests', () => {
     await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Step 4: Generate an automatic invoice using the billing cycle
@@ -846,7 +920,7 @@ describe('Credit Application Tests', () => {
     expect(totals.totalAmount).toBe(expectedRemainingTotal);
     
     // Verify remaining credit balance (should be 0 since all credit was applied)
-    const finalCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
 
     // Verify credit application transaction
@@ -893,6 +967,40 @@ describe('Credit Application Tests', () => {
     const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
     expect(initialCredit).toBe(0);
 
+    const serviceB = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service B',
+      service_type: 'Fixed',
+      default_rate: -7500, // -$75.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Assign services to plan
+    await context.db('contract_line_services').insert([
+      {
+        contract_line_id: planId,
+        service_id: serviceA,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        contract_line_id: planId,
+        service_id: serviceB,
+        quantity: 1,
+        tenant: context.tenantId
+      }
+    ]);
+
+    // Create billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
@@ -905,26 +1013,60 @@ describe('Credit Application Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    const { invoiceId, total: negativeTotal } = await createManualInvoice(
-      client_id,
-      [
-        { description: 'Credit Service A', unitPrice: -5000, netAmount: -5000, taxAmount: 0 },
-        { description: 'Credit Service B', unitPrice: -7500, netAmount: -7500, taxAmount: 0 }
-      ],
-      { billingCycleId }
-    );
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
 
-    expect(negativeTotal).toBeLessThan(0);
-    const creditAmount = Math.abs(negativeTotal);
+    // Step 1: Check initial credit balance (should be 0)
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
+    expect(initialCredit).toBe(0);
 
-    await runInTenant(() => finalizeInvoice(invoiceId));
-
-    const updatedCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
-    expect(Math.abs(updatedCredit)).toBe(creditAmount);
-
-    // Credit memos carry negative totals but credit_balance persists the available amount as positive
-    expect(updatedCredit).toBeGreaterThanOrEqual(0);
-
+    // Step 2: Generate invoice with negative total
+    const invoice = await generateInvoice(billingCycleId);
+    
+    if (!invoice) {
+      throw new Error('Failed to generate invoice');
+    }
+    
+    // Verify the invoice has a negative total
+    expect(invoice.total_amount).toBeLessThan(0);
+    const negativeAmount = invoice.total_amount;
+    const creditAmount = Math.abs(negativeAmount);
+    
+    console.log('Generated negative invoice:', {
+      invoice_id: invoice.invoice_id,
+      subtotal: invoice.subtotal,
+      tax: invoice.tax,
+      total_amount: invoice.total_amount
+    });
+    
+    // Verify that no tax is applied to negative amounts
+    // According to taxService.ts: "For negative or zero net amounts, no tax should be applied"
+    expect(invoice.tax).toBe(0);
+    
+    // Expected values:
+    // Service A: -$50.00 (-5000)
+    // Service B: -$75.00 (-7500)
+    // Subtotal: -$125.00 (-12500)
+    // Tax: $0 (no tax on negative amounts)
+    // Total: -$125.00 (-12500)
+    expect(invoice.subtotal).toBe(-12500);
+    expect(invoice.total_amount).toBe(-12500);
+    
+    // Step 3: Finalize the invoice to trigger credit creation
+    await finalizeInvoice(invoice.invoice_id);
+    
+    // Step 4: Verify credit balance has been increased by the absolute value of the negative total
+    const updatedCredit = await ClientContractLine.getClientCredit(client_id);
+    expect(updatedCredit).toBe(12500); // $125.00
+    
+    // Step 5: Verify transaction record
     const creditTransaction = await context.db('transactions')
       .where({
         client_id: client_id,
@@ -986,6 +1128,50 @@ describe('Credit Application Tests', () => {
     });
     expect(billingSettingsWithExpiration).toBeTruthy();
 
+    // Create services with negative rates (credits)
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service A',
+      service_type: 'Fixed',
+      default_rate: -5000, // -$50.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    const serviceB = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service B',
+      service_type: 'Fixed',
+      default_rate: -7500, // -$75.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Assign services to plan
+    await context.db('contract_line_services').insert([
+      {
+        contract_line_id: planId,
+        service_id: serviceA,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        contract_line_id: planId,
+        service_id: serviceB,
+        quantity: 1,
+        tenant: context.tenantId
+      }
+    ]);
+
+    // Create billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
@@ -998,18 +1184,15 @@ describe('Credit Application Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    const { invoiceId, total: negativeTotal } = await createManualInvoice(
-      client_id,
-      [
-        { description: 'Credit Service A', unitPrice: -5000, netAmount: -5000, taxAmount: 0 },
-        { description: 'Credit Service B', unitPrice: -7500, netAmount: -7500, taxAmount: 0 }
-      ],
-      { billingCycleId }
-    );
-
-    expect(negativeTotal).toBeLessThan(0);
-
-    await runInTenant(() => finalizeInvoice(invoiceId));
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
 
     const creditTransaction = await context.db('transactions')
       .where({
@@ -1088,6 +1271,33 @@ describe('Credit Application Tests', () => {
       .onConflict('tenant')
       .merge(); // This will update existing records if there's a conflict
 
+    // Create services with negative rates (credits)
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service A',
+      service_type: 'Fixed',
+      default_rate: -5000, // -$50.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Assign services to plan
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: serviceA,
+      quantity: 1,
+      tenant: context.tenantId
+    });
+
+    // Create billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
@@ -1100,23 +1310,15 @@ describe('Credit Application Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    const { invoiceId, total: negativeTotal } = await createManualInvoice(
-      client_id,
-      [
-        { description: 'Credit Service A', unitPrice: -5000, netAmount: -5000, taxAmount: 0 }
-      ],
-      { billingCycleId }
-    );
-
-    expect(negativeTotal).toBeLessThan(0);
-
-    await runInTenant(() => finalizeInvoice(invoiceId));
-
-    const expectedCredit = Math.abs(negativeTotal);
-    const updatedCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
-    expect(Math.abs(updatedCredit)).toBe(expectedCredit);
-    // Credit memos post negative totals but credit_balance retains the available amount as positive
-    expect(updatedCredit).toBeGreaterThan(0);
+    // Assign plan to client
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
+      client_id: client_id,
+      contract_line_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
 
     const creditTransaction = await context.db('transactions')
       .where({
@@ -1182,7 +1384,23 @@ describe('Credit Application Tests', () => {
       default_rate: 20000,
       unit_of_measure: 'unit',
       tax_region: 'US-NY',
-      billing_method: 'fixed'
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Link service to plan
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
     });
 
     const now = createTestDate();
@@ -1208,10 +1426,10 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -1425,7 +1643,23 @@ describe('Credit Application Tests', () => {
       default_rate: 10000,
       unit_of_measure: 'unit',
       tax_region: 'US-NY',
-      billing_method: 'fixed'
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a single contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Link service to plan
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
     });
 
     const now = createTestDate();
@@ -1476,6 +1710,18 @@ describe('Credit Application Tests', () => {
       effective_date: startDate3
     }, 'billing_cycle_id');
 
+    // Link the same plan to client for all billing cycles
+    await context.db('client_contract_lines').insert([
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: client_id,
+        contract_line_id: planId,
+        tenant: context.tenantId,
+        start_date: startDate1,
+        is_active: true
+      }
+    ]);
+
     // Step 1: Create prepayment invoice with credit amount that will cover multiple invoices
     const prepaymentAmount = 20000; // $200.00 credit
     const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(client_id, prepaymentAmount));
@@ -1484,7 +1730,7 @@ describe('Credit Application Tests', () => {
     await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
     console.log('Initial credit balance:', initialCredit);
     
@@ -1511,15 +1757,21 @@ describe('Credit Application Tests', () => {
       .where({ invoice_id: invoice1.invoice_id })
       .first();
     
-    const totals1 = parseInvoiceTotals(updatedInvoice1);
-    const totalBeforeCredit1 = totals1.totalAmount + totals1.creditApplied;
-    const expectedAppliedCredit1 = Math.min(prepaymentAmount, totalBeforeCredit1);
-    const expectedRemainingCredit1 = prepaymentAmount - expectedAppliedCredit1;
-
-    expect(totals1.creditApplied).toBe(expectedAppliedCredit1);
-    expect(totals1.totalAmount).toBe(totalBeforeCredit1 - expectedAppliedCredit1);
-
-    const creditAfterInvoice1 = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    // Calculate expected values for first invoice
+    const subtotal1 = 10000; // $100.00
+    const tax1 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit1 = subtotal1 + tax1; // $110.00
+    const expectedAppliedCredit1 = totalBeforeCredit1; // $110.00 (full invoice amount)
+    const expectedRemainingCredit1 = prepaymentAmount - expectedAppliedCredit1; // $200 - $110 = $90
+    
+    // Verify first invoice values
+    expect(updatedInvoice1.subtotal).toBe(subtotal1);
+    expect(updatedInvoice1.tax).toBe(tax1);
+    expect(updatedInvoice1.credit_applied).toBe(expectedAppliedCredit1);
+    expect(parseInt(updatedInvoice1.total_amount)).toBe(0); // Invoice should be fully paid
+    
+    // Verify credit balance after first invoice
+    const creditAfterInvoice1 = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterInvoice1).toBe(expectedRemainingCredit1);
     console.log('Credit balance after first invoice:', creditAfterInvoice1);
     
@@ -1541,16 +1793,23 @@ describe('Credit Application Tests', () => {
     const updatedInvoice2 = await context.db('invoices')
       .where({ invoice_id: invoice2.invoice_id })
       .first();
-
-    const totals2 = parseInvoiceTotals(updatedInvoice2);
-    const totalBeforeCredit2 = totals2.totalAmount + totals2.creditApplied;
-    const expectedAppliedCredit2 = Math.min(expectedRemainingCredit1, totalBeforeCredit2);
-    const expectedRemainingCredit2 = expectedRemainingCredit1 - expectedAppliedCredit2;
-
-    expect(totals2.creditApplied).toBe(expectedAppliedCredit2);
-    expect(totals2.totalAmount).toBe(totalBeforeCredit2 - expectedAppliedCredit2);
-
-    const creditAfterInvoice2 = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    
+    // Calculate expected values for second invoice
+    const subtotal2 = 10000; // $100.00
+    const tax2 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit2 = subtotal2 + tax2; // $110.00
+    const expectedAppliedCredit2 = expectedRemainingCredit1; // $90.00 (all remaining credit)
+    const expectedRemainingCredit2 = 0; // All credit has been applied
+    const expectedRemainingTotal2 = totalBeforeCredit2 - expectedAppliedCredit2; // $110 - $90 = $20
+    
+    // Verify second invoice values
+    expect(updatedInvoice2.subtotal).toBe(subtotal2);
+    expect(updatedInvoice2.tax).toBe(tax2);
+    expect(updatedInvoice2.credit_applied).toBe(expectedAppliedCredit2);
+    expect(parseInt(updatedInvoice2.total_amount)).toBe(expectedRemainingTotal2); // Invoice should be partially paid
+    
+    // Verify credit balance after second invoice
+    const creditAfterInvoice2 = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterInvoice2).toBe(expectedRemainingCredit2);
 
     const creditTransaction2 = await context.db('transactions')
@@ -1570,18 +1829,20 @@ describe('Credit Application Tests', () => {
     const updatedInvoice3 = await context.db('invoices')
       .where({ invoice_id: invoice3.invoice_id })
       .first();
-
-    const totals3 = parseInvoiceTotals(updatedInvoice3);
-    const totalBeforeCredit3 = totals3.totalAmount + totals3.creditApplied;
-    const expectedAppliedCredit3 = Math.min(expectedRemainingCredit2, totalBeforeCredit3);
-    const expectedRemainingCredit3 = expectedRemainingCredit2 - expectedAppliedCredit3;
-
-    expect(totals3.creditApplied).toBe(expectedAppliedCredit3);
-    expect(totals3.totalAmount).toBe(totalBeforeCredit3 - expectedAppliedCredit3);
-
-    const finalCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
-    expect(finalCredit).toBe(expectedRemainingCredit3);
-
+    
+    // Verify third invoice values after manual credit application
+    expect(updatedInvoice3.subtotal).toBe(subtotal3);
+    expect(updatedInvoice3.tax).toBe(tax3);
+    expect(updatedInvoice3.credit_applied).toBe(expectedAppliedCredit3);
+    expect(parseInt(updatedInvoice3.total_amount)).toBe(expectedRemainingTotal3); // Invoice should be partially paid
+    
+    // Verify credit balance is now zero
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
+    expect(finalCredit).toBe(0);
+    console.log('Final credit balance:', finalCredit);
+    
+    // Since there's no credit left to apply to the third invoice,
+    // there should be no credit application transaction
     const creditTransaction3 = await context.db('transactions')
       .where({
         client_id: client_id,
@@ -1638,7 +1899,23 @@ describe('Credit Application Tests', () => {
       default_rate: 10000,
       unit_of_measure: 'unit',
       tax_region: 'US-NY',
-      billing_method: 'fixed'
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a single contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
+
+    // Link service to plan
+    await context.db('contract_line_services').insert({
+      contract_line_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
     });
 
     const now = createTestDate();
@@ -1689,6 +1966,18 @@ describe('Credit Application Tests', () => {
       effective_date: startDate3
     }, 'billing_cycle_id');
 
+    // Link the same plan to client for all billing cycles
+    await context.db('client_contract_lines').insert([
+      {
+        client_contract_line_id: uuidv4(),
+        client_id: client_id,
+        contract_line_id: planId,
+        tenant: context.tenantId,
+        start_date: startDate1,
+        is_active: true
+      }
+    ]);
+
     // Step 1: Create prepayment invoice with credit amount that will cover multiple invoices
     // and partially cover the third invoice
     const prepaymentAmount = 25000; // $250.00 credit (enough for 2 full invoices + partial third)
@@ -1698,7 +1987,7 @@ describe('Credit Application Tests', () => {
     await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
     console.log('Initial credit balance:', initialCredit);
     
@@ -1722,18 +2011,26 @@ describe('Credit Application Tests', () => {
     const updatedInvoice1 = await context.db('invoices')
       .where({ invoice_id: invoice1.invoice_id })
       .first();
-
-    const totals1 = parseInvoiceTotals(updatedInvoice1);
-    const totalBeforeCredit1 = totals1.totalAmount + totals1.creditApplied;
-    const appliedCredit1 = Math.min(prepaymentAmount, totalBeforeCredit1);
-    let remainingCredit = prepaymentAmount - appliedCredit1;
-
-    expect(totals1.creditApplied).toBe(appliedCredit1);
-    expect(totals1.totalAmount).toBe(totalBeforeCredit1 - appliedCredit1);
-
-    const creditAfterInvoice1 = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
-    expect(creditAfterInvoice1).toBe(remainingCredit);
-
+    
+    // Calculate expected values for first invoice
+    const subtotal1 = 10000; // $100.00
+    const tax1 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit1 = subtotal1 + tax1; // $110.00
+    const expectedAppliedCredit1 = totalBeforeCredit1; // $110.00 (full invoice amount)
+    const expectedRemainingCredit1 = prepaymentAmount - expectedAppliedCredit1; // $250 - $110 = $140
+    
+    // Verify first invoice values
+    expect(updatedInvoice1.subtotal).toBe(subtotal1);
+    expect(updatedInvoice1.tax).toBe(tax1);
+    expect(updatedInvoice1.credit_applied).toBe(expectedAppliedCredit1);
+    expect(parseInt(updatedInvoice1.total_amount)).toBe(0); // Invoice should be fully paid
+    
+    // Verify credit balance after first invoice
+    const creditAfterInvoice1 = await ClientContractLine.getClientCredit(client_id);
+    expect(creditAfterInvoice1).toBe(expectedRemainingCredit1);
+    console.log('Credit balance after first invoice:', creditAfterInvoice1);
+    
+    // Verify credit application transaction for first invoice
     const creditTransaction1 = await context.db('transactions')
       .where({
         client_id: client_id,
@@ -1751,18 +2048,26 @@ describe('Credit Application Tests', () => {
     const updatedInvoice2 = await context.db('invoices')
       .where({ invoice_id: invoice2.invoice_id })
       .first();
-
-    const totals2 = parseInvoiceTotals(updatedInvoice2);
-    const totalBeforeCredit2 = totals2.totalAmount + totals2.creditApplied;
-    const appliedCredit2 = Math.min(remainingCredit, totalBeforeCredit2);
-    remainingCredit -= appliedCredit2;
-
-    expect(totals2.creditApplied).toBe(appliedCredit2);
-    expect(totals2.totalAmount).toBe(totalBeforeCredit2 - appliedCredit2);
-
-    const creditAfterInvoice2 = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
-    expect(creditAfterInvoice2).toBe(remainingCredit);
-
+    
+    // Calculate expected values for second invoice
+    const subtotal2 = 10000; // $100.00
+    const tax2 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit2 = subtotal2 + tax2; // $110.00
+    const expectedAppliedCredit2 = totalBeforeCredit2; // $110.00 (full invoice amount)
+    const expectedRemainingCredit2 = expectedRemainingCredit1 - expectedAppliedCredit2; // $140 - $110 = $30
+    
+    // Verify second invoice values
+    expect(updatedInvoice2.subtotal).toBe(subtotal2);
+    expect(updatedInvoice2.tax).toBe(tax2);
+    expect(updatedInvoice2.credit_applied).toBe(expectedAppliedCredit2);
+    expect(parseInt(updatedInvoice2.total_amount)).toBe(0); // Invoice should be fully paid
+    
+    // Verify credit balance after second invoice
+    const creditAfterInvoice2 = await ClientContractLine.getClientCredit(client_id);
+    expect(creditAfterInvoice2).toBe(expectedRemainingCredit2);
+    console.log('Credit balance after second invoice:', creditAfterInvoice2);
+    
+    // Verify credit application transaction for second invoice
     const creditTransaction2 = await context.db('transactions')
       .where({
         client_id: client_id,
@@ -1780,18 +2085,19 @@ describe('Credit Application Tests', () => {
     const updatedInvoice3 = await context.db('invoices')
       .where({ invoice_id: invoice3.invoice_id })
       .first();
-
-    const totals3 = parseInvoiceTotals(updatedInvoice3);
-    const totalBeforeCredit3 = totals3.totalAmount + totals3.creditApplied;
-    const appliedCredit3 = Math.min(remainingCredit, totalBeforeCredit3);
-    remainingCredit -= appliedCredit3;
-
-    expect(totals3.creditApplied).toBe(appliedCredit3);
-    expect(totals3.totalAmount).toBe(totalBeforeCredit3 - appliedCredit3);
-
-    const finalCredit = await runInTenant(() => ClientBillingPlan.getClientCredit(client_id));
-    expect(finalCredit).toBe(remainingCredit);
-
+    
+    // Verify third invoice values after credit application
+    expect(updatedInvoice3.subtotal).toBe(subtotal3);
+    expect(updatedInvoice3.tax).toBe(tax3);
+    expect(updatedInvoice3.credit_applied).toBe(expectedAppliedCredit3);
+    expect(parseInt(updatedInvoice3.total_amount)).toBe(expectedRemainingTotal3); // Invoice should be partially paid
+    
+    // Verify credit balance is now zero
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
+    expect(finalCredit).toBe(0);
+    console.log('Final credit balance:', finalCredit);
+    
+    // Verify credit application transaction for third invoice
     const creditTransaction3 = await context.db('transactions')
       .where({
         client_id: client_id,

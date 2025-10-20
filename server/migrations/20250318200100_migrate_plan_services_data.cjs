@@ -12,8 +12,8 @@ exports.up = async function(knex) {
   // Process each tenant separately
   for (const { tenant } of tenants) {
     console.log(`Migrating plan services for tenant: ${tenant}`);
-    
-    // Get all billing plans for this tenant
+
+    // Get all contract lines for this tenant
     const plans = await knex('billing_plans')
       .where({ tenant })
       .select('*');

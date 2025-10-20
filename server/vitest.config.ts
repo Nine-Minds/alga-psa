@@ -28,7 +28,6 @@ export default defineConfig({
       provider: 'v8',
       include: [
         'src/**/*.{js,ts,jsx,tsx}',
-        path.resolve(__dirname, '../packages/product-extension-storage-api/**/*.{js,ts,jsx,tsx}'),
       ],
       reportsDirectory: path.resolve(__dirname, './coverage'),
       reporter: ['text', 'html', 'lcov'],
@@ -40,22 +39,6 @@ export default defineConfig({
       '@ee': path.resolve(__dirname, '../ee/server/src'),
       '@shared': path.resolve(__dirname, '../shared'),
       'next/server': path.resolve(__dirname, './src/test/stubs/next-server.ts'),
-      '@product/extension-storage-api/ee/record-impl': path.resolve(
-        __dirname,
-        '../packages/product-extension-storage-api/ee/record-impl.ts',
-      ),
-      '@product/extension-storage-api/ee/records-impl': path.resolve(
-        __dirname,
-        '../packages/product-extension-storage-api/ee/records-impl.ts',
-      ),
-      '@product/extension-storage-api/record': path.resolve(
-        __dirname,
-        '../packages/product-extension-storage-api/record.ts',
-      ),
-      '@product/extension-storage-api/records': path.resolve(
-        __dirname,
-        '../packages/product-extension-storage-api/records.ts',
-      ),
     },
   },
   server: {
@@ -64,7 +47,6 @@ export default defineConfig({
         'next-auth',
         '@auth/core',
         'next',
-        /^@product\/extension-storage-api(\/.*)?$/,
       ],
     },
     fs: {
@@ -72,6 +54,6 @@ export default defineConfig({
     },
   },
   ssr: {
-    noExternal: [/^@product\/extension-storage-api(\/.*)?$/],
+    noExternal: [],
   },
 });

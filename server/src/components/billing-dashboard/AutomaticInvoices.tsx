@@ -3,15 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { toPlainDate } from '../../lib/utils/dateTimeUtils';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
 // Removed direct Radix imports:
-// TooltipContent,
-// TooltipProvider,
 // TooltipTrigger,
-import { Info, AlertTriangle, X, MoreVertical } from 'lucide-react'; // Changed to MoreVertical
-import { IClientBillingCycle } from '../../interfaces/billing.interfaces';
+import { Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react'; // Changed to MoreVertical and added Eye icon
+import { IClientContractLineCycle } from '../../interfaces/billing.interfaces';
 // Import PreviewInvoiceResponse (which uses the correct VM internally)
 import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
 // Import the InvoiceViewModel directly from the renderer types
@@ -33,8 +32,9 @@ import {
 } from "../ui/DropdownMenu";
 // Use ConfirmationDialog instead of AlertDialog
 import { ConfirmationDialog } from '../ui/ConfirmationDialog'; // Corrected import
+import LoadingIndicator from '../ui/LoadingIndicator';
 interface AutomaticInvoicesProps {
-  periods: (IClientBillingCycle & {
+  periods: (IClientContractLineCycle & {
     client_name: string;
     can_generate: boolean;
     period_start_date: ISO8601String;
@@ -43,16 +43,18 @@ interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
 }
 
-interface Period extends IClientBillingCycle {
+interface Period extends IClientContractLineCycle {
   client_name: string;
   can_generate: boolean;
   billing_cycle_id?: string;
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
   is_early?: boolean;
+  contract_name?: string; // Added for Phase 4
 }
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenerateSuccess }) => {
+  // Drawer removed: client details quick view no longer used here
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
@@ -116,8 +118,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   useEffect(() => {
     if (previewState.data) {
       console.log("Preview data items:", previewState.data.items); // Use items
-      // Need to check item structure for bundle headers if needed, assuming 'description' for now
-      console.log("Bundle headers:", previewState.data.items.filter(item => item.description?.startsWith('Bundle:')));
+      // Need to check item structure for contract headers if needed, assuming 'description' for now
+      console.log("Contract headers:", previewState.data.items.filter(item => item.description?.startsWith('Contract:')));
     }
   }, [previewState.data]);
 
@@ -274,13 +276,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     }
   };
 
+  // Removed company drawer handler (migrated to client-only flow)
+
   return (
-    // Removed TooltipProvider wrapper
+  // Removed TooltipProvider wrapper
       <>
       <div className="space-y-8">
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Ready to Invoice Billing Periods</h2>
+            <h2 className="text-lg font-semibold">Ready to Invoice</h2>
             <div className="flex gap-4">
               <input
                 type="text"
@@ -289,6 +293,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}
               />
+              <Button
+                id='preview-selected-button'
+                variant="outline"
+                onClick={() => {
+                  if (selectedPeriods.size === 1) {
+                    handlePreviewInvoice(Array.from(selectedPeriods)[0]);
+                  }
+                }}
+                disabled={selectedPeriods.size !== 1 || isPreviewLoading}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                {isPreviewLoading ? 'Loading...' : 'Preview Selected'}
+              </Button>
               <Button
                 id='generate-invoices-button'
                 onClick={handleGenerateInvoices}
@@ -354,10 +371,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                   />
                 ) : null
               },
-              {
-                title: 'Client',
-                dataIndex: 'client_name'
-              },
+              { title: 'Client', dataIndex: 'client_name' },
               {
                 title: 'Billing Cycle',
                 dataIndex: 'billing_cycle'
@@ -444,22 +458,25 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
             totalItems={filteredPeriods.length}
             // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
             rowClassName={() => "hover:bg-muted/50"}
+            initialSorting={[{ id: 'period_end_date', desc: true }]}
           />
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold mb-4">Previously Invoiced Periods</h2>
+          <h2 className="text-lg font-semibold mb-4">Already Invoiced</h2>
           {isLoading ? (
-            <div className="text-center py-4">Loading...</div>
+            <LoadingIndicator
+              layout="stacked"
+              className="py-10 text-gray-600"
+              spinnerProps={{ size: 'md' }}
+              text="Loading generated invoices"
+            />
           ) : (
             <>
               <DataTable
                 data={filteredInvoicedPeriods}
                 columns={[
-                  {
-                    title: 'Client',
-                    dataIndex: 'client_name'
-                  },
+                  { title: 'Client', dataIndex: 'client_name' },
                   {
                     title: 'Billing Cycle',
                     dataIndex: 'billing_cycle'
@@ -513,6 +530,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 onPageChange={setCurrentPage}
                 pageSize={itemsPerPage}
                 totalItems={filteredInvoicedPeriods.length}
+                initialSorting={[{ id: 'period_end_date', desc: true }]}
               />
             </>
           )}
@@ -629,13 +647,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                   <tbody>
                     {/* Map over previewState.data.items */}
                     {previewState.data.items.map((item) => {
-                      // Check for bundle header based on description (adjust if needed)
-                      const isBundleHeader = item.description?.startsWith('Bundle:');
+                      // Check for contract header based on description (adjust if needed)
+                      const isContractHeader = item.description?.startsWith('Contract:');
                       // Check for detail line (assuming no quantity/unitPrice for now)
-                      const isDetailLine = !isBundleHeader && item.quantity === undefined && item.unitPrice === undefined;
+                      const isDetailLine = !isContractHeader && item.quantity === undefined && item.unitPrice === undefined;
 
-                      if (isBundleHeader) {
-                        // Render bundle header style
+                      if (isContractHeader) {
+                        // Render contract header style
                         return (
                           <tr key={item.id} className="border-b bg-muted/50 font-semibold">
                             <td className="py-2 px-2" colSpan={4}>{item.description}</td>
@@ -728,7 +746,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         id="delete-billing-cycle-confirmation" // Added an ID for consistency
       />
       </>
-    // Removed TooltipProvider closing tag
+  // Removed TooltipProvider closing tag
   );
 };
 

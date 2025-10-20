@@ -440,19 +440,19 @@ const fetchContacts = async (): Promise<void> => {
       <CardContent>
         {/* License Usage Banner for MSP Portal */}
         {portalType === 'msp' && licenseUsage && (
-          <div 
+          <div
             id="msp-licence-usage-banner"
             className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Info size={16} className="text-blue-600" />
               <span className="text-sm text-blue-900">
-                MSP users: {licenseUsage.used} During the pre-release please email support@nineminds.com to adjust.
-                {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licences used` : ' (No limit)'}
+                MSP users: {licenseUsage.used}
+                {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licenses used` : ' (No limit)'}
               </span>
             </div>
             {licenseUsage.limit !== null && licenseUsage.remaining === 0 && (
               <span className="text-sm text-blue-700">
-                Remove or deactivate a user to free a licence
+                To add a new user you must purchase additional licenses
               </span>
             )}
           </div>
@@ -493,15 +493,9 @@ const fetchContacts = async (): Promise<void> => {
             )}
           </div>
           {!showNewUserForm && (
-            <Button 
-              id={`create-new-${portalType}-user-btn`} 
+            <Button
+              id={`create-new-${portalType}-user-btn`}
               onClick={() => setShowNewUserForm(true)}
-              disabled={portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0}
-              title={
-                portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
-                  ? 'Licence limit reached. Remove or deactivate a user to free a licence.'
-                  : undefined
-              }
             >
               Create New {portalType === 'msp' ? 'User' : 'Client User'}
             </Button>
@@ -697,13 +691,28 @@ const fetchContacts = async (): Promise<void> => {
                   </div>
                 </div>
               </div>
-<div className="flex gap-2 justify-end">
-                <Button 
-                  id={`submit-new-${portalType}-user-btn`} 
-                  onClick={handleCreateUser}
+              <div className="flex gap-2 justify-end">
+                <Button
+                  id={`submit-new-${portalType}-user-btn`}
+                  variant={
+                    portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                      ? 'secondary'
+                      : 'default'
+                  }
+                  onClick={
+                    portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                      ? () => window.location.href = '/msp/licenses/purchase'
+                      : handleCreateUser
+                  }
                   disabled={portalType === 'client' && !newUser.password && !!contactValidationError}
                 >
-                  {portalType === 'msp' ? 'Create User' : newUser.password ? 'Create User' : 'Send Portal Invitation'}
+                  {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                    ? 'Add License'
+                    : portalType === 'msp'
+                      ? 'Create User'
+                      : newUser.password
+                        ? 'Create User'
+                        : 'Send Portal Invitation'}
                 </Button>
                 <Button 
                   id={`cancel-new-${portalType}-user-btn`} 

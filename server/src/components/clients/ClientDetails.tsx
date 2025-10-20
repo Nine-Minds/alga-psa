@@ -50,7 +50,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
-import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard';
+import ClientContractLineDashboard from '../billing-dashboard/ClientContractLineDashboard';
 import { toast } from 'react-hot-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
@@ -815,7 +815,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: "Billing Dashboard",
       content: isBillingEnabled ? (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <ClientBillingDashboard clientId={client.client_id} />
+          <ClientContractLineDashboard clientId={client.client_id} />
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">

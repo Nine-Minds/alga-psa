@@ -140,3 +140,26 @@ export async function invalidateDomainBrandingCache(_domain: string): Promise<vo
   const { revalidateTag } = await import('next/cache');
   revalidateTag('tenant-portal-config');
 }
+
+/**
+ * Get tenant branding by tenant ID (from session)
+ * This avoids the need for host headers and domain lookups
+ */
+export async function getTenantBrandingByTenantId(tenantId: string): Promise<TenantBranding | null> {
+  try {
+    const knex = await getConnection(tenantId);
+    const tenantSettings = await knex('tenant_settings')
+      .where({ tenant: tenantId })
+      .first();
+
+    if (!tenantSettings?.settings) {
+      console.log('[getTenantBrandingByTenantId] No tenant settings found for tenant:', tenantId);
+      return null;
+    }
+
+    return tenantSettings.settings.branding || null;
+  } catch (error) {
+    console.error('[getTenantBrandingByTenantId] Error fetching branding:', error);
+    return null;
+  }
+}

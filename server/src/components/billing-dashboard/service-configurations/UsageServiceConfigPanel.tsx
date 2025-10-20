@@ -9,13 +9,13 @@ import { Button } from 'server/src/components/ui/Button';
 import { Trash2, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { IPlanServiceUsageConfig, IPlanServiceRateTier } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 
 interface UsageServiceConfigPanelProps {
-  configuration: Partial<IPlanServiceUsageConfig>;
-  rateTiers?: IPlanServiceRateTier[];
-  onConfigurationChange: (updates: Partial<IPlanServiceUsageConfig>) => void;
-  onRateTiersChange?: (tiers: IPlanServiceRateTier[]) => void;
+  configuration: Partial<IContractLineServiceUsageConfig>;
+  rateTiers?: IContractLineServiceRateTier[];
+  onConfigurationChange: (updates: Partial<IContractLineServiceUsageConfig>) => void;
+  onRateTiersChange?: (tiers: IContractLineServiceRateTier[]) => void;
   className?: string;
   disabled?: boolean;
 }
@@ -160,7 +160,7 @@ export function UsageServiceConfigPanel({
     const updatedTiers = [...tiers, newTier];
     setTiers(updatedTiers);
     
-    // Convert to IPlanServiceRateTier format for the parent component
+    // Convert to IContractLineServiceRateTier format for the parent component
     const formattedTiers = updatedTiers.map(tier => ({
       tier_id: tier.id,
       config_id: '', // This will be set by the backend
@@ -181,7 +181,7 @@ export function UsageServiceConfigPanel({
     const updatedTiers = tiers.filter(tier => tier.id !== id);
     setTiers(updatedTiers);
     
-    // Convert to IPlanServiceRateTier format for the parent component
+    // Convert to IContractLineServiceRateTier format for the parent component
     const formattedTiers = updatedTiers.map(tier => ({
       tier_id: tier.id,
       config_id: '', // This will be set by the backend
@@ -209,7 +209,7 @@ export function UsageServiceConfigPanel({
     
     setTiers(updatedTiers);
     
-    // Convert to IPlanServiceRateTier format for the parent component
+    // Convert to IContractLineServiceRateTier format for the parent component
     const formattedTiers = updatedTiers.map(tier => ({
       tier_id: tier.id,
       config_id: '', // This will be set by the backend

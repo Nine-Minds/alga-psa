@@ -3,7 +3,7 @@
 import { withTransaction } from '@alga-psa/shared/db';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { createTenantKnex } from 'server/src/lib/db';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { IInvoice } from 'server/src/interfaces/invoice.interfaces';
 import { ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
@@ -592,13 +592,13 @@ export async function applyCreditToInvoice(
             tenant
         });
 
-        // Verify client billing plan exists before update
-        const billingPlan = await trx('client_billing_plans')
+        // Verify client contract line exists before update
+        const contractLine = await trx('client_contract_lines')
             .where({ client_id: clientId, tenant })
             .first();
         
-        if (!billingPlan) {
-            throw new Error(`No billing plan found for client ${clientId}`);
+        if (!contractLine) {
+            throw new Error(`No contract line found for client ${clientId}`);
         }
 
         // Update invoice and client credit balance

@@ -15,7 +15,7 @@ export interface TimeEntry {
   notes?: string;
   time_sheet_id?: string;
   approval_status?: string;
-  billing_plan_id?: string;
+  contract_line_id?: string;
   tax_region?: string;
   tax_rate_id?: string;
   invoiced?: boolean;
@@ -28,7 +28,7 @@ export interface Service {
   tenant: string;
   service_name: string;
   description?: string;
-  billing_method: 'fixed' | 'per_unit';
+  billing_method: 'fixed' | 'hourly' | 'usage';
   custom_service_type_id: string;
   default_rate?: number;
   unit_of_measure?: string;
@@ -74,7 +74,7 @@ export async function createTestTimeEntry(
     tax_region: overrides.tax_region,
     tax_rate_id: overrides.tax_rate_id,
     invoiced: overrides.invoiced || false,
-    billing_plan_id: overrides.billing_plan_id,
+    contract_line_id: overrides.contract_line_id,
     created_at: overrides.created_at || now,
     updated_at: overrides.updated_at || now
   };

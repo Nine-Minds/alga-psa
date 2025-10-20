@@ -48,7 +48,7 @@
  - [ ] server/src/app/auth/signin/page.tsx
  - [ ] server/src/app/auth/verify/page.tsx
  - [ ] server/src/app/auth/verify_email/page.tsx
- - [ ] server/src/app/client-portal/company-settings/page.tsx
+ - [ ] server/src/app/client-portal/client-settings/page.tsx
  - [ ] server/src/app/client-portal/dashboard/page.tsx
  - [ ] server/src/app/client-portal/layout.tsx
  - [ ] server/src/app/client-portal/profile/page.tsx
@@ -109,8 +109,8 @@
  - [ ] server/src/components/auth/TwoFA.tsx
  - [ ] server/src/components/billing-dashboard/BillingCycles.tsx
  - [ ] server/src/components/billing-dashboard/BillingDashboard.tsx
- - [ ] server/src/components/billing-dashboard/BillingPlanDialog.tsx
- - [ ] server/src/components/billing-dashboard/BillingPlans.tsx
+ - [ ] server/src/components/billing-dashboard/ContractLineDialog.tsx
+ - [ ] server/src/components/billing-dashboard/ContractLines.tsx
  - [ ] server/src/components/billing-dashboard/ConditionalRuleManager.tsx
  - [ ] server/src/components/billing-dashboard/CreditApplicationUI.tsx
  - [ ] server/src/components/billing-dashboard/CreditExpirationInfo.tsx
@@ -164,7 +164,7 @@
  - [ ] server/src/components/common/JobProgress.tsx
  - [ ] server/src/components/companies/BillingConfigForm.tsx
  - [ ] server/src/components/companies/BillingConfiguration.tsx
- - [ ] server/src/components/companies/BillingPlans.tsx
+ - [ ] server/src/components/companies/ContractLines.tsx
  - [ ] server/src/components/companies/Companies.tsx
  - [ ] server/src/components/companies/CompaniesGrid.tsx
  - [ ] server/src/components/companies/CompaniesImportDialog.tsx
@@ -364,7 +364,7 @@
  - [ ] server/src/lib/actions/asset-actions/assetDocumentActions.ts
  - [ ] server/src/lib/actions/auth.tsx
  - [ ] server/src/lib/actions/billingCycleActions.ts
- - [ ] server/src/lib/actions/billingPlanAction.ts
+ - [ ] server/src/lib/actions/contractLineAction.ts
  - [ ] server/src/lib/actions/billingSettingsActions.ts
  - [ ] server/src/lib/actions/bucketPlanAction.ts
  - [ ] server/src/lib/actions/categoryActions.ts
@@ -374,7 +374,7 @@
  - [ ] server/src/lib/actions/client-portal-actions/clientUserActions.ts
  - [ ] server/src/lib/actions/client-portal-actions/dashboard.ts
  - [ ] server/src/lib/actions/clientAction.ts
- - [ ] server/src/lib/actions/clientBillingAction.ts
+ - [ ] server/src/lib/actions/clientContractLineAction.ts
  - [ ] server/src/lib/actions/comment-actions/commentActions.ts
  - [ ] server/src/lib/actions/company-settings/emailSettings.ts
  - [ ] server/src/lib/actions/companyActions.ts
@@ -446,8 +446,8 @@
  - [ ] server/src/lib/jobs/index.ts
  - [ ] server/src/lib/jobs/initializeScheduledJobs.ts
  - [ ] server/src/lib/jobs/jobScheduler.ts
- - [ ] server/src/lib/models/billingPlan.ts
- - [ ] server/src/lib/models/clientBilling.ts
+ - [ ] server/src/lib/models/contractLine.ts
+ - [ ] server/src/lib/models/clientContractLine.ts
  - [ ] server/src/lib/models/company.tsx
  - [ ] server/src/lib/models/contact.tsx
  - [ ] server/src/lib/models/creditReconciliationReport.ts
@@ -519,8 +519,8 @@
  - [ ] server/src/test/setup.ts
  - [ ] server/src/test/unit/auth.test.ts
  - [ ] server/src/test/unit/billingEngine.test.ts
- - [ ] server/src/test/unit/billingPlanAction.test.ts
- - [ ] server/src/test/unit/clientBillingAction.test.ts
+ - [ ] server/src/test/unit/contractLineAction.test.ts
+ - [ ] server/src/test/unit/clientContractLineAction.test.ts
  - [ ] server/src/test/unit/route.test.tsx
  - [ ] server/src/test/unit/taxCalculation.test.ts
  - [ ] server/src/test/unit/templateLanguage.test.ts

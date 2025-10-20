@@ -32,6 +32,55 @@ wait_for_postgres() {
     log "PostgreSQL is up and running!"
 }
 
+# Verify Postgres is configured to use md5 authentication (and not trust/scram) for host connections
+check_postgres_md5_auth() {
+    if [ "${SKIP_MD5_AUTH_CHECK}" = "true" ] || [ "${SKIP_MD5_AUTH_CHECK}" = "1" ]; then
+        log "Skipping PostgreSQL md5 authentication check (SKIP_MD5_AUTH_CHECK=${SKIP_MD5_AUTH_CHECK})"
+        return 0
+    fi
+
+    log "Validating PostgreSQL authentication configuration (md5)..."
+
+    local psql_base=(psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -tAc)
+
+    # 1) Ensure password_encryption is md5 so newly created passwords are compatible with md5 auth
+    local password_encryption
+    password_encryption=$(PGPASSWORD=$(cat /run/secrets/postgres_password) "${psql_base[@]}" "SHOW password_encryption;" | tr -d '[:space:]')
+    if [ "${password_encryption}" != "md5" ]; then
+        log "ERROR: password_encryption is '${password_encryption}', expected 'md5'."
+        log "       Update postgresql.conf to set password_encryption = 'md5' and restart Postgres,"
+        log "       or set SKIP_MD5_AUTH_CHECK=true to bypass this enforcement."
+        exit 1
+    fi
+
+    # 2) Ensure pg_hba rules use md5 for host connections
+    # Check if pg_hba_file_rules view exists (PG 10+)
+    local has_hba_view
+    has_hba_view=$(PGPASSWORD=$(cat /run/secrets/postgres_password) "${psql_base[@]}" "SELECT to_regclass('pg_catalog.pg_hba_file_rules') IS NOT NULL;" | tr -d '[:space:]')
+
+    if [ "${has_hba_view}" != "t" ]; then
+        log "WARNING: pg_hba_file_rules view is not available on this Postgres version; skipping pg_hba auth check."
+        return 0
+    fi
+
+    # Count any non-md5 host rules
+    local non_md5_count
+    non_md5_count=$(PGPASSWORD=$(cat /run/secrets/postgres_password) "${psql_base[@]}" \
+        "SELECT count(*) FROM pg_hba_file_rules WHERE type IN ('host','hostssl','hostnossl') AND auth_method <> 'md5';")
+    non_md5_count=$(echo "$non_md5_count" | tr -d '[:space:]')
+
+    if [ "${non_md5_count}" != "0" ]; then
+        log "ERROR: Found ${non_md5_count} pg_hba host rules that are not using md5 authentication."
+        PGPASSWORD=$(cat /run/secrets/postgres_password) "${psql_base[@]}" \
+            "SELECT line_number, type, database, user_name, address, netmask, auth_method FROM pg_hba_file_rules WHERE type IN ('host','hostssl','hostnossl') AND auth_method <> 'md5' ORDER BY line_number;"
+        log "       Update pg_hba.conf to use 'md5' for host entries (and reload Postgres),"
+        log "       or set SKIP_MD5_AUTH_CHECK=true to bypass this enforcement."
+        exit 1
+    fi
+
+    log "PostgreSQL authentication check passed (md5)."
+}
+
 # Function to merge CE and EE migrations
 merge_migrations() {
     log "Merging CE and EE migrations..."
@@ -104,6 +153,7 @@ main() {
     log "Starting Enterprise Edition setup..."
     
     wait_for_postgres
+    check_postgres_md5_auth
 
     # Merge CE and EE migrations/seeds
     merge_migrations

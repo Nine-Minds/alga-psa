@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useId } from 'react';
 import { signOut } from "next-auth/react";
 import Link from 'next/link';
-import { ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
+import { LogOut, ChevronRight, Home, User, Settings } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
@@ -13,6 +13,7 @@ import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConf
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { useRouter } from 'next/navigation';
+import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -55,17 +56,22 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const router = useRouter();
   const dropdownId = useId();
   const isDevelopment = process.env.NODE_ENV === 'development';
   console.log('Environment:', process.env.NODE_ENV, 'isDevelopment:', isDevelopment);
-  
+
   useEffect(() => {
     const fetchUserData = async () => {
       const user = await getCurrentUser();
       if (user) {
         setUserData(user);
-        
+
+        // Check account management permission
+        const hasAccountPermission = await checkAccountManagementPermission();
+        setCanManageAccount(hasAccountPermission);
+
         // Fetch the user's avatar URL using server action
         if (user.tenant && user.user_id) {
           try {
@@ -108,8 +114,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const pathname = usePathname();
-  const breadcrumbItems = getBreadcrumbItems(pathname);  
-
+  const breadcrumbItems = getBreadcrumbItems(pathname);
 
   return (
     <header className="bg-transparent py-4 flex items-center justify-between border-b border-main-300 shadow-[0_5px_10px_rgba(0,0,0,0.1)] p-2">
@@ -118,7 +123,7 @@ const Header: React.FC<HeaderProps> = ({
           {breadcrumbItems.map((item, index):JSX.Element => (
             <li key={item.href} className="flex items-center">
               {index > 0 && (
-                <ChevronRightIcon className="w-4 h-4 mx-2 text-gray-400" />
+                <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
               )}
               {index === 0 ? (
                 <Link
@@ -127,7 +132,7 @@ const Header: React.FC<HeaderProps> = ({
                   className="text-gray-500 hover:text-main-800 text-md transition-colors cursor-pointer"
                   aria-label="Home"
                 >
-                  <HomeIcon className="w-5 h-5" />
+                  <Home className="w-5 h-5" />
                 </Link>
               ) : index === breadcrumbItems.length - 1 ? (
                 <span className="text-xl font-semibold text-main-800">
@@ -179,14 +184,23 @@ const Header: React.FC<HeaderProps> = ({
                 className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                 onSelect={() => router.push(userData?.user_type === 'client' ? '/client/profile' : '/msp/profile')}
               >
-                <PersonIcon className="mr-2 h-3.5 w-3.5" />
+                <User className="mr-2 h-3.5 w-3.5" />
                 <span>Profile</span>
               </DropdownMenu.Item>
+              {canManageAccount && (
+                <DropdownMenu.Item
+                  className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
+                  onSelect={() => router.push('/msp/account')}
+                >
+                  <Settings className="mr-2 h-3.5 w-3.5" />
+                  <span>Account</span>
+                </DropdownMenu.Item>
+              )}
               <DropdownMenu.Item
                 className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                 onSelect={handleSignOut}
               >
-                <ExitIcon className="mr-2 h-3.5 w-3.5" />
+                <LogOut className="mr-2 h-3.5 w-3.5" />
                 <span>Sign out</span>
               </DropdownMenu.Item>
             </DropdownMenu.Content>

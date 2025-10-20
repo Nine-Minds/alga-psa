@@ -1094,6 +1094,141 @@ describe('portal domain git integration helpers', () => {
       expect(parsed.spec.gateways).toContain('istio-system/portal-domain-gw-active-id');
     });
 
+    it('should strip runtime metadata fields before writing base VirtualService', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      baseVirtualService.metadata.resourceVersion = '603903974';
+      baseVirtualService.metadata.uid = '55c7a351-a091-4db8-a83b-df882fab6b7c';
+      baseVirtualService.metadata.creationTimestamp = '2025-09-30T21:44:39Z';
+      baseVirtualService.metadata.generation = 19;
+      baseVirtualService.metadata.annotations['kubectl.kubernetes.io/last-applied-configuration'] = '{"mock":"config"}';
+      baseVirtualService.status = { observedGeneration: 19 };
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+
+      const now = new Date().toISOString();
+      const rows: PortalDomainActivityRecord[] = [
+        {
+          id: 'active-id',
+          tenant: 'Tenant One',
+          domain: 'portal.mspmind.com',
+          canonical_host: 'tenantone.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(now),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+      const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
+      const fileContent = await fs.readFile(vsFilePath, 'utf8');
+      const parsed = yamlLoad(fileContent) as any;
+
+      expect(parsed.metadata.resourceVersion).toBeUndefined();
+      expect(parsed.metadata.uid).toBeUndefined();
+      expect(parsed.metadata.creationTimestamp).toBeUndefined();
+      expect(parsed.metadata.generation).toBeUndefined();
+      expect(parsed.metadata.annotations?.['kubectl.kubernetes.io/last-applied-configuration']).toBeUndefined();
+      expect(parsed.status).toBeUndefined();
+    });
+
+    it('should sanitize base VirtualService metadata even when routing is unchanged', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      baseVirtualService.metadata.resourceVersion = '12345';
+      baseVirtualService.metadata.creationTimestamp = '2025-01-01T00:00:00Z';
+      baseVirtualService.metadata.annotations['kubectl.kubernetes.io/last-applied-configuration'] = '{"mock":"config"}';
+      baseVirtualService.spec.hosts = ['apps.algapsa.com'];
+      baseVirtualService.spec.gateways = ['istio-system/alga-psa-gw'];
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve([]),
+              where() {
+                return {
+                  update: () => Promise.resolve(0),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(0),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
+
+      const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
+      const fileContent = await fs.readFile(vsFilePath, 'utf8');
+      const parsed = yamlLoad(fileContent) as any;
+
+      expect(parsed.metadata.resourceVersion).toBeUndefined();
+      expect(parsed.metadata.creationTimestamp).toBeUndefined();
+      expect(parsed.metadata.annotations?.['kubectl.kubernetes.io/last-applied-configuration']).toBeUndefined();
+      expect(parsed.spec.hosts).toEqual(['apps.algapsa.com']);
+      expect(parsed.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
+    });
+
     it('should commit base VirtualService changes to git', async () => {
       process.env.GITHUB_ACCESS_TOKEN = 'test-token';
       process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
@@ -1464,8 +1599,8 @@ describe('portal domain git integration helpers', () => {
       expect(vs.spec.hosts).toContain('apps.algapsa.com');
       expect(vs.spec.gateways).not.toContain('istio-system/portal-domain-gw-test-id');
 
-      expect(vs.metadata.annotations['portal.alga-psa.com/managed-hosts']).toBeUndefined();
-      expect(vs.metadata.annotations['portal.alga-psa.com/managed-gateways']).toBeUndefined();
+      expect(vs.metadata.annotations?.['portal.alga-psa.com/managed-hosts']).toBeUndefined();
+      expect(vs.metadata.annotations?.['portal.alga-psa.com/managed-gateways']).toBeUndefined();
     });
 
     it('should not delete base VirtualService when removing managed domains and gateways', async () => {
@@ -1747,9 +1882,13 @@ describe('portal domain git integration helpers', () => {
       );
 
       const appliedFromWrongLocation = applyCommands.some(cmd =>
-        cmd.args.some(arg =>
-          arg.includes('portal-domains') && arg.includes('istio-virtualservice.yaml')
-        )
+        cmd.args.some(arg => {
+          if (typeof arg !== 'string') {
+            return false;
+          }
+          const normalized = arg.replace(/\\/g, '/');
+          return normalized.includes('/portal-domains/istio-virtualservice.yaml');
+        })
       );
 
       expect(appliedFromWrongLocation).toBe(false);

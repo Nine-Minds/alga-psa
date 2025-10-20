@@ -13,38 +13,55 @@ export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
     }
 
     const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
+
+      const hasClientContractLines = await trx.schema.hasTable('client_contract_lines');
+      if (!hasClientContractLines) {
+        throw new Error('client_contract_lines table not found. Run the latest contract migrations.');
+      }
+
       return await trx('clients')
         .select(
           'clients.client_id',
           'clients.client_name',
-          'billing_plans.plan_id',
-          'billing_plans.plan_name',
-          'billing_plans.billing_frequency',
-          'billing_plans.is_custom',
-          'billing_plans.plan_type'
+          'contract_lines.contract_line_id',
+          'contract_lines.contract_line_name',
+          'contract_lines.billing_frequency',
+          'contract_lines.is_custom',
+          'contract_lines.contract_line_type'
         )
         .where('clients.tenant', tenant)
-        .leftJoin('client_billing', function() {
-          this.on('clients.client_id', '=', 'client_billing.client_id')
-              .andOn('clients.tenant', '=', 'client_billing.tenant');
+        .leftJoin('client_contract_lines', function(this: Knex.JoinClause) {
+          this.on('clients.client_id', '=', 'client_contract_lines.client_id')
+              .andOn('clients.tenant', '=', 'client_contract_lines.tenant');
         })
-        .leftJoin('billing_plans', function() {
-          this.on('client_billing.plan_id', '=', 'billing_plans.plan_id')
-              .andOn('client_billing.tenant', '=', 'billing_plans.tenant');
+        .leftJoin('contract_lines', function(this: Knex.JoinClause) {
+          this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
+              .andOn('client_contract_lines.tenant', '=', 'contract_lines.tenant');
         });
     });
-    
-    return clients.map((client): Omit<IClientSummary, "tenant"> => ({
-      id: client.client_id,
-      name: client.client_name,
-      billingPlan: client.plan_id ? {
-        plan_id: client.plan_id,
-        plan_name: client.plan_name,
-        billing_frequency: client.billing_frequency,
-        is_custom: client.is_custom,
-        plan_type: client.plan_type
-      } : undefined
-    }));
+
+    // Deduplicate clients - the left joins create one row per contract line
+    const uniqueClientsMap = new Map<string, Omit<IClientSummary, "tenant">>();
+
+    clients.forEach((client) => {
+      if (!uniqueClientsMap.has(client.client_id)) {
+        uniqueClientsMap.set(client.client_id, {
+          id: client.client_id,
+          name: client.client_name,
+          contractLine: client.contract_line_id
+            ? {
+                contract_line_id: client.contract_line_id,
+                contract_line_name: client.contract_line_name,
+                billing_frequency: client.billing_frequency,
+                is_custom: client.is_custom,
+                contract_line_type: client.contract_line_type
+              }
+            : undefined
+        });
+      }
+    });
+
+    return Array.from(uniqueClientsMap.values());
   } catch (error) {
     console.error('Error fetching clients:', error);
     throw new Error('Failed to fetch clients');

@@ -297,7 +297,10 @@ export async function getDocumentByTicketId(ticketId: string) {
     }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documents = await trx('documents')
-        .join('document_associations', 'documents.document_id', 'document_associations.document_id')
+        .join('document_associations', function() {
+          this.on('documents.document_id', '=', 'document_associations.document_id')
+              .andOn('documents.tenant', '=', 'document_associations.tenant');
+        })
         .where({
           'document_associations.entity_id': ticketId,
           'document_associations.entity_type': 'ticket',
@@ -332,7 +335,10 @@ export async function getDocumentByClientId(clientId: string) {
     }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documents = await trx('documents')
-        .join('document_associations', 'documents.document_id', 'document_associations.document_id')
+        .join('document_associations', function() {
+          this.on('documents.document_id', '=', 'document_associations.document_id')
+              .andOn('documents.tenant', '=', 'document_associations.tenant');
+        })
         .where({
           'document_associations.entity_id': clientId,
           'document_associations.entity_type': 'client',
@@ -367,7 +373,10 @@ export async function getDocumentByContactNameId(contactNameId: string) {
     }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documents = await trx('documents')
-        .join('document_associations', 'documents.document_id', 'document_associations.document_id')
+        .join('document_associations', function() {
+          this.on('documents.document_id', '=', 'document_associations.document_id')
+              .andOn('documents.tenant', '=', 'document_associations.tenant');
+        })
         .where({
           'document_associations.entity_id': contactNameId,
           'document_associations.entity_type': 'contact',
@@ -457,7 +466,19 @@ export async function getDocumentPreview(
     // Check if the identifier is a document ID
     let document = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('documents')
-        .where({ document_id: identifier, tenant })
+        .select(
+          'documents.*',
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `)
+        )
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+        .where({ 'documents.document_id': identifier, 'documents.tenant': tenant })
         .first();
     });
     console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${document ? 'found' : 'not found'}`);
@@ -584,7 +605,11 @@ export async function downloadDocument(documentIdOrFileId: string) {
         // Set appropriate headers for file download
         const headers = new Headers();
         headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
-        headers.set('Content-Disposition', `attachment; filename="${document.document_name}"`);
+
+        // Properly encode filename to handle special characters
+        const encodedFilename = encodeURIComponent(document.document_name || 'download');
+        const asciiFilename = document.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
+        headers.set('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`);
         headers.set('Content-Length', buffer.length.toString());
         
         // Add cache control headers for images to enable browser caching

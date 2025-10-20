@@ -10,7 +10,8 @@ import {
   createFixedPlanAssignment,
   addServiceToFixedPlan,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
@@ -39,14 +40,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -74,6 +113,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       taxPercentage: 8.875
     });
     await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+    await ensureClientPlanBundlesTable(context);
   }
 
   beforeAll(async () => {
@@ -87,12 +127,11 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
+        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'client_tax_settings',
@@ -149,8 +188,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
   }, 30000);
 
   describe('Fixed Price Plans', () => {
-    it('should generate an invoice with consolidated line items for fixed plan', async () => {
-      // Create two services
+    it('should generate an invoice with line items for each service', async () => {
+      // Arrange - Use helper to properly set up fixed plan
       const service1Id = await createTestService(context, {
         service_name: 'Service 1',
         billing_method: 'fixed',
@@ -165,6 +204,21 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         tax_region: 'US-NY'
       });
 
+      // Create the plan with first service
+      const { planId } = await createFixedPlanAssignment(context, service1Id, {
+        planName: 'Standard Fixed Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 25000,
+        detailBaseRateCents: 10000,
+        quantity: 1,
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
+
+      // Add second service to the plan
+      await addServiceToFixedPlan(context, planId, service2Id, {
+        detailBaseRateCents: 15000
+      });
+
       // Create billing cycle
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: context.clientId,
@@ -173,21 +227,6 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
-
-      // Create plan with first service
-      const { planId } = await createFixedPlanAssignment(context, service1Id, {
-        planName: 'Standard Fixed Plan',
-        billingFrequency: 'monthly',
-        baseRateCents: 25000,  // Total for both services
-        detailBaseRateCents: 10000,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
-      });
-
-      // Add second service to plan
-      await addServiceToFixedPlan(context, planId, service2Id, {
-        quantity: 1,
-        detailBaseRateCents: 15000
-      });
 
       // Act
       const result = await generateInvoice(billingCycleId);
@@ -207,12 +246,22 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
     });
 
     it('should calculate taxes correctly', async () => {
-      // Create service
+      // Arrange - Use helper to properly set up fixed plan
       const serviceId = await createTestService(context, {
         service_name: 'Taxable Service',
         billing_method: 'fixed',
         default_rate: 50000,
+        unit_of_measure: 'unit',
         tax_region: 'US-NY'
+      });
+
+      const { planId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Taxable Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 50000,
+        detailBaseRateCents: 50000,
+        quantity: 1,
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
 
       // Create billing cycle
@@ -223,14 +272,6 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
-
-      // Assign plan
-      await createFixedPlanAssignment(context, serviceId, {
-        planName: 'Taxable Plan',
-        billingFrequency: 'monthly',
-        baseRateCents: 50000,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
-      });
 
       // Act
       const result = await generateInvoice(billingCycleId);
@@ -249,13 +290,41 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
 
   describe('Time-Based Plans', () => {
     it('should generate an invoice based on time entries', async () => {
-      // Create time-based service
+      // Arrange - Create time-based service and configuration
       const serviceId = await createTestService(context, {
         service_name: 'Hourly Consultation',
-        billing_method: 'per_unit',
-        default_rate: 5000,
+        billing_method: 'usage',
+        default_rate: 10000,
         unit_of_measure: 'hour',
         tax_region: 'US-NY'
+      });
+
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Hourly Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Hourly'
+      }, 'contract_line_id');
+
+      const configId = uuidv4();
+
+      // Set up contract line service configuration for time-based billing
+      await context.db('contract_line_service_configuration').insert({
+        config_id: configId,
+        contract_line_id: planId,
+        service_id: serviceId,
+        configuration_type: 'Time',
+        custom_rate: 5000, // $50/hour custom rate
+        quantity: 1,
+        tenant: context.tenantId
+      });
+
+      await context.db('contract_line_services').insert({
+        contract_line_id: planId,
+        service_id: serviceId,
+        custom_rate: 5000,
+        quantity: 1,
+        tenant: context.tenantId
       });
 
       // Create billing cycle
@@ -267,19 +336,10 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      // For time-based billing, we need a time-based plan
-      // Note: This is simplified - real implementation may differ
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Hourly Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Hourly'
-      }, 'plan_id');
-
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
@@ -300,7 +360,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         ticket_number: 'TEST-001'
       }, 'ticket_id');
 
-      // Create time entry
+      // Create time entry (2 hours)
       await context.db('time_entries').insert({
         tenant: context.tenantId,
         entry_id: uuidv4(),

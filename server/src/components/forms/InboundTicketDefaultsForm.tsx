@@ -16,7 +16,7 @@ import { getTicketFieldOptions, getCategoriesByBoard } from '../../lib/actions/e
 import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
@@ -158,8 +158,24 @@ export function InboundTicketDefaultsForm({
       return;
     }
 
-    if (!formData.board_id || !formData.status_id || !formData.priority_id) {
-      setError('Board, status, and priority are required');
+    if (!formData.board_id) {
+      setError('Board is required');
+      return;
+    }
+
+    if (!formData.status_id) {
+      setError('Status is required');
+      return;
+    }
+
+    if (!formData.priority_id) {
+      setError('Priority is required');
+      return;
+    }
+
+    // Client/Company is required
+    if (!formData.client_id) {
+      setError('Company is required');
       return;
     }
 
@@ -332,19 +348,20 @@ export function InboundTicketDefaultsForm({
 
           {/* Optional Fields */}
           <div>
-            <Label htmlFor="client_id">Client</Label>
-            <CustomSelect
+            <Label htmlFor="client_id">Client *</Label>
+            <ClientPicker
               id="client_id"
-              options={clients.map((client) => ({
-                value: client.client_id,
-                label: client.client_name
-              }))}
-              value={formData.client_id || null}
-              onValueChange={(value) => handleDefaultChange('client_id', value || '')}
+              clients={clients}
+              selectedClientId={formData.client_id || null}
+              onSelect={(clientId) => handleDefaultChange('client_id', clientId || '')}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
               placeholder="Select Client"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Used as a catch-all when no client can be matched from the email; otherwise ignored.
+              Required: used as a catch-all when no client can be matched from the email.
             </p>
           </div>
 

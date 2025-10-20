@@ -4,7 +4,7 @@ import { ISO8601String } from 'server/src/types/types.d';
 import { createTenantKnex } from 'server/src/lib/db'; // Assuming needed if trx doesn't carry tenant context reliably
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 // Import necessary interfaces - adjust paths if needed
-import { IClientBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
 
 // Define IBucketUsage locally for now, aligning with Phase 1 needs.
 // This might be replaced/merged with the main interface later.
@@ -16,7 +16,7 @@ interface IBucketUsage {
     usage_id: string;
     tenant: string;
     client_id: string;
-    plan_id: string;
+    contract_line_id: string;
     service_catalog_id: string;
     period_start: ISO8601String;
     period_end: ISO8601String;
@@ -30,9 +30,9 @@ interface IBucketUsage {
 // Simplified interface for bucket config needed in this function
 // Local interface matching current DB schema.
 // Fields will be treated as minutes conceptually in calculations below.
-interface IPlanServiceBucketConfig {
+interface IContractLineServiceBucketConfigLocal {
     config_id: string;
-    plan_id: string;
+    contract_line_id: string;
     service_catalog_id: string;
     total_minutes: number;
     allow_rollover: boolean;
@@ -57,7 +57,7 @@ interface PeriodInfo {
 
 /**
  * Calculates the billing period start and end dates for a given client, service, and date,
- * based on the active billing plan and its frequency.
+ * based on the active contract line and its frequency.
  *
  * @param trx Knex transaction object.
  * @param tenant The tenant identifier.
@@ -78,45 +78,45 @@ async function calculatePeriod(
 
     console.debug(`[calculatePeriod] Inputs: tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
 
-    // Find the active client billing plan that covers the target date AND
+    // Find the active client contract line that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
-    const clientPlan = await trx('client_billing_plans as cbp')
-        .join('billing_plans as bp', function() {
-            this.on('cbp.plan_id', '=', 'bp.plan_id')
-                .andOn('cbp.tenant', '=', 'bp.tenant');
+    const clientPlan = await trx('client_contract_lines as ccl')
+        .join('contract_lines as cl', function() {
+            this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
+                .andOn('ccl.tenant', '=', 'cl.tenant');
         })
-        .join('plan_service_configuration as psc', function() {
-            this.on('bp.plan_id', '=', 'psc.plan_id')
-                .andOn('bp.tenant', '=', 'psc.tenant')
+        .join('contract_line_service_configuration as psc', function() {
+            this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
+                .andOn('cl.tenant', '=', 'psc.tenant')
                 .andOnVal('psc.service_id', '=', serviceCatalogId);
         })
-        .join('plan_service_bucket_config as psbc', function() {
+        .join('contract_line_service_bucket_config as psbc', function() {
             this.on('psc.config_id', '=', 'psbc.config_id')
                 .andOn('psc.tenant', '=', 'psbc.tenant');
         })
-        .where('cbp.client_id', clientId)
-        .andWhere('cbp.tenant', tenant)
-        .andWhere('cbp.is_active', true)
-        .andWhere('cbp.start_date', '<=', targetDateISO) // Plan must start on or before the target date
+        .where('ccl.client_id', clientId)
+        .andWhere('ccl.tenant', tenant)
+        .andWhere('ccl.is_active', true)
+        .andWhere('ccl.start_date', '<=', targetDateISO) // Plan must start on or before the target date
         .andWhere(function() {
             // Plan must end on or after the target date, or have no end date
-            this.where('cbp.end_date', '>=', targetDateISO)
-                .orWhereNull('cbp.end_date');
+            this.where('ccl.end_date', '>=', targetDateISO)
+                .orWhereNull('ccl.end_date');
         })
         .select(
-            'cbp.plan_id',
-            'cbp.start_date', // Use the client-specific plan start date as the anchor
-            'bp.billing_frequency'
+            'ccl.contract_line_id',
+            'ccl.start_date', // Use the client-specific plan start date as the anchor
+            'cl.billing_frequency'
          )
-        .orderBy('cbp.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
-        .first<{ plan_id: string; start_date: ISO8601String; billing_frequency: string } | undefined>();
+        .orderBy('ccl.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
+        .first<{ contract_line_id: string; start_date: ISO8601String; billing_frequency: string } | undefined>();
 
     if (!clientPlan) {
-        console.warn(`[calculatePeriod] No active billing plan with bucket config found. tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
+        console.warn(`[calculatePeriod] No active contract line with bucket config found. tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
         return null;
     }
 
-    console.debug(`[calculatePeriod] Found clientPlan: plan_id=${clientPlan.plan_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`);
+    console.debug(`[calculatePeriod] Found clientPlan: contract_line_id=${clientPlan.contract_line_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`);
 
     const planStartDate = toPlainDate(clientPlan.start_date);
     const frequency = clientPlan.billing_frequency;
@@ -162,7 +162,7 @@ async function calculatePeriod(
     return {
         periodStart,
         periodEnd,
-        planId: clientPlan.plan_id,
+        planId: clientPlan.contract_line_id,
         billingFrequency: frequency,
     };
 }
@@ -201,7 +201,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     if (!periodInfo) {
         // If no period info, it means no suitable active plan was found.
-        throw new Error(`Could not determine active billing plan/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
+        throw new Error(`Could not determine active contract line/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
     }
 
     const { periodStart, periodEnd, planId, billingFrequency } = periodInfo;
@@ -226,11 +226,11 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     // 3. Create New Record - Fetch Bucket Configuration
 
-    // First, get the plan_service_configuration to find the config_id
-    const planServiceConfig = await trx('plan_service_configuration')
+    // First, get the contract_line_service_configuration to find the config_id
+    const planServiceConfig = await trx('contract_line_service_configuration')
         .where({
             tenant: tenant,
-            plan_id: planId,
+            contract_line_id: planId,
             service_id: serviceCatalogId,
         })
         .first<{ config_id: string }>();
@@ -239,12 +239,12 @@ export async function findOrCreateCurrentBucketUsageRecord(
         throw new Error(`Plan service configuration not found for plan ${planId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`);
     }
 
-    const bucketConfig = await trx('plan_service_bucket_config')
+    const bucketConfig = await trx('contract_line_service_bucket_config')
         .where({
             tenant: tenant,
             config_id: planServiceConfig.config_id,
         })
-        .first<IPlanServiceBucketConfig | undefined>();
+        .first<IContractLineServiceBucketConfigLocal | undefined>();
 
     if (!bucketConfig) {
         // A bucket usage record cannot exist without its configuration.
@@ -313,7 +313,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
         // usage_id should be generated by DB (assuming UUID default or sequence)
         tenant: tenant,
         client_id: clientId,
-        plan_id: planId, // Link to the plan active in this period
+        contract_line_id: planId, // Link to the plan active in this period
         service_catalog_id: serviceCatalogId,
         period_start: periodStartISO,
         period_end: periodEndISO,
@@ -367,12 +367,12 @@ export async function updateBucketUsageMinutes(
     }
 
     const currentUsage = await trx('bucket_usage as bu')
-        .join('plan_service_configuration as psc', function() {
-            this.on('bu.plan_id', '=', 'psc.plan_id')
+        .join('contract_line_service_configuration as psc', function() {
+            this.on('bu.contract_line_id', '=', 'psc.contract_line_id')
                 .andOn('bu.service_catalog_id', '=', 'psc.service_id')
                 .andOn('bu.tenant', '=', 'psc.tenant');
         })
-        .join('plan_service_bucket_config as psbc', function() {
+        .join('contract_line_service_bucket_config as psbc', function() {
             this.on('psc.config_id', '=', 'psbc.config_id')
                 .andOn('psc.tenant', '=', 'psbc.tenant')
                 .andOn('bu.tenant', '=', 'psbc.tenant')
@@ -437,12 +437,12 @@ export async function reconcileBucketUsageRecord(
 
    // 2. Fetch Bucket Usage Record and Config
    const usageRecord = await trx('bucket_usage as bu')
-       .join('plan_service_configuration as psc', function() {
-           this.on('bu.plan_id', '=', 'psc.plan_id')
+       .join('contract_line_service_configuration as psc', function() {
+           this.on('bu.contract_line_id', '=', 'psc.contract_line_id')
                .andOn('bu.service_catalog_id', '=', 'psc.service_id')
                .andOn('bu.tenant', '=', 'psc.tenant')
        })
-       .join('plan_service_bucket_config as psbc', function() {
+       .join('contract_line_service_bucket_config as psbc', function() {
            this.on('psc.config_id', '=', 'psbc.config_id')
                .andOn('psc.tenant', '=', 'psbc.tenant')
                .andOn('bu.tenant', '=', 'psbc.tenant')

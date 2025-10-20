@@ -7,7 +7,11 @@ import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { StepProps } from '../types';
 import { validateEmailAddress, validateContactName, validateClientName } from 'server/src/lib/utils/clientFormValidation';
 
-export function ClientInfoStep({ data, updateData }: StepProps) {
+interface ClientInfoStepProps extends StepProps {
+  isRevisit?: boolean;
+}
+
+export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
@@ -38,6 +42,40 @@ export function ClientInfoStep({ data, updateData }: StepProps) {
     else setPasswordStrength('strong');
   }, [password]);
 
+  // For returning users, show simplified view
+  if (isRevisit) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">Company Information</h2>
+          <p className="text-sm text-gray-600">
+            Review or update your company details.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="clientName">
+            Company Name <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="clientName"
+            value={data.clientName}
+            onChange={(e) => updateData({ clientName: e.target.value })}
+            placeholder="Acme IT Solutions"
+            required
+          />
+        </div>
+
+        <div className="rounded-md bg-blue-50 p-4">
+          <p className="text-sm text-blue-800">
+            <span className="font-semibold">Note:</span> You can use this wizard to reconfigure your workspace settings at any time.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // For first-time users, show full form
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -136,7 +174,7 @@ export function ClientInfoStep({ data, updateData }: StepProps) {
             </div>
           </div>
         </div>
-        
+
         <div className="space-y-2">
           <h3 className="text-lg font-medium">Set Your Password</h3>
           <p className="text-sm text-gray-600">
@@ -172,7 +210,7 @@ export function ClientInfoStep({ data, updateData }: StepProps) {
               )}
             </button>
           </div>
-          
+
           <div id="password-requirements" className="text-sm mt-1">
             <p className="text-gray-500">Password must contain:</p>
             <ul className="list-disc list-inside space-y-1">
@@ -218,7 +256,7 @@ export function ClientInfoStep({ data, updateData }: StepProps) {
               required
               autoComplete="new-password"
               className={`pr-10 ${
-                confirmPassword && password && 
+                confirmPassword && password &&
                 confirmPassword !== password ? 'border-red-500' : ''
               }`}
             />

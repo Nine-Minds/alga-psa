@@ -155,10 +155,15 @@ exports.seed = async function(knex) {
         { resource: 'billing_settings', action: 'update', msp: true, client: false, description: 'Update billing settings' },
         { resource: 'billing_settings', action: 'delete', msp: true, client: false, description: 'Delete billing settings' },
 
+        // Account Management permissions - MSP Admin only
+        { resource: 'account_management', action: 'read', msp: true, client: false, description: 'View account and subscription details' },
+        { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Manage account and subscription settings' },
+        { resource: 'account_management', action: 'delete', msp: true, client: false, description: 'Cancel subscription and delete account' },
+
         // both the MSP and Client have their own settings, but share the same permission structure
         { resource: 'settings', action: 'read', msp: true, client: true, description: 'View portal settings' },
         { resource: 'settings', action: 'create', msp: true, client: true, description: 'Create portal settings' },
-        { resource: 'settings', action: 'update', msp: true, client: true, description: 'Update portal settings' },
+        { resource: 'settings', action: 'update', msp: true, client: true, description: 'Manage portal settings' },
         { resource: 'settings', action: 'delete', msp: true, client: true, description: 'Delete portal settings' },
         
         // Client Portal Permissions

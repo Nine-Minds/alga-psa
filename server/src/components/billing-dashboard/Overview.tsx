@@ -137,12 +137,12 @@ const Overview = () => {
       {/* Primary Billing Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
-          title="Active Billing Plans"
+          title="Active Contract Lines"
           value={metrics.active_plans_count}
           icon={FileSpreadsheet}
           loading={loading}
           error={hasError}
-          subtitle="Active Plans"
+          subtitle="Active Contract Lines"
         />
         <MetricCard
           title="Billing Clients"
@@ -250,7 +250,7 @@ const Overview = () => {
         <FeatureCard
           icon={FileSpreadsheet}
           title="Service Catalog"
-          description="Manage your service offerings, pricing, and service bundles"
+          description="Manage your service offerings, pricing, and contracts"
         />
       </div>
 

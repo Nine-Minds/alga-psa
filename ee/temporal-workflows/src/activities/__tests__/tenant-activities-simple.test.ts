@@ -54,7 +54,7 @@ async function setupTenantDataInDB(input: {
   tenantId: string;
   adminUserId?: string;
   clientId?: string;
-  billingPlan?: string;
+  contractLine?: string;
 }) {
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
     const setupSteps: string[] = [];
@@ -231,7 +231,7 @@ describe('Tenant Activities Database Logic', () => {
         tenantId: createResult.tenantId,
         adminUserId: 'admin-user-123',
         clientId: createResult.clientId,
-        billingPlan: 'Enterprise'
+        contractLine: 'Enterprise'
       };
 
       const result = await setupTenantDataInDB(setupInput);

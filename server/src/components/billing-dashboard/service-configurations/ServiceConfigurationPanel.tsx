@@ -7,29 +7,29 @@ import { HourlyServiceConfigPanel } from './HourlyServiceConfigPanel';
 import { UsageServiceConfigPanel } from './UsageServiceConfigPanel';
 import { BucketServiceConfigPanel } from './BucketServiceConfigPanel';
 import { 
-  IPlanServiceConfiguration,
-  IPlanServiceFixedConfig,
-  IPlanServiceHourlyConfig,
-  IPlanServiceUsageConfig,
-  IPlanServiceBucketConfig,
-  IPlanServiceRateTier,
+  IContractLineServiceConfiguration,
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IContractLineServiceBucketConfig,
+  IContractLineServiceRateTier,
   IUserTypeRate
-} from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { IService, IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
+} from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
+import { IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Button } from 'server/src/components/ui/Button';
 
 interface ServiceConfigurationPanelProps {
-  configuration: Partial<IPlanServiceConfiguration>;
+  configuration: Partial<IContractLineServiceConfiguration>;
   service?: IService;
-  typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig> | null;
-  planFixedConfig?: Partial<IBillingPlanFixedConfig>;
-  rateTiers?: IPlanServiceRateTier[];
+  typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig> | null;
+  planFixedConfig?: Partial<IContractLineFixedConfig>;
+  rateTiers?: IContractLineServiceRateTier[];
   userTypeRates?: IUserTypeRate[];
-  onConfigurationChange: (updates: Partial<IPlanServiceConfiguration>) => void;
-  onTypeConfigChange: (type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket', config: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>) => void;
-  onPlanFixedConfigChange?: (updates: Partial<IBillingPlanFixedConfig>) => void;
-  onRateTiersChange?: (tiers: IPlanServiceRateTier[]) => void;
+  onConfigurationChange: (updates: Partial<IContractLineServiceConfiguration>) => void;
+  onTypeConfigChange: (type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket', config: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>) => void;
+  onPlanFixedConfigChange?: (updates: Partial<IContractLineFixedConfig>) => void;
+  onRateTiersChange?: (tiers: IContractLineServiceRateTier[]) => void;
   onUserTypeRatesChange?: (rates: IUserTypeRate[]) => void;
   onSave?: () => void;
   onCancel?: () => void;
@@ -61,17 +61,17 @@ export function ServiceConfigurationPanel({
   const [configurationType, setConfigurationType] = useState<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>(
     configuration.configuration_type || 'Fixed'
   );
-  const [fixedConfig, setFixedConfig] = useState<Partial<IPlanServiceFixedConfig>>(
-    configurationType === 'Fixed' ? (typeConfig as Partial<IPlanServiceFixedConfig>) || {} : {}
+  const [fixedConfig, setFixedConfig] = useState<Partial<IContractLineServiceFixedConfig>>(
+    configurationType === 'Fixed' ? (typeConfig as Partial<IContractLineServiceFixedConfig>) || {} : {}
   );
-  const [hourlyConfig, setHourlyConfig] = useState<Partial<IPlanServiceHourlyConfig>>(
-    configurationType === 'Hourly' ? (typeConfig as Partial<IPlanServiceHourlyConfig>) || {} : {}
+  const [hourlyConfig, setHourlyConfig] = useState<Partial<IContractLineServiceHourlyConfig>>(
+    configurationType === 'Hourly' ? (typeConfig as Partial<IContractLineServiceHourlyConfig>) || {} : {}
   );
-  const [usageConfig, setUsageConfig] = useState<Partial<IPlanServiceUsageConfig>>(
-    configurationType === 'Usage' ? (typeConfig as Partial<IPlanServiceUsageConfig>) || {} : {}
+  const [usageConfig, setUsageConfig] = useState<Partial<IContractLineServiceUsageConfig>>(
+    configurationType === 'Usage' ? (typeConfig as Partial<IContractLineServiceUsageConfig>) || {} : {}
   );
-  const [bucketConfig, setBucketConfig] = useState<Partial<IPlanServiceBucketConfig>>(
-    configurationType === 'Bucket' ? (typeConfig as Partial<IPlanServiceBucketConfig>) || {} : {}
+  const [bucketConfig, setBucketConfig] = useState<Partial<IContractLineServiceBucketConfig>>(
+    configurationType === 'Bucket' ? (typeConfig as Partial<IContractLineServiceBucketConfig>) || {} : {}
   );
 
   // Update local state when props change
@@ -81,22 +81,22 @@ export function ServiceConfigurationPanel({
     if (typeConfig) {
       switch (configuration.configuration_type) {
         case 'Fixed':
-          setFixedConfig(typeConfig as Partial<IPlanServiceFixedConfig>);
+          setFixedConfig(typeConfig as Partial<IContractLineServiceFixedConfig>);
           break;
         case 'Hourly':
-          setHourlyConfig(typeConfig as Partial<IPlanServiceHourlyConfig>);
+          setHourlyConfig(typeConfig as Partial<IContractLineServiceHourlyConfig>);
           break;
         case 'Usage':
-          setUsageConfig(typeConfig as Partial<IPlanServiceUsageConfig>);
+          setUsageConfig(typeConfig as Partial<IContractLineServiceUsageConfig>);
           break;
         case 'Bucket':
-          setBucketConfig(typeConfig as Partial<IPlanServiceBucketConfig>);
+          setBucketConfig(typeConfig as Partial<IContractLineServiceBucketConfig>);
           break;
       }
     }
   }, [configuration, typeConfig]);
 
-  const handleConfigurationChange = (updates: Partial<IPlanServiceConfiguration>) => {
+  const handleConfigurationChange = (updates: Partial<IContractLineServiceConfiguration>) => {
     onConfigurationChange(updates);
   };
 
@@ -121,25 +121,25 @@ export function ServiceConfigurationPanel({
     }
   };
 
-  const handleFixedConfigChange = (updates: Partial<IPlanServiceFixedConfig>) => {
+  const handleFixedConfigChange = (updates: Partial<IContractLineServiceFixedConfig>) => {
     const updatedConfig = { ...fixedConfig, ...updates };
     setFixedConfig(updatedConfig);
     onTypeConfigChange('Fixed', updatedConfig);
   };
 
-  const handleHourlyConfigChange = (updates: Partial<IPlanServiceHourlyConfig>) => {
+  const handleHourlyConfigChange = (updates: Partial<IContractLineServiceHourlyConfig>) => {
     const updatedConfig = { ...hourlyConfig, ...updates };
     setHourlyConfig(updatedConfig);
     onTypeConfigChange('Hourly', updatedConfig);
   };
 
-  const handleUsageConfigChange = (updates: Partial<IPlanServiceUsageConfig>) => {
+  const handleUsageConfigChange = (updates: Partial<IContractLineServiceUsageConfig>) => {
     const updatedConfig = { ...usageConfig, ...updates };
     setUsageConfig(updatedConfig);
     onTypeConfigChange('Usage', updatedConfig);
   };
 
-  const handleBucketConfigChange = (updates: Partial<IPlanServiceBucketConfig>) => {
+  const handleBucketConfigChange = (updates: Partial<IContractLineServiceBucketConfig>) => {
     const updatedConfig = { ...bucketConfig, ...updates };
     setBucketConfig(updatedConfig);
     onTypeConfigChange('Bucket', updatedConfig);

@@ -18,9 +18,9 @@ export class TextDocumentHandler extends BaseDocumentHandler {
   canHandle(document: IDocument): boolean {
     const docTypeName = document.type_name?.toLowerCase();
     const docMimeType = document.mime_type?.toLowerCase();
-    
+
     return (
-      (TextDocumentHandler.TEXT_TYPE_NAMES.includes(docTypeName || '') || 
+      (TextDocumentHandler.TEXT_TYPE_NAMES.includes(docTypeName || '') ||
        docMimeType === 'text/plain') &&
       !document.file_id // In-app document (not a file)
     );

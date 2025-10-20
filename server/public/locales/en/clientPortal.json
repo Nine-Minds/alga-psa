@@ -7,6 +7,7 @@
     "assets": "Assets",
     "clientSettings": "Client Settings",
     "profile": "Profile",
+    "account": "Account",
     "signOut": "Sign out",
     "clientPortal": "Client Portal",
     "portal": "Portal"
@@ -194,14 +195,14 @@
       "overview": "Overview",
       "invoices": "Invoices"
     },
-    "currentPlan": "Current Plan",
+    "currentContractLine": "Current Contract Line",
     "nextInvoice": "Next Invoice",
-    "viewPlanDetails": "View Plan Details",
+    "viewContractLineDetails": "View Contract Line Details",
     "viewAllInvoices": "View All Invoices",
     "failedToLoad": "Failed to load invoices. Please try again.",
     "invoices": "Invoices",
     "payments": "Payments",
-    "plans": "Service Plans",
+    "contractLines": "Service Contract Lines",
     "usage": "Usage Metrics",
     "hoursByService": "Hours by Service",
     "invoice": {
@@ -246,9 +247,9 @@
       "weekly": "Weekly",
       "biweekly": "Bi-weekly"
     },
-    "plan": {
-      "detailsTitle": "Plan Details",
-      "name": "Plan Name",
+    "contractLine": {
+      "detailsTitle": "Contract Line Details",
+      "name": "Contract Line Name",
       "frequency": "Billing Frequency",
       "startDate": "Start Date",
       "endDate": "End Date",
@@ -256,7 +257,7 @@
       "status": "Status",
       "customRate": "Custom Rate",
       "serviceCategory": "Service Category",
-      "statusDescription": "This plan is currently {{status}} and will {{expiry}}.",
+      "statusDescription": "This contract line is currently {{status}} and will {{expiry}}.",
       "expiresOn": "expire on {{date}}",
       "noExpiry": "not expire"
     },
@@ -274,8 +275,8 @@
       "total": "Total Hours",
       "usage": "Usage",
       "overage": "Overage",
-      "noPlanTitle": "No bucket plans available",
-      "noPlanDescription": "There are no active bucket plans for your account."
+      "noContractLineTitle": "No bucket contract lines available",
+      "noContractLineDescription": "There are no active bucket contract lines for your account."
     },
     "messages": {
       "noInvoices": "No invoices found",
@@ -461,6 +462,7 @@
       "website": "Website",
       "industry": "Industry",
       "companySize": "Company Size",
+      "company_size": "Company Size",
       "annualRevenue": "Annual Revenue",
       "size": "Company Size",
       "taxId": "Tax ID",
@@ -521,9 +523,23 @@
   },
   "account": {
     "title": "Account",
+    "licenseManagement": {
+      "title": "Account",
+      "subtitle": "License management is available in the MSP Portal",
+      "howToPurchaseTitle": "How to Purchase Additional Licenses:",
+      "step1": "Sign in to the MSP Portal (if you have admin access)",
+      "step2": "Navigate to Settings → Account Management",
+      "step3": "Click \"Add Licenses\" to purchase more licenses",
+      "step4": "Complete the checkout process",
+      "needHelpTitle": "Need Help?",
+      "needHelpDescription": "Only users with Account Management permissions can purchase licenses. If you don't have access, please contact your AlgaPSA administrator.",
+      "backToDashboard": "Back to Dashboard",
+      "goToMSPPortal": "Go to MSP Portal",
+      "signingOut": "Signing out..."
+    },
     "services": {
       "loadError": "Failed to load services",
-      "loadPlansError": "Failed to load service plans",
+      "loadContractLinesError": "Failed to load service contract lines",
       "updateError": "Failed to update service",
       "loading": "Loading services...",
       "activeTitle": "Active Services",
@@ -532,7 +548,7 @@
         "service": "Service",
         "description": "Description",
         "status": "Status",
-        "currentPlan": "Current Plan",
+        "currentContractLine": "Current Contract Line",
         "nextBilling": "Next Billing"
       },
       "actions": {
@@ -542,8 +558,8 @@
       },
       "manageTitle": "Manage {{service}}",
       "genericServiceLabel": "Service",
-      "currentPlan": "Current Plan",
-      "availablePlans": "Available Plans",
+      "currentContractLine": "Current Contract Line",
+      "availableContractLines": "Available Contract Lines",
       "catalog": {
         "title": "Available Services",
         "learnMore": "Learn More",

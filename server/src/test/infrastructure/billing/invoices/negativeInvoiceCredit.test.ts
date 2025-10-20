@@ -5,15 +5,18 @@ import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createTestDate } from '../../../../../test-utils/dateUtils';
+import { createTestDate, dateHelpers } from '../../../../../test-utils/dateUtils';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import {
   createTestService,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  createFixedPlanAssignment,
+  addServiceToFixedPlan,
+  ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
@@ -41,14 +44,52 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-});
+vi.mock('@alga-psa/shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/core/secretProvider', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: () => ({
+    getSecret: async () => undefined,
+    getAppSecret: async () => undefined,
+    setSecret: async () => {},
+    getProviderName: () => 'MockSecretProvider',
+    close: async () => {},
+  }),
+}));
+
+vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+  WorkflowEventModel: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams', () => ({
+  getRedisStreamClient: () => ({
+    publishEvent: vi.fn(),
+  }),
+  toStreamEvent: (event: unknown) => event,
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -76,6 +117,7 @@ describe('Negative Invoice Credit Tests', () => {
       taxPercentage: 10.0
     });
     await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+    await ensureClientPlanBundlesTable(context);
   }
 
   beforeAll(async () => {
@@ -86,13 +128,10 @@ describe('Negative Invoice Credit Tests', () => {
         'invoices',
         'transactions',
         'client_billing_cycles',
-        'client_billing_plans',
-        'plan_service_configuration',
-        'plan_service_fixed_config',
-        'plan_service_bucket_config',
+        'client_contract_lines',
+        'contract_line_services',
         'service_catalog',
-        'billing_plan_fixed_config',
-        'billing_plans',
+        'contract_lines',
         'bucket_usage',
         'tax_rates',
         'tax_regions',
@@ -140,27 +179,15 @@ describe('Negative Invoice Credit Tests', () => {
 
   describe('Basic Negative Invoice Credit Creation', () => {
     it('should create a credit when finalizing an invoice with negative total', async () => {
-      // 1. Create a test client with zero initial credit balance
-      const client_id = await context.createEntity('clients', {
-        client_name: 'Basic Negative Invoice Client',
-        billing_cycle: 'monthly',
-        client_id: uuidv4(),
-        region_code: 'US-NY',
-        is_tax_exempt: false,
-        created_at: Temporal.Now.plainDateISO().toString(),
-        updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
-        url: '',
-        is_inactive: false
-      }, 'client_id');
+      // Use the default test client
+      const client_id = context.clientId;
 
-      // 2. Set up client tax settings
-      await setupClientTaxConfiguration(context, {
-        regionCode: 'US-NY',
-        clientId: client_id
-      });
+      // Calculate dates first
+      const now = createTestDate();
+      const startDate = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month').toInstant().toString();
+      const endDate = dateHelpers.startOf(now, 'month').toInstant().toString();
 
-      // 3. Create two services with negative rates
+      // 4. Create two services with negative rates
       const serviceA = await createTestService(context, {
         service_name: 'Credit Service A',
         billing_method: 'fixed',
@@ -175,11 +202,22 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 4. Create a billing cycle first (needed before plan assignment)
-      const now = createTestDate();
-      const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-      const endDate = Temporal.PlainDate.from(now).toString();
+      // 5. Use helper to create properly configured plan with negative rates
+      const { planId } = await createFixedPlanAssignment(context, serviceA, {
+        planName: 'Credit Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: -12500, // Total of both services
+        detailBaseRateCents: -5000, // Service A rate
+        quantity: 1,
+        startDate
+      });
 
+      // 6. Add second service to plan
+      await addServiceToFixedPlan(context, planId, serviceB, {
+        detailBaseRateCents: -7500 // Service B rate
+      });
+
+      // 7. Create a billing cycle
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: client_id,
         billing_cycle: 'monthly',
@@ -188,63 +226,8 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate
       }, 'billing_cycle_id');
 
-      // 5. Create a billing plan with negative services
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Credit Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.db('billing_plan_fixed_config').insert({
-        plan_id: planId,
-        tenant: context.tenantId
-      });
-
-      // 6. Assign services to plan
-      const configIdA = uuidv4();
-      const configIdB = uuidv4();
-      await context.db('plan_service_configuration').insert([
-        {
-          config_id: configIdA,
-          plan_id: planId,
-          service_id: serviceA,
-          configuration_type: 'Fixed',
-          tenant: context.tenantId
-        },
-        {
-          config_id: configIdB,
-          plan_id: planId,
-          service_id: serviceB,
-          configuration_type: 'Fixed',
-          tenant: context.tenantId
-        }
-      ]);
-
-      await context.db('plan_service_fixed_config').insert([
-        {
-          config_id: configIdA,
-          base_rate: -50.00, // -$50.00
-          tenant: context.tenantId
-        },
-        {
-          config_id: configIdB,
-          base_rate: -75.00, // -$75.00
-          tenant: context.tenantId
-        }
-      ]);
-
-      // 7. Assign plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
-        client_id: client_id,
-        plan_id: planId,
-        tenant: context.tenantId,
-        start_date: startDate,
-        is_active: true
-      });
-
-      // 9. Check initial credit balance is zero
-      const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+      // 8. Check initial credit balance is zero
+      const initialCredit = await ClientContractLine.getClientCredit(client_id);
       expect(initialCredit).toBe(0);
 
       // 10. Generate invoice
@@ -264,7 +247,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(invoice.invoice_id);
 
       // 13. Verify the client credit balance has increased
-      const updatedCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const updatedCredit = await ClientContractLine.getClientCredit(client_id);
       expect(updatedCredit).toBe(12500); // $125.00 credit
 
       // 14. Verify credit issuance transaction
@@ -293,27 +276,15 @@ describe('Negative Invoice Credit Tests', () => {
 
   describe('Mixed Invoice with Net Negative Amount', () => {
     it('should create a credit when finalizing a mixed invoice with negative total', async () => {
-      // 1. Create a test client with zero initial credit balance
-      const client_id = await context.createEntity('clients', {
-        client_name: 'Mixed Invoice Client',
-        billing_cycle: 'monthly',
-        client_id: uuidv4(),
-        region_code: 'US-NY',
-        is_tax_exempt: false,
-        created_at: Temporal.Now.plainDateISO().toString(),
-        updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
-        url: '',
-        is_inactive: false
-      }, 'client_id');
+      // Use the default test client
+      const client_id = context.clientId;
 
-      // 2. Set up client tax settings
-      await setupClientTaxConfiguration(context, {
-        regionCode: 'US-NY',
-        clientId: client_id
-      });
+      // Calculate dates first
+      const now = createTestDate();
+      const startDate = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month').toInstant().toString();
+      const endDate = dateHelpers.startOf(now, 'month').toInstant().toString();
 
-      // 3. Create three services with both positive and negative rates
+      // 4. Create three services with both positive and negative rates
       const serviceA = await createTestService(context, {
         service_name: 'Regular Service A',
         billing_method: 'fixed',
@@ -335,69 +306,26 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 4. Create a billing plan with mixed services
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Mixed Credit Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.db('billing_plan_fixed_config').insert({
-        plan_id: planId,
-        tenant: context.tenantId
+      // 5. Use helper to create properly configured plan with mixed rates
+      const { planId } = await createFixedPlanAssignment(context, serviceA, {
+        planName: 'Mixed Credit Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: -12500, // Total: 10000 - 15000 - 7500 = -12500
+        detailBaseRateCents: 10000, // Service A rate
+        quantity: 1,
+        startDate
       });
 
-      // 5. Assign services to plan
-      const configIdA = uuidv4();
-      const configIdB = uuidv4();
-      const configIdC = uuidv4();
-      await context.db('plan_service_configuration').insert([
-        {
-          config_id: configIdA,
-          plan_id: planId,
-          service_id: serviceA,
-          configuration_type: 'Fixed',
-          tenant: context.tenantId
-        },
-        {
-          config_id: configIdB,
-          plan_id: planId,
-          service_id: serviceB,
-          configuration_type: 'Fixed',
-          tenant: context.tenantId
-        },
-        {
-          config_id: configIdC,
-          plan_id: planId,
-          service_id: serviceC,
-          configuration_type: 'Fixed',
-          tenant: context.tenantId
-        }
-      ]);
+      // 6. Add negative services to plan
+      await addServiceToFixedPlan(context, planId, serviceB, {
+        detailBaseRateCents: -15000 // Service B rate
+      });
 
-      await context.db('plan_service_fixed_config').insert([
-        {
-          config_id: configIdA,
-          base_rate: 100.00, // $100.00
-          tenant: context.tenantId
-        },
-        {
-          config_id: configIdB,
-          base_rate: -150.00, // -$150.00
-          tenant: context.tenantId
-        },
-        {
-          config_id: configIdC,
-          base_rate: -75.00, // -$75.00
-          tenant: context.tenantId
-        }
-      ]);
+      await addServiceToFixedPlan(context, planId, serviceC, {
+        detailBaseRateCents: -7500 // Service C rate
+      });
 
       // 7. Create a billing cycle
-      const now = createTestDate();
-      const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-      const endDate = Temporal.PlainDate.from(now).toString();
-
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: client_id,
         billing_cycle: 'monthly',
@@ -406,18 +334,8 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate
       }, 'billing_cycle_id');
 
-      // 8. Assign plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
-        client_id: client_id,
-        plan_id: planId,
-        tenant: context.tenantId,
-        start_date: startDate,
-        is_active: true
-      });
-
-      // 9. Check initial credit balance is zero
-      const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+      // 8. Check initial credit balance is zero
+      const initialCredit = await ClientContractLine.getClientCredit(client_id);
       expect(initialCredit).toBe(0);
 
       // 10. Generate invoice
@@ -453,7 +371,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(invoice.invoice_id);
 
       // 13. Verify the client credit balance has increased by the absolute value of the total
-      const updatedCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const updatedCredit = await ClientContractLine.getClientCredit(client_id);
       expect(updatedCredit).toBe(11500); // $115.00 credit (absolute value of -$115.00)
 
       // 14. Verify credit issuance transaction
@@ -474,27 +392,15 @@ describe('Negative Invoice Credit Tests', () => {
 
   describe('Applying Credit from Negative Invoice to Future Invoice', () => {
     it('should automatically apply credit from a negative invoice to a future invoice', async () => {
-      // 1. Create a test client with zero initial credit balance
-      const client_id = await context.createEntity('clients', {
-        client_name: 'Credit Application Client',
-        billing_cycle: 'monthly',
-        client_id: uuidv4(),
-        region_code: 'US-NY',
-        is_tax_exempt: false,
-        created_at: Temporal.Now.plainDateISO().toString(),
-        updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
-        url: '',
-        is_inactive: false
-      }, 'client_id');
+      // Use the default test client
+      const client_id = context.clientId;
 
-      // 2. Set up client tax settings
-      await setupClientTaxConfiguration(context, {
-        regionCode: 'US-NY',
-        clientId: client_id
-      });
+      // Calculate dates first
+      const now = createTestDate();
+      const startDate1 = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 2 }), 'month').toInstant().toString();
+      const endDate1 = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month').toInstant().toString();
 
-      // 3. Create negative services for first invoice
+      // 4. Create negative services for first invoice
       const negativeServiceA = await createTestService(context, {
         service_name: 'Credit Service A',
         billing_method: 'fixed',
@@ -509,56 +415,22 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 4. Create a billing plan for negative services
-      const planId1 = await context.createEntity('billing_plans', {
-        plan_name: 'Credit Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.db('billing_plan_fixed_config').insert({
-        plan_id: planId1,
-        tenant: context.tenantId
+      // 5. Use helper to create properly configured plan with negative rates
+      const { planId: planId1, clientContractLineId: firstPlanId } = await createFixedPlanAssignment(context, negativeServiceA, {
+        planName: 'Credit Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: -12500, // Total: -5000 + -7500 = -12500
+        detailBaseRateCents: -5000, // Service A rate
+        quantity: 1,
+        startDate: startDate1
       });
 
-      // 5. Assign negative services to plan
-      const configIdNegA = uuidv4();
-      const configIdNegB = uuidv4();
-      await context.db('plan_service_configuration').insert([
-        {
-          config_id: configIdNegA,
-          plan_id: planId1,
-          service_id: negativeServiceA,
-          configuration_type: 'Fixed',
-          tenant: context.tenantId
-        },
-        {
-          config_id: configIdNegB,
-          plan_id: planId1,
-          service_id: negativeServiceB,
-          configuration_type: 'Fixed',
-          tenant: context.tenantId
-        }
-      ]);
-
-      await context.db('plan_service_fixed_config').insert([
-        {
-          config_id: configIdNegA,
-          base_rate: -50.00, // -$50.00
-          tenant: context.tenantId
-        },
-        {
-          config_id: configIdNegB,
-          base_rate: -75.00, // -$75.00
-          tenant: context.tenantId
-        }
-      ]);
+      // 6. Add second negative service to plan
+      await addServiceToFixedPlan(context, planId1, negativeServiceB, {
+        detailBaseRateCents: -7500 // Service B rate
+      });
 
       // 7. Create first billing cycle
-      const now = createTestDate();
-      const startDate1 = Temporal.PlainDate.from(now).subtract({ months: 2 }).toString();
-      const endDate1 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-
       const billingCycleId1 = await context.createEntity('client_billing_cycles', {
         client_id: client_id,
         billing_cycle: 'monthly',
@@ -567,19 +439,8 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate1
       }, 'billing_cycle_id');
 
-      // 8. Assign first plan to client
-      const firstPlanId = uuidv4();
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: firstPlanId,
-        client_id: client_id,
-        plan_id: planId1,
-        tenant: context.tenantId,
-        start_date: startDate1,
-        is_active: true
-      });
-
       // 9. Check initial credit balance is zero
-      const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const initialCredit = await ClientContractLine.getClientCredit(client_id);
       expect(initialCredit).toBe(0);
 
       // 10. Generate negative invoice
@@ -601,7 +462,7 @@ describe('Negative Invoice Credit Tests', () => {
       // await new Promise(resolve => setTimeout(resolve, 100));
 
       // 13. Verify credit was created
-      const creditAfterNegativeInvoice = await ClientBillingPlan.getClientCredit(client_id);
+      const creditAfterNegativeInvoice = await ClientContractLine.getClientCredit(client_id);
       expect(creditAfterNegativeInvoice).toBe(12500); // $125.00 credit
 
       // Verify transaction record for the negative invoice credit
@@ -619,7 +480,11 @@ describe('Negative Invoice Credit Tests', () => {
 
       // Now create a positive invoice that will use the credit
 
-      // 14. Create positive service for second invoice
+      // 14. Calculate dates for second billing cycle
+      const startDate2 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+      const endDate2 = Temporal.PlainDate.from(now).toString();
+
+      // 15. Create positive service for second invoice
       const positiveService = await createTestService(context, {
         service_name: 'Regular Service',
         billing_method: 'fixed',
@@ -627,38 +492,17 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 15. Create a billing plan for positive service
-      const planId2 = await context.createEntity('billing_plans', {
-        plan_name: 'Regular Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.db('billing_plan_fixed_config').insert({
-        plan_id: planId2,
-        tenant: context.tenantId
-      });
-
-      // 16. Assign positive service to second plan
-      const configIdPos = uuidv4();
-      await context.db('plan_service_configuration').insert({
-        config_id: configIdPos,
-        plan_id: planId2,
-        service_id: positiveService,
-        configuration_type: 'fixed',
-        tenant: context.tenantId
-      });
-
-      await context.db('plan_service_fixed_config').insert({
-        config_id: configIdPos,
-        base_rate: 100.00, // $100.00
-        tenant: context.tenantId
+      // 16. Use helper to create properly configured plan with positive rate
+      const { planId: planId2 } = await createFixedPlanAssignment(context, positiveService, {
+        planName: 'Regular Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 10000,
+        detailBaseRateCents: 10000,
+        quantity: 1,
+        startDate: startDate2
       });
 
       // 17. Create second billing cycle
-      const startDate2 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-      const endDate2 = Temporal.PlainDate.from(now).toString();
-
       const billingCycleId2 = await context.createEntity('client_billing_cycles', {
         client_id: client_id,
         billing_cycle: 'monthly',
@@ -667,19 +511,10 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate2
       }, 'billing_cycle_id');
 
-      // 18. Deactivate first plan and assign second plan to client
-      await context.db('client_billing_plans')
-        .where({ client_billing_plan_id: firstPlanId })
+      // 18. Deactivate first plan (second plan already assigned via helper)
+      await context.db('client_contract_lines')
+        .where({ client_contract_line_id: firstPlanId })
         .update({ is_active: false });
-        
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
-        client_id: client_id,
-        plan_id: planId2,
-        tenant: context.tenantId,
-        start_date: startDate2,
-        is_active: true
-      });
 
       // 19. Generate positive invoice
       const positiveInvoice = await generateInvoice(billingCycleId2);
@@ -706,7 +541,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(parseInt(finalPositiveInvoice.total_amount)).toBe(0); // $0.00 remaining total
 
       // 23. Verify the credit balance is reduced
-      const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const finalCredit = await ClientContractLine.getClientCredit(client_id);
       expect(finalCredit).toBe(1500); // $15.00 = $125.00 - $110.00 
 
       // 24. Verify credit application transaction
@@ -725,27 +560,15 @@ describe('Negative Invoice Credit Tests', () => {
 
   describe('Partial Application of Negative Invoice Credit', () => {
     it('should apply partial credit when the invoice amount exceeds the available credit', async () => {
-      // 1. Create a test client with zero initial credit balance
-      const client_id = await context.createEntity('clients', {
-        client_name: 'Partial Credit Application Client',
-        billing_cycle: 'monthly',
-        client_id: uuidv4(),
-        region_code: 'US-NY',
-        is_tax_exempt: false,
-        created_at: Temporal.Now.plainDateISO().toString(),
-        updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
-        url: '',
-        is_inactive: false
-      }, 'client_id');
+      // Use the default test client
+      const client_id = context.clientId;
 
-      // 2. Set up client tax settings
-      await setupClientTaxConfiguration(context, {
-        regionCode: 'US-NY',
-        clientId: client_id
-      });
+      // Calculate dates first
+      const now = createTestDate();
+      const startDate1 = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 2 }), 'month').toInstant().toString();
+      const endDate1 = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month').toInstant().toString();
 
-      // 3. Create single negative service for first invoice (small amount)
+      // 4. Create single negative service for first invoice (small amount)
       const negativeService = await createTestService(context, {
         service_name: 'Small Credit Service',
         billing_method: 'fixed',
@@ -753,39 +576,17 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 4. Create a billing plan for negative services
-      const planId1 = await context.createEntity('billing_plans', {
-        plan_name: 'Small Credit Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.db('billing_plan_fixed_config').insert({
-        plan_id: planId1,
-        tenant: context.tenantId
+      // 5. Use helper to create properly configured plan with negative rate
+      const { planId: planId1 } = await createFixedPlanAssignment(context, negativeService, {
+        planName: 'Small Credit Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: -5000,
+        detailBaseRateCents: -5000,
+        quantity: 1,
+        startDate: startDate1
       });
 
-      // 5. Assign negative service to plan
-      const configIdNeg = uuidv4();
-      await context.db('plan_service_configuration').insert({
-        config_id: configIdNeg,
-        plan_id: planId1,
-        service_id: negativeService,
-        configuration_type: 'fixed',
-        tenant: context.tenantId
-      });
-
-      await context.db('plan_service_fixed_config').insert({
-        config_id: configIdNeg,
-        base_rate: -50.00, // -$50.00
-        tenant: context.tenantId
-      });
-
-      // 7. Create first billing cycle
-      const now = createTestDate();
-      const startDate1 = Temporal.PlainDate.from(now).subtract({ months: 2 }).toString();
-      const endDate1 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-
+      // 6. Create first billing cycle
       const billingCycleId1 = await context.createEntity('client_billing_cycles', {
         client_id: client_id,
         billing_cycle: 'monthly',
@@ -793,16 +594,6 @@ describe('Negative Invoice Credit Tests', () => {
         period_end_date: endDate1,
         effective_date: startDate1
       }, 'billing_cycle_id');
-
-      // 8. Assign first plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
-        client_id: client_id,
-        plan_id: planId1,
-        tenant: context.tenantId,
-        start_date: startDate1,
-        is_active: true
-      });
 
       // 9. Generate negative invoice (small amount)
       const negativeInvoice = await generateInvoice(billingCycleId1);
@@ -820,12 +611,16 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(negativeInvoice.invoice_id);
 
       // 12. Verify credit was created
-      const creditAfterNegativeInvoice = await ClientBillingPlan.getClientCredit(client_id);
+      const creditAfterNegativeInvoice = await ClientContractLine.getClientCredit(client_id);
       expect(creditAfterNegativeInvoice).toBe(5000); // $50.00 credit
 
       // Now create a positive invoice with a larger amount
 
-      // 13. Create expensive positive service for second invoice
+      // 13. Calculate dates for second billing cycle
+      const startDate2 = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month').toInstant().toString();
+      const endDate2 = dateHelpers.startOf(now, 'month').toInstant().toString();
+
+      // 14. Create expensive positive service for second invoice
       const expensiveService = await createTestService(context, {
         service_name: 'Expensive Service',
         billing_method: 'fixed',
@@ -833,38 +628,17 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 14. Create a billing plan for expensive service
-      const planId2 = await context.createEntity('billing_plans', {
-        plan_name: 'Expensive Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.db('billing_plan_fixed_config').insert({
-        plan_id: planId2,
-        tenant: context.tenantId
-      });
-
-      // 15. Assign positive service to second plan
-      const configIdExp = uuidv4();
-      await context.db('plan_service_configuration').insert({
-        config_id: configIdExp,
-        plan_id: planId2,
-        service_id: expensiveService,
-        configuration_type: 'fixed',
-        tenant: context.tenantId
-      });
-
-      await context.db('plan_service_fixed_config').insert({
-        config_id: configIdExp,
-        base_rate: 175.00, // $175.00
-        tenant: context.tenantId
+      // 15. Use helper to create properly configured plan with positive rate
+      const { planId: planId2 } = await createFixedPlanAssignment(context, expensiveService, {
+        planName: 'Expensive Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 17500,
+        detailBaseRateCents: 17500,
+        quantity: 1,
+        startDate: startDate2
       });
 
       // 16. Create second billing cycle
-      const startDate2 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-      const endDate2 = Temporal.PlainDate.from(now).toString();
-
       const billingCycleId2 = await context.createEntity('client_billing_cycles', {
         client_id: client_id,
         billing_cycle: 'monthly',
@@ -873,23 +647,14 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate2
       }, 'billing_cycle_id');
 
-      // 17. Deactivate the first plan and assign second plan to client
-      await context.db('client_billing_plans')
-        .where({ 
+      // 18. Deactivate the first plan
+      await context.db('client_contract_lines')
+        .where({
           client_id: client_id,
-          plan_id: planId1,
+          contract_line_id: planId1,
           tenant: context.tenantId
         })
         .update({ is_active: false });
-        
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
-        client_id: client_id,
-        plan_id: planId2,
-        tenant: context.tenantId,
-        start_date: startDate2,
-        is_active: true
-      });
 
       // 18. Generate positive invoice
       const positiveInvoice = await generateInvoice(billingCycleId2);
@@ -916,7 +681,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(parseInt(finalPositiveInvoice.total_amount)).toBe(14250); // $142.50 remaining total ($192.50 - $50.00)
 
       // 22. Verify the credit balance is now zero
-      const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const finalCredit = await ClientContractLine.getClientCredit(client_id);
       expect(finalCredit).toBe(0); // All credit was used
 
       // 23. Verify credit application transaction
@@ -935,27 +700,15 @@ describe('Negative Invoice Credit Tests', () => {
 
   describe('Full Credit Coverage from Negative Invoice', () => {
     it('should fully cover a smaller invoice with excess credit from a negative invoice', async () => {
-      // 1. Create a test client with zero initial credit balance
-      const client_id = await context.createEntity('clients', {
-        client_name: 'Full Credit Coverage Client',
-        billing_cycle: 'monthly',
-        client_id: uuidv4(),
-        region_code: 'US-NY',
-        is_tax_exempt: false,
-        created_at: Temporal.Now.plainDateISO().toString(),
-        updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
-        url: '',
-        is_inactive: false
-      }, 'client_id');
+      // Use the default test client
+      const client_id = context.clientId;
 
-      // 2. Set up client tax settings
-      await setupClientTaxConfiguration(context, {
-        regionCode: 'US-NY',
-        clientId: client_id
-      });
+      // Calculate dates first
+      const now = createTestDate();
+      const startDate1 = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 2 }), 'month').toInstant().toString();
+      const endDate1 = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month').toInstant().toString();
 
-      // 3. Create large negative service for first invoice
+      // 4. Create large negative service for first invoice
       const largeNegativeService = await createTestService(context, {
         service_name: 'Large Credit Service',
         billing_method: 'fixed',
@@ -963,39 +716,17 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 4. Create a billing plan for negative service
-      const planId1 = await context.createEntity('billing_plans', {
-        plan_name: 'Large Credit Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.db('billing_plan_fixed_config').insert({
-        plan_id: planId1,
-        tenant: context.tenantId
+      // 5. Use helper to create properly configured plan with negative rate
+      const { planId: planId1 } = await createFixedPlanAssignment(context, largeNegativeService, {
+        planName: 'Large Credit Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: -20000,
+        detailBaseRateCents: -20000,
+        quantity: 1,
+        startDate: startDate1
       });
 
-      // 5. Assign negative service to plan
-      const configIdLarge = uuidv4();
-      await context.db('plan_service_configuration').insert({
-        config_id: configIdLarge,
-        plan_id: planId1,
-        service_id: largeNegativeService,
-        configuration_type: 'fixed',
-        tenant: context.tenantId
-      });
-
-      await context.db('plan_service_fixed_config').insert({
-        config_id: configIdLarge,
-        base_rate: -200.00, // -$200.00
-        tenant: context.tenantId
-      });
-
-      // 7. Create first billing cycle
-      const now = createTestDate();
-      const startDate1 = Temporal.PlainDate.from(now).subtract({ months: 2 }).toString();
-      const endDate1 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-
+      // 6. Create first billing cycle
       const billingCycleId1 = await context.createEntity('client_billing_cycles', {
         client_id: client_id,
         billing_cycle: 'monthly',
@@ -1003,16 +734,6 @@ describe('Negative Invoice Credit Tests', () => {
         period_end_date: endDate1,
         effective_date: startDate1
       }, 'billing_cycle_id');
-
-      // 8. Assign first plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
-        client_id: client_id,
-        plan_id: planId1,
-        tenant: context.tenantId,
-        start_date: startDate1,
-        is_active: true
-      });
 
       // 9. Generate negative invoice (large amount)
       const negativeInvoice = await generateInvoice(billingCycleId1);
@@ -1030,12 +751,16 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(negativeInvoice.invoice_id);
 
       // 12. Verify credit was created
-      const creditAfterNegativeInvoice = await ClientBillingPlan.getClientCredit(client_id);
+      const creditAfterNegativeInvoice = await ClientContractLine.getClientCredit(client_id);
       expect(creditAfterNegativeInvoice).toBe(20000); // $200.00 credit
 
       // Now create a positive invoice with a smaller amount
 
-      // 13. Create small positive service for second invoice
+      // 13. Calculate dates for second billing cycle
+      const startDate2 = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month').toInstant().toString();
+      const endDate2 = dateHelpers.startOf(now, 'month').toInstant().toString();
+
+      // 14. Create small positive service for second invoice
       const smallService = await createTestService(context, {
         service_name: 'Small Service',
         billing_method: 'fixed',
@@ -1043,38 +768,17 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 14. Create a billing plan for small service
-      const planId2 = await context.createEntity('billing_plans', {
-        plan_name: 'Small Service Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.db('billing_plan_fixed_config').insert({
-        plan_id: planId2,
-        tenant: context.tenantId
-      });
-
-      // 15. Assign positive service to second plan
-      const configIdSmall = uuidv4();
-      await context.db('plan_service_configuration').insert({
-        config_id: configIdSmall,
-        plan_id: planId2,
-        service_id: smallService,
-        configuration_type: 'fixed',
-        tenant: context.tenantId
-      });
-
-      await context.db('plan_service_fixed_config').insert({
-        config_id: configIdSmall,
-        base_rate: 50.00, // $50.00
-        tenant: context.tenantId
+      // 15. Use helper to create properly configured plan with positive rate
+      const { planId: planId2 } = await createFixedPlanAssignment(context, smallService, {
+        planName: 'Small Service Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 5000,
+        detailBaseRateCents: 5000,
+        quantity: 1,
+        startDate: startDate2
       });
 
       // 16. Create second billing cycle
-      const startDate2 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
-      const endDate2 = Temporal.PlainDate.from(now).toString();
-
       const billingCycleId2 = await context.createEntity('client_billing_cycles', {
         client_id: client_id,
         billing_cycle: 'monthly',
@@ -1083,23 +787,14 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate2
       }, 'billing_cycle_id');
 
-      // 17. Deactivate the first plan and assign second plan to client
-      await context.db('client_billing_plans')
-        .where({ 
+      // 18. Deactivate the first plan
+      await context.db('client_contract_lines')
+        .where({
           client_id: client_id,
-          plan_id: planId1,
+          contract_line_id: planId1,
           tenant: context.tenantId
         })
         .update({ is_active: false });
-        
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
-        client_id: client_id,
-        plan_id: planId2,
-        tenant: context.tenantId,
-        start_date: startDate2,
-        is_active: true
-      });
 
       // 18. Generate positive invoice
       const positiveInvoice = await generateInvoice(billingCycleId2);
@@ -1126,7 +821,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(parseInt(finalPositiveInvoice.total_amount)).toBe(0); // $0.00 remaining total
 
       // 22. Verify the credit balance is reduced but still has remaining credit
-      const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const finalCredit = await ClientContractLine.getClientCredit(client_id);
       expect(finalCredit).toBe(14500); // $145.00 remaining credit ($200.00 - $55.00)
 
       // 23. Verify credit application transaction

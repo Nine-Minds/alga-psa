@@ -1,7 +1,7 @@
 import { cn } from 'server/src/lib/utils';
 import * as React from 'react';
 
-export type BadgeVariant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+export type BadgeVariant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'outline';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: BadgeVariant;
@@ -21,6 +21,7 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
             'border-transparent bg-warning text-warning-foreground': variant === 'warning',
             'border-transparent bg-error text-error-foreground': variant === 'error',
             'border-border bg-background text-foreground': variant === 'default',
+            'border-current bg-transparent': variant === 'outline',
           },
           className
         )}

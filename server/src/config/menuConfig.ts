@@ -1,8 +1,7 @@
 // server/src/config/sidebarNavigationConfig.ts
 
-import { 
+import {
   BarChart3,
-  Activity,
   MessageSquare,
   Layers,
   Building2,
@@ -10,18 +9,10 @@ import {
   FileText,
   Timer,
   Clock,
-  CheckCircle,
   CreditCard,
-  Percent,
-  LayoutDashboard,
-  FilePlus,
-  FileText as FileTextIcon,
-  FileMinus,
-  Package,
-  Box,
-  Layers3,
+  CheckCircle,
   Calendar,
-  Gauge,
+  LayoutDashboard,
   MapPin,
   Rocket,
   Layout,
@@ -37,6 +28,7 @@ import {
   Search,
   GitBranch
 } from 'lucide-react';
+import { billingTabDefinitions } from '../components/billing-dashboard/billingTabsConfig';
 
 export interface MenuItem {
   name: string;
@@ -97,63 +89,11 @@ export const menuItems: MenuItem[] = [
   {
     name: 'Billing',
     icon: CreditCard,
-    subItems: [
-      {
-        name: 'Overview',
-        icon: LayoutDashboard,
-        href: '/msp/billing?tab=overview'
-      },
-      {
-        name: 'Generate Invoices',
-        icon: FilePlus,
-        href: '/msp/billing?tab=generate-invoices'
-      },
-      {
-        name: 'Invoices',
-        icon: FileTextIcon,
-        href: '/msp/billing?tab=invoices'
-      },
-      {
-        name: 'Invoice Templates',
-        icon: FileMinus,
-        href: '/msp/billing?tab=invoice-templates'
-      },
-      {
-        name: 'Tax Rates',
-        icon: Percent,
-        href: '/msp/billing?tab=tax-rates'
-      },
-      {
-        name: 'Plans',
-        icon: Package,
-        href: '/msp/billing?tab=plans'
-      },
-      {
-        name: 'Plan Bundles',
-        icon: Box,
-        href: '/msp/billing?tab=plan-bundles'
-      },
-      {
-        name: 'Billing Cycles',
-        icon: Calendar,
-        href: '/msp/billing?tab=billing-cycles'
-      },
-      {
-        name: 'Usage Tracking',
-        icon: Gauge,
-        href: '/msp/billing?tab=usage-tracking'
-      },
-      {
-        name: 'Credits',
-        icon: CreditCard,
-        href: '/msp/billing?tab=credits'
-      },
-      {
-        name: 'Reconciliation',
-        icon: CheckCircle,
-        href: '/msp/billing?tab=reconciliation'
-      }
-    ]
+    subItems: billingTabDefinitions.map(({ label, icon, href }) => ({
+      name: label,
+      icon,
+      href
+    }))
   },
   {
     name: 'Schedule',
@@ -206,8 +146,8 @@ export const menuItems: MenuItem[] = [
 ];
 
 export const bottomMenuItems: MenuItem[] = [
-  { 
-    name: 'Settings', 
+  {
+    name: 'Settings',
     icon: Settings,
     subItems: [
       { name: 'General', icon: SlidersHorizontal, href: '/msp/settings' },
