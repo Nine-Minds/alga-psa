@@ -48,6 +48,10 @@ applyPlaywrightDatabaseEnv();
 let adminDb: Knex | null = null;
 let databaseReadyPromise: Promise<void> | null = null;
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function seedUsageServiceForTenant(
   db: Knex,
   tenantId: string,
@@ -462,7 +466,11 @@ async function completeContractWizardFlow(
     }
 
     if (options?.usageBucketOverlay) {
-      await expect(page.getByText(/Bucket:.*API calls/i)).toBeVisible({ timeout: 3000 });
+      const dialogLocator = page.locator('[data-automation-id="dialog-dialog"]');
+      const dialogText = (await dialogLocator.textContent()) ?? '';
+      const unitLabel = options.usageBucketOverlay.unitOfMeasure || 'unit';
+      const bucketPattern = new RegExp(`Bucket:\\s*[\\s\\S]*${escapeRegex(unitLabel)}`, 'i');
+      expect(dialogText).toMatch(bucketPattern);
     }
 
     await expect(page.locator(`text=${serviceName}`).first()).toBeVisible({ timeout: 3000 });
@@ -1041,5 +1049,355 @@ test.describe('Contract Wizard Happy Path', () => {
       }
       await db.destroy();
     }
+  });
+
+  test.describe('Bucket Overage Calculations - Cents vs Dollars', () => {
+    test('hourly bucket overage with fractional dollars ($150.50/hour)', async ({ page }) => {
+      test.setTimeout(300000);
+      const db = createTestDbConnection();
+      let tenantData: TenantTestData | null = null;
+      const now = new Date();
+      const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+      const hourlyServiceName = `Playwright Hourly Service ${uuidv4().slice(0, 8)}`;
+      const contractName = `Playwright Overage Test ${uuidv4().slice(0, 8)}`;
+      const hourlyRateCents = 16500;
+      const overageRateCents = 15050; // $150.50 - This is the critical test case
+
+      try {
+        tenantData = await createTestTenant(db, {
+          companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+        });
+
+        const tenantId = tenantData.tenant.tenantId;
+        await prepareWizardTenant(db, tenantId, now);
+        await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+        const { serviceId: hourlyServiceId } = await seedHourlyServiceForTenant(
+          db,
+          tenantId,
+          hourlyServiceName,
+          now,
+          hourlyRateCents
+        );
+
+        await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+          baseRate: 500,
+          hourlyService: {
+            serviceId: hourlyServiceId,
+            serviceName: hourlyServiceName,
+            hourlyRate: hourlyRateCents,
+          },
+          hourlyBucketOverlay: {
+            hours: 10,
+            overageRateCents: overageRateCents,
+            serviceName: hourlyServiceName,
+          },
+          onReview: async (page) => {
+            // Verify UI displays dollars correctly with 2 decimal places
+            const dialogText = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+            expect(dialogText).toMatch(/\$150\.50\/hour/i);
+
+            // Should NOT show incorrect cent-to-dollar conversion
+            await expect(page.locator('text=/\\$15,050/')).not.toBeVisible();
+            await expect(page.locator('text=/\\$150,50/')).not.toBeVisible();
+          },
+        });
+
+        const { contract, contractLineIds } = await getContractLineContext(
+          db,
+          tenantId,
+          contractName
+        );
+        expect(contract).toBeDefined();
+        expect(contractLineIds.length).toBeGreaterThan(0);
+
+        const service = await db('service_catalog')
+          .where({ tenant: tenantId, service_name: hourlyServiceName })
+          .first();
+        expect(service).toBeDefined();
+
+        const bucketConfig = await getBucketOverlayForService(
+          db,
+          tenantId,
+          contractLineIds,
+          service!.service_id
+        );
+        expect(bucketConfig).toBeDefined();
+        expect(Number(bucketConfig!.total_minutes)).toBe(10 * 60);
+
+        // Critical assertion: Database should store monetary amounts in cents
+        const storedOverageRateCents = Number(bucketConfig!.overage_rate);
+        expect(storedOverageRateCents).toBe(overageRateCents);
+        expect(storedOverageRateCents / 100).toBeCloseTo(150.5, 2);
+
+        // Should NOT be stored as raw dollars or other incorrect conversions
+        expect(storedOverageRateCents).not.toBeCloseTo(overageRateCents / 100, 2);
+        expect(storedOverageRateCents).not.toBe(overageRateCents * 100);
+      } finally {
+        if (tenantData) {
+          const tenantId = tenantData.tenant.tenantId;
+          await cleanupContractArtifacts(db, tenantId);
+          await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+          await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+          await rollbackTenant(db, tenantId).catch(() => {});
+        }
+        await db.destroy();
+      }
+    });
+
+    test('usage bucket overage with complex decimal ($0.45/unit)', async ({ page }) => {
+      test.setTimeout(300000);
+      const db = createTestDbConnection();
+      let tenantData: TenantTestData | null = null;
+      const now = new Date();
+      const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+      const usageServiceName = `Playwright Usage Service ${uuidv4().slice(0, 8)}`;
+      const contractName = `Playwright Usage Overage ${uuidv4().slice(0, 8)}`;
+      const overageRateCents = 45; // $0.45/unit
+
+      try {
+        tenantData = await createTestTenant(db, {
+          companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+        });
+
+        const tenantId = tenantData.tenant.tenantId;
+        await prepareWizardTenant(db, tenantId, now);
+        await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+        await seedUsageServiceForTenant(db, tenantId, usageServiceName, now);
+
+        await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+          baseRate: 500,
+          usageBucketOverlay: {
+            units: 1000,
+            unitOfMeasure: 'API calls',
+            overageRateCents: overageRateCents,
+            serviceName: usageServiceName,
+          },
+          onReview: async (page) => {
+            // Verify UI displays $0.45 correctly
+            const dialogText = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+            expect(dialogText).toMatch(/\$0\.45/);
+
+            // Should NOT show incorrect conversion to dollars
+            await expect(page.locator('text=/\\$45\.00/')).not.toBeVisible();
+            await expect(page.locator('text=/\\$4,500/')).not.toBeVisible();
+          },
+        });
+
+        const { contract, contractLineIds } = await getContractLineContext(
+          db,
+          tenantId,
+          contractName
+        );
+        expect(contract).toBeDefined();
+        expect(contractLineIds.length).toBeGreaterThan(0);
+
+        const service = await db('service_catalog')
+          .where({ tenant: tenantId, service_name: usageServiceName })
+          .first();
+        expect(service).toBeDefined();
+
+        const bucketConfig = await getBucketOverlayForService(
+          db,
+          tenantId,
+          contractLineIds,
+          service!.service_id
+        );
+        expect(bucketConfig).toBeDefined();
+        expect(Number(bucketConfig!.total_minutes)).toBe(1000); // units stored as total_minutes
+
+        // Critical: amounts persist as cents in the database
+        const storedOverageRateCents = Number(bucketConfig!.overage_rate);
+        expect(storedOverageRateCents).toBe(overageRateCents);
+        expect(storedOverageRateCents / 100).toBeCloseTo(0.45, 2);
+
+        // Should NOT be stored as raw dollars or magnified values
+        expect(storedOverageRateCents).not.toBeCloseTo(overageRateCents / 100, 2);
+        expect(storedOverageRateCents).not.toBe(overageRateCents * 100);
+      } finally {
+        if (tenantData) {
+          const tenantId = tenantData.tenant.tenantId;
+          await cleanupContractArtifacts(db, tenantId);
+          await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+          await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+          await rollbackTenant(db, tenantId).catch(() => {});
+        }
+        await db.destroy();
+      }
+    });
+
+    test('edge case - round dollar amount ($100.00)', async ({ page }) => {
+      test.setTimeout(300000);
+      const db = createTestDbConnection();
+      let tenantData: TenantTestData | null = null;
+      const now = new Date();
+      const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+      const hourlyServiceName = `Playwright Hourly Service ${uuidv4().slice(0, 8)}`;
+      const contractName = `Playwright Round Dollar ${uuidv4().slice(0, 8)}`;
+      const hourlyRateCents = 16500;
+      const overageRateCents = 10000; // $100.00 - Edge case with no fractional cents
+
+      try {
+        tenantData = await createTestTenant(db, {
+          companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+        });
+
+        const tenantId = tenantData.tenant.tenantId;
+        await prepareWizardTenant(db, tenantId, now);
+        await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+        const { serviceId: hourlyServiceId } = await seedHourlyServiceForTenant(
+          db,
+          tenantId,
+          hourlyServiceName,
+          now,
+          hourlyRateCents
+        );
+
+        await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+          baseRate: 500,
+          hourlyService: {
+            serviceId: hourlyServiceId,
+            serviceName: hourlyServiceName,
+            hourlyRate: hourlyRateCents,
+          },
+          hourlyBucketOverlay: {
+            hours: 20,
+            overageRateCents: overageRateCents,
+            serviceName: hourlyServiceName,
+          },
+          onReview: async (page) => {
+            // Verify UI displays $100.00 correctly
+            const dialogText = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+            expect(dialogText).toMatch(/\$100\.00\/hour/i);
+
+            // Should NOT show as $10,000
+            await expect(page.locator('text=/\\$10,000/')).not.toBeVisible();
+          },
+        });
+
+        const { contract, contractLineIds } = await getContractLineContext(
+          db,
+          tenantId,
+          contractName
+        );
+        expect(contract).toBeDefined();
+
+        const service = await db('service_catalog')
+          .where({ tenant: tenantId, service_name: hourlyServiceName })
+          .first();
+        expect(service).toBeDefined();
+
+        const bucketConfig = await getBucketOverlayForService(
+          db,
+          tenantId,
+          contractLineIds,
+          service!.service_id
+        );
+        expect(bucketConfig).toBeDefined();
+
+        // Critical: persisted values remain in cents even for round dollars
+        const storedOverageRateCents = Number(bucketConfig!.overage_rate);
+        expect(storedOverageRateCents).toBe(overageRateCents);
+        expect(storedOverageRateCents / 100).toBeCloseTo(100.0, 2);
+
+        // Should NOT be stored as raw dollars or multiplied
+        expect(storedOverageRateCents).not.toBeCloseTo(overageRateCents / 100, 2);
+        expect(storedOverageRateCents).not.toBe(overageRateCents * 100);
+      } finally {
+        if (tenantData) {
+          const tenantId = tenantData.tenant.tenantId;
+          await cleanupContractArtifacts(db, tenantId);
+          await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+          await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+          await rollbackTenant(db, tenantId).catch(() => {});
+        }
+        await db.destroy();
+      }
+    });
+
+    test('edge case - small fractional amount ($0.05)', async ({ page }) => {
+      test.setTimeout(300000);
+      const db = createTestDbConnection();
+      let tenantData: TenantTestData | null = null;
+      const now = new Date();
+      const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+      const usageServiceName = `Playwright Usage Service ${uuidv4().slice(0, 8)}`;
+      const contractName = `Playwright Small Amount ${uuidv4().slice(0, 8)}`;
+      const overageRateCents = 5; // $0.05 - Very small amount
+
+      try {
+        tenantData = await createTestTenant(db, {
+          companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+        });
+
+        const tenantId = tenantData.tenant.tenantId;
+        await prepareWizardTenant(db, tenantId, now);
+        await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+        await seedUsageServiceForTenant(db, tenantId, usageServiceName, now);
+
+        await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+          baseRate: 500,
+          usageBucketOverlay: {
+            units: 5000,
+            unitOfMeasure: 'units',
+            overageRateCents: overageRateCents,
+            serviceName: usageServiceName,
+          },
+          onReview: async (page) => {
+            // Verify UI displays $0.05 correctly
+            const dialogText = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
+            expect(dialogText).toMatch(/\$0\.05/);
+
+            // Should NOT show incorrect overage amounts
+            // Note: $500 appears as base rate, so check for overage context
+            await expect(page.locator('text=/overage.*\\$5\.00/i')).not.toBeVisible();
+          },
+        });
+
+        const { contract, contractLineIds } = await getContractLineContext(
+          db,
+          tenantId,
+          contractName
+        );
+        expect(contract).toBeDefined();
+
+        const service = await db('service_catalog')
+          .where({ tenant: tenantId, service_name: usageServiceName })
+          .first();
+        expect(service).toBeDefined();
+
+        const bucketConfig = await getBucketOverlayForService(
+          db,
+          tenantId,
+          contractLineIds,
+          service!.service_id
+        );
+        expect(bucketConfig).toBeDefined();
+
+        // Critical: persisted values remain in cents for very small amounts
+        const storedOverageRateCents = Number(bucketConfig!.overage_rate);
+        expect(storedOverageRateCents).toBe(overageRateCents);
+        expect(storedOverageRateCents / 100).toBeCloseTo(0.05, 2);
+
+        // Should NOT be stored as raw dollars or multiplied
+        expect(storedOverageRateCents).not.toBeCloseTo(overageRateCents / 100, 2);
+        expect(storedOverageRateCents).not.toBe(overageRateCents * 100);
+      } finally {
+        if (tenantData) {
+          const tenantId = tenantData.tenant.tenantId;
+          await cleanupContractArtifacts(db, tenantId);
+          await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+          await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+          await rollbackTenant(db, tenantId).catch(() => {});
+        }
+        await db.destroy();
+      }
+    });
+
+    test.skip('fixed fee bucket overage - SKIPPED (feature not yet implemented in wizard UI)', async ({ page }) => {
+      // This test is skipped because the contract wizard UI does not currently
+      // support bucket overlays for fixed fee services. The backend supports it,
+      // but the UI toggle is missing from FixedFeeServicesStep.tsx
+      // TODO: Re-enable this test once fixed fee bucket overlay UI is implemented
+    });
   });
 });
