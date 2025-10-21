@@ -142,29 +142,38 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (isEditingWorkItem) {
       const fetchWorkItems = async () => {
         try {
-          if (!entryData.work_item_id || !entryData.work_item_type) {
-            setAvailableWorkItems([]);
-            return;
-          }
-
-          // Get work items for the current time period
-          const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
-          if (items) {
-            setAvailableWorkItems([items]);
+          // For existing work items, fetch them
+          if (selectedWorkItem && selectedWorkItem.work_item_id && selectedWorkItem.type && selectedWorkItem.type !== 'ad_hoc') {
+            const items = await getWorkItemById(selectedWorkItem.work_item_id, selectedWorkItem.type);
+            if (items) {
+              setAvailableWorkItems([items]);
+            } else {
+              setAvailableWorkItems([]);
+            }
+          } else if (entryData.work_item_id && entryData.work_item_type && entryData.work_item_type !== 'ad_hoc') {
+            const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
+            if (items) {
+              setAvailableWorkItems([items]);
+            } else {
+              setAvailableWorkItems([]);
+            }
           } else {
+            // For ad-hoc or no work item, clear the list
             setAvailableWorkItems([]);
-            setValidationErrors(['No work items found for the selected period']);
           }
         } catch (error) {
           console.error('Error fetching work items:', error);
           setAvailableWorkItems([]);
-          setValidationErrors(['Failed to fetch work items. Please try again.']);
+          // Don't set validation errors here as it interrupts the user flow
         }
       };
 
       fetchWorkItems();
+    } else {
+      // Clear available work items when not editing to prevent stale data
+      setAvailableWorkItems([]);
     }
-  }, [isEditingWorkItem, entryData.work_item_id, entryData.work_item_type]);
+  }, [isEditingWorkItem, selectedWorkItem, entryData.work_item_id, entryData.work_item_type]);
 
   useEffect(() => {
     const initializeData = () => {
@@ -282,12 +291,24 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const handleWorkItemSelect = (workItem: IWorkItem | null) => {
     clearErrorIfSubmitted();
     setSelectedWorkItem(workItem);
-    setEntryData(prev => ({
-      ...prev,
-      work_item_id: workItem ? workItem.work_item_id : null,
-      title: workItem ? workItem.name : prev.title,
-      work_item_type: workItem?.type || 'ad_hoc'
-    }));
+    setEntryData(prev => {
+      // Only update title if:
+      // 1. No title exists yet (empty or undefined), OR
+      // 2. Current title matches the previous work item name (user hasn't customized it)
+      // Note: selectedWorkItem here refers to the *previous* selection (stale closure) -
+      // this is intentional for comparing against the last auto-generated title
+      const shouldUpdateTitle = !prev.title?.trim() ||
+        (selectedWorkItem && prev.title === selectedWorkItem.name);
+
+      return {
+        ...prev,
+        work_item_id: workItem ? workItem.work_item_id : null,
+        title: workItem && shouldUpdateTitle ? workItem.name : prev.title,
+        work_item_type: workItem?.type || 'ad_hoc'
+      };
+    });
+    // Clear available work items to prevent stale data
+    setAvailableWorkItems([]);
     setIsEditingWorkItem(false);
   };
 
@@ -505,18 +526,28 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             ) : (
               <SelectedWorkItem
                 workItem={selectedWorkItem}
-                onEdit={() => setIsEditingWorkItem(true)}
+                onEdit={(e?: React.MouseEvent) => {
+                  if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                  setIsEditingWorkItem(true);
+                }}
               />
             )}
-            <AddWorkItemDialog
-              isOpen={isEditingWorkItem}
-              onClose={() => setIsEditingWorkItem(false)}
-              onAdd={(workItem) => {
-                handleWorkItemSelect(workItem);
-                setIsEditingWorkItem(false);
-              }}
-              availableWorkItems={availableWorkItems}
-            />
+            {isEditingWorkItem && (
+              <AddWorkItemDialog
+                isOpen={isEditingWorkItem}
+                onClose={() => {
+                  setIsEditingWorkItem(false);
+                  setAvailableWorkItems([]);
+                }}
+                onAdd={(workItem) => {
+                  handleWorkItemSelect(workItem);
+                }}
+                availableWorkItems={availableWorkItems}
+              />
+            )}
           </div>
           </div>
           <div>
