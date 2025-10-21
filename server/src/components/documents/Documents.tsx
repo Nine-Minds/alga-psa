@@ -64,7 +64,7 @@ interface DocumentsProps {
   userId: string;
   searchTermFromParent?: string;
   entityId?: string;
-  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task';
+  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
   isLoading?: boolean;
   onDocumentCreated?: () => Promise<void>;
   isInDrawer?: boolean;
@@ -981,6 +981,9 @@ const Documents = ({
               entityType={entityType}
               onUploadComplete={async () => {
                 setShowUpload(false);
+                // Refresh the documents list
+                fetchDocuments(currentPage, searchTermFromParent);
+                // Also call parent callback if provided
                 if (onDocumentCreated) await onDocumentCreated();
               }}
               onCancel={() => setShowUpload(false)}
@@ -994,15 +997,10 @@ const Documents = ({
             entityId={entityId}
             entityType={entityType}
             onDocumentsSelected={async () => {
-              // Refresh documents list after association
-              if (entityId && entityType) {
-                try {
-                } catch (error) {
-                  console.error('Error associating documents:', error);
-                  setError('Failed to associate documents');
-                }
-              }
               setShowSelector(false);
+              // Refresh the documents list
+              fetchDocuments(currentPage, searchTermFromParent);
+              // Also call parent callback if provided
               if (onDocumentCreated) await onDocumentCreated();
             }}
             isOpen={showSelector}

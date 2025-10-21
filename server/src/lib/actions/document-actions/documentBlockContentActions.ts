@@ -8,6 +8,7 @@ import Document from '../../models/document';
 import DocumentAssociation from '../../models/document-association';
 import { getCurrentUser } from '../user-actions/userActions';
 import { CacheFactory } from '../../cache/CacheFactory';
+import { IDocument } from 'server/src/interfaces/document.interface';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -19,7 +20,7 @@ interface CreateBlockDocumentInput extends BlockContentInput {
   user_id: string;
   type_id?: string;
   entityId?: string;
-  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task';
+  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
   folder_path?: string | null;
 }
 
@@ -44,14 +45,14 @@ export async function createBlockDocument(
       const documentId = uuidv4();
       
       // Create the document directly in the transaction
-      const documentData = {
+      const documentData: IDocument = {
         document_id: documentId,
         document_name: input.document_name,
         user_id: input.user_id || currentUser.user_id,
         created_by: input.user_id || currentUser.user_id,
         tenant,
         type_id: input.type_id || null,
-        folder_path: input.folder_path || null,
+        folder_path: input.folder_path === null ? undefined : input.folder_path,
         order_number: 0
       };
 

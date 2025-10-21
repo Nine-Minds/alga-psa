@@ -15,7 +15,7 @@ interface DocumentUploadProps {
     id: string; // Made required since it's needed for reflection registration
     userId: string;
     entityId?: string;
-    entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task';
+    entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
     folderPath?: string | null;
     onUploadComplete: (result: { success: boolean; document: IDocument }) => void;
     onCancel: () => void;
@@ -28,6 +28,7 @@ interface UploadOptions {
     contactNameId?: string;
     assetId?: string;
     projectTaskId?: string;
+    contractId?: string;
     folder_path?: string | null;
 }
 
@@ -124,6 +125,9 @@ export default function DocumentUpload({
                         break;
                     case 'project_task':
                         options.projectTaskId = entityId;
+                        break;
+                    case 'contract':
+                        options.contractId = entityId;
                         break;
                 }
             }

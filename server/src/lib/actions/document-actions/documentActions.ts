@@ -395,6 +395,126 @@ export async function getDocumentByContactNameId(contactNameId: string) {
   }
 }
 
+// Get documents by contract ID
+export async function getDocumentsByContractId(contractId: string) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
+    // Check billing permission (required for contract documents)
+    if (!await hasPermission(currentUser, 'billing', 'read')) {
+      throw new Error('Permission denied: Cannot access contract documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const documents = await trx('documents')
+        .join('document_associations', function() {
+          this.on('documents.document_id', '=', 'document_associations.document_id')
+              .andOn('documents.tenant', '=', 'document_associations.tenant');
+        })
+        .where({
+          'document_associations.entity_id': contractId,
+          'document_associations.entity_type': 'contract',
+          'documents.tenant': tenant,
+          'document_associations.tenant': tenant
+        })
+        .select('documents.*', 'document_associations.association_id');
+      return documents;
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to get contract documents");
+  }
+}
+
+// Associate document with contract
+export async function associateDocumentWithContract(input: IDocumentAssociationInput) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document association
+    if (!await hasPermission(currentUser, 'document', 'create')) {
+      throw new Error('Permission denied: Cannot associate documents');
+    }
+
+    // Check billing permission (required for contract documents)
+    if (!await hasPermission(currentUser, 'billing', 'update')) {
+      throw new Error('Permission denied: Cannot modify contract documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const association = await DocumentAssociation.create(trx, {
+        ...input,
+        entity_type: 'contract',
+        tenant
+      });
+
+      return association;
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to associate document with contract");
+  }
+}
+
+// Remove document from contract
+export async function removeDocumentFromContract(associationId: string) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document deletion
+    if (!await hasPermission(currentUser, 'document', 'delete')) {
+      throw new Error('Permission denied: Cannot remove document associations');
+    }
+
+    // Check billing permission (required for contract documents)
+    if (!await hasPermission(currentUser, 'billing', 'update')) {
+      throw new Error('Permission denied: Cannot modify contract documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await trx('document_associations')
+        .where({
+          association_id: associationId,
+          tenant,
+          entity_type: 'contract'
+        })
+        .delete();
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to remove document from contract");
+  }
+}
+
 // Get document preview
 async function renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
   let browser;
@@ -1436,6 +1556,7 @@ export async function uploadDocument(
     contactNameId?: string;
     assetId?: string;
     projectTaskId?: string;
+    contractId?: string;
     folder_path?: string | null;
   }
 ): Promise<
@@ -1544,6 +1665,15 @@ export async function uploadDocument(
         document_id: documentWithId.document_id,
         entity_id: options.projectTaskId,
         entity_type: 'project_task',
+        tenant
+      });
+    }
+
+    if (options.contractId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.contractId,
+        entity_type: 'contract',
         tenant
       });
     }

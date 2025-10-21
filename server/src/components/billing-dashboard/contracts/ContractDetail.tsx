@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, File, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
@@ -18,6 +18,7 @@ import Drawer from 'server/src/components/ui/Drawer';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
 import { IClient } from 'server/src/interfaces';
+import { IDocument } from 'server/src/interfaces/document.interface';
 import {
   getContractById,
   getContractSummary,
@@ -27,12 +28,15 @@ import {
 } from 'server/src/lib/actions/contractActions';
 import { updateClientContract } from 'server/src/lib/actions/client-actions/clientContractActions';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getDocumentsByContractId } from 'server/src/lib/actions/document-actions/documentActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from 'server/src/components/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import PricingSchedules from './PricingSchedules';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
+import Documents from 'server/src/components/documents/Documents';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
@@ -67,6 +71,8 @@ const ContractDetail: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summary, setSummary] = useState<IContractSummary | null>(null);
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
+  const [documents, setDocuments] = useState<IDocument[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
 
   // Client drawer state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -187,10 +193,12 @@ const ContractDetail: React.FC = () => {
     setPoAmountInputs({});
 
     try {
-      const [contractData, summaryData, assignmentData] = await Promise.all([
+      const [contractData, summaryData, assignmentData, documentsData, currentUser] = await Promise.all([
         getContractById(contractId),
         getContractSummary(contractId),
-        getContractAssignments(contractId)
+        getContractAssignments(contractId),
+        getDocumentsByContractId(contractId),
+        getCurrentUser()
       ]);
 
       if (!contractData) {
@@ -198,12 +206,15 @@ const ContractDetail: React.FC = () => {
         setContract(null);
         setSummary(null);
         setAssignments([]);
+        setDocuments([]);
         return;
       }
 
       setContract(contractData);
       setSummary(summaryData);
       setAssignments(assignmentData);
+      setDocuments(documentsData || []);
+      setCurrentUserId(currentUser?.user_id || '');
     } catch (err) {
       console.error('Error loading contract details:', err);
       setError('Failed to load contract');
@@ -231,6 +242,19 @@ const ContractDetail: React.FC = () => {
 
   const handleContractLinesChanged = () => {
     refreshSummary();
+  };
+
+  const handleDocumentCreated = async () => {
+    if (!contractId) {
+      return;
+    }
+
+    try {
+      const documentsData = await getDocumentsByContractId(contractId);
+      setDocuments(documentsData || []);
+    } catch (error) {
+      console.error('Error refreshing documents:', error);
+    }
   };
 
   const handleOpenClientDrawer = async (clientId: string) => {
@@ -648,6 +672,7 @@ const ContractDetail: React.FC = () => {
           <TabsTrigger value="edit">Overview</TabsTrigger>
           <TabsTrigger value="lines">Contract Lines</TabsTrigger>
           <TabsTrigger value="pricing">Pricing Schedules</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
 
@@ -1224,6 +1249,10 @@ const ContractDetail: React.FC = () => {
                     <CalendarClock className="mr-2 h-4 w-4" />
                     Manage Pricing Schedules
                   </Button>
+                  <Button id="edit-view-documents" variant="outline" onClick={() => setActiveTab('documents')}>
+                    <File className="mr-2 h-4 w-4" />
+                    View Documents
+                  </Button>
                   <Button id="edit-view-invoices" variant="outline" onClick={() => setActiveTab('invoices')}>
                     <FileText className="mr-2 h-4 w-4" />
                     View Invoices
@@ -1262,6 +1291,25 @@ const ContractDetail: React.FC = () => {
 
         <TabsContent value="pricing">
           <PricingSchedules contractId={contract.contract_id} />
+        </TabsContent>
+
+        <TabsContent value="documents">
+          {currentUserId ? (
+            <Documents
+              id="contract-documents"
+              documents={documents}
+              userId={currentUserId}
+              entityId={contractId}
+              entityType="contract"
+              onDocumentCreated={handleDocumentCreated}
+            />
+          ) : (
+            <Card>
+              <CardContent className="py-6 text-center text-gray-500">
+                Loading documents...
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="invoices">
