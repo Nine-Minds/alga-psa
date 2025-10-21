@@ -20,7 +20,7 @@ import { IClient } from "server/src/interfaces/client.interfaces";
 import { IContact } from "server/src/interfaces/contact.interfaces";
 import { DateRange } from 'react-day-picker';
 import { ISO8601String } from '@alga-psa/shared/types';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from "server/src/components/clients/ClientPicker";
 import { ContactPicker } from "server/src/components/ui/ContactPicker";
 import CustomSelect from "server/src/components/ui/CustomSelect";
 
@@ -174,16 +174,16 @@ export function TicketSectionFiltersDialog({
           <div className="grid grid-cols-2 gap-x-6 gap-y-0">
             <div className="space-y-1">
               <Label htmlFor="ticket-client-picker" className="text-base font-semibold">Client</Label>
-              <CustomSelect
+              <ClientPicker
                 id="ticket-client-picker"
-                options={clients.map((client) => ({
-                  value: client.client_id,
-                  label: client.client_name
-                }))}
-                value={localFilters.clientId || null}
-                onValueChange={(clientId: string) => handleSingleFilterChange('clientId', clientId)}
-                placeholder="Filter by client"
-                allowClear={true}
+                clients={clients}
+                selectedClientId={localFilters.clientId || null}
+                onSelect={(clientId: string | null) => handleSingleFilterChange('clientId', clientId)}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
+                clientTypeFilter={clientClientTypeFilter}
+                onClientTypeFilterChange={setClientClientTypeFilter}
+                fitContent={false}
               />
             </div>
              <div className="space-y-1">
