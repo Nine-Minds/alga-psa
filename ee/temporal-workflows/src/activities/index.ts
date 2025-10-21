@@ -3,6 +3,7 @@ export * from "./user-activities";
 export * from "./portal-user-activities";
 export * from "./email-activities";
 export * from "./checkout-session-activities";
+export * from "./stripe-activities";
 export * from "./onboarding-seeds-activities";
 export * from "./customer-tracking-activities";
 export * from "./extension-domain-activities";
