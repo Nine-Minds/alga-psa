@@ -24,7 +24,7 @@ import { IInteraction, IInteractionType } from 'server/src/interfaces/interactio
 import { useTenant } from 'server/src/components/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '../ui/UserPicker';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from '../clients/ClientPicker';
 import { ContactPicker } from '../ui/ContactPicker';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
@@ -557,15 +557,16 @@ export function QuickAddInteraction({
                     {/* Client in right column */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Client</label>
-                      <CustomSelect
+                      <ClientPicker
                         id={`${id}-client-picker`}
-                        options={clients.map((client) => ({
-                          value: client.client_id,
-                          label: client.client_name
-                        }))}
-                        value={selectedClientId || null}
-                        onValueChange={(clientId) => setSelectedClientId(clientId || '')}
-                        placeholder="Select a client"
+                        clients={clients}
+                        onSelect={(clientId) => setSelectedClientId(clientId || '')}
+                        selectedClientId={selectedClientId}
+                        filterState={clientFilterState}
+                        onFilterStateChange={setClientFilterState}
+                        clientTypeFilter={clientTypeFilter}
+                        onClientTypeFilterChange={setClientTypeFilter}
+                        fitContent={true}
                       />
                     </div>
                     

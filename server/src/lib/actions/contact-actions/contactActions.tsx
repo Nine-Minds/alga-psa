@@ -577,7 +577,7 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
 
     // Fetch avatar URLs for each contact
     const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      let avatarUrl = null;
+      let avatarUrl: string | null = null;
       try {
         avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
       } catch (avatarErr) {

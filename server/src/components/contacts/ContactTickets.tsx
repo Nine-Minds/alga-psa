@@ -25,6 +25,7 @@ import { getTicketingDisplaySettings, TicketingDisplaySettings } from 'server/sr
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { TagFilter } from 'server/src/components/tags';
 
@@ -224,8 +225,15 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     try {
       const client = await getClientById(clientId);
       if (client) {
-        // Client details moved to contacts functionality
-        console.log('Client:', client.client_name);
+        openDrawer(
+          <ClientDetails
+            client={client}
+            documents={[]}
+            contacts={[]}
+            isInDrawer={true}
+            quickView={true}
+          />
+        );
       } else {
         toast.error('Client not found');
       }

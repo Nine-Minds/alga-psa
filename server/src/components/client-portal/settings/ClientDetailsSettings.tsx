@@ -54,7 +54,7 @@ const TextDetailItem: React.FC<{
   );
 };
 
-export default function ClientDetailsSettings() {
+export function ClientDetailsSettings() {
   const { t } = useTranslation('clientPortal');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);

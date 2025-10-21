@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Card } from '../ui/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
-import CustomSelect from '../ui/CustomSelect';
+import { ClientPicker } from '../clients/ClientPicker';
 import { IClient } from '../../interfaces';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IService } from '../../interfaces/billing.interfaces';
@@ -666,15 +666,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               {!invoice && !currentInvoiceData && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                  <CustomSelect
+                  <ClientPicker
                     id='client-picker'
-                    options={clients.map((client) => ({
-                      value: client.client_id,
-                      label: client.client_name
-                    }))}
-                    value={selectedClient || null}
-                    onValueChange={setSelectedClient}
-                    placeholder="Select a client"
+                    clients={clients}
+                    selectedClientId={selectedClient}
+                    onSelect={setSelectedClient}
+                    filterState={filterState}
+                    onFilterStateChange={setFilterState}
+                    clientTypeFilter={clientTypeFilter}
+                    onClientTypeFilterChange={setClientTypeFilter}
                   />
                 </div>
               )}

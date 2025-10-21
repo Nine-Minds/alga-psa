@@ -9,10 +9,10 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { IProject, IClient, IStatus } from 'server/src/interfaces';
 import { toast } from 'react-hot-toast';
 import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { ContactPicker } from 'server/src/components/ui/ContactPicker'; // Import ContactPicker
+import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';

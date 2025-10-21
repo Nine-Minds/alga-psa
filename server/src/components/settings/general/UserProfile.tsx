@@ -447,7 +447,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         <Button
           id="save-button"
           onClick={handleSave}
-          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
+          variant="default"
         >
           Save Changes
         </Button>

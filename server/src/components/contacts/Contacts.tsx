@@ -16,6 +16,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
+import ClientDetails from '../clients/ClientDetails';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { TagManager, TagFilter } from 'server/src/components/tags';
@@ -459,7 +460,34 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         }
 
         return (
-          <div className="text-blue-600">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => openDrawer(
+              <ClientDetails
+                client={client}
+                documents={[]}
+                contacts={[]}
+                isInDrawer={true}
+                quickView={true}
+              />
+            )}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openDrawer(
+                  <ClientDetails
+                    client={client}
+                    documents={[]}
+                    contacts={[]}
+                    isInDrawer={true}
+                    quickView={true}
+                  />
+                );
+              }
+            }}
+            className="text-blue-600 hover:underline cursor-pointer"
+          >
             {client.client_name}
           </div>
         );

@@ -32,8 +32,8 @@ import ContactTickets from './ContactTickets';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { IBoard } from 'server/src/interfaces/board.interface';
-import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-// ClientPicker replaced with CustomSelect
+import { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { TagManager } from 'server/src/components/tags';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
@@ -41,6 +41,7 @@ import ContactAvatarUpload from 'server/src/components/client-portal/contacts/Co
 import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 
 const SwitchDetailItem: React.FC<{
@@ -465,8 +466,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           // Small delay to ensure the URL is updated before opening drawer (only in non-quick view)
           const delay = quickView ? 0 : 10;
           setTimeout(() => {
-            // Client details functionality has been moved to contacts
-            console.log('Client:', client.client_name);
+            drawer.openDrawer(
+              <ClientDetails
+                client={client}
+                documents={[]}
+                contacts={[]}
+                isInDrawer={true}
+                quickView={true}
+              />
+            );
           }, delay);
         } else {
           console.error('Client not found');
@@ -529,19 +537,19 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 // Show client picker when editing
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
-                    <CustomSelect
+                    <ClientPicker
                       id="contact-client-picker"
-                      options={clients.map((client) => ({
-                        value: client.client_id,
-                        label: client.client_name
-                      }))}
-                      value={selectedClientId || null}
-                      onValueChange={(clientId) => {
+                      onSelect={(clientId) => {
                         handleFieldChange('client_id', clientId || '');
                         setSelectedClientId(clientId);
                         setIsEditingClient(false);
                       }}
-                      placeholder="Select a client"
+                      selectedClientId={selectedClientId}
+                      clients={clients}
+                      filterState={filterState}
+                      onFilterStateChange={setFilterState}
+                      clientTypeFilter={clientTypeFilter}
+                      onClientTypeFilterChange={setClientTypeFilter}
                     />
                   </div>
                 </div>

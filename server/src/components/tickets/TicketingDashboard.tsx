@@ -13,7 +13,7 @@ import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { TagFilter } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
@@ -31,6 +31,7 @@ import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/
 import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 
 interface TicketingDashboardProps {
@@ -798,16 +799,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               filterState={boardFilterState}
               onFilterStateChange={setBoardFilterState}
             />
-            <CustomSelect
+            <ClientPicker
               id='client-picker'
               data-automation-id={`${id}-client-picker`}
-              options={clients.map((client) => ({
-                value: client.client_id,
-                label: client.client_name
-              }))}
-              value={selectedClient || null}
-              onValueChange={handleClientSelect}
-              placeholder="Filter by client"
+              clients={clients}
+              onSelect={handleClientSelect}
+              selectedClientId={selectedClient}
+              filterState={clientFilterState}
+              onFilterStateChange={handleClientFilterStateChange}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={handleClientTypeFilterChange}
+              fitContent={true}
             />
             <CustomSelect
               data-automation-id={`${id}-status-select`}
@@ -1063,7 +1065,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }}
       >
         {quickViewClient && (
-            <div>Client details moved to contacts</div>
+          <ClientDetails
+            client={quickViewClient}
+            isInDrawer={true}
+            quickView={true}
+          />
         )}
       </Drawer>
     </ReflectionContainer>
