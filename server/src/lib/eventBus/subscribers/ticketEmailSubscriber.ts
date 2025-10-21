@@ -348,11 +348,13 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         requesterContact,
         requesterDetails: requesterDetailsForText,
         board: boardName,
+        channel: boardName, // Alias for template compatibility
         category: categoryName || 'Not categorized',
         subcategory: subcategoryName || 'Not specified',
         categoryDetails,
         locationSummary,
         clientName,
+        companyName: clientName, // Alias for template compatibility
         metaLine,
         url: `/tickets/${ticket.ticket_number}`
       }
