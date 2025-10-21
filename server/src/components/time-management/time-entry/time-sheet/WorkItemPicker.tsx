@@ -11,7 +11,7 @@ import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import { searchPickerWorkItems, createWorkItem } from 'server/src/lib/actions/workItemActions';
 import { Button } from 'server/src/components/ui/Button';
 import UserPicker from 'server/src/components/ui/UserPicker';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
