@@ -173,7 +173,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       // Clear available work items when not editing to prevent stale data
       setAvailableWorkItems([]);
     }
-  }, [isEditingWorkItem]);
+  }, [isEditingWorkItem, selectedWorkItem, entryData.work_item_id, entryData.work_item_type]);
 
   useEffect(() => {
     const initializeData = () => {
@@ -264,7 +264,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       setRecurrencePattern(null);
     } else {
       const isDaily = value === 'daily';
-      setRecurrencePattern({
+      setRecurrencePattern(prev => ({
         frequency: value as IRecurrencePattern['frequency'],
         interval: 1,
         startDate: entryData.scheduled_start,
@@ -275,7 +275,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         exceptions: isDaily ? getHolidays(entryData.scheduled_start) : undefined,
         // For daily workday events, set daysOfWeek to Mon-Fri (0-4 since RRule uses 0-based index for weekdays)
         daysOfWeek: isDaily ? [0, 1, 2, 3, 4] : undefined
-      });
+      }));
     }
   };
 
