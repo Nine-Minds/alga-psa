@@ -278,7 +278,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         </Label>
       )}
       <div className="relative">
-        <div className="inline-flex border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-purple-500 bg-white">
+        <div className="inline-flex border border-[rgb(var(--color-border-400))] rounded-md shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))] focus-within:border-transparent bg-white">
           {/* Country Code Dropdown - integrated within phone field */}
           {true && (
             <div className="relative" ref={dropdownRef}>
@@ -306,7 +306,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
                     <input
                       ref={searchInputRef}
                       type="text"
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
                       placeholder="Search countries..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}

@@ -16,7 +16,7 @@ import { IService } from 'server/src/interfaces/billing.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from 'server/src/lib/actions/usageActions';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from "server/src/components/clients/ClientPicker";
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from 'server/src/types/ui-reflection/types';

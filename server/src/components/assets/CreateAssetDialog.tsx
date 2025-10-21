@@ -10,7 +10,7 @@ import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset } from 
 import { IClient } from 'server/src/interfaces';
 import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface CreateAssetDialogProps {
@@ -314,12 +314,15 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
         <div>
           <Label htmlFor="client_id">Client</Label>
           <div className="mt-1">
-            <CustomSelect
-              id="client-select"
-              options={clients.map(client => ({ value: client.client_id, label: client.client_name }))}
-              value={formData.client_id}
-              onValueChange={(value) => handleChange('client_id', value)}
-              placeholder="Select Client"
+            <ClientPicker
+              id='client-picker'
+              clients={clients}
+              selectedClientId={formData.client_id || null}
+              onSelect={(clientId) => handleChange('client_id', clientId || '')}
+              filterState="active"
+              onFilterStateChange={() => {}}
+              clientTypeFilter="all"
+              onClientTypeFilterChange={() => {}}
             />
           </div>
         </div>

@@ -7,7 +7,7 @@ import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getCli
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from 'server/src/lib/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import toast from 'react-hot-toast';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
@@ -484,15 +484,17 @@ const fetchContacts = async (): Promise<void> => {
             </div>
             {portalType === 'client' && (
               <div>
-                <CustomSelect
+                <ClientPicker
                   id="user-management-client-filter"
-                  options={clients.map((client) => ({
-                    value: client.client_id,
-                    label: client.client_name
-                  }))}
-                  value={selectedClientId || null}
-                  onValueChange={(clientId) => setSelectedClientId(clientId)}
+                  clients={clients}
+                  selectedClientId={selectedClientId}
+                  onSelect={(clientId) => setSelectedClientId(clientId)}
+                  filterState={clientFilterState}
+                  onFilterStateChange={(state) => setClientFilterState(state)}
+                  clientTypeFilter={clientClientTypeFilter}
+                  onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
                   placeholder="Select client"
+                  fitContent={true}
                 />
               </div>
             )}
@@ -584,15 +586,17 @@ const fetchContacts = async (): Promise<void> => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Client
                         <span className="text-sm text-gray-500"> (optional)</span>
                       </label>
-                      <CustomSelect
+                      <ClientPicker
                         id="new-user-client-picker"
-                        options={clients.map((client) => ({
-                          value: client.client_id,
-                          label: client.client_name
-                        }))}
-                        value={newUser.clientId || null}
-                        onValueChange={(clientId) => setNewUser({ ...newUser, clientId: clientId || '' })}
+                        clients={clients}
+                        selectedClientId={newUser.clientId || null}
+                        onSelect={(clientId) => setNewUser({ ...newUser, clientId: clientId || '' })}
+                        filterState={clientFilterState}
+                        onFilterStateChange={(state) => setClientFilterState(state)}
+                        clientTypeFilter={clientClientTypeFilter}
+                        onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
                         placeholder="Select Client"
+                        fitContent={false}
                       />
                     </div>
                   )}

@@ -14,7 +14,7 @@ import { getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/ac
 import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-// ClientPicker replaced with CustomSelect
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
@@ -580,14 +580,15 @@ export function QuickAddTicket({
                   />
 
                   <div className={hasAttemptedSubmit && !clientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                    <CustomSelect
+                    <ClientPicker
                       id={`${id}-client`}
-                      options={filteredClients.map((client) => ({
-                        value: client.client_id,
-                        label: client.client_name
-                      }))}
-                      value={clientId || null}
-                      onValueChange={handleClientChange}
+                      clients={filteredClients}
+                      onSelect={handleClientChange}
+                      selectedClientId={clientId}
+                      filterState={clientFilterState}
+                      onFilterStateChange={setClientFilterState}
+                      clientTypeFilter={clientTypeFilter}
+                      onClientTypeFilterChange={setClientTypeFilter}
                       placeholder="Select Client *"
                       required={true}
                     />
