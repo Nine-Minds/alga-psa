@@ -533,7 +533,7 @@ export function QuickAddTicket({
         id={`${id}-dialog`}
         isOpen={open}
         onClose={handleClose}
-        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         title="Add Ticket"
       >
         <DialogContent>
