@@ -58,28 +58,35 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {
-    // Initialize tenant-specific provider manager on first use
     if (!this.providerManager) {
-      const knex = await getConnection(this.tenantId);
-      const settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
+      try {
+        const knex = await getConnection(this.tenantId);
+        const settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
 
-      if (settings) {
-        this.providerManager = new EmailProviderManager();
-        await this.providerManager.initialize(settings);
-      } else {
-        logger.warn(`[${this.getServiceName()}] No tenant email settings found`);
+        if (settings) {
+          this.providerManager = new EmailProviderManager();
+          await this.providerManager.initialize(settings);
+        } else {
+          logger.warn(`[${this.getServiceName()}] No tenant email settings found`);
+        }
+      } catch (error) {
+        logger.error(`[${this.getServiceName()}] Failed to initialize tenant provider:`, error);
+
+        if (isEnterprise) {
+          logger.info(`[${this.getServiceName()}] Using system email provider (Enterprise Edition)`);
+          try {
+            const systemProvider = await SystemEmailProviderFactory.createProvider();
+            return systemProvider;
+          } catch (fallbackError) {
+            logger.error(`[${this.getServiceName()}] Failed to create system email provider:`, fallbackError);
+          }
+          return null;
+        }
+
+        throw error;
       }
     }
 
-    // If we have a tenant provider available, use it
-    if (this.providerManager) {
-      const providers = await this.providerManager.getAvailableProviders(this.tenantId);
-      if (providers.length > 0) {
-        return providers[0];
-      }
-    }
-
-    // Fallback: In EE hosted, use system email provider
     if (isEnterprise) {
       logger.info(`[${this.getServiceName()}] Using system email provider (Enterprise Edition)`);
       try {
@@ -87,11 +94,24 @@ export class TenantEmailService extends BaseEmailService {
         return systemProvider;
       } catch (err) {
         logger.error(`[${this.getServiceName()}] Failed to create system email provider:`, err);
+
+        if (this.providerManager) {
+          const providers = await this.providerManager.getAvailableProviders(this.tenantId);
+          if (providers.length > 0) {
+            return providers[0];
+          }
+        }
         return null;
       }
     }
 
-    // Otherwise, no provider available
+    if (this.providerManager) {
+      const providers = await this.providerManager.getAvailableProviders(this.tenantId);
+      if (providers.length > 0) {
+        return providers[0];
+      }
+    }
+
     logger.error(`[${this.getServiceName()}] No email provider available`);
     return null;
   }
@@ -122,7 +142,7 @@ export class TenantEmailService extends BaseEmailService {
   ): Promise<TenantEmailSettings | null> {
     try {
       const settings = await knex('tenant_email_settings')
-        .where({ tenant_id: tenantId })
+        .where({ tenant: tenantId })
         .first();
       
       if (!settings) {
