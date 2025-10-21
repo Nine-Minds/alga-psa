@@ -10,12 +10,12 @@ import { createTenantKnex } from '@/lib/db';
  */
 const ENTITY_TO_PERMISSION_MAP: Record<string, string> = {
   'contract': 'billing',
-  'ticket': 'tickets',
-  'client': 'clients',
-  'contact': 'contacts',
-  'asset': 'assets',
-  'project_task': 'projects',
-  'user': 'users',
+  'ticket': 'ticket',
+  'client': 'client',
+  'contact': 'contact',
+  'asset': 'asset',
+  'project_task': 'project_task',
+  'user': 'user',
   'tenant': 'tenant', // Special case - always accessible
 };
 

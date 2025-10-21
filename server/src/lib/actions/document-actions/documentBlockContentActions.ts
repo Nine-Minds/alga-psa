@@ -20,6 +20,7 @@ interface CreateBlockDocumentInput extends BlockContentInput {
   type_id?: string;
   entityId?: string;
   entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task';
+  folder_path?: string | null;
 }
 
 // Create a new document with block content
@@ -50,6 +51,7 @@ export async function createBlockDocument(
         created_by: input.user_id || currentUser.user_id,
         tenant,
         type_id: input.type_id || null,
+        folder_path: input.folder_path || null,
         order_number: 0
       };
 

@@ -19,11 +19,13 @@ import FolderTreeView from './FolderTreeView';
 import FolderManager from './FolderManager';
 import DocumentListView from './DocumentListView';
 import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
-import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, ChevronRight } from 'lucide-react';
+import FolderSelectorModal from './FolderSelectorModal';
+import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, ChevronRight, X } from 'lucide-react';
 import { useTranslation } from 'server/src/lib/i18n/client';
-import { downloadDocument } from 'server/src/lib/utils/documentUtils';
+import { downloadDocument, getDocumentDownloadUrl } from 'server/src/lib/utils/documentUtils';
 import toast from 'react-hot-toast';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import {
   getDocumentsByEntity,
   getDocumentsByFolder,
@@ -52,6 +54,8 @@ const DEFAULT_BLOCKS: PartialBlock[] = [{
     styles: {}
   }]
 }];
+
+const DOCUMENT_VIEW_MODE_SETTING = 'documents_view_mode';
 
 interface DocumentsProps {
   id?: string;
@@ -108,7 +112,19 @@ const Documents = ({
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
 
   // Folder functionality state (only used when no entity is specified)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // Use user preference for view mode with localStorage fallback
+  const {
+    value: viewMode,
+    setValue: setViewMode
+  } = useUserPreference<'grid' | 'list'>(
+    DOCUMENT_VIEW_MODE_SETTING,
+    {
+      defaultValue: 'grid',
+      localStorageKey: DOCUMENT_VIEW_MODE_SETTING,
+      debounceMs: 300
+    }
+  );
+
   const [currentFolder, setCurrentFolder] = useState<string | null>(() => {
     // Initialize from URL on mount (only in folder mode)
     if (!entityId && !entityType) {
@@ -122,6 +138,14 @@ const Documents = ({
   const [folderTreeKey, setFolderTreeKey] = useState(0); // For forcing tree refresh
   const [isFoldersPaneCollapsed, setIsFoldersPaneCollapsed] = useState(false);
   const [isFiltersPaneCollapsed, setIsFiltersPaneCollapsed] = useState(false);
+
+  // Folder selector for new in-app documents
+  const [showDocumentFolderModal, setShowDocumentFolderModal] = useState(false);
+  const [documentFolderPath, setDocumentFolderPath] = useState<string | null>(null);
+
+  // Preview modal for images/videos/PDFs
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
 
   // Determine if we're in folder mode (no entity specified)
   const inFolderMode = !entityId && !entityType;
@@ -272,6 +296,27 @@ const Documents = ({
   };
 
   const handleCreateDocument = async () => {
+    // In folder mode: auto-save to current folder if browsing one
+    if (inFolderMode && currentFolder) {
+      setDocumentFolderPath(currentFolder);
+      // Open drawer directly without folder selector
+      setIsCreatingNew(true);
+      setNewDocumentName('');
+      setCurrentContent(DEFAULT_BLOCKS);
+      setSelectedDocument(null);
+      setIsLoadingContent(false);
+      setIsEditModeInDrawer(true);
+      setIsDrawerOpen(true);
+    } else {
+      // Entity mode or root folder: show folder selector
+      setShowDocumentFolderModal(true);
+    }
+  };
+
+  const handleDocumentFolderSelected = (folderPath: string | null) => {
+    setDocumentFolderPath(folderPath);
+    setShowDocumentFolderModal(false);
+    // Now open the drawer to create the document
     setIsCreatingNew(true);
     setNewDocumentName('');
     setCurrentContent(DEFAULT_BLOCKS);
@@ -335,18 +380,20 @@ const Documents = ({
         user_id: userId,
         block_data: JSON.stringify(currentContent),
         entityId,
-        entityType
+        entityType,
+        folder_path: documentFolderPath
       });
 
-      // For new documents, we need to refresh the list
-      if (entityId && entityType) {
-        fetchDocuments(currentPage, searchTermFromParent);
-      }
+      // Refresh the document list
+      fetchDocuments(currentPage, searchTermFromParent);
 
       // Call the parent callback for new documents
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
+
+      // Reset folder selection for next document
+      setDocumentFolderPath(null);
 
       setIsCreatingNew(false);
       setIsDrawerOpen(false);
@@ -438,17 +485,42 @@ const Documents = ({
   // Use refs to store click handlers to avoid recreating them
   const clickHandlersRef = useRef<Map<string, () => void>>(new Map());
 
+  const handleDocumentClick = async (document: IDocument) => {
+    // For in-app documents (no file_id), open in drawer/editor
+    if (!document.file_id) {
+      setSelectedDocument(document);
+      setDocumentName(document.document_name);
+      setIsCreatingNew(false);
+      const isEditableContentDoc = (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name);
+      setIsEditModeInDrawer(isEditableContentDoc);
+      setIsDrawerOpen(true);
+      return;
+    }
+
+    // For images, videos, and PDFs - show in preview modal
+    if (document.mime_type?.startsWith('image/') ||
+        document.mime_type?.startsWith('video/') ||
+        document.mime_type === 'application/pdf') {
+      setPreviewDocument(document);
+      setShowPreviewModal(true);
+      return;
+    }
+
+    // For other files, trigger download
+    const downloadUrl = getDocumentDownloadUrl(document.file_id);
+    const filename = document.document_name || 'download';
+    try {
+      await downloadDocument(downloadUrl, filename, true);
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast.error('Failed to download document');
+    }
+  };
+
   const getOrCreateClickHandler = (document: IDocument) => {
     const key = document.document_id;
     if (!clickHandlersRef.current.has(key)) {
-      clickHandlersRef.current.set(key, () => {
-        setSelectedDocument(document);
-        setDocumentName(document.document_name);
-        setIsCreatingNew(false);
-        const isEditableContentDoc = (!document.file_id && (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name));
-        setIsEditModeInDrawer(isEditableContentDoc);
-        setIsDrawerOpen(true);
-      });
+      clickHandlersRef.current.set(key, () => handleDocumentClick(document));
     }
     return clickHandlersRef.current.get(key)!;
   };
@@ -612,14 +684,7 @@ const Documents = ({
                   selectedDocuments={selectedDocumentsForMove}
                   onSelectionChange={setSelectedDocumentsForMove}
                   onDelete={(doc) => handleDelete(doc)}
-                  onClick={(doc) => {
-                    setSelectedDocument(doc);
-                    setDocumentName(doc.document_name);
-                    setIsCreatingNew(false);
-                    const isEditableContentDoc = (!doc.file_id && (doc.type_name === 'text/plain' || doc.type_name === 'text/markdown' || !doc.type_name));
-                    setIsEditModeInDrawer(isEditableContentDoc);
-                    setIsDrawerOpen(true);
-                  }}
+                  onClick={(doc) => handleDocumentClick(doc)}
                 />
               ) : (
                 documentsToDisplay.length > 0 ? (
@@ -654,6 +719,53 @@ const Documents = ({
             currentFolder={currentFolder}
             onFolderCreated={handleFolderCreated}
           />
+
+          {/* Folder Selector Modal for New Documents */}
+          <FolderSelectorModal
+            isOpen={showDocumentFolderModal}
+            onClose={() => setShowDocumentFolderModal(false)}
+            onSelectFolder={handleDocumentFolderSelected}
+            title="Select Folder for New Document"
+            description="Choose where to save this new document"
+          />
+
+          {/* Preview Modal for Images/Videos/PDFs */}
+          {showPreviewModal && previewDocument && previewDocument.file_id && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowPreviewModal(false)}>
+              <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                <button
+                  className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+                  onClick={() => setShowPreviewModal(false)}
+                >
+                  <X className="w-8 h-8" />
+                </button>
+                {previewDocument.mime_type?.startsWith('image/') && (
+                  <img
+                    src={`/api/documents/view/${previewDocument.file_id}`}
+                    alt={previewDocument.document_name}
+                    className="max-w-full max-h-[90vh] object-contain mx-auto"
+                  />
+                )}
+                {previewDocument.mime_type?.startsWith('video/') && (
+                  <video
+                    src={`/api/documents/view/${previewDocument.file_id}`}
+                    controls
+                    className="max-w-full max-h-[90vh] mx-auto"
+                  />
+                )}
+                {previewDocument.mime_type === 'application/pdf' && (
+                  <iframe
+                    src={`/api/documents/view/${previewDocument.file_id}`}
+                    className="w-full h-[90vh] bg-white"
+                    title={previewDocument.document_name}
+                  />
+                )}
+                <div className="mt-2 text-center text-white">
+                  <p className="text-lg font-medium">{previewDocument.document_name}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Document Drawer (keep existing drawer functionality) */}
@@ -829,7 +941,7 @@ const Documents = ({
               onClick={handleCreateDocument}
               variant="default"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <FileText className="w-4 h-4 mr-2" />
               {t('documents.newDocument', 'New Document')}
             </Button>
             <Button
@@ -924,6 +1036,53 @@ const Documents = ({
               totalPages={totalPages}
               onPageChange={handlePageChange}
             />
+          </div>
+        )}
+
+        {/* Folder Selector Modal for New Documents (Entity Mode) */}
+        <FolderSelectorModal
+          isOpen={showDocumentFolderModal}
+          onClose={() => setShowDocumentFolderModal(false)}
+          onSelectFolder={handleDocumentFolderSelected}
+          title="Select Folder for New Document"
+          description="Choose where to save this new document"
+        />
+
+        {/* Preview Modal for Images/Videos/PDFs */}
+        {showPreviewModal && previewDocument && previewDocument.file_id && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowPreviewModal(false)}>
+            <div className="relative max-w-7xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+                onClick={() => setShowPreviewModal(false)}
+              >
+                <X className="w-8 h-8" />
+              </button>
+              {previewDocument.mime_type?.startsWith('image/') && (
+                <img
+                  src={`/api/documents/view/${previewDocument.file_id}`}
+                  alt={previewDocument.document_name}
+                  className="max-w-full max-h-[90vh] object-contain mx-auto"
+                />
+              )}
+              {previewDocument.mime_type?.startsWith('video/') && (
+                <video
+                  src={`/api/documents/view/${previewDocument.file_id}`}
+                  controls
+                  className="max-w-full max-h-[90vh] mx-auto"
+                />
+              )}
+              {previewDocument.mime_type === 'application/pdf' && (
+                <iframe
+                  src={`/api/documents/view/${previewDocument.file_id}`}
+                  className="w-full h-[90vh] bg-white"
+                  title={previewDocument.document_name}
+                />
+              )}
+              <div className="mt-2 text-center text-white">
+                <p className="text-lg font-medium">{previewDocument.document_name}</p>
+              </div>
+            </div>
           </div>
         )}
 

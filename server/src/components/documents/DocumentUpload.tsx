@@ -9,6 +9,7 @@ import Spinner from 'server/src/components/ui/Spinner';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ContainerComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import FolderSelectorModal from './FolderSelectorModal';
 
 interface DocumentUploadProps {
     id: string; // Made required since it's needed for reflection registration
@@ -44,6 +45,11 @@ export default function DocumentUpload({
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Folder selection state - only used if folderPath not provided
+    const [showFolderModal, setShowFolderModal] = useState(false);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(true);
@@ -59,18 +65,37 @@ export default function DocumentUpload({
         setIsDragging(false);
         const files = e.dataTransfer.files;
         if (files.length > 0) {
-            await handleFileUpload(files[0]);
+            await handleFileSelection(files[0]);
         }
     };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            await handleFileUpload(files[0]);
+            await handleFileSelection(files[0]);
         }
     };
 
-    const handleFileUpload = async (file: File) => {
+    const handleFileSelection = async (file: File) => {
+        // If folderPath is already provided (e.g., current folder in folder mode), upload directly
+        if (folderPath !== undefined) {
+            await handleFileUpload(file, folderPath);
+        } else {
+            // Otherwise, always show folder selector to let user choose destination
+            setPendingFile(file);
+            setShowFolderModal(true);
+        }
+    };
+
+    const handleFolderSelected = async (selectedFolder: string | null) => {
+        if (pendingFile) {
+            setSelectedFolderPath(selectedFolder);
+            await handleFileUpload(pendingFile, selectedFolder);
+            setPendingFile(null);
+        }
+    };
+
+    const handleFileUpload = async (file: File, targetFolderPath: string | null | undefined) => {
         setIsUploading(true);
         setError(null);
         try {
@@ -79,7 +104,7 @@ export default function DocumentUpload({
 
             const options: UploadOptions = {
                 userId,
-                folder_path: folderPath
+                folder_path: targetFolderPath ?? null
             };
 
             // Add the appropriate entity ID based on type if both are provided
@@ -126,9 +151,10 @@ export default function DocumentUpload({
     };
 
     return (
-        <ReflectionContainer id={id} label="Document Upload">
-            <div className="space-y-4">
-                <div
+        <>
+            <ReflectionContainer id={id} label="Document Upload">
+                <div className="space-y-4">
+                    <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center ${
                         isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300'
                     }`}
@@ -188,5 +214,18 @@ export default function DocumentUpload({
                 </div>
             </div>
         </ReflectionContainer>
+
+        {/* Folder Selector Modal */}
+        <FolderSelectorModal
+            isOpen={showFolderModal}
+            onClose={() => {
+                setShowFolderModal(false);
+                setPendingFile(null);
+            }}
+            onSelectFolder={handleFolderSelected}
+            title="Select Destination Folder"
+            description={pendingFile ? `Where would you like to save "${pendingFile.name}"?` : "Choose where to save this document"}
+        />
+        </>
     );
 }

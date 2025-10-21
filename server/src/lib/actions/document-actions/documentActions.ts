@@ -1842,6 +1842,45 @@ export async function getFolderTree(): Promise<IFolderNode[]> {
 }
 
 /**
+ * Get list of all folder paths (for folder selector)
+ * @returns Promise<string[]> - Array of folder paths
+ */
+export async function getFolders(): Promise<string[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Get explicit folders from document_folders table
+  const explicitFolders = await knex('document_folders')
+    .select('folder_path')
+    .where('tenant', tenant)
+    .orderBy('folder_path', 'asc');
+
+  const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
+
+  // Get implicit folder paths from documents
+  const implicitFolders = await knex('documents')
+    .select('folder_path')
+    .where('tenant', tenant)
+    .whereNotNull('folder_path')
+    .andWhere('folder_path', '!=', '')
+    .groupBy('folder_path');
+
+  const implicitPaths = implicitFolders.map((row: any) => row.folder_path);
+
+  // Merge both lists (remove duplicates) and sort
+  const allPaths = Array.from(new Set([...explicitPaths, ...implicitPaths]));
+  return allPaths.sort();
+}
+
+/**
  * Get documents in a specific folder (OPTIMIZED - filters at DB level)
  *
  * @param folderPath - Path to folder (e.g., '/Legal/Contracts')
@@ -2154,12 +2193,38 @@ async function enrichFolderTreeWithCounts(
     return;
   }
 
-  // Single query to get counts for ALL folders at once
-  const counts = await knex('documents')
-    .where('tenant', tenant)
-    .whereIn('folder_path', allPaths)
-    .groupBy('folder_path')
-    .select('folder_path')
+  // Get current user for permission filtering
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return;
+  }
+
+  // Build list of entity types user has permission for
+  const allowedEntityTypes = await getEntityTypesForUser(currentUser);
+
+  // Single query to get counts for ALL folders at once - with same permission filtering as getDocumentsByFolder
+  const counts = await knex('documents as d')
+    .where('d.tenant', tenant)
+    .whereIn('d.folder_path', allPaths)
+    .where(function() {
+      // Option 1: Document has no associations (tenant-level doc)
+      this.whereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant);
+      })
+      // Option 2: Document has associations user has permission for
+      .orWhereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant)
+          .whereIn('da.entity_type', allowedEntityTypes);
+      });
+    })
+    .groupBy('d.folder_path')
+    .select('d.folder_path')
     .count('* as count');
 
   // Build map of path -> count

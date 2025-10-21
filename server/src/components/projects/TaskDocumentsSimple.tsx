@@ -26,6 +26,7 @@ import { downloadDocumentInBrowser } from 'server/src/lib/actions/document-downl
 import { downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import FolderSelectorModal from 'server/src/components/documents/FolderSelectorModal';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",
@@ -67,7 +68,11 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
   // New document states
   const [newDocumentName, setNewDocumentName] = useState('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
-  
+
+  // Folder selection for new documents
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
+
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<IDocument | null>(null);
@@ -165,11 +170,21 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
       toast.error('Please log in to create documents');
       return;
     }
-    
+
     // Load documents if not already loaded
     if (!documentsLoaded) {
       await fetchDocuments();
     }
+
+    // Show folder selector first
+    setShowFolderModal(true);
+  };
+
+  const handleFolderSelected = async (folderPath: string | null) => {
+    setSelectedFolderPath(folderPath);
+    setShowFolderModal(false);
+
+    // Now open the drawer to create the document
     setIsCreatingNew(true);
     setNewDocumentName('');
     setCurrentContent(DEFAULT_BLOCKS);
@@ -198,7 +213,8 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
         user_id: user.user_id,
         block_data: JSON.stringify(currentContent),
         entityId: taskId,
-        entityType: 'project_task'
+        entityType: 'project_task',
+        folder_path: selectedFolderPath
       });
 
       toast.success('Document created successfully');
@@ -206,6 +222,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
       await fetchDocuments();
       handleCloseDrawer();
       setIsCreatingNew(false);
+      setSelectedFolderPath(null); // Reset folder selection
     } catch (error) {
       console.error('Error creating document:', error);
       toast.error('Failed to create document');
@@ -647,6 +664,15 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
           )}
         </div>
       </Drawer>
+
+      {/* Folder Selector Modal */}
+      <FolderSelectorModal
+        isOpen={showFolderModal}
+        onClose={() => setShowFolderModal(false)}
+        onSelectFolder={handleFolderSelected}
+        title="Select Folder for New Document"
+        description="Choose where to save this new document"
+      />
 
       {/* Delete confirmation dialog */}
       <ConfirmationDialog
