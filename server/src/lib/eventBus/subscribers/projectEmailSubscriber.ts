@@ -12,6 +12,7 @@ import {
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from '../../db';
+import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 
 /**
  * Wrapper function that checks notification preferences before sending email
@@ -203,15 +204,24 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
           .first();
         return contact_name ? contact_name.full_name : String(value);
 
-    default:
-      if (typeof value === 'boolean') {
-        return value ? 'Yes' : 'No';
+  default:
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.startsWith('[') && trimmed.includes('"type"')) {
+        const { text } = formatBlockNoteContent(value);
+        return text;
       }
-      if (typeof value === 'object') {
-        return JSON.stringify(value);
-      }
-      return String(value);
-  }
+      return value;
+    }
+    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+      const { text } = formatBlockNoteContent(value);
+      return text;
+    }
+    return value !== undefined && value !== null ? String(value) : '';
+}
 }
 
 /**
@@ -332,6 +342,10 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       return;
     }
 
+    const descriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
+    const projectDescriptionText = descriptionFormatting ? descriptionFormatting.text : '';
+    const projectDescriptionHtml = descriptionFormatting ? descriptionFormatting.html : '';
+
     // Collect all recipient emails
     const recipients: string[] = [];
 
@@ -370,7 +384,9 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       project: {
         id: project.project_number,
         name: project.project_name,
-        description: project.description || '',
+        description: projectDescriptionText,
+        descriptionText: projectDescriptionText,
+        descriptionHtml: projectDescriptionHtml,
         status: project.status_name || 'Unknown',
         manager: project.manager_first_name && project.manager_last_name ?
           `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
@@ -798,6 +814,10 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
       return;
     }
 
+    const closedDescriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
+    const closedDescriptionText = closedDescriptionFormatting ? closedDescriptionFormatting.text : '';
+    const closedDescriptionHtml = closedDescriptionFormatting ? closedDescriptionFormatting.html : '';
+
     const emailContext = {
       project: {
         id: project.project_number,
@@ -805,7 +825,9 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         status: project.status_name || 'Unknown',
         manager: project.manager_first_name && project.manager_last_name ?
           `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
-        description: project.description || '',
+        description: closedDescriptionText,
+        descriptionText: closedDescriptionText,
+        descriptionHtml: closedDescriptionHtml,
         startDate: project.start_date,
         endDate: project.end_date,
         changes: await formatChanges(db, payload.changes || {}),
@@ -943,6 +965,10 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       return;
     }
 
+    const projectDescriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
+    const projectDescriptionText = projectDescriptionFormatting ? projectDescriptionFormatting.text : '';
+    const projectDescriptionHtml = projectDescriptionFormatting ? projectDescriptionFormatting.html : '';
+
     await sendNotificationIfEnabled({
       tenantId,
       to: project.user_email,
@@ -951,7 +977,9 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       context: {
         project: {
           name: project.project_name,
-          description: project.description || '',
+          description: projectDescriptionText,
+          descriptionText: projectDescriptionText,
+          descriptionHtml: projectDescriptionHtml,
           startDate: project.start_date,
           assignedBy: `${project.assigner_first_name} ${project.assigner_last_name}`,
           url: `/projects/${project.project_number}`,

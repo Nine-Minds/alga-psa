@@ -34,6 +34,28 @@ interface UserRecord {
   email?: string | null;
 }
 
+interface ProjectRecord {
+  project_id: string;
+  project_number: string;
+  project_name: string;
+  description?: unknown;
+  contact_email?: string | null;
+  client_email?: string | null;
+  assigned_user_email?: string | null;
+  assigned_to?: string | null;
+  status_name?: string | null;
+  manager_first_name?: string | null;
+  manager_last_name?: string | null;
+  user_email?: string | null;
+  assigner_first_name?: string | null;
+  assigner_last_name?: string | null;
+  assigned_by?: string | null;
+  client_name?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  tenant?: string | null;
+}
+
 interface NotificationSettingRecord {
   id: number;
   tenant: string;
@@ -84,6 +106,7 @@ const tokenStore = new Map<string, TokenRecord>();
 let currentTicket: TicketRecord | null = null;
 let currentUser: UserRecord | null = null;
 let currentResources: Array<{ email: string }> = [];
+let currentProject: ProjectRecord | null = null;
 
 const sendEmailMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
 const eventHandlers = vi.hoisted(() => new Map<string, (event: any) => Promise<void> | void>());
@@ -334,6 +357,36 @@ function ticketTableBuilder() {
     }
     return builder;
   };
+  return builder;
+}
+
+function projectTableBuilder() {
+  let result = currentProject;
+  const builder = createQuery(() => result);
+
+  const applyCondition = (key: string, value: any) => {
+    const normalized = normalizeColumnKey(key);
+    if (!result) {
+      return;
+    }
+    if (normalized === 'project_id') {
+      result = result.project_id === value ? result : null;
+    } else if (normalized === 'tenant') {
+      if (result.tenant && value) {
+        result = result.tenant === value ? result : null;
+      }
+    }
+  };
+
+  builder.where = (column: any, value?: any) => {
+    if (typeof column === 'object') {
+      Object.entries(column).forEach(([key, val]) => applyCondition(key, val));
+    } else if (value !== undefined) {
+      applyCondition(column, value);
+    }
+    return builder;
+  };
+  builder.andWhere = builder.where;
   return builder;
 }
 
@@ -635,6 +688,8 @@ function createMockKnex() {
         return tokenTableBuilder();
       case 'tickets as t':
         return ticketTableBuilder();
+      case 'projects as p':
+        return projectTableBuilder();
       case 'users':
         return userTableBuilder();
       case 'ticket_resources as tr':
@@ -688,10 +743,12 @@ vi.mock('next/headers', () => ({
 
 let sendEventEmail: typeof import('../../lib/notifications/sendEventEmail').sendEventEmail;
 let registerTicketEmailSubscriber: typeof import('../../lib/eventBus/subscribers/ticketEmailSubscriber').registerTicketEmailSubscriber;
+let registerProjectEmailSubscriber: typeof import('../../lib/eventBus/subscribers/projectEmailSubscriber').registerProjectEmailSubscriber;
 
 beforeAll(async () => {
   ({ sendEventEmail } = await import('../../lib/notifications/sendEventEmail'));
   ({ registerTicketEmailSubscriber } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber'));
+  ({ registerProjectEmailSubscriber } = await import('../../lib/eventBus/subscribers/projectEmailSubscriber'));
 });
 
 beforeEach(() => {
@@ -700,6 +757,7 @@ beforeEach(() => {
   currentTicket = null;
   currentUser = null;
   currentResources = [];
+  currentProject = null;
   resetNotificationState();
   sendEmailMock.mockReset();
   subscribeMock.mockClear();
@@ -734,6 +792,10 @@ function setTicket(row: TicketRecord | null) {
 
 function setUser(row: UserRecord | null) {
   currentUser = row;
+}
+
+function setProject(row: ProjectRecord | null) {
+  currentProject = row;
 }
 
 function setResources(rows: Array<{ email: string }>) {
@@ -1075,5 +1137,280 @@ describe('ticket email subscriber notification gating (known gap)', () => {
     });
 
     expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ticket email subscriber rich text formatting', () => {
+  beforeEach(async () => {
+    eventHandlers.clear();
+    await registerTicketEmailSubscriber();
+  });
+
+  it('renders rich text comment content as HTML instead of JSON', async () => {
+    seedTemplate(
+      'ticket-comment-added',
+      'New Comment {{ticket.title}}',
+      '<div class="comment">{{comment.content}}</div>',
+    );
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const commentId = randomUUID();
+
+    const richTextContent = JSON.stringify([
+      {
+        id: '70233ad1-b1d9-453b-ab92-cf0ed07bb41b',
+        type: 'paragraph',
+        props: {
+          textColor: 'default',
+          backgroundColor: 'default',
+          textAlignment: 'left',
+        },
+        content: [
+          {
+            type: 'text',
+            text: 'Another test',
+            styles: {},
+          },
+        ],
+        children: [],
+      },
+      {
+        id: 'd66ef178-ec0a-4723-8473-e04c6028ad86',
+        type: 'paragraph',
+        props: {
+          textColor: 'default',
+          backgroundColor: 'default',
+          textAlignment: 'left',
+        },
+        content: [],
+        children: [],
+      },
+    ]);
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0200',
+      title: 'Rich text comment ticket',
+      contact_email: 'contact@example.com',
+      email_metadata: { threadId: 'thread-rich-text' },
+    });
+
+    await handlerFor('TICKET_COMMENT_ADDED')({
+      id: randomUUID(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+        comment: {
+          id: commentId,
+          content: richTextContent,
+          author: 'Robert Isaacs',
+        },
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledOnce();
+    const processed = await processedCall(0);
+    expect(processed.html).toContain('Another test');
+    expect(processed.html).not.toContain('[{');
+  });
+
+  it('renders ticket description rich text without leaking JSON', async () => {
+    seedTemplate(
+      'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<p><strong>Description:</strong> {{ticket.description}}</p>',
+    );
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+
+    const richTextDescription = JSON.stringify([
+      {
+        id: '95c4df7f-1a4d-4ef2-b5f6-87122d46da4b',
+        type: 'paragraph',
+        props: {
+          textColor: 'default',
+          backgroundColor: 'default',
+          textAlignment: 'left',
+        },
+        content: [
+          {
+            type: 'text',
+            text: 'Description rich text',
+            styles: {},
+          },
+        ],
+        children: [],
+      },
+    ]);
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0201',
+      title: 'Rich text description ticket',
+      contact_email: 'contact@example.com',
+      assigned_to_email: '',
+      description: richTextDescription,
+    });
+
+    await handlerFor('TICKET_CREATED')({
+      id: randomUUID(),
+      eventType: 'TICKET_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledOnce();
+    const processed = await processedCall(0);
+    expect(processed.html).toContain('Description rich text');
+    expect(processed.html).not.toContain('[{');
+  });
+});
+
+describe('project email subscriber rich text formatting', () => {
+  beforeEach(async () => {
+    eventHandlers.clear();
+    await registerProjectEmailSubscriber();
+  });
+
+  it('renders project description rich text in project created emails', async () => {
+    seedTemplate(
+      'project-created',
+      'Project Created: {{project.name}}',
+      '<p><strong>Description:</strong> {{project.description}}</p>',
+    );
+
+    const tenantId = randomUUID();
+    const projectId = randomUUID();
+
+    const richTextDescription = JSON.stringify([
+      {
+        id: 'b1a1a0c0-7a45-4d0a-91a0-cc22f7c9b9a7',
+        type: 'paragraph',
+        props: {
+          textColor: 'default',
+          backgroundColor: 'default',
+          textAlignment: 'left',
+        },
+        content: [
+          {
+            type: 'text',
+            text: 'Project description rich text',
+            styles: {},
+          },
+        ],
+        children: [],
+      },
+    ]);
+
+    setProject({
+      project_id: projectId,
+      project_number: 'PR-0201',
+      project_name: 'Rich text project',
+      description: richTextDescription,
+      contact_email: 'contact@example.com',
+      client_email: null,
+      assigned_user_email: '',
+      assigned_to: null,
+      status_name: 'Active',
+      manager_first_name: 'Alex',
+      manager_last_name: 'Manager',
+      start_date: '2024-01-01T00:00:00.000Z',
+      tenant: tenantId,
+    });
+
+    await handlerFor('PROJECT_CREATED')({
+      id: randomUUID(),
+      eventType: 'PROJECT_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        projectId,
+        userId: randomUUID(),
+        changes: {},
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledOnce();
+    const processed = await processedCall(0);
+    expect(processed.html).toContain('Project description rich text');
+    expect(processed.html).not.toContain('[{');
+  });
+
+  it('renders project description rich text in project assigned emails', async () => {
+    seedTemplate(
+      'project-assigned',
+      'Project Assigned: {{project.name}}',
+      '<p><strong>Description:</strong> {{project.description}}</p>',
+    );
+
+    const tenantId = randomUUID();
+    const projectId = randomUUID();
+    const assigneeId = randomUUID();
+
+    const richTextDescription = JSON.stringify([
+      {
+        id: 'ed1ef20f-28f1-4d77-8b40-7b6f6af3cb1a',
+        type: 'paragraph',
+        props: {
+          textColor: 'default',
+          backgroundColor: 'default',
+          textAlignment: 'left',
+        },
+        content: [
+          {
+            type: 'text',
+            text: 'Assigned project rich text',
+            styles: {},
+          },
+        ],
+        children: [],
+      },
+    ]);
+
+    setProject({
+      project_id: projectId,
+      project_number: 'PR-0202',
+      project_name: 'Assigned project',
+      description: richTextDescription,
+      contact_email: null,
+      client_email: null,
+      assigned_user_email: 'assignee@example.com',
+      assigned_to: assigneeId,
+      user_email: 'assignee@example.com',
+      status_name: 'Active',
+      manager_first_name: 'Alex',
+      manager_last_name: 'Manager',
+      assigner_first_name: 'Taylor',
+      assigner_last_name: 'Lead',
+      start_date: '2024-01-02T00:00:00.000Z',
+      tenant: tenantId,
+    });
+
+    await handlerFor('PROJECT_ASSIGNED')({
+      id: randomUUID(),
+      eventType: 'PROJECT_ASSIGNED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        projectId,
+        userId: randomUUID(),
+        assignedTo: assigneeId,
+        changes: {},
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledOnce();
+    const processed = await processedCall(0);
+    expect(processed.html).toContain('Assigned project rich text');
+    expect(processed.html).not.toContain('[{');
   });
 });

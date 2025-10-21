@@ -1,5 +1,66 @@
 import { Block, PartialBlock } from '@blocknote/core';
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function formatBlockNoteContent(content: unknown): { html: string; text: string } {
+  if (content === null || content === undefined) {
+    return {
+      html: '<p>[No content]</p>',
+      text: '[No content]',
+    };
+  }
+
+  const convertSafely = (input: any): { html: string; text: string } => {
+    try {
+      const htmlResult = convertBlockNoteToHTML(input);
+      const textResult = convertBlockNoteToMarkdown(input);
+
+      if (
+        htmlResult &&
+        htmlResult.trim().length > 0 &&
+        htmlResult !== '<p>[Invalid content format]</p>'
+      ) {
+        return { html: htmlResult, text: textResult };
+      }
+    } catch (error) {
+      console.warn('[BlockNoteUtils] Failed to convert BlockNote content, falling back to plain text', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+
+    const fallback = typeof input === 'string' ? input : JSON.stringify(input);
+    return {
+      html: `<p>${escapeHtml(fallback)}</p>`,
+      text: fallback,
+    };
+  };
+
+  if (typeof content === 'string') {
+    const trimmed = content.trim();
+    if (trimmed.length === 0) {
+      return { html: '<p></p>', text: '' };
+    }
+    try {
+      const parsed = JSON.parse(content);
+      return convertSafely(parsed);
+    } catch {
+      return {
+        html: `<p>${escapeHtml(content)}</p>`,
+        text: content,
+      };
+    }
+  }
+
+  return convertSafely(content);
+}
+
 /**
  * Converts BlockNote JSON content to Markdown format
  *
