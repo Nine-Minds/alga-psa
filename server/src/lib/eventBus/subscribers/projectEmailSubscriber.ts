@@ -71,6 +71,7 @@ async function sendNotificationIfEnabled(
       // Check user preferences
       const preference = await knex('user_notification_preferences')
         .where({
+          tenant: params.tenantId,
           user_id: recipientUserId,
           subtype_id: subtype.id
         })
@@ -1070,29 +1071,41 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
       }, 'Project Task Assigned', assignedTo);
     }
 
-    // Send emails to additional users
-    for (const additionalUser of additionalUserEmails) {
-      if (additionalUser.email && additionalUser.user_id) {
-        await sendNotificationIfEnabled({
-          tenantId,
-          to: additionalUser.email,
-          subject: `You have been added as additional agent to task: ${task.task_name}`,
-          template: 'project-task-assigned-additional',
-          context: {
-            task: {
-              name: task.task_name,
-              project: task.project_name,
-              dueDate: task.due_date,
-              assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
-              url: `/projects/${task.project_number}/tasks/${task.task_id}`,
-              role: 'Additional Agent'
-            }
-          },
-          replyContext: {
-            projectId: task.project_id || payload.projectId
+    // Send emails to additional users (deduplicate by user_id/email)
+    const uniqueAdditionalUsers = additionalUserEmails.reduce<Map<string, typeof additionalUserEmails[number]>>(
+      (acc, user) => {
+        if (!user.email) {
+          return acc;
+        }
+        const key = user.user_id || user.email;
+        if (!acc.has(key)) {
+          acc.set(key, user);
+        }
+        return acc;
+      },
+      new Map()
+    );
+
+    for (const additionalUser of uniqueAdditionalUsers.values()) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: additionalUser.email!,
+        subject: `You have been added as additional agent to task: ${task.task_name}`,
+        template: 'project-task-assigned-additional',
+        context: {
+          task: {
+            name: task.task_name,
+            project: task.project_name,
+            dueDate: task.due_date,
+            assignedBy: `${task.assigner_first_name} ${task.assigner_last_name}`,
+            url: `/projects/${task.project_number}/tasks/${task.task_id}`,
+            role: 'Additional Agent'
           }
-        }, 'Project Task Assigned', additionalUser.user_id);
-      }
+        },
+        replyContext: {
+          projectId: task.project_id || payload.projectId
+        }
+      }, 'Project Task Assigned', additionalUser.user_id);
     }
 
   } catch (error) {

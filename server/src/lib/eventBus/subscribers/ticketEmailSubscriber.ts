@@ -73,6 +73,7 @@ async function sendNotificationIfEnabled(
       // Check user preferences
       const preference = await knex('user_notification_preferences')
         .where({
+          tenant: params.tenantId,
           user_id: recipientUserId,
           subtype_id: subtype.id
         })
