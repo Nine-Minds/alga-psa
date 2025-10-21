@@ -54,10 +54,12 @@ const TextDetailItem: React.FC<{
   );
 };
 
+export default function ClientDetailsSettings() {
   const { t } = useTranslation('clientPortal');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clientDetails, setClientDetails] = useState<IClient | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
 
@@ -96,6 +98,8 @@ const TextDetailItem: React.FC<{
           return;
         }
 
+        setClientDetails(client);
+
       } catch (error) {
         console.error('Error loading client details:', error);
         setError(t('clientSettings.messages.detailsLoadError', 'Failed to load client details'));
@@ -106,6 +110,7 @@ const TextDetailItem: React.FC<{
   }, [router]);
 
   const handleFieldChange = (field: string, value: string) => {
+    setClientDetails((prevClient) => {
       if (!prevClient) return prevClient;
       
       const updatedClient = JSON.parse(JSON.stringify(prevClient)) as IClient;
@@ -155,6 +160,7 @@ const TextDetailItem: React.FC<{
           annual_revenue: clientDetails.properties?.annual_revenue
         }
       });
+      setClientDetails(updatedClient);
       setHasUnsavedChanges(false);
       toast.success(t('clientSettings.messages.updateSuccess'));
     } catch (error) {
