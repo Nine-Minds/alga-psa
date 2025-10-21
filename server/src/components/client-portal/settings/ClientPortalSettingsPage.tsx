@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { CustomTabs } from 'server/src/components/ui/CustomTabs';
-import { ClientDetailsSettings } from './ClientDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
 import { DrawerProvider } from "server/src/context/DrawerContext";
@@ -34,7 +33,6 @@ export default function ClientPortalSettingsPage() {
     },
     {
       label: t('clientSettings.tabs.clientDetails'),
-      content: <ClientDetailsSettings />
     }
   ];
   

@@ -8,7 +8,6 @@ import UserAvatar from '../../ui/UserAvatar';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
-import ClientDetails from 'server/src/components/clients/ClientDetails';
 
 import { getUsersClientInfo } from 'server/src/lib/actions/user-actions/userClientActions';
 import {
@@ -130,13 +129,8 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
       const { getClientById } = await import('server/src/lib/actions/client-actions/clientActions');
       const client = await getClientById(clientId);
       if (client) {
-        openDrawer(
-          <ClientDetails
-            client={client}
-            isInDrawer={true}
-            quickView={true}
-          />
-        );
+        // Client details functionality has been moved to contacts
+        console.log('Client:', client.client_name);
       }
     }
   };

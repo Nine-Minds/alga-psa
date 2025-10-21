@@ -26,6 +26,14 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    minLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+    passwordsMatch: false
+  });
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -41,10 +49,35 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
     checkStatus();
   }, []);
 
+  useEffect(() => {
+    validatePassword();
+  }, [newPassword, confirmPassword]);
+
+  const validatePassword = () => {
+    setPasswordRequirements({
+      minLength: newPassword.length >= 8,
+      hasUppercase: /[A-Z]/.test(newPassword),
+      hasLowercase: /[a-z]/.test(newPassword),
+      hasNumber: /\d/.test(newPassword),
+      hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword),
+      passwordsMatch: newPassword === confirmPassword && newPassword.length > 0
+    });
+  };
+
+  const isPasswordValid = () => {
+    const { minLength, hasUppercase, hasLowercase, hasNumber, hasSpecialChar, passwordsMatch } = passwordRequirements;
+    return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar && passwordsMatch;
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
     setPasswordSuccess(null);
+
+    if (!isPasswordValid()) {
+      setPasswordError('Password does not meet all requirements');
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setPasswordError(t('profile.changePassword.passwordMismatch', 'New passwords do not match'));

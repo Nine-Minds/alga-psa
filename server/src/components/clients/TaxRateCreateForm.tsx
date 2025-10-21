@@ -51,21 +51,82 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
 
     const validateForm = () => {
         const validationErrors: string[] = [];
-        if (!regionCode) validationErrors.push('Tax region');
-        
-        const percValue = parseFloat(percentage);
-        if (!percentage.trim() || isNaN(percValue) || percValue <= 0 || percValue > 100) {
-            validationErrors.push('Valid percentage (0-100)');
+
+        // Validate tax region
+        if (!regionCode || regionCode.trim() === '') {
+            validationErrors.push('Tax region is required');
         }
-        
-        if (!startDate) validationErrors.push('Start date');
-        
+
+        // Validate percentage
+        const percValue = parseFloat(percentage);
+        if (!percentage.trim()) {
+            validationErrors.push('Tax percentage is required');
+        } else if (isNaN(percValue)) {
+            validationErrors.push('Tax percentage must be a valid number');
+        } else if (percValue < 0) {
+            validationErrors.push('Tax percentage cannot be negative');
+        } else if (percValue > 100) {
+            validationErrors.push('Tax percentage cannot exceed 100%');
+        }
+
+        // Validate start date
+        if (!startDate || startDate.trim() === '') {
+            validationErrors.push('Start date is required');
+        } else {
+            const startDateObj = new Date(startDate);
+            if (isNaN(startDateObj.getTime())) {
+                validationErrors.push('Start date must be a valid date');
+            }
+        }
+
+        // Validate end date if provided
+        if (endDate && endDate.trim() !== '') {
+            const endDateObj = new Date(endDate);
+            const startDateObj = new Date(startDate);
+
+            if (isNaN(endDateObj.getTime())) {
+                validationErrors.push('End date must be a valid date');
+            } else if (startDate && endDateObj <= startDateObj) {
+                validationErrors.push('End date must be after start date');
+            }
+        }
+
+        // Validate description length
+        if (description && description.trim().length > 255) {
+            validationErrors.push('Description cannot exceed 255 characters');
+        }
+
         return validationErrors;
     };
 
     const clearErrorIfSubmitted = () => {
         if (hasAttemptedSubmit) {
             setValidationErrors([]);
+        }
+    };
+
+    // Clear specific validation errors as user types
+    const handleRegionCodeChange = (value: string) => {
+        setRegionCode(value);
+        if (hasAttemptedSubmit && value.trim() !== '') {
+            setValidationErrors(prev => prev.filter(error => !error.includes('Tax region')));
+        }
+    };
+
+    const handlePercentageChange = (value: string) => {
+        setPercentage(value);
+        if (hasAttemptedSubmit && value.trim() !== '') {
+            const percValue = parseFloat(value);
+            if (!isNaN(percValue) && percValue >= 0 && percValue <= 100) {
+                setValidationErrors(prev => prev.filter(error => !error.includes('percentage')));
+            }
+        }
+    };
+
+    const handleDescriptionChange = (value: string) => {
+        setDescription(value);
+        if (hasAttemptedSubmit && value.trim().length <= 255) {
+            setValidationErrors(prev => prev.filter(error => !error.includes('Description')));
         }
     };
 
@@ -121,10 +182,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                 <CustomSelect
                     id="tax-rate-region"
                     value={regionCode}
-                    onValueChange={(value) => {
-                        setRegionCode(value);
-                        clearErrorIfSubmitted();
-                    }}
+                    onValueChange={handleRegionCodeChange}
                     options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
                     placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region *"}
                     disabled={isSubmitting || isLoadingTaxRegions}
@@ -139,10 +197,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                     type="number"
                     step="0.01" // Allow decimals
                     value={percentage}
-                    onChange={(e) => {
-                        setPercentage(e.target.value);
-                        clearErrorIfSubmitted();
-                    }}
+                    onChange={(e) => handlePercentageChange(e.target.value)}
                     placeholder="e.g., 8.25 *"
                     disabled={isSubmitting}
                     required
@@ -154,7 +209,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                 <Input
                     id="tax-rate-description"
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={(e) => handleDescriptionChange(e.target.value)}
                     placeholder="e.g., California State Tax"
                     disabled={isSubmitting}
                 />

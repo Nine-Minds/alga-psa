@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { X } from 'lucide-react';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { FormComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from "server/src/components/ui/Button";
 import { Input } from "server/src/components/ui/Input";
+import { PhoneInput } from "server/src/components/ui/PhoneInput";
 import { Label } from "server/src/components/ui/Label";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
+import {
+  validateContactName,
+  validateEmailAddress,
+  validatePhoneNumber,
+  validateNotes
+} from 'server/src/lib/utils/clientFormValidation';
 
 interface QuickAddContactProps {
   isOpen: boolean;
@@ -60,6 +65,23 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [countryCode, setCountryCode] = useState(() => {
+    // Enterprise locale detection
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const parts = locale.split('-');
+      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+
+      if (detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry)) {
+        return detectedCountry;
+      }
+    } catch (e) {
+      // Fallback to US if detection fails
+    }
+    return 'US';
+  });
 
 
   // Set initial client ID when the component mounts or when selectedClientId changes
@@ -68,6 +90,22 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setClientId(selectedClientId);
     }
   }, [selectedClientId]);
+
+  // Load countries when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      const fetchCountries = async () => {
+        if (countries.length > 0) return; // Don't fetch if already loaded
+        try {
+          const countriesData = await getAllCountries();
+          setCountries(countriesData);
+        } catch (error: any) {
+          console.error("Error fetching countries:", error);
+        }
+      };
+      fetchCountries();
+    }
+  }, [isOpen, countries.length]);
 
   // Reset form and error when dialog opens/closes
   useEffect(() => {
@@ -88,6 +126,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setNotes('');
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
+      setFieldErrors({});
     }
   }, [isOpen, selectedClientId]);
 
@@ -96,6 +135,108 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (typeof clientId === 'string' || clientId === null) {
       setClientId(clientId);
     }
+  };
+
+  const handleCountryChange = (countryCode: string) => {
+    setCountryCode(countryCode);
+    // When country changes, the PhoneInput will auto-update with the new phone code
+  };
+
+  // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
+  const validateField = (fieldName: string, value: string, isSubmitting: boolean = false) => {
+    let error: string | null = null;
+    const trimmedValue = value.trim();
+
+    switch (fieldName) {
+      case 'contact_name':
+        // Enterprise name validation with full Unicode support
+        if (!trimmedValue) {
+          if (isSubmitting) error = 'Full name is required';
+        } else if (trimmedValue.length < 1) {
+          error = 'Full name cannot be empty';
+        } else if (/^\s+$/.test(value)) {
+          error = 'Full name cannot contain only spaces';
+        } else {
+          error = validateContactName(trimmedValue);
+        }
+        break;
+
+      case 'contact_email':
+        // Enterprise email validation
+        if (!trimmedValue) {
+          if (isSubmitting) error = 'Email address is required';
+        } else if (/^\s+$/.test(value)) {
+          error = 'Email address cannot contain only spaces';
+        } else {
+          error = validateEmailAddress(trimmedValue);
+        }
+        break;
+
+      case 'contact_phone':
+        // Enterprise phone validation - Unicode international support
+        if (trimmedValue) {
+          // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
+          const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
+          if (countryCodeOnlyPattern.test(trimmedValue)) {
+            // Don't validate if it's just a country code - user hasn't started typing yet
+            break;
+          }
+
+          // Extract all Unicode digits (supports international number systems)
+          const unicodeDigits = trimmedValue.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+          const digitCount = unicodeDigits.length;
+
+          // International phone number validation (ITU-T E.164)
+          if (digitCount > 0 && digitCount < 7) {
+            error = 'Please enter a complete phone number (at least 7 digits)';
+          } else if (digitCount > 15) {
+            error = 'Phone number cannot exceed 15 digits';
+          } else if (digitCount > 0) {
+            // Check for obviously fake patterns using Unicode digits
+            const unicodeDigitString = unicodeDigits.join('');
+            if (/^(.)\1+$/u.test(unicodeDigitString)) {
+              error = 'Please enter a valid phone number';
+            } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
+              error = 'Please enter a valid phone number';
+            } else {
+              // Use the existing validator for more complex validation
+              error = validatePhoneNumber(trimmedValue);
+            }
+          }
+        }
+        break;
+
+      case 'role':
+        // Enterprise role validation with Unicode support
+        if (trimmedValue) {
+          if (/^\s+$/.test(value)) {
+            error = 'Role cannot contain only spaces';
+          } else if (trimmedValue.length > 100) {
+            error = 'Role must be 100 characters or less';
+          } else if (!/[\p{L}\p{N}]/u.test(trimmedValue)) {
+            error = 'Role must contain letters or numbers';
+          }
+        }
+        break;
+
+      case 'notes':
+        // Enterprise notes validation
+        if (trimmedValue) {
+          if (/^\s+$/.test(value)) {
+            error = 'Notes cannot contain only spaces';
+          } else {
+            error = validateNotes(trimmedValue);
+          }
+        }
+        break;
+    }
+
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: error || ''
+    }));
+
+    return error;
   };
 
   const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
@@ -109,21 +250,51 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       return;
     }
 
-    // Validate required fields
-    const errors: string[] = [];
-    if (!fullName.trim()) {
-      errors.push('Full name is required');
+    // Validate all fields using client validators
+    const fieldValidationErrors: Record<string, string> = {};
+    const validationMessages: string[] = [];
+
+    // Enterprise-grade validation on submit (strict validation like Microsoft/Meta)
+    const nameError = validateField('contact_name', fullName, true);
+    if (nameError) {
+      fieldValidationErrors.contact_name = nameError;
+      validationMessages.push(nameError);
     }
-    if (!email.trim()) {
-      errors.push('Email address is required');
+
+    const emailError = validateField('contact_email', email, true);
+    if (emailError) {
+      fieldValidationErrors.contact_email = emailError;
+      validationMessages.push(emailError);
     }
-    
-    if (errors.length > 0) {
-      setValidationErrors(errors);
+
+    // Validate phone even if empty to catch invalid partial entries
+    const phoneError = validateField('contact_phone', phoneNumber, true);
+    if (phoneError) {
+      fieldValidationErrors.contact_phone = phoneError;
+      validationMessages.push(phoneError);
+    }
+
+    // Validate optional fields if they have content
+    const roleError = validateField('role', role, true);
+    if (roleError) {
+      fieldValidationErrors.role = roleError;
+      validationMessages.push(roleError);
+    }
+
+    const notesError = validateField('notes', notes, true);
+    if (notesError) {
+      fieldValidationErrors.notes = notesError;
+      validationMessages.push(notesError);
+    }
+
+    if (validationMessages.length > 0) {
+      setFieldErrors(fieldValidationErrors);
+      setValidationErrors(validationMessages);
       return;
     }
-    
+
     setValidationErrors([]);
+    setFieldErrors({});
 
     try {
       setError(null); // Clear any existing errors
@@ -131,15 +302,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         full_name: fullName.trim(),
         email: email.trim(),
         phone_number: phoneNumber.trim(),
+        client_id: clientId || null, // Explicitly set to null if no client selected
         is_inactive: isInactive,
         role: role.trim(),
         notes: notes.trim(),
       };
-
-      // Only include client_id if it's actually selected
-      if (clientId) {
-        Object.assign(contactData, { client_id: clientId });
-      }
 
       const newContact = await addContact(contactData);
       onContactAdded(newContact);
@@ -225,10 +392,22 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               <Input
                 id="quick-add-contact-name"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) => {
+                  setFullName(e.target.value);
+                  // Clear error when user starts typing
+                  if (fieldErrors.contact_name) {
+                    setFieldErrors(prev => ({ ...prev, contact_name: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  validateField('contact_name', fullName, false);
+                }}
                 required
-                className={hasAttemptedSubmit && !fullName.trim() ? 'border-red-500' : ''}
+                className={fieldErrors.contact_name ? 'border-red-500' : ''}
               />
+              {fieldErrors.contact_name && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_name}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="email">Email *</Label>
@@ -236,30 +415,68 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 id="quick-add-contact-email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear error when user starts typing
+                  if (fieldErrors.contact_email) {
+                    setFieldErrors(prev => ({ ...prev, contact_email: '' }));
+                  }
+                  // Immediately validate if user enters only spaces
+                  if (/^\s+$/.test(e.target.value)) {
+                    setFieldErrors(prev => ({ ...prev, contact_email: 'Email address cannot contain only spaces' }));
+                  }
+                }}
+                onBlur={() => {
+                  validateField('contact_email', email, false);
+                }}
                 required
-                className={hasAttemptedSubmit && !email.trim() ? 'border-red-500' : ''}
+                className={fieldErrors.contact_email ? 'border-red-500' : ''}
               />
+              {fieldErrors.contact_email && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_email}</p>
+              )}
             </div>
             <div>
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <Input
+              <PhoneInput
                 id="quick-add-contact-phone"
+                label="Phone Number"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={(value) => {
+                  setPhoneNumber(value);
+                  // Clear error when user starts typing, clears the field, or has only country code
+                  const trimmedValue = value.trim();
+                  const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
+
+                  if (fieldErrors.contact_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+                    setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  validateField('contact_phone', phoneNumber, false);
+                }}
+                countryCode={countryCode}
+                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
+                countries={countries}
+                onCountryChange={handleCountryChange}
+                allowExtensions={true}
+                data-automation-id="quick-add-contact-phone"
+                className={fieldErrors.contact_phone ? 'error' : ''}
               />
+              {fieldErrors.contact_phone && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
+              )}
             </div>
             <div>
               <Label>Client (Optional)</Label>
-              <ClientPicker
+              <CustomSelect
                 id="quick-add-contact-client"
-                clients={clients}
-                onSelect={handleClientSelect}
-                selectedClientId={clientId}
-                filterState={filterState}
-                onFilterStateChange={setFilterState}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={setClientTypeFilter}
+                options={clients.map((client) => ({
+                  value: client.client_id,
+                  label: client.client_name
+                }))}
+                value={clientId || null}
+                onValueChange={handleClientSelect}
+                placeholder="Select a client (optional)"
               />
             </div>
             <div>
@@ -267,18 +484,44 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               <Input
                 id="quick-add-contact-role"
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
+                onChange={(e) => {
+                  setRole(e.target.value);
+                  // Clear error when user starts typing
+                  if (fieldErrors.role) {
+                    setFieldErrors(prev => ({ ...prev, role: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  validateField('role', role, false);
+                }}
                 placeholder="e.g., Manager, Developer, etc."
+                className={fieldErrors.role ? 'border-red-500' : ''}
               />
+              {fieldErrors.role && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.role}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="notes">Notes</Label>
               <TextArea
                 id="quick-add-contact-notes"
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  // Clear error when user starts typing
+                  if (fieldErrors.notes) {
+                    setFieldErrors(prev => ({ ...prev, notes: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  validateField('notes', notes, false);
+                }}
                 placeholder="Add any additional notes about the contact..."
+                className={fieldErrors.notes ? 'border-red-500' : ''}
               />
+              {fieldErrors.notes && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.notes}</p>
+              )}
             </div>
             <div className="flex items-center py-2">
               <Label htmlFor="quick-add-contact-status" className="mr-2">Status</Label>
@@ -303,17 +546,18 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 e.stopPropagation();
                 setHasAttemptedSubmit(false);
                 setValidationErrors([]);
+                setFieldErrors({});
                 onClose();
               }}
             >
               Cancel
             </Button>
-            <Button 
-              id="quick-add-contact-submit" 
+            <Button
+              id="quick-add-contact-submit"
               type="button"
               onClick={handleSubmit}
               disabled={false}
-              className={!fullName.trim() || !email.trim() ? 'opacity-50' : ''}
+              className={!fullName.trim() || !email.trim() || Object.values(fieldErrors).some(error => error) ? 'opacity-50' : ''}
             >
               Add Contact
             </Button>

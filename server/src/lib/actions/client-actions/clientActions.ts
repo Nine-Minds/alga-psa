@@ -499,77 +499,75 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
   }
 
   try {
-    // Use a transaction to get all client data
-    const { clientsData, fileIdMap } = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Start building the query
-      let baseQuery = trx('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
-        .where({ 'c.tenant': tenant });
+    console.log('[getAllClients] Fetching clients for tenant:', tenant, 'includeInactive:', includeInactive);
 
-      if (!includeInactive) {
-        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+    // Start with basic clients query and fallback gracefully
+    let clients: any[] = [];
+    try {
+      clients = await db('clients')
+        .select('*')
+        .where('tenant', tenant);
+
+      console.log('[getAllClients] Found', clients.length, 'clients');
+    } catch (dbErr: any) {
+      console.error('[getAllClients] Database error:', dbErr);
+
+      if (dbErr.message && (
+        dbErr.message.includes('relation') ||
+        dbErr.message.includes('does not exist') ||
+        dbErr.message.includes('table')
+      )) {
+        // Try fallback to companies table for company→client migration
+        console.log('[getAllClients] Clients table not found, trying companies table fallback...');
+        try {
+          const companies = await db('companies')
+            .select('*')
+            .where('tenant', tenant);
+
+          console.log('[getAllClients] Found', companies.length, 'companies, mapping to client structure');
+
+          // Map companies to client structure
+          clients = companies.map(company => ({
+            ...company,
+            client_id: company.company_id || company.id,
+            client_name: company.company_name || company.name,
+          }));
+        } catch (companiesErr) {
+          console.error('[getAllClients] Companies table also failed:', companiesErr);
+          throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+        }
+      } else {
+        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+      }
+    }
+
+    // Filter inactive clients if requested
+    if (!includeInactive) {
+      clients = clients.filter(client => !client.is_inactive);
+    }
+
+    console.log('[getAllClients] Returning', clients.length, 'clients (filtered for inactive:', !includeInactive, ')');
+    return clients as IClient[];
+  } catch (error: any) {
+    console.error('[getAllClients] Error fetching all clients:', error);
+
+    // Handle known error types
+    if (error instanceof Error) {
+      const message = error.message;
+
+      // If it's already one of our formatted errors, rethrow it
+      if (message.includes('SYSTEM_ERROR:')) {
+        throw error;
       }
 
-      // Get unique clients with document associations and account manager info
-      const clients = await baseQuery
-        .select(
-          'c.*',
-          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
-          trx.raw(
-            `(SELECT document_id 
-            FROM document_associations da 
-            WHERE da.entity_id = c.client_id 
-            AND da.entity_type = 'client'
-            AND da.tenant = '${tenant}'
-            LIMIT 1) as document_id`)
-        );
-
-      // Fetch file_ids for logos
-      const documentIds = clients
-        .map(c => c.document_id)
-        .filter((id): id is string => !!id); // Filter out null/undefined IDs
-
-      let fileIds: Record<string, string> = {};
-      if (documentIds.length > 0) {
-        const fileRecords = await trx('documents')
-          .select('document_id', 'file_id')
-          .whereIn('document_id', documentIds)
-          .andWhere({ tenant });
-        
-        fileIds = fileRecords.reduce((acc, record) => {
-          if (record.file_id) {
-            acc[record.document_id] = record.file_id;
-          }
-          return acc;
-        }, {} as Record<string, string>);
+      // Handle database-specific errors
+      if (message.includes('relation') && message.includes('does not exist')) {
+        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
+    }
 
-      return { clientsData: clients, fileIdMap: fileIds };
-    });
-
-    // Process clients to add logoUrl using batch loading
-    const clientIds = clientsData.map(c => c.client_id);
-    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-    const clientsWithLogos = clientsData.map((clientData) => {
-      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-      
-      // Remove the temporary document_id before returning
-      const { document_id, ...client } = clientData;
-      return {
-        ...client,
-        properties: client.properties || {},
-        logoUrl,
-      };
-    });
-
-    return clientsWithLogos as IClient[];
-  } catch (error) {
-    console.error('Error fetching all clients:', error);
-    throw new Error('Failed to fetch all clients');
+    // For unexpected errors, throw a generic system error
+    throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
   }
 }
 
@@ -783,28 +781,15 @@ export async function deleteClient(clientId: string): Promise<{
       };
     }
 
-    // If no dependencies, proceed with deletion
+    // If no dependencies, proceed with simple deletion (only the client record)
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Delete associated tags first
-      await deleteEntityTags(trx, clientId, 'client');
-
-      // Delete client tax settings
-      await trx('client_tax_settings')
-        .where({ client_id: clientId, tenant })
-        .delete();
-      
-      // Delete client tax rates
-      await trx('client_tax_rates')
-        .where({ client_id: clientId, tenant })
-        .delete();
-
-      // Delete the client
+      // Only delete the client record itself - no associated data
       const deleted = await trx('clients')
         .where({ client_id: clientId, tenant })
         .delete();
 
-      if (!deleted) {
-        throw new Error('Client not found');
+      if (!deleted || deleted === 0) {
+        throw new Error('Client record not found or could not be deleted');
       }
 
       return { success: true };

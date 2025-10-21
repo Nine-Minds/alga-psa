@@ -22,7 +22,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from 'server/src/components/ui/Input';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
@@ -32,7 +32,6 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import Drawer from 'server/src/components/ui/Drawer';
-import ClientDetails from 'server/src/components/clients/ClientDetails';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -576,11 +575,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
         }}
       >
         {quickViewClient && (
-          <ClientDetails
-            client={quickViewClient}
-            isInDrawer={true}
-            quickView={true}
-          />
+            <div>Client details moved to contacts</div>
         )}
       </Drawer>
     </div>

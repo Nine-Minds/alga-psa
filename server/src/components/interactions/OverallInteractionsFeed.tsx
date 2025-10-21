@@ -16,7 +16,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 import { Input } from 'server/src/components/ui/Input';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { Button } from 'server/src/components/ui/Button';
@@ -363,16 +363,15 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               buttonWidth="full"
             />      
             <div className="space-y-2">
-              <ClientPicker
+              <CustomSelect
                 {...clientPickerProps}
-                clients={clients}
-                onSelect={handleClientChange}
-                selectedClientId={selectedClientValue}
-                filterState={clientFilterState}
-                onFilterStateChange={setClientFilterState}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={setClientTypeFilter}
-                fitContent={false}
+                options={clients.map((client) => ({
+                  value: client.client_id,
+                  label: client.client_name
+                }))}
+                value={selectedClientValue || null}
+                onValueChange={handleClientChange}
+                placeholder="Filter by client"
               />
             </div>
             <ContactPicker

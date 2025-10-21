@@ -5,7 +5,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import CustomSelect from '../ui/CustomSelect';
-import { ClientPicker } from '../clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 import { createPrepaymentInvoice } from '../../lib/actions/creditActions';
 import { IClient } from '../../interfaces';
 
@@ -102,15 +102,15 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Client
             </label>
-            <ClientPicker
+            <CustomSelect
               id='client-picker'
-              clients={clients}
-              selectedClientId={selectedClient}
-              onSelect={setSelectedClient}
-              filterState={filterState}
-              onFilterStateChange={setFilterState}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={setClientTypeFilter}
+              options={clients.map((client) => ({
+                value: client.client_id,
+                label: client.client_name
+              }))}
+              value={selectedClient || null}
+              onValueChange={setSelectedClient}
+              placeholder="Select a client"
             />
           </div>
 

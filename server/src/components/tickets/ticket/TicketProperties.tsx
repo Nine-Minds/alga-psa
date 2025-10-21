@@ -16,7 +16,7 @@ import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUti
 import styles from './TicketDetails.module.css';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -479,16 +479,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center group relative">
                     <div className="w-full">
-                      <ClientPicker
+                      <CustomSelect
                         {...withDataAutomationId({ id: `${id}-client-picker` })}
-                        clients={uniqueClientsForPicker}
-                        onSelect={setSelectedClientId}
-                        selectedClientId={selectedClientId || client?.client_id || ''}
-                        filterState={clientFilterState}
-                        onFilterStateChange={onClientFilterStateChange}
-                        clientTypeFilter={clientTypeFilter}
-                        onClientTypeFilterChange={onClientTypeFilterChange}
-                        fitContent={false}
+                        options={uniqueClientsForPicker.map((client) => ({
+                          value: client.client_id,
+                          label: client.client_name
+                        }))}
+                        value={selectedClientId || client?.client_id || null}
+                        onValueChange={setSelectedClientId}
+                        placeholder="Select a client"
                       />
                     </div>
                   </div>

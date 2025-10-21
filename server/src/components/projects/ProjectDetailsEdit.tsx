@@ -11,7 +11,7 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
-import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+// ClientPicker replaced with CustomSelect
 import UserPicker from 'server/src/components/ui/UserPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { TagManager } from 'server/src/components/tags';

@@ -6,6 +6,7 @@ export interface ICountry {
   code: string;
   name: string;
   phone_code?: string;
+  flag_emoji?: string;
 }
 
 export async function getAllCountries(): Promise<ICountry[]> {

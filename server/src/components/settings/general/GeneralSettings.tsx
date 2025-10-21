@@ -23,6 +23,8 @@ const GeneralSettings = () => {
   }, []);
   const [selectedClientId, setSelectedClientId] = React.useState<string | null>(null);
   const [allClients, setAllClients] = React.useState<IClient[]>([]);
+  const [filterState, setFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
 
   const loadTenantData = async () => {
     try {
@@ -176,10 +178,12 @@ const GeneralSettings = () => {
               clients={allClients}
               onSelect={setSelectedClientId}
               selectedClientId={selectedClientId}
-              filterState="all"
-              onFilterStateChange={() => {}}
-              clientTypeFilter="all"
-              onClientTypeFilterChange={() => {}}
+              filterState={filterState}
+              onFilterStateChange={setFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+              placeholder="Select a client to add"
+              fitContent={true}
             />
             <Button
               onClick={handleAddClient}
