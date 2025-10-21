@@ -142,29 +142,38 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (isEditingWorkItem) {
       const fetchWorkItems = async () => {
         try {
-          if (!entryData.work_item_id || !entryData.work_item_type) {
-            setAvailableWorkItems([]);
-            return;
-          }
-
-          // Get work items for the current time period
-          const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
-          if (items) {
-            setAvailableWorkItems([items]);
+          // For existing work items, fetch them
+          if (selectedWorkItem && selectedWorkItem.work_item_id && selectedWorkItem.type && selectedWorkItem.type !== 'ad_hoc') {
+            const items = await getWorkItemById(selectedWorkItem.work_item_id, selectedWorkItem.type);
+            if (items) {
+              setAvailableWorkItems([items]);
+            } else {
+              setAvailableWorkItems([]);
+            }
+          } else if (entryData.work_item_id && entryData.work_item_type && entryData.work_item_type !== 'ad_hoc') {
+            const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
+            if (items) {
+              setAvailableWorkItems([items]);
+            } else {
+              setAvailableWorkItems([]);
+            }
           } else {
+            // For ad-hoc or no work item, clear the list
             setAvailableWorkItems([]);
-            setValidationErrors(['No work items found for the selected period']);
           }
         } catch (error) {
           console.error('Error fetching work items:', error);
           setAvailableWorkItems([]);
-          setValidationErrors(['Failed to fetch work items. Please try again.']);
+          // Don't set validation errors here as it interrupts the user flow
         }
       };
 
       fetchWorkItems();
+    } else {
+      // Clear available work items when not editing to prevent stale data
+      setAvailableWorkItems([]);
     }
-  }, [isEditingWorkItem, entryData.work_item_id, entryData.work_item_type]);
+  }, [isEditingWorkItem]);
 
   useEffect(() => {
     const initializeData = () => {
@@ -255,7 +264,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       setRecurrencePattern(null);
     } else {
       const isDaily = value === 'daily';
-      setRecurrencePattern(prev => ({
+      setRecurrencePattern({
         frequency: value as IRecurrencePattern['frequency'],
         interval: 1,
         startDate: entryData.scheduled_start,
@@ -266,7 +275,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         exceptions: isDaily ? getHolidays(entryData.scheduled_start) : undefined,
         // For daily workday events, set daysOfWeek to Mon-Fri (0-4 since RRule uses 0-based index for weekdays)
         daysOfWeek: isDaily ? [0, 1, 2, 3, 4] : undefined
-      }));
+      });
     }
   };
 
@@ -288,6 +297,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       title: workItem ? workItem.name : prev.title,
       work_item_type: workItem?.type || 'ad_hoc'
     }));
+    // Clear available work items to prevent stale data
+    setAvailableWorkItems([]);
     setIsEditingWorkItem(false);
   };
 
@@ -505,18 +516,28 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             ) : (
               <SelectedWorkItem
                 workItem={selectedWorkItem}
-                onEdit={() => setIsEditingWorkItem(true)}
+                onEdit={(e?: React.MouseEvent) => {
+                  if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                  setIsEditingWorkItem(true);
+                }}
               />
             )}
-            <AddWorkItemDialog
-              isOpen={isEditingWorkItem}
-              onClose={() => setIsEditingWorkItem(false)}
-              onAdd={(workItem) => {
-                handleWorkItemSelect(workItem);
-                setIsEditingWorkItem(false);
-              }}
-              availableWorkItems={availableWorkItems}
-            />
+            {isEditingWorkItem && (
+              <AddWorkItemDialog
+                isOpen={isEditingWorkItem}
+                onClose={() => {
+                  setIsEditingWorkItem(false);
+                  setAvailableWorkItems([]);
+                }}
+                onAdd={(workItem) => {
+                  handleWorkItemSelect(workItem);
+                }}
+                availableWorkItems={availableWorkItems}
+              />
+            )}
           </div>
           </div>
           <div>

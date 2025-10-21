@@ -6,7 +6,7 @@ import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 
 interface SelectedWorkItemProps {
   workItem: Omit<IWorkItem, 'tenant'> | null;
-  onEdit: () => void;
+  onEdit: (e?: React.MouseEvent) => void;
 }
 
 const SelectedWorkItem: React.FC<SelectedWorkItemProps> = ({ workItem, onEdit }) => {
