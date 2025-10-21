@@ -291,12 +291,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const handleWorkItemSelect = (workItem: IWorkItem | null) => {
     clearErrorIfSubmitted();
     setSelectedWorkItem(workItem);
-    setEntryData(prev => ({
-      ...prev,
-      work_item_id: workItem ? workItem.work_item_id : null,
-      title: workItem ? workItem.name : prev.title,
-      work_item_type: workItem?.type || 'ad_hoc'
-    }));
+    setEntryData(prev => {
+      // Only update title if:
+      // 1. No title exists yet (empty or undefined), OR
+      // 2. Current title matches the previous work item name (user hasn't customized it)
+      const shouldUpdateTitle = !prev.title?.trim() ||
+        (selectedWorkItem && prev.title === selectedWorkItem.name);
+
+      return {
+        ...prev,
+        work_item_id: workItem ? workItem.work_item_id : null,
+        title: workItem && shouldUpdateTitle ? workItem.name : prev.title,
+        work_item_type: workItem?.type || 'ad_hoc'
+      };
+    });
     // Clear available work items to prevent stale data
     setAvailableWorkItems([]);
     setIsEditingWorkItem(false);
