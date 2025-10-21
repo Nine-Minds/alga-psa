@@ -22,7 +22,6 @@ import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
 import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { useToast } from 'server/src/hooks/use-toast';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
@@ -223,7 +222,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
-  const { toast } = useToast();
 
 
   const handleDeleteClient = () => {
@@ -247,10 +245,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       setIsDeleteDialogOpen(false);
 
-      toast({
-        title: "Client Deleted",
-        description: "Client has been deleted successfully.",
-      });
+      toast.success("Client has been deleted successfully.");
 
       // Navigate back or close drawer depending on context
       if (isInDrawer) {
@@ -270,10 +265,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       setIsDeleteDialogOpen(false);
 
-      toast({
-        title: "Client Deactivated",
-        description: "Client has been marked as inactive successfully.",
-      });
+      toast.success("Client has been marked as inactive successfully.");
 
       // Navigate back or close drawer depending on context
       if (isInDrawer) {
@@ -296,7 +288,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   // Helper function to handle dependency errors (copied from main Clients page)
   const handleDependencyError = (result: any, setError: (error: string) => void) => {
     const dependencies = result.dependencies || {};
-    const dependencyMessages = [];
+    const dependencyMessages: string[] = [];
 
     if (dependencies.tickets > 0) {
       dependencyMessages.push(`${dependencies.tickets} ticket${dependencies.tickets !== 1 ? 's' : ''}`);
@@ -1181,13 +1173,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
           cancelLabel={deleteError ? "Close" : "Cancel"}
           isConfirming={false}
-          additionalActions={showDeactivateOption && !deleteError ? [
-            {
-              label: "Mark as Inactive",
-              onClick: handleMarkClientInactive,
-              variant: "default" as const
-            }
-          ] : undefined}
         />
       </div>
     </ReflectionContainer>

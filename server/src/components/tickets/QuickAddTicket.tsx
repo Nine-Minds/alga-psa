@@ -590,7 +590,6 @@ export function QuickAddTicket({
                       clientTypeFilter={clientTypeFilter}
                       onClientTypeFilterChange={setClientTypeFilter}
                       placeholder="Select Client *"
-                      required={true}
                     />
                   </div>
 
