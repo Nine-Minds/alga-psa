@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
@@ -28,15 +28,32 @@ import {
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 
+type ContractSubTab = 'templates' | 'client-contracts';
+
 const Contracts: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get active sub-tab from URL or default to 'templates'
+  const activeSubTab = (searchParams?.get('subtab') as ContractSubTab) || 'templates';
+
+  // Map URL subtab values to CustomTabs label values
+  const subtabToLabel: Record<ContractSubTab, string> = {
+    'templates': 'Templates',
+    'client-contracts': 'Client Contracts'
+  };
+
+  const labelToSubtab: Record<string, ContractSubTab> = {
+    'Templates': 'templates',
+    'Client Contracts': 'client-contracts'
+  };
+
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
   const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'Templates' | 'Client Contracts'>('Templates');
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
 
@@ -230,29 +247,119 @@ const renderStatusBadge = (status: string) => {
     {
       title: 'Start Date',
       dataIndex: 'start_date',
-      render: (value: string | null) => {
-        if (typeof value !== 'string' || value.length === 0) {
+      render: (value: any) => {
+        if (!value) return '—';
+        try {
+          const date = new Date(value);
+          return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+        } catch {
           return '—';
         }
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
       },
     },
     {
       title: 'End Date',
       dataIndex: 'end_date',
-      render: (value: string | null) => {
-        if (typeof value !== 'string' || value.length === 0) {
+      render: (value: any) => {
+        if (!value) return '—';
+        try {
+          const date = new Date(value);
+          return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+        } catch {
           return '—';
         }
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
       },
     },
     {
       title: 'Status',
       dataIndex: 'status',
       render: renderStatusBadge,
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'contract_id',
+      render: (value, record) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="contract-actions-menu"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id="edit-contract-menu-item"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (record.contract_id) {
+                  router.push(`/msp/billing?tab=contracts&contractId=${record.contract_id}${record.client_contract_id ? `&clientContractId=${record.client_contract_id}` : ''}`);
+                }
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            {record.status === 'active' && (
+              <DropdownMenuItem
+                id="terminate-contract-menu-item"
+                className="text-orange-600 focus:text-orange-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    void handleTerminateContract(record.contract_id);
+                  }
+                }}
+              >
+                Terminate
+              </DropdownMenuItem>
+            )}
+            {record.status === 'terminated' && (
+              <DropdownMenuItem
+                id="restore-contract-menu-item"
+                className="text-green-600 focus:text-green-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    void handleRestoreContract(record.contract_id, record.client_id);
+                  }
+                }}
+              >
+                Restore
+              </DropdownMenuItem>
+            )}
+            {record.status === 'draft' && (
+              <DropdownMenuItem
+                id="set-to-active-menu-item"
+                className="text-green-600 focus:text-green-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    void handleSetToActive(record.contract_id, record.client_id);
+                  }
+                }}
+              >
+                Set to Active
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              id="delete-contract-menu-item"
+              className="text-red-600 focus:text-red-600"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (record.contract_id) {
+                  void handleDeleteContract(record.contract_id);
+                }
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ];
 
@@ -389,10 +496,19 @@ const renderStatusBadge = (status: string) => {
           ) : (
             <CustomTabs
               tabs={tabs}
-              defaultTab={activeView}
-              onTabChange={(tab) =>
-                setActiveView(tab === 'Client Contracts' ? 'Client Contracts' : 'Templates')
-              }
+              defaultTab={subtabToLabel[activeSubTab]}
+              onTabChange={(tab) => {
+                const targetSubtab = labelToSubtab[tab] || tab.toLowerCase();
+
+                if (targetSubtab === activeSubTab) {
+                  return;
+                }
+
+                const params = new URLSearchParams(searchParams?.toString() ?? '');
+                params.set('tab', 'contracts');
+                params.set('subtab', targetSubtab);
+                router.push(`/msp/billing?${params.toString()}`);
+              }}
             />
           )}
         </Box>

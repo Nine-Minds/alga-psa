@@ -177,13 +177,13 @@ const Contract = {
           this.on('co.contract_id', '=', 'cc.contract_id')
             .andOn('co.tenant', '=', 'cc.tenant');
         })
-        .leftJoin('contract_templates as template', function joinTemplateContracts() {
-          this.on('cc.template_contract_id', '=', 'template.template_id')
-            .andOn('cc.tenant', '=', 'template.tenant');
-        })
         .leftJoin('clients as c', function joinClients() {
           this.on('cc.client_id', '=', 'c.client_id')
             .andOn('cc.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('contract_templates as template', function joinTemplateContracts() {
+          this.on('cc.template_contract_id', '=', 'template.template_id')
+            .andOn('cc.tenant', '=', 'template.tenant');
         })
         .where({ 'co.tenant': tenant })
         .andWhere((builder) => builder.whereNull('co.is_template').orWhere('co.is_template', false))
