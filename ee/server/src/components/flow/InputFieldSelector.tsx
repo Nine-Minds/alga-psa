@@ -9,12 +9,14 @@ interface InputFieldSelectorProps {
   value: Template;
   onChange: (value: string) => void;
   inputType: string;
+  id?: string;
 }
 
-const InputFieldSelector: React.FC<InputFieldSelectorProps> = ({ value, onChange, inputType }) => {
+const InputFieldSelector: React.FC<InputFieldSelectorProps> = ({ value, onChange, inputType, id }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [fields, setFields] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const uniqueId = id || `input-field-selector-${useRef(Math.random().toString(36).substr(2, 9)).current}`;
 
   useEffect(() => {
     async function fetchFields() {
@@ -73,7 +75,7 @@ const InputFieldSelector: React.FC<InputFieldSelectorProps> = ({ value, onChange
     <div style={styles.container}>
       <div style={styles.inputContainer}>
         <Input
-          id="input-field-selector"
+          id={uniqueId}
           ref={inputRef}
           type="text"
           value={value.template ?? ''}
