@@ -295,6 +295,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       // Only update title if:
       // 1. No title exists yet (empty or undefined), OR
       // 2. Current title matches the previous work item name (user hasn't customized it)
+      // Note: selectedWorkItem here refers to the *previous* selection (stale closure) -
+      // this is intentional for comparing against the last auto-generated title
       const shouldUpdateTitle = !prev.title?.trim() ||
         (selectedWorkItem && prev.title === selectedWorkItem.name);
 
