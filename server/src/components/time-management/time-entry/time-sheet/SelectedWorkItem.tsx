@@ -27,7 +27,7 @@ const SelectedWorkItem: React.FC<SelectedWorkItemProps> = ({ workItem, onEdit })
         <div className="font-medium">{workItem.name}</div>
         <div className="text-sm text-gray-500 capitalize">{workItem.type.replace('_', ' ')}</div>
       </div>
-      <Button onClick={onEdit} variant="outline" size="sm" id="change-work-item-btn">
+      <Button onClick={onEdit} variant="outline" size="sm" id="edit-work-item-button">
         Change
       </Button>
     </div>

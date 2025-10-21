@@ -34,6 +34,9 @@ export function WorkItemList({
             {item.client_name}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+            Assigned to: {item.assigned_to_name || 'Unassigned'}
+          </div>
+          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
             Due Date: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
           </div>
           <div className="flex items-center gap-2 mt-1">
@@ -59,6 +62,9 @@ export function WorkItemList({
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
             {item.client_name}
+          </div>
+          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+            Assigned to: {item.assigned_to_name || 'Unassigned'}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
             Due Date: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
