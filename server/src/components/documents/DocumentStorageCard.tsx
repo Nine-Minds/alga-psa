@@ -22,7 +22,8 @@ import {
     Video,
     Eye,
     X,
-    Play
+    Play,
+    FolderInput
 } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -224,8 +225,10 @@ export interface DocumentStorageCardProps {
     document: IDocument;
     onDelete?: (document: IDocument) => void;
     onDisassociate?: (document: IDocument) => void;
+    onMove?: (document: IDocument) => void;
     hideActions?: boolean;
     showDisassociate?: boolean;
+    showMove?: boolean;
     onClick?: () => void;
     isContentDocument?: boolean;
     forceRefresh?: number; // Timestamp to trigger preview refresh
@@ -276,8 +279,10 @@ function DocumentStorageCardComponent({
     document,
     onDelete,
     onDisassociate,
+    onMove,
     hideActions = false,
     showDisassociate = false,
+    showMove = false,
     onClick,
     isContentDocument = false,
     forceRefresh
@@ -657,6 +662,22 @@ function DocumentStorageCardComponent({
                                 {isLoading ? t('common.loading', 'Loading...') : t('documents.remove', 'Remove')}
                             </Button>
                         )}
+                        {showMove && onMove && (
+                            <Button
+                                id={`move-document-${document.document_id}-button`}
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent event bubbling to parent
+                                    onMove(document);
+                                }}
+                                disabled={isLoading}
+                                className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-50 inline-flex items-center"
+                            >
+                                <FolderInput className="w-4 h-4 mr-2" />
+                                {isLoading ? t('common.loading', 'Loading...') : t('documents.move', 'Move')}
+                            </Button>
+                        )}
                         {onDelete && (
                             <Button
                                 id={`delete-document-${document.document_id}-button`}
@@ -789,9 +810,11 @@ const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextP
         prevProps.forceRefresh === nextProps.forceRefresh &&
         prevProps.onDelete === nextProps.onDelete &&
         prevProps.onDisassociate === nextProps.onDisassociate &&
+        prevProps.onMove === nextProps.onMove &&
         prevProps.onClick === nextProps.onClick &&
         prevProps.hideActions === nextProps.hideActions &&
         prevProps.showDisassociate === nextProps.showDisassociate &&
+        prevProps.showMove === nextProps.showMove &&
         prevProps.isContentDocument === nextProps.isContentDocument
     );
 });

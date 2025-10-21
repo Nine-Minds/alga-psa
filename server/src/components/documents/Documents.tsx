@@ -143,6 +143,10 @@ const Documents = ({
   const [showDocumentFolderModal, setShowDocumentFolderModal] = useState(false);
   const [documentFolderPath, setDocumentFolderPath] = useState<string | null>(null);
 
+  // Move document modal
+  const [showMoveFolderModal, setShowMoveFolderModal] = useState(false);
+  const [documentToMove, setDocumentToMove] = useState<IDocument | null>(null);
+
   // Preview modal for images/videos/PDFs
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
@@ -366,6 +370,38 @@ const Documents = ({
     }
   }, [entityId, entityType, onDocumentCreated]);
 
+  const handleMoveDocument = useCallback((document: IDocument) => {
+    setDocumentToMove(document);
+    setShowMoveFolderModal(true);
+  }, []);
+
+  const handleMoveFolderSelected = async (folderPath: string | null) => {
+    if (!documentToMove) return;
+
+    try {
+      await moveDocumentsToFolder([documentToMove.document_id], folderPath);
+
+      toast.success(`Document "${documentToMove.document_name}" moved successfully`);
+
+      // Refresh the document list
+      await fetchDocuments(currentPage, searchTermFromParent);
+
+      // Refresh folder tree to update counts
+      if (inFolderMode) {
+        setFolderTreeKey(prev => prev + 1);
+      }
+
+      // Reset state
+      setDocumentToMove(null);
+      setShowMoveFolderModal(false);
+    } catch (error) {
+      console.error('Failed to move document:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to move document';
+      toast.error(errorMessage);
+      setError(errorMessage);
+    }
+  };
+
   const handleSaveNewDocument = async () => {
     try {
       if (!newDocumentName.trim()) {
@@ -484,6 +520,7 @@ const Documents = ({
 
   // Use refs to store click handlers to avoid recreating them
   const clickHandlersRef = useRef<Map<string, () => void>>(new Map());
+  const moveHandlersRef = useRef<Map<string, () => void>>(new Map());
 
   const handleDocumentClick = async (document: IDocument) => {
     // For in-app documents (no file_id), open in drawer/editor
@@ -546,6 +583,14 @@ const Documents = ({
     return disassociateHandlersRef.current.get(key)!;
   };
 
+  const getOrCreateMoveHandler = (document: IDocument) => {
+    const key = document.document_id;
+    if (!moveHandlersRef.current.has(key)) {
+      moveHandlersRef.current.set(key, () => handleMoveDocument(document));
+    }
+    return moveHandlersRef.current.get(key)!;
+  };
+
   // Render document cards - let React handle the re-renders with memo
   const renderDocumentCards = () => {
     return documentsToDisplay.map((document) => {
@@ -558,7 +603,9 @@ const Documents = ({
             document={document}
             onDelete={getOrCreateDeleteHandler(document)}
             onDisassociate={getOrCreateDisassociateHandler(document)}
+            onMove={getOrCreateMoveHandler(document)}
             showDisassociate={Boolean(entityId && entityType)}
+            showMove={inFolderMode}
             forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
             onClick={getOrCreateClickHandler(document)}
             isContentDocument={!document.file_id}
@@ -727,6 +774,18 @@ const Documents = ({
             onSelectFolder={handleDocumentFolderSelected}
             title="Select Folder for New Document"
             description="Choose where to save this new document"
+          />
+
+          {/* Folder Selector Modal for Moving Documents */}
+          <FolderSelectorModal
+            isOpen={showMoveFolderModal}
+            onClose={() => {
+              setShowMoveFolderModal(false);
+              setDocumentToMove(null);
+            }}
+            onSelectFolder={handleMoveFolderSelected}
+            title="Move Document"
+            description={documentToMove ? `Select destination folder for "${documentToMove.document_name}"` : "Select destination folder"}
           />
 
           {/* Preview Modal for Images/Videos/PDFs */}
@@ -1044,6 +1103,18 @@ const Documents = ({
           onSelectFolder={handleDocumentFolderSelected}
           title="Select Folder for New Document"
           description="Choose where to save this new document"
+        />
+
+        {/* Folder Selector Modal for Moving Documents (Entity Mode) */}
+        <FolderSelectorModal
+          isOpen={showMoveFolderModal}
+          onClose={() => {
+            setShowMoveFolderModal(false);
+            setDocumentToMove(null);
+          }}
+          onSelectFolder={handleMoveFolderSelected}
+          title="Move Document"
+          description={documentToMove ? `Select destination folder for "${documentToMove.document_name}"` : "Select destination folder"}
         />
 
         {/* Preview Modal for Images/Videos/PDFs */}
