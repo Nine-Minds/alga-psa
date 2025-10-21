@@ -14,6 +14,7 @@ import logger from '@shared/core/logger';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
+import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 
 /**
  * Wrapper function that checks notification preferences before sending email
@@ -455,7 +456,10 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     if (!rawDescription && 'description' in ticket) {
       rawDescription = safeString((ticket as Record<string, unknown>).description);
     }
-    const description = rawDescription || 'No description provided.';
+    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
+    const descriptionText = descriptionFormatting.text || rawDescription;
+    const description = descriptionText || 'No description provided.';
+    const descriptionHtml = rawDescription ? descriptionFormatting.html : `<p>${description}</p>`;
 
     const requesterDetailsForText = requesterDetails;
     const assignedDetailsForText = assignedDetails;
@@ -465,6 +469,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         id: ticket.ticket_number,
         title: ticket.title,
         description,
+        descriptionText: description,
+        descriptionHtml: descriptionHtml,
         priority: priorityName,
         priorityColor,
         status: statusName,
@@ -906,6 +912,16 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         'tr.tenant': tenantId
       });
 
+    const commentFormatting = formatBlockNoteContent(payload.comment?.content);
+    const commentContext = {
+      ...(payload.comment ?? {}),
+      content: commentFormatting.html,
+      html: commentFormatting.html,
+      text: commentFormatting.text,
+      plainText: commentFormatting.text,
+      rawContent: payload.comment?.content ?? null
+    };
+
     // Determine primary email (contact first, then client)
     const primaryEmail = ticket.contact_email || ticket.client_email;
 
@@ -922,7 +938,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             title: ticket.title,
             url: `/tickets/${ticket.ticket_number}`
           },
-          comment: payload.comment
+          comment: commentContext
         },
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
@@ -945,7 +961,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             title: ticket.title,
             url: `/tickets/${ticket.ticket_number}`
           },
-          comment: payload.comment
+          comment: commentContext
         },
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
@@ -963,18 +979,18 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           to: resource.email,
           subject: `New Comment on Ticket: ${ticket.title}`,
           template: 'ticket-comment-added',
-          context: {
-            ticket: {
-              id: ticket.ticket_number,
-              title: ticket.title,
-              url: `/tickets/${ticket.ticket_number}`
-            },
-            comment: payload.comment
+        context: {
+          ticket: {
+            id: ticket.ticket_number,
+            title: ticket.title,
+            url: `/tickets/${ticket.ticket_number}`
           },
-          replyContext: {
-            ticketId: ticket.ticket_id || payload.ticketId,
-            commentId: payload.comment?.id,
-            threadId: ticket.email_metadata?.threadId
+          comment: commentContext
+        },
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          commentId: payload.comment?.id,
+          threadId: ticket.email_metadata?.threadId
           }
         }, 'Ticket Comment Added', resource.user_id);
       }
