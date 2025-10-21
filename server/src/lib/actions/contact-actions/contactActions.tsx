@@ -161,18 +161,8 @@ export async function deleteContact(contactId: string) {
         counts['project'] = Number(projectCount.count);
       }
 
-      // Check for boards
-      const boardCount = await trx('boards')
-        .where({
-          contact_name_id: contactId,
-          tenant
-        })
-        .count('* as count')
-        .first();
-      if (boardCount && Number(boardCount.count) > 0) {
-        dependencies.push('board');
-        counts['board'] = Number(boardCount.count);
-      }
+      // Note: Boards are not directly associated with contacts, so we skip this check
+      // The boards table doesn't have a contact_name_id column
 
       // Check for comments
       const commentCount = await trx('comments')
