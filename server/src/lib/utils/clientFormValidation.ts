@@ -259,8 +259,8 @@ export function validatePhoneNumber(phone: string): string | null {
     return 'Phone number cannot contain emojis';
   }
 
-  // Allow Unicode digits with international formatting
-  if (!/^[\+\p{N}\s\-\(\)\.]+$/u.test(trimmedPhone)) {
+  // Allow Unicode digits with international formatting (including extensions with letters)
+  if (!/^[\+\p{N}0-9\s\-\(\)\.,#*a-zA-Z]+$/u.test(trimmedPhone)) {
     return 'Phone number can only contain numbers and formatting characters';
   }
 
@@ -589,7 +589,33 @@ export function validateIndustry(industry: string): string | null {
   return null;
 }
 
-// Contact name validation - enterprise-level rules  
+// Role validation - enterprise-level rules (matches QuickAddContact validation)
+export function validateRole(role: string): string | null {
+  if (!role || !role.trim()) {
+    return null; // Role is optional
+  }
+
+  const trimmedRole = role.trim();
+
+  // Check for spaces-only input
+  if (/^\s+$/.test(role)) {
+    return 'Role cannot contain only spaces';
+  }
+
+  // Enterprise rule: Max length 100 characters
+  if (trimmedRole.length > 100) {
+    return 'Role must be 100 characters or less';
+  }
+
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(trimmedRole)) {
+    return 'Role must contain letters or numbers';
+  }
+
+  return null;
+}
+
+// Contact name validation - enterprise-level rules
 export function validateContactName(name: string): string | null {
   if (!name || !name.trim()) {
     return null; // Contact name is optional
@@ -685,7 +711,9 @@ export function validateCompanySize(companySize: string): string | null {
     /^\d+\+$/,
     // Common SaaS categories
     /^(startup|small|medium|large|enterprise)$/,
-    /^(1-10|11-50|51-200|201-500|501-1000|1001-5000|5001\+)$/
+    /^(1-10|11-50|51-200|201-500|501-1000|1001-5000|5001\+)$/,
+    // Professional descriptive words (prevent gibberish while allowing meaningful text)
+    /^(big|huge|large|small|tiny|medium|startup|growing|expanding|established|mature|corporate|enterprise|micro|mini|global|international|local|regional|national|mid-sized|boutique|family|private|public)(\s+(company|business|organization|enterprise|firm|corporation|startup))?$/
   ];
 
   const isValid = validRanges.some(pattern => pattern.test(lowerSize));

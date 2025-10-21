@@ -1,6 +1,6 @@
 // src/components/InputFieldSelector.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import Popup from './Popup';
 import { Template } from '../../services/flow/types/workflowTypes';
 import { Input } from '@/components/ui/Input';
@@ -16,7 +16,8 @@ const InputFieldSelector: React.FC<InputFieldSelectorProps> = ({ value, onChange
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [fields, setFields] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const uniqueId = id || `input-field-selector-${useRef(Math.random().toString(36).substr(2, 9)).current}`;
+  const reactId = useId();
+  const uniqueId = id || `input-field-selector-${reactId.replace(/:/g, '')}`;
 
   useEffect(() => {
     async function fetchFields() {

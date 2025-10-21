@@ -344,7 +344,13 @@ export function UserManagementSettings() {
                   id="email"
                   type="email"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  onChange={(e) => {
+                    setNewUser({ ...newUser, email: e.target.value });
+                    // Clear error when user starts typing
+                    if (error) {
+                      setError(null);
+                    }
+                  }}
                 />
               </div>
               <div>

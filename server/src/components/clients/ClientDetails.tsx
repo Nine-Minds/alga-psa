@@ -201,6 +201,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
@@ -227,12 +228,22 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleDeleteClient = () => {
     setDeleteError(null);
+    setShowDeactivateOption(false);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
     try {
-      await deleteClient(editedClient.client_id);
+      const result = await deleteClient(editedClient.client_id);
+
+      if (!result.success) {
+        if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
+          handleDependencyError(result, setDeleteError);
+          setShowDeactivateOption(true);
+          return;
+        }
+        throw new Error(result.message || 'Failed to delete client');
+      }
 
       setIsDeleteDialogOpen(false);
 
@@ -250,6 +261,58 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } catch (error: any) {
       console.error('Failed to delete client:', error);
       setDeleteError(error.message || 'Failed to delete client. Please try again.');
+    }
+  };
+
+  const handleMarkClientInactive = async () => {
+    try {
+      await updateClient(editedClient.client_id, { is_inactive: true });
+
+      setIsDeleteDialogOpen(false);
+
+      toast({
+        title: "Client Deactivated",
+        description: "Client has been marked as inactive successfully.",
+      });
+
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
+      } else {
+        router.push('/msp/clients');
+      }
+    } catch (error: any) {
+      console.error('Error marking client as inactive:', error);
+      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+    }
+  };
+
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setDeleteError(null);
+    setShowDeactivateOption(false);
+  };
+
+  // Helper function to handle dependency errors (copied from main Clients page)
+  const handleDependencyError = (result: any, setError: (error: string) => void) => {
+    const dependencies = result.dependencies || {};
+    const dependencyMessages = [];
+
+    if (dependencies.tickets > 0) {
+      dependencyMessages.push(`${dependencies.tickets} ticket${dependencies.tickets !== 1 ? 's' : ''}`);
+    }
+    if (dependencies.contacts > 0) {
+      dependencyMessages.push(`${dependencies.contacts} contact${dependencies.contacts !== 1 ? 's' : ''}`);
+    }
+    if (dependencies.projects > 0) {
+      dependencyMessages.push(`${dependencies.projects} project${dependencies.projects !== 1 ? 's' : ''}`);
+    }
+
+    if (dependencyMessages.length > 0) {
+      const dependencyText = dependencyMessages.join(', ');
+      setError(`Cannot delete this client because it has associated ${dependencyText}. You can mark the client as inactive instead.`);
+    } else {
+      setError('Cannot delete this client because it has associated data. You can mark the client as inactive instead.');
     }
   };
 
@@ -1107,10 +1170,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         <ConfirmationDialog
           id="delete-client-dialog"
           isOpen={isDeleteDialogOpen}
-          onClose={() => {
-            setIsDeleteDialogOpen(false);
-            setDeleteError(null);
-          }}
+          onClose={resetDeleteState}
           onConfirm={confirmDelete}
           title="Delete Client"
           message={
@@ -1118,9 +1178,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               ? deleteError
               : "Are you sure you want to delete this client? This action cannot be undone."
           }
-          confirmLabel={deleteError ? undefined : "Delete"}
+          confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
           cancelLabel={deleteError ? "Close" : "Cancel"}
           isConfirming={false}
+          additionalActions={showDeactivateOption && !deleteError ? [
+            {
+              label: "Mark as Inactive",
+              onClick: handleMarkClientInactive,
+              variant: "default" as const
+            }
+          ] : undefined}
         />
       </div>
     </ReflectionContainer>

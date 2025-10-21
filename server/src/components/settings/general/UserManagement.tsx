@@ -132,15 +132,20 @@ const UserManagement = (): JSX.Element => {
     // Update the user state using the camelCase property names
     const userFieldMap = {
       first_name: 'firstName',
-      last_name: 'lastName', 
+      last_name: 'lastName',
       email: 'email'
     } as const;
-    
+
     const userField = userFieldMap[fieldName];
     setNewUser(prev => ({ ...prev, [userField]: value }));
-    
-    // Validate the field in real-time
-    validateField(fieldName, value);
+
+    // Clear existing errors when user starts typing (but don't validate yet)
+    if (fieldErrors[fieldName].length > 0) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [fieldName]: []
+      }));
+    }
   };
 
   const fetchLicenseUsage = async (): Promise<void> => {
@@ -517,10 +522,9 @@ const fetchContacts = async (): Promise<void> => {
                       value={newUser.firstName}
                       onChange={(e) => {
                         handleFieldChange('first_name', e.target.value);
-                        // Immediately validate if user enters only spaces
-                        if (/^\s+$/.test(e.target.value)) {
-                          setFieldErrors(prev => ({ ...prev, first_name: ['First name cannot contain only spaces'] }));
-                        }
+                      }}
+                      onBlur={() => {
+                        validateField('first_name', newUser.firstName);
                       }}
                       className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
                     />
@@ -539,10 +543,9 @@ const fetchContacts = async (): Promise<void> => {
                       value={newUser.lastName}
                       onChange={(e) => {
                         handleFieldChange('last_name', e.target.value);
-                        // Immediately validate if user enters only spaces
-                        if (/^\s+$/.test(e.target.value)) {
-                          setFieldErrors(prev => ({ ...prev, last_name: ['Last name cannot contain only spaces'] }));
-                        }
+                      }}
+                      onBlur={() => {
+                        validateField('last_name', newUser.lastName);
                       }}
                       className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
                     />
@@ -562,10 +565,9 @@ const fetchContacts = async (): Promise<void> => {
                       value={newUser.email}
                       onChange={(e) => {
                         handleFieldChange('email', e.target.value);
-                        // Immediately validate if user enters only spaces
-                        if (/^\s+$/.test(e.target.value)) {
-                          setFieldErrors(prev => ({ ...prev, email: ['Email address cannot contain only spaces'] }));
-                        }
+                      }}
+                      onBlur={() => {
+                        validateField('email', newUser.email);
                       }}
                       className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
                     />

@@ -781,28 +781,15 @@ export async function deleteClient(clientId: string): Promise<{
       };
     }
 
-    // If no dependencies, proceed with deletion
+    // If no dependencies, proceed with simple deletion (only the client record)
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Delete associated tags first
-      await deleteEntityTags(trx, clientId, 'client');
-
-      // Delete client tax settings
-      await trx('client_tax_settings')
-        .where({ client_id: clientId, tenant })
-        .delete();
-      
-      // Delete client tax rates
-      await trx('client_tax_rates')
-        .where({ client_id: clientId, tenant })
-        .delete();
-
-      // Delete the client
+      // Only delete the client record itself - no associated data
       const deleted = await trx('clients')
         .where({ client_id: clientId, tenant })
         .delete();
 
-      if (!deleted) {
-        throw new Error('Client not found');
+      if (!deleted || deleted === 0) {
+        throw new Error('Client record not found or could not be deleted');
       }
 
       return { success: true };

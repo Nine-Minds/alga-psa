@@ -302,15 +302,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         full_name: fullName.trim(),
         email: email.trim(),
         phone_number: phoneNumber.trim(),
+        client_id: clientId || null, // Explicitly set to null if no client selected
         is_inactive: isInactive,
         role: role.trim(),
         notes: notes.trim(),
       };
-
-      // Only include client_id if it's actually selected
-      if (clientId) {
-        Object.assign(contactData, { client_id: clientId });
-      }
 
       const newContact = await addContact(contactData);
       onContactAdded(newContact);

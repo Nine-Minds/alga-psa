@@ -13,6 +13,7 @@ import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import CustomTabs from 'server/src/components/ui/CustomTabs';
 import BackNav from 'server/src/components/ui/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -23,7 +24,7 @@ import { Card } from 'server/src/components/ui/Card';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { updateContact, getContactByContactNameId, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { validateEmailAddress, validatePhoneNumber, validateContactName } from 'server/src/lib/utils/clientFormValidation';
+import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from 'server/src/lib/utils/clientFormValidation';
 import Documents from 'server/src/components/documents/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { useToast } from 'server/src/hooks/use-toast';
@@ -39,6 +40,7 @@ import { useTags } from 'server/src/context/TagContext';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
 import { ContactPortalTab } from './ContactPortalTab';
 
 const SwitchDetailItem: React.FC<{
@@ -192,6 +194,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   const { tags: allTags } = useTags();
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(contact.client_id || null);
@@ -204,6 +207,22 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     categories: ITicketCategory[];
     tags?: string[];
   } | null>(null);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [countryCode, setCountryCode] = useState(() => {
+    // Enterprise locale detection
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const parts = locale.split('-');
+      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+
+      if (detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry)) {
+        return detectedCountry;
+      }
+    } catch (e) {
+      // Fallback to US if detection fails
+    }
+    return 'US';
+  });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -275,6 +294,20 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     }
   }, [currentUser]);
 
+  // Load countries
+  useEffect(() => {
+    const fetchCountries = async () => {
+      if (countries.length > 0) return; // Don't fetch if already loaded
+      try {
+        const countriesData = await getAllCountries();
+        setCountries(countriesData);
+      } catch (error: any) {
+        console.error("Error fetching countries:", error);
+      }
+    };
+    fetchCountries();
+  }, [countries.length]);
+
   // Fetch contact avatar URL and tags
   useEffect(() => {
     const fetchAvatarAndTags = async () => {
@@ -303,8 +336,14 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setHasUnsavedChanges(true);
   };
 
+  const handleCountryChange = (countryCode: string) => {
+    setCountryCode(countryCode);
+    // When country changes, the PhoneInput will auto-update with the new phone code
+  };
+
   const handleDeleteContact = () => {
     setDeleteError(null);
+    setShowDeactivateOption(false);
     setIsDeleteDialogOpen(true);
   };
 
@@ -327,8 +366,48 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete contact:', error);
+
+      // Handle dependency errors like the main contacts page
+      if (error.message && error.message.includes('VALIDATION_ERROR: Cannot delete contact because it has associated records:')) {
+        setDeleteError(error.message.replace('VALIDATION_ERROR: ', ''));
+        setShowDeactivateOption(true);
+        return;
+      }
+
       setDeleteError(error.message || 'Failed to delete contact. Please try again.');
     }
+  };
+
+  const handleMarkContactInactive = async () => {
+    try {
+      const updatedContact = await updateContact({
+        ...editedContact,
+        is_inactive: true
+      });
+
+      setIsDeleteDialogOpen(false);
+
+      toast({
+        title: "Contact Deactivated",
+        description: "Contact has been marked as inactive successfully.",
+      });
+
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
+      } else {
+        router.push('/msp/contacts');
+      }
+    } catch (error: any) {
+      console.error('Error marking contact as inactive:', error);
+      setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
+    }
+  };
+
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setDeleteError(null);
+    setShowDeactivateOption(false);
   };
 
   const handleSave = async () => {
@@ -505,14 +584,23 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               label="Role"
               value={editedContact.role || ''}
               onEdit={(value) => handleFieldChange('role', value)}
+              automationId="role-field"
+              validate={validateRole}
             />
-            <TextDetailItem
-              label="Phone Number"
-              value={editedContact.phone_number || ''}
-              onEdit={(value) => handleFieldChange('phone_number', value)}
-              automationId="phone-number-field"
-              validate={validatePhoneNumber}
-            />
+            <div className="space-y-2">
+              <PhoneInput
+                id="contact-phone-number"
+                label="Phone Number"
+                value={editedContact.phone_number || ''}
+                onChange={(value) => handleFieldChange('phone_number', value)}
+                countryCode={countryCode}
+                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
+                countries={countries}
+                onCountryChange={handleCountryChange}
+                allowExtensions={true}
+                data-automation-id="phone-number-field"
+              />
+            </div>
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
@@ -699,10 +787,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       <ConfirmationDialog
         id="delete-contact-dialog"
         isOpen={isDeleteDialogOpen}
-        onClose={() => {
-          setIsDeleteDialogOpen(false);
-          setDeleteError(null);
-        }}
+        onClose={resetDeleteState}
         onConfirm={confirmDelete}
         title="Delete Contact"
         message={
@@ -710,10 +795,38 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             ? deleteError
             : "Are you sure you want to delete this contact? This action cannot be undone."
         }
-        confirmLabel={deleteError ? undefined : "Delete"}
+        confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
         cancelLabel={deleteError ? "Close" : "Cancel"}
         isConfirming={false}
       />
+
+      {/* Deactivate Contact Button - shown when delete is blocked by dependencies */}
+      {showDeactivateOption && !deleteError && isDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4">Alternative Action</h3>
+            <p className="text-gray-600 mb-6">
+              Since this contact cannot be deleted, you can mark it as inactive instead.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <Button
+                id="cancel-deactivate-contact-btn"
+                variant="outline"
+                onClick={resetDeleteState}
+              >
+                Cancel
+              </Button>
+              <Button
+                id="confirm-deactivate-contact-btn"
+                variant="default"
+                onClick={handleMarkContactInactive}
+              >
+                Mark as Inactive
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </ReflectionContainer>
   );
 };

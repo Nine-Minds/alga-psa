@@ -18,7 +18,7 @@ export async function getAllCountries(): Promise<ICountry[]> {
   try {
     // Fetch active countries from reference table (shared across all tenants)
     const countries = await knex('countries')
-      .select('code', 'name', 'phone_code', 'flag_emoji')
+      .select('code', 'name', 'phone_code')
       .where('is_active', true)
       .orderBy('name');
     

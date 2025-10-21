@@ -58,6 +58,7 @@ interface PhoneInputProps {
   extensionPlaceholder?: string; // Placeholder for extension field
   error?: boolean; // Whether to show error styling
   'data-automation-id'?: string;
+  externalCountryCode?: string; // For one-way sync from address country
 }
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({
@@ -76,13 +77,15 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   required = false,
   allowExtensions = false,
   extensionPlaceholder = "ext. 1234",
-  'data-automation-id': dataAutomationId
+  'data-automation-id': dataAutomationId,
+  externalCountryCode
 }) => {
   const [displayValue, setDisplayValue] = useState('');
   const [extensionValue, setExtensionValue] = useState('');
   const [previousPhoneCode, setPreviousPhoneCode] = useState<string | undefined>();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isExternalUpdate, setIsExternalUpdate] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,6 +149,19 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     setPreviousPhoneCode(phoneCode);
   }, [phoneCode, value, previousPhoneCode, onChange]);
 
+  // Handle external country code sync (one-way from address country to phone)
+  useEffect(() => {
+    if (externalCountryCode && countries && countries.length > 0) {
+      const matchingCountry = countries.find(country => country.code === externalCountryCode);
+      if (matchingCountry && onCountryChange) {
+        setIsExternalUpdate(true);
+        onCountryChange(matchingCountry.code);
+        // Reset flag after a brief delay to allow the change to propagate
+        setTimeout(() => setIsExternalUpdate(false), 100);
+      }
+    }
+  }, [externalCountryCode, countries, onCountryChange]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const phoneNumber = e.target.value;
     setDisplayValue(phoneNumber);
@@ -202,6 +218,9 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   const handleCountrySelect = (selectedCountry: Country) => {
     setIsDropdownOpen(false);
     setSearchQuery('');
+
+    // Always trigger onCountryChange to update the phone code display
+    // This is needed for the phone input to show the correct country code
     if (onCountryChange) {
       onCountryChange(selectedCountry.code);
     }
@@ -259,13 +278,13 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         </Label>
       )}
       <div className="relative">
-        <div className="flex border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-purple-500">
+        <div className="inline-flex border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-purple-500 bg-white">
           {/* Country Code Dropdown - integrated within phone field */}
-          {countries && countries.length > 0 && (
+          {true && (
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
-                className="flex items-center px-2 py-2 border-0 bg-gray-50 text-sm rounded-l-md hover:bg-gray-100 focus:outline-none h-[42px] w-[65px]"
+                className="flex items-center justify-between px-2 py-2 bg-white text-sm hover:bg-gray-50 focus:outline-none h-[42px] w-[80px] border-r border-gray-300 rounded-l-md"
                 onClick={() => {
                   setIsDropdownOpen(!isDropdownOpen);
                   // Focus search input when dropdown opens
@@ -281,20 +300,20 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
                 <ChevronDown className="ml-1 h-3 w-3 text-gray-400 flex-shrink-0" />
               </button>
 
-              {isDropdownOpen && (
-                <div className="absolute top-full left-0 z-50 w-72 mt-1 bg-white border border-gray-300 rounded-md shadow-md max-h-60 overflow-y-auto">
+              {isDropdownOpen && countries && countries.length > 0 && (
+                <div className="absolute top-full left-0 z-50 w-64 mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
                   <div className="p-2 border-b border-gray-200">
                     <input
                       ref={searchInputRef}
                       type="text"
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Search by country name or code..."
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="Search countries..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       autoComplete="off"
                     />
                   </div>
-                  <div className="max-h-44 overflow-y-auto">
+                  <div className="max-h-48 overflow-y-auto p-1">
                     {getFilteredCountries(countries || [], searchQuery).map((country, index) => {
                       const isCommon = COMMON_COUNTRIES.includes(country.code);
                       const isFirstOther = !isCommon && index > 0 && COMMON_COUNTRIES.includes(getFilteredCountries(countries || [], searchQuery)[index - 1]?.code);
@@ -308,19 +327,18 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
                           )}
                           <button
                             type="button"
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 focus:bg-blue-50 focus:outline-none flex items-center gap-3"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center justify-between rounded"
                             onClick={() => handleCountrySelect(country)}
                           >
-                            <span className="text-lg">{getCountryFlag(country.code)}</span>
                             <span className="flex-1 truncate text-gray-800">{country.name}</span>
-                            <span className="text-gray-500 font-mono text-sm">{country.phone_code}</span>
+                            <span className="text-gray-600 font-mono text-sm ml-2">{country.phone_code}</span>
                           </button>
                         </div>
                       );
                     })}
                     {getFilteredCountries(countries || [], searchQuery).length === 0 && (
                       <div className="px-3 py-4 text-sm text-gray-500 text-center">
-                        No countries found matching "{searchQuery}"
+                        No countries found
                       </div>
                     )}
                   </div>
@@ -340,19 +358,14 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
             placeholder={getPlaceholderText()}
             disabled={disabled}
             required={required}
-            style={{ border: 'none', boxShadow: 'none', outline: 'none' }}
-            className={`flex-1 ${
-              allowExtensions
-                ? 'rounded-none'
-                : countries && countries.length > 0
-                  ? 'rounded-l-none'
-                  : 'rounded-md'
-            } h-[42px]`}
+            className={`w-80 border-0 focus:ring-0 focus:border-0 ${allowExtensions ? 'rounded-none' : 'rounded-r-md'} h-[42px] bg-white px-3`}
           />
 
           {/* Extension Input */}
           {allowExtensions && (
-            <Input
+            <>
+              <div className="w-px bg-gray-300 h-6 self-center"></div>
+              <Input
               id={`${id || dataAutomationId}-ext`}
               data-automation-id={`${dataAutomationId}-ext`}
               type="text"
@@ -360,9 +373,9 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               onChange={handleExtensionChange}
               placeholder={extensionPlaceholder || "optional ext."}
               disabled={disabled}
-              style={{ border: 'none', borderLeft: '1px solid rgb(209 213 219)', boxShadow: 'none', outline: 'none' }}
-              className="w-20 rounded-r-md h-[42px] text-center text-xs"
+              className="w-20 border-none focus:ring-0 focus:outline-none rounded-r-md h-[42px] text-center text-xs bg-white px-1"
             />
+            </>
           )}
         </div>
 

@@ -475,10 +475,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     });
     
     // Clear errors when user starts typing
-    if (fieldErrors[field]) {
+    const errorField = field.startsWith('properties.') ? field.split('.')[1] : field;
+    if (fieldErrors[errorField]) {
       setFieldErrors(prev => ({
         ...prev,
-        [field]: ''
+        [errorField]: ''
       }));
     }
   };

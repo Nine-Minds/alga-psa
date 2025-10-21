@@ -198,7 +198,7 @@ export default function Register() {
               </div>
               <div>
                 <Label.Root className="block text-sm font-medium text-gray-700">
-                  Email
+                  Email <span className="text-red-500">*</span>
                 </Label.Root>
                 <Input
                   id="register-email-input"
