@@ -100,7 +100,7 @@ export interface SendWelcomeEmailActivityResult {
 
 // Workflow execution state for queries
 export interface TenantCreationWorkflowState {
-  step: 'initializing' | 'creating_tenant' | 'creating_admin_user' | 'creating_customer_tracking' | 'setting_up_data' | 'running_onboarding_seeds' | 'sending_welcome_email' | 'completed' | 'failed';
+  step: 'initializing' | 'fetching_stripe_details' | 'creating_tenant' | 'creating_admin_user' | 'creating_customer_tracking' | 'setting_up_data' | 'running_onboarding_seeds' | 'sending_welcome_email' | 'completed' | 'failed';
   tenantId?: string;
   adminUserId?: string;
   clientId?: string;
