@@ -208,13 +208,14 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     setValidationErrors([]);
 
     try {
-      // Create the contract template first (without client-specific fields)
+      // Create the contract (without client-specific fields)
       const contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'> = {
         contract_name: contractName,
         contract_description: contractDescription || undefined,
         billing_frequency: billingFrequency,
         is_active: saveAsActive,
         status: (saveAsActive ? 'active' : 'draft') as 'active' | 'draft',
+        is_template: false,
       };
 
       let contract;
@@ -240,6 +241,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
           contract_id: contract.contract_id,
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+          is_active: saveAsActive,
           po_required: poRequired,
           po_number: poRequired ? poNumber : null,
           po_amount: poRequired ? poAmount : null,
