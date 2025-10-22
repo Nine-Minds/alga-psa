@@ -40,13 +40,16 @@ export class EmailProcessor {
         emailData: emailMessage,
       });
 
-      // 4. Mark message as processed in the provider (skip for provided email data)
-      if (!job.emailData && providerConfig) {
-        const adapter = await this.createProviderAdapter(providerConfig);
-        await adapter.markMessageProcessed(job.messageId);
-      } else {
-        console.log(`📧 Skipping markMessageProcessed for ${job.providerId} (using provided email data or missing config)`);
-      }
+      // 4. Mark message as processed in database (read-only mode - no email modification)
+      // Note: markMessageProcessed is now a no-op in read-only mode
+      // Email processing status is tracked in the database via recordProcessedMessage below
+      console.log(`📧 Email ${job.messageId} processed in read-only mode (no mailbox modification)`);
+
+      // Skip calling markMessageProcessed since we're now in read-only mode
+      // if (!job.emailData && providerConfig) {
+      //   const adapter = await this.createProviderAdapter(providerConfig);
+      //   await adapter.markMessageProcessed(job.messageId);
+      // }
 
       // 5. Record successful processing in database
       await this.recordProcessedMessage(job, emailMessage, 'success');

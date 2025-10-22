@@ -493,55 +493,13 @@ This indicates a problem with the OAuth token saving process.`;
   }
 
   /**
-   * Mark a message as processed
+   * Mark a message as processed (READ-ONLY MODE: No-op)
+   * Note: This system now operates in read-only mode and does not modify emails.
+   * Email processing status is tracked in the database instead.
    */
   async markMessageProcessed(messageId: string): Promise<void> {
-    try {
-      const vendorConfig = this.config.provider_config || {};
-      
-      // Add a custom label to mark as processed
-      // First, check if we have a processed label
-      let processedLabelId: string | undefined;
-      
-      if (!processedLabelId) {
-        // Try to find or create the label
-        const labels = await this.gmail.users.labels.list({ userId: 'me' });
-        const processedLabel = labels.data.labels?.find(
-          (label: any) => label.name === 'PSA/Processed'
-        );
-        
-        if (processedLabel) {
-          processedLabelId = processedLabel.id;
-        } else {
-          // Create the label
-          const newLabel = await this.gmail.users.labels.create({
-            userId: 'me',
-            requestBody: {
-              name: 'PSA/Processed',
-              messageListVisibility: 'show',
-              labelListVisibility: 'labelShow'
-            }
-          });
-          processedLabelId = newLabel.data.id;
-        }
-        
-        // Store label ID for future use
-        // Store the label ID for future use (would need to update config)
-      }
-
-      // Apply the label to the message
-      await this.gmail.users.messages.modify({
-        userId: 'me',
-        id: messageId,
-        requestBody: {
-          addLabelIds: [processedLabelId]
-        }
-      });
-
-      this.log('info', `Message ${messageId} marked as processed`);
-    } catch (error) {
-      throw this.handleError(error, 'markMessageProcessed');
-    }
+    this.log('info', `Email ${messageId} processed (read-only mode - not adding labels in mailbox)`);
+    // No API call made - operating in read-only mode
   }
 
   /**
