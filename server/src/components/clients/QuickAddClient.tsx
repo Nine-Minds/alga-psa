@@ -501,7 +501,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     id="client-type-select"
                     data-automation-id="client-type-select"
                     options={[
-                      { value: 'client', label: 'Client' },
+                      { value: 'company', label: 'Company' },
                       { value: 'individual', label: 'Individual' }
                     ]}
                     value={formData.client_type}
