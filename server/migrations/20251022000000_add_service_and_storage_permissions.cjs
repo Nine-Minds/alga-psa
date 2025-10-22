@@ -44,16 +44,24 @@ exports.up = async function(knex) {
       console.log(`Added ${permissionsToAdd.length} new permissions for tenant ${tenant}`);
     }
 
-    // Get Admin role for this tenant (case-insensitive)
-    const roles = await knex('roles').where({ tenant });
-    const adminRole = roles.find(r =>
-      r.role_name && r.role_name.toLowerCase() === 'admin'
-    );
+    // Get MSP Admin role for this tenant (msp=true, client=false, case-insensitive)
+    // Service and storage are MSP-only features
+    const adminRole = await knex('roles')
+      .where({
+        tenant,
+        msp: true,
+        client: false
+      })
+      .whereRaw("LOWER(role_name) = 'admin'")
+      .first();
 
     if (adminRole) {
-      // Get all service and storage permissions for this tenant
+      // Get all service and storage permissions for this tenant (MSP only)
       const serviceAndStoragePerms = await knex('permissions')
-        .where({ tenant })
+        .where({
+          tenant,
+          msp: true  // Only MSP permissions
+        })
         .whereIn('resource', ['service', 'storage'])
         .select('permission_id');
 
