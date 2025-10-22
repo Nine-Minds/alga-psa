@@ -1,19 +1,20 @@
 export {};
 
 /**
- * Standalone sample: demonstrate CRUD operations with the Alga storage API.
+ * Standalone sample: demonstrate CRUD operations with the tenant-wide Alga storage service.
+ * Official reference: ../../../docs/storage-system.md
  *
  * Usage:
- *   ALGA_API_URL="https://algapsa.com" \
- *   ALGA_API_KEY="your-api-key" \
+ *   ALGA_STORAGE_BASE_URL="https://algapsa.com" \
+ *   ALGA_STORAGE_KEY="tenant-storage-key" \
  *   npm run sample:extension-storage -- \
  *     --namespace "settings" \
  *     --key "welcome-message" \
  *     --value '{"message":"Hello from the storage API"}'
  *
  * Environment:
- * - ALGA_API_KEY is required.
- * - ALGA_API_URL defaults to https://algapsa.com.
+ * - ALGA_STORAGE_KEY is required. For backwards compatibility ALGA_API_KEY is accepted.
+ * - ALGA_STORAGE_BASE_URL defaults to https://algapsa.com (ALGA_API_URL is also respected).
  *
  * Flags:
  * --namespace   Storage namespace to target (defaults to "sample-storage").
@@ -24,10 +25,10 @@ export {};
  * --skip-delete Leave the record in storage when provided (any truthy value).
  */
 
-const API_BASE_URL = process.env.ALGA_API_URL ?? "https://algapsa.com";
-const API_KEY = process.env.ALGA_API_KEY;
-if (!API_KEY) {
-  console.error("Missing ALGA_API_KEY environment variable");
+const STORAGE_BASE_URL = process.env.ALGA_STORAGE_BASE_URL ?? process.env.ALGA_API_URL ?? "https://algapsa.com";
+const STORAGE_API_KEY = process.env.ALGA_STORAGE_KEY ?? process.env.ALGA_API_KEY;
+if (!STORAGE_API_KEY) {
+  console.error("Missing ALGA_STORAGE_KEY environment variable (ALGA_API_KEY fallback no longer recommended).");
   process.exit(1);
 }
 
@@ -73,6 +74,34 @@ if (flags.metadata) {
     });
     console.log("Put response:");
     console.log(JSON.stringify(putResult, null, 2));
+    const initialRevision = putResult.revision;
+
+    console.log("\nGuarded update (ifRevision) to demonstrate optimistic concurrency...");
+    const guardedPutResult = await putRecord({
+      namespace,
+      key: recordKey,
+      value,
+      metadata,
+      ttlSeconds,
+      ifRevision: initialRevision,
+    });
+    console.log(JSON.stringify(guardedPutResult, null, 2));
+    const latestRevision = guardedPutResult.revision;
+
+    console.log("\nAttempting a stale revision write (expected to fail)...");
+    try {
+      await putRecord({
+        namespace,
+        key: recordKey,
+        value,
+        metadata,
+        ttlSeconds,
+        ifRevision: initialRevision,
+      });
+      console.log("Stale revision write unexpectedly succeeded — investigate service configuration.");
+    } catch (error) {
+      console.log(error instanceof Error ? error.message : error);
+    }
 
     console.log("\nFetching record...");
     const getResult = await getRecord({
@@ -94,6 +123,7 @@ if (flags.metadata) {
       await deleteRecord({
         namespace,
         key: recordKey,
+        ifRevision: latestRevision,
       });
       console.log("Record deleted. Re-run without --skip-delete to keep the sample record.");
     } else {
@@ -113,9 +143,9 @@ interface FetchOptions {
 }
 
 async function apiFetch<T>({ method, path, body, headers }: FetchOptions): Promise<T> {
-  const url = `${API_BASE_URL}${path}`;
+  const url = `${STORAGE_BASE_URL}${path}`;
   const requestHeaders: Record<string, string> = {
-    "x-api-key": API_KEY!,
+    "x-api-key": STORAGE_API_KEY!,
     ...headers,
   };
 
@@ -149,6 +179,7 @@ interface PutArgs {
   value: JsonValue;
   metadata?: Record<string, JsonValue>;
   ttlSeconds?: number;
+  ifRevision?: number;
 }
 
 async function putRecord(args: PutArgs): Promise<StoragePutResponse> {
@@ -159,6 +190,7 @@ async function putRecord(args: PutArgs): Promise<StoragePutResponse> {
       value: args.value,
       metadata: args.metadata,
       ttlSeconds: args.ttlSeconds,
+      ifRevision: args.ifRevision,
     },
   });
 }
