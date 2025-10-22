@@ -321,4 +321,71 @@ describe('Storage Route Handlers', () => {
     const body: any = await readJson(response);
     expect(body.error.code).toBe('UNAUTHORIZED');
   });
+
+  it('should surface latest revision and enforce conditional guards', async () => {
+    mockAuth();
+
+    const key = 'revision-visibility';
+
+    const first = await putRecordHandler(
+      jsonRequest('PUT', buildRecordUrl(key), { value: { version: 1 } }),
+      { params: { namespace, key } },
+    );
+    expect(first.status).toBe(200);
+    const firstBody: any = await readJson(first);
+    expect(firstBody.revision).toBe(1);
+
+    const second = await putRecordHandler(
+      jsonRequest('PUT', buildRecordUrl(key), { value: { version: 2 } }),
+      { params: { namespace, key } },
+    );
+    expect(second.status).toBe(200);
+    const secondBody: any = await readJson(second);
+    expect(secondBody.revision).toBe(2);
+
+    const current = await getRecordHandler(jsonRequest('GET', buildRecordUrl(key)), {
+      params: { namespace, key },
+    });
+    expect(current.status).toBe(200);
+    const currentBody: any = await readJson(current);
+    expect(currentBody.revision).toBe(2);
+    expect(currentBody.value).toEqual({ version: 2 });
+
+    const staleRead = await getRecordHandler(
+      jsonRequest('GET', buildRecordUrl(key), undefined, { headers: { 'if-revision-match': '1' } }),
+      { params: { namespace, key } },
+    );
+    expect(staleRead.status).toBe(409);
+    const staleBody: any = await readJson(staleRead);
+    expect(staleBody.error.code).toBe('REVISION_MISMATCH');
+
+    const guardedRead = await getRecordHandler(
+      jsonRequest('GET', buildRecordUrl(key), undefined, { headers: { 'if-revision-match': '2' } }),
+      { params: { namespace, key } },
+    );
+    expect(guardedRead.status).toBe(200);
+    const guardedBody: any = await readJson(guardedRead);
+    expect(guardedBody.revision).toBe(2);
+
+    const staleDelete = await deleteRecordHandler(
+      jsonRequest('DELETE', `${buildRecordUrl(key)}?ifRevision=1`),
+      { params: { namespace, key } },
+    );
+    expect(staleDelete.status).toBe(409);
+    const staleDeleteBody: any = await readJson(staleDelete);
+    expect(staleDeleteBody.error.code).toBe('REVISION_MISMATCH');
+
+    const deleteResponse = await deleteRecordHandler(
+      jsonRequest('DELETE', `${buildRecordUrl(key)}?ifRevision=2`),
+      { params: { namespace, key } },
+    );
+    expect(deleteResponse.status).toBe(204);
+
+    const missing = await getRecordHandler(jsonRequest('GET', buildRecordUrl(key)), {
+      params: { namespace, key },
+    });
+    expect(missing.status).toBe(404);
+    const missingBody: any = await readJson(missing);
+    expect(missingBody.error.code).toBe('NOT_FOUND');
+  });
 });

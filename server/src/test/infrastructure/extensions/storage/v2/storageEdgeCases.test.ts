@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { randomUUID } from 'node:crypto';
 
 import { TestContext } from '../../../../../../test-utils/testContext';
 import { ensureStorageTables, resetStorageTables } from '../../../../e2e/api/storage.helpers';
+import { createTestDbConnection } from '../../../../../../test-utils/dbConfig';
 import { StorageService } from '@/lib/storage/api/service';
 import {
   StorageLimitError,
-  StorageQuotaError,
   StorageRevisionMismatchError,
   StorageServiceError,
   StorageValidationError,
@@ -128,5 +129,56 @@ describe('StorageService edge cases (infrastructure)', () => {
     await expect(
       context.db('storage_schemas').insert({ ...base, schema_version: 2, status: 'draft' }),
     ).resolves.toBeTruthy();
+  });
+
+});
+
+describe('StorageService revision semantics (committed connections)', () => {
+  beforeAll(async () => {
+    await ensureStorageTables();
+  }, 180_000);
+
+  afterEach(async () => {
+    await resetStorageTables();
+  });
+
+  it('exposes latest revision across independent connections', async () => {
+    const tenantId = randomUUID();
+
+    const writer = await createTestDbConnection();
+    try {
+      const writerService = new StorageService(writer, tenantId);
+      const put1 = await writerService.put({ namespace, key: 'revision-visibility', value: { version: 1 } });
+      expect(put1.revision).toBe(1);
+
+      const put2 = await writerService.put({ namespace, key: 'revision-visibility', value: { version: 2 } });
+      expect(put2.revision).toBe(2);
+    } finally {
+      await writer.destroy();
+    }
+
+    const reader = await createTestDbConnection();
+    try {
+      const readerService = new StorageService(reader, tenantId);
+      const key = 'revision-visibility';
+      const record = await readerService.get({ namespace, key });
+      expect(record.revision).toBe(2);
+      expect(record.value).toEqual({ version: 2 });
+
+      await expect(readerService.get({ namespace, key, ifRevision: 1 })).rejects.toMatchObject({
+        code: 'REVISION_MISMATCH',
+      });
+      const guarded = await readerService.get({ namespace, key, ifRevision: 2 });
+      expect(guarded.revision).toBe(2);
+
+      await expect(readerService.delete({ namespace, key, ifRevision: 1 })).rejects.toBeInstanceOf(
+        StorageRevisionMismatchError,
+      );
+
+      await readerService.delete({ namespace, key, ifRevision: 2 });
+      await expect(readerService.get({ namespace, key })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    } finally {
+      await reader.destroy();
+    }
   });
 });

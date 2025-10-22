@@ -386,37 +386,12 @@ exports.up = async function up(knex) {
     });
   }
 
-  // Add foreign key constraints only if they don't already exist
-  // Note: Knex doesn't provide a direct way to check for foreign keys, so we'll use raw SQL
-  const clientContractsFkExists = await knex.raw(`
-    SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'client_contracts_tenant_template_contract_id_foreign'
-    AND table_name = 'client_contracts'
-  `);
-
-  if (clientContractsFkExists.rows.length === 0) {
-    await knex.schema.alterTable('client_contracts', (table) => {
-      table
-        .foreign(['tenant', 'template_contract_id'])
-        .references(['tenant', 'contract_id'])
-        .inTable('contracts');
-    });
-  }
-
-  const clientContractLinesFkExists = await knex.raw(`
-    SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'client_contract_lines_tenant_template_contract_line_id_foreign'
-    AND table_name = 'client_contract_lines'
-  `);
-
-  if (clientContractLinesFkExists.rows.length === 0) {
-    await knex.schema.alterTable('client_contract_lines', (table) => {
-      table
-        .foreign(['tenant', 'template_contract_line_id'])
-        .references(['tenant', 'contract_line_id'])
-        .inTable('contract_lines');
-    });
-  }
+  // Foreign key constraints from client_contracts to contracts are not added here.
+  // In Citus distributed environments, both tables are distributed and colocated,
+  // but foreign keys between distributed tables cannot be reliably enforced across shards.
+  // Per the AI coding standards: "Foreign keys from reference tables to distributed tables are not supported."
+  // These relationships are enforced at the application level instead.
+  // See migration 20251020180500_update_client_contract_template_foreign_keys.cjs for cleanup of these constraints.
 };
 
 /**
@@ -424,13 +399,8 @@ exports.up = async function up(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function down(knex) {
-  await knex.schema.table('client_contract_lines', (table) => {
-    table.dropForeign(['tenant', 'template_contract_line_id']);
-  });
-
-  await knex.schema.table('client_contracts', (table) => {
-    table.dropForeign(['tenant', 'template_contract_id']);
-  });
+  // No foreign keys to drop since we don't create them in the up migration
+  // (Citus distributed tables cannot have foreign keys between them)
 
   await knex.schema.dropTableIfExists('client_contract_line_discounts');
   await knex.schema.dropTableIfExists('client_contract_line_pricing');
