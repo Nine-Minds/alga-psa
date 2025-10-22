@@ -1,14 +1,15 @@
 'use server';
 
-import { createTenantKnex } from '../../db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import Document from '../../models/document';
-import DocumentAssociation from '../../models/document-association';
-import { getCurrentUser } from '../user-actions/userActions';
-import { CacheFactory } from '../../cache/CacheFactory';
+import Document from 'server/src/lib/models/document';
+import DocumentAssociation from 'server/src/models/document-association';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
 import { IDocument } from 'server/src/interfaces/document.interface';
+import { IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -73,12 +74,13 @@ export async function createBlockDocument(
 
       // If entity information is provided, create association
       if (input.entityId && input.entityType) {
-        await DocumentAssociation.create({
+        const associationData: IDocumentAssociationInput = {
           document_id: documentResult.document_id,
           entity_id: input.entityId,
           entity_type: input.entityType,
           tenant
-        }, trx);
+        };
+        await DocumentAssociation.create(trx, associationData);
       }
 
       return {

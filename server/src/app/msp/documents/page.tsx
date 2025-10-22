@@ -266,6 +266,7 @@ export default function DocumentsPage() {
                 isLoading={isLoading}
                 onDocumentCreated={handleDocumentUpdate}
                 searchTermFromParent={filterInputs.searchTerm}
+                filters={filterInputs}
               />
             )}
             

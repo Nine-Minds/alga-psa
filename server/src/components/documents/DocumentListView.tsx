@@ -74,7 +74,19 @@ export default function DocumentListView({
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <FileIcon className="w-4 h-4 text-gray-400" />
+                  {doc.thumbnail_file_id ? (
+                    <img
+                      src={`/api/documents/${doc.document_id}/thumbnail`}
+                      alt={doc.document_name}
+                      className="w-8 h-8 object-cover rounded border border-gray-200 dark:border-gray-600"
+                      onError={(e) => {
+                        // Fallback to icon if thumbnail fails to load
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <FileIcon className={`w-4 h-4 text-gray-400 ${doc.thumbnail_file_id ? 'hidden' : ''}`} />
                   <span className="text-sm">{doc.document_name}</span>
                 </div>
               </td>

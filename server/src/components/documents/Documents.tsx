@@ -20,7 +20,7 @@ import FolderManager from './FolderManager';
 import DocumentListView from './DocumentListView';
 import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
 import FolderSelectorModal from './FolderSelectorModal';
-import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, ChevronRight, X } from 'lucide-react';
+import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, ChevronRight, X, FolderInput, Trash2 } from 'lucide-react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from 'server/src/lib/utils/documentUtils';
 import toast from 'react-hot-toast';
@@ -69,6 +69,7 @@ interface DocumentsProps {
   onDocumentCreated?: () => Promise<void>;
   isInDrawer?: boolean;
   uploadFormRef?: React.RefObject<HTMLDivElement>;
+  filters?: DocumentFilters;
 }
 
 const Documents = ({
@@ -82,7 +83,8 @@ const Documents = ({
   onDocumentCreated,
   isInDrawer = false,
   uploadFormRef,
-  searchTermFromParent = ''
+  searchTermFromParent = '',
+  filters
 }: DocumentsProps): JSX.Element => {
   const { t } = useTranslation('clientPortal');
   const router = useRouter();
@@ -145,6 +147,7 @@ const Documents = ({
 
   // Move document modal
   const [showMoveFolderModal, setShowMoveFolderModal] = useState(false);
+  const [showBulkMoveFolderModal, setShowBulkMoveFolderModal] = useState(false);
   const [documentToMove, setDocumentToMove] = useState<IDocument | null>(null);
 
   // Preview modal for images/videos/PDFs
@@ -165,7 +168,7 @@ const Documents = ({
     // Folder mode: fetch by folder
     if (inFolderMode) {
       try {
-        const response = await getDocumentsByFolder(currentFolder, false, page, pageSize);
+        const response = await getDocumentsByFolder(currentFolder, false, page, pageSize, filters);
         let docs = response.documents;
 
         // Apply client-side search filter if needed
@@ -222,7 +225,7 @@ const Documents = ({
       setTotalPages(1);
       setCurrentPage(1);
     }
-  }, [entityId, entityType, pageSize, initialDocuments, inFolderMode, currentFolder]);
+  }, [entityId, entityType, pageSize, initialDocuments, inFolderMode, currentFolder, filters]);
 
 
   useEffect(() => {
@@ -274,19 +277,21 @@ const Documents = ({
     }
   };
 
-  const handleMoveDocuments = async () => {
+  const handleMoveDocuments = async (targetFolder: string | null) => {
     if (selectedDocumentsForMove.size === 0) return;
 
     try {
       await moveDocumentsToFolder(
         Array.from(selectedDocumentsForMove),
-        currentFolder
+        targetFolder
       );
 
       const count = selectedDocumentsForMove.size;
-      toast.success(`${count} document${count > 1 ? 's' : ''} moved successfully`);
+      const folderName = targetFolder || 'Root';
+      toast.success(`${count} document${count > 1 ? 's' : ''} moved to ${folderName}`);
 
       setSelectedDocumentsForMove(new Set());
+      setShowBulkMoveFolderModal(false);
       fetchDocuments(currentPage, searchTermFromParent);
 
       // Refresh folder tree to update counts
@@ -336,10 +341,7 @@ const Documents = ({
   };
 
   const handleDelete = useCallback(async (document: IDocument) => {
-    if (!confirm(`Are you sure you want to delete "${document.document_name}"?`)) {
-      return;
-    }
-
+    // Note: Confirmation dialog is handled by DocumentStorageCard component
     try {
       await deleteDocument(document.document_id, userId);
       setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
@@ -725,24 +727,90 @@ const Documents = ({
                 <div className="text-center py-4 text-red-500 bg-red-50 rounded-md">
                   {error}
                 </div>
-              ) : viewMode === 'list' ? (
-                <DocumentListView
-                  documents={documentsToDisplay}
-                  selectedDocuments={selectedDocumentsForMove}
-                  onSelectionChange={setSelectedDocumentsForMove}
-                  onDelete={(doc) => handleDelete(doc)}
-                  onClick={(doc) => handleDocumentClick(doc)}
-                />
               ) : (
-                documentsToDisplay.length > 0 ? (
-                  <div className={`grid ${gridColumnsClass} gap-4`}>
-                    {renderDocumentCards()}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-                    No documents found in this folder
-                  </div>
-                )
+                <>
+                  {/* Bulk Actions Toolbar */}
+                  {selectedDocumentsForMove.size > 0 && viewMode === 'list' && (
+                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                          {selectedDocumentsForMove.size} document{selectedDocumentsForMove.size > 1 ? 's' : ''} selected
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {!entityId && !entityType && (
+                            <Button
+                              id="bulk-move-button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowBulkMoveFolderModal(true)}
+                            >
+                              <FolderInput className="w-4 h-4 mr-2" />
+                              Move to Folder
+                            </Button>
+                          )}
+                          <Button
+                            id="bulk-delete-button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              if (!confirm(`Are you sure you want to delete ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size > 1 ? 's' : ''}?`)) {
+                                return;
+                              }
+                              try {
+                                const deletePromises = Array.from(selectedDocumentsForMove).map(docId => {
+                                  const doc = documentsToDisplay.find(d => d.document_id === docId);
+                                  return doc ? deleteDocument(docId, userId) : Promise.resolve();
+                                });
+                                await Promise.all(deletePromises);
+                                toast.success(`${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size > 1 ? 's' : ''} deleted successfully`);
+                                setSelectedDocumentsForMove(new Set());
+                                fetchDocuments(currentPage, searchTermFromParent);
+                                if (onDocumentCreated) {
+                                  await onDocumentCreated();
+                                }
+                              } catch (error) {
+                                console.error('Error deleting documents:', error);
+                                toast.error('Failed to delete some documents');
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Selected
+                          </Button>
+                        </div>
+                      </div>
+                      <Button
+                        id="bulk-clear-selection-button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedDocumentsForMove(new Set())}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Clear Selection
+                      </Button>
+                    </div>
+                  )}
+
+                  {viewMode === 'list' ? (
+                    <DocumentListView
+                      documents={documentsToDisplay}
+                      selectedDocuments={selectedDocumentsForMove}
+                      onSelectionChange={setSelectedDocumentsForMove}
+                      onDelete={(doc) => handleDelete(doc)}
+                      onClick={(doc) => handleDocumentClick(doc)}
+                    />
+                  ) : (
+                    documentsToDisplay.length > 0 ? (
+                      <div className={`grid ${gridColumnsClass} gap-4`}>
+                        {renderDocumentCards()}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
+                        No documents found in this folder
+                      </div>
+                    )
+                  )}
+                </>
               )}
             </div>
 
@@ -786,6 +854,17 @@ const Documents = ({
             onSelectFolder={handleMoveFolderSelected}
             title="Move Document"
             description={documentToMove ? `Select destination folder for "${documentToMove.document_name}"` : "Select destination folder"}
+          />
+
+          {/* Folder Selector Modal for Bulk Moving Documents */}
+          <FolderSelectorModal
+            isOpen={showBulkMoveFolderModal}
+            onClose={() => {
+              setShowBulkMoveFolderModal(false);
+            }}
+            onSelectFolder={handleMoveDocuments}
+            title="Move Selected Documents"
+            description={`Select destination folder for ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size > 1 ? 's' : ''}`}
           />
 
           {/* Preview Modal for Images/Videos/PDFs */}

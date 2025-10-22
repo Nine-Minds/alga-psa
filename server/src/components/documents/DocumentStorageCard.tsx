@@ -307,17 +307,29 @@ function DocumentStorageCardComponent({
         ? t('documents.deleteVideoTitle', 'Delete Video')
         : t('documents.deleteTitle', 'Delete Document');
     const deleteMessage = isVideoDocument
-        ? t('documents.deleteVideoMessage', 'Are you sure you want to delete the video "{{name}}"? This action cannot be undone.', { name: documentName })
-        : t('documents.deleteMessage', 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', { name: documentName });
+        ? t('documents.deleteVideoMessage', `Are you sure you want to delete the video "${documentName}"? This action cannot be undone.`)
+        : t('documents.deleteMessage', `Are you sure you want to delete "${documentName}"? This action cannot be undone.`);
     const removeTitle = isVideoDocument
         ? t('documents.removeVideoTitle', 'Remove Video')
         : t('documents.removeTitle', 'Remove Document');
     const removeMessage = isVideoDocument
-        ? t('documents.removeVideoMessage', 'Are you sure you want to remove the video "{{name}}" from this item? The file will remain available in the document library.', { name: documentName })
-        : t('documents.removeMessage', 'Are you sure you want to remove "{{name}}" from this item? The document will still be available in the document library.', { name: documentName });
+        ? t('documents.removeVideoMessage', `Are you sure you want to remove the video "${documentName}" from this item? The file will remain available in the document library.`)
+        : t('documents.removeMessage', `Are you sure you want to remove "${documentName}" from this item? The document will still be available in the document library.`);
 
 
     const loadPreview = async () => {
+        // NEW: Try cached preview first (for images, videos, PDFs)
+        // Use preview (800x600, preserves aspect ratio) instead of thumbnail (200x200, cropped)
+        if (document.preview_file_id) {
+            // Use the cached preview endpoint - much faster!
+            const previewUrl = `/api/documents/${document.document_id}/preview?t=${Date.now()}`;
+            setPreviewContent({ previewImage: previewUrl });
+            setHasLoadedPreview(true);
+            setIsLoading(false);
+            return;
+        }
+
+        // LEGACY: Fall back to old preview generation system for documents without thumbnails
         const identifierForPreview = document.file_id || document.document_id;
 
         if (!identifierForPreview) {

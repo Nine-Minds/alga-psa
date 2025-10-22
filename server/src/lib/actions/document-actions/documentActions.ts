@@ -35,6 +35,7 @@ import { DocumentHandlerRegistry } from 'server/src/lib/document-handlers/Docume
 import { getCurrentUser } from '../user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getEntityTypesForUser } from 'server/src/lib/utils/documentPermissionUtils';
+import { generateDocumentPreviews } from 'server/src/lib/utils/documentPreviewGenerator';
 
 // Add new document
 export async function addDocument(data: DocumentInput) {
@@ -175,13 +176,41 @@ export async function deleteDocument(documentId: string, userId: string) {
       return document;
     });
 
-    // If there's an associated file, delete it from storage (outside transaction)
+    // Delete all associated files from storage (outside transaction)
+    const filesToDelete: string[] = [];
+
+    // Add main file if it exists
     if (result.file_id) {
-      // Delete file from storage and soft delete file record
-      const deleteResult = await deleteFile(result.file_id, userId);
-      if (!deleteResult.success) {
-        throw new Error(deleteResult.error || 'Failed to delete file from storage');
-      }
+      filesToDelete.push(result.file_id);
+    }
+
+    // Add thumbnail file if it exists
+    if (result.thumbnail_file_id) {
+      filesToDelete.push(result.thumbnail_file_id);
+    }
+
+    // Add preview file if it exists
+    if (result.preview_file_id) {
+      filesToDelete.push(result.preview_file_id);
+    }
+
+    // Delete all files
+    if (filesToDelete.length > 0) {
+      console.log(`[deleteDocument] Deleting ${filesToDelete.length} files for document ${documentId}`);
+
+      const deletePromises = filesToDelete.map(async (fileId) => {
+        try {
+          const deleteResult = await deleteFile(fileId, userId);
+          if (!deleteResult.success) {
+            console.error(`[deleteDocument] Failed to delete file ${fileId}:`, deleteResult.error);
+          }
+        } catch (error) {
+          console.error(`[deleteDocument] Error deleting file ${fileId}:`, error);
+          // Don't throw - continue deleting other files
+        }
+      });
+
+      await Promise.all(deletePromises);
 
       // Clear preview cache if it exists
       const cache = CacheFactory.getPreviewCache(tenant);
@@ -561,6 +590,7 @@ const IN_APP_BLOCKNOTE_TYPE_NAMES = ['blocknote', 'block note', 'blocknote docum
 /**
  * Generates a preview for a document
  * Uses the Strategy pattern with document type handlers to handle different document types
+ * Now with cached preview support - tries cached preview first, then falls back to legacy handler
  *
  * @param identifier The document ID or file ID to generate a preview for
  * @returns A promise that resolves to a PreviewResponse
@@ -609,7 +639,7 @@ export async function getDocumentPreview(
     // If document not found, try to treat identifier as a file ID
     if (!document) {
       console.log(`[getDocumentPreview] Document not found, treating identifier as file ID: ${identifier}`);
-      
+
       // Check cache for file ID
       const cache = CacheFactory.getPreviewCache(tenant);
       const cachedPreview = await cache.get(identifier);
@@ -623,7 +653,7 @@ export async function getDocumentPreview(
           content: 'Cached Preview'
         };
       }
-      
+
       // Try to download the file to get metadata
       try {
         const downloadResult = await StorageService.downloadFile(identifier);
@@ -657,7 +687,27 @@ export async function getDocumentPreview(
       }
     }
 
-    // Use the document handler registry to get the appropriate handler
+    // NEW: Try cached preview first if available
+    if (document.preview_file_id) {
+      console.log(`[getDocumentPreview] Using cached preview: ${document.preview_file_id}`);
+      try {
+        const downloadResult = await StorageService.downloadFile(document.preview_file_id);
+        if (downloadResult) {
+          const base64Image = `data:image/jpeg;base64,${downloadResult.buffer.toString('base64')}`;
+          return {
+            success: true,
+            previewImage: base64Image,
+            content: `Cached Preview (${document.document_name || 'document'})`
+          };
+        }
+      } catch (cacheError) {
+        console.error(`[getDocumentPreview] Failed to load cached preview, falling back to handler:`, cacheError);
+        // Continue to legacy handler fallback
+      }
+    }
+
+    // Fallback to legacy handler if no cached preview or if loading cached preview failed
+    console.log(`[getDocumentPreview] Using legacy handler for document ${identifier}`);
     const handlerRegistry = DocumentHandlerRegistry.getInstance();
     return await handlerRegistry.generatePreview(document, tenant, knex);
   } catch (error) {
@@ -682,6 +732,114 @@ export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
     }
 
     return `/api/documents/download/${file_id}`;
+}
+
+/**
+ * Get thumbnail URL for a document
+ * Returns the cached thumbnail if available, falls back to original file for images
+ *
+ * @param documentId - The document ID
+ * @returns URL to thumbnail or null if not available
+ */
+export async function getDocumentThumbnailUrl(documentId: string): Promise<string | null> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Get document
+    const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('documents')
+        .where({ document_id: documentId, tenant })
+        .first();
+    });
+
+    if (!document) {
+      console.warn(`[getDocumentThumbnailUrl] Document not found: ${documentId}`);
+      return null;
+    }
+
+    // Check if thumbnail exists
+    if (document.thumbnail_file_id) {
+      return `/api/documents/thumbnail/${documentId}`;
+    }
+
+    // Fallback: For images without thumbnails, return original file
+    if (document.file_id && document.mime_type?.startsWith('image/')) {
+      return `/api/documents/view/${document.file_id}`;
+    }
+
+    // No thumbnail available
+    return null;
+  } catch (error) {
+    console.error(`[getDocumentThumbnailUrl] Error for document ${documentId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get preview URL for a document
+ * Returns the cached preview if available, falls back to original file
+ *
+ * @param documentId - The document ID
+ * @returns URL to preview or null if not available
+ */
+export async function getDocumentPreviewUrl(documentId: string): Promise<string | null> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Get document
+    const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('documents')
+        .where({ document_id: documentId, tenant })
+        .first();
+    });
+
+    if (!document) {
+      console.warn(`[getDocumentPreviewUrl] Document not found: ${documentId}`);
+      return null;
+    }
+
+    // Check if preview exists
+    if (document.preview_file_id) {
+      return `/api/documents/preview/${documentId}`;
+    }
+
+    // Fallback: Return original file if available
+    if (document.file_id) {
+      return `/api/documents/view/${document.file_id}`;
+    }
+
+    // No preview available
+    return null;
+  } catch (error) {
+    console.error(`[getDocumentPreviewUrl] Error for document ${documentId}:`, error);
+    return null;
+  }
 }
 
 // Download document
@@ -950,7 +1108,7 @@ export async function getDocumentsByEntity(
         }
         return query;
       };
-      return await buildBaseTrxQuery()
+      let query = buildBaseTrxQuery()
         .select(
           'documents.*',
           'users.first_name',
@@ -961,10 +1119,29 @@ export async function getDocumentsByEntity(
             COALESCE(dt.icon, sdt.icon) as type_icon
           `)
         )
-        .orderBy('documents.updated_at', 'desc')
-        .limit(limit)
-        .offset(offset)
         .distinct('documents.document_id');
+
+      // Apply sorting based on filters (before limit/offset)
+      if (filters?.sortBy) {
+        const sortField = filters.sortBy;
+        const sortOrder = filters.sortOrder || 'desc';
+
+        // Handle special case for created_by_full_name which is a computed field
+        if (sortField === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else {
+          // For other fields, prefix with table name for clarity
+          query = query.orderBy(`documents.${sortField}`, sortOrder);
+        }
+      } else {
+        // Default sort by updated_at desc if no sort specified
+        query = query.orderBy('documents.updated_at', 'desc');
+      }
+
+      // Apply pagination after sorting
+      query = query.limit(limit).offset(offset);
+
+      return await query;
     });
 
     console.log('Raw documents from database:', documents);
@@ -1395,15 +1572,13 @@ export async function getAllDocuments(
             COALESCE(dt.icon, sdt.icon) as type_icon
           `)
         )
-        .limit(limit)
-        .offset(offset)
         .distinct('documents.document_id');
-      
-      // Apply sorting based on filters
+
+      // Apply sorting based on filters (before limit/offset)
       if (filters?.sortBy) {
         const sortField = filters.sortBy;
         const sortOrder = filters.sortOrder || 'desc';
-        
+
         // Handle special case for created_by_full_name which is a computed field
         if (sortField === 'created_by_full_name') {
           query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
@@ -1415,6 +1590,9 @@ export async function getAllDocuments(
         // Default sort by updated_at desc if no sort specified
         query = query.orderBy('documents.updated_at', 'desc');
       }
+
+      // Apply pagination after sorting
+      query = query.limit(limit).offset(offset);
 
       return await query;
     });
@@ -1613,11 +1791,11 @@ export async function uploadDocument(
         storage_path: uploadResult.storage_path,
         mime_type: fileData.type,
         file_size: fileData.size,
-        folder_path: options.folder_path || null
+        folder_path: options.folder_path || undefined
       };
 
       // Use transaction for document creation and associations
-      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
         await trx('documents').insert(document);
         const documentWithId = document;
 
@@ -1688,10 +1866,39 @@ export async function uploadDocument(
         }
 
         return {
-          success: true,
+          success: true as const,
           document: documentWithId
         };
       });
+
+      // Generate previews asynchronously (non-blocking)
+      // This happens after the transaction completes and document is returned to user
+      // Preview generation failures won't affect the upload success
+      generateDocumentPreviews(document, buffer)
+        .then(async (previewResult) => {
+          if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
+            try {
+              // Update document with preview file IDs
+              await knex('documents')
+                .where({ document_id: document.document_id, tenant })
+                .update({
+                  thumbnail_file_id: previewResult.thumbnail_file_id,
+                  preview_file_id: previewResult.preview_file_id,
+                  preview_generated_at: previewResult.preview_generated_at,
+                  updated_at: new Date(),
+                });
+              console.log(`[uploadDocument] Preview generation completed for document ${document.document_id}`);
+            } catch (updateError) {
+              console.error(`[uploadDocument] Failed to update document with preview IDs:`, updateError);
+            }
+          }
+        })
+        .catch((error) => {
+          console.error(`[uploadDocument] Preview generation failed for document ${document.document_id}:`, error);
+          // Don't fail the upload - just log the error
+        });
+
+      return result;
   } catch (error) {
     console.error('Error uploading document:', error);
     return {
@@ -1940,6 +2147,9 @@ export async function getFolderTree(): Promise<IFolderNode[]> {
   }
 
   const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
 
   // Get explicit folders from document_folders table
   const explicitFolders = await knex('document_folders')
@@ -2017,13 +2227,15 @@ export async function getFolders(): Promise<string[]> {
  * @param includeSubfolders - Whether to include documents from subfolders
  * @param page - Page number
  * @param limit - Items per page
+ * @param filters - Optional filters including sorting
  * @returns Promise with documents and pagination info
  */
 export async function getDocumentsByFolder(
   folderPath: string | null,
   includeSubfolders: boolean = false,
   page: number = 1,
-  limit: number = 15
+  limit: number = 15,
+  filters?: DocumentFilters
 ): Promise<{ documents: IDocument[]; total: number }> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
@@ -2079,13 +2291,41 @@ export async function getDocumentsByFolder(
   const countResult = await query.clone().count('* as count');
   const total = parseInt(countResult[0].count as string);
 
-  // Get paginated results
+  // Get paginated results with joins for sorting support
   const offset = (page - 1) * limit;
-  const documents = await query
-    .select('d.*')
-    .limit(limit)
-    .offset(offset)
-    .orderBy('d.document_name', 'asc');
+
+  // Add joins for computed fields used in sorting
+  query = query
+    .leftJoin('users', function() {
+      this.on('d.created_by', '=', 'users.user_id')
+          .andOn('users.tenant', '=', knex.raw('?', [tenant]));
+    })
+    .select(
+      'd.*',
+      knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+    );
+
+  // Apply sorting based on filters
+  if (filters?.sortBy) {
+    const sortField = filters.sortBy;
+    const sortOrder = filters.sortOrder || 'desc';
+
+    // Handle special case for created_by_full_name which is a computed field
+    if (sortField === 'created_by_full_name') {
+      query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+    } else {
+      // For other fields, prefix with table alias
+      query = query.orderBy(`d.${sortField}`, sortOrder);
+    }
+  } else {
+    // Default sort by document_name asc
+    query = query.orderBy('d.document_name', 'asc');
+  }
+
+  // Apply pagination after sorting
+  query = query.limit(limit).offset(offset);
+
+  const documents = await query;
 
   return {
     documents,
