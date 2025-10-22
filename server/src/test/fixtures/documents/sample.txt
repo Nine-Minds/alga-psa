@@ -1,0 +1,11 @@
+This is a sample text file for testing document uploads.
+
+It contains multiple lines of text to simulate a real document.
+
+Key testing scenarios:
+- File upload and storage
+- MIME type detection
+- File size validation
+- Document preview generation
+
+This file should be successfully uploaded and stored in the test environment.
