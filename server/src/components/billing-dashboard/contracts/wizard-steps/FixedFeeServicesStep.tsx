@@ -13,6 +13,7 @@ import { Plus, X, DollarSign, Package, HelpCircle } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { BucketOverlayFields } from '../BucketOverlayFields';
+import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
@@ -291,6 +292,15 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
               </p>
             </div>
           </div>
+        )}
+
+        {data.fixed_services.length > 0 && (
+          <BillingFrequencyOverrideSelect
+            contractBillingFrequency={data.billing_frequency}
+            value={data.fixed_billing_frequency}
+            onChange={(value) => updateData({ fixed_billing_frequency: value })}
+            label="Alternate Billing Frequency (Optional)"
+          />
         )}
       </div>
     </ReflectionContainer>

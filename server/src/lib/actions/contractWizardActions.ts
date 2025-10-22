@@ -109,10 +109,13 @@ export type ClientContractWizardSubmission = {
   po_number?: string;
   po_amount?: number;
   fixed_base_rate?: number;
+  fixed_billing_frequency?: string;
   enable_proration: boolean;
   fixed_services: ClientFixedServiceInput[];
   hourly_services?: ClientHourlyServiceInput[];
+  hourly_billing_frequency?: string;
   usage_services?: ClientUsageServiceInput[];
+  usage_billing_frequency?: string;
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
   template_id?: string;
@@ -628,7 +631,7 @@ export async function createClientContractFromWizard(
     if (filteredFixedServices.length > 0) {
       const createdFixedLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Fixed Fee`,
-        billing_frequency: submission.billing_frequency ?? 'monthly',
+        billing_frequency: submission.fixed_billing_frequency ?? submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Fixed',
@@ -719,7 +722,7 @@ export async function createClientContractFromWizard(
     if (filteredHourlyServices.length > 0) {
       const createdHourlyLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Hourly`,
-        billing_frequency: submission.billing_frequency ?? 'monthly',
+        billing_frequency: submission.hourly_billing_frequency ?? submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
@@ -771,7 +774,7 @@ export async function createClientContractFromWizard(
     if (filteredUsageServices.length > 0) {
       const createdUsageLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Usage`,
-        billing_frequency: submission.billing_frequency ?? 'monthly',
+        billing_frequency: submission.usage_billing_frequency ?? submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Usage',

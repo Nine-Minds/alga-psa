@@ -11,6 +11,7 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Plus, X, Clock, DollarSign } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
+import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -325,6 +326,15 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
             )}
           </div>
         </div>
+      )}
+
+      {data.hourly_services.length > 0 && (
+        <BillingFrequencyOverrideSelect
+          contractBillingFrequency={data.billing_frequency}
+          value={data.hourly_billing_frequency}
+          onChange={(value) => updateData({ hourly_billing_frequency: value })}
+          label="Alternate Billing Frequency (Optional)"
+        />
       )}
     </div>
   );

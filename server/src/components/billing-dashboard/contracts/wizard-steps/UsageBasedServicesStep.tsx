@@ -11,6 +11,7 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Plus, X, Activity, DollarSign } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
+import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 
 interface UsageBasedServicesStepProps {
   data: ContractWizardData;
@@ -305,6 +306,15 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
             </div>
           </div>
         </div>
+      )}
+
+      {(data.usage_services?.length ?? 0) > 0 && (
+        <BillingFrequencyOverrideSelect
+          contractBillingFrequency={data.billing_frequency}
+          value={data.usage_billing_frequency}
+          onChange={(value) => updateData({ usage_billing_frequency: value })}
+          label="Alternate Billing Frequency (Optional)"
+        />
       )}
     </div>
   );
