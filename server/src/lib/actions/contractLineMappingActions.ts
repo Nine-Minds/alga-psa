@@ -373,6 +373,10 @@ export async function getDetailedContractLines(contractId: string): Promise<any[
           this.on('lines.template_line_id', '=', 'base.contract_line_id')
             .andOn('lines.tenant', '=', 'base.tenant');
         })
+        .leftJoin('contract_template_line_fixed_config as tfc', function joinTemplateFixedConfig() {
+          this.on('lines.template_line_id', '=', 'tfc.template_line_id')
+            .andOn('lines.tenant', '=', 'tfc.tenant');
+        })
         .where({
           'map.template_id': contractId,
           'map.tenant': tenant,
@@ -388,6 +392,7 @@ export async function getDetailedContractLines(contractId: string): Promise<any[
           'lines.billing_frequency',
           'base.is_custom',
           'lines.line_type as contract_line_type',
+          'tfc.base_rate as default_rate',
         ]);
 
       return rows;

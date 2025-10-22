@@ -1,51 +1,71 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical, Settings } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from 'server/src/components/ui/DropdownMenu';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IContract, IContractLineMapping } from 'server/src/interfaces/contract.interfaces';
+import { Plus, ChevronDown, ChevronUp, Trash2, Package } from 'lucide-react';
+import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { getContractLines } from 'server/src/lib/actions/contractLineAction';
 import {
   getDetailedContractLines,
   addContractLine,
   removeContractLine,
-  updateContractLineAssociation,
 } from 'server/src/lib/actions/contractLineMappingActions';
+import {
+  getContractLineServicesWithConfigurations,
+  getTemplateLineServicesWithConfigurations,
+} from 'server/src/lib/actions/contractLineServiceActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { ContractLineRateDialog } from './ContractLineRateDialog';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Badge } from 'server/src/components/ui/Badge';
+import { AddContractLinesDialog } from './AddContractLinesDialog';
 
 interface ContractLinesProps {
   contract: IContract;
   onContractLinesChanged?: () => void;
 }
 
-interface DetailedContractLineMapping extends IContractLineMapping {
+interface DetailedContractLineMapping {
+  tenant: string;
+  contract_id: string;
+  contract_line_id: string;
+  display_order: number;
+  custom_rate?: number | null;
+  created_at: string | Date;
   contract_line_name: string;
   billing_frequency: string;
   contract_line_type: string;
-  default_rate?: number;
+  default_rate?: number | null;
+}
+
+interface ServiceConfiguration {
+  service: {
+    service_id: string;
+    service_name: string;
+    service_type?: string;
+    billing_method?: string;
+  };
+  configuration: {
+    config_id: string;
+    service_id: string;
+    configuration_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+    custom_rate?: number;
+    quantity?: number;
+  };
+  typeConfig: any;
 }
 
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged }) => {
   const [contractLines, setContractLines] = useState<DetailedContractLineMapping[]>([]);
   const [availableContractLines, setAvailableContractLines] = useState<IContractLine[]>([]);
-  const [selectedLineToAdd, setSelectedLineToAdd] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingLine, setEditingLine] = useState<DetailedContractLineMapping | null>(null);
+  const [expandedLines, setExpandedLines] = useState<Record<string, boolean>>({});
+  const [lineServices, setLineServices] = useState<Record<string, ServiceConfiguration[]>>({});
+  const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => {
     if (contract.contract_id) {
@@ -66,13 +86,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       ]);
 
       setContractLines(detailedContractLines);
-      setAvailableContractLines(allContractLines);
 
+      // Filter to only show contract lines that aren't already added
       const unusedLines = allContractLines.filter(
         (line) => !detailedContractLines.some((cl) => cl.contract_line_id === line.contract_line_id)
       );
-
-      setSelectedLineToAdd(unusedLines.length > 0 ? unusedLines[0].contract_line_id ?? null : null);
+      setAvailableContractLines(unusedLines);
     } catch (err) {
       console.error('Error fetching contract lines:', err);
       setError('Failed to load contract lines');
@@ -81,16 +100,54 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
-  const handleAddContractLine = async () => {
-    if (!contract.contract_id || !selectedLineToAdd) return;
+  const loadServicesForLine = async (contractLineId: string) => {
+    if (lineServices[contractLineId] || loadingServices[contractLineId]) {
+      return; // Already loaded or loading
+    }
+
+    setLoadingServices(prev => ({ ...prev, [contractLineId]: true }));
 
     try {
-      await addContractLine(contract.contract_id, selectedLineToAdd, undefined);
+      const isTemplate = contract.is_template;
+      const services = isTemplate
+        ? await getTemplateLineServicesWithConfigurations(contractLineId)
+        : await getContractLineServicesWithConfigurations(contractLineId);
+
+      setLineServices(prev => ({ ...prev, [contractLineId]: services }));
+    } catch (err) {
+      console.error(`Error loading services for contract line ${contractLineId}:`, err);
+    } finally {
+      setLoadingServices(prev => ({ ...prev, [contractLineId]: false }));
+    }
+  };
+
+  const toggleExpand = async (contractLineId: string) => {
+    const isExpanded = expandedLines[contractLineId];
+
+    setExpandedLines(prev => ({
+      ...prev,
+      [contractLineId]: !isExpanded
+    }));
+
+    if (!isExpanded) {
+      await loadServicesForLine(contractLineId);
+    }
+  };
+
+  const handleAddContractLines = async (selectedLineIds: string[]) => {
+    if (!contract.contract_id || selectedLineIds.length === 0) return;
+
+    try {
+      // Add all selected contract lines
+      await Promise.all(
+        selectedLineIds.map(lineId => addContractLine(contract.contract_id, lineId, undefined))
+      );
       await fetchData();
       onContractLinesChanged?.();
     } catch (err) {
-      console.error('Error adding contract line:', err);
-      setError('Failed to add contract line');
+      console.error('Error adding contract lines:', err);
+      setError('Failed to add contract lines');
+      throw err; // Re-throw to let dialog handle it
     }
   };
 
@@ -107,85 +164,57 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
-  const handleCustomRateSave = async (contractLineId: string, customRate?: number) => {
-    if (!contract.contract_id) return;
-
-    try {
-      await updateContractLineAssociation(contract.contract_id, contractLineId, { custom_rate: customRate });
-      await fetchData();
-      setEditingLine(null);
-      onContractLinesChanged?.();
-    } catch (err) {
-      console.error('Error updating contract line rate:', err);
-      setError('Failed to update contract line rate');
-    }
+  const formatRate = (rate?: number | null) => {
+    if (rate === undefined || rate === null) return 'N/A';
+    return `$${(rate / 100).toFixed(2)}`;
   };
 
-  const contractLineColumns: ColumnDefinition<DetailedContractLineMapping>[] = useMemo(
-    () => [
-      {
-        title: 'Contract Line',
-        dataIndex: 'contract_line_name',
-      },
-      {
-        title: 'Line Type',
-        dataIndex: 'contract_line_type',
-      },
-      {
-        title: 'Billing Frequency',
-        dataIndex: 'billing_frequency',
-      },
-      {
-        title: 'Default Rate',
-        dataIndex: 'default_rate',
-        render: (value) =>
-          value !== undefined ? `$${parseFloat(value.toString()).toFixed(2)}` : 'N/A',
-      },
-      {
-        title: 'Custom Rate',
-        dataIndex: 'custom_rate',
-        render: (value) =>
-          value !== undefined && value !== null
-            ? `$${parseFloat(value.toString()).toFixed(2)}`
-            : 'Same as default',
-      },
-      {
-        title: 'Actions',
-        dataIndex: 'contract_line_id',
-        render: (value, record) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                id={`actions-${value}`}
-                variant="ghost"
-                className="h-8 w-8 p-0"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setEditingLine(record)}>
-                <Settings className="h-4 w-4 mr-2" />
-                Set Custom Rate
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-red-600 focus:text-red-600"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleRemoveContractLine(value);
-                }}
-              >
-                Remove from Contract
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
-      },
-    ],
-    []
-  );
+  const renderServiceDetails = (service: ServiceConfiguration) => {
+    const { configuration, typeConfig } = service;
+    const details: string[] = [];
+
+    if (configuration.configuration_type === 'Fixed') {
+      if (typeConfig?.base_rate) {
+        details.push(`Rate: ${formatRate(typeConfig.base_rate)}`);
+      }
+      if (configuration.quantity) {
+        details.push(`Qty: ${configuration.quantity}`);
+      }
+    } else if (configuration.configuration_type === 'Hourly') {
+      if (typeConfig?.hourly_rate) {
+        details.push(`$${(typeConfig.hourly_rate / 100).toFixed(2)}/hr`);
+      }
+      if (typeConfig?.minimum_billable_time) {
+        details.push(`Min: ${typeConfig.minimum_billable_time} min`);
+      }
+      if (typeConfig?.round_up_to_nearest) {
+        details.push(`Round: ${typeConfig.round_up_to_nearest} min`);
+      }
+    } else if (configuration.configuration_type === 'Usage') {
+      if (typeConfig?.base_rate) {
+        details.push(`Rate: ${formatRate(typeConfig.base_rate)}`);
+      }
+      if (typeConfig?.unit_of_measure) {
+        details.push(`Unit: ${typeConfig.unit_of_measure}`);
+      }
+    } else if (configuration.configuration_type === 'Bucket') {
+      if (typeConfig?.total_minutes) {
+        details.push(`${typeConfig.total_minutes} min`);
+      }
+      if (typeConfig?.overage_rate) {
+        details.push(`Overage: ${formatRate(typeConfig.overage_rate)}`);
+      }
+      if (typeConfig?.billing_period) {
+        details.push(`Period: ${typeConfig.billing_period}`);
+      }
+    }
+
+    if (configuration.custom_rate) {
+      details.push(`Custom: ${formatRate(configuration.custom_rate)}`);
+    }
+
+    return details.join(' • ');
+  };
 
   if (isLoading) {
     return (
@@ -209,31 +238,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
           <div>
             <h3 className="text-lg font-medium">Contract Lines</h3>
             <p className="text-sm text-gray-600">
-              Manage the contract lines associated with this contract
+              Manage the contract lines and services for this contract
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <CustomSelect
-              value={selectedLineToAdd}
-              onValueChange={setSelectedLineToAdd}
-              options={availableContractLines
-                .filter(
-                  (line) =>
-                    !contractLines.some(
-                      (existing) => existing.contract_line_id === line.contract_line_id
-                    )
-                )
-                .map((line) => ({
-                  label: line.contract_line_name ?? 'Unnamed Contract Line',
-                  value: line.contract_line_id ?? '',
-                }))}
-              placeholder="Select contract line"
-            />
-            <Button id="add-contract-line-btn" onClick={handleAddContractLine} disabled={!selectedLineToAdd}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Contract Line
-            </Button>
-          </div>
+          <Button
+            id="add-contract-line-btn"
+            onClick={() => setShowAddDialog(true)}
+            disabled={availableContractLines.length === 0}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contract Lines
+          </Button>
         </div>
 
         {error && (
@@ -243,16 +258,210 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
           </Alert>
         )}
 
-        <DataTable data={contractLines} columns={contractLineColumns} pagination={false} />
+        {contractLines.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>No contract lines added yet.</p>
+            <p className="text-sm mt-1">Select a contract line above to get started.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {contractLines.map((line) => {
+              const isExpanded = expandedLines[line.contract_line_id];
+              const services = lineServices[line.contract_line_id] || [];
+              const isLoadingServices = loadingServices[line.contract_line_id];
+
+              return (
+                <div
+                  key={line.contract_line_id}
+                  className="border rounded-lg overflow-hidden bg-white"
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-3 p-4 bg-gray-50 border-b">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(line.contract_line_id)}
+                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-gray-600" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-gray-600" />
+                      )}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900">{line.contract_line_name}</h4>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+                        <Badge
+                          className={`text-xs ${
+                            line.contract_line_type === 'Fixed'
+                              ? 'bg-green-100 text-green-800'
+                              : line.contract_line_type === 'Hourly'
+                              ? 'bg-purple-100 text-purple-800'
+                              : line.contract_line_type === 'Usage'
+                              ? 'bg-indigo-100 text-indigo-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {line.contract_line_type}
+                        </Badge>
+                        <span>•</span>
+                        <span>{line.billing_frequency}</span>
+                        {line.default_rate !== null && line.default_rate !== undefined && (
+                          <>
+                            <span>•</span>
+                            <span>Base: {formatRate(line.default_rate)}</span>
+                          </>
+                        )}
+                        {line.custom_rate !== null && line.custom_rate !== undefined && (
+                          <>
+                            <span>•</span>
+                            <span className="text-blue-600 font-medium">
+                              Custom: {formatRate(line.custom_rate)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      id={`remove-${line.contract_line_id}`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveContractLine(line.contract_line_id);
+                      }}
+                      className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="p-4 bg-white">
+                      {isLoadingServices ? (
+                        <div className="flex items-center justify-center py-8 text-gray-500">
+                          <LoadingIndicator
+                            layout="inline"
+                            spinnerProps={{ size: 'sm' }}
+                            text="Loading services..."
+                          />
+                        </div>
+                      ) : services.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <p className="text-sm">No services configured for this contract line.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="text-sm font-medium text-gray-700 mb-3">
+                            Services ({services.length})
+                          </div>
+                          {services.map((serviceConfig, idx) => (
+                            <div
+                              key={`${serviceConfig.configuration.config_id}-${idx}`}
+                              className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                            >
+                              <div className="flex-shrink-0 mt-0.5">
+                                {serviceConfig.configuration.configuration_type === 'Bucket' ? (
+                                  <Package className="h-5 w-5 text-purple-600" />
+                                ) : (
+                                  <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span className="text-xs font-medium text-blue-700">
+                                      {serviceConfig.configuration.configuration_type[0]}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <h5 className="font-medium text-gray-900">
+                                      {serviceConfig.service.service_name}
+                                    </h5>
+                                    <div className="mt-1 text-xs text-gray-600">
+                                      <Badge
+                                        className={`text-xs mr-2 ${
+                                          serviceConfig.configuration.configuration_type === 'Fixed'
+                                            ? 'bg-green-100 text-green-800'
+                                            : serviceConfig.configuration.configuration_type === 'Hourly'
+                                            ? 'bg-purple-100 text-purple-800'
+                                            : serviceConfig.configuration.configuration_type === 'Usage'
+                                            ? 'bg-indigo-100 text-indigo-800'
+                                            : serviceConfig.configuration.configuration_type === 'Bucket'
+                                            ? 'bg-blue-100 text-blue-800'
+                                            : 'bg-gray-100 text-gray-800'
+                                        }`}
+                                      >
+                                        {serviceConfig.configuration.configuration_type}
+                                      </Badge>
+                                      {renderServiceDetails(serviceConfig)}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Additional configuration details */}
+                                {serviceConfig.configuration.configuration_type === 'Bucket' &&
+                                  serviceConfig.typeConfig && (
+                                    <div className="mt-2 p-2 bg-purple-50 rounded border border-purple-200">
+                                      <div className="text-xs space-y-1">
+                                        <div className="flex items-center gap-4">
+                                          <span className="font-medium text-purple-900">
+                                            Bucket Configuration
+                                          </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mt-1">
+                                          <div>
+                                            <span className="text-gray-600">Total Minutes:</span>
+                                            <span className="ml-1 text-gray-900">
+                                              {serviceConfig.typeConfig.total_minutes}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="text-gray-600">Overage Rate:</span>
+                                            <span className="ml-1 text-gray-900">
+                                              {formatRate(serviceConfig.typeConfig.overage_rate)}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="text-gray-600">Rollover:</span>
+                                            <span className="ml-1 text-gray-900">
+                                              {serviceConfig.typeConfig.allow_rollover ? 'Yes' : 'No'}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span className="text-gray-600">Period:</span>
+                                            <span className="ml-1 text-gray-900 capitalize">
+                                              {serviceConfig.typeConfig.billing_period}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Box>
 
-      {editingLine && (
-        <ContractLineRateDialog
-          plan={editingLine}
-          onClose={() => setEditingLine(null)}
-          onSave={handleCustomRateSave}
-        />
-      )}
+      <AddContractLinesDialog
+        isOpen={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        availableContractLines={availableContractLines}
+        onAdd={handleAddContractLines}
+      />
     </Card>
   );
 };
