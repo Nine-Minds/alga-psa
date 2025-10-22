@@ -56,6 +56,8 @@ const DEFAULT_BLOCKS: PartialBlock[] = [{
 }];
 
 const DOCUMENT_VIEW_MODE_SETTING = 'documents_view_mode';
+const DOCUMENT_GRID_PAGE_SIZE_SETTING = 'documents_grid_page_size';
+const DOCUMENT_LIST_PAGE_SIZE_SETTING = 'documents_list_page_size';
 
 interface DocumentsProps {
   id?: string;
@@ -126,9 +128,33 @@ const Documents = ({
     }
   );
 
-  // Default page size: 9 for grid, 10 for list
-  const getDefaultPageSize = (view: 'grid' | 'list') => view === 'grid' ? 9 : 10;
-  const [pageSize, setPageSize] = useState(getDefaultPageSize(viewMode));
+  // Use user preferences for page sizes (separate for grid and list views)
+  const {
+    value: gridPageSize,
+    setValue: setGridPageSize
+  } = useUserPreference<number>(
+    DOCUMENT_GRID_PAGE_SIZE_SETTING,
+    {
+      defaultValue: 9,
+      localStorageKey: DOCUMENT_GRID_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  const {
+    value: listPageSize,
+    setValue: setListPageSize
+  } = useUserPreference<number>(
+    DOCUMENT_LIST_PAGE_SIZE_SETTING,
+    {
+      defaultValue: 10,
+      localStorageKey: DOCUMENT_LIST_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Current page size based on view mode
+  const pageSize = viewMode === 'grid' ? gridPageSize : listPageSize;
 
   const [currentFolder, setCurrentFolder] = useState<string | null>(() => {
     // Initialize from URL on mount (only in folder mode)
@@ -140,11 +166,9 @@ const Documents = ({
   });
   const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
 
-  // Update page size when view mode changes
+  // Reset to first page when view mode changes
   useEffect(() => {
-    const newPageSize = getDefaultPageSize(viewMode);
-    setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to first page when changing view mode
+    setCurrentPage(1);
   }, [viewMode]);
   const [showFolderManager, setShowFolderManager] = useState(false);
   const [folderTreeKey, setFolderTreeKey] = useState(0); // For forcing tree refresh
@@ -242,7 +266,12 @@ const Documents = ({
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
+    // Save to the appropriate preference based on current view mode
+    if (viewMode === 'grid') {
+      setGridPageSize(newPageSize);
+    } else {
+      setListPageSize(newPageSize);
+    }
     setCurrentPage(1); // Reset to first page when page size changes
   };
 
