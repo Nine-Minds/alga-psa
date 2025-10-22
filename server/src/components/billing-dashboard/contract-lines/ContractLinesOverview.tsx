@@ -99,11 +99,6 @@ const ContractLinesOverview: React.FC = () => {
       render: (value) => PLAN_TYPE_DISPLAY[value] || value,
     },
     {
-      title: 'Is Custom',
-      dataIndex: 'is_custom',
-      render: (value) => value ? 'Yes' : 'No',
-    },
-    {
       title: 'Actions',
       dataIndex: 'contract_line_id',
       render: (value, record) => (
