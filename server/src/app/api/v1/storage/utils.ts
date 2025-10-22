@@ -76,6 +76,11 @@ export async function ensureStoragePermission(
   }
 }
 
+const DEFAULT_ERROR_HEADERS = {
+  'Cache-Control': 'no-store',
+  Vary: 'authorization,x-api-key,if-revision-match',
+};
+
 export function mapStorageError(error: unknown): NextResponse {
   if (error instanceof StorageServiceError || error instanceof StorageValidationError) {
     const status = (() => {
@@ -107,7 +112,7 @@ export function mapStorageError(error: unknown): NextResponse {
           details: error.details ?? null,
         },
       },
-      { status },
+      { status, headers: DEFAULT_ERROR_HEADERS },
     );
   }
 
@@ -120,7 +125,7 @@ export function mapStorageError(error: unknown): NextResponse {
           details: error.flatten(),
         },
       },
-      { status: 400 },
+      { status: 400, headers: DEFAULT_ERROR_HEADERS },
     );
   }
 
@@ -132,6 +137,6 @@ export function mapStorageError(error: unknown): NextResponse {
         message: 'Internal error',
       },
     },
-    { status: 500 },
+    { status: 500, headers: DEFAULT_ERROR_HEADERS },
   );
 }

@@ -46,7 +46,13 @@ export async function GET(req: NextRequest, { params }: { params: { namespace: s
     };
 
     const result = await service.list(request);
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(result, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store',
+        Vary: 'authorization,x-api-key',
+      },
+    });
   } catch (error) {
     return mapStorageError(error);
   }
@@ -65,7 +71,13 @@ export async function POST(req: NextRequest, { params }: { params: { namespace: 
     };
 
     const result = await service.bulkPut(request);
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(result, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store',
+        Vary: 'authorization,x-api-key',
+      },
+    });
   } catch (error) {
     return mapStorageError(error);
   }

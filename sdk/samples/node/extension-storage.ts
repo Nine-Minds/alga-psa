@@ -25,10 +25,40 @@ export {};
  * --skip-delete Leave the record in storage when provided (any truthy value).
  */
 
+const colors = {
+  reset: "\x1b[0m",
+  step: "\x1b[36m",
+  success: "\x1b[32m",
+  info: "\x1b[35m",
+  warn: "\x1b[33m",
+  error: "\x1b[31m",
+};
+
+function logStep(message: string): void {
+  console.log(`${colors.step}→ ${message}${colors.reset}`);
+}
+
+function logSuccess(message: string): void {
+  console.log(`${colors.success}✓ ${message}${colors.reset}`);
+}
+
+function logWarn(message: string): void {
+  console.log(`${colors.warn}! ${message}${colors.reset}`);
+}
+
+function logError(message: string): void {
+  console.error(`${colors.error}${message}${colors.reset}`);
+}
+
+function logData(label: string, data: unknown): void {
+  console.log(`${colors.info}${label}:${colors.reset}`);
+  console.log(`${colors.info}${JSON.stringify(data, null, 2)}${colors.reset}`);
+}
+
 const STORAGE_BASE_URL = process.env.ALGA_STORAGE_BASE_URL ?? process.env.ALGA_API_URL ?? "https://algapsa.com";
 const STORAGE_API_KEY = process.env.ALGA_STORAGE_KEY ?? process.env.ALGA_API_KEY;
 if (!STORAGE_API_KEY) {
-  console.error("Missing ALGA_STORAGE_KEY environment variable (ALGA_API_KEY fallback no longer recommended).");
+  logError("Missing ALGA_STORAGE_KEY environment variable (ALGA_API_KEY fallback no longer recommended).");
   process.exit(1);
 }
 
@@ -37,13 +67,14 @@ const namespace = flags.namespace ?? "sample-storage";
 const recordKey = flags.key ?? "welcome-message";
 const ttlSeconds = flags.ttl ? Number(flags.ttl) : undefined;
 const skipDelete = Boolean(flags["skip-delete"] ?? false);
+const enableCacheBust = Boolean(flags["cache-bust"] ?? false);
 
 let value: JsonValue = { message: "Hello from the storage API sample" };
 if (flags.value) {
   try {
     value = JSON.parse(flags.value);
   } catch (error) {
-    console.error("Failed to parse --value JSON:", error instanceof Error ? error.message : error);
+    logError(`Failed to parse --value JSON: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 }
@@ -57,14 +88,14 @@ if (flags.metadata) {
     }
     metadata = parsed as Record<string, JsonValue>;
   } catch (error) {
-    console.error("Failed to parse --metadata JSON:", error instanceof Error ? error.message : error);
+    logError(`Failed to parse --metadata JSON: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 }
 
 (async () => {
   try {
-    console.log(`Writing record ${namespace}/${recordKey}...`);
+    logStep(`Writing record ${namespace}/${recordKey}...`);
     const putResult = await putRecord({
       namespace,
       key: recordKey,
@@ -72,11 +103,18 @@ if (flags.metadata) {
       metadata,
       ttlSeconds,
     });
-    console.log("Put response:");
-    console.log(JSON.stringify(putResult, null, 2));
+    logSuccess(`Stored revision ${putResult.revision}`);
+    logData("Put response", putResult);
     const initialRevision = putResult.revision;
 
-    console.log("\nGuarded update (ifRevision) to demonstrate optimistic concurrency...");
+    logStep("Reading record (initial revision)...");
+    const initialGet = await getRecord({
+      namespace,
+      key: recordKey,
+    });
+    logData("Get response", initialGet);
+
+    logStep("Updating record with optimistic guard...");
     const guardedPutResult = await putRecord({
       namespace,
       key: recordKey,
@@ -85,10 +123,18 @@ if (flags.metadata) {
       ttlSeconds,
       ifRevision: initialRevision,
     });
-    console.log(JSON.stringify(guardedPutResult, null, 2));
+    logSuccess(`Update applied at revision ${guardedPutResult.revision}`);
+    logData("Update response", guardedPutResult);
     const latestRevision = guardedPutResult.revision;
 
-    console.log("\nAttempting a stale revision write (expected to fail)...");
+    logStep("Reading record after update...");
+    const latestGet = await getRecord({
+      namespace,
+      key: recordKey,
+    });
+    logData("Get response", latestGet);
+
+    logStep("Attempting a stale revision write (expected to fail)...");
     try {
       await putRecord({
         namespace,
@@ -98,39 +144,32 @@ if (flags.metadata) {
         ttlSeconds,
         ifRevision: initialRevision,
       });
-      console.log("Stale revision write unexpectedly succeeded — investigate service configuration.");
+      logWarn("Stale revision write unexpectedly succeeded — investigate service configuration.");
     } catch (error) {
-      console.log(error instanceof Error ? error.message : error);
+      logWarn(error instanceof Error ? error.message : String(error));
     }
 
-    console.log("\nFetching record...");
-    const getResult = await getRecord({
-      namespace,
-      key: recordKey,
-    });
-    console.log(JSON.stringify(getResult, null, 2));
-
-    console.log("\nListing records in namespace...");
+    logStep("Listing records in namespace...");
     const listResult = await listRecords({
       namespace,
       includeValues: true,
       includeMetadata: true,
     });
-    console.log(JSON.stringify(listResult, null, 2));
+    logData("List response", listResult);
 
     if (!skipDelete) {
-      console.log("\nDeleting record...");
+      logStep("Deleting record...");
       await deleteRecord({
         namespace,
         key: recordKey,
         ifRevision: latestRevision,
       });
-      console.log("Record deleted. Re-run without --skip-delete to keep the sample record.");
+      logSuccess("Record deleted. Re-run without --skip-delete to keep the sample record.");
     } else {
-      console.log("Skipping delete as requested.");
+      logWarn("Skipping delete as requested.");
     }
   } catch (error) {
-    console.error(error instanceof Error ? error.message : error);
+    logError(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 })();
@@ -143,14 +182,21 @@ interface FetchOptions {
 }
 
 async function apiFetch<T>({ method, path, body, headers }: FetchOptions): Promise<T> {
-  const url = `${STORAGE_BASE_URL}${path}`;
+  const url = `${STORAGE_BASE_URL}${appendCacheBust(path)}`;
   const requestHeaders: Record<string, string> = {
     "x-api-key": STORAGE_API_KEY!,
     ...headers,
+    ...(enableCacheBust
+      ? {
+          "Cache-Control": "no-cache, no-store",
+          Pragma: "no-cache",
+        }
+      : {}),
   };
 
   const response = await fetch(url, {
     method,
+    cache: "no-store",
     headers:
       body !== undefined
         ? {
@@ -244,6 +290,7 @@ async function listRecords(args: ListArgs): Promise<StorageListResponse> {
   if (args.keyPrefix) params.set("keyPrefix", args.keyPrefix);
   if (args.includeValues !== undefined) params.set("includeValues", String(args.includeValues));
   if (args.includeMetadata !== undefined) params.set("includeMetadata", String(args.includeMetadata));
+  if (enableCacheBust) params.set("__ts", Date.now().toString());
 
   const query = params.toString() ? `?${params.toString()}` : "";
   return apiFetch<StorageListResponse>({
@@ -308,3 +355,11 @@ interface StorageListResponse {
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+
+function appendCacheBust(path: string): string {
+  if (!enableCacheBust) {
+    return path;
+  }
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}__ts=${Date.now()}`;
+}
