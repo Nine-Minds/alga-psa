@@ -28,6 +28,30 @@ export async function getContractLineServices(contractLineId: string): Promise<I
 }
 
 /**
+ * Get all services for a contract line with service names
+ */
+export async function getContractLineServicesWithNames(contractLineId: string): Promise<Array<IContractLineService & { service_name?: string }>> {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const services = await trx('contract_line_services as cls')
+      .leftJoin('service_catalog as sc', function() {
+        this.on('cls.service_id', '=', 'sc.service_id')
+          .andOn('cls.tenant', '=', 'sc.tenant');
+      })
+      .where({
+        'cls.contract_line_id': contractLineId,
+        'cls.tenant': tenant
+      })
+      .select(
+        'cls.*',
+        'sc.service_name'
+      );
+
+    return services;
+  });
+}
+
+/**
  * Get a specific service in a plan
  */
 export async function getContractLineService(contractLineId: string, serviceId: string): Promise<IContractLineService | null> {

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
-import { MoreVertical, Wand2, Search, Sparkles } from 'lucide-react';
+import { MoreVertical, Wand2, Search, Sparkles, Plus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,7 @@ import {
 } from 'server/src/lib/actions/contractActions';
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
+import { ContractDialog } from './ContractDialog';
 
 type ContractSubTab = 'templates' | 'client-contracts';
 
@@ -443,6 +444,19 @@ const renderStatusBadge = (status: string) => {
           />
         </div>
         <div className="flex flex-wrap gap-2">
+          <ContractDialog
+            onContractSaved={fetchContracts}
+            triggerButton={
+              <Button
+                id="quick-add-contract-button"
+                variant="outline"
+                className="inline-flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Quick Add
+              </Button>
+            }
+          />
           <Button
             id="client-wizard-button"
             onClick={() => setShowClientWizard(true)}

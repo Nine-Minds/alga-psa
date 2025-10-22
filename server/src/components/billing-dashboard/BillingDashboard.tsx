@@ -16,7 +16,7 @@ import GenerateInvoices from './GenerateInvoices';
 import UsageTracking from './UsageTracking';
 import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
-import Contracts from './contracts/Contracts';
+import ContractsHub from './ContractsHub';
 import ContractDetailSwitcher from './contracts/ContractDetailSwitcher';
 import { ContractLineTypeRouter } from './contract-lines/ContractLineTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
@@ -43,18 +43,27 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     params.set('tab', tabValue);
 
     if (value === 'invoicing') {
-      // When switching TO invoicing, check for subtab in URL, sessionStorage, or default
-      const urlSubtab = searchParams?.get('subtab');
+      // When switching TO invoicing, use sessionStorage or default (ignore URL subtab from previous tab)
       const savedSubtab = typeof window !== 'undefined' ? sessionStorage.getItem('invoicing-subtab') : null;
-      const subtab = urlSubtab || savedSubtab || 'generate';
+      const subtab = savedSubtab || 'generate';
+      params.set('subtab', subtab);
+    } else if (value === 'contracts') {
+      // When switching TO contracts, use sessionStorage or default (ignore URL subtab from previous tab)
+      const savedSubtab = typeof window !== 'undefined' ? sessionStorage.getItem('contracts-subtab') : null;
+      const subtab = savedSubtab || 'templates';
       params.set('subtab', subtab);
     } else {
-      // When switching AWAY from invoicing, save the current subtab to sessionStorage
+      // When switching AWAY from invoicing or contracts, save the current subtab to sessionStorage
+      const currentTab = searchParams?.get('tab');
       const currentSubtab = searchParams?.get('subtab');
       if (currentSubtab && typeof window !== 'undefined') {
-        sessionStorage.setItem('invoicing-subtab', currentSubtab);
+        if (currentTab === 'invoicing') {
+          sessionStorage.setItem('invoicing-subtab', currentSubtab);
+        } else if (currentTab === 'contracts') {
+          sessionStorage.setItem('contracts-subtab', currentSubtab);
+        }
       }
-      // Don't include subtab in URL for non-invoicing tabs
+      // Don't include subtab in URL for non-invoicing/contracts tabs
     }
 
     // If we're on a contract line detail page and switching tabs, go back to the main billing dashboard
@@ -116,7 +125,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           {searchParams?.has('contractId') ? (
             <ContractDetailSwitcher />
           ) : (
-            <Contracts />
+            <ContractsHub />
           )}
         </Tabs.Content>
 
