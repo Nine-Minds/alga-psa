@@ -216,3 +216,98 @@ export async function deleteEntityImage(
     return { success: false, message };
   }
 }
+
+/**
+ * Link an existing document as an entity's avatar/logo
+ * Useful for reusing already-uploaded documents without duplicate uploads
+ *
+ * @param entityType - The type of entity (user, contact, client, tenant)
+ * @param entityId - The ID of the entity
+ * @param documentId - The ID of the existing document to link
+ * @param userId - The user performing the action
+ * @param tenant - The tenant ID
+ * @returns UploadResult with success status and image URL
+ */
+export async function linkExistingDocumentAsEntityImage(
+  entityType: EntityType,
+  entityId: string,
+  documentId: string,
+  userId: string,
+  tenant: string
+): Promise<UploadResult> {
+  const { knex } = await createTenantKnex();
+
+  try {
+    // Verify the document exists and is an image
+    const document = await knex('documents')
+      .where({ document_id: documentId, tenant })
+      .first();
+
+    if (!document) {
+      return { success: false, message: 'Document not found' };
+    }
+
+    if (!document.mime_type?.startsWith('image/')) {
+      return { success: false, message: 'Document must be an image' };
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Step 1: Unmark any existing logo/avatar for this entity
+      await trx('document_associations')
+        .where({
+          entity_id: entityId,
+          entity_type: entityType,
+          tenant: tenant,
+          is_entity_logo: true,
+        })
+        .update({ is_entity_logo: false });
+
+      // Step 2: Check if an association already exists
+      const existingAssociation = await trx('document_associations')
+        .where({
+          document_id: documentId,
+          entity_id: entityId,
+          entity_type: entityType,
+          tenant,
+        })
+        .first();
+
+      if (existingAssociation) {
+        // Update existing association to mark as logo
+        await trx('document_associations')
+          .where({ association_id: existingAssociation.association_id })
+          .update({ is_entity_logo: true });
+      } else {
+        // Create new association
+        await DocumentAssociation.create({
+          document_id: documentId,
+          entity_id: entityId,
+          entity_type: entityType,
+          tenant,
+          is_entity_logo: true,
+        }, trx);
+      }
+
+      // Get the image URL for the response
+      const imageUrl = await getEntityImageUrl(entityType, entityId, tenant);
+
+      return {
+        success: true,
+        message: `Document linked as ${entityType} image successfully`,
+        imageUrl,
+      };
+    });
+  } catch (error) {
+    console.error(`[EntityImageService] Failed to link document as ${entityType} image:`, {
+      operation: 'linkExistingDocumentAsEntityImage',
+      entityType,
+      entityId,
+      documentId,
+      tenant,
+      userId,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+    const message = error instanceof Error ? error.message : `Failed to link document as ${entityType} image`;
+    return { success: false, message };
+  }
+}
