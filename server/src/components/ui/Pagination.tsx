@@ -103,9 +103,28 @@ const Pagination = ({
     const firstItemIndex = (currentPage - 1) * itemsPerPage + 1;
     const lastItemIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
-    // Don't render pagination if there's only one page or no pages
-    if (totalPages <= 1) {
+    // Don't render pagination if there's only one page AND no page size selector
+    if (totalPages <= 1 && !onItemsPerPageChange) {
         return null;
+    }
+
+    // If only one page but page size selector is available, show simplified version
+    if (totalPages <= 1 && onItemsPerPageChange) {
+        return (
+            <ReflectionContainer id={id} label="Pagination">
+                <div className={`flex py-3 items-center justify-end pr-6 ${className}`}>
+                    <p className="text-sm text-gray-700 mr-6">
+                        {totalItems} {itemLabel} {totalItems === 1 ? '' : 'total'}
+                    </p>
+                    <CustomSelect
+                        value={itemsPerPage.toString()}
+                        onValueChange={(value) => onItemsPerPageChange(Number(value))}
+                        options={itemsPerPageOptions}
+                        placeholder="Items per page"
+                    />
+                </div>
+            </ReflectionContainer>
+        );
     }
 
     // Render the appropriate variant
