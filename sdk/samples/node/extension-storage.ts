@@ -1,17 +1,19 @@
 export {};
 
 /**
- * Standalone sample: demonstrate CRUD operations with the Alga extension storage API.
+ * Standalone sample: demonstrate CRUD operations with the Alga storage API.
  *
  * Usage:
  *   ALGA_API_URL="https://algapsa.com" \
  *   ALGA_API_KEY="your-api-key" \
- *   ALGA_TENANT_ID="your-tenant-id" \
- *   ALGA_EXTENSION_INSTALL_ID="your-install-id" \
  *   npm run sample:extension-storage -- \
  *     --namespace "settings" \
  *     --key "welcome-message" \
  *     --value '{"message":"Hello from the storage API"}'
+ *
+ * Environment:
+ * - ALGA_API_KEY is required.
+ * - ALGA_API_URL defaults to https://algapsa.com.
  *
  * Flags:
  * --namespace   Storage namespace to target (defaults to "sample-storage").
@@ -24,9 +26,6 @@ export {};
 
 const API_BASE_URL = process.env.ALGA_API_URL ?? "https://algapsa.com";
 const API_KEY = process.env.ALGA_API_KEY;
-const TENANT_ID = process.env.ALGA_TENANT_ID;
-const INSTALL_ID = process.env.ALGA_EXTENSION_INSTALL_ID;
-
 if (!API_KEY) {
   console.error("Missing ALGA_API_KEY environment variable");
   process.exit(1);
@@ -37,14 +36,6 @@ const namespace = flags.namespace ?? "sample-storage";
 const recordKey = flags.key ?? "welcome-message";
 const ttlSeconds = flags.ttl ? Number(flags.ttl) : undefined;
 const skipDelete = Boolean(flags["skip-delete"] ?? false);
-const extensionInstallId = flags.install ?? INSTALL_ID;
-
-if (!extensionInstallId) {
-  console.error(
-    "Missing extension install identifier. Provide ALGA_EXTENSION_INSTALL_ID env var or --install flag.",
-  );
-  process.exit(1);
-}
 
 let value: JsonValue = { message: "Hello from the storage API sample" };
 if (flags.value) {
