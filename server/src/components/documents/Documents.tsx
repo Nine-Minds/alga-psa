@@ -93,7 +93,6 @@ const Documents = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalDocuments, setTotalDocuments] = useState(0);
-  const [pageSize, setPageSize] = useState(15);
 
   const [showUpload, setShowUpload] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
@@ -127,6 +126,10 @@ const Documents = ({
     }
   );
 
+  // Default page size: 9 for grid, 10 for list
+  const getDefaultPageSize = (view: 'grid' | 'list') => view === 'grid' ? 9 : 10;
+  const [pageSize, setPageSize] = useState(getDefaultPageSize(viewMode));
+
   const [currentFolder, setCurrentFolder] = useState<string | null>(() => {
     // Initialize from URL on mount (only in folder mode)
     if (!entityId && !entityType) {
@@ -136,6 +139,13 @@ const Documents = ({
     return null;
   });
   const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
+
+  // Update page size when view mode changes
+  useEffect(() => {
+    const newPageSize = getDefaultPageSize(viewMode);
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing view mode
+  }, [viewMode]);
   const [showFolderManager, setShowFolderManager] = useState(false);
   const [folderTreeKey, setFolderTreeKey] = useState(0); // For forcing tree refresh
   const [isFoldersPaneCollapsed, setIsFoldersPaneCollapsed] = useState(false);
@@ -236,6 +246,26 @@ const Documents = ({
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
+
+  // Page size options based on view mode
+  const gridPageSizeOptions = [
+    { value: '9', label: '9 per page' },
+    { value: '18', label: '18 per page' },
+    { value: '27', label: '27 per page' },
+    { value: '36', label: '36 per page' }
+  ];
+
+  const listPageSizeOptions = [
+    { value: '10', label: '10 per page' },
+    { value: '25', label: '25 per page' },
+    { value: '50', label: '50 per page' },
+    { value: '100', label: '100 per page' }
+  ];
 
   // Folder-specific handlers
   const handleFolderSelect = (folderPath: string | null) => {
@@ -820,8 +850,11 @@ const Documents = ({
                 <DocumentsPagination
                   id={`${id}-pagination`}
                   currentPage={currentPage}
-                  totalPages={totalPages}
+                  totalItems={totalDocuments}
+                  itemsPerPage={pageSize}
                   onPageChange={handlePageChange}
+                  onItemsPerPageChange={handlePageSizeChange}
+                  itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : listPageSizeOptions}
                 />
               </div>
             )}
@@ -1169,8 +1202,11 @@ const Documents = ({
             <DocumentsPagination
               id={`${id}-pagination`}
               currentPage={currentPage}
-              totalPages={totalPages}
+              totalItems={totalDocuments}
+              itemsPerPage={pageSize}
               onPageChange={handlePageChange}
+              onItemsPerPageChange={handlePageSizeChange}
+              itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : listPageSizeOptions}
             />
           </div>
         )}

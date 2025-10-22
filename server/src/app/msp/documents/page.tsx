@@ -276,7 +276,8 @@ export default function DocumentsPage() {
                 <DocumentsPagination
                   id="main-documents-pagination"
                   currentPage={currentPage}
-                  totalPages={totalPages}
+                  totalItems={totalCount}
+                  itemsPerPage={pageSize}
                   onPageChange={handlePageChange}
                 />
               </div>
