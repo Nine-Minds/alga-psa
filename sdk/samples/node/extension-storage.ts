@@ -65,7 +65,6 @@ if (flags.metadata) {
   try {
     console.log(`Writing record ${namespace}/${recordKey}...`);
     const putResult = await putRecord({
-      installId: extensionInstallId,
       namespace,
       key: recordKey,
       value,
@@ -77,7 +76,6 @@ if (flags.metadata) {
 
     console.log("\nFetching record...");
     const getResult = await getRecord({
-      installId: extensionInstallId,
       namespace,
       key: recordKey,
     });
@@ -85,7 +83,6 @@ if (flags.metadata) {
 
     console.log("\nListing records in namespace...");
     const listResult = await listRecords({
-      installId: extensionInstallId,
       namespace,
       includeValues: true,
       includeMetadata: true,
@@ -95,7 +92,6 @@ if (flags.metadata) {
     if (!skipDelete) {
       console.log("\nDeleting record...");
       await deleteRecord({
-        installId: extensionInstallId,
         namespace,
         key: recordKey,
       });
@@ -123,10 +119,6 @@ async function apiFetch<T>({ method, path, body, headers }: FetchOptions): Promi
     ...headers,
   };
 
-  if (TENANT_ID) {
-    requestHeaders["x-tenant-id"] = TENANT_ID;
-  }
-
   const response = await fetch(url, {
     method,
     headers:
@@ -152,7 +144,6 @@ async function apiFetch<T>({ method, path, body, headers }: FetchOptions): Promi
 }
 
 interface PutArgs {
-  installId: string;
   namespace: string;
   key: string;
   value: JsonValue;
@@ -163,7 +154,7 @@ interface PutArgs {
 async function putRecord(args: PutArgs): Promise<StoragePutResponse> {
   return apiFetch<StoragePutResponse>({
     method: "PUT",
-    path: `/api/ext-storage/install/${encodeURIComponent(args.installId)}/${encodeURIComponent(args.namespace)}/records/${encodeURIComponent(args.key)}`,
+    path: `/api/v1/storage/namespaces/${encodeURIComponent(args.namespace)}/records/${encodeURIComponent(args.key)}`,
     body: {
       value: args.value,
       metadata: args.metadata,
@@ -173,7 +164,6 @@ async function putRecord(args: PutArgs): Promise<StoragePutResponse> {
 }
 
 interface GetArgs {
-  installId: string;
   namespace: string;
   key: string;
   ifRevision?: number;
@@ -187,13 +177,26 @@ async function getRecord(args: GetArgs): Promise<StorageGetResponse> {
 
   return apiFetch<StorageGetResponse>({
     method: "GET",
-    path: `/api/ext-storage/install/${encodeURIComponent(args.installId)}/${encodeURIComponent(args.namespace)}/records/${encodeURIComponent(args.key)}`,
+    path: `/api/v1/storage/namespaces/${encodeURIComponent(args.namespace)}/records/${encodeURIComponent(args.key)}`,
     headers,
   });
 }
 
+interface DeleteArgs {
+  namespace: string;
+  key: string;
+  ifRevision?: number;
+}
+
+async function deleteRecord(args: DeleteArgs): Promise<void> {
+  const query = args.ifRevision !== undefined ? `?ifRevision=${encodeURIComponent(String(args.ifRevision))}` : "";
+  await apiFetch<void>({
+    method: "DELETE",
+    path: `/api/v1/storage/namespaces/${encodeURIComponent(args.namespace)}/records/${encodeURIComponent(args.key)}${query}`,
+  });
+}
+
 interface ListArgs {
-  installId: string;
   namespace: string;
   limit?: number;
   cursor?: string;
@@ -204,64 +207,39 @@ interface ListArgs {
 
 async function listRecords(args: ListArgs): Promise<StorageListResponse> {
   const params = new URLSearchParams();
-  if (args.limit) params.set("limit", String(args.limit));
+  if (args.limit !== undefined) params.set("limit", String(args.limit));
   if (args.cursor) params.set("cursor", args.cursor);
   if (args.keyPrefix) params.set("keyPrefix", args.keyPrefix);
-  if (args.includeValues) params.set("includeValues", String(args.includeValues));
-  if (args.includeMetadata) params.set("includeMetadata", String(args.includeMetadata));
+  if (args.includeValues !== undefined) params.set("includeValues", String(args.includeValues));
+  if (args.includeMetadata !== undefined) params.set("includeMetadata", String(args.includeMetadata));
 
+  const query = params.toString() ? `?${params.toString()}` : "";
   return apiFetch<StorageListResponse>({
     method: "GET",
-    path: `/api/ext-storage/install/${encodeURIComponent(args.installId)}/${encodeURIComponent(args.namespace)}/records?${params.toString()}`,
+    path: `/api/v1/storage/namespaces/${encodeURIComponent(args.namespace)}/records${query}`,
   });
 }
 
-interface DeleteArgs {
-  installId: string;
-  namespace: string;
-  key: string;
-  ifRevision?: number;
-}
-
-async function deleteRecord(args: DeleteArgs): Promise<void> {
-  const params = new URLSearchParams();
-  if (typeof args.ifRevision === "number") {
-    params.set("ifRevision", String(args.ifRevision));
-  }
-
-  await apiFetch<void>({
-    method: "DELETE",
-    path: `/api/ext-storage/install/${encodeURIComponent(args.installId)}/${encodeURIComponent(args.namespace)}/records/${encodeURIComponent(args.key)}${params.size ? `?${params.toString()}` : ""}`,
-  });
-}
-
+// Minimal flag parser
 function parseFlags(): Record<string, string> {
-  const result: Record<string, string> = {};
+  const flags: Record<string, string> = {};
   const argv = process.argv.slice(2);
-
-  for (let index = 0; index < argv.length; index++) {
-    const token = argv[index];
-    if (!token.startsWith("--")) {
-      continue;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (!arg.startsWith('--')) continue;
+    const key = arg.slice(2);
+    const next = argv[i + 1];
+    if (next && !next.startsWith('--')) {
+      flags[key] = next;
+      i++;
+    } else {
+      flags[key] = 'true';
     }
-    const key = token.slice(2);
-    const value = argv[index + 1];
-
-    if (!value || value.startsWith("--")) {
-      result[key] = "true";
-      continue;
-    }
-
-    result[key] = value;
-    index += 1;
   }
-
-  return result;
+  return flags;
 }
 
-type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
-
+// Types shared with the API response
 interface StoragePutResponse {
   namespace: string;
   key: string;
@@ -282,18 +260,19 @@ interface StorageGetResponse {
   updatedAt: string;
 }
 
-interface StorageListItem {
-  namespace: string;
-  key: string;
-  revision: number;
-  value?: JsonValue;
-  metadata?: Record<string, JsonValue>;
-  ttlExpiresAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface StorageListResponse {
-  items: StorageListItem[];
+  items: Array<{
+    namespace: string;
+    key: string;
+    revision: number;
+    value?: JsonValue;
+    metadata?: Record<string, JsonValue>;
+    ttlExpiresAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
   nextCursor: string | null;
 }
+
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
