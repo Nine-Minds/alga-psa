@@ -9,7 +9,6 @@ import { getDistinctEntityTypes } from 'server/src/lib/actions/document-actions/
 import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/index';
 import { toast } from 'react-hot-toast';
-import DocumentsPagination from 'server/src/components/documents/DocumentsPagination';
 import DocumentFilters from 'server/src/components/documents/DocumentFilters';
 import DocumentsPageSkeleton from 'server/src/components/documents/DocumentsPageSkeleton';
 import { useDocuments } from 'server/src/hooks/useDocuments';
@@ -42,8 +41,7 @@ export default function DocumentsPage() {
   const [allUsersData, setAllUsersData] = useState<IUserWithRoles[]>([]);
   const [entityTypeOptions, setEntityTypeOptions] = useState<SelectOption[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  
+
   const [filterInputs, setFilterInputs] = useState<DocumentFilterType>({
     entityType: '',
     searchTerm: '',
@@ -54,8 +52,6 @@ export default function DocumentsPage() {
     sortOrder: 'desc'
   });
 
-  const pageSize = 15;
-  
   const {
     documents,
     totalCount,
@@ -64,23 +60,16 @@ export default function DocumentsPage() {
     refetch: refetchDocuments
   } = useDocuments(
     initialized ? filterInputs : {},
-    currentPage,
-    pageSize
+    1,  // Page 1 - Documents component handles its own pagination
+    9   // Default page size for grid view - Documents component handles page size changes
   );
-  
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const capitalizeFirstLetter = (string: string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
   const handleFiltersChange = (newFilters: DocumentFilterType) => {
     setFilterInputs(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
   };
 
   const handleClearFilters = () => {
@@ -94,7 +83,6 @@ export default function DocumentsPage() {
       sortOrder: 'desc'
     };
     setFilterInputs(clearedFilters);
-    setCurrentPage(1); // Reset to first page when filters are cleared
   };
 
   const handleDocumentUpdate = async () => {
@@ -268,19 +256,6 @@ export default function DocumentsPage() {
                 searchTermFromParent={filterInputs.searchTerm}
                 filters={filterInputs}
               />
-            )}
-            
-            {/* Pagination controls */}
-            {!isLoading && documents.length > 0 && totalPages > 1 && (
-              <div className="mt-4 flex justify-center">
-                <DocumentsPagination
-                  id="main-documents-pagination"
-                  currentPage={currentPage}
-                  totalItems={totalCount}
-                  itemsPerPage={pageSize}
-                  onPageChange={handlePageChange}
-                />
-              </div>
             )}
           </Card>
         </div>

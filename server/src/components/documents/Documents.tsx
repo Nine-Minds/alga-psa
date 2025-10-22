@@ -191,13 +191,11 @@ const Documents = ({
         setDocumentsToDisplay(docs);
         setTotalDocuments(response.total);
         setTotalPages(Math.ceil(response.total / pageSize));
-        setCurrentPage(page);
       } catch (err) {
         console.error('Error fetching documents by folder:', err);
         setError('Failed to fetch documents.');
         setDocumentsToDisplay([]);
         setTotalPages(1);
-        setCurrentPage(1);
       }
       return;
     }
@@ -210,11 +208,9 @@ const Documents = ({
         );
         setDocumentsToDisplay(filtered);
         setTotalPages(1);
-        setCurrentPage(1);
       } else {
         setDocumentsToDisplay(initialDocuments);
         setTotalPages(1);
-        setCurrentPage(1);
       }
       return;
     }
@@ -227,13 +223,11 @@ const Documents = ({
       setDocumentsToDisplay(response.documents);
       setTotalDocuments(response.totalCount);
       setTotalPages(response.totalPages);
-      setCurrentPage(response.currentPage);
     } catch (err) {
       console.error('Error fetching documents:', err);
       setError('Failed to fetch documents.');
       setDocumentsToDisplay([]);
       setTotalPages(1);
-      setCurrentPage(1);
     }
   }, [entityId, entityType, pageSize, initialDocuments, inFolderMode, currentFolder, filters]);
 

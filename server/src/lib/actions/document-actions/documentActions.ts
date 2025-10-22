@@ -1117,6 +1117,13 @@ export async function getDocumentsByEntity(
           trx.raw(`
             COALESCE(dt.type_name, sdt.type_name) as type_name,
             COALESCE(dt.icon, sdt.icon) as type_icon
+          `),
+          trx.raw(`
+            CASE
+              WHEN documents.document_name ~ '^[0-9]'
+              THEN CAST(COALESCE(NULLIF(regexp_replace(documents.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+              ELSE 0
+            END as document_name_sort_key
           `)
         )
         .distinct('documents.document_id');
@@ -1129,6 +1136,9 @@ export async function getDocumentsByEntity(
         // Handle special case for created_by_full_name which is a computed field
         if (sortField === 'created_by_full_name') {
           query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else if (sortField === 'document_name') {
+          // Natural sort for document_name: sort numerically by leading digits, then alphabetically
+          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
         } else {
           // For other fields, prefix with table name for clarity
           query = query.orderBy(`documents.${sortField}`, sortOrder);
@@ -1570,6 +1580,13 @@ export async function getAllDocuments(
           trx.raw(`
             COALESCE(dt.type_name, sdt.type_name) as type_name,
             COALESCE(dt.icon, sdt.icon) as type_icon
+          `),
+          trx.raw(`
+            CASE
+              WHEN documents.document_name ~ '^[0-9]'
+              THEN CAST(COALESCE(NULLIF(regexp_replace(documents.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+              ELSE 0
+            END as document_name_sort_key
           `)
         )
         .distinct('documents.document_id');
@@ -1582,6 +1599,9 @@ export async function getAllDocuments(
         // Handle special case for created_by_full_name which is a computed field
         if (sortField === 'created_by_full_name') {
           query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else if (sortField === 'document_name') {
+          // Natural sort for document_name: sort numerically by leading digits, then alphabetically
+          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
         } else {
           // For other fields, prefix with table name for clarity
           query = query.orderBy(`documents.${sortField}`, sortOrder);
@@ -2313,13 +2333,30 @@ export async function getDocumentsByFolder(
     // Handle special case for created_by_full_name which is a computed field
     if (sortField === 'created_by_full_name') {
       query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+    } else if (sortField === 'document_name') {
+      // Natural sort for document_name: sort numerically by leading digits, then alphabetically
+      query = query.orderByRaw(`
+        CASE
+          WHEN d.document_name ~ '^[0-9]'
+          THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+          ELSE 0
+        END ${sortOrder},
+        d.document_name ${sortOrder}
+      `);
     } else {
       // For other fields, prefix with table alias
       query = query.orderBy(`d.${sortField}`, sortOrder);
     }
   } else {
-    // Default sort by document_name asc
-    query = query.orderBy('d.document_name', 'asc');
+    // Default sort by document_name asc with natural sorting
+    query = query.orderByRaw(`
+      CASE
+        WHEN d.document_name ~ '^[0-9]'
+        THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+        ELSE 0
+      END ASC,
+      d.document_name ASC
+    `);
   }
 
   // Apply pagination after sorting
