@@ -17,6 +17,7 @@ import { hasPermission } from 'server/src/lib/auth/rbac';
 import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
 import { getEventBus } from '../../../lib/eventBus';
+import { getEmailEventChannel } from '../../notifications/emailChannel';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
@@ -44,10 +45,13 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 // Helper function to safely publish events
 async function safePublishEvent(eventType: string, payload: any) {
   try {
-    await getEventBus().publish({
-      eventType,
-      payload
-    });
+    await getEventBus().publish(
+      {
+        eventType,
+        payload
+      },
+      { channel: getEmailEventChannel() }
+    );
   } catch (error) {
     console.error(`Failed to publish ${eventType} event:`, error);
   }

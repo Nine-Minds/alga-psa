@@ -80,9 +80,11 @@ export function getRedisConfig(): RedisConfig {
 }
 
 // Helper function to generate event stream name
-export function getEventStream(eventType: string): string {
+export const DEFAULT_EVENT_CHANNEL = 'global';
+
+export function getEventStream(eventType: string, channel: string = DEFAULT_EVENT_CHANNEL): string {
   const config = getRedisConfig();
-  return `${config.prefix}${config.eventBus.streamPrefix}${eventType}`;
+  return `${config.prefix}${config.eventBus.streamPrefix}${channel}:${eventType}`;
 }
 
 // Helper function to generate consumer name
