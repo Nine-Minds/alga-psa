@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { toast } from 'react-hot-toast'; // Import toast
 import { Button } from 'server/src/components/ui/Button';
-import { MoreVertical, Plus } from 'lucide-react';
+import { MoreVertical, Plus, Search, XCircle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +18,10 @@ import { IContractLine, IServiceType } from 'server/src/interfaces/billing.inter
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'; // Added import for fetching types
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
+import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY, CONTRACT_LINE_TYPE_DISPLAY } from 'server/src/constants/billing';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 const ContractLinesOverview: React.FC = () => {
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
@@ -27,6 +29,8 @@ const ContractLinesOverview: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]); // Added state for service types
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
   const router = useRouter();
 
   useEffect(() => {
@@ -82,6 +86,28 @@ const ContractLinesOverview: React.FC = () => {
       }
     }
   };
+
+  // Filter contract lines based on search term and contract line type
+  const filteredContractLines = useMemo(() => {
+    return contractLines.filter(line => {
+      // Search filter
+      const matchesSearch = line.contract_line_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Type filter
+      const matchesType = filterType === 'all' || line.contract_line_type === filterType;
+
+      return matchesSearch && matchesType;
+    });
+  }, [contractLines, searchTerm, filterType]);
+
+  // Contract line type filter options
+  const typeFilterOptions = [
+    { value: 'all', label: 'All types' },
+    ...Object.entries(CONTRACT_LINE_TYPE_DISPLAY).map(([value, label]) => ({
+      value,
+      label
+    }))
+  ];
 
   const contractLineColumns: ColumnDefinition<IContractLine>[] = [
     {
@@ -180,6 +206,53 @@ const ContractLinesOverview: React.FC = () => {
           </div>
         )}
 
+        {/* Filter section */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {/* Search bar */}
+          <div className="relative">
+            <Input
+              id="contract-line-search"
+              type="text"
+              placeholder="Search contract lines"
+              className="pl-10 pr-4 py-2 w-64"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
+
+          {/* Type filter */}
+          <div className="relative z-10">
+            <CustomSelect
+              id="contract-line-type-filter"
+              options={typeFilterOptions}
+              value={filterType}
+              onValueChange={(value) => setFilterType(value)}
+              placeholder="Select type"
+              customStyles={{
+                content: 'mt-1'
+              }}
+            />
+          </div>
+
+          {/* Clear filters button */}
+          {(searchTerm || filterType !== 'all') && (
+            <Button
+              id="clear-contract-line-filters-button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchTerm('');
+                setFilterType('all');
+              }}
+              className="flex items-center gap-1 bg-white"
+            >
+              <XCircle className="h-4 w-4" />
+              <span>Clear filters</span>
+            </Button>
+          )}
+        </div>
+
         {isLoading ? (
           <LoadingIndicator
             layout="stacked"
@@ -189,7 +262,7 @@ const ContractLinesOverview: React.FC = () => {
           />
         ) : (
           <DataTable
-            data={contractLines.filter(plan => plan.contract_line_id !== undefined)}
+            data={filteredContractLines.filter(plan => plan.contract_line_id !== undefined)}
             columns={contractLineColumns}
             pagination={true}
             onRowClick={handleContractLineClick}
