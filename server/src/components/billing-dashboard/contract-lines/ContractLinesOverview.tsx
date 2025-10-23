@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ContractLineDialog } from '../ContractLineDialog';
 import { getContractLines, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
 import { IContractLine, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
@@ -23,6 +24,11 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 
+interface ContractWithClients {
+  name: string;
+  clients: string[];
+}
+
 const ContractLinesOverview: React.FC = () => {
   const [contractLines, setContractLines] = useState<IContractLine[]>([]);
   const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
@@ -31,6 +37,8 @@ const ContractLinesOverview: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [deletionErrorDialogOpen, setDeletionErrorDialogOpen] = useState(false);
+  const [deletionErrorContracts, setDeletionErrorContracts] = useState<ContractWithClients[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,20 +76,27 @@ const ContractLinesOverview: React.FC = () => {
       await deleteContractLine(planId);
       await fetchContractLines();
     } catch (error) {
-      console.error('Error deleting contract line:', error); // Keep console log for debugging
+      console.error('Error deleting contract line:', error);
       if (error instanceof Error) {
-        // Check for the specific error message for contract lines assigned to clients
-        if (error.message === "Cannot delete contract line: It is currently assigned to one or more clients.") {
-            toast.error(error.message);
-        // Check for the specific error message for contract lines with associated services (from pre-check)
-        } else if (error.message.includes('associated services')) {
-          toast.error(error.message); // Use the exact message from the action
-        } else {
-          // Display other specific error messages directly
-          toast.error(error.message);
+        // Check if it's a structured error message
+        if (error.message.startsWith('STRUCTURED_ERROR:')) {
+          try {
+            const jsonStr = error.message.replace('STRUCTURED_ERROR:', '');
+            const errorData = JSON.parse(jsonStr);
+
+            if (errorData.type === 'CONTRACT_LINE_IN_USE') {
+              setDeletionErrorContracts(errorData.contracts);
+              setDeletionErrorDialogOpen(true);
+              return;
+            }
+          } catch (parseError) {
+            console.error('Error parsing structured error:', parseError);
+          }
         }
+
+        // Fallback to toast for other errors
+        toast.error(error.message);
       } else {
-        // Fallback for non-Error objects
         toast.error('An unexpected error occurred while deleting the contract line.');
       }
     }
@@ -270,6 +285,47 @@ const ContractLinesOverview: React.FC = () => {
           />
         )}
       </Box>
+
+      {/* Deletion Error Dialog */}
+      <Dialog
+        isOpen={deletionErrorDialogOpen}
+        onClose={() => setDeletionErrorDialogOpen(false)}
+        title="Cannot Delete Contract Line"
+        className="max-w-2xl"
+      >
+        <DialogContent>
+          <p className="text-gray-700 mb-4">
+            This contract line cannot be deleted because it is associated with the following:
+          </p>
+          <div className="space-y-3">
+            {deletionErrorContracts.map((contract, index) => (
+              <div key={index} className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                <div className="font-semibold text-gray-900 mb-2">
+                  {contract.name}
+                </div>
+                {contract.clients.length > 0 && (
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Assigned to clients:</span>{' '}
+                    {contract.clients.join(', ')}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-gray-600 text-sm mt-4">
+            To delete this contract line, you must first remove it from these contracts.
+          </p>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="close-deletion-error-dialog"
+            onClick={() => setDeletionErrorDialogOpen(false)}
+            variant="default"
+          >
+            OK
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </Card>
   );
 };

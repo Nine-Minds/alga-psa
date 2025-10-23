@@ -1532,23 +1532,53 @@ export class ContractLineService extends BaseService<IContractLine> {
       };
     }
     
-    // Check if plan is in contracts that are assigned to clients
-    const contractAssignments = await knex('contract_line_mappings as clm')
-      .join('client_contracts as cc', 'clm.contract_id', 'cc.contract_id')
+    // Check if plan is associated with any contracts and fetch associated clients
+    const contractsWithClients = await knex('contract_line_mappings as clm')
+      .join('contracts as c', 'clm.contract_id', 'c.contract_id')
+      .leftJoin('client_contracts as cc', function() {
+        this.on('c.contract_id', '=', 'cc.contract_id')
+          .andOn('cc.is_active', '=', knex.raw('?', [true]));
+      })
+      .leftJoin('clients as cl', function() {
+        this.on('cc.client_id', '=', 'cl.client_id')
+          .andOn('cl.tenant', '=', knex.raw('?', [context.tenant]));
+      })
       .where('clm.contract_line_id', planId)
       .where('clm.tenant', context.tenant)
-      .where('cc.is_active', true)
-      .count('* as count')
-      .first();
-    
-    const contractCount = parseInt(String(contractAssignments?.count || '0'));
-    if (contractCount > 0) {
+      .select('c.contract_name', 'cl.client_name', 'c.contract_id')
+      .orderBy(['c.contract_name', 'cl.client_name']);
+
+    if (contractsWithClients.length > 0) {
+      // Group clients by contract
+      const contractMap = new Map<string, { contractName: string; clients: string[] }>();
+
+      for (const row of contractsWithClients) {
+        if (!contractMap.has(row.contract_id)) {
+          contractMap.set(row.contract_id, {
+            contractName: row.contract_name,
+            clients: []
+          });
+        }
+        if (row.client_name) {
+          contractMap.get(row.contract_id)!.clients.push(row.client_name);
+        }
+      }
+
+      // Create a structured error message that the UI can parse
+      const errorData = JSON.stringify({
+        type: 'CONTRACT_LINE_IN_USE',
+        contracts: Array.from(contractMap.values()).map(({ contractName, clients }) => ({
+          name: contractName,
+          clients: clients
+        }))
+      });
+
       return {
         inUse: true,
-        reason: `Plan is in contracts assigned to ${contractCount} ${contractCount === 1 ? 'client' : 'clients'}`
+        reason: `STRUCTURED_ERROR:${errorData}`
       };
     }
-    
+
     return { inUse: false };
   }
 
