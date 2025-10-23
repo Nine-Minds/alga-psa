@@ -15,6 +15,7 @@ import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
+import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 
 /**
  * Wrapper function that checks notification preferences before sending email
@@ -1176,9 +1177,12 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
       'TICKET_COMMENT_ADDED'
     ];
 
+    const channel = getEmailEventChannel();
+    console.log(`[TicketEmailSubscriber] Using channel "${channel}" for ticket email events`);
+
     for (const eventType of ticketEventTypes) {
-      await getEventBus().subscribe(eventType, handleTicketEvent);
-      console.log(`[TicketEmailSubscriber] Successfully subscribed to ${eventType} events`);
+      await getEventBus().subscribe(eventType, handleTicketEvent, { channel });
+      console.log(`[TicketEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
 
     console.log('[TicketEmailSubscriber] Registered handler for all ticket events');
@@ -1196,14 +1200,18 @@ export async function unregisterTicketEmailSubscriber(): Promise<void> {
     const ticketEventTypes: EventType[] = [
       'TICKET_CREATED',
       'TICKET_UPDATED',
-      'TICKET_CLOSED'
+      'TICKET_CLOSED',
+      'TICKET_ASSIGNED',
+      'TICKET_COMMENT_ADDED'
     ];
 
+    const channel = getEmailEventChannel();
+
     for (const eventType of ticketEventTypes) {
-      await getEventBus().unsubscribe(eventType, handleTicketEvent);
+      await getEventBus().unsubscribe(eventType, handleTicketEvent, { channel });
     }
 
-    logger.info('[TicketEmailSubscriber] Successfully unregistered from all ticket events');
+    logger.info(`[TicketEmailSubscriber] Successfully unregistered from ticket events on channel "${channel}"`);
   } catch (error) {
     logger.error('Failed to unregister email notification subscribers:', error);
     throw error;
