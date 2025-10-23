@@ -10,6 +10,7 @@ import {
   ProjectTaskAssignedEvent
 } from '../events';
 import { sendEventEmail } from '../../notifications/sendEventEmail';
+import { getEmailEventChannel } from '../../notifications/emailChannel';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from '../../db';
 
@@ -952,9 +953,12 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
       'PROJECT_TASK_ASSIGNED'
     ];
 
+    const channel = getEmailEventChannel();
+    logger.info('[ProjectEmailSubscriber] Using channel for subscriptions', { channel });
+
     for (const eventType of projectEventTypes) {
-      await getEventBus().subscribe(eventType, handleProjectEvent);
-      logger.info(`[ProjectEmailSubscriber] Successfully subscribed to ${eventType} events`);
+      await getEventBus().subscribe(eventType, handleProjectEvent, { channel });
+      logger.info(`[ProjectEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
 
   } catch (error) {
@@ -976,11 +980,13 @@ export async function unregisterProjectEmailSubscriber(): Promise<void> {
       'PROJECT_TASK_ASSIGNED'
     ];
 
+    const channel = getEmailEventChannel();
+
     for (const eventType of projectEventTypes) {
-      await getEventBus().unsubscribe(eventType, handleProjectEvent);
+      await getEventBus().unsubscribe(eventType, handleProjectEvent, { channel });
     }
 
-    logger.info('[ProjectEmailSubscriber] Successfully unregistered from all project events');
+    logger.info('[ProjectEmailSubscriber] Successfully unregistered from project events', { channel });
   } catch (error) {
     logger.error('Failed to unregister project email subscribers:', error);
     throw error;
