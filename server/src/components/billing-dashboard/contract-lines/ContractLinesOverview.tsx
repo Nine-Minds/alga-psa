@@ -12,10 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ContractLineDialog } from '../ContractLineDialog';
-import { getContractLines, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
-import { IContractLine, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
+import { getContractLinePresets, deleteContractLinePreset } from 'server/src/lib/actions/contractLinePresetActions';
+import { IContractLinePreset, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'; // Added import for fetching types
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -24,21 +23,14 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 
-interface ContractWithClients {
-  name: string;
-  clients: string[];
-}
-
 const ContractLinesOverview: React.FC = () => {
-  const [contractLines, setContractLines] = useState<IContractLine[]>([]);
-  const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
+  const [contractLines, setContractLines] = useState<IContractLinePreset[]>([]);
+  const [editingPlan, setEditingPlan] = useState<IContractLinePreset | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]); // Added state for service types
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
-  const [deletionErrorDialogOpen, setDeletionErrorDialogOpen] = useState(false);
-  const [deletionErrorContracts, setDeletionErrorContracts] = useState<ContractWithClients[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -49,12 +41,12 @@ const ContractLinesOverview: React.FC = () => {
   const fetchContractLines = async () => {
     setIsLoading(true);
     try {
-      const plans = await getContractLines();
-      setContractLines(plans);
+      const presets = await getContractLinePresets();
+      setContractLines(presets);
       setError(null);
     } catch (error) {
-      console.error('Error fetching contract lines:', error);
-      setError('Failed to fetch contract lines');
+      console.error('Error fetching contract line presets:', error);
+      setError('Failed to fetch contract line presets');
     } finally {
       setIsLoading(false);
     }
@@ -71,45 +63,29 @@ const ContractLinesOverview: React.FC = () => {
     }
   };
 
-  const handleDeletePlan = async (planId: string) => {
+  const handleDeletePlan = async (presetId: string) => {
     try {
-      await deleteContractLine(planId);
+      await deleteContractLinePreset(presetId);
       await fetchContractLines();
+      toast.success('Contract line preset deleted successfully');
     } catch (error) {
-      console.error('Error deleting contract line:', error);
+      console.error('Error deleting contract line preset:', error);
       if (error instanceof Error) {
-        // Check if it's a structured error message
-        if (error.message.startsWith('STRUCTURED_ERROR:')) {
-          try {
-            const jsonStr = error.message.replace('STRUCTURED_ERROR:', '');
-            const errorData = JSON.parse(jsonStr);
-
-            if (errorData.type === 'CONTRACT_LINE_IN_USE') {
-              setDeletionErrorContracts(errorData.contracts);
-              setDeletionErrorDialogOpen(true);
-              return;
-            }
-          } catch (parseError) {
-            console.error('Error parsing structured error:', parseError);
-          }
-        }
-
-        // Fallback to toast for other errors
         toast.error(error.message);
       } else {
-        toast.error('An unexpected error occurred while deleting the contract line.');
+        toast.error('An unexpected error occurred while deleting the contract line preset.');
       }
     }
   };
 
-  // Filter contract lines based on search term and contract line type
+  // Filter contract line presets based on search term and contract line type
   const filteredContractLines = useMemo(() => {
-    return contractLines.filter(line => {
+    return contractLines.filter(preset => {
       // Search filter
-      const matchesSearch = line.contract_line_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = preset.preset_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Type filter
-      const matchesType = filterType === 'all' || line.contract_line_type === filterType;
+      const matchesType = filterType === 'all' || preset.contract_line_type === filterType;
 
       return matchesSearch && matchesType;
     });
@@ -124,10 +100,10 @@ const ContractLinesOverview: React.FC = () => {
     }))
   ];
 
-  const contractLineColumns: ColumnDefinition<IContractLine>[] = [
+  const contractLineColumns: ColumnDefinition<IContractLinePreset>[] = [
     {
       title: 'Contract Line Name',
-      dataIndex: 'contract_line_name',
+      dataIndex: 'preset_name',
     },
     {
       title: 'Billing Frequency',
@@ -141,7 +117,7 @@ const ContractLinesOverview: React.FC = () => {
     },
     {
       title: 'Actions',
-      dataIndex: 'contract_line_id',
+      dataIndex: 'preset_id',
       render: (value, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -160,8 +136,8 @@ const ContractLinesOverview: React.FC = () => {
               id="edit-contract-line-menu-item"
               onClick={(e) => {
                 e.stopPropagation();
-                if (record.contract_line_id) {
-                  router.push(`/msp/billing?tab=contract-lines&contractLineId=${record.contract_line_id}`);
+                if (record.preset_id) {
+                  router.push(`/msp/billing?tab=contract-lines&presetId=${record.preset_id}`);
                 }
               }}
             >
@@ -172,8 +148,8 @@ const ContractLinesOverview: React.FC = () => {
               className="text-red-600 focus:text-red-600"
               onClick={async (e) => {
                 e.stopPropagation();
-                if (record.contract_line_id) {
-                  handleDeletePlan(record.contract_line_id);
+                if (record.preset_id) {
+                  handleDeletePlan(record.preset_id);
                 }
               }}
             >
@@ -185,9 +161,9 @@ const ContractLinesOverview: React.FC = () => {
     },
   ];
 
-  const handleContractLineClick = (plan: IContractLine) => {
-    if (plan.contract_line_id) {
-      router.push(`/msp/billing?tab=contract-lines&contractLineId=${plan.contract_line_id}`);
+  const handleContractLineClick = (preset: IContractLinePreset) => {
+    if (preset.preset_id) {
+      router.push(`/msp/billing?tab=contract-lines&presetId=${preset.preset_id}`);
     }
   };
 
@@ -195,12 +171,12 @@ const ContractLinesOverview: React.FC = () => {
     <Card size="2">
       <Box p="4">
         <div className="flex justify-between items-center mb-4">
-          <Heading as="h3" size="4">Contract Lines</Heading>
+          <Heading as="h3" size="4">Contract Line Presets</Heading>
           <ContractLineDialog
-            onPlanAdded={(newPlanId) => {
-              if (newPlanId) {
-                // Navigate directly. PlanTypeRouter will fetch the plan details.
-                router.push(`/msp/billing?tab=contract-lines&contractLineId=${newPlanId}`);
+            onPlanAdded={(newPresetId) => {
+              if (newPresetId) {
+                // Navigate directly to the new preset details
+                router.push(`/msp/billing?tab=contract-lines&presetId=${newPresetId}`);
               }
             }}
             editingPlan={editingPlan}
@@ -208,7 +184,7 @@ const ContractLinesOverview: React.FC = () => {
             triggerButton={
               <Button id='add-contract-line-button'>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Contract Line
+                Add Contract Line Preset
               </Button>
             }
             allServiceTypes={allServiceTypes} // Pass the fetched service types
@@ -228,7 +204,7 @@ const ContractLinesOverview: React.FC = () => {
             <Input
               id="contract-line-search"
               type="text"
-              placeholder="Search contract lines"
+              placeholder="Search contract line presets"
               className="pl-10 pr-4 py-2 w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -273,11 +249,11 @@ const ContractLinesOverview: React.FC = () => {
             layout="stacked"
             className="py-10 text-gray-600"
             spinnerProps={{ size: 'md' }}
-            text="Loading contract lines"
+            text="Loading contract line presets"
           />
         ) : (
           <DataTable
-            data={filteredContractLines.filter(plan => plan.contract_line_id !== undefined)}
+            data={filteredContractLines.filter(preset => preset.preset_id !== undefined)}
             columns={contractLineColumns}
             pagination={true}
             onRowClick={handleContractLineClick}
@@ -285,47 +261,6 @@ const ContractLinesOverview: React.FC = () => {
           />
         )}
       </Box>
-
-      {/* Deletion Error Dialog */}
-      <Dialog
-        isOpen={deletionErrorDialogOpen}
-        onClose={() => setDeletionErrorDialogOpen(false)}
-        title="Cannot Delete Contract Line"
-        className="max-w-2xl"
-      >
-        <DialogContent>
-          <p className="text-gray-700 mb-4">
-            This contract line cannot be deleted because it is associated with the following:
-          </p>
-          <div className="space-y-3">
-            {deletionErrorContracts.map((contract, index) => (
-              <div key={index} className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                <div className="font-semibold text-gray-900 mb-2">
-                  {contract.name}
-                </div>
-                {contract.clients.length > 0 && (
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">Assigned to clients:</span>{' '}
-                    {contract.clients.join(', ')}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <p className="text-gray-600 text-sm mt-4">
-            To delete this contract line, you must first remove it from these contracts.
-          </p>
-        </DialogContent>
-        <DialogFooter>
-          <Button
-            id="close-deletion-error-dialog"
-            onClick={() => setDeletionErrorDialogOpen(false)}
-            variant="default"
-          >
-            OK
-          </Button>
-        </DialogFooter>
-      </Dialog>
     </Card>
   );
 };

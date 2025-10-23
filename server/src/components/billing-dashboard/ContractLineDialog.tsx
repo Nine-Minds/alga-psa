@@ -9,12 +9,10 @@ import CustomSelect from '../ui/CustomSelect';
 import { Switch } from '../ui/Switch';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import {
-  createContractLine,
-  updateContractLine,
-  updateContractLineFixedConfig,
-  getContractLineFixedConfig,
-} from 'server/src/lib/actions/contractLineAction';
-import { IContractLine } from 'server/src/interfaces/billing.interfaces';
+  createContractLinePreset,
+  updateContractLinePreset,
+} from 'server/src/lib/actions/contractLinePresetActions';
+import { IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { Package, Clock, Activity, Plus, X, DollarSign } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
@@ -24,8 +22,8 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
 interface ContractLineDialogProps {
-  onPlanAdded: (newPlanId?: string) => void;
-  editingPlan?: IContractLine | null;
+  onPlanAdded: (newPresetId?: string) => void;
+  editingPlan?: IContractLinePreset | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
   allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[];
@@ -36,13 +34,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
-  const [isCustom, setIsCustom] = useState(false);
 
-  // Fixed plan state
+  // Hourly rate state (can be used for Hourly presets)
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
-  const [enableProration, setEnableProration] = useState<boolean>(false);
-  const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'prorated'>('start');
 
   // Services state
   const [services, setServices] = useState<IService[]>([]);
@@ -87,21 +82,16 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   useEffect(() => {
     if (editingPlan) {
       setOpen(true);
-      setPlanName(editingPlan.contract_line_name);
+      setPlanName(editingPlan.preset_name);
       setBillingFrequency(editingPlan.billing_frequency);
       setPlanType(editingPlan.contract_line_type as PlanType);
-      setIsCustom(editingPlan.is_custom);
-      if (editingPlan.contract_line_id && editingPlan.contract_line_type === 'Fixed') {
-        getContractLineFixedConfig(editingPlan.contract_line_id)
-          .then((cfg) => {
-            if (cfg) {
-              setBaseRate(cfg.base_rate ?? undefined);
-              setEnableProration(!!cfg.enable_proration);
-              setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
-            }
-          })
-          .catch(() => {});
+
+      // Load preset-specific fields
+      if (editingPlan.contract_line_type === 'Hourly') {
+        setMinimumBillableTime(editingPlan.minimum_billable_time ?? undefined);
+        setRoundUpToNearest(editingPlan.round_up_to_nearest ?? undefined);
       }
+
       setIsDirty(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -189,39 +179,42 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     setIsSaving(true);
     setValidationErrors([]);
     try {
-      const planData: Partial<IContractLine> = {
-        contract_line_name: planName,
+      const presetData: Partial<IContractLinePreset> = {
+        preset_name: planName,
         billing_frequency: billingFrequency,
-        is_custom: isCustom,
         contract_line_type: planType!,
         tenant,
       };
 
-      let savedPlanId: string | undefined;
-      if (editingPlan?.contract_line_id) {
-        const { contract_line_id, ...updateData } = planData;
-        const updatedPlan = await updateContractLine(editingPlan.contract_line_id, updateData);
-        savedPlanId = updatedPlan.contract_line_id;
-      } else {
-        const { contract_line_id, ...createData } = planData;
-        const newPlan = await createContractLine(createData as Omit<IContractLine, 'contract_line_id'>);
-        savedPlanId = newPlan.contract_line_id;
+      // Add hourly-specific fields if applicable
+      if (planType === 'Hourly') {
+        presetData.hourly_rate = baseRate ?? null;
+        presetData.minimum_billable_time = minimumBillableTime ?? null;
+        presetData.round_up_to_nearest = roundUpToNearest ?? null;
+        presetData.enable_overtime = false;
+        presetData.overtime_rate = null;
+        presetData.overtime_threshold = null;
+        presetData.enable_after_hours_rate = false;
+        presetData.after_hours_multiplier = null;
       }
 
-      if (savedPlanId && planType === 'Fixed') {
-        await updateContractLineFixedConfig(savedPlanId, {
-          base_rate: baseRate ?? null,
-          enable_proration: enableProration,
-          billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',
-        });
+      let savedPresetId: string | undefined;
+      if (editingPlan?.preset_id) {
+        const { preset_id, tenant: _, ...updateData } = presetData as any;
+        const updatedPreset = await updateContractLinePreset(editingPlan.preset_id, updateData);
+        savedPresetId = updatedPreset.preset_id;
+      } else {
+        const { tenant: _, ...createData } = presetData as any;
+        const newPreset = await createContractLinePreset(createData);
+        savedPresetId = newPreset.preset_id;
       }
 
       resetForm();
       setOpen(false);
-      onPlanAdded(savedPlanId);
+      onPlanAdded(savedPresetId);
     } catch (error) {
-      console.error('Error saving contract line:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line';
+      console.error('Error saving contract line preset:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line preset';
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -232,11 +225,8 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     setPlanName('');
     setPlanType(null);
     setBillingFrequency('monthly');
-    setIsCustom(false);
     setBaseRate(undefined);
     setBaseRateInput('');
-    setEnableProration(false);
-    setBillingCycleAlignment('start');
     setMinimumBillableTime(undefined);
     setRoundUpToNearest(undefined);
     setFixedServices([]);
@@ -773,7 +763,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <Dialog
         isOpen={open}
         onClose={() => handleCloseRequest(false)}
-        title={editingPlan ? 'Edit Contract Line' : 'Add Contract Line'}
+        title={editingPlan ? 'Edit Contract Line Preset' : 'Add Contract Line Preset'}
         className="max-w-3xl"
         hideCloseButton={!!editingPlan}
       >

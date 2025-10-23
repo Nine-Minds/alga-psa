@@ -211,6 +211,28 @@ export interface IContractLine extends TenantEntity {
 }
 
 /**
+ * Interface for contract line presets/templates
+ * These are reusable templates that can be copied into contracts
+ */
+export interface IContractLinePreset extends TenantEntity {
+  preset_id: string;
+  preset_name: string;
+  billing_frequency: string;
+  service_category?: string;
+  contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  hourly_rate?: number | null;
+  minimum_billable_time?: number | null;
+  round_up_to_nearest?: number | null;
+  enable_overtime?: boolean | null;
+  overtime_rate?: number | null;
+  overtime_threshold?: number | null;
+  enable_after_hours_rate?: boolean | null;
+  after_hours_multiplier?: number | null;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
+/**
  * Interface for the new contract_line_fixed_config table
  */
 export interface IContractLineFixedConfig extends TenantEntity {
