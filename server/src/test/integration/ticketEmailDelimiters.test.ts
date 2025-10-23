@@ -100,6 +100,13 @@ interface NotificationLogRecord {
   error_message?: string | null;
 }
 
+interface PortalDomainRecord {
+  tenant: string;
+  domain: string | null;
+  canonical_host: string | null;
+  status: string;
+}
+
 const templateStore = new Map<string, TemplateRecord>();
 const tokenStore = new Map<string, TokenRecord>();
 
@@ -107,6 +114,7 @@ let currentTicket: TicketRecord | null = null;
 let currentUser: UserRecord | null = null;
 let currentResources: Array<{ email: string }> = [];
 let currentProject: ProjectRecord | null = null;
+let currentPortalDomain: PortalDomainRecord | null = null;
 
 const sendEmailMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
 const eventHandlers = vi.hoisted(() => new Map<string, (event: any) => Promise<void> | void>());
@@ -405,6 +413,23 @@ function resourceTableBuilder() {
   return builder;
 }
 
+function portalDomainTableBuilder() {
+  let result: PortalDomainRecord[] = currentPortalDomain ? [currentPortalDomain] : [];
+  const builder = createQuery(() => result);
+  builder.where = (conditions: Record<string, any>) => {
+    if (conditions.tenant !== undefined) {
+      result =
+        currentPortalDomain && currentPortalDomain.tenant === conditions.tenant ? [currentPortalDomain] : [];
+    }
+    if (conditions.domain !== undefined) {
+      result =
+        currentPortalDomain && currentPortalDomain.domain === conditions.domain ? [currentPortalDomain] : [];
+    }
+    return builder;
+  };
+  return builder;
+}
+
 function notificationSettingsTableBuilder() {
   let result: NotificationSettingRecord | NotificationSettingRecord[] | null = Array.from(
     notificationSettingsStore.values(),
@@ -651,17 +676,22 @@ function userNotificationPreferencesTableBuilder() {
 }
 
 function notificationLogsTableBuilder() {
-  const builder: any = createQuery(() => notificationLogs);
+  let rowsSnapshot: Array<Record<string, any>> = [...notificationLogs];
+  const builder: any = createQuery(() => rowsSnapshot);
+  const applyCondition = (key: string, value: any) => {
+    rowsSnapshot = rowsSnapshot.filter((row) => matchesCondition(row, key, value));
+  };
   builder.insert = (data: any) => {
-    const rows = Array.isArray(data) ? data : [data];
-    notificationLogs.push(...rows);
+    const newRows = Array.isArray(data) ? data : [data];
+    notificationLogs.push(...newRows);
+    rowsSnapshot = [...notificationLogs];
     return {
       returning: (columns?: string[]) => {
         if (!columns) {
-          return Promise.resolve(rows);
+          return Promise.resolve(newRows);
         }
         return Promise.resolve(
-          rows.map((row) => {
+          newRows.map((row) => {
             const picked: Record<string, any> = {};
             for (const column of columns) {
               picked[column] = (row as any)[column];
@@ -672,7 +702,19 @@ function notificationLogsTableBuilder() {
       },
     };
   };
-  builder.where = () => builder;
+  builder.where = (column: any, value?: any) => {
+    if (typeof column === 'object') {
+      Object.entries(column).forEach(([key, val]) => applyCondition(key, val));
+    } else if (value !== undefined) {
+      applyCondition(column, value);
+    }
+    return builder;
+  };
+  builder.count = (_column?: string) => {
+    const countValue = rowsSnapshot.length;
+    rowsSnapshot = [{ count: countValue }];
+    return builder;
+  };
   builder.orderBy = () => builder;
   return builder;
 }
@@ -694,6 +736,8 @@ function createMockKnex() {
         return userTableBuilder();
       case 'ticket_resources as tr':
         return resourceTableBuilder();
+      case 'portal_domains':
+        return portalDomainTableBuilder();
       case 'notification_settings':
         return notificationSettingsTableBuilder();
       case 'notification_categories':
@@ -758,6 +802,7 @@ beforeEach(() => {
   currentUser = null;
   currentResources = [];
   currentProject = null;
+  currentPortalDomain = null;
   resetNotificationState();
   sendEmailMock.mockReset();
   subscribeMock.mockClear();
@@ -796,6 +841,10 @@ function setUser(row: UserRecord | null) {
 
 function setProject(row: ProjectRecord | null) {
   currentProject = row;
+}
+
+function setPortalDomain(row: PortalDomainRecord | null) {
+  currentPortalDomain = row;
 }
 
 function setResources(rows: Array<{ email: string }>) {
@@ -1137,6 +1186,117 @@ describe('ticket email subscriber notification gating (known gap)', () => {
     });
 
     expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ticket email subscriber link routing', () => {
+  const ORIGINAL_NEXTAUTH_URL = process.env.NEXTAUTH_URL;
+  const BASE_URL = 'https://msp.example.com';
+
+  beforeEach(async () => {
+    process.env.NEXTAUTH_URL = BASE_URL;
+    eventHandlers.clear();
+    await registerTicketEmailSubscriber();
+  });
+
+  afterEach(() => {
+    process.env.NEXTAUTH_URL = ORIGINAL_NEXTAUTH_URL;
+  });
+
+  afterAll(() => {
+    process.env.NEXTAUTH_URL = ORIGINAL_NEXTAUTH_URL;
+  });
+
+  it('uses portal domain for external recipients and MSP URL for internal users', async () => {
+    seedTemplate(
+      'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<a href="{{ticket.url}}">{{ticket.url}}</a>',
+    );
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+
+    setNotificationSettings(tenantId, { is_enabled: true });
+    setPortalDomain({
+      tenant: tenantId,
+      domain: 'portal.acme.test',
+      canonical_host: 'abc123.portal.algapsa.com',
+      status: 'active',
+    });
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-PORTAL',
+      title: 'Portal Routed Ticket',
+      contact_email: 'client@example.com',
+      assigned_to_email: 'tech@example.com',
+      assigned_to: 'tech-user',
+      email_metadata: { threadId: 'thread-portal' },
+    });
+
+    await handlerFor('TICKET_CREATED')({
+      id: randomUUID(),
+      eventType: 'TICKET_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    const externalProcessed = await processedCall(0);
+    const internalProcessed = await processedCall(1);
+
+    expect(externalProcessed.html).toContain('https://portal.acme.test/client-portal/tickets?ticket=T-PORTAL');
+    expect(externalProcessed.html).not.toContain('/msp/tickets/');
+    expect(internalProcessed.html).toContain(`https://msp.example.com/msp/tickets/${ticketId}`);
+    expect(internalProcessed.html).not.toContain('portal.acme.test/client-portal/tickets');
+  });
+
+  it('falls back to the client portal path when no custom domain exists', async () => {
+    seedTemplate(
+      'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<a href="{{ticket.url}}">{{ticket.url}}</a>',
+    );
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+
+    setNotificationSettings(tenantId, { is_enabled: true });
+    setPortalDomain(null);
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-FALLBACK',
+      title: 'Fallback Routed Ticket',
+      contact_email: 'client@example.com',
+      assigned_to_email: 'tech@example.com',
+      assigned_to: 'tech-user',
+      email_metadata: { threadId: 'thread-fallback' },
+    });
+
+    await handlerFor('TICKET_CREATED')({
+      id: randomUUID(),
+      eventType: 'TICKET_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    const externalProcessed = await processedCall(0);
+    const internalProcessed = await processedCall(1);
+
+    expect(externalProcessed.html).toContain('https://msp.example.com/client-portal/tickets?ticket=T-FALLBACK');
+    expect(externalProcessed.html).not.toContain('/msp/tickets/');
+    expect(internalProcessed.html).toContain(`https://msp.example.com/msp/tickets/${ticketId}`);
   });
 });
 
