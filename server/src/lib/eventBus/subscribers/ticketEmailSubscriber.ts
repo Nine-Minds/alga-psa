@@ -18,6 +18,14 @@ import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 
 /**
+ * Get the base URL from NEXTAUTH_URL environment variable
+ */
+function getBaseUrl(): string {
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+/**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
  * @param subtypeName - Name of the notification subtype (e.g., "Ticket Created")
@@ -513,7 +521,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         locationSummary,
         clientName,
         metaLine,
-        url: `/tickets/${ticket.ticket_number}`
+        url: `${getBaseUrl()}/msp/tickets/${ticket.ticket_id}`
       }
     };
 
@@ -653,7 +661,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         status: ticket.status_name || 'Unknown',
         changes: formattedChanges,
         updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId,
-        url: `/tickets/${ticket.ticket_number}`
+        url: `${getBaseUrl()}/msp/tickets/${ticket.ticket_id}`
       }
     };
 
@@ -793,7 +801,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         priority: ticket.priority_name || 'Unknown',
         status: ticket.status_name || 'Unknown',
         assignedBy: assignerName,
-        url: `/tickets/${ticket.ticket_number}`
+        url: `${getBaseUrl()}/msp/tickets/${ticket.ticket_id}`
       }
     };
 
@@ -957,7 +965,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           ticket: {
             id: ticket.ticket_number,
             title: ticket.title,
-            url: `/tickets/${ticket.ticket_number}`
+            url: `${getBaseUrl()}/msp/tickets/${ticket.ticket_id}`
           },
           comment: commentContext
         },
@@ -980,7 +988,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           ticket: {
             id: ticket.ticket_number,
             title: ticket.title,
-            url: `/tickets/${ticket.ticket_number}`
+            url: `${getBaseUrl()}/msp/tickets/${ticket.ticket_id}`
           },
           comment: commentContext
         },
@@ -1004,7 +1012,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           ticket: {
             id: ticket.ticket_number,
             title: ticket.title,
-            url: `/tickets/${ticket.ticket_number}`
+            url: `${getBaseUrl()}/msp/tickets/${ticket.ticket_id}`
           },
           comment: commentContext
         },
@@ -1080,7 +1088,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         changes: await formatChanges(db, payload.changes || {}, tenantId),
         closedBy: payload.userId,
         resolution: ticket.resolution || '',
-        url: `/tickets/${ticket.ticket_number}`
+        url: `${getBaseUrl()}/msp/tickets/${ticket.ticket_id}`
       }
     };
 
