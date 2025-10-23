@@ -72,6 +72,7 @@ type TemplateContractLine = {
   contract_line_name: string;
   contract_line_type: string;
   billing_frequency: string;
+  billing_timing: 'arrears' | 'advance';
   services: TemplateLineService[];
 };
 
@@ -80,6 +81,7 @@ type DetailedContractLineRow = {
   contract_line_name: string;
   contract_line_type: string;
   billing_frequency: string;
+  billing_timing?: 'arrears' | 'advance';
 };
 
 type RawContractSummary = Awaited<ReturnType<typeof getContractSummary>>;
@@ -354,6 +356,7 @@ const ContractTemplateDetail: React.FC = () => {
               contract_line_name: line.contract_line_name,
               contract_line_type: line.contract_line_type,
               billing_frequency: line.billing_frequency,
+              billing_timing: (line.billing_timing ?? 'arrears') as 'arrears' | 'advance',
               services,
             } as TemplateContractLine;
           })

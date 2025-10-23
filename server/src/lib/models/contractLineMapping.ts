@@ -293,6 +293,10 @@ const ContractLineMapping = {
             this.on('lines.template_line_id', '=', 'base.contract_line_id')
               .andOn('lines.tenant', '=', 'base.tenant');
           })
+          .leftJoin('contract_template_line_terms as line_terms', function joinTemplateTerms() {
+            this.on('line_terms.template_line_id', '=', 'lines.template_line_id')
+              .andOn('line_terms.tenant', '=', 'lines.tenant');
+          })
           .where({
             'map.template_id': contractId,
             'map.tenant': tenant,
@@ -309,7 +313,8 @@ const ContractLineMapping = {
             db.raw('COALESCE(base.is_custom, false) as is_custom'),
             'lines.line_type as contract_line_type',
             'lines.minimum_billable_time',
-            'lines.round_up_to_nearest'
+            'lines.round_up_to_nearest',
+            'line_terms.billing_timing as billing_timing'
           )
           .orderBy('map.display_order', 'asc');
       }
@@ -318,6 +323,10 @@ const ContractLineMapping = {
         .join('contract_lines as cl', function() {
           this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
               .andOn('clm.tenant', '=', 'cl.tenant');
+        })
+        .leftJoin('contract_line_template_terms as line_terms', function joinTerms() {
+          this.on('line_terms.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('line_terms.tenant', '=', 'cl.tenant');
         })
         .where({
           'clm.contract_id': contractId,
@@ -328,7 +337,8 @@ const ContractLineMapping = {
           'cl.contract_line_name',
           'cl.billing_frequency',
           'cl.is_custom',
-          'cl.contract_line_type'
+          'cl.contract_line_type',
+          'line_terms.billing_timing as billing_timing'
         );
     } catch (error) {
       console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);

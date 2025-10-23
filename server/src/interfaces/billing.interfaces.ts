@@ -62,6 +62,9 @@ export interface IBillingCharge extends TenantEntity {
   is_taxable?: boolean;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
+  servicePeriodStart?: ISO8601String;
+  servicePeriodEnd?: ISO8601String;
+  billingTiming?: 'arrears' | 'advance';
 }
 
 export interface IDiscount extends TenantEntity {
@@ -90,6 +93,7 @@ export interface IClientContractLine extends TenantEntity {
   client_id: string;
   contract_line_id: string;
   template_contract_line_id?: string;
+  billing_timing?: 'arrears' | 'advance';
   service_category?: string;
   service_category_name?: string; // Added field from join with service_categories
   start_date: ISO8601String;
@@ -195,6 +199,7 @@ export interface IContractLine extends TenantEntity {
   is_custom: boolean;
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  billing_timing?: 'arrears' | 'advance';
   // Add potentially existing hourly fields (to be deprecated for Hourly type)
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;

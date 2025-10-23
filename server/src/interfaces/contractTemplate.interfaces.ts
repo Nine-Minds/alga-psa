@@ -30,6 +30,7 @@ export interface IContractTemplateLine extends TenantEntity {
   after_hours_multiplier?: number | null;
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
+  billing_timing?: 'arrears' | 'advance';
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }

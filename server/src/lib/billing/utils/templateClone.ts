@@ -55,7 +55,13 @@ export async function cloneTemplateContractLine(
     throw new Error(`Template contract line ${templateContractLineId} not found`);
   }
 
-  await upsertClientContractLineTerms(trx, tenant, clientContractLineId, templateLine);
+  const templateLineTerms = await trx('contract_template_line_terms')
+    .where({ tenant, template_line_id: templateContractLineId })
+    .first();
+
+  const billingTiming = (templateLineTerms?.billing_timing ?? 'arrears') as 'arrears' | 'advance';
+
+  await upsertClientContractLineTerms(trx, tenant, clientContractLineId, templateLine, billingTiming);
   await cloneServices(trx, tenant, templateContractLineId, clientContractLineId, effectiveDate);
 
   const templateCustomRate = await resolveTemplateCustomRate(
@@ -92,7 +98,8 @@ async function upsertClientContractLineTerms(
   trx: Knex.Transaction,
   tenant: string,
   clientContractLineId: string,
-  templateLine: IContractTemplateLine
+  templateLine: IContractTemplateLine,
+  billingTiming: 'arrears' | 'advance'
 ) {
   const payload = {
     tenant,
@@ -105,6 +112,7 @@ async function upsertClientContractLineTerms(
     after_hours_multiplier: normalizeNumeric(templateLine.after_hours_multiplier),
     minimum_billable_time: templateLine.minimum_billable_time ?? null,
     round_up_to_nearest: templateLine.round_up_to_nearest ?? null,
+    billing_timing: billingTiming,
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   };
@@ -121,6 +129,7 @@ async function upsertClientContractLineTerms(
       after_hours_multiplier: payload.after_hours_multiplier,
       minimum_billable_time: payload.minimum_billable_time,
       round_up_to_nearest: payload.round_up_to_nearest,
+      billing_timing: payload.billing_timing,
       updated_at: trx.fn.now()
     });
 }

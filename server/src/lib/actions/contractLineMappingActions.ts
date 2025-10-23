@@ -33,6 +33,8 @@ export async function ensureTemplateLineSnapshot(
     .where({ tenant, contract_line_id: contractLineId })
     .first();
 
+  const billingTiming = terms?.billing_timing ?? 'arrears';
+
   const now = knex.fn.now();
 
   await knex('contract_template_lines')
@@ -275,35 +277,37 @@ export async function ensureTemplateLineSnapshot(
       });
   }
 
-  if (terms) {
-    await knex('contract_template_line_terms')
-      .insert({
-        tenant,
-        template_line_id: contractLineId,
-        billing_frequency: terms.billing_frequency ?? null,
-        enable_overtime: terms.enable_overtime ?? false,
-        overtime_rate: terms.overtime_rate ?? null,
-        overtime_threshold: terms.overtime_threshold ?? null,
-        enable_after_hours_rate: terms.enable_after_hours_rate ?? false,
-        after_hours_multiplier: terms.after_hours_multiplier ?? null,
-        minimum_billable_time: terms.minimum_billable_time ?? null,
-        round_up_to_nearest: terms.round_up_to_nearest ?? null,
-        created_at: terms.created_at ?? now,
-        updated_at: now,
-      })
-      .onConflict(['tenant', 'template_line_id'])
-      .merge({
-        billing_frequency: terms.billing_frequency ?? null,
-        enable_overtime: terms.enable_overtime ?? false,
-        overtime_rate: terms.overtime_rate ?? null,
-        overtime_threshold: terms.overtime_threshold ?? null,
-        enable_after_hours_rate: terms.enable_after_hours_rate ?? false,
-        after_hours_multiplier: terms.after_hours_multiplier ?? null,
-        minimum_billable_time: terms.minimum_billable_time ?? null,
-        round_up_to_nearest: terms.round_up_to_nearest ?? null,
-        updated_at: now,
-      });
-  }
+  await knex('contract_template_line_terms')
+    .insert({
+      tenant,
+      template_line_id: contractLineId,
+      billing_frequency: terms?.billing_frequency ?? contractLine.billing_frequency ?? null,
+      enable_overtime: terms?.enable_overtime ?? contractLine.enable_overtime ?? false,
+      overtime_rate: terms?.overtime_rate ?? contractLine.overtime_rate ?? null,
+      overtime_threshold: terms?.overtime_threshold ?? contractLine.overtime_threshold ?? null,
+      enable_after_hours_rate:
+        terms?.enable_after_hours_rate ?? contractLine.enable_after_hours_rate ?? false,
+      after_hours_multiplier: terms?.after_hours_multiplier ?? contractLine.after_hours_multiplier ?? null,
+      minimum_billable_time: terms?.minimum_billable_time ?? null,
+      round_up_to_nearest: terms?.round_up_to_nearest ?? null,
+      billing_timing: billingTiming,
+      created_at: terms?.created_at ?? now,
+      updated_at: now,
+    })
+    .onConflict(['tenant', 'template_line_id'])
+    .merge({
+      billing_frequency: terms?.billing_frequency ?? contractLine.billing_frequency ?? null,
+      enable_overtime: terms?.enable_overtime ?? contractLine.enable_overtime ?? false,
+      overtime_rate: terms?.overtime_rate ?? contractLine.overtime_rate ?? null,
+      overtime_threshold: terms?.overtime_threshold ?? contractLine.overtime_threshold ?? null,
+      enable_after_hours_rate:
+        terms?.enable_after_hours_rate ?? contractLine.enable_after_hours_rate ?? false,
+      after_hours_multiplier: terms?.after_hours_multiplier ?? contractLine.after_hours_multiplier ?? null,
+      minimum_billable_time: terms?.minimum_billable_time ?? null,
+      round_up_to_nearest: terms?.round_up_to_nearest ?? null,
+      billing_timing: billingTiming,
+      updated_at: now,
+    });
 }
 
 /**
@@ -373,6 +377,10 @@ export async function getDetailedContractLines(contractId: string): Promise<any[
           this.on('lines.template_line_id', '=', 'base.contract_line_id')
             .andOn('lines.tenant', '=', 'base.tenant');
         })
+        .leftJoin('contract_template_line_terms as line_terms', function joinTemplateTerms() {
+          this.on('line_terms.template_line_id', '=', 'lines.template_line_id')
+            .andOn('line_terms.tenant', '=', 'lines.tenant');
+        })
         .where({
           'map.template_id': contractId,
           'map.tenant': tenant,
@@ -388,6 +396,7 @@ export async function getDetailedContractLines(contractId: string): Promise<any[
           'lines.billing_frequency',
           'base.is_custom',
           'lines.line_type as contract_line_type',
+          'line_terms.billing_timing as billing_timing'
         ]);
 
       return rows;
