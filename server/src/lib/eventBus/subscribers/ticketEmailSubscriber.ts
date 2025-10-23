@@ -204,11 +204,31 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
     }
 
     default:
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
       if (typeof value === 'boolean') {
         return value ? 'Yes' : 'No';
       }
+      if (typeof value === 'string') {
+        const formatted = formatBlockNoteContent(value);
+        const formattedText = formatted.text?.trim?.();
+        if (formattedText) {
+          return formattedText;
+        }
+        return value;
+      }
       if (typeof value === 'object') {
-        return JSON.stringify(value);
+        const formatted = formatBlockNoteContent(value);
+        const formattedText = formatted.text?.trim?.();
+        if (formattedText && formattedText !== JSON.stringify(value)) {
+          return formattedText;
+        }
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return String(value);
+        }
       }
       return String(value);
   }
