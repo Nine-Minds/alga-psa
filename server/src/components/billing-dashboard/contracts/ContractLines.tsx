@@ -3,19 +3,24 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit } from 'lucide-react';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X } from 'lucide-react';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
-import { getContractLines } from 'server/src/lib/actions/contractLineAction';
+import { getContractLines, updateContractLine } from 'server/src/lib/actions/contractLineAction';
 import {
   getDetailedContractLines,
   addContractLine,
   removeContractLine,
+  updateContractLineAssociation,
 } from 'server/src/lib/actions/contractLineMappingActions';
+import { checkContractHasInvoices } from 'server/src/lib/actions/contractActions';
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
 } from 'server/src/lib/actions/contractLineServiceActions';
+import { updateConfiguration } from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
@@ -38,6 +43,8 @@ interface DetailedContractLineMapping {
   billing_frequency: string;
   contract_line_type: string;
   default_rate?: number | null;
+  minimum_billable_time?: number | null;
+  round_up_to_nearest?: number | null;
 }
 
 interface ServiceConfiguration {
@@ -50,6 +57,7 @@ interface ServiceConfiguration {
   configuration: {
     config_id: string;
     service_id: string;
+    contract_line_id: string;
     configuration_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
     custom_rate?: number;
     quantity?: number;
@@ -66,6 +74,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
   const [lineServices, setLineServices] = useState<Record<string, ServiceConfiguration[]>>({});
   const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [editLineData, setEditLineData] = useState<Partial<DetailedContractLineMapping>>({});
+  const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (contract.contract_id) {
@@ -164,10 +175,107 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
-  const handleEditContractLine = async (contractLineId: string) => {
-    // TODO: Check if contract has invoices
-    // TODO: Open edit dialog for contract line
-    setError('Edit functionality coming soon. Contract lines can currently only be edited if the contract has no associated invoices.');
+  const handleEditContractLine = async (line: DetailedContractLineMapping) => {
+    if (!contract.contract_id) return;
+
+    try {
+      // Check if contract has invoices
+      const hasInvoices = await checkContractHasInvoices(contract.contract_id);
+
+      if (hasInvoices) {
+        setError('Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.');
+        return;
+      }
+
+      // Start editing - populate edit data from the line
+      setEditingLineId(line.contract_line_id);
+      setEditLineData({
+        minimum_billable_time: line.minimum_billable_time,
+        round_up_to_nearest: line.round_up_to_nearest,
+      });
+
+      // Populate service configs for editing
+      const services = lineServices[line.contract_line_id] || [];
+      const serviceConfigsData: Record<string, any> = {};
+
+      services.forEach(serviceConfig => {
+        serviceConfigsData[serviceConfig.configuration.config_id] = {
+          quantity: serviceConfig.configuration.quantity,
+          custom_rate: serviceConfig.configuration.custom_rate,
+          hourly_rate: serviceConfig.typeConfig?.hourly_rate,
+          base_rate: serviceConfig.typeConfig?.base_rate,
+          unit_of_measure: serviceConfig.typeConfig?.unit_of_measure,
+        };
+      });
+
+      setEditServiceConfigs(serviceConfigsData);
+    } catch (err) {
+      console.error('Error checking contract invoices:', err);
+      setError('Failed to check if contract can be edited');
+    }
+  };
+
+  const handleSaveContractLine = async (contractLineId: string) => {
+    try {
+      // Update contract line fields
+      await updateContractLine(contractLineId, {
+        minimum_billable_time: editLineData.minimum_billable_time,
+        round_up_to_nearest: editLineData.round_up_to_nearest,
+      });
+
+      // Update all service configurations
+      const services = lineServices[contractLineId] || [];
+      for (const serviceConfig of services) {
+        const configId = serviceConfig.configuration.config_id;
+        const editData = editServiceConfigs[configId];
+
+        if (editData) {
+          const baseConfig: any = {
+            quantity: editData.quantity,
+            custom_rate: editData.custom_rate,
+          };
+
+          const typeConfig: any = {};
+
+          // Build type-specific config based on configuration type
+          if (serviceConfig.configuration.configuration_type === 'Hourly') {
+            if (editData.hourly_rate !== undefined) {
+              typeConfig.hourly_rate = editData.hourly_rate;
+            }
+          } else if (serviceConfig.configuration.configuration_type === 'Usage') {
+            if (editData.base_rate !== undefined) {
+              typeConfig.base_rate = editData.base_rate;
+            }
+            if (editData.unit_of_measure !== undefined) {
+              typeConfig.unit_of_measure = editData.unit_of_measure;
+            }
+          } else if (serviceConfig.configuration.configuration_type === 'Fixed') {
+            if (editData.base_rate !== undefined) {
+              typeConfig.base_rate = editData.base_rate;
+            }
+          }
+
+          await updateConfiguration(configId, baseConfig, typeConfig);
+        }
+      }
+
+      // Reload services for this line
+      await loadServicesForLine(contractLineId);
+      await fetchData();
+      setEditingLineId(null);
+      setEditLineData({});
+      setEditServiceConfigs({});
+      onContractLinesChanged?.();
+    } catch (err) {
+      console.error('Error updating contract line:', err);
+      setError('Failed to update contract line');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLineId(null);
+    setEditLineData({});
+    setEditServiceConfigs({});
   };
 
   const formatRate = (rate?: number | null) => {
@@ -318,13 +426,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                         {services.length > 0 && (
                           <>
                             <span>•</span>
-                            <span>
-                              {services.length} service{services.length !== 1 ? 's' : ''}
-                              {(() => {
-                                const totalQty = services.reduce((sum, s) => sum + (s.configuration.quantity || 0), 0);
-                                return totalQty > 0 ? ` (${totalQty} total qty)` : '';
-                              })()}
-                            </span>
+                            <span>{services.length} service{services.length !== 1 ? 's' : ''}</span>
                           </>
                         )}
                         {line.default_rate !== null && line.default_rate !== undefined && (
@@ -351,7 +453,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEditContractLine(line.contract_line_id);
+                          handleEditContractLine(line);
                         }}
                         className="h-8 text-gray-600 hover:text-gray-700 hover:bg-gray-100"
                       >
@@ -376,110 +478,275 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
                   {/* Expanded Content */}
                   {isExpanded && (
-                    <div className="p-4 bg-white">
+                    <div className="p-4 bg-white border-t">
                       {isLoadingServices ? (
                         <div className="flex items-center justify-center py-8 text-gray-500">
                           <LoadingIndicator
                             layout="inline"
                             spinnerProps={{ size: 'sm' }}
-                            text="Loading services..."
+                            text="Loading..."
                           />
                         </div>
-                      ) : services.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <p className="text-sm">No services configured for this contract line.</p>
-                        </div>
                       ) : (
-                        <div className="space-y-3">
-                          <div className="text-sm font-medium text-gray-700 mb-3">
-                            Services ({services.length})
-                          </div>
-                          {services.map((serviceConfig, idx) => (
-                            <div
-                              key={`${serviceConfig.configuration.config_id}-${idx}`}
-                              className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
-                            >
-                              <div className="flex-shrink-0 mt-0.5">
-                                {serviceConfig.configuration.configuration_type === 'Bucket' ? (
-                                  <Package className="h-5 w-5 text-purple-600" />
-                                ) : (
-                                  <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <span className="text-xs font-medium text-blue-700">
-                                      {serviceConfig.configuration.configuration_type[0]}
-                                    </span>
-                                  </div>
-                                )}
+                        <div className="space-y-6">
+                          {/* Contract Line Configuration Section */}
+                          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="font-semibold text-gray-900">Contract Line Configuration</p>
+                                <p className="text-xs text-gray-500">
+                                  Settings that apply to this contract line
+                                </p>
                               </div>
-
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <h5 className="font-medium text-gray-900">
-                                      {serviceConfig.service.service_name}
-                                    </h5>
-                                    <div className="mt-1 text-xs text-gray-600">
-                                      <Badge
-                                        className={`text-xs mr-2 ${
-                                          serviceConfig.configuration.configuration_type === 'Fixed'
-                                            ? 'bg-green-100 text-green-800'
-                                            : serviceConfig.configuration.configuration_type === 'Hourly'
-                                            ? 'bg-purple-100 text-purple-800'
-                                            : serviceConfig.configuration.configuration_type === 'Usage'
-                                            ? 'bg-indigo-100 text-indigo-800'
-                                            : serviceConfig.configuration.configuration_type === 'Bucket'
-                                            ? 'bg-blue-100 text-blue-800'
-                                            : 'bg-gray-100 text-gray-800'
-                                        }`}
-                                      >
-                                        {serviceConfig.configuration.configuration_type}
-                                      </Badge>
-                                      {renderServiceDetails(serviceConfig)}
-                                    </div>
-                                  </div>
+                              {editingLineId === line.contract_line_id ? (
+                                <div className="flex gap-2">
+                                  <Button
+                                    id={`save-line-${line.contract_line_id}`}
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => handleSaveContractLine(line.contract_line_id)}
+                                    className="gap-2"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                    Save
+                                  </Button>
+                                  <Button
+                                    id={`cancel-line-${line.contract_line_id}`}
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleCancelEdit}
+                                    className="gap-2"
+                                  >
+                                    <X className="h-4 w-4" />
+                                    Cancel
+                                  </Button>
                                 </div>
+                              ) : null}
+                            </div>
 
-                                {/* Additional configuration details */}
-                                {serviceConfig.configuration.configuration_type === 'Bucket' &&
-                                  serviceConfig.typeConfig && (
-                                    <div className="mt-2 p-2 bg-purple-50 rounded border border-purple-200">
-                                      <div className="text-xs space-y-1">
-                                        <div className="flex items-center gap-4">
-                                          <span className="font-medium text-purple-900">
-                                            Bucket Configuration
-                                          </span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 mt-1">
+                            <div className="grid gap-4 md:grid-cols-2">
+                              {/* Hourly contract line fields */}
+                              {line.contract_line_type === 'Hourly' && (
+                                <>
+                                  <div>
+                                    <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                      Minimum Billable Time (minutes)
+                                    </Label>
+                                    {editingLineId === line.contract_line_id ? (
+                                      <Input
+                                        id={`min-billable-${line.contract_line_id}`}
+                                        type="number"
+                                        min="0"
+                                        value={editLineData.minimum_billable_time ?? ''}
+                                        onChange={(e) => setEditLineData({
+                                          ...editLineData,
+                                          minimum_billable_time: e.target.value ? parseInt(e.target.value) : undefined
+                                        })}
+                                        placeholder="15"
+                                        className="mt-1"
+                                      />
+                                    ) : (
+                                      <p className="mt-1 text-sm text-gray-800">
+                                        {line.minimum_billable_time || 0} minutes
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                      Round Up To Nearest (minutes)
+                                    </Label>
+                                    {editingLineId === line.contract_line_id ? (
+                                      <Input
+                                        id={`round-up-${line.contract_line_id}`}
+                                        type="number"
+                                        min="0"
+                                        value={editLineData.round_up_to_nearest ?? ''}
+                                        onChange={(e) => setEditLineData({
+                                          ...editLineData,
+                                          round_up_to_nearest: e.target.value ? parseInt(e.target.value) : undefined
+                                        })}
+                                        placeholder="15"
+                                        className="mt-1"
+                                      />
+                                    ) : (
+                                      <p className="mt-1 text-sm text-gray-800">
+                                        {line.round_up_to_nearest || 0} minutes
+                                      </p>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Fixed contract line - show info message */}
+                              {line.contract_line_type === 'Fixed' && (
+                                <div className="col-span-2">
+                                  <p className="text-sm text-gray-600">
+                                    Fixed contract lines have a base rate and proration settings configured at setup.
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Usage contract line - show info message */}
+                              {line.contract_line_type === 'Usage' && (
+                                <div className="col-span-2">
+                                  <p className="text-sm text-gray-600">
+                                    Usage-based contract lines are configured per service with unit rates.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Services List Section */}
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-3">
+                              Services ({services.length})
+                            </h4>
+                            {services.length === 0 ? (
+                              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                                <p className="text-sm">No services configured for this contract line.</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {services.map((serviceConfig, idx) => {
+                                  const isEditing = editingLineId === line.contract_line_id;
+                                  const configId = serviceConfig.configuration.config_id;
+                                  const editData = editServiceConfigs[configId] || {};
+
+                                  return (
+                                    <div
+                                      key={`${serviceConfig.configuration.config_id}-${idx}`}
+                                      className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4"
+                                    >
+                                      <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div className="flex items-center gap-2">
                                           <div>
-                                            <span className="text-gray-600">Total Minutes:</span>
-                                            <span className="ml-1 text-gray-900">
-                                              {serviceConfig.typeConfig.total_minutes}
-                                            </span>
+                                            <p className="font-semibold text-gray-900">
+                                              {serviceConfig.service.service_name}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                              {serviceConfig.configuration.configuration_type} Service
+                                            </p>
                                           </div>
-                                          <div>
-                                            <span className="text-gray-600">Overage Rate:</span>
-                                            <span className="ml-1 text-gray-900">
-                                              {formatRate(serviceConfig.typeConfig.overage_rate)}
-                                            </span>
-                                          </div>
-                                          <div>
-                                            <span className="text-gray-600">Rollover:</span>
-                                            <span className="ml-1 text-gray-900">
-                                              {serviceConfig.typeConfig.allow_rollover ? 'Yes' : 'No'}
-                                            </span>
-                                          </div>
-                                          <div>
-                                            <span className="text-gray-600">Period:</span>
-                                            <span className="ml-1 text-gray-900 capitalize">
-                                              {serviceConfig.typeConfig.billing_period}
-                                            </span>
-                                          </div>
+                                          <Badge className="bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border-[rgb(var(--color-primary-200))]">
+                                            Qty: {isEditing ? (editData.quantity ?? serviceConfig.configuration.quantity ?? 1) : (serviceConfig.configuration.quantity || 1)}
+                                          </Badge>
                                         </div>
                                       </div>
+
+                                      <div className="grid gap-4 md:grid-cols-2">
+                                        {/* Quantity - all service types */}
+                                        <div>
+                                          <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                            Quantity
+                                          </Label>
+                                          {isEditing ? (
+                                            <Input
+                                              id={`quantity-${serviceConfig.configuration.config_id}`}
+                                              type="number"
+                                              min="1"
+                                              value={editData.quantity ?? ''}
+                                              onChange={(e) => setEditServiceConfigs({
+                                                ...editServiceConfigs,
+                                                [configId]: {
+                                                  ...editData,
+                                                  quantity: e.target.value ? parseInt(e.target.value) : undefined
+                                                }
+                                              })}
+                                              className="mt-1"
+                                            />
+                                          ) : (
+                                            <p className="mt-1 text-sm text-gray-800 font-semibold">
+                                              {serviceConfig.configuration.quantity || 1}
+                                            </p>
+                                          )}
+                                        </div>
+
+                                        {/* Rate field - varies by type */}
+                                        <div>
+                                          <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                            {serviceConfig.configuration.configuration_type === 'Hourly' ? 'Hourly Rate' :
+                                             serviceConfig.configuration.configuration_type === 'Usage' ? 'Unit Rate' : 'Rate'}
+                                          </Label>
+                                          {isEditing ? (
+                                            <div className="relative mt-1">
+                                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                              <Input
+                                                id={`rate-${serviceConfig.configuration.config_id}`}
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={
+                                                  serviceConfig.configuration.configuration_type === 'Hourly'
+                                                    ? (editData.hourly_rate !== undefined ? (editData.hourly_rate / 100).toFixed(2) : '')
+                                                    : (editData.base_rate !== undefined ? (editData.base_rate / 100).toFixed(2) : '')
+                                                }
+                                                onChange={(e) => {
+                                                  const cents = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : undefined;
+                                                  if (serviceConfig.configuration.configuration_type === 'Hourly') {
+                                                    setEditServiceConfigs({
+                                                      ...editServiceConfigs,
+                                                      [configId]: {
+                                                        ...editData,
+                                                        hourly_rate: cents
+                                                      }
+                                                    });
+                                                  } else {
+                                                    setEditServiceConfigs({
+                                                      ...editServiceConfigs,
+                                                      [configId]: {
+                                                        ...editData,
+                                                        base_rate: cents
+                                                      }
+                                                    });
+                                                  }
+                                                }}
+                                                className="pl-7"
+                                              />
+                                            </div>
+                                          ) : (
+                                            <p className="mt-1 text-sm text-gray-800">
+                                              {formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate)}
+                                            </p>
+                                          )}
+                                        </div>
+
+                                        {/* Unit of Measure - Usage only */}
+                                        {serviceConfig.configuration.configuration_type === 'Usage' && (
+                                          <div>
+                                            <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                              Unit of Measure
+                                            </Label>
+                                            {isEditing ? (
+                                              <Input
+                                                id={`unit-${serviceConfig.configuration.config_id}`}
+                                                type="text"
+                                                value={editData.unit_of_measure ?? ''}
+                                                onChange={(e) => setEditServiceConfigs({
+                                                  ...editServiceConfigs,
+                                                  [configId]: {
+                                                    ...editData,
+                                                    unit_of_measure: e.target.value
+                                                  }
+                                                })}
+                                                placeholder="unit"
+                                                className="mt-1"
+                                              />
+                                            ) : (
+                                              <p className="mt-1 text-sm text-gray-800">
+                                                {serviceConfig.typeConfig?.unit_of_measure || 'unit'}
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  )}
+                                  );
+                                })}
                               </div>
-                            </div>
-                          ))}
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
