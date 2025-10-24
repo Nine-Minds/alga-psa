@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { FolderPlus } from 'lucide-react';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface FolderManagerProps {
   open: boolean;
@@ -20,6 +21,7 @@ export default function FolderManager({
   onFolderCreated
 }: FolderManagerProps) {
   const [folderName, setFolderName] = useState('');
+  const { t } = useTranslation('common');
 
   function handleCreate() {
     if (!folderName.trim()) return;
@@ -37,34 +39,37 @@ export default function FolderManager({
     <Dialog isOpen={open} onClose={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Folder</DialogTitle>
+          <DialogTitle>{t('documents.folderManager.title', 'Create New Folder')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Folder Name</label>
+            <label className="text-sm font-medium">{t('documents.folderManager.nameLabel', 'Folder Name')}</label>
             <Input
               id="folder-name-input"
               value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
-              placeholder="Enter folder name"
+              placeholder={t('documents.folderManager.namePlaceholder', 'Enter folder name')}
               onKeyPress={(e) => e.key === 'Enter' && handleCreate()}
             />
           </div>
 
           {currentFolder && (
             <div className="text-sm text-gray-500">
-              Will be created in: {currentFolder}
+              {t('documents.folderManager.willCreateIn', {
+                folder: currentFolder,
+                defaultValue: `Will be created in: ${currentFolder}`
+              })}
             </div>
           )}
 
           <div className="flex gap-2 justify-end">
             <Button id="folder-cancel-button" variant="outline" onClick={onClose}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="folder-create-button" onClick={handleCreate} disabled={!folderName.trim()}>
               <FolderPlus className="w-4 h-4 mr-2" />
-              Create
+              {t('common.create', 'Create')}
             </Button>
           </div>
         </div>

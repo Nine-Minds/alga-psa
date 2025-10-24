@@ -1,11 +1,11 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from 'server/src/components/ui/Button';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { usePagination } from 'server/src/hooks/usePagination';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { ReactNode } from 'react';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface PaginationProps {
     id: string;
@@ -40,13 +40,36 @@ const Pagination = ({
     showTotalItems = false,
     itemLabel = 'items',
     onItemsPerPageChange,
-    itemsPerPageOptions = [
-        { value: '9', label: '9 cards/page' },
-        { value: '18', label: '18 cards/page' },
-        { value: '27', label: '27 cards/page' },
-        { value: '36', label: '36 cards/page' }
-    ]
+    itemsPerPageOptions
 }: PaginationProps) => {
+    const { t } = useTranslation('common');
+
+    const resolvedItemLabel =
+        itemLabel || t('pagination.itemsLabel', 'items');
+
+    const resolvedItemsPerPageOptions =
+        (itemsPerPageOptions && itemsPerPageOptions.length > 0)
+            ? itemsPerPageOptions
+            :
+        [
+            {
+                value: '9',
+                label: t('pagination.itemsPerPageOption', { count: 9, defaultValue: '9 items/page' }),
+            },
+            {
+                value: '18',
+                label: t('pagination.itemsPerPageOption', { count: 18, defaultValue: '18 items/page' }),
+            },
+            {
+                value: '27',
+                label: t('pagination.itemsPerPageOption', { count: 27, defaultValue: '27 items/page' }),
+            },
+            {
+                value: '36',
+                label: t('pagination.itemsPerPageOption', { count: 36, defaultValue: '36 items/page' }),
+            },
+        ];
+
     // Use the pagination hook for logic
     const {
         currentPage: internalCurrentPage,
@@ -111,16 +134,23 @@ const Pagination = ({
     // If only one page but page size selector is available, show simplified version
     if (totalPages <= 1 && onItemsPerPageChange) {
         return (
-            <ReflectionContainer id={id} label="Pagination">
+            <ReflectionContainer
+                id={id}
+                label={t('pagination.reflectionLabel', 'Pagination')}
+            >
                 <div className={`flex py-3 items-center justify-end pr-6 ${className}`}>
                     <p className="text-sm text-gray-700 mr-6">
-                        {totalItems} {itemLabel} {totalItems === 1 ? '' : 'total'}
+                        {t('pagination.totalItems', {
+                            count: totalItems,
+                            itemLabel: resolvedItemLabel,
+                            defaultValue: `${totalItems} ${resolvedItemLabel} total`
+                        })}
                     </p>
                     <CustomSelect
                         value={itemsPerPage.toString()}
                         onValueChange={(value) => onItemsPerPageChange(Number(value))}
-                        options={itemsPerPageOptions}
-                        placeholder="Items per page"
+                        options={resolvedItemsPerPageOptions}
+                        placeholder={t('pagination.itemsPerPagePlaceholder', 'Items per page')}
                     />
                 </div>
             </ReflectionContainer>
@@ -130,13 +160,25 @@ const Pagination = ({
     // Render the appropriate variant
     if (variant === 'clients') {
         return (
-            <ReflectionContainer id={id} label="Pagination">
+            <ReflectionContainer
+                id={id}
+                label={t('pagination.reflectionLabel', 'Pagination')}
+            >
                 <div className={`flex py-3 items-center justify-end pr-6 ${className}`}>
                     <p className="text-sm text-gray-700 mr-6">
-                        {firstItemIndex} - {lastItemIndex} of {totalItems} {itemLabel}
+                        {t('pagination.range', {
+                            from: firstItemIndex,
+                            to: lastItemIndex,
+                            total: totalItems,
+                            itemLabel: resolvedItemLabel,
+                            defaultValue: `${firstItemIndex} - ${lastItemIndex} of ${totalItems} ${resolvedItemLabel}`
+                        })}
                     </p>
 
-                    <div className="inline-flex rounded-md gap-2 mr-8" aria-label="Pagination">
+                    <div
+                        className="inline-flex rounded-md gap-2 mr-8"
+                        aria-label={t('pagination.ariaLabel', 'Pagination')}
+                    >
                         <button 
                             id={`${id}-prev-btn`}
                             onClick={() => handleChange(currentPage - 1)} 
@@ -160,8 +202,8 @@ const Pagination = ({
                         <CustomSelect
                             value={itemsPerPage.toString()}
                             onValueChange={(value) => onItemsPerPageChange(Number(value))}
-                            options={itemsPerPageOptions}
-                            placeholder="Items per page"
+                            options={resolvedItemsPerPageOptions}
+                            placeholder={t('pagination.itemsPerPagePlaceholder', 'Items per page')}
                         />
                     )}
                 </div>
@@ -171,9 +213,15 @@ const Pagination = ({
 
     if (variant === 'numbered') {
         return (
-            <ReflectionContainer id={id} label="Pagination">
+            <ReflectionContainer
+                id={id}
+                label={t('pagination.reflectionLabel', 'Pagination')}
+            >
                 <div className={`flex justify-center items-center py-4 ${className}`}>
-                    <div className="inline-flex rounded-md gap-1" aria-label="Pagination">
+                    <div
+                        className="inline-flex rounded-md gap-1"
+                        aria-label={t('pagination.ariaLabel', 'Pagination')}
+                    >
                         <button 
                             id={`${id}-prev-btn`}
                             onClick={() => handleChange(currentPage - 1)} 
@@ -198,7 +246,10 @@ const Pagination = ({
     }
 
     return (
-        <ReflectionContainer id={id} label="Pagination">
+        <ReflectionContainer
+            id={id}
+            label={t('pagination.reflectionLabel', 'Pagination')}
+        >
             <div className={`px-6 py-4 bg-white ${className}`}>
                 <div className="flex items-center justify-between space-x-4">
                     {variant === 'compact' ? (
@@ -213,8 +264,17 @@ const Pagination = ({
                                 <ChevronLeft size={16} />
                             </button>
                             <span className="text-sm text-[rgb(var(--color-text-700))]">
-                                Page {currentPage} of {totalPages}
-                                {showTotalItems && ` (${totalItems} total records)`}
+                                {t('pagination.pageOf', {
+                                    current: currentPage,
+                                    total: totalPages,
+                                    defaultValue: `Page ${currentPage} of ${totalPages}`
+                                })}
+                                {showTotalItems
+                                    ? ` ${t('pagination.totalRecordsInline', {
+                                        count: totalItems,
+                                        defaultValue: `(${totalItems} total records)`
+                                    })}`
+                                    : ''}
                             </span>
                             <button
                                 id={`${id}-next-btn`}
@@ -234,11 +294,20 @@ const Pagination = ({
                                 disabled={currentPage === 1}
                                 className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                Previous
+                                {t('pagination.previous', 'Previous')}
                             </button>
                             <span className="text-sm text-[rgb(var(--color-text-700))]">
-                                Page {currentPage} of {totalPages}
-                                {showTotalItems && ` (${totalItems} total records)`}
+                                {t('pagination.pageOf', {
+                                    current: currentPage,
+                                    total: totalPages,
+                                    defaultValue: `Page ${currentPage} of ${totalPages}`
+                                })}
+                                {showTotalItems
+                                    ? ` ${t('pagination.totalRecordsInline', {
+                                        count: totalItems,
+                                        defaultValue: `(${totalItems} total records)`
+                                    })}`
+                                    : ''}
                             </span>
                             <button
                                 id={`${id}-next-btn`}
@@ -246,7 +315,7 @@ const Pagination = ({
                                 disabled={currentPage === totalPages}
                                 className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                Next
+                                {t('pagination.next', 'Next')}
                             </button>
                         </>
                     )}

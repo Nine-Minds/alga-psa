@@ -14,6 +14,7 @@ import { Text } from '@radix-ui/themes';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import Pagination from 'server/src/components/ui/Pagination';
 import FolderTreeView from './FolderTreeView';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface DocumentSelectorProps {
     id: string;
@@ -39,7 +40,7 @@ export default function DocumentSelector({
     isOpen,
     onClose,
     typeFilter,
-    title = 'Select Documents',
+    title,
     description
 }: DocumentSelectorProps): JSX.Element {
     const [documents, setDocuments] = useState<IDocument[]>([]);
@@ -52,6 +53,9 @@ export default function DocumentSelector({
     const [totalPages, setTotalPages] = useState(1);
     const [pageSize, setPageSize] = useState(12);
     const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+    const { t } = useTranslation('common');
+    const resolvedTitle = title ?? t('documents.selector.title', 'Select Documents');
+    const resolvedDescription = description;
 
     useEffect(() => {
         if (isOpen) {
@@ -66,7 +70,7 @@ export default function DocumentSelector({
 
             if (!entityId || !entityType) {
                 console.error('Missing required props: entityId or entityType is undefined');
-                setError('Configuration error: Missing entity information');
+                setError(t('documents.selector.errors.configuration', 'Configuration error: Missing entity information'));
                 setIsLoading(false);
                 return;
             }
@@ -106,11 +110,11 @@ export default function DocumentSelector({
                 setDocuments([]);
                 setTotalPages(1);
                 setCurrentPage(1);
-                setError('Invalid document data received');
+                setError(t('documents.selector.errors.invalidData', 'Invalid document data received'));
             }
         } catch (error) {
             console.error('Error loading documents:', error);
-            setError('Failed to load documents');
+            setError(t('documents.selector.errors.load', 'Failed to load documents'));
             setDocuments([]);
             setTotalPages(1);
             setCurrentPage(1);
@@ -162,7 +166,7 @@ export default function DocumentSelector({
             // Validate required props before using them
             if (!entityId || !entityType) {
                 console.error('Missing required props: entityId or entityType is undefined');
-                setError('Configuration error: Missing entity information');
+                setError(t('documents.selector.errors.configuration', 'Configuration error: Missing entity information'));
                 setIsSaving(false);
                 return;
             }
@@ -185,7 +189,7 @@ export default function DocumentSelector({
             onClose();
         } catch (error) {
             console.error('Error saving document selection:', error);
-            setError('Failed to save document selection');
+            setError(t('documents.selector.errors.save', 'Failed to save document selection'));
         } finally {
             setIsSaving(false);
         }
@@ -199,11 +203,11 @@ export default function DocumentSelector({
               isOpen={isOpen} 
               onClose={onClose} 
               data-testid="document-selector-dialog" 
-              title="Configuration Error"
+              title={t('documents.selector.configErrorTitle', 'Configuration Error')}
             >
                 <DialogContent>
                     <div className="p-4 text-red-500">
-                        Missing required configuration. Please contact support.
+                        {t('documents.selector.configErrorMessage', 'Missing required configuration. Please contact support.')}
                     </div>
                 </DialogContent>
             </Dialog>
@@ -214,10 +218,13 @@ export default function DocumentSelector({
         <Dialog
           isOpen={isOpen}
           onClose={onClose}
-          title={title}
+          title={resolvedTitle}
         >
             <DialogContent>
-                <ReflectionContainer id={id} label="Document Selector">
+                <ReflectionContainer
+                    id={id}
+                    label={t('documents.selector.reflectionLabel', 'Document Selector')}
+                >
                     <div className="space-y-4">
                         {/* Description */}
                         {description && (
@@ -231,7 +238,7 @@ export default function DocumentSelector({
                             <Input
                                 id={`${id}-search`}
                                 type="text"
-                                placeholder="Search documents..."
+                                placeholder={t('documents.selector.searchPlaceholder', 'Search documents...')}
                                 value={searchTerm}
                                 onChange={handleSearchChange}
                                 onKeyPress={handleSearchKeyPress}
@@ -252,7 +259,9 @@ export default function DocumentSelector({
                         <div className="flex gap-4">
                             {/* Folder Navigation Sidebar */}
                             <div className="w-64 flex-shrink-0 border-r border-gray-200 pr-4">
-                                <div className="text-sm font-medium text-gray-700 mb-2">Folders</div>
+                                <div className="text-sm font-medium text-gray-700 mb-2">
+                                    {t('documents.selector.foldersLabel', 'Folders')}
+                                </div>
                                 <FolderTreeView
                                     selectedFolder={selectedFolder}
                                     onFolderSelect={(folder) => {
@@ -354,11 +363,14 @@ export default function DocumentSelector({
                                                 <div className="col-span-full text-center py-8">
                                                     <File className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                                                     <Text as="div" size="2" color="gray">
-                                                        No documents found
+                                                        {t('documents.empty.default', 'No documents found')}
                                                     </Text>
                                                     {selectedFolder && (
                                                         <Text as="div" size="1" color="gray" className="mt-1">
-                                                            in folder "{selectedFolder}"
+                                                            {t('documents.selector.folderHint', {
+                                                                folder: selectedFolder,
+                                                                defaultValue: `in folder "${selectedFolder}"`
+                                                            })}
                                                         </Text>
                                                     )}
                                                 </div>
@@ -381,28 +393,36 @@ export default function DocumentSelector({
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex justify-end space-x-2 pt-4 border-t mt-4">
-                            <Button
-                                id="cancel-document-selection-button"
-                                variant="outline"
-                                onClick={onClose}
-                                disabled={isSaving}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                id="save-document-selection-button"
-                                onClick={handleSave}
-                                disabled={selectedDocuments.size === 0 || isSaving}
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <LoadingIndicator text="Saving..." spinnerProps={{ size: "sm" }} />
-                                    </>
-                                ) : (
-                                    singleSelect ? 'Select Document' : 'Associate Selected'
-                                )}
-                            </Button>
+                        <div className="pt-4 border-t mt-4">
+                            {/* Loading State */}
+                            {isSaving && (
+                                <div className="flex justify-center mb-3">
+                                    <LoadingIndicator
+                                        text={t('documents.selector.saving', 'Saving...')}
+                                        spinnerProps={{ size: 'sm' }}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex justify-end space-x-2">
+                                <Button
+                                    id="cancel-document-selection-button"
+                                    variant="outline"
+                                    onClick={onClose}
+                                    disabled={isSaving}
+                                >
+                                    {t('common.cancel', 'Cancel')}
+                                </Button>
+                                <Button
+                                    id="save-document-selection-button"
+                                    onClick={handleSave}
+                                    disabled={selectedDocuments.size === 0 || isSaving}
+                                >
+                                    {singleSelect
+                                        ? t('documents.selector.selectDocument', 'Select Document')
+                                        : t('documents.selector.associateSelected', 'Associate Selected')}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </ReflectionContainer>

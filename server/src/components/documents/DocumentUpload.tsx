@@ -6,10 +6,9 @@ import { uploadDocument } from '../../lib/actions/document-actions/documentActio
 import { IDocument } from '../../interfaces/document.interface';
 import { Upload, X, FileUp } from 'lucide-react';
 import Spinner from 'server/src/components/ui/Spinner';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 import FolderSelectorModal from './FolderSelectorModal';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface DocumentUploadProps {
     id: string; // Made required since it's needed for reflection registration
@@ -32,6 +31,13 @@ interface UploadOptions {
     folder_path?: string | null;
 }
 
+interface FileUploadStatus {
+    file: File;
+    status: 'pending' | 'uploading' | 'success' | 'error';
+    error?: string;
+    document?: IDocument;
+}
+
 export default function DocumentUpload({
     id,
     userId,
@@ -45,11 +51,16 @@ export default function DocumentUpload({
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { t } = useTranslation('common');
 
     // Folder selection state - only used if folderPath not provided
     const [showFolderModal, setShowFolderModal] = useState(false);
-    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
+
+    // Upload queue state
+    const [uploadQueue, setUploadQueue] = useState<FileUploadStatus[]>([]);
+    const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -64,41 +75,64 @@ export default function DocumentUpload({
     const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
-        const files = e.dataTransfer.files;
+        const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
-            await handleFileSelection(files[0]);
+            await handleFileSelection(files);
         }
     };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            await handleFileSelection(files[0]);
+            await handleFileSelection(Array.from(files));
         }
     };
 
-    const handleFileSelection = async (file: File) => {
+    const handleFileSelection = async (files: File[]) => {
         // If folderPath is already provided (e.g., current folder in folder mode), upload directly
         if (folderPath !== undefined) {
-            await handleFileUpload(file, folderPath);
+            await startBulkUpload(files, folderPath);
         } else {
             // Otherwise, always show folder selector to let user choose destination
-            setPendingFile(file);
+            setPendingFiles(files);
             setShowFolderModal(true);
         }
     };
 
     const handleFolderSelected = async (selectedFolder: string | null) => {
-        if (pendingFile) {
+        if (pendingFiles.length > 0) {
             setSelectedFolderPath(selectedFolder);
-            await handleFileUpload(pendingFile, selectedFolder);
-            setPendingFile(null);
+            await startBulkUpload(pendingFiles, selectedFolder);
+            setPendingFiles([]);
         }
     };
 
-    const handleFileUpload = async (file: File, targetFolderPath: string | null | undefined) => {
+    const startBulkUpload = async (files: File[], targetFolderPath: string | null | undefined) => {
+        // Initialize upload queue
+        const queue: FileUploadStatus[] = files.map(file => ({
+            file,
+            status: 'pending' as const
+        }));
+        setUploadQueue(queue);
+        setCurrentFileIndex(0);
         setIsUploading(true);
         setError(null);
+
+        // Process files sequentially
+        for (let i = 0; i < files.length; i++) {
+            setCurrentFileIndex(i);
+            await processFileUpload(i, files[i], targetFolderPath);
+        }
+
+        setIsUploading(false);
+    };
+
+    const processFileUpload = async (index: number, file: File, targetFolderPath: string | null | undefined) => {
+        // Update status to uploading
+        setUploadQueue(prev => prev.map((item, idx) =>
+            idx === index ? { ...item, status: 'uploading' as const } : item
+        ));
+
         try {
             const formData = new FormData();
             formData.append('file', file);
@@ -132,31 +166,47 @@ export default function DocumentUpload({
                 }
             }
 
-            console.log('Uploading document with options:', options); // Debug log
-
             const result = await uploadDocument(formData, options);
 
             if (result.success) {
-                console.log('Upload successful:', result.document); // Debug log
+                // Update status to success
+                setUploadQueue(prev => prev.map((item, idx) =>
+                    idx === index ? { ...item, status: 'success' as const, document: result.document } : item
+                ));
+
+                // Call onUploadComplete for each successful upload
                 onUploadComplete({
                     success: true,
                     document: result.document
                 });
             } else {
-                console.error('Upload failed:', result.error);
-                setError(result.error || 'Failed to upload document');
+                // Update status to error
+                setUploadQueue(prev => prev.map((item, idx) =>
+                    idx === index ? {
+                        ...item,
+                        status: 'error' as const,
+                        error: result.error || t('documents.uploadSection.error', 'Failed to upload document')
+                    } : item
+                ));
             }
         } catch (error) {
             console.error('Error uploading file:', error);
-            setError('Failed to upload file');
-        } finally {
-            setIsUploading(false);
+            setUploadQueue(prev => prev.map((item, idx) =>
+                idx === index ? {
+                    ...item,
+                    status: 'error' as const,
+                    error: t('documents.uploadSection.fileError', 'Failed to upload file')
+                } : item
+            ));
         }
     };
 
     return (
         <>
-            <ReflectionContainer id={id} label="Document Upload">
+            <ReflectionContainer
+                id={id}
+                label={t('documents.uploadSection.reflectionLabel', 'Document Upload')}
+            >
                 <div className="space-y-4">
                     <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center ${
@@ -172,7 +222,9 @@ export default function DocumentUpload({
                                 className={`w-12 h-12 mb-4 ${isDragging ? 'text-purple-500' : 'text-gray-400'}`}
                                 strokeWidth={1.5}
                             />
-                            <p className="text-sm">Drag and drop your file here, or</p>
+                            <p className="text-sm">
+                                {t('documents.uploadSection.dragDrop', 'Drag and drop your files here, or')}
+                            </p>
                             <Button
                                 id="select-file-button"
                                 type="button"
@@ -182,18 +234,53 @@ export default function DocumentUpload({
                                 className="mt-2 inline-flex items-center"
                             >
                                 <FileUp className="w-4 h-4 mr-2" />
-                                {isUploading ? 'Uploading...' : 'Browse Files'}
+                                {isUploading
+                                    ? t('documents.uploadSection.uploading', 'Uploading...')
+                                    : t('documents.uploadSection.browse', 'Browse Files')}
                             </Button>
                             <input
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileSelect}
                                 className="hidden"
+                                multiple
                             />
                         </div>
-                        {isUploading && (
-                            <div className="flex justify-center">
-                                <Spinner size="sm" />
+                        {isUploading && uploadQueue.length > 0 && (
+                            <div className="space-y-2">
+                                <div className="text-sm text-gray-600 text-center">
+                                    {t('documents.uploadSection.uploadingProgress', {
+                                        current: currentFileIndex + 1,
+                                        total: uploadQueue.length,
+                                        defaultValue: `Uploading ${currentFileIndex + 1} of ${uploadQueue.length}`
+                                    })}
+                                </div>
+                                <div className="max-h-48 overflow-y-auto space-y-2">
+                                    {uploadQueue.map((item, index) => (
+                                        <div
+                                            key={index}
+                                            className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded"
+                                        >
+                                            <span className="truncate flex-1">{item.file.name}</span>
+                                            <span className="ml-2 flex items-center">
+                                                {item.status === 'pending' && (
+                                                    <span className="text-gray-400">
+                                                        {t('documents.uploadSection.pending', 'Pending')}
+                                                    </span>
+                                                )}
+                                                {item.status === 'uploading' && (
+                                                    <Spinner size="sm" />
+                                                )}
+                                                {item.status === 'success' && (
+                                                    <span className="text-green-600">✓</span>
+                                                )}
+                                                {item.status === 'error' && (
+                                                    <span className="text-red-600" title={item.error}>✗</span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                         {error && (
@@ -213,7 +300,7 @@ export default function DocumentUpload({
                         className="inline-flex items-center"
                     >
                         <X className="w-4 h-4 mr-2" />
-                        Cancel
+                        {t('common.cancel', 'Cancel')}
                     </Button>
                 </div>
             </div>
@@ -224,11 +311,23 @@ export default function DocumentUpload({
             isOpen={showFolderModal}
             onClose={() => {
                 setShowFolderModal(false);
-                setPendingFile(null);
+                setPendingFiles([]);
             }}
             onSelectFolder={handleFolderSelected}
-            title="Select Destination Folder"
-            description={pendingFile ? `Where would you like to save "${pendingFile.name}"?` : "Choose where to save this document"}
+            title={t('documents.folderSelector.defaultTitle', 'Select Destination Folder')}
+            description={
+                pendingFiles.length > 1
+                    ? t('documents.folderSelector.multipleDescription', {
+                        count: pendingFiles.length,
+                        defaultValue: `Where would you like to save these ${pendingFiles.length} files?`
+                    })
+                    : pendingFiles.length === 1
+                    ? t('documents.folderSelector.singleDescription', {
+                        fileName: pendingFiles[0].name,
+                        defaultValue: `Where would you like to save "${pendingFiles[0].name}"?`
+                    })
+                    : t('documents.folderSelector.defaultDescription', 'Choose where to save this document')
+            }
         />
         </>
     );

@@ -6,6 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { getFolders, createFolder } from 'server/src/lib/actions/document-actions/documentActions';
 import { Folder, Home, ChevronRight, FolderPlus, X } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface FolderSelectorModalProps {
   isOpen: boolean;
@@ -13,18 +14,23 @@ interface FolderSelectorModalProps {
   onSelectFolder: (folderPath: string | null) => void;
   title?: string;
   description?: string;
+  namespace?: 'common' | 'clientPortal';
 }
 
 export default function FolderSelectorModal({
   isOpen,
   onClose,
   onSelectFolder,
-  title = "Select Destination Folder",
-  description = "Choose where to save this document"
+  title: titleProp,
+  description: descriptionProp,
+  namespace = 'common'
 }: FolderSelectorModalProps) {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [folders, setFolders] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation(namespace);
+  const title = titleProp ?? t('documents.folderSelector.defaultTitle', 'Select Destination Folder');
+  const description = descriptionProp ?? t('documents.folderSelector.defaultDescription', 'Choose where to save this document');
 
   // New folder creation state
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
@@ -63,13 +69,13 @@ export default function FolderSelectorModal({
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) {
-      setError('Please enter a folder name');
+      setError(t('documents.folderSelector.errors.nameRequired', 'Please enter a folder name'));
       return;
     }
 
     // Validate folder name - no slashes allowed
     if (newFolderName.includes('/')) {
-      setError('Folder name cannot contain "/"');
+      setError(t('documents.folderSelector.errors.invalidCharacters', 'Folder name cannot contain "/"'));
       return;
     }
 
@@ -96,7 +102,11 @@ export default function FolderSelectorModal({
       setSelectedFolder(folderPath);
     } catch (err) {
       console.error('Error creating folder:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create folder');
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : t('documents.folderSelector.errors.createFailed', 'Failed to create folder')
+      );
     } finally {
       setCreatingFolder(false);
     }
@@ -156,7 +166,7 @@ export default function FolderSelectorModal({
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2">
                 <FolderPlus className="w-4 h-4 text-purple-600" />
-                Create New Folder
+                {t('documents.folderSelector.createTitle', 'Create New Folder')}
               </h4>
               <button
                 id="cancel-new-folder-btn"
@@ -171,7 +181,10 @@ export default function FolderSelectorModal({
 
             <div>
               <label className="block text-sm text-gray-600 mb-1">
-                Parent folder: {newFolderParent || '/ (Root)'}
+                {t('documents.folderSelector.parentLabel', {
+                  folder: newFolderParent || t('documents.folderSelector.rootLabel', '/ (Root)'),
+                  defaultValue: `Parent folder: ${newFolderParent || '/ (Root)'}`
+                })}
               </label>
             </div>
 
@@ -179,7 +192,7 @@ export default function FolderSelectorModal({
               <Input
                 id="new-folder-name-input"
                 type="text"
-                placeholder="Enter folder name"
+                placeholder={t('documents.folderSelector.namePlaceholder', 'Enter folder name')}
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={(e) => {
@@ -207,7 +220,7 @@ export default function FolderSelectorModal({
                 onClick={handleCancelNewFolder}
                 disabled={creatingFolder}
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button
                 id="create-folder-btn"
@@ -216,7 +229,9 @@ export default function FolderSelectorModal({
                 onClick={handleCreateFolder}
                 disabled={creatingFolder || !newFolderName.trim()}
               >
-                {creatingFolder ? 'Creating...' : 'Create Folder'}
+                {creatingFolder
+                  ? t('documents.folderSelector.creating', 'Creating...')
+                  : t('documents.folderSelector.createButton', 'Create Folder')}
               </Button>
             </div>
           </div>
@@ -232,14 +247,16 @@ export default function FolderSelectorModal({
               className="flex items-center gap-2"
             >
               <FolderPlus className="w-4 h-4" />
-              New Folder
+              {t('documents.folderSelector.newFolderButton', 'New Folder')}
             </Button>
           </div>
         )}
 
         <div className="flex-1 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-1">
           {loading ? (
-            <div className="text-center py-8 text-gray-500">Loading folders...</div>
+            <div className="text-center py-8 text-gray-500">
+              {t('documents.folderSelector.loading', 'Loading folders...')}
+            </div>
           ) : (
             <>
               {/* Root option */}
@@ -252,7 +269,7 @@ export default function FolderSelectorModal({
               >
                 <div className="flex items-center gap-2">
                   <Home className="w-4 h-4" />
-                  <span>Root (No folder)</span>
+                  <span>{t('documents.folderSelector.rootOption', 'Root (No folder)')}</span>
                 </div>
               </button>
 
@@ -261,7 +278,10 @@ export default function FolderSelectorModal({
                 renderFolderTree(folders)
               ) : (
                 <div className="text-center py-4 text-sm text-gray-500">
-                  No folders available. Documents will be saved to root.
+                  {t(
+                    'documents.folderSelector.empty',
+                    'No folders available. Documents will be saved to root.'
+                  )}
                 </div>
               )}
             </>
@@ -274,13 +294,13 @@ export default function FolderSelectorModal({
             variant="outline"
             onClick={onClose}
           >
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button
             id="folder-selector-confirm-btn"
             onClick={handleConfirm}
           >
-            Confirm
+            {t('common.confirm', 'Confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

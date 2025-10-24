@@ -333,13 +333,32 @@ export async function getDocumentByTicketId(ticketId: string) {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
         })
+        .leftJoin('users', function() {
+          this.on('documents.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': ticketId,
           'document_associations.entity_type': 'ticket',
           'documents.tenant': tenant,
           'document_associations.tenant': tenant
         })
-        .select('documents.*');
+        .select(
+          'documents.*',
+          'users.first_name',
+          'users.last_name',
+          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `)
+        )
+        .orderBy('documents.updated_at', 'desc');
       return documents;
     });
   } catch (error) {
@@ -371,13 +390,32 @@ export async function getDocumentByClientId(clientId: string) {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
         })
+        .leftJoin('users', function() {
+          this.on('documents.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': clientId,
           'document_associations.entity_type': 'client',
           'documents.tenant': tenant,
           'document_associations.tenant': tenant
         })
-        .select('documents.*');
+        .select(
+          'documents.*',
+          'users.first_name',
+          'users.last_name',
+          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `)
+        )
+        .orderBy('documents.updated_at', 'desc');
       return documents;
     });
   } catch (error) {
@@ -409,13 +447,32 @@ export async function getDocumentByContactNameId(contactNameId: string) {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
         })
+        .leftJoin('users', function() {
+          this.on('documents.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': contactNameId,
           'document_associations.entity_type': 'contact',
           'documents.tenant': tenant,
           'document_associations.tenant': tenant
         })
-        .select('documents.*');
+        .select(
+          'documents.*',
+          'users.first_name',
+          'users.last_name',
+          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `)
+        )
+        .orderBy('documents.updated_at', 'desc');
       return documents;
     });
   } catch (error) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { IDocument, DocumentFilters } from 'server/src/interfaces/document.interface';
@@ -72,6 +72,7 @@ interface DocumentsProps {
   isInDrawer?: boolean;
   uploadFormRef?: React.RefObject<HTMLDivElement>;
   filters?: DocumentFilters;
+  namespace?: 'common' | 'clientPortal';
 }
 
 const Documents = ({
@@ -86,9 +87,10 @@ const Documents = ({
   isInDrawer = false,
   uploadFormRef,
   searchTermFromParent = '',
-  filters
+  filters,
+  namespace = 'common'
 }: DocumentsProps): JSX.Element => {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('common');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [documentsToDisplay, setDocumentsToDisplay] = useState<IDocument[]>(initialDocuments);
@@ -217,7 +219,7 @@ const Documents = ({
         setTotalPages(Math.ceil(response.total / pageSize));
       } catch (err) {
         console.error('Error fetching documents by folder:', err);
-        setError('Failed to fetch documents.');
+        setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
         setDocumentsToDisplay([]);
         setTotalPages(1);
       }
@@ -249,7 +251,7 @@ const Documents = ({
       setTotalPages(response.totalPages);
     } catch (err) {
       console.error('Error fetching documents:', err);
-      setError('Failed to fetch documents.');
+      setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
       setDocumentsToDisplay([]);
       setTotalPages(1);
     }
@@ -276,19 +278,25 @@ const Documents = ({
   };
 
   // Page size options based on view mode
-  const gridPageSizeOptions = [
-    { value: '9', label: '9 per page' },
-    { value: '18', label: '18 per page' },
-    { value: '27', label: '27 per page' },
-    { value: '36', label: '36 per page' }
-  ];
+  const gridPageSizeOptions = useMemo(
+    () => [
+      { value: '9', label: t('documents.pagination.perPage', { count: 9, defaultValue: '9 per page' }) },
+      { value: '18', label: t('documents.pagination.perPage', { count: 18, defaultValue: '18 per page' }) },
+      { value: '27', label: t('documents.pagination.perPage', { count: 27, defaultValue: '27 per page' }) },
+      { value: '36', label: t('documents.pagination.perPage', { count: 36, defaultValue: '36 per page' }) }
+    ],
+    [t]
+  );
 
-  const listPageSizeOptions = [
-    { value: '10', label: '10 per page' },
-    { value: '25', label: '25 per page' },
-    { value: '50', label: '50 per page' },
-    { value: '100', label: '100 per page' }
-  ];
+  const listPageSizeOptions = useMemo(
+    () => [
+      { value: '10', label: t('documents.pagination.perPage', { count: 10, defaultValue: '10 per page' }) },
+      { value: '25', label: t('documents.pagination.perPage', { count: 25, defaultValue: '25 per page' }) },
+      { value: '50', label: t('documents.pagination.perPage', { count: 50, defaultValue: '50 per page' }) },
+      { value: '100', label: t('documents.pagination.perPage', { count: 100, defaultValue: '100 per page' }) }
+    ],
+    [t]
+  );
 
   // Folder-specific handlers
   const handleFolderSelect = (folderPath: string | null) => {
@@ -314,7 +322,12 @@ const Documents = ({
       await createFolder(folderPath);
 
       // Show success toast
-      toast.success(`Folder "${folderPath}" created successfully`);
+      toast.success(
+        t('documents.messages.folderCreated', {
+          name: folderPath,
+          defaultValue: `Folder "${folderPath}" created successfully`
+        })
+      );
 
       // Navigate to the new folder
       setCurrentFolder(folderPath);
@@ -324,7 +337,10 @@ const Documents = ({
       setFolderTreeKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to create folder:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create folder';
+      const errorMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : t('documents.messages.folderCreateFailed', 'Failed to create folder');
       toast.error(errorMessage);
       setError(errorMessage);
     }
@@ -340,8 +356,15 @@ const Documents = ({
       );
 
       const count = selectedDocumentsForMove.size;
-      const folderName = targetFolder || 'Root';
-      toast.success(`${count} document${count > 1 ? 's' : ''} moved to ${folderName}`);
+      const folderName =
+        targetFolder || t('documents.folders.root', 'Root');
+      toast.success(
+        t('documents.messages.moveDocumentsSuccess', {
+          count,
+          destination: folderName,
+          defaultValue: `${count} document${count !== 1 ? 's' : ''} moved to ${folderName}`
+        })
+      );
 
       setSelectedDocumentsForMove(new Set());
       setShowBulkMoveFolderModal(false);
@@ -351,7 +374,10 @@ const Documents = ({
       setFolderTreeKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to move documents:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to move documents';
+      const errorMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : t('documents.messages.moveDocumentsFailed', 'Failed to move documents');
       toast.error(errorMessage);
       setError(errorMessage);
     }
@@ -398,13 +424,21 @@ const Documents = ({
     try {
       await deleteDocument(document.document_id, userId);
       setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
-      toast.success(`Document "${document.document_name}" deleted successfully`);
+      toast.success(
+        t('documents.messages.deleteSuccess', {
+          name: document.document_name,
+          defaultValue: `Document "${document.document_name}" deleted successfully`
+        })
+      );
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
     } catch (error) {
       console.error('Error deleting document:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete document';
+      const errorMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : t('documents.messages.deleteFailed', 'Failed to delete document');
       toast.error(errorMessage);
       setError(errorMessage);
     }
@@ -421,7 +455,9 @@ const Documents = ({
       }
     } catch (error) {
       console.error('Error disassociating document:', error);
-      setError('Failed to remove document association');
+      setError(
+        t('documents.messages.removeAssociationFailed', 'Failed to remove document association')
+      );
     }
   }, [entityId, entityType, onDocumentCreated]);
 
@@ -436,7 +472,12 @@ const Documents = ({
     try {
       await moveDocumentsToFolder([documentToMove.document_id], folderPath);
 
-      toast.success(`Document "${documentToMove.document_name}" moved successfully`);
+      toast.success(
+        t('documents.messages.moveDocumentSuccess', {
+          name: documentToMove.document_name,
+          defaultValue: `Document "${documentToMove.document_name}" moved successfully`
+        })
+      );
 
       // Refresh the document list
       await fetchDocuments(currentPage, searchTermFromParent);
@@ -451,7 +492,10 @@ const Documents = ({
       setShowMoveFolderModal(false);
     } catch (error) {
       console.error('Failed to move document:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to move document';
+      const errorMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : t('documents.messages.moveDocumentFailed', 'Failed to move document');
       toast.error(errorMessage);
       setError(errorMessage);
     }
@@ -460,7 +504,9 @@ const Documents = ({
   const handleSaveNewDocument = async () => {
     try {
       if (!newDocumentName.trim()) {
-        setDrawerError('Document name is required');
+        setDrawerError(
+          t('documents.validation.nameRequired', 'Document name is required')
+        );
         return;
       }
 
@@ -490,7 +536,9 @@ const Documents = ({
       setIsDrawerOpen(false);
     } catch (error) {
       console.error('Error creating document:', error);
-      setDrawerError('Failed to create document');
+      setDrawerError(
+        t('documents.messages.createFailed', 'Failed to create document')
+      );
     } finally {
       setIsSaving(false);
     }
@@ -527,7 +575,9 @@ const Documents = ({
       setIsDrawerOpen(false);
     } catch (error) {
       console.error('Error saving document:', error);
-      setDrawerError('Failed to save document');
+      setDrawerError(
+        t('documents.messages.saveFailed', 'Failed to save document')
+      );
     } finally {
       setIsSaving(false);
     }
@@ -555,7 +605,9 @@ const Documents = ({
           }
         } catch (error) {
           console.error('Error loading document content:', error);
-          setError('Failed to load document content');
+          setError(
+            t('documents.messages.loadContentFailed', 'Failed to load document content')
+          );
           setCurrentContent(DEFAULT_BLOCKS);
         } finally {
           setIsLoadingContent(false);
@@ -605,7 +657,9 @@ const Documents = ({
       await downloadDocument(downloadUrl, filename, true);
     } catch (error) {
       console.error('Download failed:', error);
-      toast.error('Failed to download document');
+      toast.error(
+        t('documents.messages.downloadFailed', 'Failed to download document')
+      );
     }
   };
 
@@ -787,7 +841,10 @@ const Documents = ({
                     <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                          {selectedDocumentsForMove.size} document{selectedDocumentsForMove.size > 1 ? 's' : ''} selected
+                          {t('documents.bulkActions.selected', {
+                            count: selectedDocumentsForMove.size,
+                            defaultValue: `${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''} selected`
+                          })}
                         </span>
                         <div className="flex items-center gap-2">
                           {!entityId && !entityType && (
@@ -798,7 +855,7 @@ const Documents = ({
                               onClick={() => setShowBulkMoveFolderModal(true)}
                             >
                               <FolderInput className="w-4 h-4 mr-2" />
-                              Move to Folder
+                              {t('documents.bulkActions.moveToFolder', 'Move to Folder')}
                             </Button>
                           )}
                           <Button
@@ -806,7 +863,15 @@ const Documents = ({
                             variant="ghost"
                             size="sm"
                             onClick={async () => {
-                              if (!confirm(`Are you sure you want to delete ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size > 1 ? 's' : ''}?`)) {
+                              const count = selectedDocumentsForMove.size;
+                              if (
+                                !confirm(
+                                  t('documents.prompts.confirmBulkDelete', {
+                                    count,
+                                    defaultValue: `Are you sure you want to delete ${count} document${count !== 1 ? 's' : ''}?`
+                                  })
+                                )
+                              ) {
                                 return;
                               }
                               try {
@@ -815,7 +880,12 @@ const Documents = ({
                                   return doc ? deleteDocument(docId, userId) : Promise.resolve();
                                 });
                                 await Promise.all(deletePromises);
-                                toast.success(`${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size > 1 ? 's' : ''} deleted successfully`);
+                                toast.success(
+                                  t('documents.messages.bulkDeleteSuccess', {
+                                    count,
+                                    defaultValue: `${count} document${count !== 1 ? 's' : ''} deleted successfully`
+                                  })
+                                );
                                 setSelectedDocumentsForMove(new Set());
                                 fetchDocuments(currentPage, searchTermFromParent);
                                 if (onDocumentCreated) {
@@ -823,12 +893,14 @@ const Documents = ({
                                 }
                               } catch (error) {
                                 console.error('Error deleting documents:', error);
-                                toast.error('Failed to delete some documents');
+                                toast.error(
+                                  t('documents.messages.bulkDeleteFailed', 'Failed to delete some documents')
+                                );
                               }
                             }}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Selected
+                            {t('documents.bulkActions.deleteSelected', 'Delete Selected')}
                           </Button>
                         </div>
                       </div>
@@ -839,7 +911,7 @@ const Documents = ({
                         onClick={() => setSelectedDocumentsForMove(new Set())}
                       >
                         <X className="w-4 h-4 mr-2" />
-                        Clear Selection
+                        {t('documents.bulkActions.clearSelection', 'Clear Selection')}
                       </Button>
                     </div>
                   )}
@@ -859,7 +931,7 @@ const Documents = ({
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-                        No documents found in this folder
+                        {t('documents.empty.folder', 'No documents found in this folder')}
                       </div>
                     )
                   )}
@@ -896,8 +968,9 @@ const Documents = ({
             isOpen={showDocumentFolderModal}
             onClose={() => setShowDocumentFolderModal(false)}
             onSelectFolder={handleDocumentFolderSelected}
-            title="Select Folder for New Document"
-            description="Choose where to save this new document"
+            title={t('documents.folderSelector.newDocumentTitle', 'Select Folder for New Document')}
+            description={t('documents.folderSelector.newDocumentDescription', 'Choose where to save this new document')}
+            namespace={namespace}
           />
 
           {/* Folder Selector Modal for Moving Documents */}
@@ -908,8 +981,16 @@ const Documents = ({
               setDocumentToMove(null);
             }}
             onSelectFolder={handleMoveFolderSelected}
-            title="Move Document"
-            description={documentToMove ? `Select destination folder for "${documentToMove.document_name}"` : "Select destination folder"}
+            title={t('documents.folderSelector.moveTitle', 'Move Document')}
+            description={
+              documentToMove
+                ? t('documents.folderSelector.moveDescriptionWithName', {
+                    name: documentToMove.document_name,
+                    defaultValue: `Select destination folder for "${documentToMove.document_name}"`
+                  })
+                : t('documents.folderSelector.moveDescription', 'Select destination folder')
+            }
+            namespace={namespace}
           />
 
           {/* Folder Selector Modal for Bulk Moving Documents */}
@@ -919,8 +1000,12 @@ const Documents = ({
               setShowBulkMoveFolderModal(false);
             }}
             onSelectFolder={handleMoveDocuments}
-            title="Move Selected Documents"
-            description={`Select destination folder for ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size > 1 ? 's' : ''}`}
+            title={t('documents.folderSelector.bulkMoveTitle', 'Move Selected Documents')}
+            description={t('documents.folderSelector.bulkMoveDescription', {
+              count: selectedDocumentsForMove.size,
+              defaultValue: `Select destination folder for ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''}`
+            })}
+            namespace={namespace}
           />
 
           {/* Preview Modal for Images/Videos/PDFs */}
@@ -935,7 +1020,7 @@ const Documents = ({
                 </button>
                 {previewDocument.mime_type?.startsWith('image/') && (
                   <img
-                    src={`/api/documents/view/${previewDocument.file_id}`}
+                    src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.file_id}`}
                     alt={previewDocument.document_name}
                     className="max-w-full max-h-[90vh] object-contain mx-auto"
                   />
@@ -1216,7 +1301,7 @@ const Documents = ({
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-            No documents found
+            {t('documents.empty.default', 'No documents found')}
           </div>
         )}
 
@@ -1239,8 +1324,9 @@ const Documents = ({
           isOpen={showDocumentFolderModal}
           onClose={() => setShowDocumentFolderModal(false)}
           onSelectFolder={handleDocumentFolderSelected}
-          title="Select Folder for New Document"
-          description="Choose where to save this new document"
+          title={t('documents.folderSelector.newDocumentTitle', 'Select Folder for New Document')}
+          description={t('documents.folderSelector.newDocumentDescription', 'Choose where to save this new document')}
+          namespace={namespace}
         />
 
         {/* Folder Selector Modal for Moving Documents (Entity Mode) */}
@@ -1251,8 +1337,16 @@ const Documents = ({
             setDocumentToMove(null);
           }}
           onSelectFolder={handleMoveFolderSelected}
-          title="Move Document"
-          description={documentToMove ? `Select destination folder for "${documentToMove.document_name}"` : "Select destination folder"}
+          title={t('documents.folderSelector.moveTitle', 'Move Document')}
+          description={
+            documentToMove
+              ? t('documents.folderSelector.moveDescriptionWithName', {
+                  name: documentToMove.document_name,
+                  defaultValue: `Select destination folder for "${documentToMove.document_name}"`
+                })
+              : t('documents.folderSelector.moveDescription', 'Select destination folder')
+          }
+          namespace={namespace}
         />
 
         {/* Preview Modal for Images/Videos/PDFs */}
@@ -1267,7 +1361,7 @@ const Documents = ({
               </button>
               {previewDocument.mime_type?.startsWith('image/') && (
                 <img
-                  src={`/api/documents/view/${previewDocument.file_id}`}
+                  src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.file_id}`}
                   alt={previewDocument.document_name}
                   className="max-w-full max-h-[90vh] object-contain mx-auto"
                 />

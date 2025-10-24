@@ -5,6 +5,7 @@ import { IDocument } from '@/interfaces/document.interface';
 import { formatBytes, formatDate } from '@/lib/utils/formatters';
 import { FileIcon, Download, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface DocumentListViewProps {
   documents: IDocument[];
@@ -21,6 +22,8 @@ export default function DocumentListView({
   onDelete,
   onClick
 }: DocumentListViewProps) {
+  const { t } = useTranslation('common');
+
   function toggleSelection(documentId: string) {
     const newSelected = new Set(selectedDocuments);
     if (newSelected.has(documentId)) {
@@ -51,11 +54,21 @@ export default function DocumentListView({
                 onChange={toggleSelectAll}
               />
             </th>
-            <th className="text-left px-4 py-3 text-sm font-medium">Name</th>
-            <th className="text-left px-4 py-3 text-sm font-medium">Folder</th>
-            <th className="text-left px-4 py-3 text-sm font-medium">Size</th>
-            <th className="text-left px-4 py-3 text-sm font-medium">Modified</th>
-            <th className="w-24 px-4 py-3 text-sm font-medium">Actions</th>
+            <th className="text-left px-4 py-3 text-sm font-medium">
+              {t('documents.list.name', 'Name')}
+            </th>
+            <th className="text-left px-4 py-3 text-sm font-medium">
+              {t('documents.list.folder', 'Folder')}
+            </th>
+            <th className="text-left px-4 py-3 text-sm font-medium">
+              {t('documents.list.size', 'Size')}
+            </th>
+            <th className="text-left px-4 py-3 text-sm font-medium">
+              {t('documents.list.modified', 'Modified')}
+            </th>
+            <th className="w-24 px-4 py-3 text-sm font-medium">
+              {t('documents.list.actions', 'Actions')}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -104,7 +117,7 @@ export default function DocumentListView({
                   <button
                     id={`document-download-${doc.document_id}`}
                     className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                    title="Download"
+                    title={t('documents.download', 'Download')}
                   >
                     <Download className="w-4 h-4" />
                   </button>
@@ -113,7 +126,7 @@ export default function DocumentListView({
                       id={`document-delete-${doc.document_id}`}
                       className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
                       onClick={() => onDelete(doc)}
-                      title="Delete"
+                      title={t('documents.delete', 'Delete')}
                     >
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </button>
@@ -126,7 +139,7 @@ export default function DocumentListView({
       </table>
       {documents.length === 0 && (
         <div className="p-8 text-center text-gray-500">
-          No documents found
+          {t('documents.empty.default', 'No documents found')}
         </div>
       )}
     </div>

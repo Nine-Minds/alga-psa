@@ -100,6 +100,15 @@ export default function DocumentsPage() {
     router.replace(newUrl);
   };
 
+  const handleShowAllDocuments = () => {
+    // Navigate to root folder (no folder parameter)
+    handleFolderNavigate(null);
+    // Clear folder-specific filters but keep other filters
+    const newFilters = { ...filterInputs };
+    delete newFilters.folder_path;
+    setFilterInputs(newFilters);
+  };
+
 
   useEffect(() => {
     let mounted = true;
@@ -234,6 +243,8 @@ export default function DocumentsPage() {
               onClearFilters={handleClearFilters}
               entityTypeOptions={entityTypeOptions}
               allUsersData={allUsersData}
+              onShowAllDocuments={handleShowAllDocuments}
+              showAllDocumentsButton={true}
             />
           </div>
         )}

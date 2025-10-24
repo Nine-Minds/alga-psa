@@ -5,6 +5,7 @@ import { IFolderNode } from '@/interfaces/document.interface';
 import { getFolderTree, deleteFolder } from '@/lib/actions/document-actions/documentActions';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface FolderTreeViewProps {
   onFolderSelect: (folderPath: string | null) => void;
@@ -24,6 +25,7 @@ export default function FolderTreeView({
   const [folderTree, setFolderTree] = useState<IFolderNode[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation('common');
 
   useEffect(() => {
     loadFolderTree();
@@ -51,7 +53,7 @@ export default function FolderTreeView({
       setFolderTree(tree);
     } catch (error) {
       console.error('Failed to load folder tree:', error);
-      toast.error('Failed to load folder tree');
+      toast.error(t('documents.folders.loadFailed', 'Failed to load folder tree'));
     } finally {
       setLoading(false);
     }
@@ -70,13 +72,25 @@ export default function FolderTreeView({
   async function handleDeleteFolder(path: string, e: React.MouseEvent) {
     e.stopPropagation();
 
-    if (!confirm(`Are you sure you want to delete the folder "${path}"? This will only work if the folder is empty.`)) {
+    if (
+      !confirm(
+        t('documents.folders.deleteConfirm', {
+          name: path,
+          defaultValue: `Are you sure you want to delete the folder "${path}"? This will only work if the folder is empty.`
+        })
+      )
+    ) {
       return;
     }
 
     try {
       await deleteFolder(path);
-      toast.success(`Folder "${path}" deleted successfully`);
+      toast.success(
+        t('documents.folders.deleteSuccess', {
+          name: path,
+          defaultValue: `Folder "${path}" deleted successfully`
+        })
+      );
 
       // Reload tree and notify parent
       await loadFolderTree();
@@ -90,7 +104,10 @@ export default function FolderTreeView({
       }
     } catch (error) {
       console.error('Failed to delete folder:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete folder';
+      const errorMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : t('documents.folders.deleteFailed', 'Failed to delete folder');
       toast.error(errorMessage);
     }
   }
@@ -144,7 +161,7 @@ export default function FolderTreeView({
             id={`folder-delete-${node.path.replace(/\//g, '-')}`}
             onClick={(e) => handleDeleteFolder(node.path, e)}
             className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-opacity"
-            title="Delete folder"
+            title={t('documents.folders.deleteAction', 'Delete folder')}
           >
             <Trash2 className="w-3.5 h-3.5 text-red-600" />
           </button>
@@ -160,18 +177,24 @@ export default function FolderTreeView({
   }
 
   if (loading) {
-    return <div className="p-4 text-sm text-gray-500">Loading folders...</div>;
+    return (
+      <div className="p-4 text-sm text-gray-500">
+        {t('documents.folders.loading', 'Loading folders...')}
+      </div>
+    );
   }
 
   return (
     <div className="h-full overflow-y-auto flex flex-col">
       <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Folders</h3>
+        <h3 className="text-sm font-semibold">
+          {t('documents.folders.title', 'Folders')}
+        </h3>
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
             className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-            title="Collapse folders"
+            title={t('documents.folders.collapse', 'Collapse folders')}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -180,7 +203,7 @@ export default function FolderTreeView({
       <div className="flex-1 overflow-y-auto">
 
       <div
-        id="folder-all-documents"
+        id="folder-root"
         className={`
           flex items-center gap-2 py-2 px-3 cursor-pointer
           hover:bg-gray-100 dark:hover:bg-gray-800
@@ -188,8 +211,7 @@ export default function FolderTreeView({
         `}
         onClick={() => onFolderSelect(null)}
       >
-        <Folder className="w-4 h-4 text-gray-500" />
-        <span className="text-sm">All Documents</span>
+        <span className="text-sm font-mono text-gray-700 dark:text-gray-300">&lt;root&gt;</span>
       </div>
 
       {folderTree.map(node => renderFolderNode(node, 0))}

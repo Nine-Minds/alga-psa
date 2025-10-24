@@ -38,7 +38,7 @@ interface VideoPreviewProps {
 }
 
 function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPreviewProps) {
-    const { t } = useTranslation('clientPortal');
+    const { t } = useTranslation('common');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -116,7 +116,7 @@ interface VideoModalProps {
 }
 
 function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
-    const { t } = useTranslation('clientPortal');
+    const { t } = useTranslation('common');
     const [videoError, setVideoError] = useState(false);
     const videoRef = React.useRef<HTMLVideoElement>(null);
 
@@ -151,7 +151,10 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                     {t('documents.videoPlaybackFailed', 'Unable to play this video in the browser')}
                 </p>
                 <p className="text-xs text-[rgb(var(--color-text-500))] mb-4">
-                    Chrome may not support this video codec. Try downloading or use Safari/Edge.
+                    {t(
+                        'documents.videoCodecWarning',
+                        'Chrome may not support this video codec. Try downloading or use Safari/Edge.'
+                    )}
                 </p>
                 <Button
                     id={`download-video-${fileId}`}
@@ -287,7 +290,7 @@ function DocumentStorageCardComponent({
     isContentDocument = false,
     forceRefresh
 }: DocumentStorageCardProps): JSX.Element {
-    const { t } = useTranslation('clientPortal');
+    const { t } = useTranslation('common');
     const [previewContent, setPreviewContent] = useState<{
         content?: string;
         previewImage?: string;
@@ -307,14 +310,26 @@ function DocumentStorageCardComponent({
         ? t('documents.deleteVideoTitle', 'Delete Video')
         : t('documents.deleteTitle', 'Delete Document');
     const deleteMessage = isVideoDocument
-        ? t('documents.deleteVideoMessage', `Are you sure you want to delete the video "${documentName}"? This action cannot be undone.`)
-        : t('documents.deleteMessage', `Are you sure you want to delete "${documentName}"? This action cannot be undone.`);
+        ? t('documents.deleteVideoMessage', {
+            name: documentName,
+            defaultValue: `Are you sure you want to delete the video "${documentName}"? This action cannot be undone.`
+        })
+        : t('documents.deleteMessage', {
+            name: documentName,
+            defaultValue: `Are you sure you want to delete "${documentName}"? This action cannot be undone.`
+        });
     const removeTitle = isVideoDocument
         ? t('documents.removeVideoTitle', 'Remove Video')
         : t('documents.removeTitle', 'Remove Document');
     const removeMessage = isVideoDocument
-        ? t('documents.removeVideoMessage', `Are you sure you want to remove the video "${documentName}" from this item? The file will remain available in the document library.`)
-        : t('documents.removeMessage', `Are you sure you want to remove "${documentName}" from this item? The document will still be available in the document library.`);
+        ? t('documents.removeVideoMessage', {
+            name: documentName,
+            defaultValue: `Are you sure you want to remove the video "${documentName}" from this item? The file will remain available in the document library.`
+        })
+        : t('documents.removeMessage', {
+            name: documentName,
+            defaultValue: `Are you sure you want to remove "${documentName}" from this item? The document will still be available in the document library.`
+        });
 
 
     const loadPreview = async () => {
@@ -334,7 +349,9 @@ function DocumentStorageCardComponent({
 
         if (!identifierForPreview) {
             console.warn('DocumentStorageCard: No identifier available for preview (document_id or file_id). Document:', document);
-            setPreviewContent({ error: 'Preview not available (no identifier)' });
+            setPreviewContent({
+                error: t('documents.previewUnavailableNoId', 'Preview not available (no identifier)')
+            });
             setIsLoading(false);
             return;
         }
@@ -349,7 +366,9 @@ function DocumentStorageCardComponent({
                 setHasLoadedPreview(true);
             } catch (error) {
                 console.error('Error getting document preview:', error);
-                setPreviewContent({ error: 'Failed to load preview' });
+                setPreviewContent({
+                    error: t('documents.previewLoadFailed', 'Failed to load preview')
+                });
             } finally {
                 setIsLoading(false);
             }
