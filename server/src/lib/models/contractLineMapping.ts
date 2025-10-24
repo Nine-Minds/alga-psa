@@ -264,16 +264,9 @@ const ContractLineMapping = {
             'created_at',
           ]);
 
-        if (result.length > 0) {
-          console.log(`[updateContractLineAssociation] Updated contract_template_line_mappings`);
-        } else {
-          console.log(`[updateContractLineAssociation] No template mappings found (likely a client contract, not a template)`);
-        }
+        // No need to log - template mappings update is expected to be empty for client contracts
       }
 
-      // Check if billing_timing column exists in contract_line_mappings
-      const hasBillingTimingColumn = await db.schema.hasColumn('contract_line_mappings', 'billing_timing');
-      console.log(`[updateContractLineAssociation] contract_line_mappings has billing_timing column: ${hasBillingTimingColumn}`);
 
       // Fetch and return the updated data with billing_timing
       const updated = await db('contract_line_mappings as clm')
@@ -300,8 +293,6 @@ const ContractLineMapping = {
           contract_line_type?: string;
           billing_timing?: string;
         };
-
-      console.log(`[updateContractLineAssociation] Fetched updated data:`, updated);
 
       if (!updated) {
         throw new Error(`Failed to fetch updated contract line ${contractLineId} for contract ${contractId}`);
@@ -365,17 +356,10 @@ const ContractLineMapping = {
           .orderBy('map.display_order', 'asc');
       }
 
-      // Check if billing_timing column exists in contract_line_template_terms
-      const hasColumn = await db.schema.hasColumn('contract_line_template_terms', 'billing_timing');
-
       const query = db('contract_line_mappings as clm')
         .join('contract_lines as cl', function() {
           this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
               .andOn('clm.tenant', '=', 'cl.tenant');
-        })
-        .leftJoin('contract_line_template_terms as line_terms', function joinTerms() {
-          this.on('line_terms.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('line_terms.tenant', '=', 'cl.tenant');
         })
         .where({
           'clm.contract_id': contractId,
@@ -386,22 +370,8 @@ const ContractLineMapping = {
           'cl.contract_line_name',
           'cl.billing_frequency',
           'cl.is_custom',
-          'cl.contract_line_type',
-          hasColumn
-            ? 'line_terms.billing_timing as billing_timing'
-            : db.raw("'arrears' as billing_timing")
+          'cl.contract_line_type'
         );
-
-      // If column doesn't exist, add it
-      if (!hasColumn) {
-        try {
-          await db.schema.alterTable('contract_line_template_terms', (table) => {
-            table.string('billing_timing', 16).notNullable().defaultTo('arrears');
-          });
-        } catch (e) {
-          // Column may already exist due to concurrent operations
-        }
-      }
 
       return await query;
     } catch (error) {
