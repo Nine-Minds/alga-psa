@@ -24,7 +24,7 @@ import {
 } from 'server/src/lib/actions/contractLineMappingActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { ContractLineRateDialog } from './ContractLineRateDialog';
+import { ContractLineEditDialog } from './ContractLineEditDialog';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface ContractLinesProps {
@@ -37,6 +37,7 @@ interface DetailedContractLineMapping extends IContractLineMapping {
   billing_frequency: string;
   contract_line_type: string;
   default_rate?: number;
+  billing_timing?: 'arrears' | 'advance';
 }
 
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged }) => {
@@ -107,17 +108,29 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
-  const handleCustomRateSave = async (contractLineId: string, customRate?: number) => {
+  const handleContractLineSave = async (
+    contractLineId: string,
+    customRate?: number,
+    billingTiming?: 'arrears' | 'advance'
+  ) => {
     if (!contract.contract_id) return;
 
     try {
-      await updateContractLineAssociation(contract.contract_id, contractLineId, { custom_rate: customRate });
+      const updateData: any = {};
+      if (customRate !== undefined) {
+        updateData.custom_rate = customRate;
+      }
+      if (billingTiming !== undefined) {
+        updateData.billing_timing = billingTiming;
+      }
+
+      await updateContractLineAssociation(contract.contract_id, contractLineId, updateData);
       await fetchData();
       setEditingLine(null);
       onContractLinesChanged?.();
     } catch (err) {
-      console.error('Error updating contract line rate:', err);
-      setError('Failed to update contract line rate');
+      console.error('Error updating contract line:', err);
+      setError('Failed to update contract line');
     }
   };
 
@@ -150,6 +163,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
             : 'Same as default',
       },
       {
+        title: 'Billing Timing',
+        dataIndex: 'billing_timing',
+        render: (value) => {
+          const timing = value || 'arrears';
+          return <span className="capitalize">{timing}</span>;
+        },
+      },
+      {
         title: 'Actions',
         dataIndex: 'contract_line_id',
         render: (value, record) => (
@@ -168,7 +189,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditingLine(record)}>
                 <Settings className="h-4 w-4 mr-2" />
-                Set Custom Rate
+                Edit Contract Line
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-600"
@@ -247,10 +268,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       </Box>
 
       {editingLine && (
-        <ContractLineRateDialog
-          plan={editingLine}
+        <ContractLineEditDialog
+          line={editingLine}
           onClose={() => setEditingLine(null)}
-          onSave={handleCustomRateSave}
+          onSave={handleContractLineSave}
         />
       )}
     </Card>

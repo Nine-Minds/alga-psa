@@ -161,10 +161,12 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
     // Add monthly recurring to aggregated data
     for (const contractLine of contractLines) {
       const keys = Array.from(aggregatedMap.keys()).filter(k => k.startsWith(contractLine.contract_id));
-      const rate = contractLine.custom_rate || contractLine.base_rate || 0;
+      // Convert dollars to cents: rate is stored as decimal(10,2) in dollars
+      const rateInDollars = contractLine.custom_rate || contractLine.base_rate || 0;
+      const rateInCents = Math.round(rateInDollars * 100);
       for (const key of keys) {
         const item = aggregatedMap.get(key)!;
-        item.monthly_recurring += rate;
+        item.monthly_recurring += rateInCents;
       }
     }
 

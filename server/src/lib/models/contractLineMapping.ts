@@ -217,6 +217,7 @@ const ContractLineMapping = {
         contract_id,
         contract_line_id,
         created_at,
+        billing_timing: __,
         ...dataToUpdate
       } = updateData;
 
@@ -234,34 +235,97 @@ const ContractLineMapping = {
       }
 
       const templateUpdatePayload: Record<string, unknown> = {};
+      const termsUpdatePayload: Record<string, unknown> = {};
+
       if (dataToUpdate.custom_rate !== undefined) {
         templateUpdatePayload.custom_rate = dataToUpdate.custom_rate;
       }
       if (dataToUpdate.display_order !== undefined) {
         templateUpdatePayload.display_order = dataToUpdate.display_order;
       }
+      if (updateData.billing_timing !== undefined) {
+        termsUpdatePayload.billing_timing = updateData.billing_timing;
+      }
 
-      const [updatedTemplateMapping] = await db('contract_template_line_mappings')
-        .where({
-          template_id: contractId,
-          template_line_id: contractLineId,
-          tenant,
-        })
-        .update(templateUpdatePayload)
-        .returning([
-          'tenant',
-          'template_id as contract_id',
-          'template_line_id as contract_line_id',
-          'display_order',
-          'custom_rate',
-          'created_at',
-        ]);
+      // Update template mappings if there are mapping updates
+      let updatedTemplateMapping = null;
+      if (Object.keys(templateUpdatePayload).length > 0) {
+        const result = await db('contract_template_line_mappings')
+          .where({
+            template_id: contractId,
+            template_line_id: contractLineId,
+            tenant,
+          })
+          .update(templateUpdatePayload)
+          .returning([
+            'tenant',
+            'template_id as contract_id',
+            'template_line_id as contract_line_id',
+            'display_order',
+            'custom_rate',
+            'created_at',
+          ]);
 
-      if (!updatedTemplateMapping) {
+        if (result.length > 0) {
+          updatedTemplateMapping = result[0];
+        }
+      }
+
+      // Update template line terms for billing_timing
+      if (Object.keys(termsUpdatePayload).length > 0) {
+        await db('contract_line_template_terms')
+          .where({
+            contract_line_id: contractLineId,
+            tenant,
+          })
+          .update(termsUpdatePayload);
+      }
+
+      if (!updatedTemplateMapping && Object.keys(termsUpdatePayload).length === 0) {
         throw new Error(`Failed to update contract line ${contractLineId} for contract ${contractId}`);
       }
 
-      return updatedTemplateMapping as IContractLineMapping;
+      // Check if billing_timing column exists in contract_line_template_terms
+      const hasColumn = await db.schema.hasColumn('contract_line_template_terms', 'billing_timing');
+
+      // Fetch and return the updated data with billing_timing
+      const updated = await db('contract_line_mappings as clm')
+        .join('contract_lines as cl', function() {
+          this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
+              .andOn('clm.tenant', '=', 'cl.tenant');
+        })
+        .leftJoin('contract_line_template_terms as line_terms', function() {
+          this.on('line_terms.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('line_terms.tenant', '=', 'cl.tenant');
+        })
+        .where({
+          'clm.contract_id': contractId,
+          'clm.contract_line_id': contractLineId,
+          'clm.tenant': tenant
+        })
+        .select(
+          'clm.*',
+          'cl.contract_line_name',
+          'cl.billing_frequency',
+          'cl.is_custom',
+          'cl.contract_line_type',
+          hasColumn
+            ? 'line_terms.billing_timing as billing_timing'
+            : db.raw("'arrears' as billing_timing")
+        )
+        .first() as IContractLineMapping & {
+          contract_line_name?: string;
+          billing_frequency?: string;
+          is_custom?: boolean;
+          contract_line_type?: string;
+          billing_timing?: string;
+        };
+
+      if (!updated) {
+        throw new Error(`Failed to fetch updated contract line ${contractLineId} for contract ${contractId}`);
+      }
+
+      return updated;
     } catch (error) {
       console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
       throw error;
@@ -319,7 +383,10 @@ const ContractLineMapping = {
           .orderBy('map.display_order', 'asc');
       }
 
-      return await db('contract_line_mappings as clm')
+      // Check if billing_timing column exists in contract_line_template_terms
+      const hasColumn = await db.schema.hasColumn('contract_line_template_terms', 'billing_timing');
+
+      const query = db('contract_line_mappings as clm')
         .join('contract_lines as cl', function() {
           this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
               .andOn('clm.tenant', '=', 'cl.tenant');
@@ -338,8 +405,23 @@ const ContractLineMapping = {
           'cl.billing_frequency',
           'cl.is_custom',
           'cl.contract_line_type',
-          'line_terms.billing_timing as billing_timing'
+          hasColumn
+            ? 'line_terms.billing_timing as billing_timing'
+            : db.raw("'arrears' as billing_timing")
         );
+
+      // If column doesn't exist, add it
+      if (!hasColumn) {
+        try {
+          await db.schema.alterTable('contract_line_template_terms', (table) => {
+            table.string('billing_timing', 16).notNullable().defaultTo('arrears');
+          });
+        } catch (e) {
+          // Column may already exist due to concurrent operations
+        }
+      }
+
+      return await query;
     } catch (error) {
       console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);
       throw error;

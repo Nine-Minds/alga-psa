@@ -1670,7 +1670,7 @@ export class BillingEngine {
     return licenseCharges;
   }
 
-  private async calculateBucketPlanCharges(clientId: string, period: IBillingPeriod, contractLine: IClientContractLine): Promise<IBucketCharge[]> {
+  private async calculateBucketPlanCharges(clientId: string, billingPeriod: IBillingPeriod, contractLine: IClientContractLine): Promise<IBucketCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -1728,8 +1728,8 @@ export class BillingEngine {
           contract_line_id: contractLine.contract_line_id,
           service_catalog_id: bucketConfig.service_id
         })
-        .where('period_start', '>=', period.startDate)
-        .where('period_end', '<=', period.endDate)
+        .where('period_start', '>=', billingPeriod.startDate)
+        .where('period_end', '<=', billingPeriod.endDate)
         .select('*');
 
       if (usageRecords.length === 0) {
@@ -1780,7 +1780,7 @@ export class BillingEngine {
         if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
           try {
             const taxServiceInstance = new TaxService();
-            const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, period.endDate, effectiveTaxRegion);
+            const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
             taxRate = taxResult.taxRate;
             taxAmount = taxResult.taxAmount;
           } catch (error) {

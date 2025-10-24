@@ -38,17 +38,31 @@ export async function getContractLines(): Promise<IContractLine[]> {
 
             let termsMap = new Map<string, { billing_timing: 'arrears' | 'advance' }>();
             if (ids.length > 0) {
-                const termRows = await trx('contract_line_template_terms')
-                    .where({ tenant })
-                    .whereIn('contract_line_id', ids)
-                    .select('contract_line_id', 'billing_timing');
+                // Check if billing_timing column exists before querying it
+                const hasColumn = await trx.schema.hasColumn('contract_line_template_terms', 'billing_timing');
 
-                termsMap = new Map(
-                    termRows.map((row) => [
-                        row.contract_line_id,
-                        { billing_timing: (row.billing_timing ?? 'arrears') as 'arrears' | 'advance' },
-                    ])
-                );
+                if (hasColumn) {
+                    const termRows = await trx('contract_line_template_terms')
+                        .where({ tenant })
+                        .whereIn('contract_line_id', ids)
+                        .select('contract_line_id', 'billing_timing');
+
+                    termsMap = new Map(
+                        termRows.map((row) => [
+                            row.contract_line_id,
+                            { billing_timing: (row.billing_timing ?? 'arrears') as 'arrears' | 'advance' },
+                        ])
+                    );
+                } else {
+                    // If column doesn't exist, add it with migration-like logic
+                    try {
+                        await trx.schema.alterTable('contract_line_template_terms', (table) => {
+                            table.string('billing_timing', 16).notNullable().defaultTo('arrears');
+                        });
+                    } catch (e) {
+                        // Column may already exist due to concurrent migrations, continue
+                    }
+                }
             }
 
             const enrichedPlans = plans.map((plan) => ({

@@ -19,7 +19,7 @@ export interface PaginatedServicesResponse {
 
 export interface ServiceListOptions {
   search?: string;
-  billing_method?: 'fixed' | 'hourly' | 'usage';
+  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit';
   category_id?: string | null;
   custom_service_type_id?: string;
   sort?: 'service_name' | 'billing_method' | 'default_rate';
