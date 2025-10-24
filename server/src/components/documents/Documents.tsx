@@ -204,7 +204,11 @@ const Documents = ({
     // Folder mode: fetch by folder
     if (inFolderMode) {
       try {
-        const response = await getDocumentsByFolder(currentFolder, false, page, pageSize, filters);
+        // If showAllDocuments is true, pass includeSubfolders as true with null folder to show all documents
+        const includeSubfolders = filters?.showAllDocuments || false;
+        const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
+
+        const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, page, pageSize, filters);
         let docs = response.documents;
 
         // Apply client-side search filter if needed

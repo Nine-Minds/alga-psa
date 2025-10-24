@@ -49,7 +49,8 @@ export default function DocumentsPage() {
     updated_at_start: '',
     updated_at_end: '',
     sortBy: 'updated_at',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    showAllDocuments: false
   });
 
   const {
@@ -80,7 +81,8 @@ export default function DocumentsPage() {
       updated_at_start: '',
       updated_at_end: '',
       sortBy: 'updated_at',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
+      showAllDocuments: false
     };
     setFilterInputs(clearedFilters);
   };
@@ -103,16 +105,27 @@ export default function DocumentsPage() {
   const handleShowAllDocuments = () => {
     // Navigate to root folder (no folder parameter)
     handleFolderNavigate(null);
-    // Clear folder-specific filters but keep other filters
-    const newFilters = { ...filterInputs };
-    delete newFilters.folder_path;
-    setFilterInputs(newFilters);
+    // Set showAllDocuments flag to display all documents without folder hierarchy
+    setFilterInputs({
+      ...filterInputs,
+      showAllDocuments: true
+    });
   };
 
 
+  // Clear showAllDocuments flag when folder changes
+  useEffect(() => {
+    if (currentFolder && filterInputs.showAllDocuments) {
+      setFilterInputs(prev => ({
+        ...prev,
+        showAllDocuments: false
+      }));
+    }
+  }, [currentFolder]);
+
   useEffect(() => {
     let mounted = true;
-    
+
     const initialize = async () => {
       if (initialized) return;
 
@@ -142,12 +155,12 @@ export default function DocumentsPage() {
         }
 
         if (dbEntityTypes && Array.isArray(dbEntityTypes)) {
-          const options = dbEntityTypes.map(et => ({ 
-            value: et, 
-            label: capitalizeFirstLetter(et) 
+          const options = dbEntityTypes.map(et => ({
+            value: et,
+            label: capitalizeFirstLetter(et)
           }));
           setEntityTypeOptions([
-            { value: 'all_entities', label: 'All Entity Types' }, 
+            { value: 'all_entities', label: 'All Entity Types' },
             ...options
           ]);
         } else {
@@ -166,7 +179,7 @@ export default function DocumentsPage() {
     };
 
     initialize();
-    
+
     return () => {
       mounted = false;
     };

@@ -2359,10 +2359,12 @@ export async function getDocumentsByFolder(
     } else {
       query = query.where('d.folder_path', folderPath);
     }
-  } else {
+  } else if (!includeSubfolders) {
     // Root folder - documents with no folder_path
+    // If includeSubfolders is true with null folderPath, show ALL documents (no folder filtering)
     query = query.whereNull('d.folder_path');
   }
+  // If folderPath is null and includeSubfolders is true, don't add any folder filtering - show all documents
 
   // Get total count
   const countResult = await query.clone().count('* as count');
