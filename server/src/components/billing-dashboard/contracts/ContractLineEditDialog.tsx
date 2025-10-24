@@ -19,7 +19,7 @@ interface ContractLineEditDialogProps {
     billing_timing?: 'arrears' | 'advance';
   };
   onClose: () => void;
-  onSave: (contractLineId: string, customRate: number | undefined, billingTiming: 'arrears' | 'advance') => void;
+  onSave: (contractLineId: string, customRate: number | undefined, billingTiming: 'arrears' | 'advance') => Promise<void>;
 }
 
 export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEditDialogProps) {
@@ -33,8 +33,9 @@ export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEd
     line.billing_timing || 'arrears'
   );
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!useDefaultRate && (customRate < 0 || isNaN(customRate))) {
@@ -42,9 +43,15 @@ export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEd
       return;
     }
 
-    // If using default rate, pass undefined to reset to default (will be saved as NULL)
-    // Otherwise pass the custom rate
-    onSave(line.contract_line_id, useDefaultRate ? undefined : customRate, billingTiming);
+    setIsSaving(true);
+    try {
+      // If using default rate, pass undefined to reset to default (will be saved as NULL)
+      // Otherwise pass the custom rate
+      await onSave(line.contract_line_id, useDefaultRate ? undefined : customRate, billingTiming);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save changes');
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -144,14 +151,16 @@ export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEd
               type="button"
               variant="secondary"
               onClick={onClose}
+              disabled={isSaving}
             >
               Cancel
             </Button>
             <Button
               id="save-edit-line-btn"
               type="submit"
+              disabled={isSaving}
             >
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </form>
