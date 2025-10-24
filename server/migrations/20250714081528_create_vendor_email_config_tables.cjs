@@ -110,9 +110,19 @@ exports.up = async function(knex) {
     ON google_email_provider_config (tenant, email_provider_id)
   `);
 
-  // Create distributed tables for CitusDB
-  await knex.raw("SELECT create_distributed_table('microsoft_email_provider_config', 'tenant')");
-  await knex.raw("SELECT create_distributed_table('google_email_provider_config', 'tenant')");
+  const citusFn = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_proc
+      WHERE proname = 'create_distributed_table'
+    ) AS exists;
+  `);
+
+  if (citusFn.rows?.[0]?.exists) {
+    await knex.raw("SELECT create_distributed_table('microsoft_email_provider_config', 'tenant')");
+    await knex.raw("SELECT create_distributed_table('google_email_provider_config', 'tenant')");
+  } else {
+    console.warn('[create_vendor_email_config_tables] Skipping create_distributed_table (function unavailable)');
+  }
 
   console.log('✅ Created vendor-specific email configuration tables');
 };

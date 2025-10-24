@@ -1186,6 +1186,10 @@ export class BillingEngine {
         this.on('time_entries.user_id', '=', 'users.user_id')
           .andOn('users.tenant', '=', 'time_entries.tenant');
       })
+      .leftJoin('service_catalog', function () {
+        this.on('service_catalog.service_id', '=', 'time_entries.service_id')
+          .andOn('service_catalog.tenant', '=', 'time_entries.tenant');
+      })
       .leftJoin('project_ticket_links', function () {
         this.on('time_entries.work_item_id', '=', 'project_ticket_links.ticket_id')
           .andOn('project_ticket_links.tenant', '=', 'time_entries.tenant');
@@ -1205,10 +1209,6 @@ export class BillingEngine {
       .leftJoin('tickets', function () {
         this.on('time_entries.work_item_id', '=', 'tickets.ticket_id')
           .andOn('tickets.tenant', '=', 'time_entries.tenant');
-      })
-      .leftJoin('client_contract_service_bucket_config as ccsbc', function () {
-        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
-          .andOn('service_catalog.tenant', '=', 'time_entries.tenant');
       })
       .where({
         'time_entries.tenant': client.tenant
@@ -1242,7 +1242,7 @@ export class BillingEngine {
         'time_entries.*',
         'service_catalog.service_name',
         'service_catalog.default_rate',
-        'service_catalog.tax_rate_id', // Fetch tax_rate_id
+        'service_catalog.tax_rate_id',
         this.knex.raw('COALESCE(project_tasks.task_name, tickets.title) as work_item_name')
       );
 
@@ -1406,8 +1406,8 @@ export class BillingEngine {
     }
 
     const usageRecordQuery = this.knex('usage_tracking')
-      .leftJoin('client_contract_service_bucket_config as ccsbc', function () {
-        this.on('usage_tracking.service_id', '=', 'service_catalog.service_id')
+      .leftJoin('service_catalog', function () {
+        this.on('service_catalog.service_id', '=', 'usage_tracking.service_id')
           .andOn('service_catalog.tenant', '=', 'usage_tracking.tenant');
       })
       .where({
@@ -1697,8 +1697,8 @@ export class BillingEngine {
           .andOn('ccsbc.tenant', '=', 'ccsc.tenant');
       })
       .join('service_catalog as sc', function () {
-        this.on('ccsc.service_id', '=', 'sc.service_id')
-          .andOn('sc.tenant', '=', 'ccsc.tenant');
+        this.on('ccs.service_id', '=', 'sc.service_id')
+          .andOn('sc.tenant', '=', 'ccs.tenant');
       })
       .where({
         'ccs.client_contract_line_id': contractLine.client_contract_line_id,
@@ -1710,7 +1710,8 @@ export class BillingEngine {
         'ccsbc.*',
         'sc.service_name',
         'sc.default_rate',
-        'sc.tax_rate_id'
+        'sc.tax_rate_id',
+        'ccs.service_id'
       );
 
     if (!bucketConfigs || bucketConfigs.length === 0) {

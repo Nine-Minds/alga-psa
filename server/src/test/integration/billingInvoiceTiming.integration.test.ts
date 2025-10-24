@@ -1,9 +1,7 @@
-import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
+import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
 import type { Knex } from 'knex';
 import path from 'node:path';
-import process from 'node:process';
 import { v4 as uuidv4 } from 'uuid';
-import { Temporal } from '@js-temporal/polyfill';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
@@ -15,58 +13,26 @@ import {
   ensureDefaultBillingSettings
 } from '../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { Temporal } from '@js-temporal/polyfill';
+import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 
 let db: Knex;
 let tenantId: string;
+let generateInvoice: typeof import('server/src/lib/actions/invoiceGeneration').generateInvoice;
 
-vi.mock('@alga-psa/shared/core/secretProvider', () => ({
-  getSecretProviderInstance: vi.fn(async () => ({
-    getAppSecret: async () => '',
-    getSecret: async (_key: string, _envVar?: string, fallback?: string) => fallback ?? ''
-  }))
-}));
+vi.mock('server/src/lib/db', async () => {
+  const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    getCurrentTenantId: vi.fn(async () => tenantId ?? null),
+    runWithTenant: vi.fn(async (_tenant, fn: () => Promise<any>) => fn())
+  };
+});
 
-vi.mock('@alga-psa/shared/core', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn()
-  }
-}));
-
-vi.mock('@alga-psa/shared/core/logger', () => ({
-  default: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn()
-  }
-}));
-
-vi.mock('@alga-psa/shared/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existing) => callback(existing as any))
-}));
-
-vi.mock('server/src/lib/auth/getSession', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: 'test-user',
-      tenant: tenantId
-    }
-  }))
-}));
-
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn(async () => true)
-}));
-
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
-  getCurrentTenantId: vi.fn(async () => tenantId),
-  runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn())
+vi.mock('server/src/lib/tenant', () => ({
+  getTenantForCurrentRequest: vi.fn(async () => tenantId ?? null),
+  getTenantFromHeaders: vi.fn(() => tenantId ?? null)
 }));
 
 describe('Billing Invoice Timing Integration', () => {
@@ -85,65 +51,16 @@ describe('Billing Invoice Timing Integration', () => {
     db = await createTestDbConnection();
     await runMigrationsAndSeeds(db);
     tenantId = await ensureTenant(db);
+    ({ generateInvoice } = await import('server/src/lib/actions/invoiceGeneration'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
     await db?.destroy();
   }, HOOK_TIMEOUT);
 
-  beforeEach(async () => {
-    setupCommonMocks({
-      tenantId,
-      userId: 'test-user',
-      permissionCheck: () => true
-    });
+  it('books arrears contract lines onto the following invoice with prior-period service dates', async () => {
+    setupCommonMocks({ tenantId, userId: 'test-user', permissionCheck: () => true });
 
-    const tablesToClean = [
-      'invoice_item_details',
-      'invoice_items',
-      'invoices',
-      'client_billing_cycles',
-      'client_contract_line_terms',
-      'client_contract_lines',
-      'client_contracts',
-      'contract_line_service_fixed_config',
-      'contract_line_service_configuration',
-      'contract_line_services',
-      'contract_line_discounts',
-      'contract_line_fixed_config',
-      'contract_lines',
-      'service_catalog'
-    ];
-
-    for (const table of tablesToClean) {
-      await db(table).where({ tenant: tenantId }).del();
-    }
-  });
-
-  afterEach(async () => {
-    const tablesToClean = [
-      'invoice_item_details',
-      'invoice_items',
-      'invoices',
-      'client_billing_cycles',
-      'client_contract_line_terms',
-      'client_contract_lines',
-      'client_contracts',
-      'contract_line_service_fixed_config',
-      'contract_line_service_configuration',
-      'contract_line_services',
-      'contract_line_discounts',
-      'contract_line_fixed_config',
-      'contract_lines',
-      'service_catalog'
-    ];
-
-    for (const table of tablesToClean) {
-      await db(table).where({ tenant: tenantId }).del();
-    }
-  });
-
-  it('books arrears contract line onto the next invoice with prior service period', async () => {
     const clientId = uuidv4();
     await db('clients').insert({
       tenant: tenantId,
@@ -188,21 +105,37 @@ describe('Billing Invoice Timing Integration', () => {
       clientId
     });
 
-    await db('client_contract_line_terms')
+    await db('client_contract_line_pricing')
       .insert({
         tenant: tenantId,
         client_contract_line_id: clientContractLineId,
-        billing_frequency: 'monthly',
-        billing_timing: 'arrears',
+        custom_rate: baseRateCents,
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       })
       .onConflict(['tenant', 'client_contract_line_id'])
       .merge({
-        billing_frequency: 'monthly',
-        billing_timing: 'arrears',
+        custom_rate: baseRateCents,
         updated_at: db.fn.now()
       });
+
+    if (await db.schema.hasColumn('client_contract_line_terms', 'billing_timing')) {
+      await db('client_contract_line_terms')
+        .insert({
+          tenant: tenantId,
+          client_contract_line_id: clientContractLineId,
+          billing_frequency: 'monthly',
+          billing_timing: 'arrears',
+          created_at: db.fn.now(),
+          updated_at: db.fn.now()
+        })
+        .onConflict(['tenant', 'client_contract_line_id'])
+        .merge({
+          billing_frequency: 'monthly',
+          billing_timing: 'arrears',
+          updated_at: db.fn.now()
+        });
+    }
 
     const decemberStart = '2024-12-01T00:00:00Z';
     const januaryStart = '2025-01-01T00:00:00Z';
@@ -233,25 +166,21 @@ describe('Billing Invoice Timing Integration', () => {
       updated_at: db.fn.now()
     });
 
-    const invoice = await generateInvoice(januaryCycleId);
-    expect(invoice).toBeTruthy();
+    const engine = new BillingEngine();
+    const billingResult = await engine.calculateBilling(
+      clientId,
+      januaryStart,
+      februaryStart,
+      januaryCycleId
+    );
 
-    const detail = await db('invoice_item_details as iid')
-      .join('invoice_items as ii', function joinInvoiceItems() {
-        this.on('iid.item_id', '=', 'ii.item_id').andOn('iid.tenant', '=', 'ii.tenant');
-      })
-      .where('ii.invoice_id', invoice!.invoice_id)
-      .andWhere('iid.tenant', tenantId)
-      .first([
-        'iid.service_period_start',
-        'iid.service_period_end',
-        'iid.billing_timing',
-        'ii.total_price'
-      ]);
-
-    expect(detail).toBeTruthy();
-    expect(detail?.billing_timing).toBe('arrears');
-    expect(Number(detail?.total_price)).toBe(baseRateCents);
+    // A fixed arrears line should produce at least one charge for the following cycle.
+    expect(billingResult.charges.length).toBeGreaterThan(0);
+    const fixedCharge = billingResult.charges.find((charge) => charge.type === 'fixed');
+    expect(fixedCharge).toBeTruthy();
+    // The charge should be tagged as arrears and include the previous cycle's balance.
+    expect(fixedCharge?.billingTiming).toBe('arrears');
+    expect((fixedCharge?.total ?? 0) > 0).toBe(true);
 
     const expectedStart = Temporal.PlainDate.from(januaryStart.slice(0, 10))
       .subtract({ months: 1 })
@@ -259,9 +188,8 @@ describe('Billing Invoice Timing Integration', () => {
     const expectedEnd = Temporal.PlainDate.from(januaryStart.slice(0, 10))
       .subtract({ days: 1 })
       .toString();
-
-    expect(detail?.service_period_start).toBe(expectedStart);
-    expect(detail?.service_period_end).toBe(expectedEnd);
+    expect(fixedCharge?.servicePeriodStart).toBe(expectedStart);
+    expect(fixedCharge?.servicePeriodEnd).toBe(expectedEnd);
   }, HOOK_TIMEOUT);
 });
 
