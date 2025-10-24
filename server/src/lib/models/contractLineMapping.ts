@@ -273,12 +273,31 @@ const ContractLineMapping = {
 
       // Update template line terms for billing_timing
       if (Object.keys(termsUpdatePayload).length > 0) {
-        await db('contract_line_template_terms')
+        // Check if the row exists
+        const existingTerm = await db('contract_line_template_terms')
           .where({
             contract_line_id: contractLineId,
             tenant,
           })
-          .update(termsUpdatePayload);
+          .first();
+
+        if (existingTerm) {
+          // Update existing row
+          await db('contract_line_template_terms')
+            .where({
+              contract_line_id: contractLineId,
+              tenant,
+            })
+            .update(termsUpdatePayload);
+        } else {
+          // Insert new row if it doesn't exist
+          await db('contract_line_template_terms')
+            .insert({
+              contract_line_id: contractLineId,
+              tenant,
+              ...termsUpdatePayload,
+            });
+        }
       }
 
       if (!updatedTemplateMapping && Object.keys(termsUpdatePayload).length === 0) {
