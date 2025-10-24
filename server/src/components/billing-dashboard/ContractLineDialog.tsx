@@ -154,7 +154,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract Line Name is required');
+    if (!planName.trim()) errors.push('Contract Line Preset Name is required');
     if (!billingFrequency) errors.push('Billing frequency is required');
     if (!planType) errors.push('Contract Line Type is required');
 
@@ -162,9 +162,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       if (fixedServices.length === 0) {
         errors.push('At least one fixed service is required');
       }
-      if (baseRate === undefined || baseRate === null || isNaN(baseRate) || baseRate === 0) {
-        errors.push('Base Rate is required for Fixed Fee plans');
-      }
+      // Base rate is now optional for presets - it can be set when creating actual contracts
       // Check that all services are selected
       fixedServices.forEach((service, index) => {
         if (!service.service_id) {
@@ -850,7 +848,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <Dialog
         isOpen={open}
         onClose={() => handleCloseRequest(false)}
-        title={editingPlan ? 'Edit Contract Line' : 'Add Contract Line'}
+        title={editingPlan ? 'Edit Contract Line Preset' : 'Add Contract Line Preset'}
         className="max-w-3xl"
         hideCloseButton={!!editingPlan}
       >
@@ -871,15 +869,14 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
             <section className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+                <h3 className="text-lg font-semibold">Contract Line Preset Basics</h3>
                 <p className="text-sm text-gray-600">
-                  Name the contract line and choose how it should bill by default. Overlays and service-specific rates can be
-                  refined after creation.
+                  Create a reusable template that can be quickly added to contracts or contract templates. Define the billing model, services, and default rates that will be copied when this preset is used.
                 </p>
               </div>
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="name">Contract Line Name *</Label>
+                  <Label htmlFor="name">Contract Line Preset Name *</Label>
                   <Input
                     id="name"
                     value={planName}
@@ -981,7 +978,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 {fixedServices.length > 0 && (
                   <>
                     <div className="space-y-2 pt-4 border-t">
-                      <Label htmlFor="base-rate">Monthly Base Rate *</Label>
+                      <Label htmlFor="base-rate">Monthly Base Rate (Optional)</Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                         <Input
@@ -1009,10 +1006,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                             }
                           }}
                           placeholder="0.00"
-                          className={`pl-7 ${hasAttemptedSubmit && (baseRate === undefined || Number.isNaN(baseRate)) ? 'border-red-500' : ''}`}
+                          className="pl-7"
                         />
                       </div>
-                      <p className="text-xs text-gray-500">The total monthly fee for all fixed services combined</p>
+                      <p className="text-xs text-gray-500">Suggested monthly fee for all fixed services. Can be overridden when adding this preset to a contract.</p>
                     </div>
 
                     <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
@@ -1072,7 +1069,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 disabled={isSaving}
                 className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
               >
-                {isSaving ? 'Saving…' : editingPlan ? 'Update Contract Line' : 'Create Contract Line'}
+                {isSaving ? 'Saving…' : editingPlan ? 'Update Contract Line Preset' : 'Create Contract Line Preset'}
               </Button>
             </DialogFooter>
           </form>

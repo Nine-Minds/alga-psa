@@ -55,7 +55,7 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
   },
   {
     value: 'contract-lines',
-    label: 'Contract Lines',
+    label: 'Contract Line Presets',
     href: '/msp/billing?tab=contract-lines',
     icon: Layers3
   },
