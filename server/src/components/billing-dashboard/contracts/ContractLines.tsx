@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, ChevronDown, ChevronUp, Trash2, Package } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit } from 'lucide-react';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { getContractLines } from 'server/src/lib/actions/contractLineAction';
@@ -165,6 +164,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
+  const handleEditContractLine = async (contractLineId: string) => {
+    // TODO: Check if contract has invoices
+    // TODO: Open edit dialog for contract line
+    setError('Edit functionality coming soon. Contract lines can currently only be edited if the contract has no associated invoices.');
+  };
+
   const formatRate = (rate?: number | null) => {
     if (rate === undefined || rate === null) return 'N/A';
     return `$${(rate / 100).toFixed(2)}`;
@@ -291,15 +296,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                     </button>
 
                     <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/msp/billing?tab=contract-lines&contractLineId=${line.contract_line_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] hover:underline inline-block"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <div className="font-medium text-gray-900">
                         {line.contract_line_name}
-                      </Link>
+                      </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
                         <Badge
                           className={`text-xs ${
@@ -316,6 +315,18 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                         </Badge>
                         <span>•</span>
                         <span>{line.billing_frequency}</span>
+                        {services.length > 0 && (
+                          <>
+                            <span>•</span>
+                            <span>
+                              {services.length} service{services.length !== 1 ? 's' : ''}
+                              {(() => {
+                                const totalQty = services.reduce((sum, s) => sum + (s.configuration.quantity || 0), 0);
+                                return totalQty > 0 ? ` (${totalQty} total qty)` : '';
+                              })()}
+                            </span>
+                          </>
+                        )}
                         {line.default_rate !== null && line.default_rate !== undefined && (
                           <>
                             <span>•</span>
@@ -333,19 +344,34 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                       </div>
                     </div>
 
-                    <Button
-                      id={`remove-${line.contract_line_id}`}
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveContractLine(line.contract_line_id);
-                      }}
-                      className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Remove
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        id={`edit-${line.contract_line_id}`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditContractLine(line.contract_line_id);
+                        }}
+                        className="h-8 text-gray-600 hover:text-gray-700 hover:bg-gray-100"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        id={`remove-${line.contract_line_id}`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveContractLine(line.contract_line_id);
+                        }}
+                        className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Expanded Content */}

@@ -333,10 +333,29 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
       if (contract && selectedContractLinePresetIds.size > 0) {
         await Promise.all(
           Array.from(selectedContractLinePresetIds).map(presetId => {
-            const overrides = presetRateOverrides[presetId] !== undefined
-              ? { base_rate: presetRateOverrides[presetId] }
-              : undefined;
-            return copyPresetToContractLine(contract.contract_id, presetId, overrides);
+            const overrides: {
+              base_rate?: number | null;
+              services?: Record<string, { quantity?: number; custom_rate?: number }>;
+            } = {};
+
+            // Add base_rate override for Fixed type presets
+            if (presetRateOverrides[presetId] !== undefined) {
+              overrides.base_rate = presetRateOverrides[presetId];
+            }
+
+            // Add service-level overrides (quantity and custom_rate)
+            const serviceOverrides = presetServiceOverrides[presetId];
+            if (serviceOverrides && Object.keys(serviceOverrides).length > 0) {
+              overrides.services = {};
+              for (const [serviceId, override] of Object.entries(serviceOverrides)) {
+                overrides.services[serviceId] = {
+                  quantity: override.quantity,
+                  custom_rate: override.custom_rate
+                };
+              }
+            }
+
+            return copyPresetToContractLine(contract.contract_id, presetId, Object.keys(overrides).length > 0 ? overrides : undefined);
           })
         );
       }

@@ -13,6 +13,8 @@ import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
 import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
+import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 
 export async function getContractLinePresets(): Promise<IContractLinePreset[]> {
     try {
@@ -342,6 +344,7 @@ export async function copyPresetToContractLine(
     presetId: string,
     overrides?: {
         base_rate?: number | null;
+        services?: Record<string, { quantity?: number; custom_rate?: number }>;
     }
 ): Promise<string> {
     try {
@@ -354,6 +357,9 @@ export async function copyPresetToContractLine(
         if (!tenant) {
             throw new Error("tenant context not found");
         }
+
+        // Capture tenant as a string for use in the transaction
+        const tenantId: string = tenant;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'create', trx)) {
@@ -372,14 +378,21 @@ export async function copyPresetToContractLine(
                 contract_line_type: preset.contract_line_type,
                 billing_frequency: preset.billing_frequency,
                 service_category: undefined, // Presets don't have service_category
+                is_custom: false, // Contract lines created from presets are not custom
             };
 
             const contractLine = await ContractLine.create(trx, contractLineData);
 
+            if (!contractLine.contract_line_id) {
+                throw new Error('Failed to create contract line: missing contract_line_id');
+            }
+
+            const contractLineId = contractLine.contract_line_id;
+
             // 3. Add the contract line to the contract by directly inserting into the mapping table
             // We can't use addContractLine() because it creates its own transaction and session
             const countResult = await trx('contract_line_mappings')
-                .where({ tenant, contract_id: contractId })
+                .where({ tenant: tenantId, contract_id: contractId })
                 .count<{ count: string | number }>('contract_line_id as count')
                 .first();
 
@@ -391,53 +404,101 @@ export async function copyPresetToContractLine(
                     : 0;
 
             await trx('contract_line_mappings').insert({
-                tenant,
+                tenant: tenantId,
                 contract_id: contractId,
-                contract_line_id: contractLine.contract_line_id,
+                contract_line_id: contractLineId,
                 display_order: existingCount,
                 custom_rate: null,
                 created_at: trx.fn.now()
             });
 
-            // 4. Copy services
+            // 4. Copy services and their configurations
             const presetServices = await ContractLinePresetService.getByPresetId(trx, presetId);
+            console.log(`[copyPresetToContractLine] Found ${presetServices.length} services for preset ${presetId}:`, presetServices);
+
             if (presetServices.length > 0) {
+                const configService = new ContractLineServiceConfigurationService(trx, tenantId);
+
                 for (const presetService of presetServices) {
+                    const serviceOverride = overrides?.services?.[presetService.service_id];
+                    console.log(`[copyPresetToContractLine] Copying service ${presetService.service_id}, override:`, serviceOverride);
+
+                    // Insert into contract_line_services table
                     await trx('contract_line_services').insert({
-                        contract_line_id: contractLine.contract_line_id,
+                        contract_line_id: contractLineId,
                         service_id: presetService.service_id,
-                        quantity: presetService.quantity || 1,
-                        custom_rate: null, // Services use their default rates unless overridden
-                        tenant,
-                        created_at: trx.fn.now(),
-                        updated_at: trx.fn.now()
+                        tenant: tenantId
                     });
+
+                    console.log(`[copyPresetToContractLine] Successfully inserted service ${presetService.service_id} for contract line ${contractLineId}`);
+
+                    // Determine configuration type based on contract line type
+                    let configurationType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = preset.contract_line_type as any;
+
+                    // Create the base configuration
+                    const baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+                        contract_line_id: contractLineId,
+                        service_id: presetService.service_id,
+                        configuration_type: configurationType,
+                        custom_rate: serviceOverride?.custom_rate ?? presetService.custom_rate ?? undefined,
+                        quantity: serviceOverride?.quantity ?? presetService.quantity ?? 1,
+                        instance_name: undefined,
+                        tenant: tenantId
+                    };
+
+                    // Create type-specific config based on contract line type
+                    let typeConfig: any = {};
+
+                    if (configurationType === 'Hourly') {
+                        typeConfig = {
+                            hourly_rate: baseConfig.custom_rate,
+                            minimum_billable_time: 15,
+                            round_up_to_nearest: 15
+                        };
+                    } else if (configurationType === 'Usage') {
+                        typeConfig = {
+                            unit_of_measure: presetService.unit_of_measure || 'unit',
+                            base_rate: baseConfig.custom_rate,
+                            enable_tiered_pricing: false,
+                            minimum_usage: undefined
+                        };
+                    }
+
+                    // Create the configuration record
+                    await configService.createConfiguration(baseConfig, typeConfig);
+
+                    console.log(`[copyPresetToContractLine] Successfully created configuration for service ${presetService.service_id}`);
                 }
+            } else {
+                console.log(`[copyPresetToContractLine] No services found for preset ${presetId}, skipping service copy`);
             }
 
             // 5. Copy type-specific config
             if (preset.contract_line_type === 'Fixed') {
                 const presetFixedConfig = await ContractLinePresetFixedConfig.getByPresetId(trx, presetId);
                 if (presetFixedConfig) {
-                    const fixedConfigData: Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'> = {
+                    const fixedConfigData: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'> = {
+                        contract_line_id: contractLineId,
                         base_rate: overrides?.base_rate !== undefined ? overrides.base_rate : presetFixedConfig.base_rate,
                         enable_proration: presetFixedConfig.enable_proration,
                         billing_cycle_alignment: presetFixedConfig.billing_cycle_alignment,
+                        tenant: tenantId
                     };
-                    await ContractLineFixedConfig.upsert(trx, contractLine.contract_line_id, fixedConfigData);
+                    const fixedConfigModel = new ContractLineFixedConfig(trx, tenantId);
+                    await fixedConfigModel.upsert(fixedConfigData);
                 }
             }
 
             // Track analytics
             analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
-                contract_line_id: contractLine.contract_line_id,
+                contract_line_id: contractLineId,
                 contract_line_name: contractLine.contract_line_name,
                 contract_line_type: contractLine.contract_line_type,
                 copied_from_preset: presetId,
                 contract_id: contractId
             }, currentUser.user_id);
 
-            return contractLine.contract_line_id;
+            return contractLineId;
         });
     } catch (error) {
         console.error(`Error copying preset ${presetId} to contract ${contractId}:`, error);
