@@ -677,6 +677,99 @@ export async function createFixedPlanAssignment(
       });
   }
 
+  const now = context.db.fn.now();
+  const effectiveDate = `${options.startDate ?? '2025-02-01'}T00:00:00Z`;
+  const customRateDollars = options.customRateCents !== undefined
+    ? options.customRateCents / 100
+    : null;
+
+  let existingClientService = await context.db('client_contract_services')
+    .where({
+      tenant: context.tenantId,
+      client_contract_line_id: clientContractLineId,
+      service_id: serviceId
+    })
+    .first<{ client_contract_service_id: string }>('client_contract_service_id');
+
+  const clientContractServiceId = existingClientService?.client_contract_service_id ?? uuidv4();
+
+  if (existingClientService) {
+    await context.db('client_contract_services')
+      .where({
+        tenant: context.tenantId,
+        client_contract_service_id: clientContractServiceId
+      })
+      .update({
+        quantity,
+        custom_rate: customRateDollars,
+        updated_at: now
+      });
+  } else {
+    await context.db('client_contract_services').insert({
+      tenant: context.tenantId,
+      client_contract_service_id: clientContractServiceId,
+      client_contract_line_id: clientContractLineId,
+      service_id: serviceId,
+      quantity,
+      custom_rate: customRateDollars,
+      effective_date: effectiveDate,
+      created_at: now,
+      updated_at: now
+    });
+  }
+
+  let existingClientConfig = await context.db('client_contract_service_configuration')
+    .where({
+      tenant: context.tenantId,
+      client_contract_service_id: clientContractServiceId
+    })
+    .first<{ config_id: string }>('config_id');
+
+  const clientConfigId = existingClientConfig?.config_id ?? uuidv4();
+
+  if (existingClientConfig) {
+    await context.db('client_contract_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        config_id: clientConfigId
+      })
+      .update({
+        configuration_type: 'Fixed',
+        custom_rate: customRateDollars,
+        quantity,
+        updated_at: now
+      });
+  } else {
+    await context.db('client_contract_service_configuration').insert({
+      tenant: context.tenantId,
+      config_id: clientConfigId,
+      client_contract_service_id: clientContractServiceId,
+      configuration_type: 'Fixed',
+      custom_rate: customRateDollars,
+      quantity,
+      created_at: now,
+      updated_at: now
+    });
+  }
+
+  await context.db('client_contract_service_fixed_config')
+    .insert({
+      tenant: context.tenantId,
+      config_id: clientConfigId,
+      base_rate: baseRateDollars,
+      enable_proration: enableProration,
+      billing_cycle_alignment: billingCycleAlignment,
+      created_at: now,
+      updated_at: now
+    })
+    .onConflict(['tenant', 'config_id'])
+    .merge({
+      base_rate: baseRateDollars,
+      enable_proration: enableProration,
+      billing_cycle_alignment: billingCycleAlignment,
+      updated_at: now
+    });
+
   return {
     planId: legacyPlanId,
     clientBillingPlanId: legacyClientPlanId,

@@ -1826,18 +1826,17 @@ export class BillingEngine {
     _clientContractLine: IClientContractLine,
     billingTiming: 'arrears' | 'advance'
   ): Promise<{ servicePeriodStart: ISO8601String; servicePeriodEnd: ISO8601String }> {
+    const currentStart = toPlainDate(billingPeriod.startDate);
+    const currentEndExclusive = toPlainDate(billingPeriod.endDate);
+
     if (billingTiming === 'advance') {
-      const nextPeriodStart = await getNextBillingDate(clientId, billingPeriod.startDate);
-      const nextPeriodEndExclusive = await getNextBillingDate(clientId, nextPeriodStart);
-      const nextPeriodEnd = toISODate(toPlainDate(nextPeriodEndExclusive).subtract({ days: 1 }));
+      const currentPeriodEnd = toISODate(currentEndExclusive.subtract({ days: 1 }));
       return {
-        servicePeriodStart: nextPeriodStart,
-        servicePeriodEnd: nextPeriodEnd
+        servicePeriodStart: toISODate(currentStart),
+        servicePeriodEnd: currentPeriodEnd
       };
     }
 
-    const currentStart = toPlainDate(billingPeriod.startDate);
-    const currentEndExclusive = toPlainDate(billingPeriod.endDate);
     const cycleDays = Math.max(
       currentStart.until(currentEndExclusive, { largestUnit: 'days' }).days,
       1

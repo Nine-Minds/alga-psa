@@ -538,6 +538,9 @@ async function persistFixedInvoiceItems(
         config_id: detail.config_id,
         quantity: detailQuantity,
         rate: unitPriceCents,
+        service_period_start: detail.servicePeriodStart ?? null,
+        service_period_end: detail.servicePeriodEnd ?? null,
+        billing_timing: detail.billingTiming ?? null,
         created_at: now,
         updated_at: now,
         tenant
