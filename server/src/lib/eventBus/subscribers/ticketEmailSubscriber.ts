@@ -877,7 +877,12 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     };
 
     const sentEmails = new Set<string>();
-    const normalizeEmail = (email: string) => email.trim().toLowerCase();
+    const normalizeEmail = (email: string) => {
+      const trimmed = email.trim();
+      const match = trimmed.match(/<([^>]+)>/);
+      const extracted = (match ? match[1] : trimmed).replace(/\s+/g, '');
+      return extracted.toLowerCase();
+    };
     const sendIfUnique = async (
       params: SendEmailParams,
       subtypeName: string,
@@ -889,6 +894,11 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       }
       const key = normalizeEmail(email);
       if (sentEmails.has(key)) {
+        logger.info('[TicketEmailSubscriber] Skipping duplicate ticket assigned notification', {
+          ticketId: ticket.ticket_id,
+          email: params.to,
+          subtypeName
+        });
         return;
       }
       sentEmails.add(key);
