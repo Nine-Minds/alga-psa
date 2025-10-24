@@ -8,26 +8,33 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
-import { IContractLine } from 'server/src/interfaces/billing.interfaces';
+import { IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
 import { createContract, updateContract, checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { createClientContract } from 'server/src/lib/actions/clientContractActions';
-import { getContractLines } from 'server/src/lib/actions/contractLineAction';
-import { addContractLine } from 'server/src/lib/actions/contractLineMappingActions';
+import { getContractLinePresets, copyPresetToContractLine } from 'server/src/lib/actions/contractLinePresetActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { IClient } from 'server/src/interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { BILLING_FREQUENCY_OPTIONS, CONTRACT_LINE_TYPE_DISPLAY } from 'server/src/constants/billing';
 import { HelpCircle, Info, Plus, X, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { getContractLineServicesWithNames } from 'server/src/lib/actions/contractLineServiceActions';
-import { IContractLineService } from 'server/src/interfaces/billing.interfaces';
+import { Badge } from 'server/src/components/ui/Badge';
+import { getContractLinePresetServices, getContractLinePresetFixedConfig } from 'server/src/lib/actions/contractLinePresetActions';
+import { IContractLinePresetService, IContractLinePresetFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { getServices } from 'server/src/lib/actions/serviceActions';
 
-interface ContractLineServiceWithName extends IContractLineService {
+interface ContractLinePresetServiceWithName extends IContractLinePresetService {
   service_name?: string;
+  default_rate?: number;
+}
+
+interface PresetServiceOverrides {
+  quantity?: number;
+  custom_rate?: number;
 }
 
 interface ContractDialogProps {
@@ -59,19 +66,38 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
-  // Contract lines state
-  const [availableContractLines, setAvailableContractLines] = useState<IContractLine[]>([]);
-  const [selectedContractLineIds, setSelectedContractLineIds] = useState<Set<string>>(new Set());
-  const [isLoadingContractLines, setIsLoadingContractLines] = useState(false);
-  const [contractLineSearchTerm, setContractLineSearchTerm] = useState('');
-  const [expandedContractLines, setExpandedContractLines] = useState<Record<string, boolean>>({});
-  const [contractLineServices, setContractLineServices] = useState<Record<string, ContractLineServiceWithName[]>>({});
+  // Contract line presets state
+  const [availableContractLinePresets, setAvailableContractLinePresets] = useState<IContractLinePreset[]>([]);
+  const [selectedContractLinePresetIds, setSelectedContractLinePresetIds] = useState<Set<string>>(new Set());
+  const [isLoadingContractLinePresets, setIsLoadingContractLinePresets] = useState(false);
+  const [contractLinePresetSearchTerm, setContractLinePresetSearchTerm] = useState('');
+  const [contractLinePresetTypeFilter, setContractLinePresetTypeFilter] = useState<string>('all');
+  const [expandedContractLinePresets, setExpandedContractLinePresets] = useState<Record<string, boolean>>({});
+  const [contractLinePresetServices, setContractLinePresetServices] = useState<Record<string, ContractLinePresetServiceWithName[]>>({});
+  const [contractLinePresetFixedConfigs, setContractLinePresetFixedConfigs] = useState<Record<string, IContractLinePresetFixedConfig | null>>({});
+  const [contractLinePresetServiceCounts, setContractLinePresetServiceCounts] = useState<Record<string, number>>({});
 
-  // Load clients and contract lines on mount
+  // Rate overrides for presets (stores in cents)
+  const [presetRateOverrides, setPresetRateOverrides] = useState<Record<string, number | null>>({});
+  const [presetRateInputs, setPresetRateInputs] = useState<Record<string, string>>({});
+
+  // Service overrides for each preset
+  const [presetServiceOverrides, setPresetServiceOverrides] = useState<Record<string, Record<string, PresetServiceOverrides>>>({});
+  const [presetServiceInputs, setPresetServiceInputs] = useState<Record<string, Record<string, { quantity: string; rate: string }>>>({});
+
+  // Load clients and contract line presets on mount
   useEffect(() => {
     loadClients();
-    loadContractLines();
+    loadContractLinePresets();
   }, []);
+
+  // Reload clients when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadClients();
+      loadContractLinePresets();
+    }
+  }, [open]);
 
   const loadClients = async () => {
     try {
@@ -84,15 +110,32 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     }
   };
 
-  const loadContractLines = async () => {
-    setIsLoadingContractLines(true);
+  const loadContractLinePresets = async () => {
+    setIsLoadingContractLinePresets(true);
     try {
-      const lines = await getContractLines();
-      setAvailableContractLines(lines);
+      const presets = await getContractLinePresets();
+      setAvailableContractLinePresets(presets);
+
+      // Load service counts for each preset
+      const counts: Record<string, number> = {};
+      await Promise.all(
+        presets.map(async (preset) => {
+          if (preset.preset_id) {
+            try {
+              const services = await getContractLinePresetServices(preset.preset_id);
+              counts[preset.preset_id] = services.length;
+            } catch (error) {
+              console.error(`Error loading service count for preset ${preset.preset_id}:`, error);
+              counts[preset.preset_id] = 0;
+            }
+          }
+        })
+      );
+      setContractLinePresetServiceCounts(counts);
     } catch (error) {
-      console.error('Error loading contract lines:', error);
+      console.error('Error loading contract line presets:', error);
     } finally {
-      setIsLoadingContractLines(false);
+      setIsLoadingContractLinePresets(false);
     }
   };
 
@@ -135,47 +178,108 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     }
   };
 
-  const toggleContractLine = (contractLineId: string) => {
-    const newSet = new Set(selectedContractLineIds);
-    if (newSet.has(contractLineId)) {
-      newSet.delete(contractLineId);
+  const toggleContractLinePreset = (presetId: string) => {
+    const newSet = new Set(selectedContractLinePresetIds);
+    if (newSet.has(presetId)) {
+      newSet.delete(presetId);
     } else {
-      newSet.add(contractLineId);
+      newSet.add(presetId);
     }
-    setSelectedContractLineIds(newSet);
+    setSelectedContractLinePresetIds(newSet);
   };
 
-  const toggleExpandContractLine = async (contractLineId: string) => {
-    const isExpanded = expandedContractLines[contractLineId];
+  const toggleExpandContractLinePreset = async (presetId: string) => {
+    const isExpanded = expandedContractLinePresets[presetId];
 
-    setExpandedContractLines(prev => ({
+    setExpandedContractLinePresets(prev => ({
       ...prev,
-      [contractLineId]: !isExpanded
+      [presetId]: !isExpanded
     }));
 
-    // Load services if expanding and not already loaded
-    if (!isExpanded && !contractLineServices[contractLineId]) {
+    // Load services and fixed config if expanding and not already loaded
+    if (!isExpanded && !contractLinePresetServices[presetId]) {
       try {
-        const servicesWithNames = await getContractLineServicesWithNames(contractLineId);
-        setContractLineServices(prev => ({
+        // Load services
+        const services = await getContractLinePresetServices(presetId);
+
+        // Load all service details to get names and rates
+        const allServices = await getServices(1, 999);
+        const serviceMap = new Map(allServices.services.map((s) => [s.service_id, s]));
+
+        // Enhance services with names and default rates
+        const enhancedServices: ContractLinePresetServiceWithName[] = services.map(service => {
+          const serviceDetails = serviceMap.get(service.service_id);
+          return {
+            ...service,
+            service_name: serviceDetails?.service_name || 'Unknown Service',
+            default_rate: serviceDetails?.default_rate || 0
+          };
+        });
+
+        setContractLinePresetServices(prev => ({
           ...prev,
-          [contractLineId]: servicesWithNames
+          [presetId]: enhancedServices
         }));
+
+        // Initialize service input states with current quantities and rates
+        const serviceInputs: Record<string, { quantity: string; rate: string }> = {};
+        enhancedServices.forEach(service => {
+          // Both custom_rate and default_rate are stored in cents in the database
+          // If custom_rate exists, use it; otherwise use default_rate
+          // Note: custom_rate might come as a string from the database, so we need to convert it
+          const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
+            ? (typeof service.custom_rate === 'string' ? parseFloat(service.custom_rate) : service.custom_rate)
+            : null;
+
+          const rateInCents = customRateValue !== null
+            ? customRateValue
+            : (service.default_rate || 0);
+
+          serviceInputs[service.service_id] = {
+            quantity: service.quantity?.toString() || '1',
+            rate: (rateInCents / 100).toFixed(2)
+          };
+        });
+
+        setPresetServiceInputs(prev => ({
+          ...prev,
+          [presetId]: serviceInputs
+        }));
+
+        // Load fixed config for Fixed type presets
+        const preset = availableContractLinePresets.find(p => p.preset_id === presetId);
+        if (preset?.contract_line_type === 'Fixed') {
+          const fixedConfig = await getContractLinePresetFixedConfig(presetId);
+          setContractLinePresetFixedConfigs(prev => ({
+            ...prev,
+            [presetId]: fixedConfig
+          }));
+
+          // Initialize preset rate input if it has a base_rate
+          if (fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined) {
+            setPresetRateInputs(prev => ({
+              ...prev,
+              [presetId]: (fixedConfig.base_rate! / 100).toFixed(2)
+            }));
+          }
+        }
       } catch (error) {
-        console.error(`Error loading services for contract line ${contractLineId}:`, error);
+        console.error(`Error loading services for contract line preset ${presetId}:`, error);
       }
     }
   };
 
-  const filteredContractLines = availableContractLines.filter((line) => {
-    if (!contractLineSearchTerm) return true;
-    const search = contractLineSearchTerm.toLowerCase();
-    return (
-      line.contract_line_name?.toLowerCase().includes(search) ||
-      line.billing_frequency?.toLowerCase().includes(search) ||
-      line.contract_line_type?.toLowerCase().includes(search) ||
-      line.service_category?.toLowerCase().includes(search)
-    );
+  const filteredContractLinePresets = availableContractLinePresets.filter((preset) => {
+    // Search filter
+    const matchesSearch = !contractLinePresetSearchTerm ||
+      preset.preset_name?.toLowerCase().includes(contractLinePresetSearchTerm.toLowerCase()) ||
+      preset.billing_frequency?.toLowerCase().includes(contractLinePresetSearchTerm.toLowerCase()) ||
+      preset.contract_line_type?.toLowerCase().includes(contractLinePresetSearchTerm.toLowerCase());
+
+    // Type filter
+    const matchesType = contractLinePresetTypeFilter === 'all' || preset.contract_line_type === contractLinePresetTypeFilter;
+
+    return matchesSearch && matchesType;
   });
 
   const handleSubmit = async (e: React.FormEvent, saveAsActive: boolean = true) => {
@@ -225,12 +329,15 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         contract = await createContract(contractData);
       }
 
-      // Add selected contract lines to the contract
-      if (contract && selectedContractLineIds.size > 0) {
+      // Add selected contract line presets to the contract (copy them into actual contract lines)
+      if (contract && selectedContractLinePresetIds.size > 0) {
         await Promise.all(
-          Array.from(selectedContractLineIds).map(lineId =>
-            addContractLine(contract.contract_id, lineId)
-          )
+          Array.from(selectedContractLinePresetIds).map(presetId => {
+            const overrides = presetRateOverrides[presetId] !== undefined
+              ? { base_rate: presetRateOverrides[presetId] }
+              : undefined;
+            return copyPresetToContractLine(contract.contract_id, presetId, overrides);
+          })
         );
       }
 
@@ -273,9 +380,12 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     setPoNumber('');
     setPoAmountInput('');
     setPoAmount(undefined);
-    setSelectedContractLineIds(new Set());
-    setContractLineSearchTerm('');
-    setExpandedContractLines({});
+    setSelectedContractLinePresetIds(new Set());
+    setContractLinePresetSearchTerm('');
+    setContractLinePresetTypeFilter('all');
+    setExpandedContractLinePresets({});
+    setPresetRateOverrides({});
+    setPresetRateInputs({});
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
   };
@@ -421,112 +531,360 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               />
             </div>
 
-            {/* Contract Lines Selection */}
+            {/* Contract Line Presets Selection */}
             <div className="border-t pt-4 space-y-3">
               <div className="flex items-center gap-2">
-                <Label>Contract Lines (Optional)</Label>
-                <Tooltip content="Select existing contract lines to include in this contract. You can add more later.">
+                <Label>Contract Line Presets (Optional)</Label>
+                <Tooltip content="Select contract line presets to copy into this contract. You can add more later.">
                   <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
                 </Tooltip>
               </div>
 
-              {isLoadingContractLines ? (
-                <div className="text-sm text-gray-500">Loading contract lines...</div>
-              ) : availableContractLines.length === 0 ? (
-                <div className="text-sm text-gray-500">No contract lines available. You can add them later.</div>
+              {isLoadingContractLinePresets ? (
+                <div className="text-sm text-gray-500">Loading contract line presets...</div>
+              ) : availableContractLinePresets.length === 0 ? (
+                <div className="text-sm text-gray-500">No contract line presets available. You can add them later.</div>
               ) : (
                 <>
-                  {/* Search Input */}
-                  <div className="relative">
-                    <Search
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
-                      aria-hidden="true"
-                    />
-                    <Input
-                      type="text"
-                      placeholder="Search contract lines..."
-                      value={contractLineSearchTerm}
-                      onChange={(e) => setContractLineSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
+                  {/* Search and Filter Row */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {/* Search Input */}
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+                        aria-hidden="true"
+                      />
+                      <Input
+                        type="text"
+                        placeholder="Search contract line presets..."
+                        value={contractLinePresetSearchTerm}
+                        onChange={(e) => setContractLinePresetSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+
+                    {/* Type Filter */}
+                    <div className="w-48">
+                      <CustomSelect
+                        id="contract-line-preset-type-filter"
+                        options={[
+                          { value: 'all', label: 'All types' },
+                          ...Object.entries(CONTRACT_LINE_TYPE_DISPLAY).map(([value, label]) => ({
+                            value,
+                            label
+                          }))
+                        ]}
+                        value={contractLinePresetTypeFilter}
+                        onValueChange={(value) => setContractLinePresetTypeFilter(value)}
+                        placeholder="Select type"
+                      />
+                    </div>
+
+                    {/* Clear filters button */}
+                    {(contractLinePresetSearchTerm || contractLinePresetTypeFilter !== 'all') && (
+                      <Button
+                        id="clear-preset-filters-button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setContractLinePresetSearchTerm('');
+                          setContractLinePresetTypeFilter('all');
+                        }}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Clear
+                      </Button>
+                    )}
                   </div>
 
-                  {/* Contract Lines List */}
+                  {/* Contract Line Presets List */}
                   <div className="max-h-64 overflow-y-auto border rounded-md p-2 space-y-1">
-                    {filteredContractLines.length === 0 ? (
-                      <div className="text-sm text-gray-500 p-2">No contract lines match your search.</div>
+                    {filteredContractLinePresets.length === 0 ? (
+                      <div className="text-sm text-gray-500 p-2">No contract line presets match your search.</div>
                     ) : (
-                      filteredContractLines.map((line) => {
-                        if (!line.contract_line_id) return null;
-                        const isExpanded = expandedContractLines[line.contract_line_id];
-                        const services = contractLineServices[line.contract_line_id] || [];
+                      filteredContractLinePresets.map((preset) => {
+                        if (!preset.preset_id) return null;
+                        const isExpanded = expandedContractLinePresets[preset.preset_id];
+                        const services = contractLinePresetServices[preset.preset_id] || [];
+                        const serviceCount = contractLinePresetServiceCounts[preset.preset_id] || 0;
+
+                        const fixedConfig = contractLinePresetFixedConfigs[preset.preset_id];
 
                         return (
-                          <div key={line.contract_line_id} className="border rounded">
-                            {/* Main row with checkbox and expand button */}
-                            <div className="flex items-center gap-2 p-2 hover:bg-gray-50">
-                              <Checkbox
-                                id={`line-${line.contract_line_id}`}
-                                checked={selectedContractLineIds.has(line.contract_line_id)}
-                                onChange={() => line.contract_line_id && toggleContractLine(line.contract_line_id)}
-                              />
-                              <Label
-                                htmlFor={`line-${line.contract_line_id}`}
-                                className="flex-1 cursor-pointer text-sm"
+                          <div key={preset.preset_id} className="border rounded bg-white shadow-sm">
+                            {/* Main row - now fully clickable */}
+                            <div
+                              className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => preset.preset_id && toggleExpandContractLinePreset(preset.preset_id)}
+                            >
+                              <div
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <div className="font-medium">{line.contract_line_name}</div>
-                                <div className="text-xs text-gray-500 mt-0.5">
-                                  {line.contract_line_type} • {line.billing_frequency}
+                                <Checkbox
+                                  id={`preset-${preset.preset_id}`}
+                                  checked={selectedContractLinePresetIds.has(preset.preset_id)}
+                                  onChange={() => preset.preset_id && toggleContractLinePreset(preset.preset_id)}
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium text-sm text-gray-900">{preset.preset_name}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge
+                                    className={
+                                      preset.contract_line_type === 'Fixed'
+                                        ? 'bg-green-100 text-green-800 border-green-200'
+                                        : preset.contract_line_type === 'Hourly'
+                                        ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                        : preset.contract_line_type === 'Usage'
+                                        ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                                        : 'bg-gray-100 text-gray-800 border-gray-200'
+                                    }
+                                  >
+                                    {preset.contract_line_type}
+                                  </Badge>
+                                  <span className="text-xs text-gray-600">{preset.billing_frequency}</span>
+                                  {serviceCount > 0 && (
+                                    <span className="text-xs text-gray-600">• {serviceCount} service{serviceCount !== 1 ? 's' : ''}</span>
+                                  )}
                                 </div>
-                              </Label>
-                              <button
-                                type="button"
-                                onClick={() => line.contract_line_id && toggleExpandContractLine(line.contract_line_id)}
-                                className="p-1 hover:bg-gray-200 rounded"
-                              >
+                              </div>
+                              <div className="text-gray-600">
                                 {isExpanded ? (
-                                  <ChevronUp className="h-4 w-4 text-gray-600" />
+                                  <ChevronUp className="h-5 w-5" />
                                 ) : (
-                                  <ChevronDown className="h-4 w-4 text-gray-600" />
+                                  <ChevronDown className="h-5 w-5" />
                                 )}
-                              </button>
+                              </div>
                             </div>
 
                             {/* Expanded details */}
                             {isExpanded && (
-                              <div className="px-4 py-2 bg-gray-50 border-t text-xs space-y-2">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <span className="font-medium text-gray-600">Type:</span>
-                                    <span className="ml-1">{line.contract_line_type}</span>
-                                  </div>
-                                  <div>
-                                    <span className="font-medium text-gray-600">Frequency:</span>
-                                    <span className="ml-1">{line.billing_frequency}</span>
-                                  </div>
-                                  {line.service_category && (
-                                    <div className="col-span-2">
-                                      <span className="font-medium text-gray-600">Category:</span>
-                                      <span className="ml-1">{line.service_category}</span>
+                              <div className="px-5 py-4 bg-gray-50 border-t space-y-4">
+                                {/* Fixed Rate Configuration for Fixed type presets */}
+                                {preset.contract_line_type === 'Fixed' && (
+                                  <div className="bg-white rounded-md p-4 border border-gray-200">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <Label className="text-sm font-semibold text-gray-900">Fixed Rate Configuration</Label>
                                     </div>
-                                  )}
-                                </div>
+                                    <div className="space-y-2">
+                                      <div className="text-sm">
+                                        <span className="font-medium text-gray-700">Default Base Rate:</span>
+                                        <span className="ml-2 text-gray-900 font-semibold">
+                                          {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
+                                            ? `$${(fixedConfig.base_rate / 100).toFixed(2)}`
+                                            : 'Not set'}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <Label htmlFor={`rate-override-${preset.preset_id}`} className="text-sm font-medium text-gray-700">
+                                          Override Base Rate
+                                        </Label>
+                                        <div className="relative mt-1.5">
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                          <Input
+                                            id={`rate-override-${preset.preset_id}`}
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={presetRateInputs[preset.preset_id] || ''}
+                                            onChange={(e) => {
+                                              const value = e.target.value.replace(/[^0-9.]/g, '');
+                                              const decimalCount = (value.match(/\./g) || []).length;
+                                              if (decimalCount <= 1) {
+                                                setPresetRateInputs({
+                                                  ...presetRateInputs,
+                                                  [preset.preset_id]: value
+                                                });
+                                              }
+                                            }}
+                                            onBlur={() => {
+                                              const inputValue = presetRateInputs[preset.preset_id] || '';
+                                              if (inputValue.trim() === '' || inputValue === '.') {
+                                                const newInputs = { ...presetRateInputs };
+                                                delete newInputs[preset.preset_id];
+                                                setPresetRateInputs(newInputs);
 
-                                {/* Services */}
-                                <div>
-                                  <div className="font-medium text-gray-600 mb-1">Services Included:</div>
+                                                const newOverrides = { ...presetRateOverrides };
+                                                delete newOverrides[preset.preset_id];
+                                                setPresetRateOverrides(newOverrides);
+                                              } else {
+                                                const dollars = parseFloat(inputValue) || 0;
+                                                const cents = Math.round(dollars * 100);
+                                                setPresetRateOverrides({
+                                                  ...presetRateOverrides,
+                                                  [preset.preset_id]: cents
+                                                });
+                                                setPresetRateInputs({
+                                                  ...presetRateInputs,
+                                                  [preset.preset_id]: (cents / 100).toFixed(2)
+                                                });
+                                              }
+                                            }}
+                                            placeholder={fixedConfig?.base_rate ? `Default: $${(fixedConfig.base_rate / 100).toFixed(2)}` : 'Enter base rate'}
+                                            className="pl-8 h-9 text-sm"
+                                          />
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Leave blank to use the default rate
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Services Configuration */}
+                                <div className="bg-white rounded-md p-4 border border-gray-200">
+                                  <Label className="text-sm font-semibold text-gray-900 mb-3 block">
+                                    {preset.contract_line_type === 'Fixed' ? 'Services Included (Reference)' : 'Services Configuration'}
+                                  </Label>
                                   {services.length === 0 ? (
-                                    <div className="text-gray-500 italic">No services configured</div>
-                                  ) : (
-                                    <ul className="list-disc list-inside space-y-0.5 text-gray-700">
-                                      {services.map((service, idx) => (
-                                        <li key={idx}>
-                                          {service.service_name || 'Unknown Service'}
-                                          {service.quantity && ` (Qty: ${service.quantity})`}
-                                          {service.custom_rate && ` - $${(service.custom_rate / 100).toFixed(2)}`}
-                                        </li>
+                                    <div className="text-sm text-gray-500 italic">No services configured for this preset</div>
+                                  ) : preset.contract_line_type === 'Fixed' ? (
+                                    /* For Fixed presets, show services as read-only reference */
+                                    <div className="space-y-2">
+                                      <p className="text-xs text-gray-600 mb-3">
+                                        These services are included for reference only. The fixed rate above determines the billing amount.
+                                      </p>
+                                      {services.map((service) => (
+                                        <div key={service.service_id} className="bg-gray-50 rounded-md p-2 border border-gray-200">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-900">{service.service_name}</span>
+                                            {service.quantity && service.quantity > 1 && (
+                                              <span className="text-xs text-gray-600">Qty: {service.quantity}</span>
+                                            )}
+                                          </div>
+                                        </div>
                                       ))}
-                                    </ul>
+                                    </div>
+                                  ) : (
+                                    /* For non-Fixed presets (Hourly/Usage), show editable fields */
+                                    <div className="space-y-3">
+                                      {services.map((service) => {
+                                        // Fallback: calculate rate if not in state yet
+                                        // Note: custom_rate might come as a string from the database
+                                        const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
+                                          ? (typeof service.custom_rate === 'string' ? parseFloat(service.custom_rate) : service.custom_rate)
+                                          : null;
+
+                                        const rateInCents = customRateValue !== null
+                                          ? customRateValue
+                                          : (service.default_rate || 0);
+
+                                        const serviceInputs = presetServiceInputs[preset.preset_id]?.[service.service_id] || {
+                                          quantity: service.quantity?.toString() || '1',
+                                          rate: (rateInCents / 100).toFixed(2)
+                                        };
+
+                                        return (
+                                          <div key={service.service_id} className="bg-gray-50 rounded-md p-3 border border-gray-200">
+                                            <div className="font-medium text-sm text-gray-900 mb-2">{service.service_name}</div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                              <div>
+                                                <Label htmlFor={`quantity-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
+                                                  Quantity
+                                                </Label>
+                                                <Input
+                                                  id={`quantity-${preset.preset_id}-${service.service_id}`}
+                                                  type="number"
+                                                  min="1"
+                                                  step="1"
+                                                  value={serviceInputs.quantity}
+                                                  onChange={(e) => {
+                                                    const newInputs = {
+                                                      ...presetServiceInputs,
+                                                      [preset.preset_id]: {
+                                                        ...(presetServiceInputs[preset.preset_id] || {}),
+                                                        [service.service_id]: {
+                                                          ...serviceInputs,
+                                                          quantity: e.target.value
+                                                        }
+                                                      }
+                                                    };
+                                                    setPresetServiceInputs(newInputs);
+                                                  }}
+                                                  onBlur={() => {
+                                                    const quantity = parseInt(serviceInputs.quantity) || 1;
+                                                    const newOverrides = {
+                                                      ...presetServiceOverrides,
+                                                      [preset.preset_id]: {
+                                                        ...(presetServiceOverrides[preset.preset_id] || {}),
+                                                        [service.service_id]: {
+                                                          ...(presetServiceOverrides[preset.preset_id]?.[service.service_id] || {}),
+                                                          quantity
+                                                        }
+                                                      }
+                                                    };
+                                                    setPresetServiceOverrides(newOverrides);
+                                                  }}
+                                                  className="h-9 text-sm mt-1"
+                                                />
+                                              </div>
+                                              <div>
+                                                <Label htmlFor={`rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
+                                                  Rate (per unit)
+                                                </Label>
+                                                <div className="relative mt-1">
+                                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                                  <Input
+                                                    id={`rate-${preset.preset_id}-${service.service_id}`}
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={serviceInputs.rate}
+                                                    onChange={(e) => {
+                                                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                                                      const decimalCount = (value.match(/\./g) || []).length;
+                                                      if (decimalCount <= 1) {
+                                                        const newInputs = {
+                                                          ...presetServiceInputs,
+                                                          [preset.preset_id]: {
+                                                            ...(presetServiceInputs[preset.preset_id] || {}),
+                                                            [service.service_id]: {
+                                                              ...serviceInputs,
+                                                              rate: value
+                                                            }
+                                                          }
+                                                        };
+                                                        setPresetServiceInputs(newInputs);
+                                                      }
+                                                    }}
+                                                    onBlur={() => {
+                                                      const dollars = parseFloat(serviceInputs.rate) || 0;
+                                                      const cents = Math.round(dollars * 100);
+                                                      const newOverrides = {
+                                                        ...presetServiceOverrides,
+                                                        [preset.preset_id]: {
+                                                          ...(presetServiceOverrides[preset.preset_id] || {}),
+                                                          [service.service_id]: {
+                                                            ...(presetServiceOverrides[preset.preset_id]?.[service.service_id] || {}),
+                                                            custom_rate: cents
+                                                          }
+                                                        }
+                                                      };
+                                                      setPresetServiceOverrides(newOverrides);
+                                                      const newInputs = {
+                                                        ...presetServiceInputs,
+                                                        [preset.preset_id]: {
+                                                          ...(presetServiceInputs[preset.preset_id] || {}),
+                                                          [service.service_id]: {
+                                                            ...serviceInputs,
+                                                            rate: (cents / 100).toFixed(2)
+                                                          }
+                                                        }
+                                                      };
+                                                      setPresetServiceInputs(newInputs);
+                                                    }}
+                                                    placeholder={(service.default_rate! / 100).toFixed(2)}
+                                                    className="pl-8 h-9 text-sm"
+                                                  />
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                  Default: ${(service.default_rate! / 100).toFixed(2)}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -539,9 +897,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 </>
               )}
 
-              {selectedContractLineIds.size > 0 && (
-                <div className="text-sm text-blue-600">
-                  {selectedContractLineIds.size} contract line{selectedContractLineIds.size > 1 ? 's' : ''} selected
+              {selectedContractLinePresetIds.size > 0 && (
+                <div className="text-sm text-primary-600">
+                  {selectedContractLinePresetIds.size} contract line preset{selectedContractLinePresetIds.size > 1 ? 's' : ''} selected
                 </div>
               )}
             </div>

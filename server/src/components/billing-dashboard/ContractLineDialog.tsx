@@ -268,7 +268,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 preset_id: savedPresetId,
                 service_id: service.service_id,
                 quantity: null,
-                custom_rate: Math.round(service.hourly_rate * 100), // Convert to cents
+                custom_rate: service.hourly_rate, // Already in cents from handleHourlyRateChange
                 unit_of_measure: null
               });
             }
@@ -281,7 +281,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 preset_id: savedPresetId,
                 service_id: service.service_id,
                 quantity: null,
-                custom_rate: Math.round(service.unit_rate * 100), // Convert to cents
+                custom_rate: service.unit_rate, // Already in cents from handleUsageRateChange
                 unit_of_measure: service.unit_of_measure || ''
               });
             }
