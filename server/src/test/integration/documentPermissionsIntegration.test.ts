@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { TestContext } from '../../../test-utils/testContext';
-import {  canAccessDocument,
+import { setupCommonMocks } from '../../../test-utils/testMocks';
+import { addDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { createContract } from 'server/src/lib/actions/contractActions';
+import DocumentAssociation from 'server/src/models/document-association';
+import {
+  canAccessDocument,
   filterAccessibleDocuments
 } from 'server/src/lib/utils/documentPermissionUtils';
 import { IUser } from '@/interfaces/auth.interfaces';
-import { IDocument } from '@/interfaces/document.interface';
-import { IDocumentAssociation } from '@/interfaces/document-association.interface';
+import { IDocument, DocumentInput } from '@/interfaces/document.interface';
+import { DocumentAssociationEntityType } from '@/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -28,7 +33,7 @@ describe('Document Permissions Integration Tests', () => {
   // Test data IDs
   let testClientId: string;
   let testTicketId: string;
-  let testContractId: string;
+  let testContractId: string | null;
   let documentNoAssoc: IDocument;
   let documentWithTicket: IDocument;
   let documentWithContract: IDocument;
@@ -42,9 +47,15 @@ describe('Document Permissions Integration Tests', () => {
         'documents',
         'tickets',
         'contracts',
-        'companies'
+        'clients'
       ],
       clientName: 'Document Test Client'
+    });
+
+    setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
     });
   }, 120000);
 
@@ -54,6 +65,11 @@ describe('Document Permissions Integration Tests', () => {
 
   beforeEach(async () => {
     context = await resetContext();
+    setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
     await seedTestData();
   });
 
@@ -64,12 +80,73 @@ describe('Document Permissions Integration Tests', () => {
   async function seedTestData() {
     // Create test client
     testClientId = uuidv4();
-    await context.db('companies').insert({
-      company_id: testClientId,
+    await context.db('clients').insert({
+      client_id: testClientId,
       tenant: context.tenantId,
-      company_name: 'Test Client',
+      client_name: 'Test Client',
       is_inactive: false
     });
+
+    // Determine available columns for statuses table to keep compatibility across schema versions
+    const statusColumns: string[] = await context.db('information_schema.columns')
+      .select('column_name')
+      .where({ table_schema: 'public', table_name: 'statuses' })
+      .pluck('column_name');
+
+    const hasItemType = statusColumns.includes('item_type');
+    const hasStatusType = statusColumns.includes('status_type');
+
+    // Ensure we have a ticket status for FK constraint
+    let statusQuery = context.db('statuses').where('tenant', context.tenantId);
+    if (hasItemType) {
+      statusQuery = statusQuery.where('item_type', 'ticket');
+    } else if (hasStatusType) {
+      statusQuery = statusQuery.where('status_type', 'ticket');
+    }
+
+    let statusId: string | undefined = await statusQuery
+      .first()
+      .then(row => row?.status_id as string | undefined);
+
+    if (!statusId) {
+      statusId = uuidv4();
+      const statusData: Record<string, any> = {
+        status_id: statusId,
+        tenant: context.tenantId,
+        name: 'New'
+      };
+
+      if (hasItemType) {
+        statusData.item_type = 'ticket';
+      }
+      if (hasStatusType) {
+        statusData.status_type = 'ticket';
+      }
+      if (statusColumns.includes('order_number')) {
+        statusData.order_number = 1;
+      }
+      if (statusColumns.includes('is_default')) {
+        statusData.is_default = true;
+      }
+      if (statusColumns.includes('is_closed')) {
+        statusData.is_closed = false;
+      }
+      if (statusColumns.includes('created_by')) {
+        statusData.created_by = context.userId;
+      }
+      if (statusColumns.includes('created_at')) {
+        statusData.created_at = new Date();
+      }
+      if (statusColumns.includes('status_key')) {
+        statusData.status_key = 'new';
+      }
+
+      await context.db('statuses').insert(statusData);
+    }
+
+    if (!statusId) {
+      throw new Error('Unable to determine ticket status for integration test seeding');
+    }
 
     // Create test ticket
     testTicketId = uuidv4();
@@ -78,74 +155,35 @@ describe('Document Permissions Integration Tests', () => {
       tenant: context.tenantId,
       title: 'Test Ticket',
       ticket_number: 'TEST-001',
-      company_id: testClientId,
+      client_id: testClientId,
       entered_by: context.userId,
-      status_id: uuidv4() // Simplified - in real tests would reference actual status
+      status_id: statusId
     });
 
-    // Create test contract (using contracts table if available)
-    testContractId = uuidv4();
-    // Note: This assumes a contracts table exists. Adjust based on your schema.
-    // If using billing_plans, adapt accordingly.
-    try {
-      await context.db('contracts').insert({
-        contract_id: testContractId,
-        tenant: context.tenantId,
-        contract_name: 'Test Contract',
-        company_id: testClientId
-      });
-    } catch (error) {
-      // If contracts table doesn't exist, we'll skip contract-related tests
-      console.warn('Contracts table may not exist, some tests may be skipped');
+    // Create test contract using contract actions (if supported by schema)
+    testContractId = null;
+    if (await tableExists('contracts')) {
+      try {
+        const contract = await createContract({
+          contract_name: 'Test Contract',
+          billing_frequency: 'monthly',
+          status: 'draft',
+          is_active: true,
+          contract_description: 'Integration Test Contract'
+        });
+        testContractId = contract.contract_id;
+      } catch (error) {
+        console.warn('Failed to create contract record, skipping contract-related tests', error);
+      }
+    } else {
+      console.warn('Contracts table not found, skipping contract-related tests');
     }
 
-    // Create test documents
-    documentNoAssoc = {
-      document_id: uuidv4(),
-      tenant: context.tenantId,
-      document_name: 'Document No Associations',
-      type_id: null,
-      user_id: context.userId,
-      order_number: 0,
-      created_by: context.userId
-    };
-
-    documentWithTicket = {
-      document_id: uuidv4(),
-      tenant: context.tenantId,
-      document_name: 'Document With Ticket',
-      type_id: null,
-      user_id: context.userId,
-      order_number: 1,
-      created_by: context.userId
-    };
-
-    documentWithContract = {
-      document_id: uuidv4(),
-      tenant: context.tenantId,
-      document_name: 'Document With Contract',
-      type_id: null,
-      user_id: context.userId,
-      order_number: 2,
-      created_by: context.userId
-    };
-
-    documentWithMultiple = {
-      document_id: uuidv4(),
-      tenant: context.tenantId,
-      document_name: 'Document With Multiple Associations',
-      type_id: null,
-      user_id: context.userId,
-      order_number: 3,
-      created_by: context.userId
-    };
-
-    await context.db('documents').insert([
-      documentNoAssoc,
-      documentWithTicket,
-      documentWithContract,
-      documentWithMultiple
-    ]);
+    // Create test documents through document actions
+    documentNoAssoc = await createDocumentRecord('Document No Associations', 0);
+    documentWithTicket = await createDocumentRecord('Document With Ticket', 1);
+    documentWithContract = await createDocumentRecord('Document With Contract', 2);
+    documentWithMultiple = await createDocumentRecord('Document With Multiple Associations', 3);
 
     // Create standard associations
     await createStandardAssociations();
@@ -153,44 +191,223 @@ describe('Document Permissions Integration Tests', () => {
 
   async function createStandardAssociations() {
     // Create ticket association
-    await context.db('document_associations').insert({
-      association_id: uuidv4(),
-      tenant: context.tenantId,
-      document_id: documentWithTicket.document_id,
-      entity_id: testTicketId,
-      entity_type: 'ticket'
-    });
+    await associateDocument(documentWithTicket, testTicketId, 'ticket');
 
     // Create contract association (if contracts table exists)
-    try {
-      await context.db('document_associations').insert({
-        association_id: uuidv4(),
-        tenant: context.tenantId,
-        document_id: documentWithContract.document_id,
-        entity_id: testContractId,
-        entity_type: 'contract'
-      });
-    } catch (error) {
-      console.warn('Skipping contract association creation');
+    if (testContractId) {
+      try {
+        await associateDocument(documentWithContract, testContractId, 'contract');
+      } catch (error) {
+        console.warn('Skipping contract association creation', error);
+      }
     }
 
     // Create multiple associations
-    await context.db('document_associations').insert([
-      {
-        association_id: uuidv4(),
-        tenant: context.tenantId,
-        document_id: documentWithMultiple.document_id,
-        entity_id: testTicketId,
-        entity_type: 'ticket'
-      },
-      {
-        association_id: uuidv4(),
-        tenant: context.tenantId,
-        document_id: documentWithMultiple.document_id,
-        entity_id: testClientId,
-        entity_type: 'client'
+    await associateDocument(documentWithMultiple, testTicketId, 'ticket');
+    await associateDocument(documentWithMultiple, testClientId, 'client');
+  }
+
+  async function tableExists(tableName: string): Promise<boolean> {
+    const result = await context.db('information_schema.tables')
+      .where({ table_schema: 'public', table_name: tableName })
+      .count('* as count')
+      .first();
+
+    const countValue = result?.count;
+    return typeof countValue === 'string'
+      ? parseInt(countValue, 10) > 0
+      : Number(countValue ?? 0) > 0;
+  }
+
+  async function createDocumentRecord(name: string, orderNumber: number): Promise<IDocument> {
+    const documentInput: DocumentInput = {
+      tenant: context.tenantId,
+      document_name: name,
+      type_id: null,
+      user_id: context.userId,
+      order_number: orderNumber,
+      created_by: context.userId
+    };
+
+    const { _id } = await addDocument(documentInput);
+    const record = await context.db('documents')
+      .where({ tenant: context.tenantId, document_id: _id })
+      .first();
+
+    if (!record) {
+      throw new Error(`Failed to create document record for ${name}`);
+    }
+
+    return record as IDocument;
+  }
+
+  async function associateDocument(
+    document: IDocument,
+    entityId: string,
+    entityType: DocumentAssociationEntityType
+  ): Promise<string> {
+    const { association_id } = await DocumentAssociation.create(context.db, {
+      tenant: context.tenantId,
+      document_id: document.document_id,
+      entity_id: entityId,
+      entity_type: entityType
+    });
+
+    return association_id;
+  }
+
+  async function ensureTenantExists(tenantId: string): Promise<{ userId: string; documentId: string }> {
+    const now = new Date();
+    const sample = tenantId.slice(0, 8);
+
+    const tenantColumns = await context.db('tenants').columnInfo();
+    const tenantPayload: Record<string, any> = { tenant: tenantId };
+
+    const tenantOverrides: Record<string, any> = {
+      name: `Test Tenant ${sample}`,
+      tenant_name: `Test Tenant ${sample}`,
+      organization_name: `Test Tenant ${sample}`,
+      client_name: `Client ${sample}`,
+      company_name: `Company ${sample}`,
+      email: `tenant-${sample}@example.com`,
+      primary_contact_email: `tenant-${sample}@example.com`,
+      created_by: context.userId,
+      created_at: now,
+      updated_at: now
+    };
+
+    applyColumnDefaults(tenantColumns, tenantPayload, tenantOverrides, sample, now);
+
+    await context.db('tenants')
+      .insert(tenantPayload)
+      .onConflict('tenant')
+      .merge(tenantPayload);
+
+    const userColumns = await context.db('users').columnInfo();
+    const existingUser = await context.db('users')
+      .where({ tenant: tenantId })
+      .first('user_id');
+
+    let userId: string;
+
+    if (existingUser?.user_id) {
+      userId = existingUser.user_id as string;
+    } else {
+      userId = uuidv4();
+      const userPayload: Record<string, any> = {
+        user_id: userId,
+        tenant: tenantId
+      };
+
+      const userOverrides: Record<string, any> = {
+        username: `test-user-${sample}`,
+        email: `${sample}@example.com`,
+        hashed_password: 'hashed-password',
+        user_type: 'internal',
+        first_name: 'Test',
+        last_name: 'User',
+        is_inactive: false,
+        created_at: now,
+        updated_at: now
+      };
+
+      applyColumnDefaults(userColumns, userPayload, userOverrides, sample, now);
+
+      await context.db('users').insert(userPayload);
+    }
+
+    const documentColumns = await context.db('documents').columnInfo();
+    const documentId = uuidv4();
+    const documentPayload: Record<string, any> = {
+      document_id: documentId,
+      tenant: tenantId,
+      document_name: 'Tenant Isolation Doc',
+      type_id: null,
+      user_id: userId,
+      order_number: 0,
+      created_by: userId
+    };
+
+    const documentOverrides: Record<string, any> = {
+      entered_at: now,
+      created_at: now,
+      updated_at: now,
+      mime_type: null,
+      file_size: null,
+      storage_path: null,
+      folder_path: null,
+      thumbnail_file_id: null,
+      preview_file_id: null
+    };
+
+    applyColumnDefaults(documentColumns, documentPayload, documentOverrides, sample, now);
+
+    await context.db('documents').insert(documentPayload);
+
+    return { userId, documentId };
+  }
+
+  function applyColumnDefaults(
+    columns: Record<string, { type: string; nullable: boolean; defaultValue: any }>,
+    payload: Record<string, any>,
+    overrides: Record<string, any>,
+    sample: string,
+    now: Date
+  ) {
+    for (const [column, info] of Object.entries(columns)) {
+      if (column === 'tenant' || column === 'document_id' || column === 'user_id') {
+        continue;
       }
-    ]);
+
+      if (payload[column] !== undefined) {
+        continue;
+      }
+
+      if (overrides[column] !== undefined) {
+        payload[column] = overrides[column];
+        continue;
+      }
+
+      const nullable = info?.nullable;
+      const defaultValue = info?.defaultValue;
+
+      if (nullable === false && defaultValue == null) {
+        payload[column] = generateDefaultValue(column, info, sample, now);
+      }
+    }
+  }
+
+  function generateDefaultValue(
+    column: string,
+    info: { type?: string; nullable?: boolean; defaultValue?: any },
+    sample: string,
+    now: Date
+  ) {
+    const type = (info?.type || '').toLowerCase();
+
+    if (column === 'email' || column.endsWith('_email')) {
+      return `${sample}@example.com`;
+    }
+    if (column.endsWith('_name')) {
+      return `${column.replace(/_/g, ' ')} ${sample}`;
+    }
+    if (column === 'created_by' || column === 'updated_by') {
+      return context.userId;
+    }
+    if (type.includes('timestamp') || type.includes('date')) {
+      return now;
+    }
+    if (type.includes('bool')) {
+      return false;
+    }
+    if (type.includes('int') || type.includes('numeric') || type.includes('decimal')) {
+      return 0;
+    }
+    if (type.includes('uuid')) {
+      return uuidv4();
+    }
+
+    return `${column}-${sample}`;
   }
 
   describe('canAccessDocument with real database', () => {
@@ -222,7 +439,7 @@ describe('Document Permissions Integration Tests', () => {
         .select('*');
 
       // May be 0 if contracts table doesn't exist
-      if (associations.length > 0) {
+      if (testContractId && associations.length > 0) {
         expect(associations[0].entity_type).toBe('contract');
         expect(associations[0].entity_id).toBe(testContractId);
       }
@@ -288,10 +505,13 @@ describe('Document Permissions Integration Tests', () => {
   describe('Database integrity checks', () => {
     it('should enforce tenant isolation for document_associations', async () => {
       // Try to create association with wrong tenant (should work but not be queryable)
+      const wrongTenantId = uuidv4();
+      const { documentId: wrongTenantDocumentId } = await ensureTenantExists(wrongTenantId);
+
       const wrongTenantAssoc = {
         association_id: uuidv4(),
-        tenant: 'wrong-tenant-id',
-        document_id: documentNoAssoc.document_id,
+        tenant: wrongTenantId,
+        document_id: wrongTenantDocumentId,
         entity_id: testTicketId,
         entity_type: 'ticket'
       };
@@ -301,14 +521,14 @@ describe('Document Permissions Integration Tests', () => {
       // Query with correct tenant should not find it
       const results = await context.db('document_associations')
         .where('tenant', context.tenantId)
-        .where('document_id', documentNoAssoc.document_id)
+        .where('document_id', wrongTenantDocumentId)
         .select('*');
 
       expect(results.length).toBe(0);
 
       // Cleanup
       await context.db('document_associations')
-        .where('association_id', wrongTenantAssoc.association_id)
+        .where({ association_id: wrongTenantAssoc.association_id, tenant: wrongTenantId })
         .delete();
     });
 
@@ -361,18 +581,11 @@ describe('Document Permissions Integration Tests', () => {
 
   describe('Performance tests', () => {
     it('should efficiently query large number of documents', async () => {
-      // Create 100 test documents
-      const testDocs = Array.from({ length: 100 }, (_, i) => ({
-        document_id: uuidv4(),
-        tenant: context.tenantId,
-        document_name: `Perf Test Doc ${i}`,
-        type_id: null,
-        user_id: context.userId,
-        order_number: i + 100,
-        created_by: context.userId
-      }));
-
-      await context.db('documents').insert(testDocs);
+      // Create 100 test documents via document action
+      const testDocs: IDocument[] = [];
+      for (let i = 0; i < 100; i++) {
+        testDocs.push(await createDocumentRecord(`Perf Test Doc ${i}`, i + 100));
+      }
 
       // Query all documents
       const startTime = Date.now();
@@ -393,29 +606,13 @@ describe('Document Permissions Integration Tests', () => {
     });
 
     it('should efficiently bulk load associations for many documents', async () => {
-      // Create 50 documents with associations
-      const testDocs = Array.from({ length: 50 }, (_, i) => ({
-        document_id: uuidv4(),
-        tenant: context.tenantId,
-        document_name: `Bulk Test Doc ${i}`,
-        type_id: null,
-        user_id: context.userId,
-        order_number: i + 200,
-        created_by: context.userId
-      }));
-
-      await context.db('documents').insert(testDocs);
-
-      // Create associations for each
-      const testAssocs = testDocs.map(doc => ({
-        association_id: uuidv4(),
-        tenant: context.tenantId,
-        document_id: doc.document_id,
-        entity_id: testTicketId,
-        entity_type: 'ticket'
-      }));
-
-      await context.db('document_associations').insert(testAssocs);
+      // Create 50 documents with associations using domain actions
+      const testDocs: IDocument[] = [];
+      for (let i = 0; i < 50; i++) {
+        const doc = await createDocumentRecord(`Bulk Test Doc ${i}`, i + 200);
+        testDocs.push(doc);
+        await associateDocument(doc, testTicketId, 'ticket');
+      }
 
       // Bulk load associations (single query)
       const startTime = Date.now();
@@ -430,7 +627,8 @@ describe('Document Permissions Integration Tests', () => {
 
       // Cleanup
       await context.db('document_associations')
-        .whereIn('association_id', testAssocs.map(a => a.association_id))
+        .where('tenant', context.tenantId)
+        .whereIn('document_id', testDocs.map(d => d.document_id))
         .delete();
       await context.db('documents')
         .where('tenant', context.tenantId)
