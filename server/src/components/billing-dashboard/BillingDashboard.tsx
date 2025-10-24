@@ -19,6 +19,7 @@ import CreditReconciliation from './CreditReconciliation';
 import ContractsHub from './ContractsHub';
 import ContractDetailSwitcher from './contracts/ContractDetailSwitcher';
 import { ContractLineTypeRouter } from './contract-lines/ContractLineTypeRouter';
+import { ContractLinePresetTypeRouter } from './contract-lines/ContractLinePresetTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
@@ -150,20 +151,19 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="contract-lines">
-          {searchParams?.get('contractLineId') ? (
+          {searchParams?.get('presetId') ? (
             <>
               <BackNav>
-                &larr; Back to Contract Lines List {/* Using HTML entity for left arrow */}
+                &larr; Back to Contract Line Presets List
               </BackNav>
-              <div className="mt-4"> {/* Add margin top for spacing */}
-                <ContractLineTypeRouter contractLineId={searchParams.get('contractLineId')!} />
+              <div className="mt-4">
+                <ContractLinePresetTypeRouter presetId={searchParams.get('presetId')!} />
               </div>
             </>
           ) : (
             <ContractLinesOverview />
           )}
         </Tabs.Content>
-
         <Tabs.Content value="billing-cycles">
           <BillingCycles />
         </Tabs.Content>

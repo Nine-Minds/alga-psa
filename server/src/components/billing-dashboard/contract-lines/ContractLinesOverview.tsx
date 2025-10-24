@@ -175,8 +175,8 @@ const ContractLinesOverview: React.FC = () => {
           <ContractLineDialog
             onPlanAdded={(newPresetId) => {
               if (newPresetId) {
-                // Navigate directly to the new preset details
-                router.push(`/msp/billing?tab=contract-lines&presetId=${newPresetId}`);
+                // Refresh the contract lines list to show the new preset
+                fetchContractLines();
               }
             }}
             editingPlan={editingPlan}

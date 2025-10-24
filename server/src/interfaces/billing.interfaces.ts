@@ -252,6 +252,33 @@ export interface IContractLineService extends TenantEntity {
   custom_rate?: number;
 }
 
+/**
+ * Interface for contract line preset services
+ * Stores services associated with contract line presets
+ */
+export interface IContractLinePresetService extends TenantEntity {
+  preset_id: string;
+  service_id: string;
+  quantity?: number;
+  custom_rate?: number;
+  unit_of_measure?: string;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
+/**
+ * Interface for contract line preset fixed config
+ * Stores fixed fee configuration for contract line presets
+ */
+export interface IContractLinePresetFixedConfig extends TenantEntity {
+  preset_id: string;
+  base_rate?: number | null;
+  enable_proration: boolean;
+  billing_cycle_alignment: 'start' | 'end' | 'prorated';
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
 export interface IBucketContractLine extends TenantEntity {
   bucket_contract_line_id: string;
   contract_line_id: string;

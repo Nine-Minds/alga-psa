@@ -11,6 +11,10 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import {
   createContractLinePreset,
   updateContractLinePreset,
+  updateContractLinePresetFixedConfig,
+  getContractLinePresetFixedConfig,
+  updateContractLinePresetServices,
+  getContractLinePresetServices,
 } from 'server/src/lib/actions/contractLinePresetActions';
 import { IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
@@ -35,9 +39,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
 
-  // Hourly rate state (can be used for Hourly presets)
+  // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
+  const [enableProration, setEnableProration] = useState<boolean>(false);
+  const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'prorated'>('start');
 
   // Services state
   const [services, setServices] = useState<IService[]>([]);
@@ -85,13 +91,48 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       setPlanName(editingPlan.preset_name);
       setBillingFrequency(editingPlan.billing_frequency);
       setPlanType(editingPlan.contract_line_type as PlanType);
-
-      // Load preset-specific fields
-      if (editingPlan.contract_line_type === 'Hourly') {
-        setMinimumBillableTime(editingPlan.minimum_billable_time ?? undefined);
-        setRoundUpToNearest(editingPlan.round_up_to_nearest ?? undefined);
+      if (editingPlan.preset_id && editingPlan.contract_line_type === 'Fixed') {
+        getContractLinePresetFixedConfig(editingPlan.preset_id)
+          .then((cfg) => {
+            if (cfg) {
+              setBaseRate(cfg.base_rate ?? undefined);
+              setEnableProration(!!cfg.enable_proration);
+              setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
+            }
+          })
+          .catch(() => {});
       }
-
+      // Load services for existing preset
+      if (editingPlan.preset_id) {
+        getContractLinePresetServices(editingPlan.preset_id)
+          .then((presetServices) => {
+            // Load services based on type
+            if (editingPlan.contract_line_type === 'Fixed') {
+              const fixedSvcs = presetServices.map(s => ({
+                service_id: s.service_id,
+                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
+                quantity: s.quantity || 1
+              }));
+              setFixedServices(fixedSvcs);
+            } else if (editingPlan.contract_line_type === 'Hourly') {
+              const hourlySvcs = presetServices.map(s => ({
+                service_id: s.service_id,
+                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
+                hourly_rate: s.custom_rate ? s.custom_rate / 100 : undefined
+              }));
+              setHourlyServices(hourlySvcs);
+            } else if (editingPlan.contract_line_type === 'Usage') {
+              const usageSvcs = presetServices.map(s => ({
+                service_id: s.service_id,
+                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
+                unit_rate: s.custom_rate ? s.custom_rate / 100 : undefined,
+                unit_of_measure: s.unit_of_measure || ''
+              }));
+              setUsageServices(usageSvcs);
+            }
+          })
+          .catch(() => {});
+      }
       setIsDirty(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -186,27 +227,71 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         tenant,
       };
 
-      // Add hourly-specific fields if applicable
-      if (planType === 'Hourly') {
-        presetData.hourly_rate = baseRate ?? null;
-        presetData.minimum_billable_time = minimumBillableTime ?? null;
-        presetData.round_up_to_nearest = roundUpToNearest ?? null;
-        presetData.enable_overtime = false;
-        presetData.overtime_rate = null;
-        presetData.overtime_threshold = null;
-        presetData.enable_after_hours_rate = false;
-        presetData.after_hours_multiplier = null;
-      }
-
       let savedPresetId: string | undefined;
       if (editingPlan?.preset_id) {
-        const { preset_id, tenant: _, ...updateData } = presetData as any;
+        const { preset_id, ...updateData } = presetData;
         const updatedPreset = await updateContractLinePreset(editingPlan.preset_id, updateData);
         savedPresetId = updatedPreset.preset_id;
       } else {
-        const { tenant: _, ...createData } = presetData as any;
-        const newPreset = await createContractLinePreset(createData);
+        const { preset_id, ...createData } = presetData;
+        const newPreset = await createContractLinePreset(createData as any);
         savedPresetId = newPreset.preset_id;
+      }
+
+      // Save services based on plan type
+      if (savedPresetId) {
+        const servicesToSave: any[] = [];
+
+        if (planType === 'Fixed') {
+          // Save Fixed config
+          await updateContractLinePresetFixedConfig(savedPresetId, {
+            base_rate: baseRate ?? null,
+            enable_proration: enableProration,
+            billing_cycle_alignment: 'start',
+          });
+
+          // Save Fixed services
+          fixedServices.forEach(service => {
+            if (service.service_id) {
+              servicesToSave.push({
+                preset_id: savedPresetId,
+                service_id: service.service_id,
+                quantity: service.quantity || 1,
+                custom_rate: null,
+                unit_of_measure: null
+              });
+            }
+          });
+        } else if (planType === 'Hourly') {
+          // Save Hourly services
+          hourlyServices.forEach(service => {
+            if (service.service_id && service.hourly_rate) {
+              servicesToSave.push({
+                preset_id: savedPresetId,
+                service_id: service.service_id,
+                quantity: null,
+                custom_rate: Math.round(service.hourly_rate * 100), // Convert to cents
+                unit_of_measure: null
+              });
+            }
+          });
+        } else if (planType === 'Usage') {
+          // Save Usage services
+          usageServices.forEach(service => {
+            if (service.service_id && service.unit_rate) {
+              servicesToSave.push({
+                preset_id: savedPresetId,
+                service_id: service.service_id,
+                quantity: null,
+                custom_rate: Math.round(service.unit_rate * 100), // Convert to cents
+                unit_of_measure: service.unit_of_measure || ''
+              });
+            }
+          });
+        }
+
+        // Update services for the preset
+        await updateContractLinePresetServices(savedPresetId, servicesToSave);
       }
 
       resetForm();
@@ -227,6 +312,8 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     setBillingFrequency('monthly');
     setBaseRate(undefined);
     setBaseRateInput('');
+    setEnableProration(false);
+    setBillingCycleAlignment('start');
     setMinimumBillableTime(undefined);
     setRoundUpToNearest(undefined);
     setFixedServices([]);
@@ -763,7 +850,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <Dialog
         isOpen={open}
         onClose={() => handleCloseRequest(false)}
-        title={editingPlan ? 'Edit Contract Line Preset' : 'Add Contract Line Preset'}
+        title={editingPlan ? 'Edit Contract Line' : 'Add Contract Line'}
         className="max-w-3xl"
         hideCloseButton={!!editingPlan}
       >
@@ -945,25 +1032,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       <p className="text-xs text-gray-500">
                         When enabled, the monthly fee will be prorated for partial months based on the start/end date
                       </p>
-                      {enableProration && (
-                        <div>
-                          <Label htmlFor="alignment">Billing Cycle Alignment</Label>
-                          <CustomSelect
-                            id="alignment"
-                            value={billingCycleAlignment}
-                            onValueChange={(value: string) => {
-                              setBillingCycleAlignment(value as 'start' | 'end' | 'prorated');
-                              markDirty();
-                            }}
-                            options={[
-                              { value: 'start', label: 'Start of Billing Cycle' },
-                              { value: 'end', label: 'End of Billing Cycle' },
-                              { value: 'prorated', label: 'Prorated' },
-                            ]}
-                            placeholder="Select alignment"
-                          />
-                        </div>
-                      )}
                     </div>
                   </>
                 )}

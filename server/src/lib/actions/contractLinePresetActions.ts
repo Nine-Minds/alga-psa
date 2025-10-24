@@ -1,7 +1,9 @@
 // server/src/lib/actions/contractLinePresetActions.ts
 'use server'
 import ContractLinePreset from 'server/src/lib/models/contractLinePreset';
-import { IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
+import ContractLinePresetService from 'server/src/lib/models/contractLinePresetService';
+import ContractLinePresetFixedConfig from 'server/src/lib/models/contractLinePresetFixedConfig';
+import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/shared/db';
@@ -190,5 +192,141 @@ export async function deleteContractLinePreset(presetId: string): Promise<void> 
             throw error;
         }
         throw new Error(`Failed to delete contract line preset: ${error}`);
+    }
+}
+
+/**
+ * Get services for a contract line preset
+ */
+export async function getContractLinePresetServices(presetId: string): Promise<IContractLinePresetService[]> {
+    try {
+        const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
+        if (!currentUser && !isBypass) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error("tenant context not found");
+        }
+
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!isBypass && !await hasPermission(currentUser, 'billing', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read contract line preset services');
+            }
+
+            const services = await ContractLinePresetService.getByPresetId(trx, presetId);
+            return services;
+        });
+    } catch (error) {
+        console.error(`Error fetching services for preset ${presetId}:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(`Failed to fetch services for preset ${presetId}: ${error}`);
+    }
+}
+
+/**
+ * Update services for a contract line preset
+ */
+export async function updateContractLinePresetServices(
+    presetId: string,
+    services: Omit<IContractLinePresetService, 'tenant' | 'created_at' | 'updated_at'>[]
+): Promise<IContractLinePresetService[]> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error("tenant context not found");
+        }
+
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
+                throw new Error('Permission denied: Cannot update contract line preset services');
+            }
+
+            const updatedServices = await ContractLinePresetService.updateForPreset(trx, presetId, services);
+            return updatedServices;
+        });
+    } catch (error) {
+        console.error(`Error updating services for preset ${presetId}:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(`Failed to update services for preset ${presetId}: ${error}`);
+    }
+}
+
+/**
+ * Get fixed config for a contract line preset
+ */
+export async function getContractLinePresetFixedConfig(presetId: string): Promise<IContractLinePresetFixedConfig | null> {
+    try {
+        const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+        const currentUser = isBypass ? ({} as any) : await getCurrentUser();
+        if (!currentUser && !isBypass) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error("tenant context not found");
+        }
+
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!isBypass && !await hasPermission(currentUser, 'billing', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read contract line preset fixed config');
+            }
+
+            const config = await ContractLinePresetFixedConfig.getByPresetId(trx, presetId);
+            return config;
+        });
+    } catch (error) {
+        console.error(`Error fetching fixed config for preset ${presetId}:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(`Failed to fetch fixed config for preset ${presetId}: ${error}`);
+    }
+}
+
+/**
+ * Update fixed config for a contract line preset
+ */
+export async function updateContractLinePresetFixedConfig(
+    presetId: string,
+    configData: Omit<IContractLinePresetFixedConfig, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
+): Promise<IContractLinePresetFixedConfig> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error("tenant context not found");
+        }
+
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
+                throw new Error('Permission denied: Cannot update contract line preset fixed config');
+            }
+
+            const config = await ContractLinePresetFixedConfig.upsert(trx, presetId, configData);
+            return config;
+        });
+    } catch (error) {
+        console.error(`Error updating fixed config for preset ${presetId}:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(`Failed to update fixed config for preset ${presetId}: ${error}`);
     }
 }
