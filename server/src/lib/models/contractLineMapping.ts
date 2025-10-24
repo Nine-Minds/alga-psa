@@ -217,14 +217,12 @@ const ContractLineMapping = {
         contract_id,
         contract_line_id,
         created_at,
-        billing_timing: __,
         ...dataToUpdate
       } = updateData;
 
       const templateUpdatePayload: Record<string, unknown> = {};
-      const termsUpdatePayload: Record<string, unknown> = {};
 
-      // Update contract_line_mappings with non-billing_timing fields
+      // Update contract_line_mappings with all fields including billing_timing
       if (Object.keys(dataToUpdate).length > 0) {
         const [updatedMapping] = await db<IContractLineMapping>('contract_line_mappings')
           .where({
@@ -246,11 +244,9 @@ const ContractLineMapping = {
       if (dataToUpdate.display_order !== undefined) {
         templateUpdatePayload.display_order = dataToUpdate.display_order;
       }
-      if (updateData.billing_timing !== undefined) {
-        termsUpdatePayload.billing_timing = updateData.billing_timing;
-      }
 
       // Update template mappings if there are mapping updates
+      // Note: This only applies to template contracts, not client contracts
       if (Object.keys(templateUpdatePayload).length > 0) {
         const result = await db('contract_template_line_mappings')
           .where({
@@ -268,59 +264,22 @@ const ContractLineMapping = {
             'created_at',
           ]);
 
-        if (result.length === 0) {
-          throw new Error(`Failed to update contract line ${contractLineId} for contract ${contractId}`);
-        }
-      }
-
-      // Update template line terms for billing_timing
-      if (Object.keys(termsUpdatePayload).length > 0) {
-        console.log(`[updateContractLineAssociation] Updating billing_timing for contract_line_id: ${contractLineId}, tenant: ${tenant}, payload:`, termsUpdatePayload);
-
-        // Check if the row exists
-        const existingTerm = await db('contract_line_template_terms')
-          .where({
-            contract_line_id: contractLineId,
-            tenant,
-          })
-          .first();
-
-        console.log(`[updateContractLineAssociation] Existing term:`, existingTerm);
-
-        if (existingTerm) {
-          // Update existing row
-          const updateResult = await db('contract_line_template_terms')
-            .where({
-              contract_line_id: contractLineId,
-              tenant,
-            })
-            .update(termsUpdatePayload);
-          console.log(`[updateContractLineAssociation] Updated ${updateResult} rows in contract_line_template_terms`);
+        if (result.length > 0) {
+          console.log(`[updateContractLineAssociation] Updated contract_template_line_mappings`);
         } else {
-          // Insert new row if it doesn't exist
-          const insertResult = await db('contract_line_template_terms')
-            .insert({
-              contract_line_id: contractLineId,
-              tenant,
-              ...termsUpdatePayload,
-            });
-          console.log(`[updateContractLineAssociation] Inserted new row into contract_line_template_terms:`, insertResult);
+          console.log(`[updateContractLineAssociation] No template mappings found (likely a client contract, not a template)`);
         }
       }
 
-      // Check if billing_timing column exists in contract_line_template_terms
-      const hasColumn = await db.schema.hasColumn('contract_line_template_terms', 'billing_timing');
-      console.log(`[updateContractLineAssociation] Has billing_timing column: ${hasColumn}`);
+      // Check if billing_timing column exists in contract_line_mappings
+      const hasBillingTimingColumn = await db.schema.hasColumn('contract_line_mappings', 'billing_timing');
+      console.log(`[updateContractLineAssociation] contract_line_mappings has billing_timing column: ${hasBillingTimingColumn}`);
 
       // Fetch and return the updated data with billing_timing
       const updated = await db('contract_line_mappings as clm')
         .join('contract_lines as cl', function() {
           this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
               .andOn('clm.tenant', '=', 'cl.tenant');
-        })
-        .leftJoin('contract_line_template_terms as line_terms', function() {
-          this.on('line_terms.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('line_terms.tenant', '=', 'cl.tenant');
         })
         .where({
           'clm.contract_id': contractId,
@@ -332,10 +291,7 @@ const ContractLineMapping = {
           'cl.contract_line_name',
           'cl.billing_frequency',
           'cl.is_custom',
-          'cl.contract_line_type',
-          hasColumn
-            ? 'line_terms.billing_timing as billing_timing'
-            : db.raw("'arrears' as billing_timing")
+          'cl.contract_line_type'
         )
         .first() as IContractLineMapping & {
           contract_line_name?: string;
