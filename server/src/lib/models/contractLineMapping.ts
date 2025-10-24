@@ -275,6 +275,8 @@ const ContractLineMapping = {
 
       // Update template line terms for billing_timing
       if (Object.keys(termsUpdatePayload).length > 0) {
+        console.log(`[updateContractLineAssociation] Updating billing_timing for contract_line_id: ${contractLineId}, tenant: ${tenant}, payload:`, termsUpdatePayload);
+
         // Check if the row exists
         const existingTerm = await db('contract_line_template_terms')
           .where({
@@ -283,27 +285,32 @@ const ContractLineMapping = {
           })
           .first();
 
+        console.log(`[updateContractLineAssociation] Existing term:`, existingTerm);
+
         if (existingTerm) {
           // Update existing row
-          await db('contract_line_template_terms')
+          const updateResult = await db('contract_line_template_terms')
             .where({
               contract_line_id: contractLineId,
               tenant,
             })
             .update(termsUpdatePayload);
+          console.log(`[updateContractLineAssociation] Updated ${updateResult} rows in contract_line_template_terms`);
         } else {
           // Insert new row if it doesn't exist
-          await db('contract_line_template_terms')
+          const insertResult = await db('contract_line_template_terms')
             .insert({
               contract_line_id: contractLineId,
               tenant,
               ...termsUpdatePayload,
             });
+          console.log(`[updateContractLineAssociation] Inserted new row into contract_line_template_terms:`, insertResult);
         }
       }
 
       // Check if billing_timing column exists in contract_line_template_terms
       const hasColumn = await db.schema.hasColumn('contract_line_template_terms', 'billing_timing');
+      console.log(`[updateContractLineAssociation] Has billing_timing column: ${hasColumn}`);
 
       // Fetch and return the updated data with billing_timing
       const updated = await db('contract_line_mappings as clm')
@@ -337,6 +344,8 @@ const ContractLineMapping = {
           contract_line_type?: string;
           billing_timing?: string;
         };
+
+      console.log(`[updateContractLineAssociation] Fetched updated data:`, updated);
 
       if (!updated) {
         throw new Error(`Failed to fetch updated contract line ${contractLineId} for contract ${contractId}`);
