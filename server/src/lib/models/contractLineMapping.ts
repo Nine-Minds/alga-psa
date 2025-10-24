@@ -221,21 +221,24 @@ const ContractLineMapping = {
         ...dataToUpdate
       } = updateData;
 
-      const [updatedMapping] = await db<IContractLineMapping>('contract_line_mappings')
-        .where({
-          contract_id: contractId,
-          contract_line_id: contractLineId,
-          tenant
-        })
-        .update(dataToUpdate)
-        .returning('*');
-
-      if (updatedMapping) {
-        return updatedMapping;
-      }
-
       const templateUpdatePayload: Record<string, unknown> = {};
       const termsUpdatePayload: Record<string, unknown> = {};
+
+      // Update contract_line_mappings with non-billing_timing fields
+      if (Object.keys(dataToUpdate).length > 0) {
+        const [updatedMapping] = await db<IContractLineMapping>('contract_line_mappings')
+          .where({
+            contract_id: contractId,
+            contract_line_id: contractLineId,
+            tenant
+          })
+          .update(dataToUpdate)
+          .returning('*');
+
+        if (!updatedMapping) {
+          throw new Error(`Failed to update contract line ${contractLineId} for contract ${contractId}`);
+        }
+      }
 
       if (dataToUpdate.custom_rate !== undefined) {
         templateUpdatePayload.custom_rate = dataToUpdate.custom_rate;
@@ -248,7 +251,6 @@ const ContractLineMapping = {
       }
 
       // Update template mappings if there are mapping updates
-      let updatedTemplateMapping = null;
       if (Object.keys(templateUpdatePayload).length > 0) {
         const result = await db('contract_template_line_mappings')
           .where({
@@ -266,8 +268,8 @@ const ContractLineMapping = {
             'created_at',
           ]);
 
-        if (result.length > 0) {
-          updatedTemplateMapping = result[0];
+        if (result.length === 0) {
+          throw new Error(`Failed to update contract line ${contractLineId} for contract ${contractId}`);
         }
       }
 
@@ -298,10 +300,6 @@ const ContractLineMapping = {
               ...termsUpdatePayload,
             });
         }
-      }
-
-      if (!updatedTemplateMapping && Object.keys(termsUpdatePayload).length === 0) {
-        throw new Error(`Failed to update contract line ${contractLineId} for contract ${contractId}`);
       }
 
       // Check if billing_timing column exists in contract_line_template_terms
