@@ -1835,9 +1835,18 @@ export class BillingEngine {
       };
     }
 
+    const currentStart = toPlainDate(billingPeriod.startDate);
+    const currentEndExclusive = toPlainDate(billingPeriod.endDate);
+    const cycleDays = Math.max(
+      currentStart.until(currentEndExclusive, { largestUnit: 'days' }).days,
+      1
+    );
+    const previousStart = toISODate(currentStart.subtract({ days: cycleDays }));
+    const previousEnd = toISODate(currentStart.subtract({ days: 1 }));
+
     return {
-      servicePeriodStart: billingPeriod.startDate,
-      servicePeriodEnd: billingPeriod.endDate
+      servicePeriodStart: previousStart,
+      servicePeriodEnd: previousEnd
     };
   }
 
