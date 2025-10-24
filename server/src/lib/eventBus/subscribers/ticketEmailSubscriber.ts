@@ -1,6 +1,6 @@
 import { getEventBus } from '../index';
-import { 
-  EventType, 
+import {
+  EventType,
   BaseEvent,
   EventSchemas,
   TicketCreatedEvent,
@@ -9,10 +9,200 @@ import {
   TicketAssignedEvent,
   TicketCommentAddedEvent
 } from '../events';
-import { sendEventEmail } from '../../notifications/sendEventEmail';
+import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import logger from '@shared/core/logger';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
+import { createTenantKnex } from '../../db';
+import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
+import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
+import type { Knex } from 'knex';
+import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+
+/**
+ * Get the base URL from NEXTAUTH_URL environment variable
+ */
+function getBaseUrl(): string {
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+function normalizeHost(host: string): string {
+  return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+}
+
+async function resolveTicketLinks(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string,
+  ticketNumber?: string | null
+): Promise<{ internalUrl: string; portalUrl: string }> {
+  const internalBase = getBaseUrl();
+  const identifier = (ticketNumber && ticketNumber.trim()) || ticketId;
+  const internalUrl = `${internalBase}/msp/tickets/${ticketId}`;
+
+  let portalHost: string | null = null;
+
+  try {
+    const portalDomain = await getPortalDomain(knex, tenantId);
+    if (portalDomain) {
+      if (portalDomain.status === 'active' && portalDomain.domain) {
+        portalHost = portalDomain.domain;
+      } else if (portalDomain.canonicalHost) {
+        portalHost = portalDomain.canonicalHost;
+      }
+    }
+  } catch (error) {
+    logger.warn('[TicketEmailSubscriber] Failed to resolve portal domain for ticket link', {
+      tenantId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+
+  const clientPortalPath = `/client-portal/tickets`;
+  const clientPortalWithTicket = `${clientPortalPath}?ticket=${encodeURIComponent(identifier)}`;
+  let portalUrl: string;
+  if (portalHost) {
+    const sanitizedHost = normalizeHost(portalHost);
+    portalUrl = `https://${sanitizedHost}${clientPortalWithTicket}`;
+  } else {
+    const fallbackBase = internalBase.endsWith('/') ? internalBase.slice(0, -1) : internalBase;
+    portalUrl = `${fallbackBase}${clientPortalWithTicket}`;
+  }
+
+  return { internalUrl, portalUrl };
+}
+
+/**
+ * Wrapper function that checks notification preferences before sending email
+ * @param params - Same params as sendEventEmail
+ * @param subtypeName - Name of the notification subtype (e.g., "Ticket Created")
+ * @param recipientUserId - Optional user ID for preference checking (only for internal users)
+ */
+async function sendNotificationIfEnabled(
+  params: SendEmailParams,
+  subtypeName: string,
+  recipientUserId?: string
+): Promise<void> {
+  try {
+    const { knex } = await createTenantKnex();
+
+    // 1. Check global notification settings
+    const settings = await knex('notification_settings')
+      .where({ tenant: params.tenantId })
+      .first();
+
+    if (settings && !settings.is_enabled) {
+      logger.info('[TicketEmailSubscriber] Notifications disabled globally for tenant:', {
+        tenantId: params.tenantId,
+        recipient: params.to,
+        subtypeName
+      });
+      return;
+    }
+
+    // 2. Look up notification subtype ID
+    const subtype = await knex('notification_subtypes')
+      .where({ name: subtypeName })
+      .first();
+
+    if (!subtype) {
+      logger.warn('[TicketEmailSubscriber] Notification subtype not found:', {
+        subtypeName,
+        recipient: params.to
+      });
+      // Continue anyway to avoid breaking existing functionality
+      await sendEventEmail(params);
+      return;
+    }
+
+    // 3. Check if subtype is enabled
+    if (!subtype.is_enabled) {
+      logger.info('[TicketEmailSubscriber] Notification subtype disabled:', {
+        subtypeName,
+        recipient: params.to,
+        tenantId: params.tenantId
+      });
+      return;
+    }
+
+    // 4. For internal users, check user preferences and rate limiting
+    if (recipientUserId) {
+      // Check user preferences
+      const preference = await knex('user_notification_preferences')
+        .where({
+          tenant: params.tenantId,
+          user_id: recipientUserId,
+          subtype_id: subtype.id
+        })
+        .first();
+
+      if (preference && !preference.is_enabled) {
+        logger.info('[TicketEmailSubscriber] User has opted out of this notification type:', {
+          userId: recipientUserId,
+          subtypeName,
+          recipient: params.to
+        });
+        return;
+      }
+
+      // Check rate limiting (only if settings exist)
+      if (settings) {
+        const recentCount = await knex('notification_logs')
+          .where({
+            tenant: params.tenantId,
+            user_id: recipientUserId
+          })
+          .where('created_at', '>', new Date(Date.now() - 60000))
+          .count('id')
+          .first()
+          .then((result): number => Number(result?.count));
+
+        if (recentCount >= settings.rate_limit_per_minute) {
+          logger.warn('[TicketEmailSubscriber] Rate limit exceeded for user:', {
+            userId: recipientUserId,
+            recentCount,
+            limit: settings.rate_limit_per_minute,
+            recipient: params.to
+          });
+          return;
+        }
+      }
+    }
+
+    // 5. All checks passed - send the email
+    await sendEventEmail(params);
+
+    // 6. Log the notification (only for internal users with userId)
+    if (recipientUserId && subtype) {
+      try {
+        await knex('notification_logs').insert({
+          tenant: params.tenantId,
+          user_id: recipientUserId,
+          subtype_id: subtype.id,
+          email_address: params.to,
+          subject: params.subject,
+          status: 'sent'
+        });
+      } catch (logError) {
+        logger.warn('[TicketEmailSubscriber] Failed to log notification:', {
+          error: logError instanceof Error ? logError.message : 'Unknown error',
+          userId: recipientUserId,
+          recipient: params.to
+        });
+      }
+    }
+
+  } catch (error) {
+    logger.error('[TicketEmailSubscriber] Error in sendNotificationIfEnabled:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      subtypeName,
+      recipient: params.to,
+      tenantId: params.tenantId
+    });
+    throw error;
+  }
+}
 
 /**
  * Format changes record into a readable string
@@ -70,11 +260,31 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
     }
 
     default:
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
       if (typeof value === 'boolean') {
         return value ? 'Yes' : 'No';
       }
+      if (typeof value === 'string') {
+        const formatted = formatBlockNoteContent(value);
+        const formattedText = formatted.text?.trim?.();
+        if (formattedText) {
+          return formattedText;
+        }
+        return value;
+      }
       if (typeof value === 'object') {
-        return JSON.stringify(value);
+        const formatted = formatBlockNoteContent(value);
+        const formattedText = formatted.text?.trim?.();
+        if (formattedText && formattedText !== JSON.stringify(value)) {
+          return formattedText;
+        }
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return String(value);
+        }
       }
       return String(value);
   }
@@ -323,40 +533,51 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     if (!rawDescription && 'description' in ticket) {
       rawDescription = safeString((ticket as Record<string, unknown>).description);
     }
-    const description = rawDescription || 'No description provided.';
+    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
+    const descriptionText = descriptionFormatting.text || rawDescription;
+    const description = descriptionText || 'No description provided.';
+    const descriptionHtml = rawDescription ? descriptionFormatting.html : `<p>${description}</p>`;
 
     const requesterDetailsForText = requesterDetails;
     const assignedDetailsForText = assignedDetails;
 
-    const emailContext = {
-      ticket: {
-        id: ticket.ticket_number,
-        title: ticket.title,
-        description,
-        priority: priorityName,
-        priorityColor,
-        status: statusName,
-        createdAt,
-        createdBy: createdByName,
-        createdDetails,
-        assignedToName,
-        assignedToEmail: assignedToEmailDisplay,
-        assignedDetails: assignedDetailsForText,
-        requesterName,
-        requesterEmail,
-        requesterPhone,
-        requesterContact,
-        requesterDetails: requesterDetailsForText,
-        board: boardName,
-        category: categoryName || 'Not categorized',
-        subcategory: subcategoryName || 'Not specified',
-        categoryDetails,
-        locationSummary,
-        clientName,
-        metaLine,
-        url: `/tickets/${ticket.ticket_number}`
-      }
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      description,
+      descriptionText: description,
+      descriptionHtml: descriptionHtml,
+      priority: priorityName,
+      priorityColor,
+      status: statusName,
+      createdAt,
+      createdBy: createdByName,
+      createdDetails,
+      assignedToName,
+      assignedToEmail: assignedToEmailDisplay,
+      assignedDetails: assignedDetailsForText,
+      requesterName,
+      requesterEmail,
+      requesterPhone,
+      requesterContact,
+      requesterDetails: requesterDetailsForText,
+      board: boardName,
+      category: categoryName || 'Not categorized',
+      subcategory: subcategoryName || 'Not specified',
+      categoryDetails,
+      locationSummary,
+      clientName,
+      metaLine
     };
+
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url
+      }
+    });
 
     const replyContext = {
       ticketId: ticket.ticket_id || payload.ticketId,
@@ -364,28 +585,28 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     };
     const emailSubject = `New Ticket • ${ticket.title} (${priorityName})`;
 
-    // Send to primary recipient (contact or client)
+    // Send to primary recipient (contact or client) - external user, no userId
     if (primaryEmail) {
-      await sendEventEmail({
+      await sendNotificationIfEnabled({
         tenantId,
         to: primaryEmail,
         subject: emailSubject,
         template: 'ticket-created',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
-      });
+      }, 'Ticket Created');
     }
 
     // Send to assigned user if different from primary recipient
     if (assignedEmail && assignedEmail !== primaryEmail) {
-      await sendEventEmail({
+      await sendNotificationIfEnabled({
         tenantId,
         to: assignedEmail,
         subject: emailSubject,
         template: 'ticket-created',
-        context: emailContext,
+        context: buildContext(internalUrl),
         replyContext
-      });
+      }, 'Ticket Created', ticket.assigned_to);
     }
 
   } catch (error) {
@@ -486,49 +707,55 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       .where({ user_id: payload.userId, tenant: tenantId })
       .first();
 
-    const emailContext = {
-      ticket: {
-        id: ticket.ticket_number,
-        title: ticket.title,
-        priority: ticket.priority_name || 'Unknown',
-        status: ticket.status_name || 'Unknown',
-        changes: formattedChanges,
-        updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId,
-        url: `/tickets/${ticket.ticket_number}`
-      }
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      priority: ticket.priority_name || 'Unknown',
+      status: ticket.status_name || 'Unknown',
+      changes: formattedChanges,
+      updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId
     };
 
-    // Send to primary recipient (contact or client)
-    await sendEventEmail({
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url
+      }
+    });
+
+    // Send to primary recipient (contact or client) - external user, no userId
+    await sendNotificationIfEnabled({
       tenantId,
       to: primaryEmail,
       subject: `Ticket Updated: ${ticket.title}`,
       template: 'ticket-updated',
-      context: emailContext,
+      context: buildContext(portalUrl),
       replyContext: {
         ticketId: ticket.ticket_id || payload.ticketId,
         threadId: ticket.email_metadata?.threadId
       }
-    });
+    }, 'Ticket Updated');
 
     // Send to assigned user if different from primary recipient
     if (ticket.assigned_to_email && ticket.assigned_to_email !== primaryEmail) {
-      await sendEventEmail({
-        tenantId,
-        to: ticket.assigned_to_email,
-        subject: `Ticket Updated: ${ticket.title}`,
-        template: 'ticket-updated',
-        context: emailContext,
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          threadId: ticket.email_metadata?.threadId
-        }
-      });
+      await sendNotificationIfEnabled({
+      tenantId,
+      to: ticket.assigned_to_email,
+      subject: `Ticket Updated: ${ticket.title}`,
+      template: 'ticket-updated',
+      context: buildContext(internalUrl),
+      replyContext: {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        threadId: ticket.email_metadata?.threadId
+      }
+    }, 'Ticket Updated', ticket.assigned_to);
     }
 
     // Get and notify all additional resources
     const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email')
+      .select('u.email as email', 'u.user_id as user_id')
       .leftJoin('users as u', function() {
         this.on('tr.additional_user_id', 'u.user_id')
             .andOn('tr.tenant', 'u.tenant');
@@ -541,17 +768,17 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     // Send to all additional resources
     for (const resource of additionalResources) {
       if (resource.email) {
-        await sendEventEmail({
-          tenantId,
-          to: resource.email,
-          subject: `Ticket Updated: ${ticket.title}`,
-          template: 'ticket-updated',
-          context: emailContext,
-          replyContext: {
-            ticketId: ticket.ticket_id || payload.ticketId,
-            threadId: ticket.email_metadata?.threadId
-          }
-        });
+        await sendNotificationIfEnabled({
+        tenantId,
+        to: resource.email,
+        subject: `Ticket Updated: ${ticket.title}`,
+        template: 'ticket-updated',
+        context: buildContext(internalUrl),
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
+        }
+      }, 'Ticket Updated', resource.user_id);
       }
     }
 
@@ -627,16 +854,22 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       .first()
       .then(user => user ? `${user.first_name} ${user.last_name}` : 'System');
 
-    const emailContext = {
-      ticket: {
-        id: ticket.ticket_number,
-        title: ticket.title,
-        priority: ticket.priority_name || 'Unknown',
-        status: ticket.status_name || 'Unknown',
-        assignedBy: assignerName,
-        url: `/tickets/${ticket.ticket_number}`
-      }
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      priority: ticket.priority_name || 'Unknown',
+      status: ticket.status_name || 'Unknown',
+      assignedBy: assignerName
     };
+
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url
+      }
+    });
 
     const replyContext = {
       ticketId: ticket.ticket_id || payload.ticketId,
@@ -645,46 +878,46 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     // Send to assigned user
     if (ticket.assigned_to_email) {
-      await sendEventEmail({
+      await sendNotificationIfEnabled({
         tenantId,
         to: ticket.assigned_to_email,
         subject: `You have been assigned to ticket: ${ticket.title}`,
         template: 'ticket-assigned',
-        context: emailContext,
+        context: buildContext(internalUrl),
         replyContext
-      });
+      }, 'Ticket Assigned', ticket.assigned_to);
     }
 
     const locationEmail = ticket.client_email;
     const contactEmail = ticket.contact_email;
 
-    // Notify the client's default location email
+    // Notify the client's default location email - external user, no userId
     if (locationEmail) {
-      await sendEventEmail({
+      await sendNotificationIfEnabled({
         tenantId,
         to: locationEmail,
         subject: `Ticket Assigned: ${ticket.title}`,
         template: 'ticket-assigned',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
-      });
+      }, 'Ticket Assigned');
     }
 
-    // Notify the ticket contact when different from the default location email
+    // Notify the ticket contact when different from the default location email - external user, no userId
     if (contactEmail && contactEmail !== locationEmail) {
-      await sendEventEmail({
+      await sendNotificationIfEnabled({
         tenantId,
         to: contactEmail,
         subject: `Ticket Assigned: ${ticket.title}`,
         template: 'ticket-assigned',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
-      });
+      }, 'Ticket Assigned');
     }
 
     // Get all additional resources
     const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email')
+      .select('u.email as email', 'u.user_id as user_id')
       .leftJoin('users as u', function() {
         this.on('tr.additional_user_id', 'u.user_id')
             .andOn('tr.tenant', 'u.tenant');
@@ -697,14 +930,14 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     // Send to all additional resources
     for (const resource of additionalResources) {
       if (resource.email) {
-        await sendEventEmail({
+        await sendNotificationIfEnabled({
           tenantId,
           to: resource.email,
           subject: `You have been added as additional resource to ticket: ${ticket.title}`,
           template: 'ticket-assigned',
-          context: emailContext,
+          context: buildContext(internalUrl),
           replyContext
-        });
+        }, 'Ticket Assigned', resource.user_id);
       }
     }
 
@@ -764,7 +997,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Get all additional resources
     const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email')
+      .select('u.email as email', 'u.user_id as user_id')
       .leftJoin('users as u', function() {
         this.on('tr.additional_user_id', 'u.user_id')
             .andOn('tr.tenant', 'u.tenant');
@@ -774,77 +1007,81 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         'tr.tenant': tenantId
       });
 
+    const commentFormatting = formatBlockNoteContent(payload.comment?.content);
+    const commentContext = {
+      ...(payload.comment ?? {}),
+      content: commentFormatting.html,
+      html: commentFormatting.html,
+      text: commentFormatting.text,
+      plainText: commentFormatting.text,
+      rawContent: payload.comment?.content ?? null
+    };
+
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title
+    };
+
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url
+      },
+      comment: commentContext
+    });
+
     // Determine primary email (contact first, then client)
     const primaryEmail = ticket.contact_email || ticket.client_email;
 
-    // Send to primary email if available
+    // Send to primary email if available - external user, no userId
     if (primaryEmail) {
-      await sendEventEmail({
+      await sendNotificationIfEnabled({
         tenantId,
         to: primaryEmail,
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
-        context: {
-          ticket: {
-            id: ticket.ticket_number,
-            title: ticket.title,
-            url: `/tickets/${ticket.ticket_number}`
-          },
-          comment: payload.comment
-        },
+        context: buildContext(portalUrl),
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
         }
-      });
+      }, 'Ticket Comment Added');
     }
 
     // Send to assigned user if different from primary email
     if (ticket.assigned_to_email && ticket.assigned_to_email !== primaryEmail) {
-      await sendEventEmail({
+      await sendNotificationIfEnabled({
         tenantId,
         to: ticket.assigned_to_email,
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
-        context: {
-          ticket: {
-            id: ticket.ticket_number,
-            title: ticket.title,
-            url: `/tickets/${ticket.ticket_number}`
-          },
-          comment: payload.comment
-        },
+        context: buildContext(internalUrl),
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
         }
-      });
+      }, 'Ticket Comment Added', ticket.assigned_to);
     }
 
     // Send to all additional resources
     for (const resource of additionalResources) {
       if (resource.email) {
-        await sendEventEmail({
+        await sendNotificationIfEnabled({
           tenantId,
           to: resource.email,
           subject: `New Comment on Ticket: ${ticket.title}`,
           template: 'ticket-comment-added',
-          context: {
-            ticket: {
-              id: ticket.ticket_number,
-              title: ticket.title,
-              url: `/tickets/${ticket.ticket_number}`
-            },
-            comment: payload.comment
-          },
+          context: buildContext(internalUrl),
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             commentId: payload.comment?.id,
             threadId: ticket.email_metadata?.threadId
           }
-        });
+        }, 'Ticket Comment Added', resource.user_id);
       }
     }
 
@@ -902,35 +1139,47 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       return;
     }
 
-    const emailContext = {
+    const changes = await formatChanges(db, payload.changes || {}, tenantId);
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      priority: ticket.priority_name || 'Unknown',
+      status: ticket.status_name || 'Unknown',
+      changes,
+      closedBy: payload.userId,
+      resolution: ticket.resolution || ''
+    };
+    const externalContext = {
       ticket: {
-        id: ticket.ticket_number,
-        title: ticket.title,
-        priority: ticket.priority_name || 'Unknown',
-        status: ticket.status_name || 'Unknown',
-        changes: await formatChanges(db, payload.changes || {}, tenantId),
-        closedBy: payload.userId,
-        resolution: ticket.resolution || '',
-        url: `/tickets/${ticket.ticket_number}`
+        ...baseTicketContext,
+        url: portalUrl
+      }
+    };
+    const internalContext = {
+      ticket: {
+        ...baseTicketContext,
+        url: internalUrl
       }
     };
 
-    // Send to client email
-    await sendEventEmail({
+    // Send to client email - external user, no userId
+    await sendNotificationIfEnabled({
       tenantId,
       to: ticket.client_email,
       subject: `Ticket Closed: ${ticket.title}`,
       template: 'ticket-closed',
-      context: emailContext,
+      context: externalContext,
       replyContext: {
         ticketId: ticket.ticket_id || payload.ticketId,
         threadId: ticket.email_metadata?.threadId
       }
-    });
+    }, 'Ticket Closed');
 
     // Get and notify all additional resources
     const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email')
+      .select('u.email as email', 'u.user_id as user_id')
       .leftJoin('users as u', function() {
         this.on('tr.additional_user_id', 'u.user_id')
             .andOn('tr.tenant', 'u.tenant');
@@ -943,17 +1192,17 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     // Send to all additional resources
     for (const resource of additionalResources) {
       if (resource.email) {
-        await sendEventEmail({
+        await sendNotificationIfEnabled({
           tenantId,
           to: resource.email,
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
-          context: emailContext,
+          context: internalContext,
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId
           }
-        });
+        }, 'Ticket Closed', resource.user_id);
       }
     }
 
@@ -1028,9 +1277,12 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
       'TICKET_COMMENT_ADDED'
     ];
 
+    const channel = getEmailEventChannel();
+    console.log(`[TicketEmailSubscriber] Using channel "${channel}" for ticket email events`);
+
     for (const eventType of ticketEventTypes) {
-      await getEventBus().subscribe(eventType, handleTicketEvent);
-      console.log(`[TicketEmailSubscriber] Successfully subscribed to ${eventType} events`);
+      await getEventBus().subscribe(eventType, handleTicketEvent, { channel });
+      console.log(`[TicketEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
 
     console.log('[TicketEmailSubscriber] Registered handler for all ticket events');
@@ -1048,14 +1300,18 @@ export async function unregisterTicketEmailSubscriber(): Promise<void> {
     const ticketEventTypes: EventType[] = [
       'TICKET_CREATED',
       'TICKET_UPDATED',
-      'TICKET_CLOSED'
+      'TICKET_CLOSED',
+      'TICKET_ASSIGNED',
+      'TICKET_COMMENT_ADDED'
     ];
 
+    const channel = getEmailEventChannel();
+
     for (const eventType of ticketEventTypes) {
-      await getEventBus().unsubscribe(eventType, handleTicketEvent);
+      await getEventBus().unsubscribe(eventType, handleTicketEvent, { channel });
     }
 
-    logger.info('[TicketEmailSubscriber] Successfully unregistered from all ticket events');
+    logger.info(`[TicketEmailSubscriber] Successfully unregistered from ticket events on channel "${channel}"`);
   } catch (error) {
     logger.error('Failed to unregister email notification subscribers:', error);
     throw error;

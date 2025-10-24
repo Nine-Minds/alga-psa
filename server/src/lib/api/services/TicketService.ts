@@ -9,6 +9,7 @@ import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { withTransaction } from '@shared/db';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
+import { getEmailEventChannel } from '../../notifications/emailChannel';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
@@ -877,10 +878,13 @@ export class TicketService extends BaseService<ITicket> {
    */
   private async safePublishEvent(eventType: string, event: any): Promise<void> {
     try {
-      await getEventBus().publish({
-        eventType,
-        payload: event
-      });
+      await getEventBus().publish(
+        {
+          eventType,
+          payload: event
+        },
+        { channel: getEmailEventChannel() }
+      );
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }

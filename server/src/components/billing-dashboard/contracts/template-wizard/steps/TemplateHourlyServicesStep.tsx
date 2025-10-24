@@ -109,8 +109,13 @@ export function TemplateHourlyServicesStep({
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Hourly Services</h3>
           <p className="text-sm text-gray-600">
-            Identify hourly offerings that typically accompany this template. You can recommend
-            buckets or rounding rules to guide teams.
+            Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.
+          </p>
+        </div>
+
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-6">
+          <p className="text-sm text-amber-800">
+            <strong>What are Hourly Services?</strong> These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.
           </p>
         </div>
 

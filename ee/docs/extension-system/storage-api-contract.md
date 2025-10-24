@@ -1,123 +1,15 @@
 # Extension Storage API Contract
 
-This document defines the Phase 1 storage contract for EE extensions, covering resource hierarchy, operations, request/response models, and concurrency semantics. The contract is the basis for Runner host API implementation, REST proxy endpoints, and SDK support.
+> **Status:** Archived. The extension-scoped contract has been superseded by the tenant storage service.
 
-## Resource Hierarchy
+The authoritative API contract, resource model, and request/response semantics are maintained in the [Alga Storage Service documentation](../../../docs/storage-system.md). That specification applies uniformly to extensions, workflows, and any other integration consuming the storage platform.
 
-```
-tenant_id
-  └─ extension_install_id
-       └─ namespace (string ≤ 64 chars, lowercase slug, scoped to extension install)
-            └─ key (string ≤ 128 chars, utf-8, forward-slash not allowed)
-                 └─ record { revision, value, metadata, ttl_expires_at, created_at, updated_at }
-```
+If you are migrating existing extension code:
 
-- `tenant_id` — host-generated UUID; distribution key within Citus.
-- `extension_install_id` — unique per tenant + extension version; used for capability scoping.
-- `namespace` — logical buckets defined by extension manifests. Extensions may register up to 32 namespaces.
-- `key` — unique within a namespace; combined with namespace and extension install forms the primary identifier.
-- `record` — JSON document (`value`) plus optional `metadata` and housekeeping fields.
+- Remove any dependency on `extension_install_id` scoping—the service now keys data by tenant and namespace only.
+- Adopt the optimistic concurrency and TTL guidance documented in the official spec.
 
-## Base Operations
-
-| Operation | Capability | Description | Notes |
-|-----------|------------|-------------|-------|
-| `storage.put` | `alga.storage` | Upsert a record with optional optimistic concurrency | Rejects payloads > 64 KiB; increments `revision` |
-| `storage.get` | `alga.storage` | Retrieve a single record by namespace/key | Supports conditional fetch if `If-Revision-Match` provided |
-| `storage.list` | `alga.storage` | List records within a namespace, filtered by key prefix and metadata | Pagination via `cursor` |
-| `storage.delete` | `alga.storage` | Delete a record, optionally using revision guard | No-op delete returns success |
-| `storage.bulkPut` | `alga.storage` | Transactionally write ≤ 20 records | Each record subject to size/quota constraints |
-
-Future operations (append log, blob handles) are out of scope for Phase 1.
-
-## Request / Response Models
-
-### `storage.put`
-
-- Request body:
-  ```jsonc
-  {
-    "namespace": "settings",
-    "key": "invoice-defaults",
-    "value": { /* JSON payload */ },
-    "metadata": { "contentType": "application/json" },
-    "ttlSeconds": 86400,
-    "ifRevision": 12 // optional optimistic concurrency guard
-  }
-  ```
-- Response:
-  ```jsonc
-  {
-    "namespace": "settings",
-    "key": "invoice-defaults",
-    "revision": 13,
-    "ttlExpiresAt": "2025-10-08T19:00:00Z",
-    "createdAt": "2025-10-07T19:00:00Z",
-    "updatedAt": "2025-10-08T18:59:59Z"
-  }
-  ```
-- Errors:
-  - `REVISION_MISMATCH` — request `ifRevision` does not match stored revision.
-  - `QUOTA_EXCEEDED` — namespace or tenant quota hit.
-  - `VALIDATION_FAILED` — JSON Schema validation error.
-
-### `storage.get`
-
-- Request query:
-  ```
-  namespace=settings&key=invoice-defaults
-  ```
-- Headers:
-  - `If-Revision-Match` (optional) — fetch only if revision matches.
-- Response body:
-  ```jsonc
-  {
-    "namespace": "settings",
-    "key": "invoice-defaults",
-    "revision": 13,
-    "value": { /* JSON payload */ },
-    "metadata": { "contentType": "application/json" },
-    "ttlExpiresAt": "2025-10-08T19:00:00Z",
-    "createdAt": "2025-10-07T19:00:00Z",
-    "updatedAt": "2025-10-08T18:59:59Z"
-  }
-  ```
-- Errors:
-  - `NOT_FOUND` — record missing or expired.
-  - `REVISION_MISMATCH` — when `If-Revision-Match` fails.
-
-### `storage.list`
-
-- Request body:
-  ```jsonc
-  {
-    "namespace": "settings",
-    "cursor": "opaque-token", // optional
-    "limit": 50,
-    "keyPrefix": "invoice-",
-    "includeMetadata": true
-  }
-  ```
-- Response body:
-  ```jsonc
-  {
-    "items": [
-      {
-        "namespace": "settings",
-        "key": "invoice-defaults",
-        "revision": 13,
-        "value": { /* truncated unless includeValues true */ },
-        "metadata": { "contentType": "application/json" }
-      }
-    ],
-    "nextCursor": null
-  }
-  ```
-- Notes:
-  - Default limit 25; max limit 100.
-  - Optional `includeValues` flag (default false) to omit large payloads when only keys needed.
-
-### `storage.delete`
+Legacy details from the Phase 1 extension rollout are intentionally omitted here to avoid divergence from the shared platform documentation.
 
 - Request body:
   ```jsonc

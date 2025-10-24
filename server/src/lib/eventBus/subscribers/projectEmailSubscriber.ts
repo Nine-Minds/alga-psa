@@ -1,6 +1,6 @@
 import { getEventBus } from '../index';
-import { 
-  EventType, 
+import {
+  EventType,
   BaseEvent,
   EventSchemas,
   ProjectCreatedEvent,
@@ -9,9 +9,142 @@ import {
   ProjectAssignedEvent,
   ProjectTaskAssignedEvent
 } from '../events';
-import { sendEventEmail } from '../../notifications/sendEventEmail';
+import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from '../../db';
+import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
+import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
+
+/**
+ * Wrapper function that checks notification preferences before sending email
+ * @param params - Same params as sendEventEmail
+ * @param subtypeName - Name of the notification subtype (e.g., "Project Created")
+ * @param recipientUserId - Optional user ID for preference checking (only for internal users)
+ */
+async function sendNotificationIfEnabled(
+  params: SendEmailParams,
+  subtypeName: string,
+  recipientUserId?: string
+): Promise<void> {
+  try {
+    const { knex } = await createTenantKnex();
+
+    // 1. Check global notification settings
+    const settings = await knex('notification_settings')
+      .where({ tenant: params.tenantId })
+      .first();
+
+    if (settings && !settings.is_enabled) {
+      logger.info('[ProjectEmailSubscriber] Notifications disabled globally for tenant:', {
+        tenantId: params.tenantId,
+        recipient: params.to,
+        subtypeName
+      });
+      return;
+    }
+
+    // 2. Look up notification subtype ID
+    const subtype = await knex('notification_subtypes')
+      .where({ name: subtypeName })
+      .first();
+
+    if (!subtype) {
+      logger.warn('[ProjectEmailSubscriber] Notification subtype not found:', {
+        subtypeName,
+        recipient: params.to
+      });
+      // Continue anyway to avoid breaking existing functionality
+      await sendEventEmail(params);
+      return;
+    }
+
+    // 3. Check if subtype is enabled
+    if (!subtype.is_enabled) {
+      logger.info('[ProjectEmailSubscriber] Notification subtype disabled:', {
+        subtypeName,
+        recipient: params.to,
+        tenantId: params.tenantId
+      });
+      return;
+    }
+
+    // 4. For internal users, check user preferences and rate limiting
+    if (recipientUserId) {
+      // Check user preferences
+      const preference = await knex('user_notification_preferences')
+        .where({
+          tenant: params.tenantId,
+          user_id: recipientUserId,
+          subtype_id: subtype.id
+        })
+        .first();
+
+      if (preference && !preference.is_enabled) {
+        logger.info('[ProjectEmailSubscriber] User has opted out of this notification type:', {
+          userId: recipientUserId,
+          subtypeName,
+          recipient: params.to
+        });
+        return;
+      }
+
+      // Check rate limiting (only if settings exist)
+      if (settings) {
+        const recentCount = await knex('notification_logs')
+          .where({
+            tenant: params.tenantId,
+            user_id: recipientUserId
+          })
+          .where('created_at', '>', new Date(Date.now() - 60000))
+          .count('id')
+          .first()
+          .then((result): number => Number(result?.count));
+
+        if (recentCount >= settings.rate_limit_per_minute) {
+          logger.warn('[ProjectEmailSubscriber] Rate limit exceeded for user:', {
+            userId: recipientUserId,
+            recentCount,
+            limit: settings.rate_limit_per_minute,
+            recipient: params.to
+          });
+          return;
+        }
+      }
+    }
+
+    // 5. All checks passed - send the email
+    await sendEventEmail(params);
+
+    // 6. Log the notification (only for internal users with userId)
+    if (recipientUserId && subtype) {
+      try {
+        await knex('notification_logs').insert({
+          tenant: params.tenantId,
+          user_id: recipientUserId,
+          subtype_id: subtype.id,
+          email_address: params.to,
+          subject: params.subject,
+          status: 'sent'
+        });
+      } catch (logError) {
+        logger.warn('[ProjectEmailSubscriber] Failed to log notification:', {
+          error: logError instanceof Error ? logError.message : 'Unknown error',
+          userId: recipientUserId,
+          recipient: params.to
+        });
+      }
+    }
+
+  } catch (error) {
+    logger.error('[ProjectEmailSubscriber] Error in sendNotificationIfEnabled:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      subtypeName,
+      recipient: params.to,
+      tenantId: params.tenantId
+    });
+    throw error;
+  }
+}
 
 /**
  * Format changes record into a readable string
@@ -72,15 +205,24 @@ async function resolveValue(db: any, field: string, value: unknown): Promise<str
           .first();
         return contact_name ? contact_name.full_name : String(value);
 
-    default:
-      if (typeof value === 'boolean') {
-        return value ? 'Yes' : 'No';
+  default:
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.startsWith('[') && trimmed.includes('"type"')) {
+        const { text } = formatBlockNoteContent(value);
+        return text;
       }
-      if (typeof value === 'object') {
-        return JSON.stringify(value);
-      }
-      return String(value);
-  }
+      return value;
+    }
+    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+      const { text } = formatBlockNoteContent(value);
+      return text;
+    }
+    return value !== undefined && value !== null ? String(value) : '';
+}
 }
 
 /**
@@ -201,6 +343,10 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       return;
     }
 
+    const descriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
+    const projectDescriptionText = descriptionFormatting ? descriptionFormatting.text : '';
+    const projectDescriptionHtml = descriptionFormatting ? descriptionFormatting.html : '';
+
     // Collect all recipient emails
     const recipients: string[] = [];
 
@@ -235,30 +381,60 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       return;
     }
 
-    await sendEventEmail({
-      tenantId,
-      to: recipients.join(','),
-      subject: `Project Created: ${project.project_name}`,
-      template: 'project-created',
-      context: {
-        project: {
-          id: project.project_number,
-          name: project.project_name,
-          description: project.description || '',
-          status: project.status_name || 'Unknown',
-          manager: project.manager_first_name && project.manager_last_name ? 
-            `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
-          startDate: project.start_date,
-          endDate: project.end_date,
-          createdBy: payload.userId,
-          url: `/projects/${project.project_number}`,
-          client: project.client_name || 'No Client'
-        }
-      },
-      replyContext: {
-        projectId: project.project_id || payload.projectId
+    const emailContext = {
+      project: {
+        id: project.project_number,
+        name: project.project_name,
+        description: projectDescriptionText,
+        descriptionText: projectDescriptionText,
+        descriptionHtml: projectDescriptionHtml,
+        status: project.status_name || 'Unknown',
+        manager: project.manager_first_name && project.manager_last_name ?
+          `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
+        startDate: project.start_date,
+        endDate: project.end_date,
+        createdBy: payload.userId,
+        url: `/projects/${project.project_number}`,
+        client: project.client_name || 'No Client'
       }
-    });
+    };
+
+    const replyContext = {
+      projectId: project.project_id || payload.projectId
+    };
+
+    // Send to contact or client (external users - no userId check)
+    if (project.contact_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.contact_email,
+        subject: `Project Created: ${project.project_name}`,
+        template: 'project-created',
+        context: emailContext,
+        replyContext
+      }, 'Project Created');
+    } else if (project.client_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.client_email,
+        subject: `Project Created: ${project.project_name}`,
+        template: 'project-created',
+        context: emailContext,
+        replyContext
+      }, 'Project Created');
+    }
+
+    // Send to assigned user (internal user - check preferences)
+    if (project.assigned_user_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.assigned_user_email,
+        subject: `Project Created: ${project.project_name}`,
+        template: 'project-created',
+        context: emailContext,
+        replyContext
+      }, 'Project Created', project.assigned_to);
+    }
 
   } catch (error) {
     logger.error('Error handling project created event:', {
@@ -452,28 +628,56 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
       })
       .first();
 
-    await sendEventEmail({
-      tenantId,
-      to: recipients.join(','),
-      subject: `Project Updated: ${project.project_name}`,
-      template: 'project-updated',
-      context: {
-        project: {
-          id: project.project_number,
-          name: project.project_name,
-          status: project.status_name || 'Unknown',
-          manager: project.manager_first_name && project.manager_last_name ? 
-            `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
-          changes: formattedChanges,
-          updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId,
-          url: `/projects/${project.project_number}`,
-          client: project.client_name || 'No Client'
-        }
-      },
-      replyContext: {
-        projectId: project.project_id || payload.projectId
+    const emailContext = {
+      project: {
+        id: project.project_number,
+        name: project.project_name,
+        status: project.status_name || 'Unknown',
+        manager: project.manager_first_name && project.manager_last_name ?
+          `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
+        changes: formattedChanges,
+        updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId,
+        url: `/projects/${project.project_number}`,
+        client: project.client_name || 'No Client'
       }
-    });
+    };
+
+    const replyContext = {
+      projectId: project.project_id || payload.projectId
+    };
+
+    // Send to contact or client (external users - no userId check)
+    if (project.contact_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.contact_email,
+        subject: `Project Updated: ${project.project_name}`,
+        template: 'project-updated',
+        context: emailContext,
+        replyContext
+      }, 'Project Updated');
+    } else if (project.client_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.client_email,
+        subject: `Project Updated: ${project.project_name}`,
+        template: 'project-updated',
+        context: emailContext,
+        replyContext
+      }, 'Project Updated');
+    }
+
+    // Send to assigned user (internal user - check preferences)
+    if (project.assigned_user_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.assigned_user_email,
+        subject: `Project Updated: ${project.project_name}`,
+        template: 'project-updated',
+        context: emailContext,
+        replyContext
+      }, 'Project Updated', project.assigned_to);
+    }
 
   } catch (error) {
     logger.error('Error handling project updated event:', {
@@ -611,32 +815,66 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
       return;
     }
 
-    await sendEventEmail({
-      tenantId,
-      to: recipients.join(','),
-      subject: `Project Closed: ${project.project_name}`,
-      template: 'project-closed',
-      context: {
-        project: {
-          id: project.project_number,
-          name: project.project_name,
-          status: project.status_name || 'Unknown',
-          manager: project.manager_first_name && project.manager_last_name ? 
-            `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
-          description: project.description || '',
-          startDate: project.start_date,
-          endDate: project.end_date,
-          changes: await formatChanges(db, payload.changes || {}),
-          closedBy: await resolveValue(db, 'closed_by', payload.userId),
-          closedAt: new Date().toISOString(),
-          url: `/projects/${project.project_number}`,
-          client: project.client_name || 'No Client'
-        }
-      },
-      replyContext: {
-        projectId: project.project_id || payload.projectId
+    const closedDescriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
+    const closedDescriptionText = closedDescriptionFormatting ? closedDescriptionFormatting.text : '';
+    const closedDescriptionHtml = closedDescriptionFormatting ? closedDescriptionFormatting.html : '';
+
+    const emailContext = {
+      project: {
+        id: project.project_number,
+        name: project.project_name,
+        status: project.status_name || 'Unknown',
+        manager: project.manager_first_name && project.manager_last_name ?
+          `${project.manager_first_name} ${project.manager_last_name}` : 'Unassigned',
+        description: closedDescriptionText,
+        descriptionText: closedDescriptionText,
+        descriptionHtml: closedDescriptionHtml,
+        startDate: project.start_date,
+        endDate: project.end_date,
+        changes: await formatChanges(db, payload.changes || {}),
+        closedBy: await resolveValue(db, 'closed_by', payload.userId),
+        closedAt: new Date().toISOString(),
+        url: `/projects/${project.project_number}`,
+        client: project.client_name || 'No Client'
       }
-    });
+    };
+
+    const replyContext = {
+      projectId: project.project_id || payload.projectId
+    };
+
+    // Send to contact or client (external users - no userId check)
+    if (project.contact_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.contact_email,
+        subject: `Project Closed: ${project.project_name}`,
+        template: 'project-closed',
+        context: emailContext,
+        replyContext
+      }, 'Project Closed');
+    } else if (project.client_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.client_email,
+        subject: `Project Closed: ${project.project_name}`,
+        template: 'project-closed',
+        context: emailContext,
+        replyContext
+      }, 'Project Closed');
+    }
+
+    // Send to assigned user (internal user - check preferences)
+    if (project.assigned_user_email) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: project.assigned_user_email,
+        subject: `Project Closed: ${project.project_name}`,
+        template: 'project-closed',
+        context: emailContext,
+        replyContext
+      }, 'Project Closed', project.assigned_to);
+    }
 
   } catch (error) {
     logger.error('Error handling project closed event:', {
@@ -728,7 +966,11 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       return;
     }
 
-    await sendEventEmail({
+    const projectDescriptionFormatting = project.description ? formatBlockNoteContent(project.description) : null;
+    const projectDescriptionText = projectDescriptionFormatting ? projectDescriptionFormatting.text : '';
+    const projectDescriptionHtml = projectDescriptionFormatting ? projectDescriptionFormatting.html : '';
+
+    await sendNotificationIfEnabled({
       tenantId,
       to: project.user_email,
       subject: `You have been assigned to project: ${project.project_name}`,
@@ -736,7 +978,9 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       context: {
         project: {
           name: project.project_name,
-          description: project.description || '',
+          description: projectDescriptionText,
+          descriptionText: projectDescriptionText,
+          descriptionHtml: projectDescriptionHtml,
           startDate: project.start_date,
           assignedBy: `${project.assigner_first_name} ${project.assigner_last_name}`,
           url: `/projects/${project.project_number}`,
@@ -746,7 +990,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       replyContext: {
         projectId: project.project_id || payload.projectId
       }
-    });
+    }, 'Project Assigned', assignedTo);
 
   } catch (error) {
     logger.error('Error handling project assigned event:', {
@@ -835,7 +1079,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
 
     // Send email to primary assignee
     if (task.user_email) {
-      await sendEventEmail({
+      await sendNotificationIfEnabled({
         tenantId,
         to: task.user_email,
         subject: `You have been assigned to task: ${task.task_name}`,
@@ -853,17 +1097,28 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         replyContext: {
           projectId: task.project_id || payload.projectId
         }
-      });
+      }, 'Project Task Assigned', assignedTo);
     }
 
-    // Get unique additional user emails (prevent duplicates)
-    const uniqueAdditionalEmails = [...new Set(additionalUserEmails.map(u => u.email))];
+    // Send emails to additional users (deduplicate by user_id/email)
+    const uniqueAdditionalUsers = additionalUserEmails.reduce<Map<string, typeof additionalUserEmails[number]>>(
+      (acc, user) => {
+        if (!user.email) {
+          return acc;
+        }
+        const key = user.user_id || user.email;
+        if (!acc.has(key)) {
+          acc.set(key, user);
+        }
+        return acc;
+      },
+      new Map()
+    );
 
-    // Send emails to additional users
-    for (const email of uniqueAdditionalEmails) {
-      await sendEventEmail({
+    for (const additionalUser of uniqueAdditionalUsers.values()) {
+      await sendNotificationIfEnabled({
         tenantId,
-        to: email,
+        to: additionalUser.email!,
         subject: `You have been added as additional agent to task: ${task.task_name}`,
         template: 'project-task-assigned-additional',
         context: {
@@ -879,7 +1134,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         replyContext: {
           projectId: task.project_id || payload.projectId
         }
-      });
+      }, 'Project Task Assigned', additionalUser.user_id);
     }
 
   } catch (error) {
@@ -952,9 +1207,12 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
       'PROJECT_TASK_ASSIGNED'
     ];
 
+    const channel = getEmailEventChannel();
+    logger.info('[ProjectEmailSubscriber] Using channel for subscriptions', { channel });
+
     for (const eventType of projectEventTypes) {
-      await getEventBus().subscribe(eventType, handleProjectEvent);
-      logger.info(`[ProjectEmailSubscriber] Successfully subscribed to ${eventType} events`);
+      await getEventBus().subscribe(eventType, handleProjectEvent, { channel });
+      logger.info(`[ProjectEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
 
   } catch (error) {
@@ -976,11 +1234,13 @@ export async function unregisterProjectEmailSubscriber(): Promise<void> {
       'PROJECT_TASK_ASSIGNED'
     ];
 
+    const channel = getEmailEventChannel();
+
     for (const eventType of projectEventTypes) {
-      await getEventBus().unsubscribe(eventType, handleProjectEvent);
+      await getEventBus().unsubscribe(eventType, handleProjectEvent, { channel });
     }
 
-    logger.info('[ProjectEmailSubscriber] Successfully unregistered from all project events');
+    logger.info('[ProjectEmailSubscriber] Successfully unregistered from project events', { channel });
   } catch (error) {
     logger.error('Failed to unregister project email subscribers:', error);
     throw error;

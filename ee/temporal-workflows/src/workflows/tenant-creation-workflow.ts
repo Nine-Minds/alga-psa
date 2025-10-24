@@ -83,6 +83,16 @@ const activities = proxyActivities<{
   getManagementTenantId(): Promise<{ tenantId: string }>;
   createPortalUser(input: CreatePortalUserActivityInput): Promise<CreatePortalUserActivityResult>;
   rollbackPortalUser(userId: string, tenantId: string): Promise<void>;
+  // Stripe activities
+  fetchStripeDetailsFromCheckout(input: {
+    checkoutSessionId: string;
+  }): Promise<{
+    stripeCustomerId: string;
+    stripeSubscriptionId?: string;
+    stripeSubscriptionItemId?: string;
+    stripePriceId?: string;
+    licenseCount?: number;
+  }>;
 }>({
   startToCloseTimeout: '5m',
   retry: {
@@ -193,15 +203,61 @@ export async function tenantCreationWorkflow(
       }
     }
     
+    // Step 0.5: Fetch Stripe details from checkout session if provided
+    let stripeDetails = {
+      stripeCustomerId: input.stripeCustomerId,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+      stripeSubscriptionItemId: input.stripeSubscriptionItemId,
+      stripePriceId: input.stripePriceId,
+      licenseCount: input.licenseCount,
+    };
+
+    if (input.checkoutSessionId && !input.stripeCustomerId) {
+      workflowState.step = 'fetching_stripe_details';
+      workflowState.progress = 5;
+
+      log.info('Fetching Stripe details from checkout session', {
+        checkoutSessionId: input.checkoutSessionId
+      });
+
+      try {
+        const fetchedStripeDetails = await activities.fetchStripeDetailsFromCheckout({
+          checkoutSessionId: input.checkoutSessionId,
+        });
+
+        stripeDetails = {
+          ...stripeDetails,
+          ...fetchedStripeDetails,
+        };
+
+        log.info('Stripe details fetched successfully', {
+          hasCustomer: !!fetchedStripeDetails.stripeCustomerId,
+          hasSubscription: !!fetchedStripeDetails.stripeSubscriptionId,
+          licenseCount: fetchedStripeDetails.licenseCount,
+        });
+      } catch (error) {
+        log.warn('Failed to fetch Stripe details from checkout session', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          checkoutSessionId: input.checkoutSessionId,
+        });
+        // Continue without Stripe details - tenant can still be created
+        // Stripe details can be added later via subscription webhooks
+      }
+    }
+
     // Step 1: Create tenant
     workflowState.step = 'creating_tenant';
     workflowState.progress = 10;
-    
+
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
     }
 
-    log.info('Creating tenant', { tenantName: input.tenantName, licenseCount: input.licenseCount });
+    log.info('Creating tenant', {
+      tenantName: input.tenantName,
+      licenseCount: stripeDetails.licenseCount,
+      hasStripeDetails: !!stripeDetails.stripeCustomerId,
+    });
     const tenantCompanyName = input.companyName ?? input.tenantName;
     const tenantDefaultClientName = input.clientName ?? tenantCompanyName;
 
@@ -210,12 +266,12 @@ export async function tenantCreationWorkflow(
       email: input.adminUser.email,
       companyName: tenantCompanyName,
       clientName: tenantDefaultClientName,
-      licenseCount: input.licenseCount,
-      // Pass through Stripe integration data
-      stripeCustomerId: input.stripeCustomerId,
-      stripeSubscriptionId: input.stripeSubscriptionId,
-      stripeSubscriptionItemId: input.stripeSubscriptionItemId,
-      stripePriceId: input.stripePriceId,
+      licenseCount: stripeDetails.licenseCount,
+      // Pass through Stripe integration data (from input or fetched from Stripe)
+      stripeCustomerId: stripeDetails.stripeCustomerId,
+      stripeSubscriptionId: stripeDetails.stripeSubscriptionId,
+      stripeSubscriptionItemId: stripeDetails.stripeSubscriptionItemId,
+      stripePriceId: stripeDetails.stripePriceId,
     });
     
     tenantCreated = true;

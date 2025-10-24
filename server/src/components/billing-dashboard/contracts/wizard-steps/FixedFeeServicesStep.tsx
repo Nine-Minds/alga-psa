@@ -137,8 +137,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
 
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>Tip:</strong> Fixed fee plans are great for managed services bundles—use the base
-            rate below to capture the recommended monthly price.
+            <strong>What are Fixed Fee Services?</strong> These services have a set monthly price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
           </p>
         </div>
 
@@ -241,22 +240,6 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     min="1"
                     className="w-24"
                   />
-                </div>
-
-                <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
-                  <SwitchWithLabel
-                    label="Enable bucket of hours"
-                    checked={Boolean(service.bucket_overlay)}
-                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
-                  />
-                  {service.bucket_overlay && (
-                    <BucketOverlayFields
-                      mode="hours"
-                      value={service.bucket_overlay ?? getDefaultOverlay()}
-                      onChange={(next) => updateBucketOverlay(index, next)}
-                      automationId={`fixed-bucket-${index}`}
-                    />
-                  )}
                 </div>
               </div>
 

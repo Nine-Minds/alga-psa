@@ -208,7 +208,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       title="Create Contract Template"
       className="max-w-4xl max-h-[90vh]"
     >
-      <div className="flex flex-col h-full bg-white rounded-lg shadow-lg">
+      <div className="flex flex-col h-full bg-white rounded-lg">
         <div className="flex-shrink-0 px-6 pt-6">
           <WizardProgress
             steps={TEMPLATE_STEPS.slice()}
@@ -248,7 +248,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           )}
         </div>
 
-        <div className="flex-shrink-0 px-6 pb-6 border-t bg-white">
+        <div className="flex-shrink-0 px-6 pb-6 bg-white">
           <WizardNavigation
             currentStep={currentStep}
             totalSteps={TEMPLATE_STEPS.length}

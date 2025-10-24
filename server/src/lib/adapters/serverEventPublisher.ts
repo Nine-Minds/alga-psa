@@ -5,6 +5,7 @@
 
 import { IEventPublisher } from '@alga-psa/shared/models/ticketModel';
 import { getEventBus } from '../eventBus';
+import { getEmailEventChannel } from '../notifications/emailChannel';
 
 export class ServerEventPublisher implements IEventPublisher {
   async publishTicketCreated(data: {
@@ -69,10 +70,13 @@ export class ServerEventPublisher implements IEventPublisher {
 
   private async safePublishEvent(eventType: string, payload: any): Promise<void> {
     try {
-      await getEventBus().publish({
-        eventType,
-        payload
-      });
+      await getEventBus().publish(
+        {
+          eventType,
+          payload
+        },
+        { channel: getEmailEventChannel() }
+      );
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
       // Don't throw - event publishing failure shouldn't break ticket operations

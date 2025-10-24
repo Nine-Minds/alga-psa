@@ -200,7 +200,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
         grant_type: 'refresh_token',
-        scope: 'https://graph.microsoft.com/.default offline_access',
+        scope: 'https://graph.microsoft.com/Mail.Read offline_access',
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -382,19 +382,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   }
 
   /**
-   * Mark a message as read
+   * Mark a message as read (READ-ONLY MODE: No-op)
+   * Note: This system now operates in read-only mode and does not modify emails.
+   * Email processing status is tracked in the database instead.
    */
   async markMessageProcessed(messageId: string): Promise<void> {
-    try {
-      const mailboxBase = this.getMailboxBasePath();
-      await this.httpClient.patch(`${mailboxBase}/messages/${messageId}`, {
-        isRead: true,
-      });
-
-      this.log('info', `Marked message ${messageId} as read`);
-    } catch (error) {
-      this.log('warn', `Failed to mark message as read: ${(error as Error).message}`);
-    }
+    this.log('info', `Email ${messageId} processed (read-only mode - not marking as read in mailbox)`);
+    // No API call made - operating in read-only mode
   }
 
   /**
