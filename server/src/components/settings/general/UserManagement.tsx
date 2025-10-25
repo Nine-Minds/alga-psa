@@ -7,6 +7,7 @@ import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getCli
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from 'server/src/lib/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+import { getTenantPortalLoginLink } from 'server/src/lib/actions/portal-actions/clientPortalLinkActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import toast from 'react-hot-toast';
@@ -59,6 +60,7 @@ const UserManagement = (): JSX.Element => {
     email: []
   });
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
+  const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -159,6 +161,32 @@ const UserManagement = (): JSX.Element => {
       } catch (err) {
         console.error('Error fetching license usage:', err);
       }
+    }
+  };
+
+  const handleCopyPortalLink = async (): Promise<void> => {
+    if (isCopyingPortalLink) {
+      return;
+    }
+
+    try {
+      setIsCopyingPortalLink(true);
+      const linkResult = await getTenantPortalLoginLink();
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(linkResult.url);
+        toast.success(
+          linkResult.source === 'vanity'
+            ? 'Copied vanity portal login link to clipboard'
+            : 'Copied canonical portal login link to clipboard'
+        );
+      } else {
+        toast.error('Clipboard API is not available in this browser.');
+      }
+    } catch (error) {
+      console.error('Failed to copy portal login link', error);
+      toast.error('Failed to copy portal login link');
+    } finally {
+      setIsCopyingPortalLink(false);
     }
   };
 
@@ -499,14 +527,26 @@ const fetchContacts = async (): Promise<void> => {
               </div>
             )}
           </div>
-          {!showNewUserForm && (
-            <Button
-              id={`create-new-${portalType}-user-btn`}
-              onClick={() => setShowNewUserForm(true)}
-            >
-              Create New {portalType === 'msp' ? 'User' : 'Client User'}
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            {portalType === 'client' && (
+              <Button
+                id="copy-client-portal-link-button"
+                variant="outline"
+                onClick={handleCopyPortalLink}
+                disabled={isCopyingPortalLink}
+              >
+                {isCopyingPortalLink ? 'Copying...' : 'Copy Portal Login Link'}
+              </Button>
+            )}
+            {!showNewUserForm && (
+              <Button
+                id={`create-new-${portalType}-user-btn`}
+                onClick={() => setShowNewUserForm(true)}
+              >
+                Create New {portalType === 'msp' ? 'User' : 'Client User'}
+              </Button>
+            )}
+          </div>
         </div>
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">

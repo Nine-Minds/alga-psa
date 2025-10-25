@@ -18,6 +18,7 @@ import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+import { buildTenantPortalSlug } from 'server/src/lib/utils/tenantSlug';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -59,15 +60,18 @@ async function resolveTicketLinks(
     });
   }
 
+  const tenantSlug = buildTenantPortalSlug(tenantId);
+  const baseParams = new URLSearchParams({ ticket: identifier });
   const clientPortalPath = `/client-portal/tickets`;
-  const clientPortalWithTicket = `${clientPortalPath}?ticket=${encodeURIComponent(identifier)}`;
   let portalUrl: string;
   if (portalHost) {
     const sanitizedHost = normalizeHost(portalHost);
-    portalUrl = `https://${sanitizedHost}${clientPortalWithTicket}`;
+    portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
   } else {
     const fallbackBase = internalBase.endsWith('/') ? internalBase.slice(0, -1) : internalBase;
-    portalUrl = `${fallbackBase}${clientPortalWithTicket}`;
+    const fallbackParams = new URLSearchParams(baseParams);
+    fallbackParams.set('tenant', tenantSlug);
+    portalUrl = `${fallbackBase}${clientPortalPath}?${fallbackParams.toString()}`;
   }
 
   return { internalUrl, portalUrl };

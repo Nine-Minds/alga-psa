@@ -17,9 +17,10 @@ interface ClientLoginFormProps {
   callbackUrl: string;
   onError: (error: string) => void;
   onTwoFactorRequired: () => void;
+  tenantSlug?: string;
 }
 
-export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired }: ClientLoginFormProps) {
+export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, tenantSlug }: ClientLoginFormProps) {
   const { t } = useTranslation('clientPortal');
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -81,13 +82,19 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     setIsLoading(true)
 
     try {
-      const result = await signIn('credentials', {
+      const signInPayload: Record<string, unknown> = {
         email,
         password,
         userType: 'client',
         redirect: false,
         callbackUrl,
-      })
+      };
+
+      if (tenantSlug) {
+        signInPayload.tenant = tenantSlug;
+      }
+
+      const result = await signIn('credentials', signInPayload)
 
       if (result?.error) {
         if (result.error === '2FA_REQUIRED') {
@@ -118,6 +125,9 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     >
       <div className="space-y-2">
         <Label htmlFor="client-email-field">{t('auth.email', 'Email')}</Label>
+        {tenantSlug ? (
+          <input type="hidden" id="client-tenant-slug" name="tenant" value={tenantSlug} />
+        ) : null}
         <Input
           id="client-email-field"
           name="email"
