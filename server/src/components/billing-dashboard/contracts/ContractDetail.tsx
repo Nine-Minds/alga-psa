@@ -221,7 +221,7 @@ const ContractDetail: React.FC = () => {
     try {
       await deleteContract(contractId);
       setShowDeleteConfirm(false);
-      router.push('/msp/billing?tab=contracts');
+      router.push('/msp/billing?tab=contracts&subtab=clients');
       router.refresh();
     } catch (err) {
       console.error('Error deleting contract:', err);
@@ -630,7 +630,7 @@ const ContractDetail: React.FC = () => {
           id="back-to-contracts-error"
           variant="ghost"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts')}
+          onClick={() => router.push('/msp/billing?tab=contracts&subtab=clients')}
           className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -653,7 +653,7 @@ const ContractDetail: React.FC = () => {
           id="back-to-contracts"
           variant="ghost"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts')}
+          onClick={() => router.push('/msp/billing?tab=contracts&subtab=clients')}
           className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
