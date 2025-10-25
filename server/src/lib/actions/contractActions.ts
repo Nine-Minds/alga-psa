@@ -7,6 +7,7 @@ import {
   IContract,
   IContractAssignmentSummary,
   IContractWithClient,
+  IContractLineMapping,
 } from 'server/src/interfaces/contract.interfaces';
 import {
   IContractTemplate,
@@ -15,6 +16,15 @@ import {
 import { createTenantKnex } from 'server/src/lib/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { Knex } from 'knex';
+import {
+  addContractLine as repoAddContractLine,
+  fetchContractLineMappings,
+  fetchDetailedContractLines,
+  isContractLineAttached as repoIsContractLineAttached,
+  removeContractLine as repoRemoveContractLine,
+  updateContractLine as repoUpdateContractLine,
+  DetailedContractLine,
+} from 'server/src/lib/repositories/contractLineRepository';
 
 const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   tenant: template.tenant,
@@ -35,6 +45,13 @@ async function isTemplateContract(knex: Knex, tenant: string, contractId: string
     .where({ tenant, template_id: contractId })
     .first();
   return Boolean(template);
+}
+
+async function ensureSession() {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
 }
 
 export async function getContracts(): Promise<IContract[]> {
@@ -134,6 +151,74 @@ export async function getContractById(contractId: string): Promise<IContract | n
     }
     throw new Error(`Failed to fetch contract: ${error}`);
   }
+}
+
+export async function getContractLineMappings(contractId: string): Promise<IContractLineMapping[]> {
+  await ensureSession();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  return fetchContractLineMappings(knex, tenant, contractId);
+}
+
+export async function getDetailedContractLines(contractId: string): Promise<DetailedContractLine[]> {
+  await ensureSession();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+  return fetchDetailedContractLines(knex, tenant, contractId);
+}
+
+export async function addContractLine(
+  contractId: string,
+  contractLineId: string,
+  customRate?: number
+): Promise<IContractLineMapping> {
+  await ensureSession();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+
+  return knex.transaction((trx: Knex.Transaction) =>
+    repoAddContractLine(trx, tenant, contractId, contractLineId, customRate)
+  );
+}
+
+export async function removeContractLine(contractId: string, contractLineId: string): Promise<void> {
+  await ensureSession();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+
+  await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
+}
+
+export async function updateContractLineAssociation(
+  contractId: string,
+  contractLineId: string,
+  updateData: Partial<IContractLineMapping>
+): Promise<IContractLineMapping> {
+  await ensureSession();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+
+  return repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
+}
+
+export async function isContractLineAttached(contractId: string, contractLineId: string): Promise<boolean> {
+  await ensureSession();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+
+  return repoIsContractLineAttached(knex, tenant, contractId, contractLineId);
 }
 
 export async function createContract(
@@ -352,12 +437,12 @@ export async function getContractSummary(contractId: string): Promise<IContractS
 
     let lineCountRaw: string | undefined;
     if (templateRecord) {
-      const templateLineCount = await knex('contract_template_line_mappings')
+      const templateLineCount = await knex('contract_template_lines')
         .where({ template_id: contractId, tenant })
         .count<{ count: string }>('* as count');
       lineCountRaw = templateLineCount[0]?.count;
     } else {
-      const result = await knex('contract_line_mappings')
+      const result = await knex('contract_lines')
         .where({ contract_id: contractId, tenant })
         .count<{ count: string }>('* as count');
       lineCountRaw = result[0]?.count;

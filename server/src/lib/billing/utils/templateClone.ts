@@ -388,29 +388,27 @@ async function resolveTemplateCustomRate(
     return null;
   }
 
-  type TemplateMappingRow = { custom_rate: number | string | null };
+  type CustomRateRow = { custom_rate: number | string | null };
 
-  const templateMapping = await trx<TemplateMappingRow>('contract_template_line_mappings')
+  const templateLine = await trx<CustomRateRow>('contract_template_lines')
     .where('tenant', tenant)
     .where('template_id', templateContractId)
     .where('template_line_id', templateContractLineId)
     .first('custom_rate');
 
-  if (templateMapping) {
-    return templateMapping.custom_rate != null
-      ? normalizeNumeric(templateMapping.custom_rate)
-      : null;
+  if (templateLine && templateLine.custom_rate != null) {
+    return normalizeNumeric(templateLine.custom_rate);
   }
 
-  const mapping = await trx<TemplateMappingRow>('contract_line_mappings')
+  const contractLine = await trx<CustomRateRow>('contract_lines')
     .where('tenant', tenant)
     .where('contract_id', templateContractId)
     .where('contract_line_id', templateContractLineId)
     .first('custom_rate');
 
-  if (!mapping) {
+  if (!contractLine) {
     return null;
   }
 
-  return mapping.custom_rate != null ? normalizeNumeric(mapping.custom_rate) : null;
+  return contractLine.custom_rate != null ? normalizeNumeric(contractLine.custom_rate) : null;
 }

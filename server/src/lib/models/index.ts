@@ -8,5 +8,4 @@ export { default as Contract } from './contract';
 export { default as ClientContract } from './clientContract';
 export { default as ContractLine } from './contractLine';
 export { default as ClientContractLine } from './clientContractLine';
-export { default as ContractLineMapping } from './contractLineMapping';
 export { default as ContractLineFixedConfig } from './contractLineFixedConfig';

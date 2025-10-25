@@ -197,9 +197,12 @@ export interface IContractLine extends TenantEntity {
   contract_line_name: string;
   billing_frequency: string;
   is_custom: boolean;
+  contract_id?: string | null;
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   billing_timing?: 'arrears' | 'advance';
+  custom_rate?: number | null;
+  display_order?: number;
   // Add potentially existing hourly fields (to be deprecated for Hourly type)
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;

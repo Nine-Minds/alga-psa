@@ -31,16 +31,10 @@ export interface IContractTemplateLine extends TenantEntity {
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   billing_timing?: 'arrears' | 'advance';
+  custom_rate?: number | null;
+  display_order?: number;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
-}
-
-export interface IContractTemplateLineMapping extends TenantEntity {
-  template_id: string;
-  template_line_id: string;
-  display_order: number;
-  custom_rate?: number | null;
-  created_at?: ISO8601String;
 }
 
 export interface IContractTemplateWithLines extends IContractTemplate {
@@ -53,6 +47,7 @@ export interface IContractTemplateWithLines extends IContractTemplate {
       | 'billing_frequency'
       | 'is_active'
       | 'description'
+      | 'billing_timing'
     > & {
       display_order: number;
       custom_rate?: number | null;

@@ -21,7 +21,7 @@ import {
   addContractLine,
   removeContractLine,
   updateContractLineAssociation,
-} from 'server/src/lib/actions/contractLineMappingActions';
+} from 'server/src/lib/actions/contractActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { ContractLineEditDialog } from './ContractLineEditDialog';

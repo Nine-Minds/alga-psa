@@ -26,7 +26,7 @@
   - `server/src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx` – parses `template_metadata`, drives inline edit + services editor, and depends on `getContractAssignments`.
   - `server/src/components/billing-dashboard/contracts/Contracts.tsx:300` and `ContractDetailSwitcher.tsx:63` – filter/switch views with `contract.is_template`.
   - `server/src/components/billing-dashboard/contracts/ContractHeader.tsx:106` – badge logic toggled by `contract.is_template`.
-  - Server actions: `contractActions.ts` (`getContracts`, `updateContract`, etc.), `contractWizardActions.ts:805-831`, `contractLineAction.ts`, and `contractLineMappingActions.ts` all branch on `is_template` or expect template rows inside shared tables.
+  - Server actions: `contractActions.ts` (`getContracts`, `updateContract`, etc.), `contractWizardActions.ts:805-831`, `contractLineAction.ts`, and the new `contractLineRepository.ts` logic all branch on `is_template` or expect template rows inside shared tables.
   - Billing utilities: `server/src/lib/billing/utils/templateClone.ts` reads from `contract_lines`/`contract_line_services` assuming template rows live alongside instance data.
 - **Downstream / external consumers**
   - Reporting joins: `server/src/lib/billing/billingEngine.ts:396` uses `coalesce(cc.template_contract_id, cc.contract_id)` to tie invoices back to templates.
@@ -74,7 +74,7 @@
 - Document runtime expectations and resource usage to size the production window.
 
 ### Phase 4 — Application Readiness
-- Introduce new models/repos (`ContractTemplate`, `ContractTemplateLine`, etc.) and update server actions (`contractActions`, `contractLineAction`, `contractLineMappingActions`) to read/write via those models.
+- Introduce new models/repos (`ContractTemplate`, `ContractTemplateLine`, etc.) and update server actions (`contractActions`, `contractLineAction`, repository helpers) to read/write via those models.
 - Adjust TypeScript interfaces to split `IContractTemplate` from `IContract` (instances), updating UI components and hooks accordingly.
 - Skip feature-flag gating (new template flow becomes the default) while ensuring fallbacks are removed.
 - Update migrations that create sample data/fixtures, ensuring test suites build valid templates in the new schema.

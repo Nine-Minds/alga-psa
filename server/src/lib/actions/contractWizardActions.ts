@@ -9,14 +9,14 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
-import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
 import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
 } from 'server/src/lib/actions/contractLineServiceActions';
 import { getSession } from 'server/src/lib/auth/getSession';
-import { ensureTemplateLineSnapshot } from 'server/src/lib/actions/contractLineMappingActions';
+import { ensureTemplateLineSnapshot } from 'server/src/lib/repositories/contractLineRepository';
+import { fetchDetailedContractLines } from 'server/src/lib/repositories/contractLineRepository';
 import {
   IContractLineServiceBucketConfig,
   IContractLineServiceHourlyConfig,
@@ -640,6 +640,11 @@ export async function createClientContractFromWizard(
         overtime_threshold: null,
         enable_after_hours_rate: null,
         after_hours_multiplier: null,
+        contract_id: contractId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        billing_timing: 'arrears',
+        is_template: false,
       } as any);
       const planId = createdFixedLine.contract_line_id!;
       createdContractLineIds.push(planId);
@@ -705,14 +710,6 @@ export async function createClientContractFromWizard(
         tenant,
       });
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
-        contract_line_id: planId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
-      });
       nextDisplayOrder += 1;
     }
 
@@ -723,6 +720,11 @@ export async function createClientContractFromWizard(
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
+        contract_id: contractId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        billing_timing: 'arrears',
+        is_template: false,
       } as any);
       const hourlyPlanId = createdHourlyLine.contract_line_id!;
       createdContractLineIds.push(hourlyPlanId);
@@ -757,14 +759,6 @@ export async function createClientContractFromWizard(
         }
       }
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
-        contract_line_id: hourlyPlanId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
-      });
       nextDisplayOrder += 1;
     }
 
@@ -775,6 +769,11 @@ export async function createClientContractFromWizard(
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Usage',
+        contract_id: contractId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        billing_timing: 'arrears',
+        is_template: false,
       } as any);
       const usagePlanId = createdUsageLine.contract_line_id!;
       createdContractLineIds.push(usagePlanId);
@@ -809,14 +808,6 @@ export async function createClientContractFromWizard(
         }
       }
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
-        contract_line_id: usagePlanId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
-      });
       nextDisplayOrder += 1;
     }
 
@@ -898,7 +889,7 @@ export async function getContractTemplateSnapshotForClientWizard(
     throw new Error('Template not found');
   }
 
-  const detailedLines = await ContractLineMapping.getDetailedContractLines(templateId);
+  const detailedLines = await fetchDetailedContractLines(knex, tenant, templateId);
 
   const fixedServices: ClientTemplateSnapshot['fixed_services'] = [];
   const hourlyServices: ClientTemplateSnapshot['hourly_services'] = [];

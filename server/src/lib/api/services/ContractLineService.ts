@@ -16,9 +16,12 @@ import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/template
 // Import existing models and actions for integration
 import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
-import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
 import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  addContractLine as repositoryAddContractLine,
+  removeContractLine as repositoryRemoveContractLine,
+} from 'server/src/lib/repositories/contractLineRepository';
 
 // Import schema types for validation
 import {
@@ -719,30 +722,8 @@ export class ContractLineService extends BaseService<IContractLine> {
     return withTransaction(knex, async (trx) => {
       await this.validateContractExists(contractId, context, trx);
       await this.getExistingPlan(contractLineId, context, trx);
-      
-      const existing = await trx('contract_line_mappings')
-        .where('contract_id', contractId)
-        .where('contract_line_id', contractLineId)
-        .where('tenant', context.tenant)
-        .first();
-      
-      if (existing) {
-        throw new Error('Contract line already associated with this contract');
-      }
-      
-      const contractLineMapping = {
-        contract_id: contractId,
-        contract_line_id: contractLineId,
-        custom_rate: customRate,
-        tenant: context.tenant,
-        created_at: new Date()
-      };
-      
-      const [insertedMapping] = await trx('contract_line_mappings')
-        .insert(contractLineMapping)
-        .returning('*');
-      
-      return insertedMapping;
+
+      return repositoryAddContractLine(trx, context.tenant, contractId, contractLineId, customRate);
     });
   }
 
@@ -757,25 +738,23 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const clientAssignments = await trx('client_contract_lines')
-        .where('contract_line_id', contractLineId)
-        .where('client_contract_id', contractId)
-        .where('tenant', context.tenant)
-        .where('is_active', true);
-      
-      if (clientAssignments.length > 0) {
+      const clientAssignments = await trx('client_contract_lines as ccl')
+        .join('client_contracts as cc', function joinContracts() {
+          this.on('ccl.client_contract_id', '=', 'cc.client_contract_id').andOn('ccl.tenant', '=', 'cc.tenant');
+        })
+        .where('ccl.contract_line_id', contractLineId)
+        .where('ccl.tenant', context.tenant)
+        .where('ccl.is_active', true)
+        .where('cc.contract_id', contractId)
+        .count<{ count: string }[]>({ count: '*' });
+
+      const assignmentCount = parseInt(clientAssignments?.[0]?.count ?? '0', 10);
+
+      if (assignmentCount > 0) {
         throw new Error('Cannot remove contract line: it is currently assigned to clients');
       }
-      
-      const deletedCount = await trx('contract_line_mappings')
-        .where('contract_id', contractId)
-        .where('contract_line_id', contractLineId)
-        .where('tenant', context.tenant)
-        .delete();
-      
-      if (deletedCount === 0) {
-        throw new Error('Contract line not found on contract');
-      }
+
+      await repositoryRemoveContractLine(trx, context.tenant, contractId, contractLineId);
     });
   }
 
@@ -1532,16 +1511,15 @@ export class ContractLineService extends BaseService<IContractLine> {
       };
     }
     
-    // Check if plan is in contracts that are assigned to clients
-    const contractAssignments = await knex('contract_line_mappings as clm')
-      .join('client_contracts as cc', 'clm.contract_id', 'cc.contract_id')
-      .where('clm.contract_line_id', planId)
-      .where('clm.tenant', context.tenant)
-      .where('cc.is_active', true)
+    // Prevent deletion if the plan is already embedded in a contract definition
+    const contractUsage = await knex('contract_lines')
+      .where('contract_line_id', planId)
+      .where('tenant', context.tenant)
+      .whereNotNull('contract_id')
       .count('* as count')
       .first();
-    
-    const contractCount = parseInt(String(contractAssignments?.count || '0'));
+
+    const contractCount = parseInt(String(contractUsage?.count || '0'));
     if (contractCount > 0) {
       return {
         inUse: true,
@@ -1575,10 +1553,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    await trx('contract_line_mappings')
+    await trx('contract_lines')
       .where('contract_line_id', contractLineId)
       .where('tenant', context.tenant)
-      .delete();
+      .update({ contract_id: null });
   }
 
   private async createFixedPlanConfig(

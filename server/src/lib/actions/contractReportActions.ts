@@ -142,20 +142,17 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
     }
 
     // Query contract lines to get monthly recurring values
-    const contractLines = await knex('contract_line_mappings as clm')
-      .join('contract_lines as cl', function joinLines() {
-        this.on('clm.contract_line_id', '=', 'cl.contract_line_id').andOn('clm.tenant', '=', 'cl.tenant');
-      })
+    const contractLines = await knex('contract_lines as cl')
       .leftJoin('contract_line_fixed_config as cfg', function joinConfig() {
-        this.on('clm.contract_line_id', '=', 'cfg.contract_line_id').andOn('clm.tenant', '=', 'cfg.tenant');
+        this.on('cl.contract_line_id', '=', 'cfg.contract_line_id').andOn('cl.tenant', '=', 'cfg.tenant');
       })
-      .where({ 'clm.tenant': tenant })
+      .where({ 'cl.tenant': tenant })
       .select(
-        'clm.contract_id',
+        'cl.contract_id',
         'cl.contract_line_id',
         'cl.contract_line_name',
         'cfg.base_rate',
-        'clm.custom_rate'
+        'cl.custom_rate'
       );
 
     // Add monthly recurring to aggregated data
@@ -205,11 +202,11 @@ export async function getContractExpirationReport(): Promise<ContractExpiration[
       .leftJoin('clients as cl', function joinClients() {
         this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
       })
-      .leftJoin('contract_line_mappings as clm', function joinMappings() {
-        this.on('c.contract_id', '=', 'clm.contract_id').andOn('c.tenant', '=', 'clm.tenant');
+      .leftJoin('contract_lines as cln', function joinLines() {
+        this.on('c.contract_id', '=', 'cln.contract_id').andOn('c.tenant', '=', 'cln.tenant');
       })
       .leftJoin('contract_line_fixed_config as cfg', function joinConfig() {
-        this.on('clm.contract_line_id', '=', 'cfg.contract_line_id').andOn('clm.tenant', '=', 'cfg.tenant');
+        this.on('cln.contract_line_id', '=', 'cfg.contract_line_id').andOn('cln.tenant', '=', 'cfg.tenant');
       })
       .where({ 'c.tenant': tenant, 'cc.is_active': true })
       .whereNotNull('cc.end_date')
@@ -218,7 +215,7 @@ export async function getContractExpirationReport(): Promise<ContractExpiration[
         'c.contract_name',
         'cl.client_name',
         'cc.end_date',
-        'cfg.base_rate'
+        knex.raw('COALESCE(cln.custom_rate, cfg.base_rate, 0) as monthly_value')
       )
       .orderBy('cc.end_date', 'asc');
 
@@ -231,7 +228,7 @@ export async function getContractExpirationReport(): Promise<ContractExpiration[
         client_name: row.client_name || 'Unknown Client',
         end_date: endDate.toISOString().split('T')[0],
         days_until_expiration: Math.max(0, daysUntilExpiration),
-        monthly_value: row.base_rate || 0,
+        monthly_value: row.monthly_value || 0,
         auto_renew: false // This could be extended to check a flag in the database
       };
     });
@@ -276,11 +273,8 @@ export async function getBucketUsageReport(): Promise<BucketUsage[]> {
     // For now, we'll show all bucket contracts without specific hour allocations
     // (as the bucket config is stored separately and not directly linked to contract_line_id)
     const data = await knex('contracts as c')
-      .leftJoin('contract_line_mappings as clm', function joinMappings() {
-        this.on('c.contract_id', '=', 'clm.contract_id').andOn('c.tenant', '=', 'clm.tenant');
-      })
       .leftJoin('contract_lines as cl_line', function joinLines() {
-        this.on('clm.contract_line_id', '=', 'cl_line.contract_line_id').andOn('clm.tenant', '=', 'cl_line.tenant');
+        this.on('c.contract_id', '=', 'cl_line.contract_id').andOn('c.tenant', '=', 'cl_line.tenant');
       })
       .leftJoin('client_contracts as cc', function joinClientContracts() {
         this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
@@ -289,7 +283,7 @@ export async function getBucketUsageReport(): Promise<BucketUsage[]> {
         this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
       })
       .leftJoin('time_entries as te', function joinTimeEntries() {
-        this.on('clm.contract_line_id', '=', 'te.contract_line_id').andOn('clm.tenant', '=', 'te.tenant');
+        this.on('cl_line.contract_line_id', '=', 'te.contract_line_id').andOn('cl_line.tenant', '=', 'te.tenant');
       })
       .where({ 'c.tenant': tenant, 'cl_line.contract_line_type': 'Bucket' })
       .select(

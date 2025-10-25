@@ -132,7 +132,6 @@ describe('Billing Invoice Tax Calculations', () => {
         'contract_line_services',
         'contract_line_service_configuration',
         'contract_line_service_fixed_config',
-        'contract_line_mappings',
         'service_catalog',
         'contract_lines',
         'contracts',

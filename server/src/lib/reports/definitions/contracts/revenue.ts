@@ -45,22 +45,22 @@ export const contractRevenueReport: ReportDefinition = {
         joins: [
           {
             type: 'inner',
-            table: 'contract_line_mappings',
+            table: 'contract_lines',
             on: [
-              { left: 'contracts.contract_id', right: 'contract_line_mappings.contract_id' },
-              { left: 'contracts.tenant', right: 'contract_line_mappings.tenant' }
+              { left: 'contracts.contract_id', right: 'contract_lines.contract_id' },
+              { left: 'contracts.tenant', right: 'contract_lines.tenant' }
             ]
           },
           {
             type: 'left',
             table: 'contract_line_fixed_config',
             on: [
-              { left: 'contract_line_mappings.contract_line_id', right: 'contract_line_fixed_config.contract_line_id' },
-              { left: 'contract_line_mappings.tenant', right: 'contract_line_fixed_config.tenant' }
+              { left: 'contract_lines.contract_line_id', right: 'contract_line_fixed_config.contract_line_id' },
+              { left: 'contract_lines.tenant', right: 'contract_line_fixed_config.tenant' }
             ]
           }
         ],
-        fields: ['COALESCE(contract_line_mappings.custom_rate, contract_line_fixed_config.base_rate, 0)'],
+        fields: ['COALESCE(contract_lines.custom_rate, contract_line_fixed_config.base_rate, 0)'],
         aggregation: 'sum',
         filters: [
           { field: 'contracts.tenant', operator: 'eq', value: '{{tenant}}' },

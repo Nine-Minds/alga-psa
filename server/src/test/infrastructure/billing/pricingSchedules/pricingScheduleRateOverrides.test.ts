@@ -109,13 +109,16 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
   }) {
     const { contractId, clientContractId, contractLineId, clientContractLineId } = params;
 
-    await context.db('contract_line_mappings').insert({
-      tenant: context.tenantId,
-      contract_id: contractId,
-      contract_line_id: contractLineId,
-      display_order: 1,
-      custom_rate: null
-    });
+    await context.db('contract_lines')
+      .where({
+        tenant: context.tenantId,
+        contract_line_id: contractLineId
+      })
+      .update({
+        contract_id: contractId,
+        display_order: 1,
+        custom_rate: null
+      });
 
     if (clientContractLineId) {
       await context.db('client_contract_lines')
@@ -174,7 +177,6 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         'contract_lines',
         'contracts',
         'client_contracts',
-        'contract_line_mappings',
         'contract_pricing_schedules',
         'bucket_plans',
         'tax_rates',

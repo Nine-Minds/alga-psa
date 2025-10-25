@@ -15,8 +15,8 @@ Key goals:
 
 | Term | Description | Primary Tables |
 | --- | --- | --- |
-| **Contract template** | A reusable blueprint for a contract, including recommended lines, default billing frequencies, and metadata. | `contract_templates`, `contract_template_lines`, `contract_template_line_mappings`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_*` |
-| **Contract** | A sellable contract definition that can be assigned to clients. Created directly or derived from a template. | `contracts`, `contract_line_mappings`, `contract_pricing_schedules` |
+| **Contract template** | A reusable blueprint for a contract, including recommended lines, default billing frequencies, and metadata. | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_*` |
+| **Contract** | A sellable contract definition that can be assigned to clients. Created directly or derived from a template. | `contracts`, `contract_lines`, `contract_pricing_schedules` |
 | **Client contract** | A specific assignment of a contract to a client, with start/end dates, PO requirements, and lifecycle status. | `client_contracts` |
 | **Contract line** | A billable line definition (fixed, hourly, usage, bucket, product, license). | `contract_lines`, `contract_line_fixed_config`, `contract_line_service_configuration`, `contract_line_service_*` |
 | **Client contract line** | A client-scoped instance of a contract line. Stores cloned template data, pricing overrides, and service configuration snapshots. | `client_contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, `client_contract_services`, `client_contract_service_configuration`, `client_contract_service_*` |
@@ -35,9 +35,8 @@ Supporting entities still in use:
 Templates give sales and operations teams a curated starting point.
 
 - `contract_templates` – high level metadata (name, default frequency, status, optional JSON metadata).
-- `contract_template_lines` – line-level defaults (type, descriptions, frequency, overtime rules).
+- `contract_template_lines` – line-level defaults (type, descriptions, frequency, overtime rules) along with display order, billing timing, and optional template-level custom rates.
 - `contract_template_line_terms` – stores timing/terms metadata for template lines, including the new `billing_timing` flag (`arrears` or `advance`) that seeds client assignments.
-- `contract_template_line_mappings` – ordering of template lines within a template, with optional custom rate overrides.
 - `contract_template_line_services` – recommended catalog services and default quantities for a template line.
 - `contract_template_line_service_configuration` and child tables (`_fixed`, `_hourly`, `_usage`, `_bucket`) – configuration defaults for each service type.
 
@@ -48,7 +47,7 @@ Publishing or cloning a template never mutates the template tables; instead, the
 Contracts live in tenant scope and are managed through `server/src/lib/actions/contractActions.ts`.
 
 - `contracts` – stores live contract definitions. `status` drives availability (`draft`, `active`, `expired`, etc.).
-- `contract_line_mappings` – associates contract lines with a contract and records display order plus optional contract-level custom rates.
+- `contract_lines` – stores contract-specific lines (including display order, billing timing, and optional custom rates) alongside shared metadata (`contract_line_name`, type, frequency, etc.).
 - `contract_pricing_schedules` – time-bound overrides that swap in a custom rate when a schedule is effective during billing.
 
 Contracts can be created manually or cloned from templates. When cloning, template IDs are preserved in `contracts.template_metadata` for traceability.
@@ -80,7 +79,7 @@ The cloning helper ensures that future template edits do not retroactively chang
 
 1. **Author or import template** – users manage templates through `ContractTemplateModel` actions (`server/src/lib/models/contractTemplate.ts`) and UI in `server/src/components/billing-dashboard/contracts/templates/*`.
 2. **Create contract** – `createContract` in `contractActions.ts` creates a sellable contract. Templates can be cloned using wizard actions (`contractWizardActions.ts`) to seed contract lines and metadata.
-3. **Attach contract lines** – `addContractLine(contractId, contractLineId, customRate?)` from `contractLineMappingActions.ts` links existing contract lines or template line snapshots.
+3. **Attach contract lines** – server actions in `server/src/lib/actions/contractActions.ts` call the shared repository to clone template lines into `contract_lines` (or update template snapshots) while exposing `addContractLine(contractId, contractLineId, customRate?)` to callers.
 4. **Assign to client** – `assignContractToClient(clientId, contractId, startDate, endDate?)` from `clientContractActions.ts` creates `client_contracts` rows. This call ensures there is no overlap with other active contracts.
 5. **Clone template data** – if the assignment originated from a template, `cloneTemplateContractLine` copies default terms, services, and configuration into the client tables. Additional overrides can be applied through `clientContractLineActions` and `clientContractServiceActions`.
 6. **Maintain lifecycle** – `updateContract`, `updateClientContract`, and the pricing schedule actions keep data in sync as contracts renew, expire, or are repriced.
@@ -89,7 +88,7 @@ Example (simplified):
 
 ```typescript
 import { createContract } from 'server/src/lib/actions/contractActions';
-import { addContractLine } from 'server/src/lib/actions/contractLineMappingActions';
+import { addContractLine } from 'server/src/lib/actions/contractActions';
 import { assignContractToClient } from 'server/src/lib/actions/client-actions/clientContractActions';
 
 const contract = await createContract({
@@ -128,7 +127,7 @@ The billing engine lives in `server/src/lib/billing/billingEngine.ts`. It operat
 ### Discount & Pricing Inputs
 
 - `discounts` and `contract_line_discounts` define percentage or fixed discounts with effective windows.
-- Pricing hierarchy: template defaults → contract-level overrides (`contract_line_mappings.custom_rate`) → active pricing schedule (`contract_pricing_schedules`) → client-specific overrides (`client_contract_line_pricing.custom_rate`). The first non-null value in that chain wins.
+- Pricing hierarchy: template defaults → contract-level overrides (`contract_lines.custom_rate`) → active pricing schedule (`contract_pricing_schedules`) → client-specific overrides (`client_contract_line_pricing.custom_rate`). The first non-null value in that chain wins.
 
 ### Data Quality & Validation
 
@@ -251,8 +250,8 @@ These interfaces are consumed throughout the billing dashboard (`ClientContractL
 
 | Area | Tables |
 | --- | --- |
-| Templates | `contract_templates`, `contract_template_lines`, `contract_template_line_mappings`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_fixed_config`, `contract_template_line_service_hourly_config`, `contract_template_line_service_usage_config`, `contract_template_line_service_bucket_config` |
-| Contract library | `contracts`, `contract_line_mappings`, `contract_pricing_schedules`, `contract_lines`, `contract_line_fixed_config`, `contract_line_service_configuration`, `contract_line_service_fixed_config`, `contract_line_service_hourly_config`, `contract_line_service_usage_config`, `contract_line_service_bucket_config`, `contract_line_service_rate_tiers`, `contract_line_discounts` |
+| Templates | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_fixed_config`, `contract_template_line_service_hourly_config`, `contract_template_line_service_usage_config`, `contract_template_line_service_bucket_config` |
+| Contract library | `contracts`, `contract_lines`, `contract_pricing_schedules`, `contract_line_fixed_config`, `contract_line_service_configuration`, `contract_line_service_fixed_config`, `contract_line_service_hourly_config`, `contract_line_service_usage_config`, `contract_line_service_bucket_config`, `contract_line_service_rate_tiers`, `contract_line_discounts` |
 | Client instances | `client_contracts`, `client_contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, `client_contract_services`, `client_contract_service_configuration`, `client_contract_service_fixed_config`, `client_contract_service_hourly_config`, `client_contract_service_usage_config`, `client_contract_service_bucket_config`, `client_contract_service_rate_tiers`, `client_contract_line_discounts` |
 | Activity | `time_entries`, `usage_tracking`, `bucket_usage`, `license_assignments`, `product_usage` |
 | Invoicing | `client_billing_cycles`, `invoices`, `invoice_items`, `invoice_item_details`, `invoice_item_fixed_details`, `invoice_template_assignments` |
@@ -268,7 +267,7 @@ Key column highlights:
 
 - `server/src/lib/billing/billingEngine.ts`
 - `server/src/lib/actions/contractActions.ts`
-- `server/src/lib/actions/contractLineMappingActions.ts`
+- `server/src/lib/repositories/contractLineRepository.ts`
 - `server/src/lib/actions/client-actions/clientContractActions.ts`
 - `server/src/lib/actions/client-actions/clientContractLineActions.ts`
 - `server/src/lib/billing/utils/templateClone.ts`
