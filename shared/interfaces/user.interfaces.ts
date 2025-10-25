@@ -27,6 +27,8 @@ export interface IUser {
   contact_id?: string;
   phone?: string;
   timezone?: string;
+  last_login_at?: Date | string;
+  last_login_method?: string;
 }
 
 /**
