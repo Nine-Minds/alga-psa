@@ -374,7 +374,7 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         .where({ tenant, client_id: contact.client_id })
         .first() : null;
 
-      const tenantSlug = getTenantSlugForTenant(tenant);
+      const tenantSlug = await getTenantSlugForTenant(tenant);
 
       // Generate portal setup URL with robust base URL fallback
       const baseUrl =

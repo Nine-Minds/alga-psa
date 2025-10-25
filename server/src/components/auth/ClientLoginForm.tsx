@@ -94,7 +94,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         signInPayload.tenant = tenantSlug;
       }
 
-      const result = await signIn('credentials', signInPayload)
+      const result = (await signIn('credentials', signInPayload)) as unknown as { error?: string; url?: string } | null
 
       if (result?.error) {
         if (result.error === '2FA_REQUIRED') {

@@ -17,7 +17,7 @@ export async function getTenantPortalLoginLink(): Promise<TenantPortalLinkResult
     throw new Error('Tenant context is required to build portal login link');
   }
 
-  const tenantSlug = getTenantSlugForTenant(tenant);
+  const tenantSlug = await getTenantSlugForTenant(tenant);
   try {
     const portalDomain = await getPortalDomain(knex, tenant);
 

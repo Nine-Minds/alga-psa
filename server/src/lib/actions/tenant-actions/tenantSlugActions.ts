@@ -41,6 +41,6 @@ export async function getTenantIdBySlug(slug: string): Promise<string | null> {
   }
 }
 
-export function getTenantSlugForTenant(tenantId: string): string {
+export async function getTenantSlugForTenant(tenantId: string): Promise<string> {
   return buildTenantPortalSlug(tenantId);
 }

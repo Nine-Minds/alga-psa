@@ -34,7 +34,7 @@ export async function authenticateUser(
     }
 
     const normalizedEmail = email.toLowerCase();
-    let resolvedTenantId = options.tenantId;
+    let resolvedTenantId: string | undefined | null = options.tenantId;
 
     if (!resolvedTenantId && options.tenantSlug) {
         if (!isValidTenantSlug(options.tenantSlug)) {
