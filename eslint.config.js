@@ -101,7 +101,7 @@ export default [
           path.join(__dirname, 'ee/server/tsconfig.eslint.json'),
           path.join(__dirname, 'shared/tsconfig.json'),
           path.join(__dirname, 'services/workflow-worker/tsconfig.eslint.json'),
-          path.join(__dirname, 'ee/server/packages/ui-kit/tsconfig.json'),
+          path.join(__dirname, 'packages/ui-kit/tsconfig.json'),
           path.join(__dirname, 'packages/extension-iframe-sdk/tsconfig.json'),
           path.join(__dirname, 'packages/extension-iframe-sdk/examples/vite-react/tsconfig.json'),
         ],
