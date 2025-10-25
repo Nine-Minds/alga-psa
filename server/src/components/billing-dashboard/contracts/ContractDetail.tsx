@@ -101,6 +101,12 @@ const ContractDetail: React.FC = () => {
 
   // PO Amount input state for formatting (stores display value while editing)
   const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
+  const contractsListUrl = useMemo(() => {
+    const targetSubtab = contract?.is_template ? 'templates' : 'clients';
+    return `/msp/billing?tab=contracts&subtab=${targetSubtab}`;
+  }, [contract?.is_template]);
+
+  const deleteRedirectUrl = '/msp/billing?tab=contract-lines';
 
   // Track if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
@@ -220,14 +226,13 @@ const ContractDetail: React.FC = () => {
     setIsDeleting(true);
     try {
       await deleteContract(contractId);
-      setShowDeleteConfirm(false);
-      router.push('/msp/billing?tab=contracts&subtab=clients');
-      router.refresh();
+      router.push(deleteRedirectUrl);
     } catch (err) {
       console.error('Error deleting contract:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete contract');
     } finally {
       setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -630,7 +635,7 @@ const ContractDetail: React.FC = () => {
           id="back-to-contracts-error"
           variant="ghost"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts&subtab=clients')}
+                  onClick={() => router.push(contractsListUrl)}
           className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -653,7 +658,7 @@ const ContractDetail: React.FC = () => {
           id="back-to-contracts"
           variant="ghost"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts&subtab=clients')}
+                onClick={() => router.push(contractsListUrl)}
           className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
