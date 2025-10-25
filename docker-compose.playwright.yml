@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  minio-test:
+    image: minio/minio:latest
+    container_name: alga-psa-minio-test
+    command: server /data --console-address ":9003"
+    ports:
+      - "9002:9000"  # API port (different from your Payload MinIO on 9000)
+      - "9003:9003"  # Console port
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-test-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - playwright-test
+
+networks:
+  playwright-test:
+    name: alga-psa-playwright-test
+    driver: bridge
+
+volumes:
+  minio-test-data:
+    name: alga-psa-minio-test-data

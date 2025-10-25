@@ -22,7 +22,8 @@ import {
     Video,
     Eye,
     X,
-    Play
+    Play,
+    FolderInput
 } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -37,7 +38,7 @@ interface VideoPreviewProps {
 }
 
 function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPreviewProps) {
-    const { t } = useTranslation('clientPortal');
+    const { t } = useTranslation('common');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -115,7 +116,7 @@ interface VideoModalProps {
 }
 
 function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
-    const { t } = useTranslation('clientPortal');
+    const { t } = useTranslation('common');
     const [videoError, setVideoError] = useState(false);
     const videoRef = React.useRef<HTMLVideoElement>(null);
 
@@ -150,7 +151,10 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                     {t('documents.videoPlaybackFailed', 'Unable to play this video in the browser')}
                 </p>
                 <p className="text-xs text-[rgb(var(--color-text-500))] mb-4">
-                    Chrome may not support this video codec. Try downloading or use Safari/Edge.
+                    {t(
+                        'documents.videoCodecWarning',
+                        'Chrome may not support this video codec. Try downloading or use Safari/Edge.'
+                    )}
                 </p>
                 <Button
                     id={`download-video-${fileId}`}
@@ -224,8 +228,10 @@ export interface DocumentStorageCardProps {
     document: IDocument;
     onDelete?: (document: IDocument) => void;
     onDisassociate?: (document: IDocument) => void;
+    onMove?: (document: IDocument) => void;
     hideActions?: boolean;
     showDisassociate?: boolean;
+    showMove?: boolean;
     onClick?: () => void;
     isContentDocument?: boolean;
     forceRefresh?: number; // Timestamp to trigger preview refresh
@@ -276,13 +282,15 @@ function DocumentStorageCardComponent({
     document,
     onDelete,
     onDisassociate,
+    onMove,
     hideActions = false,
     showDisassociate = false,
+    showMove = false,
     onClick,
     isContentDocument = false,
     forceRefresh
 }: DocumentStorageCardProps): JSX.Element {
-    const { t } = useTranslation('clientPortal');
+    const { t } = useTranslation('common');
     const [previewContent, setPreviewContent] = useState<{
         content?: string;
         previewImage?: string;
@@ -302,22 +310,48 @@ function DocumentStorageCardComponent({
         ? t('documents.deleteVideoTitle', 'Delete Video')
         : t('documents.deleteTitle', 'Delete Document');
     const deleteMessage = isVideoDocument
-        ? t('documents.deleteVideoMessage', 'Are you sure you want to delete the video "{{name}}"? This action cannot be undone.', { name: documentName })
-        : t('documents.deleteMessage', 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', { name: documentName });
+        ? t('documents.deleteVideoMessage', {
+            name: documentName,
+            defaultValue: `Are you sure you want to delete the video "${documentName}"? This action cannot be undone.`
+        })
+        : t('documents.deleteMessage', {
+            name: documentName,
+            defaultValue: `Are you sure you want to delete "${documentName}"? This action cannot be undone.`
+        });
     const removeTitle = isVideoDocument
         ? t('documents.removeVideoTitle', 'Remove Video')
         : t('documents.removeTitle', 'Remove Document');
     const removeMessage = isVideoDocument
-        ? t('documents.removeVideoMessage', 'Are you sure you want to remove the video "{{name}}" from this item? The file will remain available in the document library.', { name: documentName })
-        : t('documents.removeMessage', 'Are you sure you want to remove "{{name}}" from this item? The document will still be available in the document library.', { name: documentName });
+        ? t('documents.removeVideoMessage', {
+            name: documentName,
+            defaultValue: `Are you sure you want to remove the video "${documentName}" from this item? The file will remain available in the document library.`
+        })
+        : t('documents.removeMessage', {
+            name: documentName,
+            defaultValue: `Are you sure you want to remove "${documentName}" from this item? The document will still be available in the document library.`
+        });
 
 
     const loadPreview = async () => {
+        // NEW: Try cached preview first (for images, videos, PDFs)
+        // Use preview (800x600, preserves aspect ratio) instead of thumbnail (200x200, cropped)
+        if (document.preview_file_id) {
+            // Use the cached preview endpoint - much faster!
+            const previewUrl = `/api/documents/${document.document_id}/preview?t=${Date.now()}`;
+            setPreviewContent({ previewImage: previewUrl });
+            setHasLoadedPreview(true);
+            setIsLoading(false);
+            return;
+        }
+
+        // LEGACY: Fall back to old preview generation system for documents without thumbnails
         const identifierForPreview = document.file_id || document.document_id;
 
         if (!identifierForPreview) {
             console.warn('DocumentStorageCard: No identifier available for preview (document_id or file_id). Document:', document);
-            setPreviewContent({ error: 'Preview not available (no identifier)' });
+            setPreviewContent({
+                error: t('documents.previewUnavailableNoId', 'Preview not available (no identifier)')
+            });
             setIsLoading(false);
             return;
         }
@@ -332,7 +366,9 @@ function DocumentStorageCardComponent({
                 setHasLoadedPreview(true);
             } catch (error) {
                 console.error('Error getting document preview:', error);
-                setPreviewContent({ error: 'Failed to load preview' });
+                setPreviewContent({
+                    error: t('documents.previewLoadFailed', 'Failed to load preview')
+                });
             } finally {
                 setIsLoading(false);
             }
@@ -657,6 +693,22 @@ function DocumentStorageCardComponent({
                                 {isLoading ? t('common.loading', 'Loading...') : t('documents.remove', 'Remove')}
                             </Button>
                         )}
+                        {showMove && onMove && (
+                            <Button
+                                id={`move-document-${document.document_id}-button`}
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent event bubbling to parent
+                                    onMove(document);
+                                }}
+                                disabled={isLoading}
+                                className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-50 inline-flex items-center"
+                            >
+                                <FolderInput className="w-4 h-4 mr-2" />
+                                {isLoading ? t('common.loading', 'Loading...') : t('documents.move', 'Move')}
+                            </Button>
+                        )}
                         {onDelete && (
                             <Button
                                 id={`delete-document-${document.document_id}-button`}
@@ -789,9 +841,11 @@ const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextP
         prevProps.forceRefresh === nextProps.forceRefresh &&
         prevProps.onDelete === nextProps.onDelete &&
         prevProps.onDisassociate === nextProps.onDisassociate &&
+        prevProps.onMove === nextProps.onMove &&
         prevProps.onClick === nextProps.onClick &&
         prevProps.hideActions === nextProps.hideActions &&
         prevProps.showDisassociate === nextProps.showDisassociate &&
+        prevProps.showMove === nextProps.showMove &&
         prevProps.isContentDocument === nextProps.isContentDocument
     );
 });

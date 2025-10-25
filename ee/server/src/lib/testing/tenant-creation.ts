@@ -286,9 +286,29 @@ export async function createTenantComplete(
 export async function rollbackTenant(db: Knex, tenantId: string): Promise<void> {
   return await db.transaction(async (trx) => {
     // Delete in proper order to avoid foreign key violations
+    // All tables that reference users must be deleted BEFORE users
+
+    // Documents and related tables must be deleted BEFORE external_files (FK constraint)
+    await deleteTenantScopedRows(trx, 'document_associations', tenantId);
+    await deleteTenantScopedRows(trx, 'document_versions', tenantId);
+    await deleteTenantScopedRows(trx, 'document_content', tenantId);
+    await deleteTenantScopedRows(trx, 'document_block_content', tenantId);
+    await deleteTenantScopedRows(trx, 'documents', tenantId);
+    await deleteTenantScopedRows(trx, 'file_store', tenantId);
+
+    // External files reference users (uploaded_by_id) - delete after documents
+    await deleteTenantScopedRows(trx, 'external_files', tenantId);
+
+    // Permissions must be deleted before roles
+    await deleteTenantScopedRows(trx, 'role_permissions', tenantId);
+    await deleteTenantScopedRows(trx, 'permissions', tenantId);
+
+    // Portal and user-related tables
     await deleteTenantScopedRows(trx, 'portal_domain_session_otts', tenantId);
     await deleteTenantScopedRows(trx, 'portal_domains', tenantId);
     await deleteTenantScopedRows(trx, 'user_roles', tenantId);
+
+    // Finally delete users, roles, and tenant
     await deleteTenantScopedRows(trx, 'users', tenantId);
     await deleteTenantScopedRows(trx, 'roles', tenantId);
     await deleteTenantScopedRows(trx, 'tenant_companies', tenantId);

@@ -39,6 +39,7 @@ export default defineConfig({
       '@ee': path.resolve(__dirname, '../ee/server/src'),
       '@shared': path.resolve(__dirname, '../shared'),
       'next/server': path.resolve(__dirname, './src/test/stubs/next-server.ts'),
+      'pdf-lib': 'empty-module',
     },
   },
   server: {

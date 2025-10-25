@@ -115,15 +115,13 @@ export function TemplateFixedFeeServicesStep({
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Fixed Fee Services</h3>
           <p className="text-sm text-gray-600">
-            Select which fixed-fee services belong to this template bundle. Billing amounts are
-            set when the template is applied to a client.
+            Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.
           </p>
         </div>
 
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>Tip:</strong> Use buckets to provide guardrails (e.g., hours included) and
-            capture overage pricing guidance for teams.
+            <strong>What are Fixed Fee Services?</strong> These services have a set monthly price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
           </p>
         </div>
 

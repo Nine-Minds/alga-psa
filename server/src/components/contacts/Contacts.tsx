@@ -30,6 +30,10 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+
+const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
+
 interface ContactsProps {
   initialContacts: IContact[];
   clientId?: string;
@@ -39,6 +43,19 @@ interface ContactsProps {
 const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelectedClientId }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['contact']);
+
+  // Use user preference for page size
+  const {
+    value: pageSize,
+    setValue: setPageSize
+  } = useUserPreference<number>(
+    CONTACTS_PAGE_SIZE_SETTING,
+    {
+      defaultValue: 10,
+      localStorageKey: CONTACTS_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
   
   const [contacts, setContacts] = useState<IContact[]>(initialContacts);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -401,6 +418,19 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     setCurrentPage(page);
   };
 
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
+
+  // Page size options for contacts table
+  const pageSizeOptions = [
+    { value: '10', label: '10 per page' },
+    { value: '25', label: '25 per page' },
+    { value: '50', label: '50 per page' },
+    { value: '100', label: '100 per page' }
+  ];
+
   const columns: ColumnDefinition<IContact>[] = [
     {
       title: 'Name',
@@ -692,7 +722,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             pagination={true}
             currentPage={currentPage}
             onPageChange={handlePageChange}
-            pageSize={10}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
+            itemsPerPageOptions={pageSizeOptions}
           />
         </div>
         <QuickAddContact

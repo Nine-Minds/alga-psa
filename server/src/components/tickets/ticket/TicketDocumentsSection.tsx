@@ -63,6 +63,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
             isLoading={isLoading}
             onDocumentCreated={fetchDocuments}
             uploadFormRef={uploadFormRef}
+            namespace="clientPortal"
           />
         </div>
       </div>

@@ -239,7 +239,210 @@
     "showing": "Affichage de {{from}} à {{to}} sur {{total}} résultats",
     "rowsPerPage": "Lignes par page",
     "first": "Première",
-    "last": "Dernière"
+    "last": "Dernière",
+    "itemsLabel": "éléments",
+    "itemsPerPageOption": "{{count}} éléments/page",
+    "itemsPerPagePlaceholder": "Éléments par page",
+    "reflectionLabel": "Pagination",
+    "range": "{{from}} - {{to}} sur {{total}} {{itemLabel}}",
+    "ariaLabel": "Pagination",
+    "totalItems": "{{count}} {{itemLabel}} au total",
+    "totalRecordsInline": "({{count}} enregistrements au total)",
+    "pageOf": "Page {{current}} sur {{total}}"
+  },
+  "documents": {
+    "title": "Documents",
+    "noDocuments": "Aucun document joint",
+    "upload": "Téléverser un document",
+    "download": "Télécharger",
+    "remove": "Retirer",
+    "preview": "Aperçu",
+    "linkDocuments": "Lier des documents",
+    "editDocument": "Modifier le document",
+    "viewDocument": "Voir le document",
+    "downloadToPlay": "Télécharger pour lire",
+    "delete": "Supprimer",
+    "previewUnavailable": "Aperçu non disponible",
+    "newDocument": "Nouveau document",
+    "uploadFile": "Téléverser un fichier",
+    "deleteTitle": "Supprimer le document",
+    "deleteMessage": "Voulez-vous vraiment supprimer \"{{name}}\" ? Cette action est irréversible.",
+    "deleteVideoTitle": "Supprimer la vidéo",
+    "deleteVideoMessage": "Voulez-vous vraiment supprimer la vidéo \"{{name}}\" ? Cette action est irréversible.",
+    "removeTitle": "Retirer le document",
+    "removeMessage": "Voulez-vous vraiment retirer \"{{name}}\" de cet élément ? Le document restera disponible dans la bibliothèque de documents.",
+    "removeVideoTitle": "Retirer la vidéo",
+    "removeVideoMessage": "Voulez-vous vraiment retirer la vidéo \"{{name}}\" de cet élément ? Le fichier restera disponible dans la bibliothèque de documents.",
+    "downloadFile": "Télécharger le fichier",
+    "videoUnsupported": "Format vidéo ({{mimeType}}) non pris en charge pour la lecture dans le navigateur",
+    "videoTagUnsupported": "Votre navigateur ne prend pas en charge la balise vidéo.",
+    "unnamed": "Sans titre",
+    "videoDownloadInfo": "La vidéo sera téléchargée et pourra être lue avec le lecteur vidéo par défaut de votre système.",
+    "previewUnavailableNoId": "Aperçu indisponible (aucun identifiant)",
+    "previewLoadFailed": "Échec du chargement de l'aperçu",
+    "videoCodecWarning": "Chrome peut ne pas prendre en charge ce codec vidéo. Essayez de télécharger le fichier ou utilisez Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Impossible de récupérer les documents.",
+      "folderCreated": "Le dossier \"{{name}}\" a été créé avec succès",
+      "folderCreateFailed": "Échec de la création du dossier",
+      "moveDocumentsSuccess_one": "{{count}} document a été déplacé vers {{destination}}",
+      "moveDocumentsSuccess_other": "{{count}} documents ont été déplacés vers {{destination}}",
+      "moveDocumentsFailed": "Impossible de déplacer les documents",
+      "deleteSuccess": "Le document \"{{name}}\" a été supprimé avec succès",
+      "deleteFailed": "Impossible de supprimer le document",
+      "removeAssociationFailed": "Impossible de supprimer l'association du document",
+      "moveDocumentSuccess": "Le document \"{{name}}\" a été déplacé avec succès",
+      "moveDocumentFailed": "Impossible de déplacer le document",
+      "createFailed": "Impossible de créer le document",
+      "saveFailed": "Impossible d'enregistrer le document",
+      "loadContentFailed": "Impossible de charger le contenu du document",
+      "downloadFailed": "Impossible de télécharger le document",
+      "bulkDeleteFailed": "Impossible de supprimer certains documents",
+      "bulkDeleteSuccess_one": "{{count}} document a été supprimé avec succès",
+      "bulkDeleteSuccess_other": "{{count}} documents ont été supprimés avec succès"
+    },
+    "validation": {
+      "nameRequired": "Le nom du document est obligatoire"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} document sélectionné",
+      "selected_other": "{{count}} documents sélectionnés",
+      "moveToFolder": "Déplacer vers un dossier",
+      "deleteSelected": "Supprimer la sélection",
+      "clearSelection": "Effacer la sélection"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Voulez-vous vraiment supprimer {{count}} document ?",
+      "confirmBulkDelete_other": "Voulez-vous vraiment supprimer {{count}} documents ?"
+    },
+    "pagination": {
+      "perPage": "{{count}} par page"
+    },
+    "folderSelector": {
+      "defaultTitle": "Sélectionner le dossier de destination",
+      "defaultDescription": "Choisissez où enregistrer ce document",
+      "singleDescription": "Où souhaitez-vous enregistrer \"{{fileName}}\" ?",
+      "multipleDescription": "Où souhaitez-vous enregistrer ces {{count}} fichiers ?",
+      "newDocumentTitle": "Sélectionner le dossier du nouveau document",
+      "newDocumentDescription": "Choisissez où enregistrer ce nouveau document",
+      "moveTitle": "Déplacer le document",
+      "moveDescriptionWithName": "Sélectionnez le dossier de destination pour \"{{name}}\"",
+      "moveDescription": "Sélectionnez le dossier de destination",
+      "bulkMoveTitle": "Déplacer les documents sélectionnés",
+      "bulkMoveDescription_one": "Sélectionnez le dossier de destination pour {{count}} document",
+      "bulkMoveDescription_other": "Sélectionnez le dossier de destination pour {{count}} documents",
+      "errors": {
+        "nameRequired": "Veuillez saisir un nom de dossier",
+        "invalidCharacters": "Le nom du dossier ne peut pas contenir \"/\"",
+        "createFailed": "Échec de la création du dossier"
+      },
+      "creating": "Création en cours...",
+      "createButton": "Créer un dossier",
+      "newFolderButton": "Nouveau dossier",
+      "parentLabel": "Dossier parent : {{folder}}",
+      "rootLabel": "/ (Racine)",
+      "namePlaceholder": "Saisissez le nom du dossier",
+      "loading": "Chargement des dossiers...",
+      "rootOption": "Racine (aucun dossier)",
+      "empty": "Aucun dossier disponible. Les documents seront enregistrés à la racine."
+    },
+    "filters": {
+      "searchLabel": "Rechercher des documents",
+      "searchPlaceholder": "Rechercher par nom de document...",
+      "typeLabel": "Type de document",
+      "entityTypeLabel": "Type d'entité associé",
+      "uploadedByLabel": "Téléversé par",
+      "uploadedByPlaceholder": "Tous les utilisateurs",
+      "updatedStartLabel": "Date de mise à jour (début)",
+      "updatedEndLabel": "Date de mise à jour (fin)",
+      "startDatePlaceholder": "Sélectionnez la date de début",
+      "endDatePlaceholder": "Sélectionnez la date de fin",
+      "sortByLabel": "Trier par",
+      "clear": "Réinitialiser les filtres",
+      "showAllDocuments": "Afficher tous les documents",
+      "typeOptions": {
+        "all": "Tous les types de document",
+        "pdf": "PDF",
+        "image": "Images",
+        "text": "Documents",
+        "video": "Vidéo",
+        "other": "Autre"
+      },
+      "sortOptions": {
+        "updated_at": "Date",
+        "document_name": "Nom du document",
+        "file_size": "Taille du fichier",
+        "created_by_full_name": "Créé par"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Afficher par ordre croissant",
+          "desc": "Afficher par ordre décroissant"
+        },
+        "document_name": {
+          "asc": "Afficher de A à Z",
+          "desc": "Afficher de Z à A"
+        },
+        "updated_at": {
+          "asc": "Afficher les plus anciens en premier",
+          "desc": "Afficher les plus récents en premier"
+        },
+        "file_size": {
+          "asc": "Afficher les plus petits en premier",
+          "desc": "Afficher les plus grands en premier"
+        },
+        "created_by_full_name": {
+          "asc": "Afficher de A à Z",
+          "desc": "Afficher de Z à A"
+        }
+      }
+    },
+    "selector": {
+      "title": "Sélectionner des documents",
+      "reflectionLabel": "Sélecteur de documents",
+      "searchPlaceholder": "Rechercher des documents...",
+      "foldersLabel": "Dossiers",
+      "folderHint": "dans le dossier \"{{folder}}\"",
+      "saving": "Enregistrement...",
+      "selectDocument": "Sélectionner un document",
+      "associateSelected": "Associer la sélection",
+      "errors": {
+        "configuration": "Erreur de configuration : informations d'entité manquantes",
+        "invalidData": "Données de document invalides reçues",
+        "load": "Impossible de charger les documents",
+        "save": "Impossible d'enregistrer la sélection de documents"
+      },
+      "configErrorTitle": "Erreur de configuration",
+      "configErrorMessage": "La configuration requise est manquante. Veuillez contacter le support."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Téléversement de documents",
+      "dragDrop": "Glissez-déposez vos fichiers ici ou",
+      "browse": "Parcourir les fichiers",
+      "uploading": "Téléversement...",
+      "uploadingProgress": "Téléversement de {{current}} sur {{total}}",
+      "pending": "En attente",
+      "error": "Impossible de téléverser le document",
+      "fileError": "Impossible de téléverser le fichier"
+    },
+    "folders": {
+      "root": "Racine",
+      "loadFailed": "Impossible de charger l'arborescence des dossiers",
+      "deleteConfirm": "Voulez-vous vraiment supprimer le dossier \"{{name}}\" ? Cela ne fonctionnera que si le dossier est vide.",
+      "deleteSuccess": "Le dossier \"{{name}}\" a été supprimé avec succès",
+      "deleteFailed": "Impossible de supprimer le dossier",
+      "deleteAction": "Supprimer le dossier",
+      "loading": "Chargement des dossiers...",
+      "title": "Dossiers",
+      "collapse": "Replier les dossiers",
+      "allDocuments": "Tous les documents"
+    },
+    "folderManager": {
+      "title": "Créer un nouveau dossier",
+      "nameLabel": "Nom du dossier",
+      "namePlaceholder": "Saisissez le nom du dossier",
+      "willCreateIn": "Sera créé dans : {{folder}}"
+    }
   },
   "fields": {
     "notes": "Notes"

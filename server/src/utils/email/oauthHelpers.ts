@@ -16,12 +16,13 @@ export interface OAuthState {
 
 /**
  * Generate OAuth authorization URL for Microsoft
+ * Using read-only scope: Mail.Read for email access
  */
 export function generateMicrosoftAuthUrl(
   clientId: string,
   redirectUri: string,
   state: OAuthState,
-  scopes: string[] = ['https://graph.microsoft.com/.default', 'offline_access'],
+  scopes: string[] = ['https://graph.microsoft.com/Mail.Read', 'offline_access'],
   tenantAuthority: string = 'common'
 ): string {
   const baseUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
@@ -41,6 +42,7 @@ export function generateMicrosoftAuthUrl(
 
 /**
  * Generate OAuth authorization URL for Google
+ * Using read-only scopes: gmail.readonly for email access
  */
 export function generateGoogleAuthUrl(
   clientId: string,
@@ -48,8 +50,6 @@ export function generateGoogleAuthUrl(
   state: OAuthState,
   scopes: string[] = [
     'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/gmail.modify',
-    'https://www.googleapis.com/auth/gmail.labels',
     'https://www.googleapis.com/auth/pubsub'
   ]
 ): string {

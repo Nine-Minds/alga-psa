@@ -79,13 +79,25 @@ export const EntityAvatar: React.FC<EntityAvatarProps> = ({
 
   // Enhanced image loading state management
   const [imageStatus, setImageStatus] = React.useState<ImageLoadingStatus>(imageUrl ? 'loading' : 'idle');
-  const [imgKey, setImgKey] = React.useState(Date.now());
-  
+  const imgRef = React.useRef<HTMLImageElement>(null);
+
+  // Check if image is already cached on mount
+  React.useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalHeight !== 0) {
+      // Image is already loaded from cache
+      setImageStatus('loaded');
+    }
+  }, []);
+
   // Reset state when imageUrl changes
   React.useEffect(() => {
     if (imageUrl) {
-      setImageStatus('loading');
-      setImgKey(Date.now());
+      // Check if the new image is already cached
+      if (imgRef.current?.complete && imgRef.current.naturalHeight !== 0) {
+        setImageStatus('loaded');
+      } else {
+        setImageStatus('loading');
+      }
     } else {
       setImageStatus('idle');
     }
@@ -94,8 +106,10 @@ export const EntityAvatar: React.FC<EntityAvatarProps> = ({
   const handleImgError = () => {
     setImageStatus('error');
   };
-  
-  const handleImgLoad = () => {
+
+  const handleImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    // Check if image was loaded from cache (already complete)
+    // If so, we can skip the loading state to prevent flicker
     setImageStatus('loaded');
   };
 
@@ -143,7 +157,7 @@ export const EntityAvatar: React.FC<EntityAvatarProps> = ({
           
           {/* Actual image with transition */}
           <img
-            key={imgKey}
+            ref={imgRef}
             src={imageUrl}
             alt={altText || `${entityName || 'Entity'} image`}
             className={cn(
