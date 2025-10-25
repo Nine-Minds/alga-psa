@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
@@ -23,6 +23,7 @@ import {
   getContractSummary,
   getContractAssignments,
   updateContract,
+  deleteContract,
   IContractSummary
 } from 'server/src/lib/actions/contractActions';
 import { updateClientContract } from 'server/src/lib/actions/client-actions/clientContractActions';
@@ -75,6 +76,7 @@ const ContractDetail: React.FC = () => {
   // Confirmation dialog state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Edit tab state
@@ -83,6 +85,7 @@ const ContractDetail: React.FC = () => {
   const [editStatus, setEditStatus] = useState<string>('draft');
   const [editBillingFrequency, setEditBillingFrequency] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
@@ -209,6 +212,22 @@ const ContractDetail: React.FC = () => {
       setError('Failed to load contract');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteContract = async () => {
+    if (!contractId) return;
+    setIsDeleting(true);
+    try {
+      await deleteContract(contractId);
+      setShowDeleteConfirm(false);
+      router.push('/msp/billing?tab=contracts');
+      router.refresh();
+    } catch (err) {
+      console.error('Error deleting contract:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete contract');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1228,6 +1247,14 @@ const ContractDetail: React.FC = () => {
                     <FileText className="mr-2 h-4 w-4" />
                     View Invoices
                   </Button>
+                  <Button
+                    id="delete-contract-btn"
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Contract
+                  </Button>
                 </CardContent>
               </Card>
 
@@ -1315,6 +1342,17 @@ const ContractDetail: React.FC = () => {
         message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
         confirmLabel="Leave Page"
         cancelLabel="Stay on Page"
+      />
+
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteContract}
+        title="Delete Contract"
+        message="Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data."
+        confirmLabel={isDeleting ? 'Deleting…' : 'Delete Contract'}
+        cancelLabel="Cancel"
+        isConfirming={isDeleting}
       />
     </div>
   );
