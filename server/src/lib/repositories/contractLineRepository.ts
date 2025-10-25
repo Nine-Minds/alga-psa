@@ -110,9 +110,6 @@ export async function fetchDetailedContractLines(
   }
 
   const rows = await knex('contract_lines as cl')
-    .leftJoin('contract_line_template_terms as terms', function joinContractTerms() {
-      this.on('terms.contract_line_id', '=', 'cl.contract_line_id').andOn('terms.tenant', '=', 'cl.tenant');
-    })
     .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
     .select([
       'cl.tenant',
@@ -125,7 +122,6 @@ export async function fetchDetailedContractLines(
       'cl.contract_line_name',
       'cl.contract_line_type',
       'cl.billing_frequency',
-      'terms.billing_timing as terms_billing_timing',
     ])
     .orderBy('cl.display_order', 'asc');
 
