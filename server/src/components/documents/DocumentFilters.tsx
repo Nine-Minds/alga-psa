@@ -220,6 +220,7 @@ export default function DocumentFilters({
         <div className="pt-4 space-y-2">
           {showAllDocumentsButton && onShowAllDocuments && (
             <Button
+              id="show-all-documents-button"
               onClick={onShowAllDocuments}
               variant="default"
               className="w-full"
@@ -228,6 +229,7 @@ export default function DocumentFilters({
             </Button>
           )}
           <Button
+            id="clear-filters-button"
             onClick={onClearFilters}
             variant="outline"
             className="w-full"
