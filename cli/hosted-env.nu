@@ -222,7 +222,7 @@ def update-hosted-env-canary-route [
         return
     }
 
-    let base_fullname = (trim-dns-name $"($release)-sebastian")
+    let base_fullname = (trim-dns-name $release)
     let service_name = (trim-dns-name $"($base_fullname)-code-server")
     let destination_host = $"($service_name).($namespace).svc.cluster.local"
     let desired_port = 3000
@@ -385,15 +385,84 @@ def update-hosted-env-canary-route [
     }
 
     let temp_vs_path = $"($repo_dir)/.tmp-alga-psa-vs-sebastian.yaml"
-    ($updated_vs | to yaml) | save --force --raw $temp_vs_path
-    let apply_res = (kubectl apply -f $temp_vs_path | complete)
-    if $apply_res.exit_code == 0 {
-        print $"($env.ALGA_COLOR_GREEN)Updated x-canary route '($trimmed_canary)' → ($destination_host):($desired_port).($env.ALGA_COLOR_RESET)"
+    let vs_metadata = ($updated_vs.metadata? | default {})
+    let vs_name = ($vs_metadata | get name? | default "")
+    let vs_namespace = ($vs_metadata | get namespace? | default "")
+    let metadata_without_version = if (($vs_metadata | columns | default []) | any {|c| $c == "resourceVersion"}) {
+        $vs_metadata | reject resourceVersion
     } else {
-        print $"($env.ALGA_COLOR_YELLOW)kubectl apply for VirtualService failed: ($apply_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
-        if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
-        return
+        $vs_metadata
     }
+    let base_doc = (
+        $updated_vs
+        | default {}
+        | upsert metadata $metadata_without_version
+    )
+
+    let max_apply_attempts = 3
+    mut attempt = 0
+    mut applied = false
+    mut last_error = ""
+    while (not $applied) and ($attempt < $max_apply_attempts) {
+        if ($vs_name | str length) == 0 {
+            if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+            error make {
+                msg: $"($env.ALGA_COLOR_RED)VirtualService metadata missing name; cannot apply update.($env.ALGA_COLOR_RESET)"
+            }
+        }
+
+        let ns = if ($vs_namespace | str length) > 0 { $vs_namespace } else { "msp" }
+        let rv_res = (kubectl get virtualservice $vs_name -n $ns -o jsonpath='{.metadata.resourceVersion}' | complete)
+        if $rv_res.exit_code != 0 {
+            if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+            error make {
+                msg: $"($env.ALGA_COLOR_RED)Unable to fetch current resourceVersion for VirtualService ($vs_name): ($rv_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+            }
+        }
+
+        let server_rv = ($rv_res.stdout | str trim)
+        if ($server_rv | str length) == 0 {
+            if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+            error make {
+                msg: $"($env.ALGA_COLOR_RED)Received empty resourceVersion for VirtualService ($vs_name); aborting update.($env.ALGA_COLOR_RESET)"
+            }
+        }
+
+        let doc_to_apply = (
+            $base_doc
+            | upsert metadata (
+                ($base_doc.metadata? | default {}) | upsert resourceVersion $server_rv
+            )
+        )
+
+        ($doc_to_apply | to yaml) | save --force --raw $temp_vs_path
+        let apply_res = (kubectl apply -f $temp_vs_path | complete)
+        if $apply_res.exit_code == 0 {
+            print $"($env.ALGA_COLOR_GREEN)Updated x-canary route '($trimmed_canary)' → ($destination_host):($desired_port).($env.ALGA_COLOR_RESET)"
+            $applied = true
+        } else {
+            let err_detail = ($apply_res.stderr | str trim)
+            if ($err_detail | str contains "the object has been modified") or ($err_detail | str contains "conflict") {
+                $attempt = $attempt + 1
+                $last_error = $err_detail
+                sleep 500ms
+                continue
+            } else {
+                if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+                error make {
+                    msg: $"($env.ALGA_COLOR_RED)Failed to apply VirtualService update: ($err_detail)($env.ALGA_COLOR_RESET)"
+                }
+            }
+        }
+    }
+
+    if not $applied {
+        if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+        error make {
+            msg: $"($env.ALGA_COLOR_RED)Failed to apply VirtualService update after retries: ($last_error)($env.ALGA_COLOR_RESET)"
+        }
+    }
+
     if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
 
     let status_res = (do { cd $repo_dir; git status --porcelain | complete })
@@ -894,7 +963,11 @@ export def hosted-env-connect [
     print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
 
     # Wait for user to stop
-    input "Press Enter to stop port forwarding..."
+    try {
+        input "Press Enter to stop port forwarding..."
+    } catch {
+        print $"($env.ALGA_COLOR_YELLOW)Non-interactive session detected; stopping port forwarding immediately.($env.ALGA_COLOR_RESET)"
+    }
 
     # Kill all kubectl port-forward processes for this env
     bash -c $"pkill -f 'kubectl port-forward.*pod/($pod_name)'" | complete | ignore
