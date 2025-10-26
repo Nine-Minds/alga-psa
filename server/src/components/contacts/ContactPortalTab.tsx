@@ -481,7 +481,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       
                       {currentUserPermissions.canInvite && (
                         <div className="flex items-center gap-2">
-                          {(invitation.status === 'pending' || invitation.status === 'expired' || invitation.status === 'revoked') && (
+                          {(invitation.status === 'pending' || invitation.status === 'expired' || invitation.status === 'revoked' || invitation.status === 'used') && (
                             <Button
                               id={`resend-invitation-${invitation.invitation_id}`}
                               variant="outline"
