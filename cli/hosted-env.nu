@@ -330,18 +330,22 @@ def update-hosted-env-canary-route [
                 }
 
                 let raw_metadata = ($doc_mut.metadata? | default {})
-                let cleaned_metadata_core = (
-                    $raw_metadata
-                    | reject resourceVersion uid generation managedFields creationTimestamp
-                )
                 let cleaned_annotations = (
                     ($raw_metadata.annotations? | default {})
                     | reject "kubectl.kubernetes.io/last-applied-configuration"
                 )
-                let final_metadata = (
-                    $cleaned_metadata_core
-                    | upsert annotations $cleaned_annotations
+                let base_metadata = (
+                    ["name", "namespace", "labels"]
+                    | reduce -f {} { |key, acc|
+                        let maybe_value = (try { $raw_metadata | get $key } catch { null })
+                        if $maybe_value == null {
+                            $acc
+                        } else {
+                            $acc | upsert $key $maybe_value
+                        }
+                    }
                 )
+                let final_metadata = ($base_metadata | upsert annotations $cleaned_annotations)
 
                 $doc_mut = (
                     $doc_mut
