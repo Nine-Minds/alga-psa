@@ -1,0 +1,118 @@
+{
+  "name": "server",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "server/src",
+  "projectType": "application",
+  "targets": {
+    "dev": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "dev"
+      }
+    },
+    "dev:express": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "dev:express"
+      }
+    },
+    "dev:turbo": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "dev:turbo"
+      }
+    },
+    "build": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build"
+      },
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/.next", "{projectRoot}/build"],
+      "cache": true
+    },
+    "build:turbo": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build:turbo"
+      },
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/.next", "{projectRoot}/build"],
+      "cache": true
+    },
+    "build:enterprise": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build:enterprise"
+      },
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/.next", "{projectRoot}/build"],
+      "cache": true
+    },
+    "build:enterprise:turbo": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build:enterprise:turbo"
+      },
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/.next", "{projectRoot}/build"],
+      "cache": true
+    },
+    "start": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "start"
+      }
+    },
+    "start:next": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "start:next"
+      }
+    },
+    "start:express": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "start:express"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "lint"
+      },
+      "cache": true
+    },
+    "test": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test"
+      },
+      "cache": true
+    },
+    "test:watch": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:watch"
+      }
+    },
+    "test:unit": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:unit"
+      },
+      "cache": true
+    },
+    "test:integration": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:integration"
+      },
+      "cache": true
+    },
+    "test:e2e": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:e2e"
+      },
+      "cache": true
+    }
+  },
+  "tags": ["scope:server", "type:application"]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "workflow-worker",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "services/workflow-worker/src",
+  "projectType": "application",
+  "targets": {
+    "dev": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "dev"
+      }
+    },
+    "build": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build"
+      },
+      "outputs": ["{projectRoot}/dist"],
+      "cache": true
+    },
+    "start": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "start"
+      }
+    },
+    "test": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test"
+      },
+      "cache": true
+    },
+    "test:watch": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:watch"
+      }
+    }
+  },
+  "tags": ["scope:workflow-worker", "type:application", "type:service"]
+}

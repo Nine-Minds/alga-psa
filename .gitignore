@@ -154,3 +154,8 @@ server/coverage
 coverage-nyc/
 server/coverage
 packages/product-extension-storage-api/coverage
+
+# Nx cache and temporary files
+.nx/
+graph.html
+static/

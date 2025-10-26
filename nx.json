@@ -1,0 +1,36 @@
+{
+  "extends": "nx/presets/npm.json",
+  "plugins": [],
+  "defaultProject": "server",
+  "workspaceLayout": {
+    "appsDir": "",
+    "libsDir": ""
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.test.ts"
+    ]
+  },
+  "targetDefaults": {
+    "build": {
+      "cache": true,
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/.next", "{projectRoot}/build"]
+    },
+    "test": {
+      "cache": true,
+      "inputs": ["default", "^production"]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": ["default"]
+    },
+    "dev": {
+      "cache": false
+    }
+  },
+  "outputHashingStrategy": "content"
+}

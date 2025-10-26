@@ -1,0 +1,71 @@
+{
+  "name": "sebastian-ee",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "ee/server/src",
+  "projectType": "application",
+  "targets": {
+    "dev": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "dev"
+      }
+    },
+    "build": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build"
+      },
+      "outputs": ["{projectRoot}/.next", "{projectRoot}/dist", "{projectRoot}/build"],
+      "cache": true
+    },
+    "start": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "start"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "lint"
+      },
+      "cache": true
+    },
+    "test": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test"
+      },
+      "cache": true
+    },
+    "test:unit": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:unit"
+      },
+      "cache": true
+    },
+    "test:integration": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:integration"
+      },
+      "cache": true
+    },
+    "test:e2e": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:e2e"
+      },
+      "cache": true
+    },
+    "test:all": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test:all"
+      },
+      "cache": true
+    }
+  },
+  "tags": ["scope:ee-server", "type:application"]
+}
