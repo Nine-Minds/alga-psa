@@ -276,18 +276,21 @@ def update-hosted-env-canary-route [
                         $match_list | any {|m|
                             let headers_rec = ($m.headers? | default {})
                             let header_value = if (($headers_rec | describe) | str contains "record<") {
-                                let lower = ($headers_rec | get "x-canary"? )
+                                let lower = ($headers_rec | get "x-canary"?)
                                 if $lower == null { $headers_rec | get "X-Canary"? } else { $lower }
                             } else { null }
                             if $header_value == null {
                                 false
                             } else {
                                 let header_desc = ($header_value | describe)
-                                if ($header_desc | str contains "record<") {
-                                    (($header_value.exact? | default "") | str trim) == $trimmed_canary
-                                } else {
-                                    ($header_value | str trim) == $trimmed_canary
-                                }
+                let header_text = if ($header_desc | str contains "record<") {
+                    ($header_value.exact? | default "") | str trim
+                } else if ($header_desc | str starts-with "list<") {
+                    ($header_value | get 0? | default "") | str trim
+                } else {
+                    ($header_value | into string | default "") | str trim
+                }
+                $header_text == $trimmed_canary
                             }
                         }
                     }
