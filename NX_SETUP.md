@@ -58,7 +58,7 @@ npm run nx:graph             # Show project dependency graph
 
 ## Installation & Setup
 
-Nx has been installed and configured for this monorepo. Due to npm workspaces not properly hoisting root-level dev dependencies, we use a global Nx installation with a symbolic link workaround:
+Nx has been installed and configured for this monorepo. Due to npm workspaces not properly hoisting root-level dev dependencies, we use a global Nx installation with symbolic links:
 
 ### Prerequisites
 Nx is installed globally. If you need to reinstall it:
@@ -66,15 +66,35 @@ Nx is installed globally. If you need to reinstall it:
 npm install -g nx@latest
 ```
 
-### Symlink Setup
-A symbolic link has been created from the project's node_modules to the global Nx installation:
+### Symlink Setup (Already Configured)
+Two symbolic links have been created:
+
+1. **Module symlink** - Links the global Nx package to project node_modules:
 ```bash
-ln -sf $(npm list -g nx --depth=0 | head -1 | sed 's/.* //') /home/coder/alga-psa/node_modules/nx
+ln -sf /home/coder/.nvm/versions/node/v25.0.0/lib/node_modules/nx \
+       /home/coder/alga-psa/node_modules/nx
 ```
 
-If the symlink doesn't exist, you can recreate it with the command above or use:
+2. **Binary symlink** - Links the Nx CLI binary for npm scripts:
 ```bash
-npm run nx -- list  # Uses the npm script which calls the global nx
+ln -sf /home/coder/.nvm/versions/node/v25.0.0/lib/node_modules/nx/bin/nx.js \
+       /home/coder/alga-psa/node_modules/.bin/nx
+```
+
+### If Symlinks Break
+If you encounter "nx: not found" errors after pulling changes or resetting:
+```bash
+# Recreate the symlinks with your current Node version
+NODE_VERSION=$(node --version | sed 's/v//')
+NVM_PATH="$HOME/.nvm/versions/node/v$NODE_VERSION"
+
+ln -sf "$NVM_PATH/lib/node_modules/nx" node_modules/nx
+ln -sf "$NVM_PATH/lib/node_modules/nx/bin/nx.js" node_modules/.bin/nx
+```
+
+Or simply run:
+```bash
+npm install -g nx@latest  # Ensure global Nx is installed
 ```
 
 ## Testing the Setup
