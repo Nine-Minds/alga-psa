@@ -329,9 +329,27 @@ def update-hosted-env-canary-route [
                     ($http_routes | update $target_route_idx $desired_route)
                 }
 
-                $doc_mut = ($doc_mut | upsert spec (
-                    ($doc_mut.spec? | default {}) | upsert http $http_updated
-                ))
+                let raw_metadata = ($doc_mut.metadata? | default {})
+                let cleaned_metadata_core = (
+                    $raw_metadata
+                    | reject resourceVersion uid generation managedFields creationTimestamp
+                )
+                let cleaned_annotations = (
+                    ($raw_metadata.annotations? | default {})
+                    | reject "kubectl.kubernetes.io/last-applied-configuration"
+                )
+                let final_metadata = (
+                    $cleaned_metadata_core
+                    | upsert annotations $cleaned_annotations
+                )
+
+                $doc_mut = (
+                    $doc_mut
+                    | upsert metadata $final_metadata
+                    | upsert spec (
+                        ($doc_mut.spec? | default {}) | upsert http $http_updated
+                    )
+                )
                 $updated_vs = $doc_mut
                 $changed = true
             }
