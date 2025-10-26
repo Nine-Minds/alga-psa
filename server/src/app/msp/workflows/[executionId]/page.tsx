@@ -1,13 +1,13 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { getWorkflowExecutionDetails } from 'server/src/lib/actions/workflow-actions';
-import ClientWorkflowVisualization from 'server/src/components/workflows/ClientWorkflowVisualization';
+import ClientWorkflowVisualization from '@product/workflows/workflows/ClientWorkflowVisualization';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import Link from 'next/link';
-import WorkflowEventTimeline from 'server/src/components/workflows/WorkflowEventTimeline';
-import WorkflowActionsList from 'server/src/components/workflows/WorkflowActionsList';
-import WorkflowControls from 'server/src/components/workflows/WorkflowControls';
+import WorkflowEventTimeline from '@product/workflows/workflows/WorkflowEventTimeline';
+import WorkflowActionsList from '@product/workflows/workflows/WorkflowActionsList';
+import WorkflowControls from '@product/workflows/workflows/WorkflowControls';
 
 export const dynamic = 'force-dynamic';
 

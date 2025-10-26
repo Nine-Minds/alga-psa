@@ -19,7 +19,7 @@ import { getTimeEntryById, saveTimeEntry } from "server/src/lib/actions/timeEntr
 import TicketDetails from "server/src/components/tickets/ticket/TicketDetails";
 import TaskEdit from "server/src/components/projects/TaskEdit";
 import EntryPopup from "server/src/components/schedule/EntryPopup";
-import { TaskForm } from "server/src/components/workflow/TaskForm";
+import { TaskForm } from "@product/workflows/workflow/TaskForm";
 import TimeEntryDialog from "server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog";
 import { toast } from 'react-hot-toast';
 import { formatISO } from 'date-fns';

@@ -1,10 +1,10 @@
 import { getQueueMetricsAction, getJobDetailsWithHistory } from 'server/src/lib/actions/job-actions';
 import { getWorkflowMetricsAction, getWorkflowExecutionsWithDetails } from 'server/src/lib/actions/workflow-actions';
-import WorkflowRegistryViewer from 'server/src/components/workflows/WorkflowRegistryViewer';
+import WorkflowRegistryViewer from '@product/workflows/workflows/WorkflowRegistryViewer';
 import JobMetricsDisplay from 'server/src/components/jobs/JobMetricsDisplay';
 import JobHistoryTable from 'server/src/components/jobs/JobHistoryTable';
-import WorkflowMetricsDisplay from 'server/src/components/workflows/WorkflowMetricsDisplay';
-import WorkflowExecutionsTable from 'server/src/components/workflows/WorkflowExecutionsTable';
+import WorkflowMetricsDisplay from '@product/workflows/workflows/WorkflowMetricsDisplay';
+import WorkflowExecutionsTable from '@product/workflows/workflows/WorkflowExecutionsTable';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import SystemMonitoringWrapper from 'server/src/components/system-monitoring/SystemMonitoringWrapper';
 

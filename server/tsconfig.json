@@ -86,8 +86,20 @@
       "@product/chat/entry": [
         "src/services/chatStreamService"
       ],
+      "@server": [
+        "src"
+      ],
+      "@server/*": [
+        "src/*"
+      ],
+      "@product/workflows": [
+        "../packages/product-workflows/src/index.ts"
+      ],
+      "@product/workflows/*": [
+        "../packages/product-workflows/src/*"
+      ],
       "@product/workflows/entry": [
-        "src/empty/components/flow/DnDFlow"
+        "../packages/product-workflows/oss/entry"
       ],
       "@product/extensions/entry": [
         "../packages/product-extensions/oss/entry"

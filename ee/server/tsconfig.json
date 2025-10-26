@@ -72,7 +72,11 @@
         "server/src/pages/*"
       ],
       "@product/chat/entry": ["server/src/services/chatStreamService"],
-      "@product/workflows/entry": ["server/src/empty/components/flow/DnDFlow"],
+      "@server": ["server/src"],
+      "@server/*": ["server/src/*"],
+      "@product/workflows": ["packages/product-workflows/src/index.ts"],
+      "@product/workflows/*": ["packages/product-workflows/src/*"],
+      "@product/workflows/entry": ["packages/product-workflows/ee/entry"],
       "@product/extensions/entry": ["packages/product-extensions/oss/entry"],
       "@product/extensions/*": ["packages/product-extensions/*"],
       "@product/settings-extensions/entry": ["packages/product-settings-extensions/oss/entry"],

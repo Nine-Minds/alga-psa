@@ -148,6 +148,7 @@ const nextConfig = {
       '@emoji-mart/data/sets/15/native.json': path.join(__dirname, '../node_modules/@emoji-mart/data/sets/15/native.json'),
       // Base app alias
       '@': './src',
+      '@server': './src',
       '@ee': isEE ? '../ee/server/src' : './src/empty',
       '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
       'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
@@ -191,6 +192,7 @@ const nextConfig = {
       '@product/workflows/entry': isEE
         ? '@product/workflows/ee/entry'
         : '@product/workflows/oss/entry',
+      '@product/workflows': '../packages/product-workflows/src',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -232,6 +234,7 @@ const nextConfig = {
     '@product/email-providers',
     '@product/client-portal-domain',
     '@product/billing',
+    '@product/workflows',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
@@ -279,6 +282,7 @@ const nextConfig = {
       alias: {
         ...config.resolve.alias,
         '@': path.join(__dirname, 'src'),
+        '@server': path.join(__dirname, 'src'),
         '@ee': isEE
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
@@ -310,9 +314,10 @@ const nextConfig = {
         '@product/client-portal-domain/entry': isEE
           ? path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
+        '@product/workflows': path.join(__dirname, '../packages/product-workflows/src'),
         '@product/workflows/entry': isEE
           ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
-          : path.join(__dirname, 'src/components/flow/DnDFlow.tsx'),
+          : path.join(__dirname, '../packages/product-workflows/oss/entry.ts'),
         '@product/billing/entry': isEE
           ? path.join(__dirname, '../packages/product-billing/ee/entry.ts')
           : path.join(__dirname, '../packages/product-billing/oss/entry.ts'),

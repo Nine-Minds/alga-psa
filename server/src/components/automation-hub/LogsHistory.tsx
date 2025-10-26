@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { Card } from 'server/src/components/ui/Card';
 import { History } from 'lucide-react';
-import LogsHistoryWorkflowTable from 'server/src/components/workflows/logs-history/LogsHistoryWorkflowTable';
-import { WorkflowExecutionDetails } from 'server/src/components/workflows/logs-history/WorkflowExecutionDetails';
+import LogsHistoryWorkflowTable from '@product/workflows/workflows/logs-history/LogsHistoryWorkflowTable';
+import { WorkflowExecutionDetails } from '@product/workflows/workflows/logs-history/WorkflowExecutionDetails';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function LogsHistory() {

@@ -4,7 +4,12 @@
   "type": "module",
   "exports": {
     "./ee/entry": "./ee/entry.ts",
-    "./oss/entry": "./oss/entry.ts"
+    "./oss/entry": "./oss/entry.ts",
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {},
   "devDependencies": {}

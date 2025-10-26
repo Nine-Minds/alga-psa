@@ -27,9 +27,9 @@ import {
   WorkflowDataWithSystemFlag // Import the type
 } from 'server/src/lib/actions/workflow-editor-actions';
 import { toast } from 'react-hot-toast';
-import WorkflowEditorComponent from 'server/src/components/workflow-editor/WorkflowEditorComponent';
-import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
-import WorkflowVersionsDialog from 'server/src/components/workflow-editor/WorkflowVersionsDialog';
+import WorkflowEditorComponent from '@product/workflows/workflow-editor/WorkflowEditorComponent';
+import TestWorkflowModal from '@product/workflows/workflow-editor/TestWorkflowModal';
+import WorkflowVersionsDialog from '@product/workflows/workflow-editor/WorkflowVersionsDialog';
 
 
 // Type for workflow data with events
