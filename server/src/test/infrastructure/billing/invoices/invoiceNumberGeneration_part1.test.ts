@@ -272,7 +272,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      billingTiming: 'advance'
     });
 
     // Restore original clientId
@@ -384,7 +385,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         planName: 'Basic Plan',
         billingFrequency: 'monthly',
         baseRateCents: 10000,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Restore original clientId
@@ -468,7 +470,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      billingTiming: 'advance'
     });
 
     // Generate invoices and verify they increment correctly from initial value

@@ -211,7 +211,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         baseRateCents: 25000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Add second service to the plan
@@ -261,7 +262,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         baseRateCents: 50000,
         detailBaseRateCents: 50000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create billing cycle

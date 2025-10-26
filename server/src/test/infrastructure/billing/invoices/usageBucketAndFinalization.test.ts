@@ -325,7 +325,8 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         baseRateCents: 0,
         detailBaseRateCents: 0,
         billingFrequency: 'monthly',
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       await createBucketOverlayForPlan(context, contractLineId, {
@@ -405,7 +406,8 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         baseRateCents: 20000,
         detailBaseRateCents: 20000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create billing cycle

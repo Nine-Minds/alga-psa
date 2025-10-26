@@ -271,6 +271,7 @@ interface CreateFixedPlanOptions {
   quantity?: number;
   startDate?: string;
   endDate?: string | null;
+  billingTiming?: 'arrears' | 'advance';
   enableProration?: boolean;
   billingCycleAlignment?: 'start' | 'end' | 'prorated';
   clientId?: string;
@@ -344,9 +345,7 @@ async function ensureServiceType(
     [tenantColumn]: context.tenantId
   };
 
-  if (columns.order_number) {
-    typeData.order_number = 1;
-  }
+  // Leave order_number null to avoid collisions with unique constraints in legacy schemas.
 
   await context.db('service_types').insert(typeData);
   if (process.env.DEBUG_SERVICE_TYPES === 'true' && debugFlags.createServiceLogCount < 5) {
@@ -491,6 +490,7 @@ export async function createFixedPlanAssignment(
   const planName = options.planName ?? 'Test Plan';
   const billingFrequency = options.billingFrequency ?? 'monthly';
   const targetClientId = options.clientId ?? context.clientId;
+  const billingTiming: 'arrears' | 'advance' = options.billingTiming ?? 'arrears';
 
   // Primary contract line tables
   await context.db('contract_lines')
@@ -500,28 +500,21 @@ export async function createFixedPlanAssignment(
       contract_line_name: planName,
       billing_frequency: billingFrequency,
       is_custom: false,
-      contract_line_type: 'Fixed'
+      contract_line_type: 'Fixed',
+      custom_rate: baseRateDollars,
+      enable_proration: enableProration,
+      billing_cycle_alignment: billingCycleAlignment,
+      billing_timing: billingTiming
     })
     .onConflict(['tenant', 'contract_line_id'])
     .merge({
       contract_line_name: planName,
       billing_frequency: billingFrequency,
-      contract_line_type: 'Fixed'
-    });
-
-  await context.db('contract_line_fixed_config')
-    .insert({
-      contract_line_id: contractLineId,
-      tenant: context.tenantId,
-      base_rate: baseRateDollars,
+      contract_line_type: 'Fixed',
+      custom_rate: baseRateDollars,
       enable_proration: enableProration,
-      billing_cycle_alignment: billingCycleAlignment
-    })
-    .onConflict(['tenant', 'contract_line_id'])
-    .merge({
-      base_rate: baseRateDollars,
-      enable_proration: enableProration,
-      billing_cycle_alignment: billingCycleAlignment
+      billing_cycle_alignment: billingCycleAlignment,
+      billing_timing: billingTiming
     });
 
   await context.db('contract_line_service_configuration')
@@ -942,6 +935,7 @@ export async function addServiceToFixedPlan(
 let planBucketConfigColumnsCache: Record<string, unknown> | null | undefined;
 let contractLineBucketConfigColumnsCache: Record<string, unknown> | null | undefined;
 let bucketUsageColumnsCache: Record<string, unknown> | null | undefined;
+let clientContractBucketConfigColumnsCache: Record<string, unknown> | null | undefined;
 
 async function ensurePlanBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
   if (planBucketConfigColumnsCache === undefined) {
@@ -983,6 +977,18 @@ async function ensureBucketUsageColumns(context: TestContext): Promise<Record<st
   }
 
   return bucketUsageColumnsCache ?? null;
+}
+
+async function ensureClientContractBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+  if (clientContractBucketConfigColumnsCache === undefined) {
+    try {
+      clientContractBucketConfigColumnsCache = await context.db('client_contract_service_bucket_config').columnInfo();
+    } catch (error) {
+      clientContractBucketConfigColumnsCache = null;
+    }
+  }
+
+  return clientContractBucketConfigColumnsCache ?? null;
 }
 
 export async function createBucketOverlayForPlan(
@@ -1230,6 +1236,93 @@ export async function createBucketOverlayForPlan(
             .onConflict(['tenant', 'config_id'])
             .merge(planBucketUpdate);
         }
+      }
+    }
+  }
+
+  const clientServices = await context.db('client_contract_services as ccs')
+    .join('client_contract_lines as ccl', function () {
+      this.on('ccs.client_contract_line_id', '=', 'ccl.client_contract_line_id')
+        .andOn('ccs.tenant', '=', 'ccl.tenant');
+    })
+    .where({
+      'ccl.contract_line_id': planId,
+      'ccs.service_id': serviceId,
+      'ccs.tenant': context.tenantId
+    })
+    .select('ccs.client_contract_service_id');
+
+  if (clientServices.length > 0) {
+    const clientBucketColumns = await ensureClientContractBucketConfigColumns(context);
+    const now = context.db.fn.now();
+
+    for (const clientService of clientServices) {
+      const existingClientBucketConfig = await context.db('client_contract_service_configuration')
+        .where({
+          tenant: context.tenantId,
+          client_contract_service_id: clientService.client_contract_service_id,
+          configuration_type: 'Bucket'
+        })
+        .first<{ config_id: string }>('config_id');
+
+      const clientConfigId = existingClientBucketConfig?.config_id ?? uuidv4();
+
+      if (existingClientBucketConfig) {
+        await context.db('client_contract_service_configuration')
+          .where({
+            tenant: context.tenantId,
+            config_id: clientConfigId
+          })
+          .update({
+            configuration_type: 'Bucket',
+            custom_rate: null,
+            quantity: null,
+            updated_at: now
+          });
+      } else {
+        await context.db('client_contract_service_configuration').insert({
+          tenant: context.tenantId,
+          config_id: clientConfigId,
+          client_contract_service_id: clientService.client_contract_service_id,
+          configuration_type: 'Bucket',
+          custom_rate: null,
+          quantity: null,
+          created_at: now,
+          updated_at: now
+        });
+      }
+
+      if (clientBucketColumns) {
+        const clientBucketData: Record<string, unknown> = {
+          tenant: context.tenantId,
+          config_id: clientConfigId,
+          billing_period: billingPeriod,
+          overage_rate: overageRateCents,
+          allow_rollover: allowRollover,
+          created_at: now,
+          updated_at: now
+        };
+
+        const clientBucketUpdate: Record<string, unknown> = {
+          billing_period: clientBucketData.billing_period,
+          overage_rate: clientBucketData.overage_rate,
+          allow_rollover: clientBucketData.allow_rollover,
+          updated_at: now
+        };
+
+        if (clientBucketColumns.total_minutes !== undefined) {
+          clientBucketData.total_minutes = totalMinutes;
+          clientBucketUpdate.total_minutes = totalMinutes;
+        } else if (clientBucketColumns.total_hours !== undefined) {
+          const totalHours = Math.round(totalMinutes / 60);
+          clientBucketData.total_hours = totalHours;
+          clientBucketUpdate.total_hours = totalHours;
+        }
+
+        await context.db('client_contract_service_bucket_config')
+          .insert(clientBucketData)
+          .onConflict(['tenant', 'config_id'])
+          .merge(clientBucketUpdate);
       }
     }
   }
