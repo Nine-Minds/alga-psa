@@ -182,17 +182,17 @@ def update-hosted-env-canary-route [
         return
     }
 
-    let repo_url = "https://github.com/nine-minds/nm-kube-connect"
-    let repo_dir = "/tmp/nm-kube-connect"
+    let repo_url = "https://github.com/nine-minds/nm-kube-config"
+    let repo_dir = "/tmp/nm-kube-config"
 
     mut repo_ready = false
     if ($repo_dir | path exists) {
         let git_check = (do { cd $repo_dir; git rev-parse --is-inside-work-tree | complete })
         if $git_check.exit_code != 0 {
-            print $"($env.ALGA_COLOR_YELLOW)Existing nm-kube-connect path at ($repo_dir) is not a git repository; re-cloning...($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_YELLOW)Existing nm-kube-config path at ($repo_dir) is not a git repository; re-cloning...($env.ALGA_COLOR_RESET)"
             (rm -rf $repo_dir | complete) | ignore
         } else {
-            print $"($env.ALGA_COLOR_CYAN)Updating existing nm-kube-connect checkout...($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_CYAN)Updating existing nm-kube-config checkout...($env.ALGA_COLOR_RESET)"
             let fetch_res = (do { cd $repo_dir; git fetch --prune origin | complete })
             if $fetch_res.exit_code != 0 {
                 print $"($env.ALGA_COLOR_YELLOW)git fetch failed: ($fetch_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
@@ -208,17 +208,17 @@ def update-hosted-env-canary-route [
     }
 
     if not $repo_ready {
-        print $"($env.ALGA_COLOR_CYAN)Cloning nm-kube-connect repository to ($repo_dir)...($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_CYAN)Cloning nm-kube-config repository to ($repo_dir)...($env.ALGA_COLOR_RESET)"
         let clone_res = (git clone $repo_url $repo_dir | complete)
         if $clone_res.exit_code != 0 {
-            print $"($env.ALGA_COLOR_RED)Failed to clone nm-kube-connect: ($clone_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_RED)Failed to clone nm-kube-config: ($clone_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
             return
         }
         $repo_ready = true
     }
 
     if not $repo_ready {
-        print $"($env.ALGA_COLOR_YELLOW)nm-kube-connect repository unavailable; skipping VirtualService update.($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)nm-kube-config repository unavailable; skipping VirtualService update.($env.ALGA_COLOR_RESET)"
         return
     }
 
@@ -326,7 +326,7 @@ def update-hosted-env-canary-route [
     }
 
     if not $changed {
-        print $"($env.ALGA_COLOR_YELLOW)VirtualService alga-psa-vs-sebastian not found in nm-kube-connect; skipping update.($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)VirtualService alga-psa-vs-sebastian not found in nm-kube-config; skipping update.($env.ALGA_COLOR_RESET)"
         return
     }
 
@@ -350,7 +350,7 @@ def update-hosted-env-canary-route [
 
     let status_res = (do { cd $repo_dir; git status --porcelain | complete })
     if $status_res.exit_code != 0 {
-        print $"($env.ALGA_COLOR_YELLOW)Unable to determine nm-kube-connect git status: ($status_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)Unable to determine nm-kube-config git status: ($status_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
         return
     }
     if ($status_res.stdout | str trim | is-empty) {
@@ -359,24 +359,24 @@ def update-hosted-env-canary-route [
 
     let add_res = (do { cd $repo_dir; git add $workflow_relative | complete })
     if $add_res.exit_code != 0 {
-        print $"($env.ALGA_COLOR_YELLOW)git add failed for nm-kube-connect: ($add_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)git add failed for nm-kube-config: ($add_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
         return
     }
 
     let commit_message = $"Update canary ($trimmed_canary) VirtualService target"
     let commit_res = (do { cd $repo_dir; git commit -m $commit_message | complete })
     if $commit_res.exit_code != 0 {
-        print $"($env.ALGA_COLOR_YELLOW)git commit failed for nm-kube-connect: ($commit_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)git commit failed for nm-kube-config: ($commit_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
         return
     }
 
     let push_res = (do { cd $repo_dir; git push origin HEAD | complete })
     if $push_res.exit_code != 0 {
-        print $"($env.ALGA_COLOR_YELLOW)git push failed for nm-kube-connect: ($push_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)git push failed for nm-kube-config: ($push_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
         return
     }
 
-    print $"($env.ALGA_COLOR_GREEN)Pushed VirtualService update to nm-kube-connect for canary '($trimmed_canary)'.($env.ALGA_COLOR_RESET)"
+    print $"($env.ALGA_COLOR_GREEN)Pushed VirtualService update to nm-kube-config for canary '($trimmed_canary)'.($env.ALGA_COLOR_RESET)"
 }
 
 # Show diagnostics for a Kubernetes Job: describe job, list pods, and print logs
