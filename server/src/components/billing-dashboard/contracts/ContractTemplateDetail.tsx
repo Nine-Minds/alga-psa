@@ -15,6 +15,7 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
+import { DetailedContractLine } from 'server/src/lib/repositories/contractLineRepository';
 import { IContractLineServiceBucketConfig, IContractLineServiceConfiguration, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import {
   getContractById,
@@ -334,7 +335,7 @@ const ContractTemplateDetail: React.FC = () => {
           getContractSummary(id),
           getDetailedContractLines(id),
           getContractAssignments(id),
-        ])) as [IContract | null, RawContractSummary, DetailedContractLineRow[], IContractAssignmentSummary[]];
+        ])) as [IContract | null, RawContractSummary, DetailedContractLine[], IContractAssignmentSummary[]];
 
         if (!contractData) {
           setContract(null);
@@ -1234,6 +1235,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                   </Badge>
                   {line.contract_line_type === 'Fixed' && (
                     <Button
+                      id={`edit-rate-${line.contract_line_id}`}
                       size="sm"
                       variant="outline"
                       className="text-xs"

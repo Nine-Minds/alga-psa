@@ -33,9 +33,9 @@ interface ContractLinesProps {
 }
 
 interface DetailedContractLineMapping extends IContractLineMapping {
-  contract_line_name: string;
-  billing_frequency: string;
-  contract_line_type: string;
+  contract_line_name?: string;
+  contract_line_type?: string;
+  billing_frequency?: string;
   rate?: number | null;
   billing_timing?: 'arrears' | 'advance';
 }

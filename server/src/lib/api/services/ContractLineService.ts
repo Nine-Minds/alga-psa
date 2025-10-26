@@ -1708,9 +1708,9 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     if (fixedConfig) {
       await this.createFixedPlanConfig(targetPlanId, {
-        base_rate: fixedConfig.base_rate,
-        enable_proration: fixedConfig.enable_proration,
-        billing_cycle_alignment: fixedConfig.billing_cycle_alignment
+        base_rate: fixedConfig.base_rate ?? undefined,
+        enable_proration: fixedConfig.enable_proration ?? false,
+        billing_cycle_alignment: fixedConfig.billing_cycle_alignment ?? 'start'
       }, context, trx);
     }
   }

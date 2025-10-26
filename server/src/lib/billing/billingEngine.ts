@@ -2037,9 +2037,9 @@ export class BillingEngine {
           servicePeriodStart: creditStartIso,
           servicePeriodEnd: billingPeriod.endDate,
           billingTiming: 'arrears' as const
-        };
+        } as IFixedPriceCharge;
       })
-      .filter((entry): entry is IFixedPriceCharge => Boolean(entry));
+      .filter((entry): entry is IFixedPriceCharge => entry !== null && Boolean(entry) && entry.servicePeriodStart !== undefined);
   }
 
   private calculateInclusiveDays(start: ISO8601String, end: ISO8601String): number {

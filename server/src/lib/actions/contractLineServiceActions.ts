@@ -26,10 +26,8 @@ function mapTemplateServiceRow(row: any): IContractLineService {
     tenant: row.tenant,
     contract_line_id: row.template_line_id,
     service_id: row.service_id,
-    quantity: row.quantity != null ? Number(row.quantity) : null,
-    custom_rate: row.custom_rate != null ? Number(row.custom_rate) : null,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
+    quantity: row.quantity != null ? Number(row.quantity) : undefined,
+    custom_rate: row.custom_rate != null ? Number(row.custom_rate) : undefined,
   };
 }
 

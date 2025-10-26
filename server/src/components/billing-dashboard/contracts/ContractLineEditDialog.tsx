@@ -12,8 +12,9 @@ import { AlertCircle } from 'lucide-react';
 interface ContractLineEditDialogProps {
   line: {
     contract_line_id: string;
-    contract_line_name: string;
+    contract_line_name?: string;
     rate?: number | null;
+    custom_rate?: number | null;
     billing_timing?: 'arrears' | 'advance';
   };
   onClose: () => void;
