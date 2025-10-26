@@ -438,26 +438,22 @@ async function persistFixedInvoiceItems(
         this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      // Join with the new fixed config table to get the plan-level base rate
-      .leftJoin('contract_line_fixed_config as clfc', function() {
-        this.on('cl.contract_line_id', '=', 'clfc.contract_line_id')
-            .andOn('cl.tenant', '=', 'clfc.tenant');
-      })
       .whereIn('ccl.client_contract_line_id', validDbPlanIds)
-      .andWhere('ccl.tenant', tenant) // Ensure tenant match on ccl
+      .andWhere('ccl.tenant', tenant)
       .select(
         'ccl.client_contract_line_id',
         'cl.contract_line_name',
-        'clfc.base_rate as contract_line_base_rate' // Select base_rate from the fixed config table
+        'cl.custom_rate as contract_line_base_rate'
        );
 
     for (const detail of planDetails) {
       planInfoMap.set(detail.client_contract_line_id, {
         contract_line_name: detail.contract_line_name,
-        // Parse the base_rate fetched from contract_line_fixed_config
-        contract_line_base_rate: detail.contract_line_base_rate ? parseFloat(detail.contract_line_base_rate) : null
-      });
-    }
+        contract_line_base_rate: detail.contract_line_base_rate != null
+          ? Number(detail.contract_line_base_rate)
+          : null
+    });
+  }
   }
 
 
@@ -472,7 +468,7 @@ async function persistFixedInvoiceItems(
 
     // Update the consolidated item's description and unit_price before insertion
     planEntry.consolidatedItem.description = `Fixed Plan: ${planInfo.contract_line_name}`;
-    // Use the plan-level base_rate fetched from contract_line_fixed_config if available.
+    // Use the plan-level base rate sourced from the contract line if available.
     // Fallback to the unit_price derived from the first service charge if plan-level rate is missing (shouldn't happen ideally).
     planEntry.consolidatedItem.unit_price = planInfo.contract_line_base_rate !== null
         ? Math.round(planInfo.contract_line_base_rate * 100) // Use plan base rate in cents

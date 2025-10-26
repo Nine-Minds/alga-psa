@@ -203,6 +203,8 @@ export interface IContractLine extends TenantEntity {
   billing_timing?: 'arrears' | 'advance';
   custom_rate?: number | null;
   display_order?: number;
+  enable_proration?: boolean;
+  billing_cycle_alignment?: 'start' | 'end' | 'prorated';
   // Add potentially existing hourly fields (to be deprecated for Hourly type)
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;
@@ -219,16 +221,17 @@ export interface IContractLine extends TenantEntity {
 }
 
 /**
- * Interface for the new contract_line_fixed_config table
+ * Legacy plan-level fixed configuration shape.
+ * Kept temporarily for compatibility while contract_lines stores the canonical values.
  */
 export interface IContractLineFixedConfig extends TenantEntity {
   contract_line_id: string;
-  base_rate?: number | null; // Add base_rate (optional, numeric)
-  enable_proration: boolean;
-  billing_cycle_alignment: 'start' | 'end' | 'prorated';
-  tenant: string;
-  created_at: Date;
-  updated_at: Date;
+  base_rate?: number | null;
+  enable_proration?: boolean;
+  billing_cycle_alignment?: 'start' | 'end' | 'prorated';
+  tenant?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface IContractLineService extends TenantEntity {

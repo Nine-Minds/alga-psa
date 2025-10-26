@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
@@ -64,7 +64,13 @@ const ContractDetail: React.FC = () => {
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('edit');
+  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'invoices']), []);
+  const initialTab = useMemo(() => {
+    const requested = searchParams?.get('contractView');
+    return requested && validTabs.has(requested) ? requested : 'edit';
+  }, [searchParams, validTabs]);
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summary, setSummary] = useState<IContractSummary | null>(null);
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
@@ -101,12 +107,35 @@ const ContractDetail: React.FC = () => {
 
   // PO Amount input state for formatting (stores display value while editing)
   const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const requested = searchParams?.get('contractView');
+    if (requested && validTabs.has(requested) && requested !== activeTab) {
+      setActiveTab(requested);
+    }
+    if (!requested && activeTab !== 'edit') {
+      setActiveTab('edit');
+    }
+  }, [searchParams, activeTab, validTabs]);
+
+  const updateContractViewParam = useCallback((tabValue: string) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (tabValue === 'edit') {
+      params.delete('contractView');
+    } else {
+      params.set('contractView', tabValue);
+    }
+    router.replace(`/msp/billing?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+    updateContractViewParam(value);
+  }, [updateContractViewParam]);
+
   const contractsListUrl = useMemo(() => {
     const targetSubtab = contract?.is_template ? 'templates' : 'clients';
     return `/msp/billing?tab=contracts&subtab=${targetSubtab}`;
   }, [contract?.is_template]);
-
-  const deleteRedirectUrl = '/msp/billing?tab=contract-lines';
 
   // Track if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
@@ -226,7 +255,10 @@ const ContractDetail: React.FC = () => {
     setIsDeleting(true);
     try {
       await deleteContract(contractId);
-      router.push(deleteRedirectUrl);
+      const params = new URLSearchParams();
+      params.set('tab', 'contracts');
+      params.set('subtab', 'clients');
+      router.push(`/msp/billing?${params.toString()}`);
     } catch (err) {
       console.error('Error deleting contract:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete contract');
@@ -273,7 +305,7 @@ const ContractDetail: React.FC = () => {
     if (hasUnsavedChanges) {
       setShowCancelConfirm(true);
     } else {
-      setActiveTab('edit');
+      handleTabChange('edit');
     }
   };
 
@@ -292,7 +324,7 @@ const ContractDetail: React.FC = () => {
     setValidationErrors([]);
     setHasAttemptedSubmit(false);
     setShowCancelConfirm(false);
-    setActiveTab('edit');
+    handleTabChange('edit');
   };
 
   const handleCancelDismiss = () => {
@@ -667,7 +699,7 @@ const ContractDetail: React.FC = () => {
         <ContractHeader contract={contract} summary={summary} />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-4 flex flex-wrap gap-2">
           <TabsTrigger value="edit">Overview</TabsTrigger>
           <TabsTrigger value="lines">Contract Lines</TabsTrigger>
@@ -1240,15 +1272,15 @@ const ContractDetail: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
-                  <Button id="edit-manage-lines" variant="outline" onClick={() => setActiveTab('lines')}>
+                  <Button id="edit-manage-lines" variant="outline" onClick={() => handleTabChange('lines')}>
                     <Layers3 className="mr-2 h-4 w-4" />
                     Manage Contract Lines
                   </Button>
-                  <Button id="edit-manage-pricing" variant="outline" onClick={() => setActiveTab('pricing')}>
+                  <Button id="edit-manage-pricing" variant="outline" onClick={() => handleTabChange('pricing')}>
                     <CalendarClock className="mr-2 h-4 w-4" />
                     Manage Pricing Schedules
                   </Button>
-                  <Button id="edit-view-invoices" variant="outline" onClick={() => setActiveTab('invoices')}>
+                  <Button id="edit-view-invoices" variant="outline" onClick={() => handleTabChange('invoices')}>
                     <FileText className="mr-2 h-4 w-4" />
                     View Invoices
                   </Button>

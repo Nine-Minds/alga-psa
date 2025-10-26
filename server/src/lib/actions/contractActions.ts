@@ -23,6 +23,7 @@ import {
   isContractLineAttached as repoIsContractLineAttached,
   removeContractLine as repoRemoveContractLine,
   updateContractLine as repoUpdateContractLine,
+  updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from 'server/src/lib/repositories/contractLineRepository';
 
@@ -209,6 +210,23 @@ export async function updateContractLineAssociation(
   }
 
   return repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
+}
+
+export async function updateContractLineRate(
+  contractId: string,
+  contractLineId: string,
+  rate: number,
+  billingTiming?: 'arrears' | 'advance'
+): Promise<void> {
+  await ensureSession();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+
+  await knex.transaction(async (trx) => {
+    await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
+  });
 }
 
 export async function isContractLineAttached(contractId: string, contractLineId: string): Promise<boolean> {

@@ -20,7 +20,7 @@ import {
   getDetailedContractLines,
   addContractLine,
   removeContractLine,
-  updateContractLineAssociation,
+  updateContractLineRate,
 } from 'server/src/lib/actions/contractActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -36,7 +36,7 @@ interface DetailedContractLineMapping extends IContractLineMapping {
   contract_line_name: string;
   billing_frequency: string;
   contract_line_type: string;
-  default_rate?: number;
+  rate?: number | null;
   billing_timing?: 'arrears' | 'advance';
 }
 
@@ -110,21 +110,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
   const handleContractLineSave = async (
     contractLineId: string,
-    customRate?: number,
+    rate: number,
     billingTiming?: 'arrears' | 'advance'
   ) => {
     if (!contract.contract_id) return;
 
     try {
-      const updateData: any = {};
-      if (customRate !== undefined) {
-        updateData.custom_rate = customRate;
-      }
-      if (billingTiming !== undefined) {
-        updateData.billing_timing = billingTiming;
-      }
-
-      await updateContractLineAssociation(contract.contract_id, contractLineId, updateData);
+      await updateContractLineRate(contract.contract_id, contractLineId, rate, billingTiming);
       await fetchData();
       setEditingLine(null);
       onContractLinesChanged?.();
@@ -149,18 +141,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         dataIndex: 'billing_frequency',
       },
       {
-        title: 'Default Rate',
-        dataIndex: 'default_rate',
-        render: (value) =>
-          value !== undefined ? `$${parseFloat(value.toString()).toFixed(2)}` : 'N/A',
-      },
-      {
-        title: 'Custom Rate',
-        dataIndex: 'custom_rate',
-        render: (value) =>
-          value !== undefined && value !== null
-            ? `$${parseFloat(value.toString()).toFixed(2)}`
-            : 'Same as default',
+        title: 'Rate',
+        dataIndex: 'rate',
+        render: (value) => {
+          if (value === undefined || value === null) {
+            return '—';
+          }
+          return `$${parseFloat(value.toString()).toFixed(2)}`;
+        },
       },
       {
         title: 'Billing Timing',

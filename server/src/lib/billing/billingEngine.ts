@@ -393,7 +393,7 @@ export class BillingEngine {
           .on(
             'cl.contract_line_id',
             '=',
-            knex.raw('coalesce(ccl.template_contract_line_id, ccl.contract_line_id)')
+            knex.raw('coalesce(ccl.contract_line_id, ccl.template_contract_line_id)')
           )
           .andOn('cl.tenant', '=', 'ccl.tenant');
       })
@@ -429,6 +429,9 @@ export class BillingEngine {
         'cl.contract_line_type',
         'cl.billing_frequency as template_billing_frequency',
         'cl.billing_timing as template_billing_timing',
+        'cl.custom_rate as contract_line_custom_rate',
+        'cl.enable_proration as contract_line_enable_proration',
+        'cl.billing_cycle_alignment as contract_line_billing_cycle_alignment',
         'cc.contract_id',
         'c.contract_name',
         'pricing.custom_rate as pricing_custom_rate',
@@ -446,15 +449,29 @@ export class BillingEngine {
       plan.billing_timing = resolvedTiming;
       delete plan.term_billing_timing;
       delete plan.template_billing_timing;
-      if (plan.pricing_custom_rate !== null && plan.pricing_custom_rate !== undefined) {
-        const parsedRate = typeof plan.pricing_custom_rate === 'string' ? parseFloat(plan.pricing_custom_rate) : Number(plan.pricing_custom_rate);
+      const pricingRate = plan.pricing_custom_rate;
+      const contractLineRate = plan.contract_line_custom_rate;
+
+      if (pricingRate !== null && pricingRate !== undefined) {
+        const parsedRate = typeof pricingRate === 'string' ? parseFloat(pricingRate) : Number(pricingRate);
         plan.custom_rate = Number.isFinite(parsedRate) ? Math.round(parsedRate * 100) : null;
-      } else if (plan.custom_rate !== null && plan.custom_rate !== undefined) {
-        const parsedRate = typeof plan.custom_rate === 'string' ? parseFloat(plan.custom_rate) : Number(plan.custom_rate);
+      } else if (contractLineRate !== null && contractLineRate !== undefined) {
+        const parsedRate = typeof contractLineRate === 'string' ? parseFloat(contractLineRate) : Number(contractLineRate);
         plan.custom_rate = Number.isFinite(parsedRate) ? Math.round(parsedRate * 100) : null;
       } else {
         plan.custom_rate = null;
       }
+
+      plan.enable_proration = plan.contract_line_enable_proration ?? plan.enable_proration ?? false;
+      plan.billing_cycle_alignment =
+        (plan.contract_line_billing_cycle_alignment as 'start' | 'end' | 'prorated' | undefined) ??
+        plan.billing_cycle_alignment ??
+        'start';
+
+      delete plan.pricing_custom_rate;
+      delete plan.contract_line_custom_rate;
+      delete plan.contract_line_enable_proration;
+      delete plan.contract_line_billing_cycle_alignment;
     });
 
     return { clientContractLines, billingCycle };
@@ -688,8 +705,8 @@ export class BillingEngine {
       // Get the contract line details to determine if this is a fixed fee plan
       const contractLineDetails = await this.knex('contract_lines')
         .where({
-          'contract_line_id': clientContractLine.contract_line_id,
-          'tenant': client.tenant // Use client.tenant here for consistency
+          contract_line_id: clientContractLine.contract_line_id,
+          tenant: client.tenant
         })
         .first();
 
@@ -700,6 +717,30 @@ export class BillingEngine {
       let planLevelEnableProration = false;
       let planLevelBillingCycleAlignment: 'start' | 'end' | 'prorated' = 'start';
 
+      if (isFixedFeePlan && contractLineDetails) {
+        if (contractLineDetails.custom_rate !== undefined && contractLineDetails.custom_rate !== null) {
+          const parsedContractRate =
+            typeof contractLineDetails.custom_rate === 'string'
+              ? parseFloat(contractLineDetails.custom_rate)
+              : Number(contractLineDetails.custom_rate);
+          if (!Number.isNaN(parsedContractRate)) {
+            planLevelBaseRate = parsedContractRate;
+          }
+        }
+
+        if (contractLineDetails.enable_proration !== undefined && contractLineDetails.enable_proration !== null) {
+          planLevelEnableProration = Boolean(contractLineDetails.enable_proration);
+        }
+
+        const alignmentCandidate = contractLineDetails.billing_cycle_alignment;
+        if (
+          typeof alignmentCandidate === 'string' &&
+          (alignmentCandidate === 'start' || alignmentCandidate === 'end' || alignmentCandidate === 'prorated')
+        ) {
+          planLevelBillingCycleAlignment = alignmentCandidate;
+        }
+      }
+
       if (isFixedFeePlan) {
         const pricing = await this.knex('client_contract_line_pricing')
           .where({
@@ -709,9 +750,18 @@ export class BillingEngine {
           .first('custom_rate');
 
         if (pricing?.custom_rate !== undefined && pricing.custom_rate !== null) {
-          const parsedPricingRate = typeof pricing.custom_rate === 'string' ? parseFloat(pricing.custom_rate) : Number(pricing.custom_rate);
+          const parsedPricingRate =
+            typeof pricing.custom_rate === 'string' ? parseFloat(pricing.custom_rate) : Number(pricing.custom_rate);
           if (!Number.isNaN(parsedPricingRate)) {
             planLevelBaseRate = parsedPricingRate;
+          }
+        } else if (planLevelBaseRate === null && clientContractLine.custom_rate != null) {
+          const parsedAssignmentRate =
+            typeof clientContractLine.custom_rate === 'string'
+              ? parseFloat(clientContractLine.custom_rate)
+              : Number(clientContractLine.custom_rate);
+          if (!Number.isNaN(parsedAssignmentRate)) {
+            planLevelBaseRate = parsedAssignmentRate;
           }
         }
       }
@@ -762,45 +812,71 @@ export class BillingEngine {
         };
       });
 
-    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
-      let derivedBaseRate = 0;
-      let hasServiceBaseRate = false;
-
-      for (const service of planServices) {
-        const rawServiceBaseRate = service.service_base_rate;
-        if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
-          const parsedServiceBaseRate = typeof rawServiceBaseRate === 'string' ? parseFloat(rawServiceBaseRate) : Number(rawServiceBaseRate);
-          if (!Number.isNaN(parsedServiceBaseRate)) {
-            const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
-            derivedBaseRate += parsedServiceBaseRate * quantity;
-            hasServiceBaseRate = true;
-          }
+      if (!planLevelEnableProration) {
+        const prorationFromService = planServices.find((service: any) => service.enable_proration);
+        if (prorationFromService?.enable_proration) {
+          planLevelEnableProration = Boolean(prorationFromService.enable_proration);
         }
       }
 
-      if (hasServiceBaseRate) {
-        planLevelBaseRate = derivedBaseRate;
-        console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`);
+      if (planLevelBillingCycleAlignment === 'start') {
+        const alignmentFromService = planServices.find(
+          (service: any) =>
+            typeof service.billing_cycle_alignment === 'string' &&
+            (service.billing_cycle_alignment === 'start' ||
+              service.billing_cycle_alignment === 'end' ||
+              service.billing_cycle_alignment === 'prorated')
+        );
+        if (alignmentFromService) {
+          planLevelBillingCycleAlignment = alignmentFromService.billing_cycle_alignment;
+        }
       }
-    }
 
-    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
-      const totalDefaultRateCents = planServices.reduce((sum: number, service: any) => {
-        const rate = Number(service.default_rate ?? 0);
-        const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
-        return sum + rate * quantity;
-      }, 0);
+      if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+        let derivedBaseRate = 0;
+        let hasServiceBaseRate = false;
 
-      if (totalDefaultRateCents !== 0) {
-        planLevelBaseRate = totalDefaultRateCents / 100;
-        console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`);
+        for (const service of planServices) {
+          const rawServiceBaseRate = service.service_base_rate;
+          if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
+            const parsedServiceBaseRate =
+              typeof rawServiceBaseRate === 'string' ? parseFloat(rawServiceBaseRate) : Number(rawServiceBaseRate);
+            if (!Number.isNaN(parsedServiceBaseRate)) {
+              const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
+              derivedBaseRate += parsedServiceBaseRate * quantity;
+              hasServiceBaseRate = true;
+            }
+          }
+        }
+
+        if (hasServiceBaseRate) {
+          planLevelBaseRate = derivedBaseRate;
+          console.log(
+            `[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`
+          );
+        }
       }
-    }
 
-    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
-      console.error(`[DEBUG] Unable to determine base_rate for contract line ${clientContractLine.contract_line_id}.`);
-      return [];
-    }
+      if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+        const totalDefaultRateCents = planServices.reduce((sum: number, service: any) => {
+          const rate = Number(service.default_rate ?? 0);
+          const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
+          return sum + rate * quantity;
+        }, 0);
+        if (totalDefaultRateCents !== 0) {
+          planLevelBaseRate = totalDefaultRateCents / 100;
+          console.log(
+            `[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`
+          );
+        }
+      }
+
+      if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+        console.error(
+          `[DEBUG] Unable to determine base_rate for contract line ${clientContractLine.contract_line_id}.`
+        );
+        return [];
+      }
 
     if (isFixedFeePlan) {
       // For fixed fee plans, we want to create a single consolidated charge

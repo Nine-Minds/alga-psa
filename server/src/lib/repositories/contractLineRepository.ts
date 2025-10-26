@@ -8,6 +8,9 @@ export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
   contract_line_type?: string;
   billing_frequency?: string;
+  rate?: number | null;
+  enable_proration?: boolean;
+  billing_cycle_alignment?: 'start' | 'end' | 'prorated';
 };
 
 type TenantScopedKnex = Knex | Knex.Transaction;
@@ -82,6 +85,9 @@ export async function fetchDetailedContractLines(
       .leftJoin('contract_template_line_terms as terms', function joinTemplateTerms() {
         this.on('terms.template_line_id', '=', 'lines.template_line_id').andOn('terms.tenant', '=', 'lines.tenant');
       })
+      .leftJoin('contract_template_line_fixed_config as fixed', function joinTemplateFixed() {
+        this.on('fixed.template_line_id', '=', 'lines.template_line_id').andOn('fixed.tenant', '=', 'lines.tenant');
+      })
       .where({ 'lines.template_id': contractId, 'lines.tenant': tenant })
       .select([
         'lines.tenant',
@@ -95,17 +101,33 @@ export async function fetchDetailedContractLines(
         'lines.line_type as contract_line_type',
         'lines.billing_frequency',
         'terms.billing_timing as terms_billing_timing',
+        'fixed.base_rate as default_rate',
+        'fixed.enable_proration as template_enable_proration',
+        'fixed.billing_cycle_alignment as template_billing_cycle_alignment',
       ])
       .orderBy('lines.display_order', 'asc');
 
     return rows.map((row: any) => ({
       ...mapContractLineRow({
         ...row,
+        custom_rate:
+          row.custom_rate ?? (row.default_rate != null ? Number(row.default_rate) : null),
         billing_timing: row.billing_timing ?? row.terms_billing_timing ?? 'arrears',
       }),
       contract_line_name: row.contract_line_name,
       contract_line_type: row.contract_line_type,
       billing_frequency: row.billing_frequency,
+      rate:
+        row.custom_rate !== undefined && row.custom_rate !== null
+          ? Number(row.custom_rate)
+          : row.default_rate != null
+            ? Number(row.default_rate)
+            : null,
+      enable_proration: row.template_enable_proration ?? false,
+      billing_cycle_alignment: (row.template_billing_cycle_alignment ?? 'start') as
+        | 'start'
+        | 'end'
+        | 'prorated',
     }));
   }
 
@@ -122,17 +144,23 @@ export async function fetchDetailedContractLines(
       'cl.contract_line_name',
       'cl.contract_line_type',
       'cl.billing_frequency',
+      'cl.enable_proration',
+      'cl.billing_cycle_alignment',
     ])
     .orderBy('cl.display_order', 'asc');
 
   return rows.map((row: any) => ({
     ...mapContractLineRow({
       ...row,
-      billing_timing: row.billing_timing ?? row.terms_billing_timing ?? 'arrears',
+      custom_rate: row.custom_rate ?? null,
+      billing_timing: row.billing_timing ?? 'arrears',
     }),
     contract_line_name: row.contract_line_name,
     contract_line_type: row.contract_line_type,
     billing_frequency: row.billing_frequency,
+    rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
+    enable_proration: row.enable_proration ?? false,
+    billing_cycle_alignment: row.billing_cycle_alignment ?? 'start',
   }));
 }
 
@@ -163,7 +191,7 @@ export async function ensureTemplateLineSnapshot(
   templateId: string,
   contractLineId: string,
   customRate?: number
-): Promise<void> {
+): Promise<string> {
   const templateLine = await knex('contract_template_lines')
     .where({ tenant, template_id: templateId, template_line_id: contractLineId })
     .first();
@@ -175,7 +203,7 @@ export async function ensureTemplateLineSnapshot(
         custom_rate: customRate ?? templateLine.custom_rate ?? null,
         updated_at: knex.fn.now(),
       });
-    return;
+    return contractLineId;
   }
 
   const baseLine = await knex('contract_lines')
@@ -187,10 +215,15 @@ export async function ensureTemplateLineSnapshot(
   }
 
   const now = knex.fn.now();
+  const existingTemplateLine = await knex('contract_template_lines')
+    .where({ tenant, template_line_id: contractLineId })
+    .first();
+
+  const targetTemplateLineId = existingTemplateLine ? uuidv4() : contractLineId;
 
   await knex('contract_template_lines').insert({
     tenant,
-    template_line_id: contractLineId,
+    template_line_id: targetTemplateLineId,
     template_id: templateId,
     template_line_name: baseLine.contract_line_name,
     description: baseLine.description ?? null,
@@ -211,6 +244,8 @@ export async function ensureTemplateLineSnapshot(
     display_order: baseLine.display_order ?? 0,
     billing_timing: baseLine.billing_timing ?? 'arrears',
   });
+
+  return targetTemplateLineId;
 }
 
 async function cloneTemplateLineToContract(
@@ -228,8 +263,16 @@ async function cloneTemplateLineToContract(
     throw new Error(`Template contract line ${templateLineId} not found`);
   }
 
+  const templateFixedConfig = await trx('contract_template_line_fixed_config')
+    .where({ tenant, template_line_id: templateLineId })
+    .first();
+
   const now = trx.fn.now();
   const newContractLineId = uuidv4();
+  const effectiveRate =
+    customRate ??
+    templateLine.custom_rate ??
+    (templateFixedConfig?.base_rate != null ? Number(templateFixedConfig.base_rate) : null);
 
   await trx('contract_lines').insert({
     tenant,
@@ -250,9 +293,11 @@ async function cloneTemplateLineToContract(
     created_at: now,
     updated_at: now,
     is_template: false,
-    custom_rate: customRate ?? templateLine.custom_rate ?? null,
+    custom_rate: effectiveRate,
     display_order: templateLine.display_order ?? 0,
     billing_timing: templateLine.billing_timing ?? 'arrears',
+    enable_proration: templateFixedConfig?.enable_proration ?? false,
+    billing_cycle_alignment: templateFixedConfig?.billing_cycle_alignment ?? 'start',
   });
 
   const templateTerms = await trx('contract_template_line_terms')
@@ -285,30 +330,6 @@ async function cloneTemplateLineToContract(
         after_hours_multiplier: templateTerms.after_hours_multiplier ?? templateLine.after_hours_multiplier ?? null,
         minimum_billable_time: templateTerms.minimum_billable_time ?? null,
         round_up_to_nearest: templateTerms.round_up_to_nearest ?? null,
-        updated_at: now,
-      });
-  }
-
-  const templateFixedConfig = await trx('contract_template_line_fixed_config')
-    .where({ tenant, template_line_id: templateLineId })
-    .first();
-
-  if (templateFixedConfig) {
-    await trx('contract_line_fixed_config')
-      .insert({
-        tenant,
-        contract_line_id: newContractLineId,
-        base_rate: templateFixedConfig.base_rate ?? null,
-        enable_proration: templateFixedConfig.enable_proration ?? false,
-        billing_cycle_alignment: templateFixedConfig.billing_cycle_alignment ?? 'start',
-        created_at: templateFixedConfig.created_at ?? now,
-        updated_at: now,
-      })
-      .onConflict(['tenant', 'contract_line_id'])
-      .merge({
-        base_rate: templateFixedConfig.base_rate ?? null,
-        enable_proration: templateFixedConfig.enable_proration ?? false,
-        billing_cycle_alignment: templateFixedConfig.billing_cycle_alignment ?? 'start',
         updated_at: now,
       });
   }
@@ -433,10 +454,10 @@ export async function addContractLine(
   const template = await isTemplateContract(trx, tenant, contractId);
 
   if (template) {
-    await ensureTemplateLineSnapshot(trx, tenant, contractId, contractLineId, customRate);
+    const effectiveLineId = await ensureTemplateLineSnapshot(trx, tenant, contractId, contractLineId, customRate);
 
     const row = await trx('contract_template_lines')
-      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+      .where({ tenant, template_id: contractId, template_line_id: effectiveLineId })
       .first([
         'tenant',
         'template_id as contract_id',
@@ -554,4 +575,35 @@ export async function fetchContractLineById(
   contractLineId: string
 ): Promise<IContractLine | undefined> {
   return knex('contract_lines').where({ tenant, contract_line_id: contractLineId }).first();
+}
+
+export async function updateContractLineRate(
+  knex: TenantScopedKnex,
+  tenant: string,
+  contractId: string,
+  contractLineId: string,
+  rate: number | null,
+  billingTiming?: 'arrears' | 'advance'
+): Promise<void> {
+  const now = knex.fn.now();
+  const template = await isTemplateContract(knex, tenant, contractId);
+
+  if (template) {
+    await knex('contract_template_lines')
+      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+      .update({
+        custom_rate: rate,
+        billing_timing: billingTiming ?? undefined,
+        updated_at: now,
+      });
+    return;
+  }
+
+  await knex('contract_lines')
+    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+    .update({
+      custom_rate: rate,
+      billing_timing: billingTiming ?? undefined,
+      updated_at: now,
+    });
 }

@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
-import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -14,20 +13,20 @@ interface ContractLineEditDialogProps {
   line: {
     contract_line_id: string;
     contract_line_name: string;
-    custom_rate?: number;
-    default_rate?: number;
+    rate?: number | null;
     billing_timing?: 'arrears' | 'advance';
   };
   onClose: () => void;
-  onSave: (contractLineId: string, customRate: number | undefined, billingTiming: 'arrears' | 'advance') => Promise<void>;
+  onSave: (contractLineId: string, rate: number, billingTiming: 'arrears' | 'advance') => Promise<void>;
 }
 
 export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEditDialogProps) {
-  const [customRate, setCustomRate] = useState<number>(
-    line.custom_rate !== undefined && line.custom_rate !== null ? line.custom_rate : (line.default_rate || 0)
-  );
-  const [useDefaultRate, setUseDefaultRate] = useState<boolean>(
-    line.custom_rate === undefined || line.custom_rate === null
+  const [rate, setRate] = useState<number>(
+    line.rate !== undefined && line.rate !== null
+      ? line.rate
+      : line.custom_rate !== undefined && line.custom_rate !== null
+        ? line.custom_rate
+        : 0
   );
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>(
     line.billing_timing || 'arrears'
@@ -38,16 +37,14 @@ export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEd
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!useDefaultRate && (customRate < 0 || isNaN(customRate))) {
+    if (isNaN(rate) || rate < 0) {
       setError('Please enter a valid rate (must be a non-negative number)');
       return;
     }
 
     setIsSaving(true);
     try {
-      // If using default rate, pass undefined to reset to default (will be saved as NULL)
-      // Otherwise pass the custom rate
-      await onSave(line.contract_line_id, useDefaultRate ? undefined : customRate, billingTiming);
+      await onSave(line.contract_line_id, rate, billingTiming);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save changes');
       setIsSaving(false);
@@ -74,44 +71,21 @@ export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEd
           <div className="space-y-4">
             <h4 className="font-medium text-sm">Pricing</h4>
 
-            <div className="flex items-center space-x-2 mb-4">
-              <SwitchWithLabel
-                label={`Use default rate${line.default_rate !== undefined ? ` ($${line.default_rate.toFixed(2)})` : ''}`}
-                checked={useDefaultRate}
-                onCheckedChange={(checked) => {
-                  setUseDefaultRate(checked);
-                  if (checked) {
-                    setCustomRate(line.default_rate || 0);
-                  }
-                }}
-              />
-            </div>
-
             <div>
-              <Label htmlFor="custom-rate" className={useDefaultRate ? 'text-gray-400' : ''}>
-                Custom Rate
-              </Label>
+              <Label htmlFor="contract-line-rate">Rate</Label>
               <div className="relative">
-                <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${useDefaultRate ? 'text-gray-400' : 'text-gray-500'}`}>$</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                 <Input
-                  id="custom-rate"
+                  id="contract-line-rate"
                   type="number"
                   min="0"
                   step="0.01"
-                  value={customRate}
+                  value={rate}
                   onChange={(e) => {
-                    setCustomRate(parseFloat(e.target.value));
-                    if (useDefaultRate) {
-                      setUseDefaultRate(false);
-                    }
+                    const value = parseFloat(e.target.value);
+                    setRate(Number.isNaN(value) ? 0 : value);
                   }}
-                  onFocus={() => {
-                    if (useDefaultRate) {
-                      setUseDefaultRate(false);
-                    }
-                  }}
-                  disabled={useDefaultRate}
-                  className={`pl-7 ${useDefaultRate ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60' : ''} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                  className="pl-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>

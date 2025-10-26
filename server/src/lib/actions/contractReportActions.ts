@@ -143,15 +143,11 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
 
     // Query contract lines to get monthly recurring values
     const contractLines = await knex('contract_lines as cl')
-      .leftJoin('contract_line_fixed_config as cfg', function joinConfig() {
-        this.on('cl.contract_line_id', '=', 'cfg.contract_line_id').andOn('cl.tenant', '=', 'cfg.tenant');
-      })
       .where({ 'cl.tenant': tenant })
       .select(
         'cl.contract_id',
         'cl.contract_line_id',
         'cl.contract_line_name',
-        'cfg.base_rate',
         'cl.custom_rate'
       );
 
@@ -159,7 +155,7 @@ export async function getContractRevenueReport(): Promise<ContractRevenue[]> {
     for (const contractLine of contractLines) {
       const keys = Array.from(aggregatedMap.keys()).filter(k => k.startsWith(contractLine.contract_id));
       // Convert dollars to cents: rate is stored as decimal(10,2) in dollars
-      const rateInDollars = contractLine.custom_rate || contractLine.base_rate || 0;
+      const rateInDollars = contractLine.custom_rate || 0;
       const rateInCents = Math.round(rateInDollars * 100);
       for (const key of keys) {
         const item = aggregatedMap.get(key)!;
@@ -205,9 +201,6 @@ export async function getContractExpirationReport(): Promise<ContractExpiration[
       .leftJoin('contract_lines as cln', function joinLines() {
         this.on('c.contract_id', '=', 'cln.contract_id').andOn('c.tenant', '=', 'cln.tenant');
       })
-      .leftJoin('contract_line_fixed_config as cfg', function joinConfig() {
-        this.on('cln.contract_line_id', '=', 'cfg.contract_line_id').andOn('cln.tenant', '=', 'cfg.tenant');
-      })
       .where({ 'c.tenant': tenant, 'cc.is_active': true })
       .whereNotNull('cc.end_date')
       .select(
@@ -215,7 +208,7 @@ export async function getContractExpirationReport(): Promise<ContractExpiration[
         'c.contract_name',
         'cl.client_name',
         'cc.end_date',
-        knex.raw('COALESCE(cln.custom_rate, cfg.base_rate, 0) as monthly_value')
+        knex.raw('COALESCE(cln.custom_rate, 0) as monthly_value')
       )
       .orderBy('cc.end_date', 'asc');
 

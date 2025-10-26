@@ -102,6 +102,33 @@ export async function getContractLineById(planId: string): Promise<IContractLine
                 throw new Error('Permission denied: Cannot read contract lines');
             }
 
+            const templateLine = await trx('contract_template_lines')
+                .where({ tenant, template_line_id: planId })
+                .first();
+
+            if (templateLine) {
+                const templateTerms = await trx('contract_template_line_terms')
+                    .where({ tenant, template_line_id: planId })
+                    .first();
+
+                return {
+                    contract_line_id: templateLine.template_line_id,
+                    contract_line_name: templateLine.template_line_name,
+                    billing_frequency: templateLine.billing_frequency,
+                    is_custom: true,
+                    contract_id: templateLine.template_id,
+                    tenant,
+                    display_order: templateLine.display_order ?? 0,
+                    custom_rate: templateLine.custom_rate != null ? Number(templateLine.custom_rate) : null,
+                    billing_timing: (templateLine.billing_timing ?? templateTerms?.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+                    contract_line_type: templateLine.line_type ?? 'Fixed',
+                    service_category: templateLine.service_category ?? null,
+                    is_active: templateLine.is_active ?? true,
+                    created_at: templateLine.created_at,
+                    updated_at: templateLine.updated_at,
+                } as IContractLine;
+            }
+
             // Assuming the ContractLine model has a method like findById
             // This might need adjustment based on the actual model implementation
             // It should ideally fetch the base plan and potentially join/fetch config details

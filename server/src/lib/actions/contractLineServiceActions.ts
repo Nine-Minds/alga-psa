@@ -5,17 +5,55 @@ import { IContractLineServiceRateTier, IUserTypeRate, IContractLineServiceConfig
 import { IContractLineService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
  
+import { v4 as uuidv4 } from 'uuid';
 import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import * as planServiceConfigActions from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
+
+async function findTemplateLine(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string
+) {
+  return trx('contract_template_lines')
+    .where({ tenant, template_line_id: contractLineId })
+    .first();
+}
+
+function mapTemplateServiceRow(row: any): IContractLineService {
+  return {
+    tenant: row.tenant,
+    contract_line_id: row.template_line_id,
+    service_id: row.service_id,
+    quantity: row.quantity != null ? Number(row.quantity) : null,
+    custom_rate: row.custom_rate != null ? Number(row.custom_rate) : null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 
 /**
  * Get all services for a plan
  */
 export async function getContractLineServices(contractLineId: string): Promise<IContractLineService[]> {
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+    if (templateLine) {
+      const services = await trx('contract_template_line_services')
+        .where({
+          template_line_id: contractLineId,
+          tenant
+        })
+        .select('*');
+
+      return services.map(mapTemplateServiceRow);
+    }
+
     const services = await trx('contract_line_services')
       .where({
         contract_line_id: contractLineId,
@@ -32,7 +70,23 @@ export async function getContractLineServices(contractLineId: string): Promise<I
  */
 export async function getContractLineService(contractLineId: string, serviceId: string): Promise<IContractLineService | null> {
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+    if (templateLine) {
+      const service = await trx('contract_template_line_services')
+        .where({
+          template_line_id: contractLineId,
+          service_id: serviceId,
+          tenant
+        })
+        .first();
+
+      return service ? mapTemplateServiceRow(service) : null;
+    }
+
     const service = await trx('contract_line_services')
       .where({
         contract_line_id: contractLineId,
@@ -43,6 +97,95 @@ export async function getContractLineService(contractLineId: string, serviceId: 
 
     return service || null;
   });
+}
+
+async function addServiceToTemplateLine(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateLine: any,
+  serviceId: string,
+  quantity?: number,
+  customRate?: number
+) {
+  if (templateLine.line_type && templateLine.line_type !== 'Fixed') {
+    throw new Error('Service management for template lines currently supports fixed fee lines only.');
+  }
+
+  const service = await trx('service_catalog')
+    .where({ service_id: serviceId, tenant })
+    .first() as IService | undefined;
+
+  if (!service) {
+    throw new Error(`Service ${serviceId} not found`);
+  }
+
+  if (service.billing_method && service.billing_method !== 'fixed') {
+    throw new Error('Only fixed billing method services can be attached to this template line.');
+  }
+
+  const now = trx.fn.now();
+  const resolvedQuantity = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
+  const resolvedRate =
+    typeof customRate === 'number'
+      ? customRate
+      : service.default_rate != null
+        ? Number(service.default_rate)
+        : null;
+
+  const existingService = await trx('contract_template_line_services')
+    .where({ tenant, template_line_id: templateLine.template_line_id, service_id: serviceId })
+    .first();
+
+  if (existingService) {
+    await trx('contract_template_line_services')
+      .where({ tenant, template_line_id: templateLine.template_line_id, service_id: serviceId })
+      .update({
+        quantity: resolvedQuantity,
+        custom_rate: resolvedRate,
+        updated_at: now,
+      });
+  } else {
+    await trx('contract_template_line_services').insert({
+      tenant,
+      template_line_id: templateLine.template_line_id,
+      service_id: serviceId,
+      quantity: resolvedQuantity,
+      custom_rate: resolvedRate,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+
+  const existingConfig = await trx('contract_template_line_service_configuration')
+    .where({ tenant, template_line_id: templateLine.template_line_id, service_id: serviceId })
+    .first();
+
+  const configId = existingConfig ? existingConfig.config_id : uuidv4();
+
+  if (existingConfig) {
+    await trx('contract_template_line_service_configuration')
+      .where({ tenant, config_id: existingConfig.config_id })
+      .update({
+        configuration_type: 'Fixed',
+        custom_rate: resolvedRate,
+        quantity: resolvedQuantity,
+        updated_at: now,
+      });
+  } else {
+    await trx('contract_template_line_service_configuration').insert({
+      tenant,
+      config_id: configId,
+      template_line_id: templateLine.template_line_id,
+      service_id: serviceId,
+      configuration_type: 'Fixed',
+      custom_rate: resolvedRate,
+      quantity: resolvedQuantity,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+
+  return configId;
 }
 
 /**
@@ -57,7 +200,14 @@ export async function addServiceToContractLine(
   typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+    if (templateLine) {
+      return addServiceToTemplateLine(trx, tenant, templateLine, serviceId, quantity, customRate);
+    }
 
   // Get service details and join with service_types to get the type's billing_method
   const serviceWithType = await trx('service_catalog as sc')
@@ -293,7 +443,54 @@ export async function updateContractLineService(
  */
 export async function removeServiceFromContractLine(contractLineId: string, serviceId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+    if (templateLine) {
+      const templateConfigs = await trx('contract_template_line_service_configuration')
+        .where({
+          tenant,
+          template_line_id: contractLineId,
+          service_id: serviceId,
+        })
+        .select('config_id');
+
+      if (templateConfigs.length > 0) {
+        const configIds = templateConfigs.map((config) => config.config_id);
+
+        await trx('contract_template_line_service_hourly_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_template_line_service_usage_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_template_line_service_bucket_config')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await trx('contract_template_line_service_configuration')
+          .where({ tenant })
+          .whereIn('config_id', configIds)
+          .delete();
+      }
+
+      await trx('contract_template_line_services')
+        .where({
+          tenant,
+          template_line_id: contractLineId,
+          service_id: serviceId,
+        })
+        .delete();
+
+      return true;
+    }
 
   // Get configuration ID
   const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
@@ -326,7 +523,71 @@ export async function getContractLineServicesWithConfigurations(contractLineId: 
   userTypeRates?: IUserTypeRate[]; // Add userTypeRates to the return type
 }[]> {
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+    if (templateLine) {
+      const configurations = await trx('contract_template_line_service_configuration')
+        .where({
+          tenant,
+          template_line_id: contractLineId,
+        })
+        .select('*');
+
+      const results: Array<{
+        service: IService & { service_type_name?: string };
+        configuration: IContractLineServiceConfiguration;
+        typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+        userTypeRates?: IUserTypeRate[];
+      }> = [];
+
+      for (const config of configurations) {
+        const service = await trx('service_catalog as sc')
+          .leftJoin('service_types as st', function () {
+            this.on('sc.custom_service_type_id', '=', 'st.id').andOn('sc.tenant', '=', 'st.tenant');
+          })
+          .where({
+            'sc.service_id': config.service_id,
+            'sc.tenant': tenant,
+          })
+          .select('sc.*', 'st.name as service_type_name')
+          .first() as IService & { service_type_name?: string } | undefined;
+
+        if (!service) {
+          continue;
+        }
+
+        let typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null =
+          null;
+
+        if (config.configuration_type === 'Bucket') {
+          typeConfig = await trx('contract_template_line_service_bucket_config')
+            .where({ tenant, config_id: config.config_id })
+            .first();
+        } else if (config.configuration_type === 'Hourly') {
+          typeConfig = await trx('contract_template_line_service_hourly_config')
+            .where({ tenant, config_id: config.config_id })
+            .first();
+        } else if (config.configuration_type === 'Usage') {
+          typeConfig = await trx('contract_template_line_service_usage_config')
+            .where({ tenant, config_id: config.config_id })
+            .first();
+        }
+
+        results.push({
+          service,
+          configuration: {
+            ...config,
+            contract_line_id: config.template_line_id,
+          },
+          typeConfig,
+        });
+      }
+
+      return results;
+    }
 
   // Get all configurations for the plan
   const configurations = await planServiceConfigActions.getConfigurationsForPlan(contractLineId);

@@ -329,21 +329,24 @@ export async function createContractTemplateFromWizard(
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
 
     const recordTemplateMapping = async (lineId: string, customRate?: number | null) => {
-      await ensureTemplateLineSnapshot(trx, tenant, templateId, lineId, customRate ?? undefined);
+      const effectiveLineId = await ensureTemplateLineSnapshot(
+        trx,
+        tenant,
+        templateId,
+        lineId,
+        customRate ?? undefined
+      );
 
-      await trx('contract_template_line_mappings')
-        .insert({
+      await trx('contract_template_lines')
+        .where({
           tenant,
           template_id: templateId,
-          template_line_id: lineId,
-          display_order: nextDisplayOrder,
-          custom_rate: customRate ?? null,
-          created_at: nowIso,
+          template_line_id: effectiveLineId,
         })
-        .onConflict(['tenant', 'template_id', 'template_line_id'])
-        .merge({
+        .update({
           display_order: nextDisplayOrder,
           custom_rate: customRate ?? null,
+          updated_at: trx.fn.now(),
         });
 
       nextDisplayOrder += 1;
@@ -903,15 +906,10 @@ export async function getContractTemplateSnapshotForClientWizard(
     const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
 
     if (line.contract_line_type === 'Fixed') {
-      const fixedConfig = await knex('contract_template_line_fixed_config')
-        .where({ tenant, template_line_id: line.contract_line_id })
-        .first();
-      if (fixedConfig) {
-        const baseRateValue =
-          fixedConfig.base_rate != null ? Number(fixedConfig.base_rate) : undefined;
-        fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
-        enableProration = Boolean(fixedConfig.enable_proration);
-      }
+      const baseRateValue =
+        line.rate != null ? Number(line.rate) : undefined;
+      fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
+      enableProration = line.enable_proration ?? false;
 
       servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
         const quantity =
