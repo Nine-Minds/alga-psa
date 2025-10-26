@@ -252,7 +252,21 @@ def update-hosted-env-canary-route [
             if (($doc_mut.kind? | default "") == "VirtualService" and ($doc_mut.metadata.name? | default "") == "alga-psa-vs-sebastian") {
                 let http_raw = ($doc_mut.spec.http? | default [])
                 let http_routes = if (($http_raw | describe) | str starts-with "list<") { $http_raw } else if ($http_raw | is-empty) { [] } else { [ $http_raw ] }
-                let route_candidates = (
+
+                let desired_route = {
+                    name: $"canary-($trimmed_canary)"
+                    match: [ { headers: { x-canary: { exact: $trimmed_canary } } } ]
+                    route: [
+                        {
+                            destination: {
+                                host: $destination_host
+                                port: { number: $desired_port }
+                            }
+                        }
+                    ]
+                }
+
+                let exact_match = (
                     $http_routes
                     | enumerate
                     | where {|row|
@@ -261,59 +275,55 @@ def update-hosted-env-canary-route [
                         let match_list = if (($match_raw | describe) | str starts-with "list<") { $match_raw } else if ($match_raw | is-empty) { [] } else { [ $match_raw ] }
                         $match_list | any {|m|
                             let headers_rec = ($m.headers? | default {})
-                            if (($headers_rec | describe) | str contains "record<") {
-                                let candidate = ($headers_rec | get "x-canary"? )
-                                if $candidate == null {
-                                    ($headers_rec | get "X-Canary"?) != null
-                                } else {
-                                    true
-                                }
-                            } else {
+                            let header_value = if (($headers_rec | describe) | str contains "record<") {
+                                let lower = ($headers_rec | get "x-canary"? )
+                                if $lower == null { $headers_rec | get "X-Canary"? } else { $lower }
+                            } else { null }
+                            if $header_value == null {
                                 false
+                            } else {
+                                let header_desc = ($header_value | describe)
+                                if ($header_desc | str contains "record<") {
+                                    (($header_value.exact? | default "") | str trim) == $trimmed_canary
+                                } else {
+                                    ($header_value | str trim) == $trimmed_canary
+                                }
                             }
                         }
                     }
                 )
-                let route_match = ($route_candidates | get 0? | default null)
-                let route_idx = if $route_match == null { null } else { $route_match.index }
+                let route_match = ($exact_match | get 0? | default null)
 
-                mut http_updated = $http_routes
-                if $route_idx == null {
-                    let new_route = {
-                        name: $"canary-($trimmed_canary)"
-                        match: [ { headers: { x-canary: { exact: $trimmed_canary } } } ]
-                        route: [
-                            {
-                                destination: {
-                                    host: $destination_host
-                                    port: { number: $desired_port }
-                                }
+                let fallback_match = if $route_match == null {
+                    (
+                        $http_routes
+                        | enumerate
+                        | where {|row|
+                            let route_entry = $row.item
+                            let match_raw = ($route_entry.match? | default [])
+                            let match_list = if (($match_raw | describe) | str starts-with "list<") { $match_raw } else if ($match_raw | is-empty) { [] } else { [ $match_raw ] }
+                            $match_list | any {|m|
+                                let headers_rec = ($m.headers? | default {})
+                                (($headers_rec | describe) | str contains "record<") and (
+                                    ($headers_rec | get "x-canary"? ) != null or ($headers_rec | get "X-Canary"? ) != null
+                                )
                             }
-                        ]
-                    }
-                    $http_updated = [ $new_route ] ++ $http_routes
+                        }
+                    ) | get 0? | default null
+                } else { null }
+
+                let target_route_idx = if $route_match != null {
+                    $route_match.index
+                } else if $fallback_match != null {
+                    $fallback_match.index
                 } else {
-                    let current_route = $route_match.item
-                    let routes_raw = ($current_route.route? | default [])
-                    let routes_list = if (($routes_raw | describe) | str starts-with "list<") { $routes_raw } else if ($routes_raw | is-empty) { [] } else { [ $routes_raw ] }
-                    mut new_routes = $routes_list
-                    if ($new_routes | is-empty) {
-                        $new_routes = [ { destination: { host: $destination_host, port: { number: $desired_port } } } ]
-                    } else {
-                        let first_route = ($new_routes | first)
-                        let dest_raw = ($first_route.destination? | default {})
-                        let dest_port = (($dest_raw.port? | default {}) | upsert number $desired_port)
-                        let dest_updated = ($dest_raw | upsert host $destination_host | upsert port $dest_port)
-                        let first_updated = ($first_route | upsert destination $dest_updated)
-                        $new_routes = [ $first_updated ] ++ ($new_routes | skip 1)
-                    }
-                    let updated_route = (
-                        $current_route
-                        | upsert name $"canary-($trimmed_canary)"
-                        | upsert match [ { headers: { x-canary: { exact: $trimmed_canary } } } ]
-                        | upsert route $new_routes
-                    )
-                    $http_updated = ($http_routes | update $route_idx $updated_route)
+                    null
+                }
+
+                let http_updated = if $target_route_idx == null {
+                    [ $desired_route ] ++ $http_routes
+                } else {
+                    ($http_routes | update $target_route_idx $desired_route)
                 }
 
                 $doc_mut = ($doc_mut | upsert spec (
@@ -347,8 +357,10 @@ def update-hosted-env-canary-route [
         print $"($env.ALGA_COLOR_GREEN)Updated x-canary route '($trimmed_canary)' → ($destination_host):($desired_port).($env.ALGA_COLOR_RESET)"
     } else {
         print $"($env.ALGA_COLOR_YELLOW)kubectl apply for VirtualService failed: ($apply_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+        return
     }
-    (rm -f $temp_vs_path | complete) | ignore
+    if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
 
     let status_res = (do { cd $repo_dir; git status --porcelain | complete })
     if $status_res.exit_code != 0 {
@@ -381,8 +393,6 @@ def update-hosted-env-canary-route [
 
     print $"($env.ALGA_COLOR_GREEN)Pushed VirtualService update to nm-kube-config for canary '($trimmed_canary)'.($env.ALGA_COLOR_RESET)"
 }
-
-
 # Show diagnostics for a Kubernetes Job: describe job, list pods, and print logs
 def show-job-diagnostics [ns: string, job: string] {
     print $"($env.ALGA_COLOR_CYAN)Job describe: ($ns)/($job)($env.ALGA_COLOR_RESET)"
