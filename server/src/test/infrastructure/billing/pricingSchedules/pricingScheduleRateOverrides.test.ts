@@ -126,7 +126,11 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
           tenant: context.tenantId,
           client_contract_line_id: clientContractLineId
         })
-        .update({ is_active: false });
+        .update({
+          client_contract_id: clientContractId,
+          contract_line_id: contractLineId,
+          is_active: true
+        });
     }
   }
 
@@ -252,7 +256,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000, // $100 base rate
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create a contract to hold the pricing schedule
@@ -331,7 +336,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       const contractId = await context.createEntity('contracts', {
@@ -394,7 +400,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create contract with two pricing schedules
@@ -500,7 +507,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create contract with null rate pricing schedule
@@ -575,7 +583,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create contract with expired pricing schedule

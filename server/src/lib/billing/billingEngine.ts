@@ -672,38 +672,6 @@ export class BillingEngine {
       }
     }
 
-    if (effectiveCustomRate !== null && effectiveCustomRate !== undefined) {
-      // Assuming effectiveCustomRate is already in cents. Add logging to confirm.
-      console.log(`Using custom rate ${effectiveCustomRate} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || 'N/A'}`);
-
-      // If a custom rate exists, create a single charge item for the entire plan at that rate.
-      // This charge represents the entire plan when a custom contract-level rate is applied.
-      const customCharge: IFixedPriceCharge = {
-        // Properties from IFixedPriceCharge & IBillingCharge
-        type: 'fixed',
-        serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Contract: ${clientContractLine.contract_name})` : ''}`,
-        quantity: 1, // Represents the single contract-level plan item
-        rate: effectiveCustomRate, // Use the effective custom rate (from schedule or contract) (assumed cents)
-        total: effectiveCustomRate, // Total is the effective custom rate (assumed cents)
-        // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
-        client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
-        client_contract_id: clientContractLine.client_contract_id || undefined, // Use correct property name
-        contract_name: clientContractLine.contract_name || undefined,
-        // Tax properties (defaulting to 0/non-taxable for now, needs review)
-        tax_amount: 0,
-        tax_rate: 0,
-        tax_region: undefined, // Tax region for consolidated fixed item determined later
-        servicePeriodStart,
-        servicePeriodEnd,
-        billingTiming: lineBillingTiming,
-        // Note: serviceId is omitted as this charge represents the whole plan.
-        // Other properties like enable_proration might need to be sourced if relevant for custom rates.
-      };
-      generatedCharges = [customCharge];
-    }
-    // --- End Custom Rate Check ---
-
-
     if (!generatedCharges) {
       // If no custom rate, proceed with calculating based on individual services or plan's fixed rate
       console.log(`No custom rate found for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}). Calculating based on services/plan rate.`);
@@ -896,6 +864,42 @@ export class BillingEngine {
           `[DEBUG] Unable to determine base_rate for contract line ${clientContractLine.contract_line_id}.`
         );
         return [];
+      }
+
+      const planLevelBaseRateCents =
+        planLevelBaseRate !== null && !Number.isNaN(planLevelBaseRate)
+          ? Math.round(planLevelBaseRate * 100)
+          : null;
+
+      const hasCustomRateOverride =
+        effectiveCustomRate !== null &&
+        effectiveCustomRate !== undefined &&
+        (planLevelBaseRateCents === null || Math.round(Number(effectiveCustomRate)) !== planLevelBaseRateCents);
+
+      if (hasCustomRateOverride) {
+        const resolvedCustomRateCents = Math.round(Number(effectiveCustomRate));
+        console.log(
+          `Using custom rate ${resolvedCustomRateCents} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || 'N/A'}`
+        );
+
+        return [
+          {
+            type: 'fixed',
+            serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Contract: ${clientContractLine.contract_name})` : ''}`,
+            quantity: 1,
+            rate: resolvedCustomRateCents,
+            total: resolvedCustomRateCents,
+            client_contract_line_id: clientContractLine.client_contract_line_id,
+            client_contract_id: clientContractLine.client_contract_id || undefined,
+            contract_name: clientContractLine.contract_name || undefined,
+            tax_amount: 0,
+            tax_rate: 0,
+            tax_region: undefined,
+            servicePeriodStart,
+            servicePeriodEnd,
+            billingTiming: lineBillingTiming,
+          } as IFixedPriceCharge,
+        ];
       }
 
     if (isFixedFeePlan) {
