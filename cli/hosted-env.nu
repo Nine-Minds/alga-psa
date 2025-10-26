@@ -159,6 +159,226 @@ def sanitize-branch-name [branch: string] {
     } else { $sanitized_base }
 }
 
+# Trim a Kubernetes DNS label to 63 characters and drop trailing hyphens.
+def trim-dns-name [value: string] {
+    let initial = if ($value | str length) > 63 { $value | str substring 0..63 } else { $value }
+    $initial | str replace -r "-+$" ""
+}
+
+# Ensure the Istio VirtualService for Sebastian routes the provided canary header to the hosted env.
+def update-hosted-env-canary-route [
+    env_cfg: record
+    namespace: string
+    release: string
+    canary: string
+] {
+    let env_key = ($env_cfg.key? | default "")
+    let trimmed_canary = (if $canary == null { "" } else { $canary | str trim })
+    if $env_key != "sebastian" {
+        return
+    }
+    if $trimmed_canary == "" {
+        print $"($env.ALGA_COLOR_YELLOW)Skipping VirtualService update: --canary value missing.($env.ALGA_COLOR_RESET)"
+        return
+    }
+
+    let repo_url = "https://github.com/nine-minds/nm-kube-connect"
+    let repo_dir = "/tmp/nm-kube-connect"
+
+    mut repo_ready = false
+    if ($repo_dir | path exists) {
+        let git_check = (do { cd $repo_dir; git rev-parse --is-inside-work-tree | complete })
+        if $git_check.exit_code != 0 {
+            print $"($env.ALGA_COLOR_YELLOW)Existing nm-kube-connect path at ($repo_dir) is not a git repository; re-cloning...($env.ALGA_COLOR_RESET)"
+            (rm -rf $repo_dir | complete) | ignore
+        } else {
+            print $"($env.ALGA_COLOR_CYAN)Updating existing nm-kube-connect checkout...($env.ALGA_COLOR_RESET)"
+            let fetch_res = (do { cd $repo_dir; git fetch --prune origin | complete })
+            if $fetch_res.exit_code != 0 {
+                print $"($env.ALGA_COLOR_YELLOW)git fetch failed: ($fetch_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+            } else {
+                let reset_res = (do { cd $repo_dir; git reset --hard origin/main | complete })
+                if $reset_res.exit_code != 0 {
+                    print $"($env.ALGA_COLOR_YELLOW)git reset failed: ($reset_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+                } else {
+                    $repo_ready = true
+                }
+            }
+        }
+    }
+
+    if not $repo_ready {
+        print $"($env.ALGA_COLOR_CYAN)Cloning nm-kube-connect repository to ($repo_dir)...($env.ALGA_COLOR_RESET)"
+        let clone_res = (git clone $repo_url $repo_dir | complete)
+        if $clone_res.exit_code != 0 {
+            print $"($env.ALGA_COLOR_RED)Failed to clone nm-kube-connect: ($clone_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+            return
+        }
+        $repo_ready = true
+    }
+
+    if not $repo_ready {
+        print $"($env.ALGA_COLOR_YELLOW)nm-kube-connect repository unavailable; skipping VirtualService update.($env.ALGA_COLOR_RESET)"
+        return
+    }
+
+    let workflow_path = $"($repo_dir)/argo-workflow/alga-psa-dev/templates/composite/alga-psa-build-migrate-deploy.yaml"
+    if not ($workflow_path | path exists) {
+        print $"($env.ALGA_COLOR_YELLOW)VirtualService definition not found at ($workflow_path); skipping update.($env.ALGA_COLOR_RESET)"
+        return
+    }
+
+    let base_fullname = (trim-dns-name $"($release)-sebastian")
+    let service_name = (trim-dns-name $"($base_fullname)-code-server")
+    let destination_host = $"($service_name).($namespace).svc.cluster.local"
+    let desired_port = 3000
+
+    let docs_raw = (open --raw $workflow_path | from yaml)
+    let docs_list = if (($docs_raw | describe) | str starts-with "list<") { $docs_raw } else { [ $docs_raw ] }
+
+    mut updated_docs = []
+    mut updated_vs = null
+    mut changed = false
+
+    for doc in $docs_list {
+        mut doc_mut = $doc
+        if (($doc_mut.kind? | default "") == "VirtualService" and ($doc_mut.metadata.name? | default "") == "alga-psa-vs-sebastian") {
+            let http_raw = ($doc_mut.spec.http? | default [])
+            let http_routes = if (($http_raw | describe) | str starts-with "list<") { $http_raw } else if ($http_raw | is-empty) { [] } else { [ $http_raw ] }
+            let route_candidates = (
+                $http_routes
+                | enumerate
+                | where {|row|
+                    let route_entry = $row.item
+                    let match_raw = ($route_entry.match? | default [])
+                    let match_list = if (($match_raw | describe) | str starts-with "list<") { $match_raw } else if ($match_raw | is-empty) { [] } else { [ $match_raw ] }
+                    $match_list | any {|m|
+                        let headers_rec = ($m.headers? | default {})
+                        let header_value = if (($headers_rec | describe) | str contains "record<") {
+                            let lower = ($headers_rec | get "x-canary"?)
+                            if $lower == null { $headers_rec | get "X-Canary"? } else { $lower }
+                        } else { null }
+                        if $header_value == null {
+                            false
+                        } else {
+                            let header_desc = ($header_value | describe)
+                            if ($header_desc | str contains "record<") {
+                                (($header_value.exact? | default "") == $trimmed_canary)
+                            } else {
+                                $header_value == $trimmed_canary
+                            }
+                        }
+                    }
+                }
+            )
+            let route_match = ($route_candidates | get 0? | default null)
+            let route_idx = if $route_match == null { null } else { $route_match.index }
+
+            mut http_updated = $http_routes
+            if $route_idx == null {
+                let new_route = {
+                    name: $"canary-($trimmed_canary)"
+                    match: [
+                        {
+                            headers: {
+                                x-canary: { exact: $trimmed_canary }
+                            }
+                        }
+                    ]
+                    route: [
+                        {
+                            destination: {
+                                host: $destination_host
+                                port: { number: $desired_port }
+                            }
+                        }
+                    ]
+                }
+                $http_updated = [ $new_route ] ++ $http_routes
+            } else {
+                let current_route = if $route_match == null { {} } else { $route_match.item }
+                let routes_raw = ($current_route.route? | default [])
+                let routes_list = if (($routes_raw | describe) | str starts-with "list<") { $routes_raw } else if ($routes_raw | is-empty) { [] } else { [ $routes_raw ] }
+                mut new_routes = $routes_list
+                if ($new_routes | is-empty) {
+                    $new_routes = [
+                        { destination: { host: $destination_host, port: { number: $desired_port } } }
+                    ]
+                } else {
+                    let first_route = ($new_routes | first)
+                    let dest_raw = ($first_route.destination? | default {})
+                    let dest_port = (($dest_raw.port? | default {}) | upsert number $desired_port)
+                    let dest_updated = ($dest_raw | upsert host $destination_host | upsert port $dest_port)
+                    let first_updated = ($first_route | upsert destination $dest_updated)
+                    $new_routes = [ $first_updated ] ++ ($new_routes | skip 1)
+                }
+                let updated_route = ($current_route | upsert route $new_routes)
+                $http_updated = ($http_routes | update $route_idx $updated_route)
+            }
+
+            $doc_mut = ($doc_mut | upsert spec (
+                ($doc_mut.spec? | default {}) | upsert http $http_updated
+            ))
+            $updated_vs = $doc_mut
+            $changed = true
+        }
+        $updated_docs = $updated_docs ++ [ $doc_mut ]
+    }
+
+    if not $changed {
+        print $"($env.ALGA_COLOR_YELLOW)VirtualService alga-psa-vs-sebastian not found in nm-kube-connect; skipping update.($env.ALGA_COLOR_RESET)"
+        return
+    }
+
+    let workflow_relative = "argo-workflow/alga-psa-dev/templates/composite/alga-psa-build-migrate-deploy.yaml"
+    let doc_strings = ($updated_docs | each {|d| $d | to yaml })
+    let joined = ($doc_strings | str join "\n---\n")
+    let final_content = if ($joined | str ends-with "\n") { $joined } else { $"($joined)\n" }
+    $final_content | save --force --raw $workflow_path
+
+    if $updated_vs != null {
+        let temp_vs_path = $"($repo_dir)/.tmp-alga-psa-vs-sebastian.yaml"
+        ($updated_vs | to yaml) | save --force --raw $temp_vs_path
+        let apply_res = (kubectl apply -f $temp_vs_path | complete)
+        if $apply_res.exit_code == 0 {
+            print $"($env.ALGA_COLOR_GREEN)Updated x-canary route '($trimmed_canary)' → ($destination_host):($desired_port).($env.ALGA_COLOR_RESET)"
+        } else {
+            print $"($env.ALGA_COLOR_YELLOW)kubectl apply for VirtualService failed: ($apply_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        }
+        (rm -f $temp_vs_path | complete) | ignore
+    }
+
+    let status_res = (do { cd $repo_dir; git status --porcelain | complete })
+    if $status_res.exit_code != 0 {
+        print $"($env.ALGA_COLOR_YELLOW)Unable to determine nm-kube-connect git status: ($status_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        return
+    }
+    if ($status_res.stdout | str trim | is-empty) {
+        return
+    }
+
+    let add_res = (do { cd $repo_dir; git add $workflow_relative | complete })
+    if $add_res.exit_code != 0 {
+        print $"($env.ALGA_COLOR_YELLOW)git add failed for nm-kube-connect: ($add_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        return
+    }
+
+    let commit_message = $"Update canary ($trimmed_canary) VirtualService target"
+    let commit_res = (do { cd $repo_dir; git commit -m $commit_message | complete })
+    if $commit_res.exit_code != 0 {
+        print $"($env.ALGA_COLOR_YELLOW)git commit failed for nm-kube-connect: ($commit_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        return
+    }
+
+    let push_res = (do { cd $repo_dir; git push origin HEAD | complete })
+    if $push_res.exit_code != 0 {
+        print $"($env.ALGA_COLOR_YELLOW)git push failed for nm-kube-connect: ($push_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        return
+    }
+
+    print $"($env.ALGA_COLOR_GREEN)Pushed VirtualService update to nm-kube-connect for canary '($trimmed_canary)'.($env.ALGA_COLOR_RESET)"
+}
+
 # Show diagnostics for a Kubernetes Job: describe job, list pods, and print logs
 def show-job-diagnostics [ns: string, job: string] {
     print $"($env.ALGA_COLOR_CYAN)Job describe: ($ns)/($job)($env.ALGA_COLOR_RESET)"
@@ -502,7 +722,7 @@ vaultAgent:
             print $"($env.ALGA_COLOR_YELLOW)Some deployments may still be starting.($env.ALGA_COLOR_RESET)"
         }
 
-        print $"Run: hosted-env-connect ($branch)  # to port-forward code-server"
+        print $"Run: hosted-env-connect ($branch) --canary ($sanitized_branch)  # to port-forward code-server"
         print $"Run: hosted-env-status  ($branch)  # to view status"
     } catch { |err|
         print $"($env.ALGA_COLOR_RED)Error: ($err)($env.ALGA_COLOR_RESET)"
@@ -538,12 +758,17 @@ export def hosted-env-list [
 export def hosted-env-connect [
     branch: string
     --environment (-e): string = "hosted"
+    --canary (-c): string
 ] {
     let env_cfg = (get-hosted-env-config $environment)
     ensure-hosted-env-context $env_cfg
     let sanitized_branch = (sanitize-branch-name $branch)
     let namespace = $"($env_cfg.namespace_prefix)($sanitized_branch)"
     let release = $"($env_cfg.release_prefix)($sanitized_branch)"
+    let canary_value = if $canary == null { "" } else { $canary | str trim }
+    if $canary_value == "" {
+        error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-connect now requires '--canary <header_value>' to update the Istio route.($env.ALGA_COLOR_RESET)" }
+    }
 
     # Ensure environment exists
     let env_check = (kubectl get namespace $namespace | complete)
@@ -554,6 +779,7 @@ export def hosted-env-connect [
     }
 
     print $"($env.ALGA_COLOR_CYAN)Connecting to hosted environment for branch: ($branch) on ($env_cfg.display)($env.ALGA_COLOR_RESET)"
+    update-hosted-env-canary-route $env_cfg $namespace $release $canary_value
     print $"($env.ALGA_COLOR_CYAN)Setting up port forwarding...($env.ALGA_COLOR_RESET)"
     print $"($env.ALGA_COLOR_YELLOW)This runs in foreground. Press Enter to stop.($env.ALGA_COLOR_RESET)"
 
