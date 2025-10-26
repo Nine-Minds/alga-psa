@@ -330,9 +330,18 @@ def update-hosted-env-canary-route [
                 }
 
                 let raw_metadata = ($doc_mut.metadata? | default {})
+                let annotations_raw = ($raw_metadata.annotations? | default {})
                 let cleaned_annotations = (
-                    ($raw_metadata.annotations? | default {})
-                    | reject "kubectl.kubernetes.io/last-applied-configuration"
+                    if (($annotations_raw | describe) | str starts-with "record<") {
+                        let has_last_applied = ($annotations_raw | columns | any {|c| $c == "kubectl.kubernetes.io/last-applied-configuration"})
+                        if $has_last_applied {
+                            $annotations_raw | reject "kubectl.kubernetes.io/last-applied-configuration"
+                        } else {
+                            $annotations_raw
+                        }
+                    } else {
+                        $annotations_raw
+                    }
                 )
                 let base_metadata = (
                     ["name", "namespace", "labels"]
