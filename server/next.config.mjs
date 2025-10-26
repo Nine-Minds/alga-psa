@@ -2,7 +2,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
-import webpack from 'webpack';
 // import CopyPlugin from 'copy-webpack-plugin';
 
 const require = createRequire(import.meta.url);
@@ -257,7 +256,7 @@ const nextConfig = {
   },
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
-  webpack: (config, { isServer, dev }) => {
+  webpack: (config, { isServer, dev, webpack }) => {
     // Enable webpack cache for faster builds
     config.cache = true;
 
