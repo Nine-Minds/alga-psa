@@ -614,12 +614,29 @@ export class BillingEngine {
     }
 
     const lineBillingTiming = (clientContractLine.billing_timing ?? 'arrears') as 'arrears' | 'advance';
-    const { servicePeriodStart, servicePeriodEnd } = await this.resolveServicePeriod(
+    const servicePeriod = await this.resolveServicePeriod(
       clientId,
       billingPeriod,
       clientContractLine,
       lineBillingTiming
     );
+    let { servicePeriodStart, servicePeriodEnd } = servicePeriod;
+    if (lineBillingTiming === 'arrears' && clientContractLine.start_date) {
+      const serviceEndDate = toPlainDate(servicePeriodEnd);
+      const lineStartDate = toPlainDate(clientContractLine.start_date);
+
+      if (Temporal.PlainDate.compare(serviceEndDate, lineStartDate) < 0) {
+        console.log(
+          `[ARREARS] Skipping fixed charge for ${clientContractLine.contract_line_name} (line ${clientContractLine.contract_line_id}) – service period ${servicePeriodStart} to ${servicePeriodEnd} ends before contract start ${clientContractLine.start_date}.`
+        );
+        return [];
+      }
+
+      const serviceStartDate = toPlainDate(servicePeriodStart);
+      if (Temporal.PlainDate.compare(serviceStartDate, lineStartDate) < 0) {
+        servicePeriodStart = toISODate(lineStartDate);
+      }
+    }
 
     // --- Custom Rate Check (Contracts & Pricing Schedules) ---
     // Check if a custom rate is defined for this plan assignment (provided via contract association)
@@ -676,6 +693,9 @@ export class BillingEngine {
         tax_amount: 0,
         tax_rate: 0,
         tax_region: undefined, // Tax region for consolidated fixed item determined later
+        servicePeriodStart,
+        servicePeriodEnd,
+        billingTiming: lineBillingTiming,
         // Note: serviceId is omitted as this charge represents the whole plan.
         // Other properties like enable_proration might need to be sourced if relevant for custom rates.
       };
