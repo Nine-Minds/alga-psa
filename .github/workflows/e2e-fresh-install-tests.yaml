@@ -124,6 +124,8 @@ jobs:
           # Database Configuration (will be overridden by docker-compose services but good to have)
           DB_TYPE=postgres
           DB_USER_ADMIN=postgres
+          DB_HOST_ADMIN=postgres
+          DB_PORT_ADMIN=5432
 
           # Logging Configuration
           LOG_LEVEL=INFO
@@ -251,10 +253,8 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting setup service"
-          # Set DB_HOST_ADMIN and DB_PORT_ADMIN to connect directly to postgres for admin operations
+          # DB_HOST_ADMIN and DB_PORT_ADMIN are now set in .env to connect directly to postgres for admin operations
           # while keeping DB_HOST and DB_PORT pointing to pgbouncer for migrations/seeds
-          DB_HOST_ADMIN=postgres \
-          DB_PORT_ADMIN=5432 \
           docker-compose -p alga-e2e-test \
             -f docker-compose.base.yaml \
             -f docker-compose.ce.yaml \
