@@ -492,6 +492,8 @@
       "invite": "Send Invitation",
       "resendInvite": "Resend Invitation",
       "lastLogin": "Last Login",
+      "never": "Never",
+      "via": "via",
       "userNotFound": "User not found",
       "failedToLoad": "Failed to load user details",
       "failedToUpdate": "Failed to update user",

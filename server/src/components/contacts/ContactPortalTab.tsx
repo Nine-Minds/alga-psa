@@ -378,6 +378,23 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   </div>
                 </div>
 
+                {/* Last Login Info */}
+                {existingUser.last_login_at && (
+                  <div className="p-3 rounded-lg border bg-gray-50">
+                    <Label className="text-sm font-medium">Last Login</Label>
+                    <div className="mt-1 space-y-1">
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(existingUser.last_login_at)}
+                      </p>
+                      {existingUser.last_login_method && (
+                        <p className="text-xs text-muted-foreground">
+                          via {existingUser.last_login_method}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* User Status */}
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <div>

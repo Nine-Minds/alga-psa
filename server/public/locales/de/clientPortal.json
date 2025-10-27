@@ -493,6 +493,8 @@
       "invite": "Einladung senden",
       "resendInvite": "Einladung erneut senden",
       "lastLogin": "Letzte Anmeldung",
+      "never": "Nie",
+      "via": "über",
       "userNotFound": "Benutzer nicht gefunden",
       "failedToLoad": "Benutzerdetails konnten nicht geladen werden",
       "failedToUpdate": "Benutzer konnte nicht aktualisiert werden",
