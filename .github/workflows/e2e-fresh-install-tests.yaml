@@ -21,7 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history for all branches and tags, required for tj-actions/changed-files
+          fetch-depth: 500 # Fetch enough history for changed-files comparison including release merges (was 0 which caused timeouts)
 
       #--------------------------------------------------------------
       # Detect whether the proposed changes require running the
@@ -33,12 +33,14 @@ jobs:
       #--------------------------------------------------------------
       - name: Check for relevant file changes
         id: changed_files_check
-        uses: tj-actions/changed-files@v42 # Using a specific version
+        uses: tj-actions/changed-files@v47 # Updated to v47 (secure version, fixes CVE-2025-30066)
+        timeout-minutes: 3 # Add timeout protection
         with:
           # List of paths that, when modified, SHOULD trigger the heavy
           # E2E job.  **Notice that the `helm/**` path is intentionally
           # omitted** so that commits exclusively touching Helm logic
           # will set `any_changed` to `false`.
+          since_last_remote_commit: true # Optimize for PR comparisons
           files: |
             .github/workflows/e2e-fresh-install-tests.yaml
             docker-compose.base.yaml
@@ -53,16 +55,37 @@ jobs:
       # successful when all executed steps succeed, so emitting an
       # informative log and exiting early is sufficient.
       - name: Skip job -- only Helm chart files changed
-        if: steps.changed_files_check.outputs.any_changed == 'false'
+        if: steps.changed_files_check.outputs.any_changed == 'false' && steps.changed_files_check.outcome == 'success'
         run: |
           echo "Only Helm chart-related files were modified – skipping E2E Fresh Install Tests."
           echo "No further steps will be executed."
           # Nothing else to do, the job will report success because the
           # previous steps (including this one) have succeeded.
 
+      # If the changed-files check failed or timed out, run tests anyway to be safe
+      - name: Fallback - Run tests if changed-files check failed
+        if: steps.changed_files_check.outcome != 'success'
+        run: |
+          echo "⚠️  Changed-files check failed or timed out. Running E2E tests to be safe."
+          echo "Changed-files check status: ${{ steps.changed_files_check.outcome }}"
+
+      # Determine if we should run tests: either changed files detected OR changed-files check failed
+      - name: Determine if tests should run
+        id: should_run_tests
+        run: |
+          if [[ "${{ steps.changed_files_check.outcome }}" != "success" ]]; then
+            echo "Should run tests (changed-files check failed/timed out)"
+            echo "run_tests=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.changed_files_check.outputs.any_changed }}" == "true" ]]; then
+            echo "Should run tests (relevant files changed)"
+            echo "run_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "Should skip tests (no relevant files changed)"
+            echo "run_tests=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up test environment secrets and .env
-        if: steps.changed_files_check.outputs.any_changed == 'true'
+        if: steps.should_run_tests.outputs.run_tests == 'true'
         run: |
           # Create secrets directory
           mkdir -p secrets
@@ -133,7 +156,7 @@ jobs:
         shell: bash
 
       - name: Install Docker Compose v1.29.2 via curl
-        if: steps.changed_files_check.outputs.any_changed == 'true'
+        if: steps.should_run_tests.outputs.run_tests == 'true'
         id: install_docker_compose # Add an ID for dependent steps
         run: |
           COMPOSE_VERSION="v2.36.0"
@@ -427,13 +450,13 @@ jobs:
         shell: bash
 
       - name: Set up Node.js
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.should_run_tests.outputs.run_tests == 'true'
         uses: actions/setup-node@v3
         with:
           node-version: '18' # Or your project's Node version
 
       - name: Create E2E test directory and package.json
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.should_run_tests.outputs.run_tests == 'true'
         run: |
           mkdir -p e2e-tests/tests
           cat << EOF > e2e-tests/package.json
@@ -456,7 +479,7 @@ jobs:
         shell: bash
 
       - name: Install Playwright and dependencies
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.should_run_tests.outputs.run_tests == 'true'
         working-directory: ./e2e-tests
         run: |
           npm install
@@ -464,7 +487,7 @@ jobs:
         shell: bash
 
       - name: Create Playwright config file
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.should_run_tests.outputs.run_tests == 'true'
         run: |
           cat << EOF > e2e-tests/playwright.config.ts
           import { defineConfig, devices } from '@playwright/test';
@@ -494,7 +517,7 @@ jobs:
         shell: bash
 
       - name: Create E2E login test spec
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.should_run_tests.outputs.run_tests == 'true'
         run: |
           # Ensure APP_PORT is available for constructing the baseURL if not set via E2E_BASE_URL
           APP_PORT_VALUE_FROM_ENV=$(grep '^APP_PORT=' ./.env | cut -d '=' -f2 | head -n 1)
@@ -557,7 +580,7 @@ jobs:
 
 
       - name: Run Playwright E2E tests
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != '' && steps.should_run_tests.outputs.run_tests == 'true'
         working-directory: ./e2e-tests
         run: |
           # Pass credentials as environment variables to Playwright tests
