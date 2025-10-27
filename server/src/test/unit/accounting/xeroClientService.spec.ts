@@ -11,15 +11,30 @@ import type { XeroInvoicePayload } from 'server/src/lib/xero/xeroClientService';
  * - OAuth token refresh: https://developer.xero.com/documentation/oauth2/auth-flow
  */
 
-vi.mock('@alga-psa/shared/core', () => {
-  const provider = {
-    getTenantSecret: vi.fn().mockResolvedValue(null),
-    setTenantSecret: vi.fn().mockResolvedValue(undefined)
-  };
-  return {
-    getSecretProviderInstance: vi.fn().mockResolvedValue(provider)
-  };
-});
+const secretProviderMock = vi.hoisted(() => ({
+  getTenantSecret: vi.fn().mockResolvedValue(null),
+  setTenantSecret: vi.fn().mockResolvedValue(undefined),
+  getAppSecret: vi.fn().mockResolvedValue(undefined)
+}));
+
+const getSecretProviderInstanceMock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(secretProviderMock)
+);
+
+vi.mock('@alga-psa/shared/core', () => ({
+  getSecretProviderInstance: getSecretProviderInstanceMock
+}));
+
+const loggerMock = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn()
+}));
+
+vi.mock('@shared/core/logger', () => ({
+  default: loggerMock
+}));
 
 vi.mock('axios', () => {
   const request = vi.fn();
@@ -88,6 +103,18 @@ function createService(overrides: Partial<XeroInvoicePayload> = {}) {
 
 describe('XeroClientService – REST usage', () => {
   beforeEach(() => {
+    loggerMock.info.mockReset();
+    loggerMock.warn.mockReset();
+    loggerMock.error.mockReset();
+    loggerMock.debug.mockReset();
+    secretProviderMock.getTenantSecret.mockReset();
+    secretProviderMock.setTenantSecret.mockReset();
+    secretProviderMock.getAppSecret.mockReset();
+    getSecretProviderInstanceMock.mockReset();
+    secretProviderMock.getTenantSecret.mockResolvedValue(null);
+    secretProviderMock.setTenantSecret.mockResolvedValue(undefined);
+    secretProviderMock.getAppSecret.mockResolvedValue(undefined);
+    getSecretProviderInstanceMock.mockResolvedValue(secretProviderMock);
     axiosMock.request.mockReset();
     axiosMock.post.mockReset();
   });
@@ -242,5 +269,161 @@ describe('XeroClientService – REST usage', () => {
 
     expect((service as any).connection.accessToken).toBe('new-access');
     expect((service as any).connection.refreshToken).toBe('new-refresh');
+  });
+
+  it('retrieves accounts, items, tax rates, and tracking categories with normalized structures', async () => {
+    const { service } = createService();
+    axiosMock.request
+      .mockResolvedValueOnce({
+        data: {
+          Accounts: [{ AccountID: 'acc-1', Code: '200', Name: 'Revenue', Status: 'ACTIVE', Type: 'SALES' }]
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          Items: [{ ItemID: 'item-1', Code: 'SKU', Name: 'Support Plan', Status: 'ACTIVE', IsTrackedAsInventory: false }]
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          TaxRates: [
+            {
+              TaxRateID: 'tax-1',
+              Name: 'GST',
+              TaxType: 'OUTPUT',
+              Status: 'ACTIVE',
+              EffectiveRate: 10,
+              TaxComponents: [{ Name: 'GST', Rate: 10 }]
+            }
+          ]
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          TrackingCategories: [
+            {
+              TrackingCategoryID: 'track-1',
+              Name: 'Region',
+              Status: 'ACTIVE',
+              Options: [{ TrackingOptionID: 'opt-1', Name: 'North', Status: 'ACTIVE' }]
+            }
+          ]
+        }
+      });
+
+    const accounts = await service.listAccounts({ status: 'ACTIVE' });
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0]).toMatchObject({ accountId: 'acc-1', code: '200', name: 'Revenue', status: 'ACTIVE', type: 'SALES' });
+
+    const items = await service.listItems();
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ itemId: 'item-1', code: 'SKU', name: 'Support Plan', isTrackedAsInventory: false });
+
+    const taxRates = await service.listTaxRates();
+    expect(taxRates).toHaveLength(1);
+    expect(taxRates[0]).toMatchObject({
+      taxRateId: 'tax-1',
+      name: 'GST',
+      taxType: 'OUTPUT',
+      effectiveRate: 10,
+      components: [{ name: 'GST', rate: 10 }]
+    });
+
+    const tracking = await service.listTrackingCategories();
+    expect(tracking).toHaveLength(1);
+    expect(tracking[0]).toMatchObject({
+      trackingCategoryId: 'track-1',
+      name: 'Region',
+      options: [{ trackingOptionId: 'opt-1', name: 'North' }]
+    });
+
+    expect(axiosMock.request.mock.calls.map((call) => call[0]?.url)).toEqual([
+      '/Accounts',
+      '/Items',
+      '/TaxRates',
+      '/TrackingCategories'
+    ]);
+  });
+
+  it('retries after 401 by refreshing token once and logs tenant metadata', async () => {
+    const { service } = createService();
+
+    axiosMock.request
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: { status: 401 }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          Accounts: [{ AccountID: 'acc-2', Name: 'Consulting', Code: '210' }]
+        }
+      });
+
+    axiosMock.post.mockResolvedValueOnce({
+      data: {
+        access_token: 'refreshed-token',
+        refresh_token: 'refreshed-refresh',
+        expires_in: 1800,
+        refresh_token_expires_in: 7200,
+        scope: 'accounting.transactions'
+      }
+    });
+
+    const accounts = await service.listAccounts();
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0].accountId).toBe('acc-2');
+
+    expect(axiosMock.request).toHaveBeenCalledTimes(2);
+    expect(axiosMock.post).toHaveBeenCalledTimes(1);
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      '[XeroClientService] 401 received, attempting token refresh',
+      expect.objectContaining({ tenantId: 'tenant-123', connectionId: 'connection-1' })
+    );
+    expect(loggerMock.info).toHaveBeenCalledWith(
+      '[XeroClientService] refreshing access token',
+      expect.objectContaining({ tenantId: 'tenant-123', connectionId: 'connection-1' })
+    );
+    expect(secretProviderMock.setTenantSecret).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows re-export after validation error once mappings are corrected', async () => {
+    const { service, payload } = createService();
+
+    axiosMock.request
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 400,
+          headers: { 'xero-correlation-id': 'corr-999' },
+          data: {
+            Elements: [
+              {
+                Invoice: { InvoiceNumber: 'INV-BAD' },
+                ValidationErrors: [{ Message: 'AccountCode ACC-000 is disabled' }]
+              }
+            ]
+          }
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          Invoices: [{ InvoiceID: 'guid-2', InvoiceNumber: 'INV-1002' }]
+        }
+      });
+
+    await expect(service.createInvoices([payload])).rejects.toMatchObject({
+      code: 'XERO_VALIDATION_ERROR'
+    });
+
+    const result = await service.createInvoices([payload]);
+    expect(result).toEqual([
+      {
+        status: 'success',
+        invoiceId: 'guid-2',
+        documentId: payload.invoiceId,
+        invoiceNumber: 'INV-1002',
+        raw: { InvoiceID: 'guid-2', InvoiceNumber: 'INV-1002' }
+      }
+    ]);
   });
 });
