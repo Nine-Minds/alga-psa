@@ -137,32 +137,10 @@ export class ActionRegistry {
       // Use provided connection if available, otherwise get a fresh one
       // Using the same connection avoids Citus cross-shard FK timing issues
       if (context.knex) {
-        const providedKnex: any = context.knex;
-        const looksLikeTransaction = Boolean(
-          providedKnex?.isTransaction || typeof providedKnex?.isCompleted === 'function'
-        );
-
-        if (looksLikeTransaction) {
-          const isCompleted = typeof providedKnex.isCompleted === 'function'
-            ? providedKnex.isCompleted()
-            : Boolean(providedKnex?._completed);
-
-          if (!isCompleted) {
-            knex = providedKnex;
-          }
-        } else {
-          knex = providedKnex;
-        }
-      }
-
-      if (!knex) {
+        knex = context.knex;
+      } else {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         knex = await getAdminConnection();
-
-        if (context.knex) {
-          // Replace the exhausted transaction reference with a live connection for future calls.
-          context.knex = knex;
-        }
       }
       
       // Create action result record (pre-execution)

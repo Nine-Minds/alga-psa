@@ -462,7 +462,7 @@ export class TypeScriptWorkflowRuntime {
 
       // Create workflow context with userId and knex connection
       // Passing knex ensures actions use the same connection, avoiding Citus cross-shard FK issues
-      const context = this.createWorkflowContext(executionId, tenant, userId, knex);
+      const context = await this.createWorkflowContext(executionId, tenant, userId, knex);
 
       // Start workflow execution in background
       this.executeWorkflow(workflowDefinition.execute, context, executionState);
@@ -854,7 +854,8 @@ export class TypeScriptWorkflowRuntime {
   /**
    * Create a workflow context for execution
    */
-  private createWorkflowContext(executionId: string, tenant: string, userId?: string, knex?: any): WorkflowContext {
+  private async createWorkflowContext(executionId: string, tenant: string, userId?: string, knex?: any): Promise<WorkflowContext> {
+    const knexForActions = await this.resolveKnexForActions(knex);
     const executionState = this.executionStates.get(executionId)!;
     const eventListeners: Map<string, ((event: WorkflowEvent) => void)[]> = new Map();
 
@@ -990,12 +991,26 @@ export class TypeScriptWorkflowRuntime {
     };
 
     // Create action proxy, passing the context being built and the knex connection
-    const actionProxyInstance = this.createActionProxy(executionId, tenant, context, knex);
+    const actionProxyInstance = this.createActionProxy(executionId, tenant, context, knexForActions);
     context.actions = actionProxyInstance; // Now assign the fully built actions object
 
     return context;
   }
-  
+
+  private async resolveKnexForActions(knex?: any): Promise<any> {
+    if (!knex) {
+      return undefined;
+    }
+
+    const looksLikeTransaction = Boolean(knex?.isTransaction || knex?.client?.transacting);
+    if (!looksLikeTransaction) {
+      return knex;
+    }
+
+    const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+    return await getAdminConnection();
+  }
+
   /**
    * Create a proxy for action execution
    */
