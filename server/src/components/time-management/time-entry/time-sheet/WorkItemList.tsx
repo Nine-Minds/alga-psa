@@ -1,5 +1,86 @@
 'use client'
+import React, { useMemo } from 'react';
 import { WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+
+interface MetaLinesProps {
+  clientName?: string;
+  assignedToName?: string;
+  dueDate?: Date | string;
+  assignedUserIds?: string[];
+  additionalUserIds?: string[];
+  workItemType?: WorkItemType;
+}
+
+const MetaLines: React.FC<MetaLinesProps> = ({
+  clientName,
+  assignedToName,
+  dueDate,
+  assignedUserIds,
+  additionalUserIds,
+  workItemType
+}) => {
+
+  const assignedDisplay = useMemo(() => {
+    // For interactions, just show the assigned user name as before
+    if (workItemType === 'interaction') {
+      return assignedToName ? assignedToName : (assignedToName === undefined ? null : 'Unassigned');
+    }
+
+    // For tickets and project tasks, calculate total unique assigned users
+    const allUserIds = [
+      ...(assignedUserIds || []),
+      ...(additionalUserIds || [])
+    ].filter(id => id);
+
+    // Use Set to get unique user count
+    const uniqueUserIds = new Set(allUserIds);
+    const totalUsers = uniqueUserIds.size;
+
+    // No assigned name and no users
+    if (!assignedToName && totalUsers === 0) {
+      return assignedToName === undefined ? null : 'Unassigned';
+    }
+
+    // No assigned name but have users
+    if (!assignedToName && totalUsers > 0) {
+      return totalUsers === 1 ? '1 user assigned' : `${totalUsers} users assigned`;
+    }
+
+    // Have assigned name
+    if (assignedToName) {
+      if (totalUsers <= 1) {
+        return assignedToName;
+      }
+      // Show primary user plus count of additional users
+      const additionalUsersCount = totalUsers - 1;
+      return `${assignedToName}, +${additionalUsersCount} user${
+        additionalUsersCount === 1 ? '' : 's'
+      }`;
+    }
+
+    return null;
+  }, [assignedToName, assignedUserIds, additionalUserIds, workItemType]);
+
+  return (
+    <>
+      {clientName && (
+        <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+          {clientName}
+        </div>
+      )}
+      {assignedDisplay !== null && (
+        <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+          Assigned to: {assignedDisplay}
+        </div>
+      )}
+      {dueDate !== undefined && (
+        <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+          Due Date: {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
+        </div>
+      )}
+    </>
+  );
+};
 
 interface WorkItemListProps {
   items: WorkItemWithStatus[];
@@ -30,12 +111,14 @@ export function WorkItemList({
           <div className="font-medium text-[rgb(var(--color-text-900))] text-lg mb-1">
             {item.ticket_number} - {item.title || 'Untitled'}
           </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            {item.client_name}
-          </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            Due Date: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
-          </div>
+          <MetaLines
+            clientName={item.client_name}
+            assignedToName={item.assigned_to_name}
+            dueDate={item.due_date}
+            assignedUserIds={item.assigned_user_ids}
+            additionalUserIds={item.additional_user_ids}
+            workItemType={item.type}
+          />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))]">
               Ticket
@@ -57,12 +140,14 @@ export function WorkItemList({
           <div className="text-sm text-[rgb(var(--color-text-600))]">
             {item.project_name} • {item.phase_name}
           </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            {item.client_name}
-          </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            Due Date: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
-          </div>
+          <MetaLines
+            clientName={item.client_name}
+            assignedToName={item.assigned_to_name}
+            dueDate={item.due_date}
+            assignedUserIds={item.assigned_user_ids}
+            additionalUserIds={item.additional_user_ids}
+            workItemType={item.type}
+          />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))]">
               Project Task
@@ -86,6 +171,10 @@ export function WorkItemList({
               Scheduled end: {new Date(item.scheduled_end).toLocaleString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
             </div>
           )}
+          <MetaLines
+            assignedToName={item.assigned_to_name}
+            workItemType={item.type}
+          />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-border-900))]">
               Ad-hoc Entry
@@ -112,6 +201,10 @@ export function WorkItemList({
               Contact: {item.contact_name}
             </div>
           )}
+          <MetaLines
+            assignedToName={item.assigned_to_name}
+            workItemType={item.type}
+          />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-900">
               Interaction
