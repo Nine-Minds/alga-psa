@@ -153,49 +153,194 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 
 ---
 
+## Screen Architecture & User Flows
+
+### Accounting Settings ▸ Accounting Integrations (`/msp/settings/accounting`)
+- **Layout:** Two-column settings shell. Left nav highlights “Accounting”. Primary content area renders accounting integration cards and mapping workspace.
+- **Adapter Tabs:** Tab bar (`id="accounting-integration-tabs"`) with entries for each connected adapter (QuickBooks Online, QuickBooks Desktop, Xero). Selecting a tab loads adapter-specific mappings panel.
+- **Mappings Panel**
+  1. Sections for **Service Items**, **Tax Codes**, **Payment Terms**, and optional **GL/Class Mappings** rendered as cards with tables (Radix `Table` component).
+  2. Each table header includes `Add Mapping` button (`id="add-{entity}-mapping-button"`) that opens `QboMappingFormDialog`/`XeroMappingFormDialog`.
+  3. Table rows provide `Edit` (`id="edit-{entity}-mapping-{rowId}"`) and `Remove` actions in dropdown menus (`{entity}-mapping-actions-menu`).
+  4. Fallback order modal triggered by `Configure Fallback` chip; modal lists overrides (contract line, service, category) with drag handles to reorder and checkbox to enable fallback.
+  5. CSV import available via `Import CSV` button which opens upload dialog; download template link included.
+- **Bulk Operations:** Toolbar (`id="mapping-toolbar"`) with adapter realm selector, `Refresh from Adapter`, `Import CSV`, and `Export CSV`.
+- **Permissions:** Non-finance roles see tables in read-only state (buttons disabled, actions hidden) with tooltip “Finance role required”.
+
+### Accounting Exports Dashboard (`/msp/billing/accounting-exports`)
+- **Filters Bar:** Date range picker (`id="export-date-filter"`), status multi-select, adapter select, client search. `Reset Filters` chip clears selections.
+- **Batch Table:** Columns for Batch ID, Created At, Adapter, Invoice Count, Amount, Status, Created By. Row click opens side drawer.
+- **Create Batch CTA:** `New Export` button triggers modal with filter form (date range, invoice status, adapter target, optional client filter). `Preview Invoices` step shows resolved invoice list before confirming.
+- **Side Drawer (Batch Detail):**
+  - Tabs for Overview (summary, totals, download links) and Line Items (table with invoice, amount, status, message).
+  - `Mark as Posted`, `Cancel Batch`, `Retry Failed Lines` buttons shown based on status.
+  - Activity log timeline showing state transitions and actor.
+
+### Invoice Detail Augmentation (`/msp/billing/invoices/[invoiceId]`)
+- **Export History Card:** Within right-hand sidebar. Lists export events (adapter, status, batch ID link, timestamp, actor). `Re-export Invoice` button shown when invoice eligible; opens modal referencing batch creation wizard with invoice preselected.
+- **Status Chips:** When exported, invoice header shows chip “Exported to {Adapter} on {date}”.
+
+### Notifications & Task Inbox
+- **Toast/Email:** Failed batches raise toast with link to batch drawer and send email to finance distribution list.
+- **Task Inbox Card:** Workflow-generated tasks for failures display `Review Accounting Export` template embedded with summary and quick actions (`Acknowledge`, `Open Batch`).
+
+### Permissions & Feature Toggle
+- Feature flag `accounting_exports` gates navigation entry and API routes. When off, menu item hidden and direct routes return 404.
+- Role matrix: `finance_admin` full access; `billing_manager` can run exports but not edit mappings; others view-only.
+
+---
+
 ## Acceptance Tests
 - **Mapping Management**
-  - `MappingCRUD#L1`: Admin manages QuickBooks Online mappings (create/edit/delete service, tax, term entries); UI renders resolved names; audit log captures each change.
-  - `MappingFallback#L1`: Invoice line resolves through contract-line override, service override, then service-category fallback; reordering fallbacks changes exported mapping; missing fallbacks block batch with actionable validation.
-  - `XeroMappings#L1`: Xero tenant imports accounts/tax rates/tracking categories, selects valid entries, handles inactive IDs with warnings, and bulk CSV import prevents duplicates.
-  - `MappingPermissions#L1`: Finance role can mutate mappings while other roles are read-only; unauthorized write attempts fail due to RLS and surface clear error.
+  - `MappingCRUD#L1`
+    1. Log in as `finance_admin`; navigate to `/msp/settings/accounting`.
+    2. Select “QuickBooks Online” tab (`accounting-integration-tabs`).
+    3. In Service Items section, click `Add Mapping` button; complete dialog (select PSA service `svc-001`, select QBO item `Consulting`, save).
+    4. Verify new row shows PSA Service Name and QBO Item Name.
+    5. Open row actions (`service-mapping-actions-menu-{rowId}`) → Edit; change QBO item to `Consulting - Premium`; save; verify table updates.
+    6. Open row actions → Delete; confirm removal; entry disappears.
+    7. Open Audit Log (existing system) and confirm create/update/delete entries referencing mapping ID.
+  - `MappingFallback#L1`
+    1. From same screen, click `Configure Fallback` chip in Service Items card.
+    2. Reorder fallback list to `Contract Line`, `Service`, `Category` by dragging handles.
+    3. Enable category fallback checkbox and select category `Managed Services`.
+    4. Save; run test export (see `ValidationUnmapped#L1` steps) with invoice covering contract line, confirm exported payload uses contracted mapping.
+    5. Move category fallback to top; run batch preview again; verify preview now shows category-based mapping.
+    6. Remove category fallback, save; attempt batch creation; ensure validation error highlights unmapped line with instruction to add mapping.
+  - `XeroMappings#L1`
+    1. Navigate to Xero tab; click `Refresh from Adapter` to pull latest accounts/tax/tracking; ensure spinner resolves without error.
+    2. Add Service mapping selecting PSA service and Xero revenue account; ensure `AccountCode` column populated.
+    3. Click `Import CSV`, upload sample mapping file; verify rows added without duplicates.
+    4. Mark Xero account inactive externally; click `Refresh from Adapter`; verify affected row shows warning badge and validation message.
+  - `MappingPermissions#L1`
+    1. Log in as `billing_manager`; confirm Add/Edit/Delete buttons enabled.
+    2. Log in as `support_agent`; navigate to same screen; verify controls disabled and tooltip text “Finance role required”.
+    3. Attempt to POST via API as support agent; expect 403 and audit log entry for denied attempt.
 - **Export Validation & Execution**
-  - `ValidationUnmapped#L1`: Batch creation detects unmapped services/taxes/terms, marks batch `needs_attention`, and lists failures in UI/API until corrected.
-  - `ValidationCurrency#L1`: Multi-currency invoices export using stored exchange rate; converted totals match accounting amounts; overrides persist across retries.
-  - `BatchLifecycle#L1`: Batch transitions `pending → validating → ready → delivered → posted`; duplicate reruns are blocked; cancellation allowed before delivery with proper status locks.
-  - `InvoiceSelection#L1`: Batches respect filters (date range, status, client, tenant), include manual invoices, multi-period lines, credit memos, and zero-dollar charges while maintaining transaction linkage.
-  - `Concurrency#L1`: Concurrent exports across tenants succeed; same-tenant overlapping ranges are rejected; single invoice cannot be exported in two live batches simultaneously.
-  - `AuditTrail#L1`: Batch records canonical snapshot, adapter payload, and checksum; transaction ledger references batch and vice versa.
+  - `ValidationUnmapped#L1`
+    1. Create invoice with service lacking mapping.
+    2. Go to `/msp/billing/accounting-exports`; click `New Export`.
+    3. Select adapter, date range covering invoice, proceed to Preview; expect preview table shows red badge “Mapping Required”.
+    4. Attempt to confirm; modal blocks with error banner referencing missing mapping.
+    5. After adding mapping, reopen modal, preview shows green check, confirmation succeeds.
+  - `ValidationCurrency#L1`
+    1. Create invoice in EUR with stored exchange rate on invoice record.
+    2. Run export wizard; on preview confirm displayed home currency totals match converted values.
+    3. After batch delivery, inspect batch detail drawer to verify captured `currency_code`, `exchange_rate`, converted amount.
+  - `BatchLifecycle#L1`
+    1. Create batch via wizard and confirm; batch row shows `pending`.
+    2. Trigger worker to process; observe status transitions to `validating`, `ready`, `delivered`.
+    3. From drawer, click `Mark as Posted`; status updates.
+    4. Attempt to re-run same filter range; wizard displays warning “Batch already exists”; prevents duplicate creation.
+    5. Create second batch, cancel from drawer before delivery; status becomes `cancelled`; confirm actions disabled thereafter.
+  - `InvoiceSelection#L1`
+    1. Use filters: set date range, choose invoice statuses, select specific client.
+    2. Click `Preview Invoices` to ensure only matching invoices appear.
+    3. Verify manual invoices, multi-period items, credit memos, zero-dollar lines display with correct metadata.
+    4. On confirm, ensure resulting batch references proper `transaction_id` links.
+  - `Concurrency#L1`
+    1. Start batch creation for Tenant A; simultaneously attempt same range for Tenant B; both succeed.
+    2. Attempt to create overlapping batch for Tenant A before first finishes; wizard shows blocking message referencing existing batch.
+    3. Verify same invoice ID cannot enter two `pending` batches by inspecting batch detail data.
+  - `AuditTrail#L1`
+    1. Open delivered batch drawer; download canonical JSON snapshot via link.
+    2. Confirm `transactions` table row contains `accounting_export_batch_id` referencing batch.
+    3. Run reporting query to ensure batch ID appears in finance audit view.
 - **Adapters – QuickBooks Online**
-  - `QBOInvoiceCreate#L1`: New invoices push with mapped items, taxes, terms, and service-period metadata; success stores QBO ID + SyncToken in mapping metadata.
-  - `QBOInvoiceUpdate#L1`: Existing invoice updates via sparse payload using latest SyncToken; totals and addresses remain consistent; mapping metadata refreshes.
-  - `QBOErrorHandling#L1`: 429 responses respect backoff; 401 triggers token refresh; invalid mappings produce batch errors without duplicate API calls.
-  - `QBOPermissions#L1`: Revoked OAuth connections fail gracefully, surface reconnect prompt, and leave batch in failed state without data loss.
-  - `QBOClassTracking#L1`: Optional class/location mapping populates when configured; absence leads to omitted fields with no failures.
+  - `QBOInvoiceCreate#L1`
+    1. Ensure tenant connected to QBO via OAuth and mappings configured.
+    2. Run export with new invoices; monitor job logs for create API call payload; confirm includes Line ServiceDate per invoice item.
+    3. After success, open mapping table and confirm metadata column shows QBO invoice ID + SyncToken.
+    4. In QBO sandbox, verify invoice exists with matching totals and tax.
+  - `QBOInvoiceUpdate#L1`
+    1. Modify exported invoice in PSA (e.g., adjust quantity).
+    2. Initiate re-export via Invoice detail `Re-export` button.
+    3. Confirm system performs update call (sparse, includes SyncToken).
+    4. Validate QBO invoice reflects change and mapping metadata updated.
+  - `QBOErrorHandling#L1`
+    1. Configure mock to respond 429; execute export; ensure adapter retries with exponential backoff and records attempt log.
+    2. Force 401 (expire token); verify adapter refreshes token and retries once; if refresh fails, batch flagged failed with reconnect prompt.
+    3. Create invoice with missing mapping to cause validation error; ensure batch line enters `failed` with message referencing missing mapping.
+  - `QBOPermissions#L1`
+    1. Revoke OAuth consent from Intuit portal.
+    2. Trigger export; verify batch stops with status `failed`, UI shows “Reconnect QuickBooks” CTA linking to OAuth flow.
+    3. After reconnection, rerun export and confirm success.
+  - `QBOClassTracking#L1`
+    1. Add class/location mapping in settings.
+    2. Export invoice; inspect QBO payload includes `ClassRef`/`DepartmentRef`.
+    3. Remove mapping; export again; confirm fields omitted.
 - **Adapters – QuickBooks Desktop**
-  - `QBDFileGeneration#L1`: Generated IIF/CSV follows schema (TRNS/SPL rows, headers, encoding) and imports cleanly into sample QuickBooks company with balanced totals.
-  - `QBDAccountMapping#L1`: Income, AR, and tax liability accounts resolve via mappings; missing accounts stop batch pre-generation with clear guidance.
-  - `QBDMultiInvoice#L1`: Multi-invoice batch yields single downloadable artifact with recorded checksum; re-download is tracked without duplicate batches.
-  - `QBDRetry#L1`: Manual re-export after mapping fix regenerates file and updates batch history while preventing stale-download confusion.
+  - `QBDFileGeneration#L1`
+    1. On batch drawer, click `Download IIF`; verify file includes TRNS/SPL rows with invoice numbers.
+    2. Import into QuickBooks Desktop sample company; ensure no import errors and totals match.
+    3. Confirm batch record captures checksum and download timestamp.
+  - `QBDAccountMapping#L1`
+    1. Remove GL account mapping; attempt export; wizard blocks with error referencing missing account.
+    2. Add mapping; export again; ensure generated file uses mapped account codes.
+  - `QBDMultiInvoice#L1`
+    1. Create batch covering >1 invoice; after delivery confirm single artifact produced.
+    2. Download twice; ensure each download logged in batch activity without duplicating batch.
+  - `QBDRetry#L1`
+    1. After correcting mapping, click `Retry Failed Lines`; confirm new file generated and appended to activity log.
+    2. Verify previous failed lines now marked delivered.
 - **Adapters – Xero**
-  - `XeroInvoiceCreate#L1`: OAuth-connected tenant exports invoice with AccountCode, TaxType, and Tracking metadata; Xero reflects amounts and contact linkage.
-  - `XeroMultipleTax#L1`: Mixed tax lines produce separate tax components aligned with Xero’s rules; totals reconcile.
-  - `XeroErrorHandling#L1`: Validation failure (e.g., inactive tax) logs error, marks line as failed, allows targeted retry after mapping update.
-  - `XeroCreditNote#L1`: Credit memos export as Xero Credit Notes, link to original invoice, and present negative totals correctly.
+  - `XeroInvoiceCreate#L1`
+    1. Connect tenant to Xero; ensure mappings present.
+    2. Run export; confirm API payload contains `AccountCode`, `TaxType`, `Tracking` arrays matching mapping.
+    3. Verify in Xero sandbox invoice created with correct data.
+  - `XeroMultipleTax#L1`
+    1. Prepare invoice with mixed GST/PST lines; export.
+    2. Confirm payload includes separate tax components; Xero invoice shows correct totals.
+  - `XeroErrorHandling#L1`
+    1. Deactivate tax rate in Xero; run export; expect line error recorded with message from Xero.
+    2. Reactivate or remap tax; use `Retry Failed Lines`; ensure success status updates.
+  - `XeroCreditNote#L1`
+    1. Create PSA credit memo linked to original invoice; export.
+    2. Validate Xero credit note references original document and amounts are negative.
 - **User Interface & Operations**
-  - `ExportDashboard#L1`: Dashboard lists batches with status, totals, adapter, creator; pagination/search works; download gated to finance/Admin roles.
-  - `InvoiceDetail#L1`: Invoice detail page shows export history, batch linkage, and enables guarded re-export when eligible.
-  - `Notifications#L1`: Failed batches trigger email and task notifications to finance role; resolving batch clears alerts automatically.
-  - `FeatureFlag#L1`: Feature toggle hides all export UI when disabled and restores prior batches when enabled without data loss.
+  - `ExportDashboard#L1`
+    1. Navigate to dashboard; apply filters; confirm table updates.
+    2. Use pagination to view additional batches; ensure data persists.
+    3. As finance admin, download payload from drawer; as support agent, verify download button hidden/disabled.
+  - `InvoiceDetail#L1`
+    1. Open exported invoice; view Export History card listing batch links.
+    2. Click batch link to open drawer; verify context slides in.
+    3. Use `Re-export Invoice` button to start guided wizard prefilled with invoice; complete run and confirm new batch appended to history.
+  - `Notifications#L1`
+    1. Cause batch failure; ensure toast displays within 5 seconds with “View Batch” CTA.
+    2. Check finance inbox for email summary containing batch ID.
+    3. Open Task Inbox, locate “Review Accounting Export” task, mark as resolved; confirm toast disappears and task closed.
+  - `FeatureFlag#L1`
+    1. Disable `accounting_exports` via admin settings; confirm navigation entry removed and direct route returns 404.
+    2. Re-enable; ensure dashboard reappears with prior data intact.
 - **Security & Isolation**
-  - `TenantIsolation#L1`: Tenant isolation enforced across APIs and UI; direct DB queries under tenant context show only own batches.
-  - `SecretManagement#L1`: OAuth secrets stored in secret provider, support rotation, and remain inaccessible to non-privileged users.
-  - `LoggingPII#L1`: Logs redact tokens and sensitive IDs during success and failure flows; tests verify no PII leakage.
+  - `TenantIsolation#L1`
+    1. Log in as Tenant A user; ensure only Tenant A batches visible.
+    2. Switch to Tenant B; confirm Tenant A data not present.
+    3. Execute API call for foreign batch ID; expect 404/403.
+  - `SecretManagement#L1`
+    1. Rotate OAuth secret via secret provider; execute export; confirm new token used.
+    2. Attempt to read secret via unauthorized user; expect denial with audit entry.
+  - `LoggingPII#L1`
+    1. Enable debug logging; run successful export; inspect logs for absence of tokens.
+    2. Force failure; confirm error logs scrub sensitive fields.
 - **Regression & Legacy Compatibility**
-  - `LegacyReexport#L1`: Historical invoices export after mapping backfill; missing service-period data defaults to invoice period without breaking downstream systems.
-  - `BillingEngineCompat#L1`: Subsequent billing runs do not alter exported status; new charges require new batch; settlement flows remain intact.
-  - `ArrearsAdvanceMix#L1`: Invoices containing advance and arrears lines export with distinct service periods, and accounting system reflects both timings.
+  - `LegacyReexport#L1`
+    1. Select invoice created prior to feature rollout; add necessary mappings.
+    2. Use invoice `Re-export` button; ensure service period defaults to invoice header and export succeeds.
+  - `BillingEngineCompat#L1`
+    1. Export batch; trigger next billing run generating new invoice.
+    2. Verify original invoice still marked exported; new invoice listed as unexported until next batch.
+  - `ArrearsAdvanceMix#L1`
+    1. Invoice with both advance and arrears lines; export.
+    2. In accounting payload, confirm service dates reflect respective periods; downstream system displays two distinct service windows.
 - **Performance & Resilience**
-  - `LargeBatch#L1`: Batch of ≥500 invoices completes within SLA, respecting memory/CPU thresholds and adapter pagination.
-  - `RetryPolicy#L1`: Configurable retry counts honor limits; exhausted retries mark batch failed with aggregated reasons.
-  - `SystemRestart#L1`: Export job survives worker restart by resuming from last checkpoint without duplicating payloads.
+  - `LargeBatch#L1`
+    1. Seed 500+ invoices; run export; capture processing time (< threshold) and monitor resource metrics.
+    2. Verify adapter paginates API calls to stay within vendor limits.
+  - `RetryPolicy#L1`
+    1. Configure retry count to 2; induce transient failures; ensure system retries twice then fails with aggregated reason message.
+    2. Update policy to 5; confirm new limit applied on next run.
+  - `SystemRestart#L1`
+    1. Launch export; midway, restart worker service.
+    2. Confirm batch resumes automatically and delivered payload contains no duplicates.
