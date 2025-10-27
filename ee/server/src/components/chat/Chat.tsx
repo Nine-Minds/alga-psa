@@ -1,31 +1,67 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { v4 as uuid } from 'uuid';
 
-import { Message } from "../../components/message/Message";
-import { IChat } from "../../interfaces/chat.interface";
+import { Message } from '../../components/message/Message';
+import { IChat } from '../../interfaces/chat.interface';
 import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { ChatModelInterface, ChatMessage } from '../../interfaces/ChatModelInterface';
 import { HfInference } from '@huggingface/inference';
 
-import "../../components/chat/chat.css";
+import '../../components/chat/chat.css';
+
+type ChatCompletionMessage = {
+  role: 'user' | 'assistant' | 'function';
+  content?: string;
+  name?: string;
+  function_call?: {
+    name: string;
+    arguments: Record<string, unknown>;
+  };
+};
+
+type FunctionMetadata = {
+  id: string;
+  displayName: string;
+  description?: string;
+  rbacResource?: string;
+  approvalRequired: boolean;
+  playbooks?: string[];
+  examples?: unknown[];
+  arguments: Record<string, unknown>;
+};
+
+type FunctionCallInfo = {
+  name: string;
+  arguments: Record<string, unknown>;
+};
+
+type PendingFunctionState = {
+  metadata: FunctionMetadata;
+  assistantPreview: string;
+  functionCall: FunctionCallInfo;
+  nextMessages: ChatCompletionMessage[];
+  chatId?: string | null;
+};
 
 type ChatProps = {
-  clientUrl: string,
-  accountId: string,
-  messages: any[],
-  userRole: string,
-  selectedAccount: string,
-  handleSelectAccount: any,
-  auth_token: string,
-  setChatTitle: any,
-  isTitleLocked: boolean,
-  onUserInput: () => void,
+  clientUrl: string;
+  accountId: string;
+  messages: any[];
+  userRole: string;
+  selectedAccount: string;
+  handleSelectAccount: any;
+  auth_token: string;
+  setChatTitle: any;
+  isTitleLocked: boolean;
+  onUserInput: () => void;
   hf: HfInference;
-  functions?: any[]; // Keep the functions prop for passing to the API
 };
+
+const mapMessagesFromProps = (records: any[]): ChatCompletionMessage[] =>
+  records.map((record: any) => ({
+    role: record.chat_role === 'bot' ? 'assistant' : 'user',
+    content: record.content ?? '',
+  }));
 
 export const Chat: React.FC<ChatProps> = ({
   clientUrl,
@@ -39,21 +75,39 @@ export const Chat: React.FC<ChatProps> = ({
   isTitleLocked,
   onUserInput,
   hf,
-  functions = []
 }) => {
   const [messageText, setMessageText] = useState('');
   const [incomingMessage, setIncomingMessage] = useState('');
   const [generatingResponse, setGeneratingResponse] = useState(false);
   const [isFunction, setIsFunction] = useState(false);
-  const router = useRouter();
-  const [newChatMessages, setNewChatMessages] = useState<{ _id: any; role: string; content: string; }[]>([]);
+  const [newChatMessages, setNewChatMessages] = useState<{
+    _id: any;
+    role: string;
+    content: string;
+  }[]>([]);
   const [fullMessage, setFullMessage] = useState('');
   const [chatId, setChatId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [userMessageId, setUserMessageId] = useState<string | null>(null);
   const [botMessageId, setBotMessageId] = useState<string | null>(null);
-  const controller = useRef(new AbortController());
+  const [conversation, setConversation] = useState<ChatCompletionMessage[]>(() =>
+    mapMessagesFromProps(messages),
+  );
+  const [pendingFunction, setPendingFunction] = useState<PendingFunctionState | null>(
+    null,
+  );
+  const [isExecutingFunction, setIsExecutingFunction] = useState(false);
+  const [functionError, setFunctionError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  void accountId;
+  void userRole;
+  void selectedAccount;
+  void handleSelectAccount;
+  void auth_token;
+  void setChatTitle;
+  void isTitleLocked;
+  void hf;
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -78,11 +132,14 @@ export const Chat: React.FC<ChatProps> = ({
 
   useEffect(() => {
     if (!generatingResponse && fullMessage) {
-      setNewChatMessages(prev => [...prev, {
-        _id: botMessageId,
-        role: "bot",
-        content: fullMessage,
-      }])
+      setNewChatMessages((prev) => [
+        ...prev,
+        {
+          _id: botMessageId,
+          role: 'bot',
+          content: fullMessage,
+        },
+      ]);
       setFullMessage('');
     }
   }, [generatingResponse, fullMessage, botMessageId]);
@@ -95,24 +152,47 @@ export const Chat: React.FC<ChatProps> = ({
     }
   };
 
+  const addAssistantMessageToPersistence = async (
+    chatIdentifier: string | null,
+    content: string,
+  ) => {
+    if (!content) {
+      return;
+    }
+
+    try {
+      const messageInfo = {
+        chat_id: chatIdentifier,
+        chat_role: 'bot' as const,
+        content,
+        thumb: null,
+        feedback: null,
+      };
+      const saved = await addMessageToChatAction(messageInfo);
+      setBotMessageId(saved._id || null);
+    } catch (error) {
+      console.error('Failed to persist assistant message', error);
+    }
+  };
+
   const sendMessage = () => {
     const trimmedMessage = messageText.trim();
-    if (trimmedMessage.length === 0) {
-      alert("Please enter a message");
+    if (!trimmedMessage.length) {
+      alert('Please enter a message');
       if (inputRef.current) {
         inputRef.current.focus();
       }
       return;
     }
 
-    handleSend();
+    handleSend(trimmedMessage);
 
     if (inputRef.current) {
       inputRef.current.focus();
     }
   };
 
-  const handleEnter = async (e: React.KeyboardEvent) => {
+  const handleEnter = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       sendMessage();
@@ -123,211 +203,202 @@ export const Chat: React.FC<ChatProps> = ({
     sendMessage();
   };
 
-  const handleStop = async () => {
+  const handleStop = () => {
     setGeneratingResponse(false);
     setIsFunction(false);
-    try {
-      controller.current.abort();
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  const handleSend = async () => {
-    setGeneratingResponse(true);
     setIncomingMessage('');
+    setPendingFunction(null);
+    setIsExecutingFunction(false);
+  };
 
-    // Create new chat if needed
-    let createdChatId: string | null = null;
-    if (chatId == null) {
-      try {
+  const handleSend = async (trimmedMessage: string) => {
+    setFunctionError(null);
+    setGeneratingResponse(true);
+    setIsFunction(true);
+    setIncomingMessage('Thinking...');
+
+    const userMessage: ChatCompletionMessage = {
+      role: 'user',
+      content: trimmedMessage,
+    };
+
+    const conversationWithUser = [...conversation, userMessage];
+    setConversation(conversationWithUser);
+
+    // Create new chat if needed and persist the user message
+    let createdChatId: string | null = chatId;
+
+    try {
+      if (chatId == null) {
         const conversationInfo: Omit<IChat, 'tenant'> = {
           user_id: userId!,
-          title_text: messageText.trim(),
-          title_is_locked: false
-        }
-        const data = await createNewChatAction(conversationInfo);
-        if (!data) {
+          title_text: trimmedMessage,
+          title_is_locked: false,
+        };
+        const created = await createNewChatAction(conversationInfo);
+        if (!created) {
           throw new Error('Failed to create new chat');
         }
-
-        setChatId(data._id || null);
-        createdChatId = data._id || null;
-
-        // Save user message for new chat
-        if (data._id) {
-          const messageInfo = {
-            chat_id: createdChatId!,
-            chat_role: "user",
-            content: messageText.trim(),
-            thumb: null,
-            feedback: null
-          }
-          const data = await addMessageToChatAction(messageInfo);
-          setUserMessageId(data._id || null);
-        }
-      } catch (error) {
-        console.error(error);
-        return;
+        createdChatId = created._id || null;
+        setChatId(createdChatId);
       }
-    } else {
-      // Save user message for existing chat
-      try {
-        const messageInfo = {
-          chat_id: chatId,
-          chat_role: "user",
-          content: messageText.trim(),
-          thumb: null,
-          feedback: null
-        }
-        const data = await addMessageToChatAction(messageInfo);
-        setUserMessageId(data._id || null);
-      } catch (error) {
-        console.error(error);
-        return;
-      }
+
+      const messageInfo = {
+        chat_id: createdChatId!,
+        chat_role: 'user' as const,
+        content: trimmedMessage,
+        thumb: null,
+        feedback: null,
+      };
+      const saved = await addMessageToChatAction(messageInfo);
+      setUserMessageId(saved._id || null);
+    } catch (error) {
+      console.error('Failed to persist user message', error);
+      setGeneratingResponse(false);
+      setIsFunction(false);
+      setIncomingMessage(
+        'I was unable to send that message. Please try again in a moment.',
+      );
+      return;
     }
 
-    // Update UI with user message
-    setNewChatMessages(prev => [
+    setNewChatMessages((prev) => [
       ...prev,
       {
         _id: userMessageId,
-        role: "user",
-        content: messageText,
-      }
+        role: 'user',
+        content: trimmedMessage,
+      },
     ]);
 
     setMessageText('');
 
-    // Prepare all messages for the API call
-    let allMessages = [...messages, ...newChatMessages, {
-      chat_id: chatId,
-      role: "user",
-      content: messageText.trim(),
-    }];
-
-
-    const loadingTimeout = setTimeout(() => {
-      if (!controller.current.signal.aborted) {
-        setIsFunction(true);
-        setIncomingMessage('Loading...');
-      }
-    }, 1000);
-  
-    controller.current = new AbortController();
-  
     try {
-      const response = await fetch('/api/chat/stream/v1/chat/completions', {
+      const response = await fetch('/api/chat/v1/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'openrouter',
-          inputs: allMessages,
-          functions: functions,
-          options: {
-            max_new_tokens: 500,
-            temperature: 0.7,
-            top_p: 0.95,
-            repetition_penalty: 1.2,
-          },
-          meta: {
-            authorization: auth_token
-          }
+          messages: conversationWithUser,
+          chatId: createdChatId,
         }),
-        signal: controller.current.signal
       });
-  
+
+      const data = await response.json();
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
-      // Clear loading message and timeout as soon as we get a response
-      clearTimeout(loadingTimeout);
-      setIncomingMessage('');
-      setIsFunction(false);
-  
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullResponse = '';
-  
-      if (!reader) {
-        throw new Error('No reader available');
-      }
-  
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-  
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-  
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              
-              if (data.type === 'function_execution') {
-                setIsFunction(true);
-                setIncomingMessage(data.content);
-                continue;
-              }
-  
-              if (data.type === 'error') {
-                setIncomingMessage(data.content);
-                continue;
-              }
-  
-              if (data.type === 'text') {
-                setIsFunction(false);
-                setIncomingMessage(prev => prev + data.content);
-                fullResponse += data.content;
-              }
-            } catch (e) {
-              console.error('Error parsing SSE data:', e);
-            }
-          }
-        }
+        throw new Error(data?.error || `Request failed with status ${response.status}`);
       }
 
-      // Save bot response to chat
-      if (fullResponse) {
-        try {
-          const messageInfo = {
-            chat_id: createdChatId ?? chatId,
-            chat_role: "bot",
-            content: fullResponse,
-            thumb: null,
-            feedback: null,
-          };
-          const data = await addMessageToChatAction(messageInfo);
-          setBotMessageId(data._id || null);
-        } catch (error) {
-          console.error(error);
-        }
-
-        setIncomingMessage("");
+      if (data.type === 'assistant_message') {
+        const assistantContent: string = data.message?.content ?? '';
+        await addAssistantMessageToPersistence(createdChatId ?? chatId, assistantContent);
+        setConversation(data.nextMessages ?? [...conversationWithUser, { role: 'assistant', content: assistantContent }]);
+        setFullMessage(assistantContent);
+        setIncomingMessage('');
+        setIsFunction(false);
         setGeneratingResponse(false);
-        setFullMessage(fullResponse);
+        setPendingFunction(null);
+      } else if (data.type === 'function_proposed') {
+        setPendingFunction({
+          metadata: data.function,
+          assistantPreview: data.assistantPreview,
+          functionCall: data.functionCall,
+          nextMessages: data.nextMessages,
+          chatId: createdChatId ?? chatId,
+        });
+        setConversation(data.nextMessages);
+        setIncomingMessage(
+          data.assistantPreview || 'I need your approval before running that.',
+        );
+        setIsFunction(true);
+        setGeneratingResponse(false);
+      } else {
+        throw new Error('Unexpected response from the assistant.');
       }
-
     } catch (error) {
-      clearTimeout(loadingTimeout); // Clear timeout on error
-      console.error('Error in chat stream:', error);
-      setGeneratingResponse(false);
+      console.error('Error generating completion', error);
+      setIncomingMessage('An error occurred while generating the response.');
       setIsFunction(false);
-      setIncomingMessage("An error occurred while generating the response.");
+      setGeneratingResponse(false);
     }
   };
-  
 
-  const allMessages = [...messages, ...newChatMessages];
+  const handleFunctionAction = async (action: 'approve' | 'decline') => {
+    if (!pendingFunction) {
+      return;
+    }
+
+    setFunctionError(null);
+    setIsExecutingFunction(true);
+    setIsFunction(true);
+    setIncomingMessage(
+      action === 'approve'
+        ? 'Executing the requested action...'
+        : 'Okay, I will respond without calling that function.',
+    );
+
+    try {
+      const response = await fetch('/api/chat/v1/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: pendingFunction.nextMessages,
+          functionCall: pendingFunction.functionCall,
+          action,
+          chatId: pendingFunction.chatId ?? chatId,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || `Request failed with status ${response.status}`);
+      }
+
+      if (data.type !== 'assistant_message') {
+        throw new Error('Unexpected response from the assistant.');
+      }
+
+      const assistantContent: string = data.message?.content ?? '';
+      await addAssistantMessageToPersistence(
+        pendingFunction.chatId ?? chatId,
+        assistantContent,
+      );
+
+      setConversation(
+        data.nextMessages ?? [
+          ...pendingFunction.nextMessages,
+          { role: 'assistant', content: assistantContent },
+        ],
+      );
+      setFullMessage(assistantContent);
+      setIncomingMessage('');
+      setIsFunction(false);
+      setGeneratingResponse(false);
+      setPendingFunction(null);
+    } catch (error) {
+      console.error('Error executing function call', error);
+      setFunctionError(
+        error instanceof Error ? error.message : 'An unexpected error occurred.',
+      );
+      setIncomingMessage('I was unable to complete that action.');
+      setIsFunction(false);
+      setGeneratingResponse(false);
+    } finally {
+      setIsExecutingFunction(false);
+    }
+  };
+
+  const displayMessages = [...messages, ...newChatMessages];
+
+  const functionArgumentsPreview = (args: Record<string, unknown>) =>
+    JSON.stringify(args, null, 2);
 
   return (
     <div className="chat-container">
-      {!allMessages.length && !incomingMessage &&
+      {!displayMessages.length && !incomingMessage && (
         <div className="m-auto justify-center flex items-center text-center h-64">
           <div className="initial-alga">
             <Image
@@ -335,15 +406,19 @@ export const Chat: React.FC<ChatProps> = ({
               src="/avatar-purple-no-shadow.svg"
               alt="Alga"
               width={150}
-              height={150} />
-            <h1 className="mt-6 text-2xl mx-1">I am Alga! Your favorite AI assistant. Ask me a question.</h1>
+              height={150}
+            />
+            <h1 className="mt-6 text-2xl mx-1">
+              I am Alga! Your favorite AI assistant. Ask me a question.
+            </h1>
           </div>
         </div>
-      }
-      {!!allMessages.length &&
+      )}
+
+      {!!displayMessages.length && (
         <div className="chats">
           <div className="mb-auto w-full">
-            {allMessages.map((message) => (
+            {displayMessages.map((message) => (
               <Message
                 key={message._id}
                 messageId={message._id}
@@ -353,14 +428,54 @@ export const Chat: React.FC<ChatProps> = ({
               />
             ))}
             {!!incomingMessage && (
-              <Message
-                role="bot"
-                isFunction={isFunction}
-                content={incomingMessage} />
+              <Message role="bot" isFunction={isFunction} content={incomingMessage} />
             )}
           </div>
         </div>
-      }
+      )}
+
+      {pendingFunction && (
+        <div className="function-approval-card">
+          <h3 className="text-lg font-semibold mb-2">
+            The assistant wants to call: {pendingFunction.metadata.displayName}
+          </h3>
+          {pendingFunction.metadata.description && (
+            <p className="text-sm mb-2">{pendingFunction.metadata.description}</p>
+          )}
+          <div className="mb-2">
+            <span className="font-semibold">Arguments:</span>
+            <pre className="function-arguments">
+{functionArgumentsPreview(pendingFunction.metadata.arguments)}
+            </pre>
+          </div>
+          {pendingFunction.metadata.playbooks?.length ? (
+            <div className="mb-2 text-sm">
+              <span className="font-semibold">Related playbooks: </span>
+              {pendingFunction.metadata.playbooks.join(', ')}
+            </div>
+          ) : null}
+          {functionError && (
+            <p className="text-sm text-red-500 mb-2">{functionError}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              className="approve-btn"
+              onClick={() => handleFunctionAction('approve')}
+              disabled={isExecutingFunction}
+            >
+              {isExecutingFunction ? 'Approving…' : 'Approve'}
+            </button>
+            <button
+              className="deny-btn"
+              onClick={() => handleFunctionAction('decline')}
+              disabled={isExecutingFunction}
+            >
+              {isExecutingFunction ? 'Processing…' : 'Deny'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <footer className="chat-footer">
         <div className="input-container">
           <div className="input">
@@ -368,7 +483,7 @@ export const Chat: React.FC<ChatProps> = ({
               ref={inputRef}
               value={messageText}
               onChange={handleInputChange}
-              placeholder={generatingResponse ? "Generating text..." : "Send a message"}
+              placeholder={generatingResponse ? 'Generating text...' : 'Send a message'}
               className="w-full resize-none rounded-md p-2 text-black"
               onKeyDown={handleEnter}
               rows={1}
@@ -379,9 +494,13 @@ export const Chat: React.FC<ChatProps> = ({
           <button
             onClick={generatingResponse ? handleStop : handleClick}
             type="submit"
-            className={generatingResponse ? `stop-btn rounded-md px-4 py-2 text-white` : `send-btn rounded-md px-4 py-2 text-white`}
+            className={
+              generatingResponse
+                ? 'stop-btn rounded-md px-4 py-2 text-white'
+                : 'send-btn rounded-md px-4 py-2 text-white'
+            }
           >
-            {generatingResponse ? "STOP" : "SEND"}
+            {generatingResponse ? 'STOP' : 'SEND'}
           </button>
         </div>
       </footer>
