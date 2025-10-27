@@ -11,12 +11,80 @@
 exports.up = async function(knex) {
   console.log('Adding system authentication email templates...');
 
+  // Fetch or create notification subtype IDs
+  const subtypeIds = {};
+
+  // Fetch existing subtypes
+  const existingSubtypes = ['email-verification', 'password-reset', 'portal-invitation'];
+
+  for (const name of existingSubtypes) {
+    const subtype = await knex('notification_subtypes')
+      .where({ name })
+      .first();
+
+    if (!subtype) {
+      throw new Error(`Notification subtype '${name}' not found in database.`);
+    }
+
+    subtypeIds[name] = subtype.id;
+  }
+
+  // Create new subtypes for tenant-recovery and no-account-found if they don't exist
+  const newSubtypes = {
+    'tenant-recovery': 'Tenant/organization account recovery and login links',
+    'no-account-found': 'Notification when no account is found for email address'
+  };
+
+  // Get or create Authentication category for new subtypes
+  let authCategory = await knex('notification_categories')
+    .where({ name: 'Authentication' })
+    .first();
+
+  if (!authCategory) {
+    // Use the same category as email-verification
+    const emailVerificationSubtype = await knex('notification_subtypes')
+      .where({ id: subtypeIds['email-verification'] })
+      .first();
+
+    if (emailVerificationSubtype) {
+      authCategory = await knex('notification_categories')
+        .where({ id: emailVerificationSubtype.category_id })
+        .first();
+    }
+  }
+
+  for (const [name, description] of Object.entries(newSubtypes)) {
+    let subtype = await knex('notification_subtypes')
+      .where({ name })
+      .first();
+
+    if (!subtype && authCategory) {
+      [subtype] = await knex('notification_subtypes')
+        .insert({
+          category_id: authCategory.id,
+          name,
+          description,
+          is_enabled: true,
+          is_default_enabled: true
+        })
+        .returning('*');
+      console.log(`✓ Created notification subtype: ${name}`);
+    }
+
+    if (subtype) {
+      subtypeIds[name] = subtype.id;
+    }
+  }
+
+  console.log('✓ All notification subtypes ready:', Object.keys(subtypeIds));
+
   // English templates
   await knex('system_email_templates').insert([
     {
       name: 'email-verification',
       language_code: 'en',
-      subject: 'Verify your email{{#if registrationCompanyName}} for {{registrationCompanyName}}{{/if}}',
+      subject: 'Verify your email{{#if registrationClientName}} for {{registrationClientName}}{{/if}}',
+      notification_subtype_id: subtypeIds['email-verification'],
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Email Verification</h2>
@@ -30,7 +98,7 @@ exports.up = async function(knex) {
           {{/if}}
           <hr style="margin-top: 30px;">
           <p style="color: #666; font-size: 12px;">If you didn't request this email, please ignore it.</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantCompanyName}}</p>
+          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantClientName}}</p>
         </div>
       `,
       text_content: `Email Verification
@@ -42,8 +110,8 @@ Please verify your email address by visiting:
 
 If you didn't request this email, please ignore it.
 
-© {{currentYear}} {{tenantCompanyName}}`,
-      notification_subtype_id: null
+© {{currentYear}} {{tenantClientName}}`,
+      notification_subtype_id: subtypeIds['email-verification']
     },
     {
       name: 'password-reset',
@@ -79,7 +147,7 @@ If you didn't request this password reset, please ignore this email.
 {{#if supportEmail}}Need help? Contact {{supportEmail}}{{/if}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['password-reset']
     },
     {
       name: 'portal-invitation',
@@ -115,7 +183,7 @@ Email: {{clientLocationEmail}}
 Phone: {{clientLocationPhone}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
       name: 'tenant-recovery',
@@ -170,7 +238,7 @@ If you have any questions or need assistance, please contact your organization's
 ---
 © {{currentYear}} {{platformName}}. All rights reserved.
 This is an automated message. Please do not reply to this email.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['tenant-recovery']
     },
     {
       name: 'no-account-found',
@@ -234,7 +302,7 @@ Security Note: If you didn't request access, you can safely ignore this email.
 ---
 © {{currentYear}} {{platformName}}. All rights reserved.
 This is an automated message. Please do not reply to this email.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['no-account-found']
     }
   ]).onConflict(['name', 'language_code']).ignore();
 
@@ -245,7 +313,7 @@ This is an automated message. Please do not reply to this email.`,
     {
       name: 'email-verification',
       language_code: 'fr',
-      subject: 'Vérifiez votre email{{#if registrationCompanyName}} pour {{registrationCompanyName}}{{/if}}',
+      subject: 'Vérifiez votre email{{#if registrationClientName}} pour {{registrationClientName}}{{/if}}',
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Vérification d'email</h2>
@@ -259,7 +327,7 @@ This is an automated message. Please do not reply to this email.`,
           {{/if}}
           <hr style="margin-top: 30px;">
           <p style="color: #666; font-size: 12px;">Si vous n'avez pas demandé cet email, veuillez l'ignorer.</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantCompanyName}}</p>
+          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantClientName}}</p>
         </div>
       `,
       text_content: `Vérification d'email
@@ -271,8 +339,8 @@ Veuillez vérifier votre adresse email en visitant :
 
 Si vous n'avez pas demandé cet email, veuillez l'ignorer.
 
-© {{currentYear}} {{tenantCompanyName}}`,
-      notification_subtype_id: null
+© {{currentYear}} {{tenantClientName}}`,
+      notification_subtype_id: subtypeIds['email-verification']
     },
     {
       name: 'password-reset',
@@ -308,7 +376,7 @@ Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.
 {{#if supportEmail}}Besoin d'aide ? Contactez {{supportEmail}}{{/if}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['password-reset']
     },
     {
       name: 'portal-invitation',
@@ -344,7 +412,7 @@ Email : {{clientLocationEmail}}
 Téléphone : {{clientLocationPhone}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
       name: 'tenant-recovery',
@@ -406,7 +474,7 @@ Si vous avez des questions ou besoin d'assistance, veuillez contacter l'équipe 
 ---
 © {{currentYear}} {{platformName}}. Tous droits réservés.
 Ceci est un message automatisé. Veuillez ne pas répondre à cet e-mail.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['tenant-recovery']
     },
     {
       name: 'no-account-found',
@@ -481,7 +549,7 @@ Note de sécurité : Si vous n'avez pas demandé d'accès, vous pouvez ignorer c
 ---
 © {{currentYear}} {{platformName}}. Tous droits réservés.
 Ceci est un message automatisé. Veuillez ne pas répondre à cet e-mail.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['no-account-found']
     }
   ]).onConflict(['name', 'language_code']).ignore();
 
@@ -492,7 +560,7 @@ Ceci est un message automatisé. Veuillez ne pas répondre à cet e-mail.`,
     {
       name: 'email-verification',
       language_code: 'es',
-      subject: 'Verifica tu correo electrónico{{#if registrationCompanyName}} para {{registrationCompanyName}}{{/if}}',
+      subject: 'Verifica tu correo electrónico{{#if registrationClientName}} para {{registrationClientName}}{{/if}}',
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Verificación de correo electrónico</h2>
@@ -506,7 +574,7 @@ Ceci est un message automatisé. Veuillez ne pas répondre à cet e-mail.`,
           {{/if}}
           <hr style="margin-top: 30px;">
           <p style="color: #666; font-size: 12px;">Si no solicitaste este correo, por favor ignóralo.</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantCompanyName}}</p>
+          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantClientName}}</p>
         </div>
       `,
       text_content: `Verificación de correo electrónico
@@ -518,8 +586,8 @@ Por favor verifica tu dirección de correo electrónico visitando:
 
 Si no solicitaste este correo, por favor ignóralo.
 
-© {{currentYear}} {{tenantCompanyName}}`,
-      notification_subtype_id: null
+© {{currentYear}} {{tenantClientName}}`,
+      notification_subtype_id: subtypeIds['email-verification']
     },
     {
       name: 'password-reset',
@@ -555,7 +623,7 @@ Si no solicitaste este restablecimiento, por favor ignora este correo.
 {{#if supportEmail}}¿Necesitas ayuda? Contacta {{supportEmail}}{{/if}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['password-reset']
     },
     {
       name: 'portal-invitation',
@@ -591,7 +659,7 @@ Email: {{clientLocationEmail}}
 Teléfono: {{clientLocationPhone}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
       name: 'tenant-recovery',
@@ -653,7 +721,7 @@ Si tienes preguntas o necesitas asistencia, por favor contacta al equipo de sopo
 ---
 © {{currentYear}} {{platformName}}. Todos los derechos reservados.
 Este es un mensaje automático. Por favor no respondas a este correo.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['tenant-recovery']
     },
     {
       name: 'no-account-found',
@@ -728,7 +796,7 @@ Nota de seguridad: Si no solicitaste acceso, puedes ignorar este correo de forma
 ---
 © {{currentYear}} {{platformName}}. Todos los derechos reservados.
 Este es un mensaje automático. Por favor no respondas a este correo.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['no-account-found']
     }
   ]).onConflict(['name', 'language_code']).ignore();
 
@@ -739,7 +807,7 @@ Este es un mensaje automático. Por favor no respondas a este correo.`,
     {
       name: 'email-verification',
       language_code: 'de',
-      subject: 'Verifizieren Sie Ihre E-Mail{{#if registrationCompanyName}} für {{registrationCompanyName}}{{/if}}',
+      subject: 'Verifizieren Sie Ihre E-Mail{{#if registrationClientName}} für {{registrationClientName}}{{/if}}',
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>E-Mail-Verifizierung</h2>
@@ -753,7 +821,7 @@ Este es un mensaje automático. Por favor no respondas a este correo.`,
           {{/if}}
           <hr style="margin-top: 30px;">
           <p style="color: #666; font-size: 12px;">Wenn Sie diese E-Mail nicht angefordert haben, ignorieren Sie sie bitte.</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantCompanyName}}</p>
+          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantClientName}}</p>
         </div>
       `,
       text_content: `E-Mail-Verifizierung
@@ -765,8 +833,8 @@ Bitte verifizieren Sie Ihre E-Mail-Adresse unter:
 
 Wenn Sie diese E-Mail nicht angefordert haben, ignorieren Sie sie bitte.
 
-© {{currentYear}} {{tenantCompanyName}}`,
-      notification_subtype_id: null
+© {{currentYear}} {{tenantClientName}}`,
+      notification_subtype_id: subtypeIds['email-verification']
     },
     {
       name: 'password-reset',
@@ -802,7 +870,7 @@ Wenn Sie diese Zurücksetzung nicht angefordert haben, ignorieren Sie diese E-Ma
 {{#if supportEmail}}Benötigen Sie Hilfe? Kontaktieren Sie {{supportEmail}}{{/if}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['password-reset']
     },
     {
       name: 'portal-invitation',
@@ -838,7 +906,7 @@ E-Mail: {{clientLocationEmail}}
 Telefon: {{clientLocationPhone}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
       name: 'tenant-recovery',
@@ -900,7 +968,7 @@ Bei Fragen oder für Unterstützung wenden Sie sich bitte an das Support-Team Ih
 ---
 © {{currentYear}} {{platformName}}. Alle Rechte vorbehalten.
 Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Mail.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['tenant-recovery']
     },
     {
       name: 'no-account-found',
@@ -975,7 +1043,7 @@ Sicherheitshinweis: Wenn Sie keinen Zugriff angefordert haben, können Sie diese
 ---
 © {{currentYear}} {{platformName}}. Alle Rechte vorbehalten.
 Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Mail.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['no-account-found']
     }
   ]).onConflict(['name', 'language_code']).ignore();
 
@@ -986,7 +1054,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
     {
       name: 'email-verification',
       language_code: 'nl',
-      subject: 'Verifieer uw e-mailadres{{#if registrationCompanyName}} voor {{registrationCompanyName}}{{/if}}',
+      subject: 'Verifieer uw e-mailadres{{#if registrationClientName}} voor {{registrationClientName}}{{/if}}',
       html_content: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>E-mailverificatie</h2>
@@ -1000,7 +1068,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
           {{/if}}
           <hr style="margin-top: 30px;">
           <p style="color: #666; font-size: 12px;">Als u deze e-mail niet heeft aangevraagd, kunt u deze negeren.</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantCompanyName}}</p>
+          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantClientName}}</p>
         </div>
       `,
       text_content: `E-mailverificatie
@@ -1012,8 +1080,8 @@ Verifieer uw e-mailadres door naar deze link te gaan:
 
 Als u deze e-mail niet heeft aangevraagd, kunt u deze negeren.
 
-© {{currentYear}} {{tenantCompanyName}}`,
-      notification_subtype_id: null
+© {{currentYear}} {{tenantClientName}}`,
+      notification_subtype_id: subtypeIds['email-verification']
     },
     {
       name: 'password-reset',
@@ -1049,7 +1117,7 @@ Als u dit wachtwoordherstel niet heeft aangevraagd, kunt u deze e-mail negeren.
 {{#if supportEmail}}Hulp nodig? Neem contact op met {{supportEmail}}{{/if}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['password-reset']
     },
     {
       name: 'portal-invitation',
@@ -1085,7 +1153,7 @@ E-mail: {{clientLocationEmail}}
 Telefoon: {{clientLocationPhone}}
 
 © {{currentYear}} {{clientName}}`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
       name: 'tenant-recovery',
@@ -1147,7 +1215,7 @@ Als u vragen heeft of hulp nodig heeft, neem dan contact op met het ondersteunin
 ---
 © {{currentYear}} {{platformName}}. Alle rechten voorbehouden.
 Dit is een geautomatiseerd bericht. Reageer alstublieft niet op deze e-mail.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['tenant-recovery']
     },
     {
       name: 'no-account-found',
@@ -1222,7 +1290,7 @@ Beveiligingsopmerking: Als u geen toegang heeft aangevraagd, kunt u deze e-mail 
 ---
 © {{currentYear}} {{platformName}}. Alle rechten voorbehouden.
 Dit is een geautomatiseerd bericht. Reageer alstublieft niet op deze e-mail.`,
-      notification_subtype_id: null
+      notification_subtype_id: subtypeIds['no-account-found']
     }
   ]).onConflict(['name', 'language_code']).ignore();
 
