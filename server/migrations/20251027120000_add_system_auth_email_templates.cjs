@@ -383,35 +383,266 @@ Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.
       language_code: 'fr',
       subject: 'Invitation au portail client - {{clientName}}',
       html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Bienvenue sur votre portail client</h2>
-          <p>Bonjour {{contactName}},</p>
-          <p>Vous êtes invité à rejoindre le portail client de {{clientName}}.</p>
-          <p><a href="{{portalLink}}" style="display: inline-block; padding: 10px 20px; background-color: #8A4DEA; color: white; text-decoration: none; border-radius: 5px;">Activer mon accès</a></p>
-          <p>Ou copiez et collez ce lien dans votre navigateur :</p>
-          <p>{{portalLink}}</p>
-          <p><small>Le lien expirera dans {{expirationTime}}.</small></p>
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Besoin d'assistance ?</p>
-          <p style="color: #666; font-size: 12px;">Email : {{clientLocationEmail}}<br>Téléphone : {{clientLocationPhone}}</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{clientName}}</p>
-        </div>
-      `,
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitation d'accès au portail</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      border-radius: 12px 12px 0 0;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      opacity: 1;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.95);
+    }
+    .content {
+      background: #ffffff;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-top: none;
+      border-bottom: none;
+    }
+    .footer {
+      background: #1e293b;
+      color: #cbd5e1;
+      padding: 24px;
+      border-radius: 0 0 12px 12px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .footer p {
+      margin: 6px 0;
+      color: #cbd5e1;
+    }
+    .footer p:last-child {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    .info-box {
+      background: #faf8ff;
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid #e9e5f5;
+      border-left: 4px solid #8a4dea;
+      margin: 24px 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .info-box h3 {
+      color: #0f172a;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .info-box p {
+      margin: 8px 0;
+      color: #334155;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8a4dea;
+      color: #ffffff !important;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 24px 0;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .action-button:hover {
+      background: #7c3aed;
+      color: #ffffff !important;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+    .warning {
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .warning h4 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .warning p {
+      margin: 0;
+      color: #92400e;
+    }
+    .contact-info {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+      border: 1px solid #e2e8f0;
+    }
+    .contact-info h4 {
+      color: #0f172a;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .contact-info p {
+      margin: 4px 0;
+      color: #334155;
+      font-size: 14px;
+    }
+    h2 {
+      color: #0f172a;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+    }
+    p {
+      color: #334155;
+      margin: 0 0 16px 0;
+    }
+    a {
+      color: #8a4dea;
+      text-decoration: underline;
+    }
+    a:hover {
+      color: #7c3aed;
+    }
+    .tagline {
+      background: #faf8ff;
+      border-left: 3px solid #8a4dea;
+      padding: 20px 24px;
+      margin: 24px 0;
+      font-style: normal;
+      color: #334155;
+      border-radius: 6px;
+      line-height: 1.7;
+    }
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 32px 0;
+    }
+    .link-text {
+      word-break: break-all;
+      font-size: 14px;
+      color: #64748b;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Bienvenue sur votre portail client</h1>
+    <p>Vous êtes invité à accéder à votre compte</p>
+  </div>
+
+  <div class="content">
+    <h2>Bonjour {{contactName}},</h2>
+
+    <p>Excellente nouvelle ! Vous avez été invité à accéder au portail client de <strong>{{clientName}}</strong>. Ce portail sécurisé vous donne un accès instantané à :</p>
+
+    <div class="info-box">
+      <h3>🎯 Ce à quoi vous pouvez accéder</h3>
+      <p>✓ Consulter et suivre vos tickets d'assistance</p>
+      <p>✓ Examiner les mises à jour et la documentation des projets</p>
+      <p>✓ Communiquer directement avec votre équipe d'assistance</p>
+    </div>
+
+    <div class="tagline">
+      Profitez d'une gestion de services fluide avec notre portail intuitif. Tout ce dont vous avez besoin pour rester informé et connecté, le tout dans un emplacement sécurisé.
+    </div>
+
+    <div style="text-align: center;">
+      <a href="{{portalLink}}" class="action-button">Configurer l'accès à mon portail</a>
+    </div>
+
+    <p style="text-align: center; color: #64748b; font-size: 14px;">
+      Ou copiez et collez ce lien dans votre navigateur :
+    </p>
+    <div class="link-text">{{portalLink}}</div>
+
+    <div class="warning">
+      <h4>⏰ Invitation à durée limitée</h4>
+      <p>Ce lien d'invitation expirera dans <strong>{{expirationTime}}</strong>. Veuillez terminer la configuration de votre compte avant cette échéance pour garantir un accès ininterrompu.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="contact-info">
+      <h4>Besoin d'assistance ?</h4>
+      <p><strong>Email :</strong> {{clientLocationEmail}}</p>
+      <p><strong>Téléphone :</strong> {{clientLocationPhone}}</p>
+      <p style="margin-top: 12px; font-size: 13px; color: #64748b;">Notre équipe d'assistance est prête à vous aider à démarrer.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Cet email a été envoyé à {{contactName}} dans le cadre de la configuration de votre accès au portail.</p>
+    <p>Si vous n'attendiez pas cette invitation, veuillez nous contacter à {{clientLocationEmail}}.</p>
+    <p>© {{currentYear}} {{clientName}}. Tous droits réservés.</p>
+  </div>
+</body>
+</html>`,
       text_content: `Bienvenue sur votre portail client
 
 Bonjour {{contactName}},
 
-Vous êtes invité à rejoindre le portail client de {{clientName}}.
+Excellente nouvelle ! Vous avez été invité à accéder au portail client de {{clientName}}. Ce portail sécurisé vous donne un accès instantané à :
 
-Activer mon accès : {{portalLink}}
+✓ Consulter et suivre vos tickets d'assistance
+✓ Examiner les mises à jour et la documentation des projets
+✓ Communiquer directement avec votre équipe d'assistance
 
-Le lien expirera dans {{expirationTime}}.
+CONFIGURER L'ACCÈS À MON PORTAIL :
+{{portalLink}}
 
-Besoin d'assistance ?
+⏰ DURÉE LIMITÉE : Ce lien d'invitation expirera dans {{expirationTime}}. Veuillez terminer la configuration de votre compte avant cette échéance pour garantir un accès ininterrompu.
+
+BESOIN D'ASSISTANCE ?
 Email : {{clientLocationEmail}}
 Téléphone : {{clientLocationPhone}}
 
-© {{currentYear}} {{clientName}}`,
+Notre équipe d'assistance est prête à vous aider à démarrer.
+
+---
+Cet email a été envoyé à {{contactName}} dans le cadre de la configuration de votre accès au portail.
+Si vous n'attendiez pas cette invitation, veuillez nous contacter à {{clientLocationEmail}}.
+
+© {{currentYear}} {{clientName}}. Tous droits réservés.
+`,
       notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
@@ -630,35 +861,266 @@ Si no solicitaste este restablecimiento, por favor ignora este correo.
       language_code: 'es',
       subject: 'Invitación al portal del cliente - {{clientName}}',
       html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Bienvenido a tu portal del cliente</h2>
-          <p>Hola {{contactName}},</p>
-          <p>Has sido invitado a unirte al portal del cliente de {{clientName}}.</p>
-          <p><a href="{{portalLink}}" style="display: inline-block; padding: 10px 20px; background-color: #8A4DEA; color: white; text-decoration: none; border-radius: 5px;">Activar mi acceso</a></p>
-          <p>O copia y pega este enlace en tu navegador:</p>
-          <p>{{portalLink}}</p>
-          <p><small>El enlace expirará en {{expirationTime}}.</small></p>
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">¿Necesitas asistencia?</p>
-          <p style="color: #666; font-size: 12px;">Email: {{clientLocationEmail}}<br>Teléfono: {{clientLocationPhone}}</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{clientName}}</p>
-        </div>
-      `,
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitación de acceso al portal</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      border-radius: 12px 12px 0 0;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      opacity: 1;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.95);
+    }
+    .content {
+      background: #ffffff;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-top: none;
+      border-bottom: none;
+    }
+    .footer {
+      background: #1e293b;
+      color: #cbd5e1;
+      padding: 24px;
+      border-radius: 0 0 12px 12px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .footer p {
+      margin: 6px 0;
+      color: #cbd5e1;
+    }
+    .footer p:last-child {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    .info-box {
+      background: #faf8ff;
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid #e9e5f5;
+      border-left: 4px solid #8a4dea;
+      margin: 24px 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .info-box h3 {
+      color: #0f172a;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .info-box p {
+      margin: 8px 0;
+      color: #334155;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8a4dea;
+      color: #ffffff !important;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 24px 0;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .action-button:hover {
+      background: #7c3aed;
+      color: #ffffff !important;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+    .warning {
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .warning h4 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .warning p {
+      margin: 0;
+      color: #92400e;
+    }
+    .contact-info {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+      border: 1px solid #e2e8f0;
+    }
+    .contact-info h4 {
+      color: #0f172a;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .contact-info p {
+      margin: 4px 0;
+      color: #334155;
+      font-size: 14px;
+    }
+    h2 {
+      color: #0f172a;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+    }
+    p {
+      color: #334155;
+      margin: 0 0 16px 0;
+    }
+    a {
+      color: #8a4dea;
+      text-decoration: underline;
+    }
+    a:hover {
+      color: #7c3aed;
+    }
+    .tagline {
+      background: #faf8ff;
+      border-left: 3px solid #8a4dea;
+      padding: 20px 24px;
+      margin: 24px 0;
+      font-style: normal;
+      color: #334155;
+      border-radius: 6px;
+      line-height: 1.7;
+    }
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 32px 0;
+    }
+    .link-text {
+      word-break: break-all;
+      font-size: 14px;
+      color: #64748b;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Bienvenido a tu portal del cliente</h1>
+    <p>Estás invitado a acceder a tu cuenta</p>
+  </div>
+
+  <div class="content">
+    <h2>Hola {{contactName}},</h2>
+
+    <p>¡Excelentes noticias! Has sido invitado a acceder al portal del cliente de <strong>{{clientName}}</strong>. Este portal seguro te brinda acceso instantáneo a:</p>
+
+    <div class="info-box">
+      <h3>🎯 A qué puedes acceder</h3>
+      <p>✓ Ver y realizar seguimiento de tus tickets de soporte</p>
+      <p>✓ Revisar actualizaciones y documentación de proyectos</p>
+      <p>✓ Comunicarte directamente con tu equipo de soporte</p>
+    </div>
+
+    <div class="tagline">
+      Experimenta una gestión de servicios sin interrupciones con nuestro portal intuitivo. Todo lo que necesitas para mantenerte informado y conectado, todo en un lugar seguro.
+    </div>
+
+    <div style="text-align: center;">
+      <a href="{{portalLink}}" class="action-button">Configurar el acceso a mi portal</a>
+    </div>
+
+    <p style="text-align: center; color: #64748b; font-size: 14px;">
+      O copia y pega este enlace en tu navegador:
+    </p>
+    <div class="link-text">{{portalLink}}</div>
+
+    <div class="warning">
+      <h4>⏰ Invitación con tiempo limitado</h4>
+      <p>Este enlace de invitación expirará en <strong>{{expirationTime}}</strong>. Por favor, completa la configuración de tu cuenta antes de ese momento para garantizar un acceso ininterrumpido.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="contact-info">
+      <h4>¿Necesitas asistencia?</h4>
+      <p><strong>Email:</strong> {{clientLocationEmail}}</p>
+      <p><strong>Teléfono:</strong> {{clientLocationPhone}}</p>
+      <p style="margin-top: 12px; font-size: 13px; color: #64748b;">Nuestro equipo de soporte está listo para ayudarte a comenzar.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Este correo fue enviado a {{contactName}} como parte de la configuración de tu acceso al portal.</p>
+    <p>Si no esperabas esta invitación, por favor contáctanos en {{clientLocationEmail}}.</p>
+    <p>© {{currentYear}} {{clientName}}. Todos los derechos reservados.</p>
+  </div>
+</body>
+</html>`,
       text_content: `Bienvenido a tu portal del cliente
 
 Hola {{contactName}},
 
-Has sido invitado a unirte al portal del cliente de {{clientName}}.
+¡Excelentes noticias! Has sido invitado a acceder al portal del cliente de {{clientName}}. Este portal seguro te brinda acceso instantáneo a:
 
-Activar mi acceso: {{portalLink}}
+✓ Ver y realizar seguimiento de tus tickets de soporte
+✓ Revisar actualizaciones y documentación de proyectos
+✓ Comunicarte directamente con tu equipo de soporte
 
-El enlace expirará en {{expirationTime}}.
+CONFIGURAR EL ACCESO A MI PORTAL:
+{{portalLink}}
 
-¿Necesitas asistencia?
+⏰ TIEMPO LIMITADO: Este enlace de invitación expirará en {{expirationTime}}. Por favor, completa la configuración de tu cuenta antes de ese momento para garantizar un acceso ininterrumpido.
+
+¿NECESITAS ASISTENCIA?
 Email: {{clientLocationEmail}}
 Teléfono: {{clientLocationPhone}}
 
-© {{currentYear}} {{clientName}}`,
+Nuestro equipo de soporte está listo para ayudarte a comenzar.
+
+---
+Este correo fue enviado a {{contactName}} como parte de la configuración de tu acceso al portal.
+Si no esperabas esta invitación, por favor contáctanos en {{clientLocationEmail}}.
+
+© {{currentYear}} {{clientName}}. Todos los derechos reservados.
+`,
       notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
@@ -877,35 +1339,266 @@ Wenn Sie diese Zurücksetzung nicht angefordert haben, ignorieren Sie diese E-Ma
       language_code: 'de',
       subject: 'Kundenportal-Einladung - {{clientName}}',
       html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Willkommen in Ihrem Kundenportal</h2>
-          <p>Hallo {{contactName}},</p>
-          <p>Sie wurden eingeladen, dem Kundenportal von {{clientName}} beizutreten.</p>
-          <p><a href="{{portalLink}}" style="display: inline-block; padding: 10px 20px; background-color: #8A4DEA; color: white; text-decoration: none; border-radius: 5px;">Zugang aktivieren</a></p>
-          <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
-          <p>{{portalLink}}</p>
-          <p><small>Der Link läuft in {{expirationTime}} ab.</small></p>
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Benötigen Sie Unterstützung?</p>
-          <p style="color: #666; font-size: 12px;">E-Mail: {{clientLocationEmail}}<br>Telefon: {{clientLocationPhone}}</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{clientName}}</p>
-        </div>
-      `,
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portalzugangs-Einladung</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      border-radius: 12px 12px 0 0;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      opacity: 1;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.95);
+    }
+    .content {
+      background: #ffffff;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-top: none;
+      border-bottom: none;
+    }
+    .footer {
+      background: #1e293b;
+      color: #cbd5e1;
+      padding: 24px;
+      border-radius: 0 0 12px 12px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .footer p {
+      margin: 6px 0;
+      color: #cbd5e1;
+    }
+    .footer p:last-child {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    .info-box {
+      background: #faf8ff;
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid #e9e5f5;
+      border-left: 4px solid #8a4dea;
+      margin: 24px 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .info-box h3 {
+      color: #0f172a;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .info-box p {
+      margin: 8px 0;
+      color: #334155;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8a4dea;
+      color: #ffffff !important;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 24px 0;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .action-button:hover {
+      background: #7c3aed;
+      color: #ffffff !important;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+    .warning {
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .warning h4 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .warning p {
+      margin: 0;
+      color: #92400e;
+    }
+    .contact-info {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+      border: 1px solid #e2e8f0;
+    }
+    .contact-info h4 {
+      color: #0f172a;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .contact-info p {
+      margin: 4px 0;
+      color: #334155;
+      font-size: 14px;
+    }
+    h2 {
+      color: #0f172a;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+    }
+    p {
+      color: #334155;
+      margin: 0 0 16px 0;
+    }
+    a {
+      color: #8a4dea;
+      text-decoration: underline;
+    }
+    a:hover {
+      color: #7c3aed;
+    }
+    .tagline {
+      background: #faf8ff;
+      border-left: 3px solid #8a4dea;
+      padding: 20px 24px;
+      margin: 24px 0;
+      font-style: normal;
+      color: #334155;
+      border-radius: 6px;
+      line-height: 1.7;
+    }
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 32px 0;
+    }
+    .link-text {
+      word-break: break-all;
+      font-size: 14px;
+      color: #64748b;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Willkommen in Ihrem Kundenportal</h1>
+    <p>Sie sind eingeladen, auf Ihr Konto zuzugreifen</p>
+  </div>
+
+  <div class="content">
+    <h2>Hallo {{contactName}},</h2>
+
+    <p>Großartige Neuigkeiten! Sie wurden eingeladen, auf das Kundenportal von <strong>{{clientName}}</strong> zuzugreifen. Dieses sichere Portal bietet Ihnen sofortigen Zugang zu:</p>
+
+    <div class="info-box">
+      <h3>🎯 Worauf Sie zugreifen können</h3>
+      <p>✓ Ihre Support-Tickets anzeigen und verfolgen</p>
+      <p>✓ Projekt-Updates und Dokumentation einsehen</p>
+      <p>✓ Direkt mit Ihrem Support-Team kommunizieren</p>
+    </div>
+
+    <div class="tagline">
+      Erleben Sie nahtloses Service-Management mit unserem intuitiven Portal. Alles, was Sie brauchen, um informiert und verbunden zu bleiben, an einem sicheren Ort.
+    </div>
+
+    <div style="text-align: center;">
+      <a href="{{portalLink}}" class="action-button">Meinen Portalzugang einrichten</a>
+    </div>
+
+    <p style="text-align: center; color: #64748b; font-size: 14px;">
+      Oder kopieren Sie diesen Link in Ihren Browser:
+    </p>
+    <div class="link-text">{{portalLink}}</div>
+
+    <div class="warning">
+      <h4>⏰ Zeitlich begrenzte Einladung</h4>
+      <p>Dieser Einladungslink läuft in <strong>{{expirationTime}}</strong> ab. Bitte schließen Sie die Einrichtung Ihres Kontos vorher ab, um einen unterbrechungsfreien Zugang zu gewährleisten.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="contact-info">
+      <h4>Benötigen Sie Unterstützung?</h4>
+      <p><strong>E-Mail:</strong> {{clientLocationEmail}}</p>
+      <p><strong>Telefon:</strong> {{clientLocationPhone}}</p>
+      <p style="margin-top: 12px; font-size: 13px; color: #64748b;">Unser Support-Team ist bereit, Ihnen beim Einstieg zu helfen.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Diese E-Mail wurde an {{contactName}} im Rahmen der Einrichtung Ihres Portalzugangs gesendet.</p>
+    <p>Wenn Sie diese Einladung nicht erwartet haben, kontaktieren Sie uns bitte unter {{clientLocationEmail}}.</p>
+    <p>© {{currentYear}} {{clientName}}. Alle Rechte vorbehalten.</p>
+  </div>
+</body>
+</html>`,
       text_content: `Willkommen in Ihrem Kundenportal
 
 Hallo {{contactName}},
 
-Sie wurden eingeladen, dem Kundenportal von {{clientName}} beizutreten.
+Großartige Neuigkeiten! Sie wurden eingeladen, auf das Kundenportal von {{clientName}} zuzugreifen. Dieses sichere Portal bietet Ihnen sofortigen Zugang zu:
 
-Zugang aktivieren: {{portalLink}}
+✓ Ihre Support-Tickets anzeigen und verfolgen
+✓ Projekt-Updates und Dokumentation einsehen
+✓ Direkt mit Ihrem Support-Team kommunizieren
 
-Der Link läuft in {{expirationTime}} ab.
+MEINEN PORTALZUGANG EINRICHTEN:
+{{portalLink}}
 
-Benötigen Sie Unterstützung?
+⏰ ZEITLICH BEGRENZT: Dieser Einladungslink läuft in {{expirationTime}} ab. Bitte schließen Sie die Einrichtung Ihres Kontos vorher ab, um einen unterbrechungsfreien Zugang zu gewährleisten.
+
+BENÖTIGEN SIE UNTERSTÜTZUNG?
 E-Mail: {{clientLocationEmail}}
 Telefon: {{clientLocationPhone}}
 
-© {{currentYear}} {{clientName}}`,
+Unser Support-Team ist bereit, Ihnen beim Einstieg zu helfen.
+
+---
+Diese E-Mail wurde an {{contactName}} im Rahmen der Einrichtung Ihres Portalzugangs gesendet.
+Wenn Sie diese Einladung nicht erwartet haben, kontaktieren Sie uns bitte unter {{clientLocationEmail}}.
+
+© {{currentYear}} {{clientName}}. Alle Rechte vorbehalten.
+`,
       notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
@@ -1124,35 +1817,266 @@ Als u dit wachtwoordherstel niet heeft aangevraagd, kunt u deze e-mail negeren.
       language_code: 'nl',
       subject: 'Uitnodiging voor klantenportaal - {{clientName}}',
       html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Welkom bij uw klantenportaal</h2>
-          <p>Hallo {{contactName}},</p>
-          <p>U bent uitgenodigd om lid te worden van het klantenportaal van {{clientName}}.</p>
-          <p><a href="{{portalLink}}" style="display: inline-block; padding: 10px 20px; background-color: #8A4DEA; color: white; text-decoration: none; border-radius: 5px;">Toegang activeren</a></p>
-          <p>Of kopieer deze link naar uw browser:</p>
-          <p>{{portalLink}}</p>
-          <p><small>De link verloopt over {{expirationTime}}.</small></p>
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Hulp nodig?</p>
-          <p style="color: #666; font-size: 12px;">E-mail: {{clientLocationEmail}}<br>Telefoon: {{clientLocationPhone}}</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{clientName}}</p>
-        </div>
-      `,
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portaaltoegang uitnodiging</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      border-radius: 12px 12px 0 0;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      opacity: 1;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.95);
+    }
+    .content {
+      background: #ffffff;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-top: none;
+      border-bottom: none;
+    }
+    .footer {
+      background: #1e293b;
+      color: #cbd5e1;
+      padding: 24px;
+      border-radius: 0 0 12px 12px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .footer p {
+      margin: 6px 0;
+      color: #cbd5e1;
+    }
+    .footer p:last-child {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    .info-box {
+      background: #faf8ff;
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid #e9e5f5;
+      border-left: 4px solid #8a4dea;
+      margin: 24px 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .info-box h3 {
+      color: #0f172a;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .info-box p {
+      margin: 8px 0;
+      color: #334155;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8a4dea;
+      color: #ffffff !important;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 24px 0;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .action-button:hover {
+      background: #7c3aed;
+      color: #ffffff !important;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+    .warning {
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .warning h4 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .warning p {
+      margin: 0;
+      color: #92400e;
+    }
+    .contact-info {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+      border: 1px solid #e2e8f0;
+    }
+    .contact-info h4 {
+      color: #0f172a;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .contact-info p {
+      margin: 4px 0;
+      color: #334155;
+      font-size: 14px;
+    }
+    h2 {
+      color: #0f172a;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+    }
+    p {
+      color: #334155;
+      margin: 0 0 16px 0;
+    }
+    a {
+      color: #8a4dea;
+      text-decoration: underline;
+    }
+    a:hover {
+      color: #7c3aed;
+    }
+    .tagline {
+      background: #faf8ff;
+      border-left: 3px solid #8a4dea;
+      padding: 20px 24px;
+      margin: 24px 0;
+      font-style: normal;
+      color: #334155;
+      border-radius: 6px;
+      line-height: 1.7;
+    }
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 32px 0;
+    }
+    .link-text {
+      word-break: break-all;
+      font-size: 14px;
+      color: #64748b;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Welkom bij uw klantenportaal</h1>
+    <p>U bent uitgenodigd om toegang te krijgen tot uw account</p>
+  </div>
+
+  <div class="content">
+    <h2>Hallo {{contactName}},</h2>
+
+    <p>Geweldig nieuws! U bent uitgenodigd om toegang te krijgen tot het klantenportaal van <strong>{{clientName}}</strong>. Dit beveiligde portaal geeft u directe toegang tot:</p>
+
+    <div class="info-box">
+      <h3>🎯 Waartoe u toegang heeft</h3>
+      <p>✓ Uw supporttickets bekijken en volgen</p>
+      <p>✓ Projectupdates en documentatie bekijken</p>
+      <p>✓ Rechtstreeks communiceren met uw supportteam</p>
+    </div>
+
+    <div class="tagline">
+      Ervaar naadloos servicebeheer met ons intuïtieve portaal. Alles wat u nodig heeft om geïnformeerd en verbonden te blijven, allemaal op één veilige locatie.
+    </div>
+
+    <div style="text-align: center;">
+      <a href="{{portalLink}}" class="action-button">Mijn portaaltoegang instellen</a>
+    </div>
+
+    <p style="text-align: center; color: #64748b; font-size: 14px;">
+      Of kopieer en plak deze link in uw browser:
+    </p>
+    <div class="link-text">{{portalLink}}</div>
+
+    <div class="warning">
+      <h4>⏰ Tijdgevoelige uitnodiging</h4>
+      <p>Deze uitnodigingslink verloopt over <strong>{{expirationTime}}</strong>. Voltooi uw accountinstelling voor die tijd om ononderbroken toegang te garanderen.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="contact-info">
+      <h4>Hulp nodig?</h4>
+      <p><strong>E-mail:</strong> {{clientLocationEmail}}</p>
+      <p><strong>Telefoon:</strong> {{clientLocationPhone}}</p>
+      <p style="margin-top: 12px; font-size: 13px; color: #64748b;">Ons supportteam staat klaar om u te helpen aan de slag te gaan.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Deze e-mail is verzonden naar {{contactName}} als onderdeel van uw portaaltoegang instelling.</p>
+    <p>Als u deze uitnodiging niet verwachtte, neem dan contact met ons op via {{clientLocationEmail}}.</p>
+    <p>© {{currentYear}} {{clientName}}. Alle rechten voorbehouden.</p>
+  </div>
+</body>
+</html>`,
       text_content: `Welkom bij uw klantenportaal
 
 Hallo {{contactName}},
 
-U bent uitgenodigd om lid te worden van het klantenportaal van {{clientName}}.
+Geweldig nieuws! U bent uitgenodigd om toegang te krijgen tot het klantenportaal van {{clientName}}. Dit beveiligde portaal geeft u directe toegang tot:
 
-Toegang activeren: {{portalLink}}
+✓ Uw supporttickets bekijken en volgen
+✓ Projectupdates en documentatie bekijken
+✓ Rechtstreeks communiceren met uw supportteam
 
-De link verloopt over {{expirationTime}}.
+MIJN PORTAALTOEGANG INSTELLEN:
+{{portalLink}}
 
-Hulp nodig?
+⏰ TIJDGEVOELIG: Deze uitnodigingslink verloopt over {{expirationTime}}. Voltooi uw accountinstelling voor die tijd om ononderbroken toegang te garanderen.
+
+HULP NODIG?
 E-mail: {{clientLocationEmail}}
 Telefoon: {{clientLocationPhone}}
 
-© {{currentYear}} {{clientName}}`,
+Ons supportteam staat klaar om u te helpen aan de slag te gaan.
+
+---
+Deze e-mail is verzonden naar {{contactName}} als onderdeel van uw portaaltoegang instelling.
+Als u deze uitnodiging niet verwachtte, neem dan contact met ons op via {{clientLocationEmail}}.
+
+© {{currentYear}} {{clientName}}. Alle rechten voorbehouden.
+`,
       notification_subtype_id: subtypeIds['portal-invitation']
     },
     {
