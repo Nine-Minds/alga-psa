@@ -19,6 +19,7 @@ import {
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import Pagination from 'server/src/components/ui/Pagination';
 
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
@@ -170,6 +171,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     rowClassName,
     initialSorting,
     onVisibleRowsChange,
+    onItemsPerPageChange,
+    itemsPerPageOptions,
   } = props;
 
   const { t } = useTranslation('common');
@@ -486,14 +489,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     return () => clearTimeout(timeoutId);
   }, [pageIndex, currentPageSize, data.length, totalItems, pagination, updateMetadata, columnConfig]);
 
-  const handlePreviousPage = () => {
-    table.previousPage();
-  };
-
-  const handleNextPage = () => {
-    table.nextPage();
-  };
-
   return (
     <div
       className="datatable-container overflow-hidden bg-white rounded-lg border border-gray-200"
@@ -594,34 +589,22 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </tbody>
           </table>
         </div>
-        {pagination && data.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-100 bg-white">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handlePreviousPage}
-                disabled={!table.getCanPreviousPage()}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {t('pagination.previous', 'Previous')}
-              </button>
-              <span className="text-sm text-[rgb(var(--color-text-700))]">
-                {(() => {
-                  const translated = t('pagination.pageInfo', { current: pageIndex + 1, total: totalPages, count: total });
-                  // If translation key is returned as-is, use fallback
-                  if (translated === 'pagination.pageInfo') {
-                    return `Page ${pageIndex + 1} of ${totalPages} (${total} total records)`;
-                  }
-                  return translated;
-                })()}
-              </span>
-              <button
-                onClick={handleNextPage}
-                disabled={!table.getCanNextPage()}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {t('pagination.next', 'Next')}
-              </button>
-            </div>
+        {pagination && data.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
+          <div className="border-t border-gray-100">
+            <Pagination
+              id={id ? `${id}-pagination` : 'datatable-pagination'}
+              currentPage={pageIndex + 1}
+              totalItems={total}
+              itemsPerPage={currentPageSize}
+              onPageChange={(page) => {
+                if (onPageChange) {
+                  onPageChange(page);
+                }
+              }}
+              onItemsPerPageChange={onItemsPerPageChange}
+              itemsPerPageOptions={itemsPerPageOptions}
+              variant={onItemsPerPageChange ? "clients" : "compact"}
+            />
           </div>
         )}
     </div>

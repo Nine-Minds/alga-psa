@@ -41,6 +41,8 @@ import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
+const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
+const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
 
 // Memoized search input component to prevent re-renders
 const SearchInput = memo(({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
@@ -235,6 +237,7 @@ const ClientResults = memo(({
           pageSize={pageSize}
           totalCount={totalCount}
           onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
           clientTags={effectiveClientTags}
           allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
@@ -301,10 +304,10 @@ const Clients: React.FC = () => {
   
   // Use the custom hook for view mode preference
   type ClientViewMode = 'grid' | 'list';
-  const { 
-    value: viewMode, 
+  const {
+    value: viewMode,
     setValue: setViewModePreference,
-    isLoading: isViewModeLoading 
+    isLoading: isViewModeLoading
   } = useUserPreference<ClientViewMode>(
     COMPANY_VIEW_MODE_SETTING,
     {
@@ -313,7 +316,35 @@ const Clients: React.FC = () => {
       debounceMs: 300
     }
   );
-  
+
+  // Use user preferences for page sizes (separate for grid and list views)
+  const {
+    value: gridPageSize,
+    setValue: setGridPageSize
+  } = useUserPreference<number>(
+    CLIENTS_GRID_PAGE_SIZE_SETTING,
+    {
+      defaultValue: 9,
+      localStorageKey: CLIENTS_GRID_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  const {
+    value: listPageSize,
+    setValue: setListPageSize
+  } = useUserPreference<number>(
+    CLIENTS_LIST_PAGE_SIZE_SETTING,
+    {
+      defaultValue: 10,
+      localStorageKey: CLIENTS_LIST_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Current page size based on view mode
+  const pageSize = viewMode === 'grid' ? gridPageSize : listPageSize;
+
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
@@ -323,25 +354,24 @@ const Clients: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
-  
+
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
-  
+
   // Edit state - removed since edit now navigates directly
-  
+
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   const [clientTags, setClientTags] = useState<Record<string, ITag[]>>({});
-  
+
   // Track if filters are applied
   const [isFiltered, setIsFiltered] = useState(false);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(viewMode === 'grid' ? 9 : 10);
-  
+
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('client_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -372,10 +402,10 @@ const Clients: React.FC = () => {
 
   // Tags will be loaded by ClientResults component
 
-  // Update page size when view mode changes
+  // Reset to first page when view mode changes
   useEffect(() => {
     if (!isViewModeLoading) {
-      setPageSize(viewMode === 'grid' ? 9 : 10);
+      setCurrentPage(1);
     }
   }, [viewMode, isViewModeLoading]);
 
@@ -895,7 +925,12 @@ const Clients: React.FC = () => {
         pageSize={pageSize}
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {
-          setPageSize(size);
+          // Save to the appropriate preference based on current view mode
+          if (viewMode === 'grid') {
+            setGridPageSize(size);
+          } else {
+            setListPageSize(size);
+          }
           setCurrentPage(1); // Reset to first page when changing page size
         }}
         onClientTagsLoaded={handleClientTagsLoaded}

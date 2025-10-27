@@ -1,6 +1,5 @@
 /**
  * Alga PSA Login Integration Tests
- * 
  * Tests the actual Alga PSA login flow including:
  * - Navigation to root path (/)
  * - Login form appearance

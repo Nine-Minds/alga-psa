@@ -1,0 +1,12 @@
+# Generated test fixtures - don't commit binary files
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.exe
+
+# Keep the text files and generator script
+!sample.txt
+!large-file.txt
+!generateTestFixtures.ts
+!README.md

@@ -29,6 +29,7 @@ interface ClientsListProps {
     pageSize?: number;
     totalCount?: number;
     onPageChange?: (page: number) => void;
+    onPageSizeChange?: (size: number) => void;
     clientTags?: Record<string, ITag[]>;
     allUniqueTags?: ITag[];
     onTagsChange?: (clientId: string, tags: ITag[]) => void;
@@ -107,18 +108,19 @@ const ClientLink: React.FC<ClientLinkProps> = ({ client, onClick }) => {
   );
 };
 
-const ClientsList = ({ 
-  selectedClients, 
-  filteredClients, 
-  setSelectedClients, 
-  handleCheckboxChange, 
-  handleEditClient, 
+const ClientsList = ({
+  selectedClients,
+  filteredClients,
+  setSelectedClients,
+  handleCheckboxChange,
+  handleEditClient,
   handleDeleteClient,
   onQuickView,
   currentPage,
   pageSize,
   totalCount,
   onPageChange,
+  onPageSizeChange,
   clientTags = {},
   allUniqueTags = [],
   onTagsChange,
@@ -127,6 +129,14 @@ const ClientsList = ({
   onSortChange
 }: ClientsListProps) => {
   const router = useRouter(); // Get router instance
+
+  // Page size options for list view
+  const listPageSizeOptions = [
+    { value: '10', label: '10 per page' },
+    { value: '25', label: '25 per page' },
+    { value: '50', label: '50 per page' },
+    { value: '100', label: '100 per page' }
+  ];
 
   const handleRowClick = (client: IClient) => {
     router.push(`/msp/clients/${client.client_id}`);
@@ -302,6 +312,8 @@ const ClientsList = ({
                 pageSize={pageSize}
                 totalItems={totalCount}
                 onPageChange={onPageChange}
+                onItemsPerPageChange={onPageSizeChange}
+                itemsPerPageOptions={listPageSizeOptions}
                 rowClassName={() => ''}
                 manualSorting={true}
                 sortBy={sortBy}
