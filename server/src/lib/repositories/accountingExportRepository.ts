@@ -102,15 +102,28 @@ export class AccountingExportRepository {
   }
 
   async updateBatchStatus(batchId: string, updates: UpdateExportBatchStatusInput): Promise<AccountingExportBatch | null> {
-    return this.updateBatch(batchId, {
+    const updatePayload: Partial<AccountingExportBatch> = {
       status: updates.status,
-      validated_at: updates.validated_at ?? null,
-      delivered_at: updates.delivered_at ?? null,
-      posted_at: updates.posted_at ?? null,
-      last_updated_by: updates.last_updated_by ?? null,
-      notes: updates.notes ?? null,
       updated_at: new Date().toISOString()
-    });
+    };
+
+    if (updates.validated_at !== undefined) {
+      updatePayload.validated_at = updates.validated_at;
+    }
+    if (updates.delivered_at !== undefined) {
+      updatePayload.delivered_at = updates.delivered_at;
+    }
+    if (updates.posted_at !== undefined) {
+      updatePayload.posted_at = updates.posted_at;
+    }
+    if (updates.last_updated_by !== undefined) {
+      updatePayload.last_updated_by = updates.last_updated_by;
+    }
+    if (updates.notes !== undefined) {
+      updatePayload.notes = updates.notes;
+    }
+
+    return this.updateBatch(batchId, updatePayload);
   }
 
   async addLine(input: CreateExportLineInput): Promise<AccountingExportLine> {

@@ -26,6 +26,8 @@ export const EventTypeEnum = z.enum([
   'CLIENT_CREATED', // QBO Client Created
   'CLIENT_UPDATED', // QBO Client Updated
   'INBOUND_EMAIL_RECEIVED', // Inbound email processing
+  'ACCOUNTING_EXPORT_COMPLETED',
+  'ACCOUNTING_EXPORT_FAILED',
   'UNKNOWN'
 ]);
 

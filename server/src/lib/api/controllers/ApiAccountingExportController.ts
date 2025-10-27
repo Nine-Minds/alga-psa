@@ -5,9 +5,10 @@ import {
   appendAccountingExportErrors,
   updateAccountingExportBatchStatus,
   getAccountingExportBatch,
-  listAccountingExportBatches
+  listAccountingExportBatches,
+  executeAccountingExportBatch
 } from '../../actions/accountingExportActions';
-import { CreateExportBatchInput, CreateExportLineInput, CreateExportErrorInput, UpdateExportBatchStatusInput } from '../../lib/repositories/accountingExportRepository';
+import { CreateExportBatchInput, CreateExportLineInput, CreateExportErrorInput, UpdateExportBatchStatusInput } from '../../repositories/accountingExportRepository';
 import { AccountingExportValidation } from '../../validation/accountingExportValidation';
 
 export class ApiAccountingExportController {
@@ -56,5 +57,10 @@ export class ApiAccountingExportController {
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
     return NextResponse.json(batch);
+  }
+
+  static async execute(req: NextRequest, { params }: { params: { batchId: string } }) {
+    const result = await executeAccountingExportBatch(params.batchId);
+    return NextResponse.json(result);
   }
 }

@@ -148,6 +148,8 @@ export interface QboInvoice {
   SalesTermRef?: QboRef; // Maps from Alga Client payment_terms via lookup
   PrivateNote?: string; // Potential place for billing period info
   MetaData?: QboMetaData;
+  CurrencyRef?: QboRef;
+  ExchangeRate?: number;
   // Add other relevant fields as needed
 }
 
