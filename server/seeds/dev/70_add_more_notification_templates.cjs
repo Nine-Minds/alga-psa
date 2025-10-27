@@ -50,9 +50,14 @@ exports.seed = async function(knex) {
       return subtype.id;
     };
   
-    // Clean up any existing templates
+    // Clean up any existing notification templates (but keep authentication templates)
     await knex('tenant_email_templates').del();
-    await knex('system_email_templates').del();
+
+    // Delete only notification-related system templates, preserve authentication templates
+    const authTemplateNames = ['email-verification', 'password-reset', 'portal-invitation', 'tenant-recovery', 'no-account-found'];
+    await knex('system_email_templates')
+      .whereNotIn('name', authTemplateNames)
+      .del();
   
     // Insert system-wide default templates
     const systemTemplates = await knex('system_email_templates').insert([
