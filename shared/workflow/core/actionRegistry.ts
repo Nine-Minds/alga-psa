@@ -22,6 +22,7 @@ export interface ActionExecutionContext {
   secrets?: Record<string, any>; // Optional field for injected secrets
   workflowName?: string; // Added for logging context
   correlationId?: string; // Added for logging context and potential future use
+  knex?: any; // Optional Knex connection/transaction - when provided, avoids cross-shard FK issues
 }
 
 /**
@@ -132,11 +133,15 @@ export class ActionRegistry {
     try {
       // Import models here to avoid circular dependencies
       const { default: WorkflowActionResultModel } = await import('../persistence/workflowActionResultModel');
-      
-      // Create Knex instance - assuming we can get it from a connection pool or similar
-      // This would typically be passed in the context or obtained from a service locator
-      const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
-      knex = await getAdminConnection();
+
+      // Use provided connection if available, otherwise get a fresh one
+      // Using the same connection avoids Citus cross-shard FK timing issues
+      if (context.knex) {
+        knex = context.knex;
+      } else {
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        knex = await getAdminConnection();
+      }
       
       // Create action result record (pre-execution)
       let resultId;

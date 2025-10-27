@@ -459,10 +459,11 @@ export class TypeScriptWorkflowRuntime {
       
       // Persist the initial event
       await WorkflowEventModel.create(knex, tenant, startEvent); // Use destructured tenant
-      
-      // Create workflow context with userId
-      const context = this.createWorkflowContext(executionId, tenant, userId); // Pass userId to context
-      
+
+      // Create workflow context with userId and knex connection
+      // Passing knex ensures actions use the same connection, avoiding Citus cross-shard FK issues
+      const context = this.createWorkflowContext(executionId, tenant, userId, knex);
+
       // Start workflow execution in background
       this.executeWorkflow(workflowDefinition.execute, context, executionState);
       
@@ -853,10 +854,10 @@ export class TypeScriptWorkflowRuntime {
   /**
    * Create a workflow context for execution
    */
-  private createWorkflowContext(executionId: string, tenant: string, userId?: string): WorkflowContext {
+  private createWorkflowContext(executionId: string, tenant: string, userId?: string, knex?: any): WorkflowContext {
     const executionState = this.executionStates.get(executionId)!;
     const eventListeners: Map<string, ((event: WorkflowEvent) => void)[]> = new Map();
-    
+
     // Store event listeners in execution state
     executionState.eventListeners = eventListeners;
 
@@ -987,42 +988,42 @@ export class TypeScriptWorkflowRuntime {
       getCurrentState: (): string => executionState.currentState,
       setState: (state: string): void => { executionState.currentState = state; }
     };
-    
-    // Create action proxy, passing the context being built
-    const actionProxyInstance = this.createActionProxy(executionId, tenant, context);
+
+    // Create action proxy, passing the context being built and the knex connection
+    const actionProxyInstance = this.createActionProxy(executionId, tenant, context, knex);
     context.actions = actionProxyInstance; // Now assign the fully built actions object
-    
+
     return context;
   }
   
   /**
    * Create a proxy for action execution
    */
-  private createActionProxy(executionId: string, tenant: string, currentContext: WorkflowContext): WorkflowContext['actions'] {
+  private createActionProxy(executionId: string, tenant: string, currentContext: WorkflowContext, knex?: any): WorkflowContext['actions'] {
     const tempProxy: { [key: string]: any } = {}; // Start with a generic object for easier construction
-    
+
     // Get all registered actions
     const actions = this.actionRegistry.getRegisteredActions();
-    
+
     // Create proxy methods for each action
     for (const [registeredName, actionDef] of Object.entries(actions)) {
       // Create a function that executes the action
       const executeAction = async (params: any) => {
         // Get the execution state to check if we have a user ID from a received event
         const currentExecutionState = this.executionStates.get(executionId);
-        
+
         // Find the most recent event with a user_id, if any
         const userIdFromEvents = currentExecutionState?.events
           .slice()
           .reverse()
           .find((e: any) => e.user_id)?.user_id;
-          
+
         // Include userId, workflowName, and correlationId in the action context if available
         // IMPORTANT: Always call actionRegistry.executeAction with the *original registeredName*
-        
+
         // Log the secrets object from executionState.data before passing it to the action context
         console.log(`[DEBUG ActionProxy] Secrets from executionState.data for action ${registeredName} (executionId: ${executionId}):`, currentExecutionState?.data?.secrets);
-        
+
         return this.actionRegistry.executeAction(registeredName, {
           tenant,
           executionId,
@@ -1031,7 +1032,8 @@ export class TypeScriptWorkflowRuntime {
           secrets: currentExecutionState?.data?.secrets, // Pass secrets from execution state data
           parameters: params,
           idempotencyKey: `${executionId}-${registeredName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          userId: userIdFromEvents // Include user ID from events if available
+          userId: userIdFromEvents, // Include user ID from events if available
+          knex: knex // Pass through the Knex connection to avoid cross-shard FK issues
         });
       };
 
