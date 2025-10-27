@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob } from './index';
 import logger from '@shared/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -102,6 +102,21 @@ export async function initializeScheduledJobs(): Promise<void> {
      }
    } catch (error) {
      logger.error('Failed to schedule temporary forms cleanup job', error);
+   }
+
+   if (process.env.EDITION === 'enterprise') {
+     try {
+       const aiCleanupJobId = await scheduleCleanupAiSessionKeysJob();
+       if (aiCleanupJobId) {
+         logger.info(`Scheduled AI session key cleanup job with ID ${aiCleanupJobId}`);
+       } else {
+         logger.info('AI session key cleanup job already scheduled (singleton active)', {
+           returnedJobId: aiCleanupJobId,
+         });
+       }
+     } catch (error) {
+       logger.error('Failed to schedule AI session key cleanup job', error);
+     }
    }
    
    logger.info('All scheduled jobs initialized');

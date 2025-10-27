@@ -28,6 +28,10 @@ export async function createApiKey(description?: string, expiresAt?: string) {
     description: apiKey.description,
     created_at: apiKey.created_at,
     expires_at: apiKey.expires_at,
+    purpose: apiKey.purpose,
+    metadata: apiKey.metadata,
+    usage_limit: apiKey.usage_limit,
+    usage_count: apiKey.usage_count,
   };
 }
 
@@ -49,6 +53,10 @@ export async function listApiKeys() {
     created_at: key.created_at,
     last_used_at: key.last_used_at,
     expires_at: key.expires_at,
+    purpose: key.purpose,
+    metadata: key.metadata,
+    usage_limit: key.usage_limit,
+    usage_count: key.usage_count,
     active: key.active,
   }));
 }
@@ -100,6 +108,10 @@ export async function adminListApiKeys() {
     created_at: key.created_at,
     last_used_at: key.last_used_at,
     expires_at: key.expires_at,
+    purpose: key.purpose,
+    metadata: key.metadata,
+    usage_limit: key.usage_limit,
+    usage_count: key.usage_count,
     active: key.active,
   }));
 }

@@ -90,6 +90,10 @@ export function registerServiceCategoryRoutes(
     extensions: {
       'x-tenant-header-required': true,
       'x-rbac-resource': 'service-category',
+      'x-chat-callable': true,
+      'x-chat-display-name': 'List Service Categories',
+      'x-chat-rbac-resource': 'service-category',
+      'x-chat-approval-required': false,
     },
     edition: 'both',
   });
@@ -128,6 +132,10 @@ export function registerServiceCategoryRoutes(
     extensions: {
       'x-tenant-header-required': true,
       'x-rbac-resource': 'service-category',
+      'x-chat-callable': true,
+      'x-chat-display-name': 'Create Service Category',
+      'x-chat-rbac-resource': 'service-category',
+      'x-chat-approval-required': true,
     },
     edition: 'both',
   });
