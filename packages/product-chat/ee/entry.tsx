@@ -4,6 +4,7 @@
 // Chat service exports
 export { ChatStreamService } from '../../ee/server/src/services/chatStreamService';
 export { TemporaryApiKeyService } from '../../ee/server/src/services/temporaryApiKeyService';
+export { ChatCompletionsService } from '../../ee/server/src/services/chatCompletionsService';
 
 // Component exports (when available)
 // export { default as ChatPage } from '../../../ee/server/src/app/msp/chat/page';
@@ -19,6 +20,7 @@ export const MessageComponent = () => import('../../ee/server/src/components/mes
 const chat = {
   ChatStreamService: () => import('../../ee/server/src/services/chatStreamService').then(mod => mod.ChatStreamService),
   TemporaryApiKeyService: () => import('../../ee/server/src/services/temporaryApiKeyService').then(mod => mod.TemporaryApiKeyService),
+  ChatCompletionsService: () => import('../../ee/server/src/services/chatCompletionsService').then(mod => mod.ChatCompletionsService),
   ChatPage: () => import('../../ee/server/src/app/msp/chat/page.js'),
   ChatComponent: () => import('../../ee/server/src/components/chat/Chat.js'),
   MessageComponent: () => import('../../ee/server/src/components/message/Message.js'),
