@@ -147,14 +147,26 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       // Get recipient information for locale resolution
       const recipientInfo = params.recipientUserId
         ? { email: params.to, userId: params.recipientUserId }
-        : await getUserInfoForEmail(params.tenantId, params.to);
+        : await getUserInfoForEmail(params.tenantId, params.to) ?? { email: params.to };
 
-      recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
-      logger.debug('[SendEventEmail] Resolved recipient locale:', {
-        locale: recipientLocale,
-        email: params.to,
-        userId: recipientInfo.userId
-      });
+      // Only do full locale resolution for client portal users
+      // MSP portal doesn't have i18n yet, so internal users always get English
+      if (recipientInfo.userType === 'client') {
+        recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
+        logger.debug('[SendEventEmail] Resolved client user locale:', {
+          locale: recipientLocale,
+          email: params.to,
+          userId: recipientInfo.userId
+        });
+      } else {
+        // Internal users always get English (MSP portal doesn't have i18n yet)
+        recipientLocale = 'en';
+        logger.debug('[SendEventEmail] Using English for internal/unknown user (MSP portal not i18n yet):', {
+          locale: recipientLocale,
+          email: params.to,
+          userType: recipientInfo.userType
+        });
+      }
     }
 
     // Get the template content using tenant-aware connection

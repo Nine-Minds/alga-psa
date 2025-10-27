@@ -161,7 +161,7 @@ export async function resolveEmailLocale(
 /**
  * Get tenant default locale based on user type
  */
-async function getTenantDefaultLocale(
+export async function getTenantDefaultLocale(
   tenantId: string,
   userType?: 'client' | 'internal'
 ): Promise<SupportedLocale> {
