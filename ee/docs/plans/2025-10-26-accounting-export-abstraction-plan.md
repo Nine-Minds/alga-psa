@@ -150,3 +150,52 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 - How many revenue recognition dimensions (department/class/location) must be supported at launch? Do we need additional PSA metadata to map them?
 - What is the minimal viable currency story (single base currency vs. true multi-currency)? Do we require historical exchange rates per invoice?
 - Are there regulatory requirements (e.g., VAT digital links) that dictate export format or audit storage beyond current design?
+
+---
+
+## Acceptance Tests
+- **Mapping Management**
+  - `MappingCRUD#L1`: Admin manages QuickBooks Online mappings (create/edit/delete service, tax, term entries); UI renders resolved names; audit log captures each change.
+  - `MappingFallback#L1`: Invoice line resolves through contract-line override, service override, then service-category fallback; reordering fallbacks changes exported mapping; missing fallbacks block batch with actionable validation.
+  - `XeroMappings#L1`: Xero tenant imports accounts/tax rates/tracking categories, selects valid entries, handles inactive IDs with warnings, and bulk CSV import prevents duplicates.
+  - `MappingPermissions#L1`: Finance role can mutate mappings while other roles are read-only; unauthorized write attempts fail due to RLS and surface clear error.
+- **Export Validation & Execution**
+  - `ValidationUnmapped#L1`: Batch creation detects unmapped services/taxes/terms, marks batch `needs_attention`, and lists failures in UI/API until corrected.
+  - `ValidationCurrency#L1`: Multi-currency invoices export using stored exchange rate; converted totals match accounting amounts; overrides persist across retries.
+  - `BatchLifecycle#L1`: Batch transitions `pending → validating → ready → delivered → posted`; duplicate reruns are blocked; cancellation allowed before delivery with proper status locks.
+  - `InvoiceSelection#L1`: Batches respect filters (date range, status, client, tenant), include manual invoices, multi-period lines, credit memos, and zero-dollar charges while maintaining transaction linkage.
+  - `Concurrency#L1`: Concurrent exports across tenants succeed; same-tenant overlapping ranges are rejected; single invoice cannot be exported in two live batches simultaneously.
+  - `AuditTrail#L1`: Batch records canonical snapshot, adapter payload, and checksum; transaction ledger references batch and vice versa.
+- **Adapters – QuickBooks Online**
+  - `QBOInvoiceCreate#L1`: New invoices push with mapped items, taxes, terms, and service-period metadata; success stores QBO ID + SyncToken in mapping metadata.
+  - `QBOInvoiceUpdate#L1`: Existing invoice updates via sparse payload using latest SyncToken; totals and addresses remain consistent; mapping metadata refreshes.
+  - `QBOErrorHandling#L1`: 429 responses respect backoff; 401 triggers token refresh; invalid mappings produce batch errors without duplicate API calls.
+  - `QBOPermissions#L1`: Revoked OAuth connections fail gracefully, surface reconnect prompt, and leave batch in failed state without data loss.
+  - `QBOClassTracking#L1`: Optional class/location mapping populates when configured; absence leads to omitted fields with no failures.
+- **Adapters – QuickBooks Desktop**
+  - `QBDFileGeneration#L1`: Generated IIF/CSV follows schema (TRNS/SPL rows, headers, encoding) and imports cleanly into sample QuickBooks company with balanced totals.
+  - `QBDAccountMapping#L1`: Income, AR, and tax liability accounts resolve via mappings; missing accounts stop batch pre-generation with clear guidance.
+  - `QBDMultiInvoice#L1`: Multi-invoice batch yields single downloadable artifact with recorded checksum; re-download is tracked without duplicate batches.
+  - `QBDRetry#L1`: Manual re-export after mapping fix regenerates file and updates batch history while preventing stale-download confusion.
+- **Adapters – Xero**
+  - `XeroInvoiceCreate#L1`: OAuth-connected tenant exports invoice with AccountCode, TaxType, and Tracking metadata; Xero reflects amounts and contact linkage.
+  - `XeroMultipleTax#L1`: Mixed tax lines produce separate tax components aligned with Xero’s rules; totals reconcile.
+  - `XeroErrorHandling#L1`: Validation failure (e.g., inactive tax) logs error, marks line as failed, allows targeted retry after mapping update.
+  - `XeroCreditNote#L1`: Credit memos export as Xero Credit Notes, link to original invoice, and present negative totals correctly.
+- **User Interface & Operations**
+  - `ExportDashboard#L1`: Dashboard lists batches with status, totals, adapter, creator; pagination/search works; download gated to finance/Admin roles.
+  - `InvoiceDetail#L1`: Invoice detail page shows export history, batch linkage, and enables guarded re-export when eligible.
+  - `Notifications#L1`: Failed batches trigger email and task notifications to finance role; resolving batch clears alerts automatically.
+  - `FeatureFlag#L1`: Feature toggle hides all export UI when disabled and restores prior batches when enabled without data loss.
+- **Security & Isolation**
+  - `TenantIsolation#L1`: Tenant isolation enforced across APIs and UI; direct DB queries under tenant context show only own batches.
+  - `SecretManagement#L1`: OAuth secrets stored in secret provider, support rotation, and remain inaccessible to non-privileged users.
+  - `LoggingPII#L1`: Logs redact tokens and sensitive IDs during success and failure flows; tests verify no PII leakage.
+- **Regression & Legacy Compatibility**
+  - `LegacyReexport#L1`: Historical invoices export after mapping backfill; missing service-period data defaults to invoice period without breaking downstream systems.
+  - `BillingEngineCompat#L1`: Subsequent billing runs do not alter exported status; new charges require new batch; settlement flows remain intact.
+  - `ArrearsAdvanceMix#L1`: Invoices containing advance and arrears lines export with distinct service periods, and accounting system reflects both timings.
+- **Performance & Resilience**
+  - `LargeBatch#L1`: Batch of ≥500 invoices completes within SLA, respecting memory/CPU thresholds and adapter pagination.
+  - `RetryPolicy#L1`: Configurable retry counts honor limits; exhausted retries mark batch failed with aggregated reasons.
+  - `SystemRestart#L1`: Export job survives worker restart by resuming from last checkpoint without duplicating payloads.
