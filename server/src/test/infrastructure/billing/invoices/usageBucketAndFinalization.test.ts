@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { finalizeInvoice } from '@product/actions/invoiceModification';
+import { generateInvoice } from '@product/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -93,7 +93,7 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@product/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn(async () => ({
     user_id: mockedUserId,
     tenant: mockedTenantId,

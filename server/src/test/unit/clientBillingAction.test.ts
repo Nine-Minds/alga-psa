@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { createClientContractLine, updateClientContractLine, getClientContractLine, getOverlappingBillings } from 'server/src/lib/actions/clientContractLineAction';
+import { createClientContractLine, updateClientContractLine, getClientContractLine, getOverlappingBillings } from '@product/actions/clientContractLineAction';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
 import { parseISO } from 'date-fns';

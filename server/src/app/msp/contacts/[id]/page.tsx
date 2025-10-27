@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 import ContactDetails from 'server/src/components/contacts/ContactDetails';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocumentsByEntity } from '@product/actions/document-actions/documentActions';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { getContactPortalPermissions } from 'server/src/lib/actions/permission-actions';
+import { getContactByContactNameId } from '@product/actions/contact-actions/contactActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
+import { getContactPortalPermissions } from '@product/actions/permission-actions';
 
 const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const [contact, setContact] = useState<IContact | null>(null);

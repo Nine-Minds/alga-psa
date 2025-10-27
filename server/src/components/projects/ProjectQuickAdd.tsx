@@ -8,15 +8,15 @@ import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { IProject, IClient, IStatus } from 'server/src/interfaces';
 import { toast } from 'react-hot-toast';
-import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
+import { createProject, generateNextWbsCode, getProjectStatuses } from '@product/actions/project-actions/projectActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker'; // Import ContactPicker
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getContactsByClient, getAllContacts } from '@product/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';
-import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getAllUsers } from '@product/actions/user-actions/userActions';
 import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 interface ProjectQuickAddProps {

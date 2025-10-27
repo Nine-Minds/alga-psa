@@ -1,5 +1,5 @@
 import { createTenantKnex } from '../db';
-import { getCurrentUser } from '../actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { checkPortalInvitationLimit, formatRateLimitError } from '../security/rateLimiting';
 import crypto from 'crypto';
 import { Knex } from 'knex';

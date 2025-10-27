@@ -2,8 +2,8 @@ import nodemailer from 'nodemailer';
 import { getSecret } from '../lib/utils/getSecret';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getTenantDetails } from 'server/src/lib/actions/tenantActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
+import { getTenantDetails } from '@product/actions/tenantActions';
 import { createTenantKnex } from 'server/src/lib/db';
 
 interface EmailConfig {

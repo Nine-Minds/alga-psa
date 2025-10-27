@@ -9,8 +9,8 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
+import { checkClientHasActiveContract } from '@product/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import {
   Calendar,

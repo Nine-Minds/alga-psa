@@ -8,7 +8,7 @@ import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { Clock, TicketCheck, Trash } from 'lucide-react';
 import { ITimeEntry, ITimePeriodView, ITimeSheet } from '../../../interfaces/timeEntry.interfaces';
-import { fetchOrCreateTimeSheet } from '../../../lib/actions/timeEntryActions';
+import { fetchOrCreateTimeSheet } from '@product/actions/timeEntryActions';
 import TimeEntryDialog from '../../time-management/time-entry/time-sheet/TimeEntryDialog';
 import { Tooltip } from '../../ui/Tooltip';
 

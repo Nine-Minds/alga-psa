@@ -9,7 +9,7 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import CreditExpirationBadge from 'server/src/components/ui/CreditExpirationBadge';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
-import { listClientCredits, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { listClientCredits, applyCreditToInvoice } from '@product/actions/creditActions';
 import { DataTable } from 'server/src/components/ui/DataTable';
 
 interface CreditApplicationUIProps {

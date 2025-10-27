@@ -8,7 +8,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 's
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { IServiceRateTier } from 'server/src/interfaces/serviceTier.interfaces';
-import { getServiceRateTiers, updateServiceRateTiers } from 'server/src/lib/actions/serviceRateTierActions';
+import { getServiceRateTiers, updateServiceRateTiers } from '@product/actions/serviceRateTierActions';
 
 // Define the rate tier interface
 interface RateTier {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { DocumentFilters, IDocument } from 'server/src/interfaces/document.interface';
-import { getAllDocuments } from 'server/src/lib/actions/document-actions/documentActions';
+import { getAllDocuments } from '@product/actions/document-actions/documentActions';
 import { toast } from 'react-hot-toast';
 
 /**

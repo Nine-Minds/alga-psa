@@ -11,7 +11,7 @@ import {
   getCategoryWithSubtypesAction,
   updateCategoryAction,
   updateSubtypeAction
-} from "server/src/lib/actions/notification-actions/notificationActions";
+} from "@product/actions/notification-actions/notificationActions";
 import { 
   NotificationCategory,
   NotificationSubtype 

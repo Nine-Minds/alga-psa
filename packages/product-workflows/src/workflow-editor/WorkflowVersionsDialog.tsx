@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@server/components/ui/Button";
 import { Badge } from "@server/components/ui/Badge";
 import { History, Check, AlertCircle } from "lucide-react";
-import { getWorkflowVersions, setActiveWorkflowVersion, WorkflowVersionData } from "@server/lib/actions/workflow-editor-actions";
+import { getWorkflowVersions, setActiveWorkflowVersion, WorkflowVersionData } from "@product/actions/workflow-editor-actions";
 import { toast } from "react-hot-toast";
 
 interface WorkflowVersionsDialogProps {

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { getCurrentTenantId } from '../db';
-import { getCurrentUser } from '../actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { deleteEntityTags } from '../utils/tagCleanup';
 import { 
   IProjectTask, 

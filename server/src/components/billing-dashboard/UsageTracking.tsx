@@ -14,8 +14,8 @@ import { useToast } from 'server/src/hooks/use-toast';
 import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from 'server/src/interfaces/usage.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
-import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from 'server/src/lib/actions/usageActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from '@product/actions/usageActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
 import { ClientPicker } from '../clients/ClientPicker';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -29,7 +29,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
-import { getRemainingBucketUnits, RemainingBucketUnitsResult } from 'server/src/lib/actions/report-actions';
+import { getRemainingBucketUnits, RemainingBucketUnitsResult } from '@product/actions/report-actions';
 import BucketUsageChart from './BucketUsageChart';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';

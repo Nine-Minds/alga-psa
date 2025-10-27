@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { createPrepaymentInvoice } from '@product/actions/creditActions';
+import { finalizeInvoice } from '@product/actions/invoiceModification';
+import { generateInvoice } from '@product/actions/invoiceGeneration';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
@@ -297,7 +297,7 @@ vi.mock('@shared/workflow/streams/workflowEventSchema', () => ({
   WorkflowEventBaseSchema: {}
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@product/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user))
 }));
 

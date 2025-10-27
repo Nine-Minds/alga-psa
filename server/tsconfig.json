@@ -92,6 +92,42 @@
       "@server/*": [
         "src/*"
       ],
+      "@server/lib/actions": [
+        "../packages/product-actions/src/index.ts"
+      ],
+      "@server/lib/actions/*": [
+        "../packages/product-actions/src/*"
+      ],
+      "@server/lib/api": [
+        "../packages/product-api/src/index.ts"
+      ],
+      "@server/lib/api/*": [
+        "../packages/product-api/src/*"
+      ],
+      "@/lib/actions": [
+        "../packages/product-actions/src/index.ts"
+      ],
+      "@/lib/actions/*": [
+        "../packages/product-actions/src/*"
+      ],
+      "@/lib/api": [
+        "../packages/product-api/src/index.ts"
+      ],
+      "@/lib/api/*": [
+        "../packages/product-api/src/*"
+      ],
+      "@product/actions": [
+        "../packages/product-actions/src/index.ts"
+      ],
+      "@product/actions/*": [
+        "../packages/product-actions/src/*"
+      ],
+      "@product/api": [
+        "../packages/product-api/src/index.ts"
+      ],
+      "@product/api/*": [
+        "../packages/product-api/src/*"
+      ],
       "@product/workflows": [
         "../packages/product-workflows/src/index.ts"
       ],

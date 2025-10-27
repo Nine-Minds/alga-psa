@@ -13,9 +13,9 @@ import {
   getStandardServiceTypes, 
   importServiceTypes, 
   getTenantServiceTypes 
-} from 'server/src/lib/actions/onboarding-actions/serviceTypeActions';
-import { deleteReferenceDataItem } from 'server/src/lib/actions/referenceDataActions';
-import { createServiceType } from 'server/src/lib/actions/serviceActions';
+} from '@product/actions/onboarding-actions/serviceTypeActions';
+import { deleteReferenceDataItem } from '@product/actions/referenceDataActions';
+import { createServiceType } from '@product/actions/serviceActions';
 import { useSession } from 'next-auth/react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Plus } from 'lucide-react';

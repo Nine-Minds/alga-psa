@@ -23,9 +23,9 @@ import {
   removeServiceFromContractLine,
   updateContractLineService,
   getContractLineServicesWithConfigurations
-} from 'server/src/lib/actions/contractLineServiceActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
+} from '@product/actions/contractLineServiceActions';
+import { getServices } from '@product/actions/serviceActions';
+import { getServiceCategories } from '@product/actions/serviceCategoryActions'; // Added import
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import EditPlanServiceQuantityDialog from './contract-lines/EditContractLineServiceQuantityDialog';

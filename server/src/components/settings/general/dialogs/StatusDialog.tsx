@@ -6,7 +6,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
-import { createStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
+import { createStatus, updateStatus } from '@product/actions/status-actions/statusActions';
 import { toast } from 'react-hot-toast';
 
 interface StatusDialogProps {

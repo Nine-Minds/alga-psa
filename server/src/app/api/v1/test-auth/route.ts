@@ -3,8 +3,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withApiKeyAuth } from 'server/src/lib/api/middleware/apiAuthMiddleware';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { withApiKeyAuth } from '@product/api/middleware/apiAuthMiddleware';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 export async function GET(request: NextRequest) {
   const handler = await withApiKeyAuth(async (req) => {

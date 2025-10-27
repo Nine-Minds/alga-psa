@@ -16,12 +16,12 @@ import * as Accordion from '@radix-ui/react-accordion'; // Import Radix Accordio
 import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 
 // Import actions and types
-import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Get list of services
-import { getContractLineConfigurationForService } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Get config per service
+import { getContractLineServicesWithConfigurations } from '@product/actions/contractLineServiceActions'; // Get list of services
+import { getContractLineConfigurationForService } from '@product/actions/contractLineServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
 import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLine } from 'server/src/interfaces';
-import { getContractLineById, updateContractLine } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
-import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Import the upsert action
+import { getContractLineById, updateContractLine } from '@product/actions/contractLineAction'; // Added action to get base plan details
+import { upsertPlanServiceConfiguration } from '@product/actions/contractLineServiceConfigurationActions'; // Import the upsert action
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';

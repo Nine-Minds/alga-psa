@@ -17,7 +17,7 @@
  *  - TODO: Replace in-process rate limiting with centralized (e.g., Redis) in production.
  */
 import { isValidSha256Hash } from "../../../../lib/storage/bundles/types";
-import { extFinalizeUpload } from "../../../../lib/actions/extBundleActions";
+import { extFinalizeUpload } from "@product/actions/extBundleActions";
 
 const MAX_BUNDLE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MiB
 const BASE_PREFIX = "sha256/";

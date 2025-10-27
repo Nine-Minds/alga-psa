@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { getDueDate } from 'server/src/lib/actions/billingAndTax';
+import { getDueDate } from '@product/actions/billingAndTax';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';

@@ -8,9 +8,9 @@ import {
   updateClientLocation, 
   deleteClientLocation,
   setDefaultClientLocation 
-} from 'server/src/lib/actions/client-actions/clientLocationActions';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
-import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
+} from '@product/actions/client-actions/clientLocationActions';
+import { getActiveTaxRegions } from '@product/actions/taxSettingsActions';
+import { getAllCountries, ICountry } from '@product/actions/client-actions/countryActions';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Button } from 'server/src/components/ui/Button';

@@ -1,5 +1,5 @@
 // src/shared/utils/workflowVersionFetcher.ts
-import { fetchWorkflowVersion as fetchWorkflowVersionAction } from '../../lib/actions/workflow'
+import { fetchWorkflowVersion as fetchWorkflowVersionAction } from '@product/actions/workflow'
 import { WorkflowVersionResponse } from './types'
 
 export async function fetchWorkflowVersion(

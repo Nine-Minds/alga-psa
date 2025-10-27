@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { getTaskTypes } from '@product/actions/project-actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
 import styles from './ProjectDetail.module.css';
 import { Circle, Clipboard, PlayCircle, PauseCircle, CheckCircle, XCircle } from 'lucide-react';

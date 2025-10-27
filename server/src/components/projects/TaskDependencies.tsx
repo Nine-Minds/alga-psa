@@ -6,7 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
 import { Lock, Link as LinkIcon, X } from 'lucide-react';
-import { addTaskDependency, removeTaskDependency } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { addTaskDependency, removeTaskDependency } from '@product/actions/project-actions/projectTaskActions';
 import { useDrawer } from "server/src/context/DrawerContext";
 import TaskEdit from './TaskEdit';
 

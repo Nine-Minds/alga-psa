@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, memo } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import Spinner from 'server/src/components/ui/Spinner';
-import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocumentPreview } from '@product/actions/document-actions/documentActions';
 import { getDocumentDownloadUrl, downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { Button } from 'server/src/components/ui/Button';
 import { useTranslation } from 'server/src/lib/i18n/client';

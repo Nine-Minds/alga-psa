@@ -5,7 +5,7 @@
  * DELETE /api/v1/categories/service/[id] - Delete service category
  */
 
-import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategoryController';
+import { ApiCategoryController } from '@product/api/controllers/ApiCategoryController';
 
 const controller = new ApiCategoryController();
 

@@ -1,8 +1,8 @@
 import { Text } from '@radix-ui/themes';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
-import { getInvoiceTemplates, getDefaultTemplate } from 'server/src/lib/actions/invoiceTemplates';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
+import { getInvoiceTemplates, getDefaultTemplate } from '@product/actions/invoiceTemplates';
+import { getActiveTaxRegions } from '@product/actions/taxSettingsActions'; // Added
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added

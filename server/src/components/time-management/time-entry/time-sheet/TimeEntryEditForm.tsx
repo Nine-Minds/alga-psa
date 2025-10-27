@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getClientById } from '@product/actions/client-actions/clientActions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { Input } from 'server/src/components/ui/Input';

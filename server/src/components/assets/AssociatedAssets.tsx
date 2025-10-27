@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Asset, AssetAssociation } from '../../interfaces/asset.interfaces';
-import { listEntityAssets, getAsset, createAssetAssociation, removeAssetAssociation, listAssets } from '../../lib/actions/asset-actions/assetActions';
+import { listEntityAssets, getAsset, createAssetAssociation, removeAssetAssociation, listAssets } from '@product/actions/asset-actions/assetActions';
 import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import CustomSelect, { SelectOption } from '../../components/ui/CustomSelect';

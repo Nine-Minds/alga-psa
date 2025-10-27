@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validate as validateAction } from '../../../../lib/actions/installDomainActions';
+import { validate as validateAction } from '@product/actions/installDomainActions';
 
 export const dynamic = 'force-dynamic';
 

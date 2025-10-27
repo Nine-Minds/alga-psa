@@ -9,7 +9,7 @@ import { TemplateFixedFeeServicesStep } from './steps/TemplateFixedFeeServicesSt
 import { TemplateHourlyServicesStep } from './steps/TemplateHourlyServicesStep';
 import { TemplateUsageBasedServicesStep } from './steps/TemplateUsageBasedServicesStep';
 import { TemplateReviewContractStep } from './steps/TemplateReviewContractStep';
-import { createContractTemplateFromWizard, ContractTemplateWizardSubmission } from 'server/src/lib/actions/contractWizardActions';
+import { createContractTemplateFromWizard, ContractTemplateWizardSubmission } from '@product/actions/contractWizardActions';
 
 const TEMPLATE_STEPS = [
   'Template Basics',

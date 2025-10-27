@@ -6,7 +6,7 @@ import { formatISO, parseISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from 'server/src/lib/actions/timeEntryActions';
+import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '@product/actions/timeEntryActions';
 import { Button } from 'server/src/components/ui/Button';
 import { 
   ITimeEntry, 

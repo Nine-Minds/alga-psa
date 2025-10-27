@@ -12,8 +12,8 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 
 // EE server actions
-import { extFinalizeUpload, extAbortUpload, extUploadProxy } from '../../../lib/actions/extBundleActions';
-import { installExtensionForCurrentTenantV2 } from '../../../lib/actions/extRegistryV2Actions';
+import { extFinalizeUpload, extAbortUpload, extUploadProxy } from '@product/actions/extBundleActions';
+import { installExtensionForCurrentTenantV2 } from '@product/actions/extRegistryV2Actions';
 
 type UploadProxyResponse = {
   filename: string;

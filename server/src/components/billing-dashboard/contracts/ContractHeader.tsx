@@ -3,7 +3,7 @@
 import React from 'react';
 import { Badge } from 'server/src/components/ui/Badge';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
-import { IContractSummary } from 'server/src/lib/actions/contractActions';
+import { IContractSummary } from '@product/actions/contractActions';
 import { Calendar, CalendarClock, FileCheck, Layers3 } from 'lucide-react';
 
 interface ContractHeaderProps {

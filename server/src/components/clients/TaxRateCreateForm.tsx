@@ -4,8 +4,8 @@ import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { addTaxRate } from 'server/src/lib/actions/taxRateActions';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+import { addTaxRate } from '@product/actions/taxRateActions';
+import { getActiveTaxRegions } from '@product/actions/taxSettingsActions';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import { toast } from 'react-hot-toast';
 

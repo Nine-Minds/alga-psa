@@ -3,7 +3,7 @@
  * GET /api/v1/contacts/search - Advanced contact search
  */
 
-import { ApiContactController } from 'server/src/lib/api/controllers/ApiContactController';
+import { ApiContactController } from '@product/api/controllers/ApiContactController';
 
 const controller = new ApiContactController();
 

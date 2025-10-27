@@ -8,7 +8,7 @@ import {
   pauseWorkflowExecutionAction, 
   resumeWorkflowExecutionAction,
   cancelWorkflowExecutionAction 
-} from '@server/lib/actions/workflow-actions';
+} from '@product/actions/workflow-actions';
 import { 
   PauseCircle, 
   PlayCircle,

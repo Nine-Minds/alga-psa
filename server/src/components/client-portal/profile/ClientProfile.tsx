@@ -8,21 +8,21 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
-import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, updateUser } from '@product/actions/user-actions/userActions';
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction
-} from 'server/src/lib/actions/notification-actions/notificationActions';
+} from '@product/actions/notification-actions/notificationActions';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
 import type { IUserWithRoles } from 'server/src/types';
 import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getContactAvatarUrlAction } from '@product/actions/avatar-actions';
 import { LanguagePreference } from 'server/src/components/ui/LanguagePreference';
 import { SupportedLocale } from '@/lib/i18n/config';
-import { updateUserLocaleAction, getUserLocaleAction } from 'server/src/lib/actions/user-actions/localeActions';
+import { updateUserLocaleAction, getUserLocaleAction } from '@product/actions/user-actions/localeActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 export function ClientProfile() {

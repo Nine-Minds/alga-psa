@@ -23,7 +23,7 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { IClientContract } from 'server/src/interfaces/contract.interfaces';
-import { getContracts } from 'server/src/lib/actions/contractActions';
+import { getContracts } from '@product/actions/contractActions';
 import {
   getClientContracts,
   getDetailedClientContract,
@@ -31,8 +31,8 @@ import {
   updateClientContract,
   deactivateClientContract,
   applyContractToClient
-} from 'server/src/lib/actions/client-actions/clientContractActions';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+} from '@product/actions/client-actions/clientContractActions';
+import { getClientById } from '@product/actions/client-actions/clientActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from 'server/src/components/ui/Badge';

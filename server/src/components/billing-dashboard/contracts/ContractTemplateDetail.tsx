@@ -16,12 +16,12 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
 import { IContractLineServiceBucketConfig, IContractLineServiceConfiguration, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { getContractById, getContractSummary, updateContract, getContractAssignments } from 'server/src/lib/actions/contractActions';
-import { getDetailedContractLines } from 'server/src/lib/actions/contractLineMappingActions';
+import { getContractById, getContractSummary, updateContract, getContractAssignments } from '@product/actions/contractActions';
+import { getDetailedContractLines } from '@product/actions/contractLineMappingActions';
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
-} from 'server/src/lib/actions/contractLineServiceActions';
+} from '@product/actions/contractLineServiceActions';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import ContractLinesEditor from './ContractLines';

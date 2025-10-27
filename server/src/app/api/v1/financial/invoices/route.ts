@@ -3,7 +3,7 @@
  * GET /api/v1/financial/invoices - List invoices for financial operations
  */
 
-import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
+import { ApiFinancialController } from '@product/api/controllers/ApiFinancialController';
 
 export async function GET(request: Request) {
   const controller = new ApiFinancialController();

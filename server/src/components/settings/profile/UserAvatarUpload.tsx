@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
-import { uploadUserAvatar, deleteUserAvatar } from 'server/src/lib/actions/user-actions/userActions';
+import { uploadUserAvatar, deleteUserAvatar } from '@product/actions/user-actions/userActions';
 
 interface UserAvatarUploadProps {
   userId: string;

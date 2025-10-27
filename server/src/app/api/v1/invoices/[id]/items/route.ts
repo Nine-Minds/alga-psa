@@ -3,7 +3,7 @@
  * GET /api/v1/invoices/[id]/items - List invoice items
  */
 
-import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
+import { ApiInvoiceController } from '@product/api/controllers/ApiInvoiceController';
 
 const controller = new ApiInvoiceController();
 

@@ -12,7 +12,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { GmailProviderForm } from '../../components/GmailProviderForm';
-import { getCurrentTenant } from '../../lib/actions/tenantActions';
+import { getCurrentTenant } from '@product/actions/tenantActions';
 
 // @vitest-environment jsdom
 
@@ -20,7 +20,7 @@ let testDb: Knex;
 let testTenant: string;
 
 // Mock the tenant functions
-vi.mock('../../lib/actions/tenantActions', () => ({
+vi.mock('@product/actions/tenantActions', () => ({
   getCurrentTenant: vi.fn()
 }));
 

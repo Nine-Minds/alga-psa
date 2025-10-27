@@ -1,5 +1,5 @@
 import ManagerApprovalDashboard from 'server/src/components/time-management/approvals/ManagerApprovalDashboard';
-import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
+import { findUserById } from '@product/actions/user-actions/userActions';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';

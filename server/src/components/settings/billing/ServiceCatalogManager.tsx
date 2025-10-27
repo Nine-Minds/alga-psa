@@ -8,10 +8,10 @@ import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput'
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions';
-import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '@product/actions/serviceActions';
+import { getServiceCategories } from '@product/actions/serviceCategoryActions';
 // Import action to get tax rates
-import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
+import { getTaxRates } from '@product/actions/taxSettingsActions';
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
 // Import ITaxRate interface
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Corrected import path if needed

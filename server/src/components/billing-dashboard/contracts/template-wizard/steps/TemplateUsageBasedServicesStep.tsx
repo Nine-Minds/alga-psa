@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@product/actions/serviceActions';
 import { TemplateWizardData, TemplateBucketOverlayInput } from '../TemplateWizard';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';

@@ -3,8 +3,8 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { setupClientTaxConfiguration, assignServiceTaxRate } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { createPrepaymentInvoice } from '@product/actions/creditActions';
+import { finalizeInvoice } from '@product/actions/invoiceModification';
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
@@ -80,7 +80,7 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@product/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn(async () => ({
     user_id: mockedUserId,
     tenant: mockedTenantId,

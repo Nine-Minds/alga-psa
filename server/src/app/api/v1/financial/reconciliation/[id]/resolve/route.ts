@@ -3,7 +3,7 @@
  * POST /api/v1/financial/reconciliation/[id]/resolve - Resolve discrepancy
  */
 
-import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
+import { ApiFinancialController } from '@product/api/controllers/ApiFinancialController';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const financialController = new ApiFinancialController();

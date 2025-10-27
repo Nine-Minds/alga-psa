@@ -168,34 +168,34 @@ vi.mock('../../../components/ui/UserPicker', () => ({
   ),
 }));
 
-vi.mock('../../../lib/actions/email-actions/ticketFieldOptionsActions', () => ({
+vi.mock('@product/actions/email-actions/ticketFieldOptionsActions', () => ({
   __esModule: true,
   getTicketFieldOptions: mockGetTicketFieldOptions,
   getCategoriesByBoard: mockGetCategoriesByBoard,
 }));
 
-vi.mock('../../../lib/actions/email-actions/inboundTicketDefaultsActions', () => ({
+vi.mock('@product/actions/email-actions/inboundTicketDefaultsActions', () => ({
   __esModule: true,
   createInboundTicketDefaults: mockCreateInboundTicketDefaults,
   updateInboundTicketDefaults: mockUpdateInboundTicketDefaults,
 }));
 
-vi.mock('server/src/lib/actions/board-actions/boardActions', () => ({
+vi.mock('@product/actions/board-actions/boardActions', () => ({
   __esModule: true,
   getAllBoards: mockGetAllBoards,
 }));
 
-vi.mock('server/src/lib/actions/company-actions/companyActions', () => ({
+vi.mock('@product/actions/company-actions/companyActions', () => ({
   __esModule: true,
   getAllCompanies: mockGetAllCompanies,
 }));
 
-vi.mock('server/src/lib/actions/priorityActions', () => ({
+vi.mock('@product/actions/priorityActions', () => ({
   __esModule: true,
   getAllPriorities: mockGetAllPriorities,
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@product/actions/user-actions/userActions', () => ({
   __esModule: true,
   getAllUsers: mockGetAllUsers,
 }));

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { getProjectProgress, getProjectManager } from 'server/src/lib/actions/client-portal-actions/client-projects';
+import { getProjectProgress, getProjectManager } from '@product/actions/client-portal-actions/client-projects';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { Mail } from 'lucide-react';
 

@@ -12,19 +12,19 @@ import { IContact } from 'server/src/interfaces';
 import { 
   updateContactPortalAdminStatus, 
   getUserByContactId 
-} from 'server/src/lib/actions/contact-actions/contactActions';
+} from '@product/actions/contact-actions/contactActions';
 import { 
   sendPortalInvitation,
   getPortalInvitations,
   revokePortalInvitation,
   InvitationHistoryItem
-} from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+} from '@product/actions/portal-actions/portalInvitationActions';
 import { 
   assignRoleToUser, 
   removeRoleFromUser,
   getRoles 
-} from 'server/src/lib/actions/policyActions';
-import { updateClientUser } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+} from '@product/actions/policyActions';
+import { updateClientUser } from '@product/actions/client-portal-actions/clientUserActions';
 import toast from 'react-hot-toast';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 

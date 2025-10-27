@@ -277,7 +277,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             async authorize(credentials): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@shared/db/admin");
                 const logger = (await import('@alga-psa/shared/core/logger')).default;
-                const { authenticateUser } = await import('server/src/lib/actions/auth');
+                const { authenticateUser } = await import('@product/actions/auth');
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
                     email: credentials?.email,
@@ -738,7 +738,7 @@ export const options: NextAuthConfig = {
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@shared/db/admin");
-                const { authenticateUser } = await import('server/src/lib/actions/auth');
+                const { authenticateUser } = await import('@product/actions/auth');
                 const logger = { info: (..._a:any[])=>{}, warn: (..._a:any[])=>{}, debug: (..._a:any[])=>{}, trace: (..._a:any[])=>{}, error: (..._a:any[])=>{} };
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {

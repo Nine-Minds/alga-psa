@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, Flex, Text, Heading } from '@radix-ui/themes';
 import { Asset, AssetMaintenanceReport, AssetRelationship, NetworkDeviceAsset } from '../../interfaces/asset.interfaces';
-import { getAssetMaintenanceReport } from '../../lib/actions/asset-actions/assetActions';
+import { getAssetMaintenanceReport } from '@product/actions/asset-actions/assetActions';
 import { Button } from '../../components/ui/Button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

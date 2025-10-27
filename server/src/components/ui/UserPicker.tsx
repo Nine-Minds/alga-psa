@@ -4,7 +4,7 @@ import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
-import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { getUserAvatarUrlsBatchAction } from '@product/actions/avatar-actions';
 import { Input } from './Input';
 import { Button } from './Button';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';

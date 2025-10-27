@@ -11,8 +11,8 @@ import { Alert, AlertDescription } from '../ui/Alert';
 import { 
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
-} from '../../lib/actions/email-actions/inboundTicketDefaultsActions';
-import { getTicketFieldOptions, getCategoriesByBoard } from '../../lib/actions/email-actions/ticketFieldOptionsActions';
+} from '@product/actions/email-actions/inboundTicketDefaultsActions';
+import { getTicketFieldOptions, getCategoriesByBoard } from '@product/actions/email-actions/ticketFieldOptionsActions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
@@ -21,10 +21,10 @@ import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 // Loaders to hydrate pickers with full data
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllBoards } from '@product/actions/board-actions/boardActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
+import { getAllPriorities } from '@product/actions/priorityActions';
+import { getAllUsers } from '@product/actions/user-actions/userActions';
 import type { IBoard, IPriority } from 'server/src/interfaces';
 import type { IClient } from 'server/src/interfaces/client.interfaces';
 import type { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';

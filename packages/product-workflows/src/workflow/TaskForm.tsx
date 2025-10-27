@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DynamicForm } from './DynamicForm';
-import { submitTaskForm } from '@server/lib/actions/workflow-actions/taskInboxActions';
+import { submitTaskForm } from '@product/actions/workflow-actions/taskInboxActions';
 import { Action } from '@server/lib/workflow/forms/actionHandlerRegistry';
 
 interface TaskFormProps {

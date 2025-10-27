@@ -3,7 +3,7 @@ import { ActivityFilters, ScheduleActivity, ActivityType } from '../../interface
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { ScheduleCard } from './ActivityCard';
-import { fetchScheduleActivities } from '../../lib/actions/activity-actions/activityServerActions';
+import { fetchScheduleActivities } from '@product/actions/activity-actions/activityServerActions';
 import { ScheduleSectionFiltersDialog } from './filters/ScheduleSectionFiltersDialog';
 import { FilterIcon, XCircleIcon } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';

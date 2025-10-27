@@ -11,7 +11,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { ISecretProvider } from '@alga-psa/shared/core';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider'; // Corrected import path
-import { createWorkflowEventAttachment } from '../../../../../lib/actions/workflow-event-attachment-actions'; // Added action import
+import { createWorkflowEventAttachment } from '@product/actions/workflow-event-attachment-actions'; // Added action import
 import { EventCatalogModel } from '../../../../../models/eventCatalog'; // Added model import
 // TODO: Import actual CSRF token validation logic
 // import { getAndVerifyCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path

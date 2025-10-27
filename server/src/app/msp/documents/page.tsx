@@ -5,8 +5,8 @@ import type { DocumentFilters as DocumentFilterType } from 'server/src/interface
 import Documents from 'server/src/components/documents/Documents';
 import { Card } from 'server/src/components/ui/Card';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { getDistinctEntityTypes } from 'server/src/lib/actions/document-actions/documentActions';
-import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getDistinctEntityTypes } from '@product/actions/document-actions/documentActions';
+import { getCurrentUser, getAllUsers } from '@product/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/index';
 import { toast } from 'react-hot-toast';
 import DocumentsPagination from 'server/src/components/documents/DocumentsPagination';

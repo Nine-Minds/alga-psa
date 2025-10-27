@@ -6,13 +6,13 @@ import { Button } from "server/src/components/ui/Button";
 import { Label } from "server/src/components/ui/Label";
 import { Input } from "server/src/components/ui/Input";
 import { TextArea } from "server/src/components/ui/TextArea";
-import { createWorkflowFromTemplate } from "server/src/lib/actions/template-library-actions";
+import { createWorkflowFromTemplate } from "@product/actions/template-library-actions";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { Code2 } from "lucide-react";
 import Editor from "@monaco-editor/react";
 
-import { TemplateData } from "server/src/lib/actions/template-library-actions";
+import { TemplateData } from "@product/actions/template-library-actions";
 import { extractTemplateCode } from "server/src/lib/utils/templateUtils";
 
 interface TemplatePreviewProps {

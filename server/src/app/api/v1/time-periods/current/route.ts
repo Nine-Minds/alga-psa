@@ -3,8 +3,8 @@
  * GET /api/v1/time-periods/current - Get current time period
  */
 
-import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTimeSheetController } from '@product/api/controllers/ApiTimeSheetController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 export async function GET(request: Request) {
   try {

@@ -12,7 +12,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { Upload, AlertTriangle, Check } from 'lucide-react';
 import { parseCSV } from 'server/src/lib/utils/csvParser';
-import { checkExistingClients, importClientsFromCSV, generateClientCSVTemplate } from 'server/src/lib/actions/client-actions/clientActions';
+import { checkExistingClients, importClientsFromCSV, generateClientCSVTemplate } from '@product/actions/client-actions/clientActions';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 interface ClientsImportDialogProps {

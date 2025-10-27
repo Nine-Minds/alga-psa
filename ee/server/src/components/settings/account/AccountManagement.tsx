@@ -19,7 +19,7 @@ import {
   getScheduledLicenseChangesAction,
   sendCancellationFeedbackAction,
 } from '@ee/lib/actions/license-actions';
-import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
+import { checkAccountManagementPermission } from '@product/actions/permission-actions';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';

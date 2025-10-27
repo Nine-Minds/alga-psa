@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Activity, ActivityFilters, ActivityResponse, ActivityType } from '../interfaces/activity.interfaces';
-import { fetchActivities } from '../lib/actions/activity-actions/activityServerActions';
+import { fetchActivities } from '@product/actions/activity-actions/activityServerActions';
 
 // Define the cache key structure
 type CacheKey = string;

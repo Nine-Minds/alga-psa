@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence';
 import { DataTable } from '@server/components/ui/DataTable';
 import { ColumnDefinition } from '@server/interfaces/dataTable.interfaces';
-import { getWorkflowExecutionsWithDetails } from '@server/lib/actions/workflow-actions';
+import { getWorkflowExecutionsWithDetails } from '@product/actions/workflow-actions';
 import { Button } from '@server/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import {
@@ -19,7 +19,7 @@ import {
   pauseWorkflowExecutionAction,
   resumeWorkflowExecutionAction,
   cancelWorkflowExecutionAction 
-} from '@server/lib/actions/workflow-actions';
+} from '@product/actions/workflow-actions';
 
 interface WorkflowExecutionsTableProps {
   initialData?: IWorkflowExecution[];

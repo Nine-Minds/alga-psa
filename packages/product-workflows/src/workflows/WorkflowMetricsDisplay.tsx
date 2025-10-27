@@ -1,5 +1,5 @@
 import { Card } from '@server/components/ui/Card';
-import { WorkflowMetrics } from '@server/lib/actions/workflow-actions';
+import { WorkflowMetrics } from '@product/actions/workflow-actions';
 
 interface WorkflowMetricsDisplayProps {
   metrics: WorkflowMetrics;

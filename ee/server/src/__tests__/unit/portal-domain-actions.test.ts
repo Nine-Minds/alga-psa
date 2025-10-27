@@ -118,7 +118,7 @@ vi.mock('server/src/models/PortalDomainModel', async () => {
   };
 });
 
-const { requestPortalDomainRegistrationAction } = await import('../../lib/actions/tenant-actions/portalDomainActions');
+const { requestPortalDomainRegistrationAction } = await import('@product/actions/tenant-actions/portalDomainActions');
 
 describe('requestPortalDomainRegistrationAction', () => {
   beforeEach(() => {

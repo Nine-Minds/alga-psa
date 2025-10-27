@@ -4,7 +4,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+import { ImportConflict } from '@product/actions/referenceDataActions';
 import { AlertCircle } from 'lucide-react';
 
 interface ConflictResolutionDialogProps {

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'serve
 import { Button } from 'server/src/components/ui/Button';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import TimePeriodForm from './TimePeriodForm';
-import { getTimePeriodSettings, fetchAllTimePeriods } from 'server/src/lib/actions/timePeriodsActions';
+import { getTimePeriodSettings, fetchAllTimePeriods } from '@product/actions/timePeriodsActions';
 import { MoreVertical } from 'lucide-react';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';

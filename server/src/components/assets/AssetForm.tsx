@@ -8,7 +8,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { getAsset, updateAsset } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getAsset, updateAsset } from '@product/actions/asset-actions/assetActions';
 import { useRouter } from 'next/navigation';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale } from 'lucide-react';
 import { Text } from '@radix-ui/themes';

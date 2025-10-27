@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getRegisteredWorkflowsAction } from '@server/lib/actions/workflow-actions';
+import { getRegisteredWorkflowsAction } from '@product/actions/workflow-actions';
 import { Button } from '@server/components/ui/Button';
 import { Card } from '@server/components/ui/Card';
 import WorkflowVisualizer from './visualization/WorkflowVisualizer';

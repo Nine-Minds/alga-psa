@@ -11,9 +11,9 @@ import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect'; // Correct: Default import
 import { Input } from 'server/src/components/ui/Input'; // For potential metadata
-import { createExternalEntityMapping, updateExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
+import { createExternalEntityMapping, updateExternalEntityMapping } from '@product/actions/externalMappingActions';
 // Removed import for placeholder AlgaService type
-import { QboItem } from 'server/src/lib/actions/integrations/qboActions'; // Import type
+import { QboItem } from '@product/actions/integrations/qboActions'; // Import type
 // Import DisplayMapping type (assuming definition is compatible/exported from Item table or shared types)
 // Ideally, this should be in a shared types file.
 import { DisplayMapping } from './QboItemMappingTable'; // Adjust path if needed

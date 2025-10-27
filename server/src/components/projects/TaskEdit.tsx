@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { getProjectTaskStatuses } from 'server/src/lib/actions/project-actions/projectActions';
+import { getProjectTaskStatuses } from '@product/actions/project-actions/projectActions';
 import TaskFormSkeleton from 'server/src/components/ui/skeletons/TaskFormSkeleton';
 
 // Dynamic import for TaskForm

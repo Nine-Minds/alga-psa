@@ -11,7 +11,7 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, MappableField, ICSVImportOptions, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
-import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from 'server/src/lib/actions/contact-actions/contactActions';
+import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from '@product/actions/contact-actions/contactActions';
 import { X, Upload, AlertTriangle, Check, Download } from 'lucide-react';
 import { parseCSV, unparseCSV, validateCSVHeaders } from 'server/src/lib/utils/csvParser';
 

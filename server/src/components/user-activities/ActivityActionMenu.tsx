@@ -8,17 +8,17 @@ import { useActivityDrawer } from "server/src/components/user-activities/Activit
 import {
   updateActivityStatus,
   reassignActivity
-} from "server/src/lib/actions/activity-actions/activityStatusActions";
+} from "@product/actions/activity-actions/activityStatusActions";
 import {
   cancelWorkflowTask,
   reassignWorkflowTask,
   submitTaskForm
-} from "server/src/lib/actions/activity-actions/workflowTaskActions";
+} from "@product/actions/activity-actions/workflowTaskActions";
 import {
   dismissTask,
   hideTask,
   unhideTask
-} from "server/src/lib/actions/workflow-actions/taskInboxActions";
+} from "@product/actions/workflow-actions/taskInboxActions";
 
 interface ActivityActionMenuProps {
   activity: Activity;

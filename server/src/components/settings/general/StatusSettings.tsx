@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+import { getStatuses, deleteStatus, updateStatus } from '@product/actions/status-actions/statusActions';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@product/actions/referenceDataActions';
 import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { Switch } from 'server/src/components/ui/Switch';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';

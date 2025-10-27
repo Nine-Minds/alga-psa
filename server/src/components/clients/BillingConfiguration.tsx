@@ -9,17 +9,17 @@ import { Button } from 'server/src/components/ui/Button';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
 import ContactModel from 'server/src/lib/models/contact';
-import { getClientContractLine, updateClientContractLine, addClientContractLine, removeClientContractLine, editClientContractLine } from '../../lib/actions/client-actions/clientContractLineActions';
-import { getContractLines } from '../../lib/actions/contractLineAction';
-import { getServiceCategories } from '../../lib/actions/serviceCategoryActions';
+import { getClientContractLine, updateClientContractLine, addClientContractLine, removeClientContractLine, editClientContractLine } from '@product/actions/client-actions/clientContractLineActions';
+import { getContractLines } from '@product/actions/contractLineAction';
+import { getServiceCategories } from '@product/actions/serviceCategoryActions';
 import { IClientContractLine, IContractLine, IServiceCategory, BillingCycleType } from '../../interfaces/billing.interfaces';
-import { getServices, createService, updateService, deleteService } from '../../lib/actions/serviceActions';
+import { getServices, createService, updateService, deleteService } from '@product/actions/serviceActions';
 import { IService } from '../../interfaces/billing.interfaces';
-import { getTaxRates } from '../../lib/actions/taxRateActions';
-import { getClientTaxRates, addClientTaxRate, removeClientTaxRate, updateDefaultClientTaxRate } from '../../lib/actions/client-actions/clientTaxRateActions'; // Added updateDefaultClientTaxRate
+import { getTaxRates } from '@product/actions/taxRateActions';
+import { getClientTaxRates, addClientTaxRate, removeClientTaxRate, updateDefaultClientTaxRate } from '@product/actions/client-actions/clientTaxRateActions'; // Added updateDefaultClientTaxRate
 import { ITaxRate, IClientTaxRate } from '../../interfaces/billing.interfaces';
-import { getBillingCycle, updateBillingCycle } from '../../lib/actions/billingCycleActions';
-import { setClientTemplate } from '../../lib/actions/invoiceTemplates';
+import { getBillingCycle, updateBillingCycle } from '@product/actions/billingCycleActions';
+import { setClientTemplate } from '@product/actions/invoiceTemplates';
 import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
 import ContractLines from './ContractLines';
@@ -140,7 +140,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
 
             // Fetch service types for the dropdown
-            const { getServiceTypesForSelection } = await import('../../lib/actions/serviceActions');
+            const { getServiceTypesForSelection } = await import('@product/actions/serviceActions');
             const types = await getServiceTypesForSelection();
             setServiceTypes(types);
 

@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import { getTaskWithDetails } from 'server/src/lib/actions/project-actions/projectTaskActions';
-import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
-import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getConsolidatedTicketData } from '@product/actions/ticket-actions/optimizedTicketActions';
+import { getTaskWithDetails } from '@product/actions/project-actions/projectTaskActions';
+import { getWorkItemById } from '@product/actions/workItemActions';
+import { getCurrentUser, getAllUsers } from '@product/actions/user-actions/userActions';
 import { toast } from 'react-hot-toast';
 import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import TaskEdit from 'server/src/components/projects/TaskEdit';
@@ -13,7 +13,7 @@ import EntryPopup from 'server/src/components/schedule/EntryPopup';
 import { useTenant } from 'server/src/components/TenantProvider';
 import Spinner from 'server/src/components/ui/Spinner';
 import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
-import { getInteractionById } from 'server/src/lib/actions/interactionActions';
+import { getInteractionById } from '@product/actions/interactionActions';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;

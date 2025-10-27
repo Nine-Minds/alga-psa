@@ -6,8 +6,8 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { TextArea } from '../ui/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact } from '../../lib/actions/contact-actions/contactActions';
-import { findTagsByEntityIds } from '../../lib/actions/tagActions';
+import { updateContact } from '@product/actions/contact-actions/contactActions';
+import { findTagsByEntityIds } from '@product/actions/tagActions';
 import { ITag } from '../../interfaces/tag.interfaces';
 import { ClientPicker } from '../clients/ClientPicker';
 import { IClient } from '../../interfaces/client.interfaces';
@@ -20,7 +20,7 @@ import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomat
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getContactAvatarUrlAction } from '@product/actions/avatar-actions';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility

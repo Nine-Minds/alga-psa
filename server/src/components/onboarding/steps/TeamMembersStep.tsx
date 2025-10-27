@@ -7,7 +7,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Plus, Trash2, Users, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import { getLicenseUsageAction } from '@product/actions/license-actions';
 import { getAvailableRoles, addSingleTeamMember } from '@/lib/actions/onboarding-actions/onboardingActions';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {

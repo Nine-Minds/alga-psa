@@ -6,8 +6,8 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
-import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getProjectTreeData, getProjectDetails } from '@product/actions/project-actions/projectActions';
+import { getAllPriorities } from '@product/actions/priorityActions';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -20,9 +20,9 @@ import {
   addTicketLinkAction,
   duplicateTaskToPhase,
   getTaskDependencies
-} from 'server/src/lib/actions/project-actions/projectTaskActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
+} from '@product/actions/project-actions/projectTaskActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
+import { findTagsByEntityId } from '@product/actions/tagActions';
 import { TagManager } from 'server/src/components/tags';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
@@ -35,7 +35,7 @@ import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import { Input } from 'server/src/components/ui/Input';
 import { toast } from 'react-hot-toast';
 import { TaskTypeSelector } from './TaskTypeSelector';
-import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { getTaskTypes } from '@product/actions/project-actions/projectTaskActions';
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
@@ -48,8 +48,8 @@ import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
 import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
-import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
-import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
+import { getCurrentTimePeriod } from '@product/actions/timePeriodsActions';
+import { fetchOrCreateTimeSheet, saveTimeEntry } from '@product/actions/timeEntryActions';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 

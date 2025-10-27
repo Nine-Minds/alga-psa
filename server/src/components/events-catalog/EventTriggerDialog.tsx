@@ -10,10 +10,10 @@ import { Card } from "server/src/components/ui/Card";
 import { Trash2, Plus, ArrowRight } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrigger, ICreateWorkflowEventMapping } from "@alga-psa/shared/workflow";
-import { createWorkflowTrigger, createWorkflowEventMappings } from "server/src/lib/actions/workflow-trigger-actions";
-import { createWorkflowEventAttachment } from "server/src/lib/actions/workflow-event-attachment-actions";
-import { getAllWorkflowRegistrations } from "server/src/lib/actions/workflow-runtime-actions";
-import { getCurrentTenant } from "server/src/lib/actions/tenantActions";
+import { createWorkflowTrigger, createWorkflowEventMappings } from "@product/actions/workflow-trigger-actions";
+import { createWorkflowEventAttachment } from "@product/actions/workflow-event-attachment-actions";
+import { getAllWorkflowRegistrations } from "@product/actions/workflow-runtime-actions";
+import { getCurrentTenant } from "@product/actions/tenantActions";
 
 interface EventTriggerDialogProps {
   isOpen: boolean;

@@ -7,7 +7,7 @@ import { TimePeriodList } from './TimePeriodList';
 import { SkeletonTimeSheet } from './SkeletonTimeSheet';
 import { ITimePeriodWithStatusView } from 'server/src/interfaces/timeEntry.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { fetchTimePeriods, fetchOrCreateTimeSheet } from 'server/src/lib/actions/timeEntryActions';
+import { fetchTimePeriods, fetchOrCreateTimeSheet } from '@product/actions/timeEntryActions';
 
 
 interface TimeTrackingProps {

@@ -1,10 +1,10 @@
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { IContact } from "server/src/interfaces/contact.interfaces";
-import { getDocumentByClientId } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocumentByClientId } from '@product/actions/document-actions/documentActions';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
-import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getContactsByClient } from '@product/actions/contact-actions/contactActions';
+import { getClientById } from '@product/actions/client-actions/clientActions';
 import { notFound } from 'next/navigation';
 
 const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {

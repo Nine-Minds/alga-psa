@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { toast } from 'react-hot-toast';
-import { moveTaskToPhase } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { moveTaskToPhase } from '@product/actions/project-actions/projectTaskActions';
 import { IProjectTask } from 'server/src/interfaces/project.interfaces';
 
 interface MoveTaskDialogProps {

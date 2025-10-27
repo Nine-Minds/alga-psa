@@ -7,9 +7,9 @@ import { AlertCircle } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
-import { getContracts, getContractLinesForContract } from 'server/src/lib/actions/contractActions';
-import { getClientContracts } from 'server/src/lib/actions/client-actions/clientContractActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { getContracts, getContractLinesForContract } from '@product/actions/contractActions';
+import { getClientContracts } from '@product/actions/client-actions/clientContractActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
 import { IClient } from 'server/src/interfaces';
 import Spinner from 'server/src/components/ui/Spinner';
 

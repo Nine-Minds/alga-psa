@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getContactsByClient } from '@product/actions/contact-actions/contactActions';
 import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -14,8 +14,8 @@ import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getDocumentsByEntity } from '@product/actions/document-actions/documentActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import QuickAddContact from 'server/src/components/contacts/QuickAddContact';
 import { useRouter } from 'next/navigation';
 

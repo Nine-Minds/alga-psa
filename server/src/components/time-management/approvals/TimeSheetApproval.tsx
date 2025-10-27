@@ -8,14 +8,14 @@ import {
   ITimeEntryWithWorkItem, 
   TimeSheetStatus 
 } from 'server/src/interfaces/timeEntry.interfaces';
-import { addCommentToTimeSheet, fetchTimeSheetComments } from 'server/src/lib/actions/timeSheetActions';
+import { addCommentToTimeSheet, fetchTimeSheetComments } from '@product/actions/timeSheetActions';
 import { Check, Clock, Undo, ChevronDown, ChevronUp } from 'lucide-react';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
-import { fetchWorkItemsForTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
+import { fetchWorkItemsForTimeSheet, saveTimeEntry } from '@product/actions/timeEntryActions';
 import { parseISO } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 

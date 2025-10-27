@@ -12,7 +12,7 @@ import { IContractPricingSchedule } from 'server/src/interfaces/contract.interfa
 import {
   createPricingSchedule,
   updatePricingSchedule
-} from 'server/src/lib/actions/contractPricingScheduleActions';
+} from '@product/actions/contractPricingScheduleActions';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 

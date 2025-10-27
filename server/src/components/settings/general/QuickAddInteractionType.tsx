@@ -7,7 +7,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { IconPicker, getIconComponent } from 'server/src/components/ui/IconPicker';
-import { createInteractionType, updateInteractionType, getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
+import { createInteractionType, updateInteractionType, getAllInteractionTypes } from '@product/actions/interactionTypeActions';
 import { IInteractionType } from 'server/src/interfaces/interaction.interfaces';
 
 interface QuickAddInteractionTypeProps {

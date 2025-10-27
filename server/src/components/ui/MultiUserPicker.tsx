@@ -7,7 +7,7 @@ import { IUserWithRoles } from '../../interfaces/auth.interfaces';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, X } from 'lucide-react';
 import { AutomationProps } from '../../types/ui-reflection/types';
-import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
+import { getUserAvatarUrlsBatchAction } from '@product/actions/avatar-actions';
 
 interface MultiUserPickerProps {
   label?: string;

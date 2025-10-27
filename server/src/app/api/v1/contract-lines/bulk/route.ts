@@ -3,8 +3,8 @@
  * POST /api/v1/contract-lines/bulk - Bulk operations on contract lines
  */
 
-import { ApiContractLineController } from 'server/src/lib/api/controllers/ApiContractLineController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiContractLineController } from '@product/api/controllers/ApiContractLineController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 const controller = new ApiContractLineController();
 

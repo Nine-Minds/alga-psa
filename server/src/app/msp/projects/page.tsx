@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Projects from 'server/src/components/projects/Projects';
-import { getProjects } from 'server/src/lib/actions/project-actions/projectActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { getProjects } from '@product/actions/project-actions/projectActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import { IClient } from 'server/src/interfaces';
 

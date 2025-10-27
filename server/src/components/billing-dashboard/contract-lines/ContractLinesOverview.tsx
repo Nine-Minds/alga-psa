@@ -13,9 +13,9 @@ import {
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
 import { ContractLineDialog } from '../ContractLineDialog';
-import { getContractLines, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
+import { getContractLines, deleteContractLine } from '@product/actions/contractLineAction';
 import { IContractLine, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
-import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'; // Added import for fetching types
+import { getServiceTypesForSelection } from '@product/actions/serviceActions'; // Added import for fetching types
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';

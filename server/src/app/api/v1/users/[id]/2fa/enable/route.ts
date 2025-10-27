@@ -4,7 +4,7 @@
  */
 
 import { ApiUserController } from '@/lib/api/controllers/ApiUserController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

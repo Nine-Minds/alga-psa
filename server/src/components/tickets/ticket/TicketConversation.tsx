@@ -38,8 +38,8 @@ import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
+import { getContactAvatarUrlAction } from '@product/actions/avatar-actions';
+import { getUserContactId } from '@product/actions/user-actions/userActions';
 import { createTenantKnex } from 'server/src/lib/db';
 
 interface TicketConversationProps {

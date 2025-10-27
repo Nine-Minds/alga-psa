@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, Suspense  } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-import { verifyRegisterUser } from 'server/src/lib/actions/useRegister';
+import { verifyRegisterUser } from '@product/actions/useRegister';
 
 
 const VerifyEmailContent = () => {

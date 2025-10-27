@@ -4,7 +4,7 @@
  * POST /api/v1/tickets/{id}/comments - Add comment to ticket
  */
 
-import { ApiTicketController } from 'server/src/lib/api/controllers/ApiTicketController';
+import { ApiTicketController } from '@product/api/controllers/ApiTicketController';
 
 const controller = new ApiTicketController();
 

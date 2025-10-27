@@ -22,12 +22,12 @@ import {
 import { 
   getEmailSettings, 
   updateEmailSettings 
-} from '../../lib/actions/email-actions/emailSettingsActions';
+} from '@product/actions/email-actions/emailSettingsActions';
 import { 
   getEmailDomains, 
   addEmailDomain, 
   verifyEmailDomain
-} from '../../lib/actions/email-actions/emailDomainActions';
+} from '@product/actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
 import { useTenant } from '../TenantProvider';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getClientProjects } from 'server/src/lib/actions/client-portal-actions/client-projects';
+import { getClientProjects } from '@product/actions/client-portal-actions/client-projects';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { DrawerProvider } from "server/src/context/DrawerContext";
 import ProjectDetailView from './ProjectDetailView';

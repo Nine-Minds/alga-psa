@@ -63,7 +63,7 @@ useEffect(() => {
       try {
         setLoadingPhases(true);
         // Use getProjectDetails to get phases for the selected project
-        const { getProjectDetails } = await import("server/src/lib/actions/project-actions/projectActions");
+        const { getProjectDetails } = await import("@product/actions/project-actions/projectActions");
         const projectDetails = await getProjectDetails(selectedProjectId);
         setProjectPhases(projectDetails.phases);
       } catch (error) {

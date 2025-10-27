@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
-import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
-import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
-import { fetchTimeSheet } from 'server/src/lib/actions/timeSheetActions';
+import { getCurrentUser } from "@product/actions/user-actions/userActions";
+import { getTeams } from '@product/actions/team-actions/teamActions';
+import { fetchTimeSheet } from '@product/actions/timeSheetActions';
 import TimeSheetClient from './TimeSheetClient';
 
 export default async function TimeSheetPage({ params }: any) {

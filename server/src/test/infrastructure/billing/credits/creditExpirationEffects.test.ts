@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { createPrepaymentInvoice, applyCreditToInvoice } from '@product/actions/creditActions';
+import { finalizeInvoice } from '@product/actions/invoiceModification';
+import { generateInvoice } from '@product/actions/invoiceGeneration';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate

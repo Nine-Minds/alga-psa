@@ -3,7 +3,7 @@
  * GET /api/v1/tickets/search - Advanced ticket search
  */
 
-import { ApiTicketController } from 'server/src/lib/api/controllers/ApiTicketController';
+import { ApiTicketController } from '@product/api/controllers/ApiTicketController';
 
 const controller = new ApiTicketController();
 

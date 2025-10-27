@@ -28,8 +28,8 @@ import {
     createServiceType, 
     updateServiceType, 
     deleteServiceType 
-} from 'server/src/lib/actions/serviceActions';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+} from '@product/actions/serviceActions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@product/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 
 // Type for the data returned by getServiceTypesForSelection

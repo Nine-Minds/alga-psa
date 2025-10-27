@@ -7,8 +7,8 @@
 
 import React from 'react';
 import { Button } from './ui/Button';
-import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
-import { updateEmailProvider } from 'server/src/lib/actions/email-actions/emailProviderActions';
+import { getInboundTicketDefaults } from '@product/actions/email-actions/inboundTicketDefaultsActions';
+import { updateEmailProvider } from '@product/actions/email-actions/emailProviderActions';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { EmailProviderCard, EmptyProviderPlaceholder } from './EmailProviderCard';
 import { RefreshCw } from 'lucide-react';

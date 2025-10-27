@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { getScheduledHoursForTicket } from '@product/actions/ticket-actions/ticketActions';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from 'server/src/interfaces'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
@@ -23,10 +23,10 @@ import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAut
 import { IntervalManagement } from 'server/src/components/time-management/interval-tracking/IntervalManagement';
 import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
+import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@product/actions/avatar-actions';
+import { getUserContactId } from '@product/actions/user-actions/userActions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
-import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import { getTicketingDisplaySettings } from '@product/actions/ticket-actions/ticketDisplaySettings';
 
 interface TicketPropertiesProps {
   id?: string;

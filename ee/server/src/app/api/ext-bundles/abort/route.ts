@@ -8,7 +8,7 @@ TODO: Replace pragmatic header RBAC with project auth/session RBAC integration.
 TODO: Replace in-process rate limiting with centralized (e.g., Redis) in production.
 */
 
-import { extAbortUpload } from "../../../../lib/actions/extBundleActions";
+import { extAbortUpload } from "@product/actions/extBundleActions";
 
 type AbortRequest = {
   key: string;

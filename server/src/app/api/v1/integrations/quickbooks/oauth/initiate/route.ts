@@ -3,9 +3,9 @@
  * POST /api/v1/integrations/quickbooks/oauth/initiate - Initiate OAuth authorization flow
  */
 
-import { ApiQuickBooksController } from 'server/src/lib/api/controllers/ApiQuickBooksController';
-import { QuickBooksService } from 'server/src/lib/api/services/QuickBooksService';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiQuickBooksController } from '@product/api/controllers/ApiQuickBooksController';
+import { QuickBooksService } from '@product/api/services/QuickBooksService';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 let controller: ApiQuickBooksController | null = null;
 

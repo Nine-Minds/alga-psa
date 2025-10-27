@@ -17,7 +17,7 @@ import {
   requestChangesForTimeSheet,
   fetchTimeSheetComments,
   reverseTimeSheetApproval
-} from 'server/src/lib/actions/timeSheetActions';
+} from '@product/actions/timeSheetActions';
 import { useTeamAuth } from 'server/src/hooks/useTeamAuth';
 import { IUser } from 'server/src/interfaces';
 import { TimeSheetApproval } from './TimeSheetApproval';

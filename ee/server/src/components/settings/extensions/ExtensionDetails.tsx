@@ -15,9 +15,9 @@ import { Extension } from '../../../lib/extensions/types';
 import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 // Fallback to console for logging in EE components
-import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
+import { fetchExtensionById, toggleExtension, uninstallExtension } from '@product/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
-import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
+import { getInstallInfo, reprovisionExtension } from '@product/actions/extensionDomainActions';
 
 /**
  * Extension Details page

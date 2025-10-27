@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { parse } from 'date-fns';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { getClients } from 'server/src/lib/actions/clientAction';
+import { getClients } from '@product/actions/clientAction';
 
 interface ReviewContractStepProps {
   data: ContractWizardData;

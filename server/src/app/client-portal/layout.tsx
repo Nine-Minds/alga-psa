@@ -1,7 +1,7 @@
 import { getSession } from "server/src/lib/auth/getSession";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
-import { getTenantBrandingByTenantId } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
-import { getHierarchicalLocaleAction } from "server/src/lib/actions/locale-actions/getHierarchicalLocale";
+import { getTenantBrandingByTenantId } from "@product/actions/tenant-actions/getTenantBrandingByDomain";
+import { getHierarchicalLocaleAction } from "@product/actions/locale-actions/getHierarchicalLocale";
 
 export default async function Layout({
   children,

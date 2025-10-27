@@ -8,7 +8,7 @@ import { Button } from '@server/components/ui/Button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import LoadingIndicator from '@server/components/ui/LoadingIndicator';
 import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence';
-import { getWorkflowExecutionDetails } from '@server/lib/actions/workflow-actions';
+import { getWorkflowExecutionDetails } from '@product/actions/workflow-actions';
 import WorkflowEventTimeline from '../WorkflowEventTimeline';
 import WorkflowActionsList from '../WorkflowActionsList';
 import ClientWorkflowVisualization from '../ClientWorkflowVisualization';

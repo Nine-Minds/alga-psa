@@ -3,7 +3,7 @@
  * PUT /api/v1/tickets/{id}/assignment - Update ticket assignment
  */
 
-import { ApiTicketController } from 'server/src/lib/api/controllers/ApiTicketController';
+import { ApiTicketController } from '@product/api/controllers/ApiTicketController';
 
 const controller = new ApiTicketController();
 

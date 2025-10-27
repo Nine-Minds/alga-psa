@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { generateManualInvoice } from '@product/actions/manualInvoiceActions';
+import { generateInvoice } from '@product/actions/invoiceGeneration';
 import {
   createTestService,
   createFixedPlanAssignment,

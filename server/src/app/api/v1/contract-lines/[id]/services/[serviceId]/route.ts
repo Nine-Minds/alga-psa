@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { ApiContractLineController } from 'server/src/lib/api/controllers/ApiContractLineController';
+import { ApiContractLineController } from '@product/api/controllers/ApiContractLineController';
 
 const controller = new ApiContractLineController();
 

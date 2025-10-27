@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
-import { createTag, deleteTag, getAllTags, checkTagPermissions } from 'server/src/lib/actions/tagActions';
+import { createTag, deleteTag, getAllTags, checkTagPermissions } from '@product/actions/tagActions';
 import { TagList } from './TagList';
 import { TagInput } from './TagInput';
 import { TagInputInline } from './TagInputInline';

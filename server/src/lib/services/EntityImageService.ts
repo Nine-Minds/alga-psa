@@ -1,5 +1,5 @@
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { deleteDocument, getDocumentTypeId } from 'server/src/lib/actions/document-actions/documentActions';
+import { deleteDocument, getDocumentTypeId } from '@product/actions/document-actions/documentActions';
 import { getEntityImageUrl } from 'server/src/lib/utils/avatarUtils';
 import Document from 'server/src/lib/models/document';
 import DocumentAssociation from 'server/src/lib/models/document-association';

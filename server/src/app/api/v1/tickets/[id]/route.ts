@@ -5,7 +5,7 @@
  * DELETE /api/v1/tickets/{id} - Delete ticket
  */
 
-import { ApiTicketController } from 'server/src/lib/api/controllers/ApiTicketController';
+import { ApiTicketController } from '@product/api/controllers/ApiTicketController';
 
 const controller = new ApiTicketController();
 

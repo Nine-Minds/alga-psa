@@ -1,7 +1,7 @@
 import React from 'react';
 import WorkItemCard from './WorkItemCard';
 import { IExtendedWorkItem, IWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
+import { StatusOption } from '@product/actions/status-actions/statusActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';

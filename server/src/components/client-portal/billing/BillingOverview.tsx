@@ -6,7 +6,7 @@ import {
   getClientContractLine,
   getClientInvoices,
   getCurrentUsage
-} from 'server/src/lib/actions/client-portal-actions/client-billing';
+} from '@product/actions/client-portal-actions/client-billing';
 import {
   getClientHoursByService,
   getClientBucketUsage,
@@ -15,14 +15,14 @@ import {
   ClientHoursByServiceResult,
   ClientBucketUsageResult,
   ClientUsageMetricResult
-} from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
+} from '@product/actions/client-portal-actions/client-billing-metrics';
 import { format, subDays } from 'date-fns';
 import {
   IClientContractLine,
   IBucketUsage,
   IService
 } from 'server/src/interfaces/billing.interfaces';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
+import { getInvoiceForRendering } from '@product/actions/invoiceQueries';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import dynamic from 'next/dynamic';
 import { useTranslation } from 'server/src/lib/i18n/client';

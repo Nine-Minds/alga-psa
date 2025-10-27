@@ -1,6 +1,6 @@
 // server/src/app/msp/contacts/[id]/activity/page.tsx
 import InteractionsFeed from 'server/src/components/interactions/InteractionsFeed';
-import { getInteractionsForEntity } from 'server/src/lib/actions/interactionActions';
+import { getInteractionsForEntity } from '@product/actions/interactionActions';
 import ContactModel from 'server/src/lib/models/contact';
 import { getConnection } from 'server/src/lib/db/db';
 

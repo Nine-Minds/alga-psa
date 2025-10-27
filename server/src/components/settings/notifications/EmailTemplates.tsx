@@ -14,7 +14,7 @@ import {
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction
-} from "server/src/lib/actions/notification-actions/notificationActions";
+} from "@product/actions/notification-actions/notificationActions";
 import { 
   SystemEmailTemplate,
   TenantEmailTemplate 

@@ -3,7 +3,7 @@
  * POST /api/v1/categories/ticket/move - Move category in hierarchy
  */
 
-import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategoryController';
+import { ApiCategoryController } from '@product/api/controllers/ApiCategoryController';
 
 const controller = new ApiCategoryController();
 

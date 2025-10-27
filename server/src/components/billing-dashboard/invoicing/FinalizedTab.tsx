@@ -18,12 +18,12 @@ import {
 } from '../../ui/DropdownMenu';
 import { ColumnDefinition } from '../../../interfaces/dataTable.interfaces';
 import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from '../../../interfaces/invoice.interfaces';
-import { fetchAllInvoices } from '../../../lib/actions/invoiceQueries';
-import { getInvoiceTemplates } from '../../../lib/actions/invoiceTemplates';
-import { unfinalizeInvoice } from '../../../lib/actions/invoiceModification';
-import { scheduleInvoiceZipAction } from '../../../lib/actions/job-actions/scheduleInvoiceZipAction';
-import { scheduleInvoiceEmailAction } from '../../../lib/actions/job-actions/scheduleInvoiceEmailAction';
-import { downloadInvoicePDF } from '../../../lib/actions/invoiceGeneration';
+import { fetchAllInvoices } from '@product/actions/invoiceQueries';
+import { getInvoiceTemplates } from '@product/actions/invoiceTemplates';
+import { unfinalizeInvoice } from '@product/actions/invoiceModification';
+import { scheduleInvoiceZipAction } from '@product/actions/job-actions/scheduleInvoiceZipAction';
+import { scheduleInvoiceEmailAction } from '@product/actions/job-actions/scheduleInvoiceEmailAction';
+import { downloadInvoicePDF } from '@product/actions/invoiceGeneration';
 import { toPlainDate } from '../../../lib/utils/dateTimeUtils';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '../../ui/LoadingIndicator';

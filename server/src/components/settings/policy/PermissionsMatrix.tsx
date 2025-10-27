@@ -18,7 +18,7 @@ import {
   getRolePermissions, 
   assignPermissionToRole, 
   removePermissionFromRole 
-} from 'server/src/lib/actions/policyActions';
+} from '@product/actions/policyActions';
 import { IPermission, IRole } from 'server/src/interfaces/auth.interfaces';
 import toast from 'react-hot-toast';
 

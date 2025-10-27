@@ -3,8 +3,8 @@
  * POST /api/v1/webhooks/validate - Validate webhook configuration
  */
 
-import { ApiWebhookController } from 'server/src/lib/api/controllers/ApiWebhookController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiWebhookController } from '@product/api/controllers/ApiWebhookController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 export async function POST(request: Request) {
   try {

@@ -4,7 +4,7 @@
  * PUT /api/v1/financial/transactions/[id] - Update transaction
  */
 
-import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
+import { ApiFinancialController } from '@product/api/controllers/ApiFinancialController';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const controller = new ApiFinancialController();

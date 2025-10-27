@@ -4,7 +4,7 @@ import ContactModel from 'server/src/lib/models/contact';
 import UserModel from 'server/src/lib/models/user';
 import { IContact, IUserWithRoles } from 'server/src/interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
 import ContactsLayout from 'server/src/components/contacts/ContactsLayout';
 import { getConnection } from 'server/src/lib/db/db';
 

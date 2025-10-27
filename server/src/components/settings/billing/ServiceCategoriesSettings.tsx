@@ -9,8 +9,8 @@ import {
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory
-} from 'server/src/lib/actions/categoryActions';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+} from '@product/actions/categoryActions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@product/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';

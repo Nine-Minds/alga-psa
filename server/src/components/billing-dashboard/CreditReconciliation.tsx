@@ -12,13 +12,13 @@ import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { parseISO } from 'date-fns';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICreditReconciliationReport, ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
-import { validateClientCredit } from 'server/src/lib/actions/creditReconciliationActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { validateClientCredit } from '@product/actions/creditReconciliationActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import {
   fetchReconciliationReports,
   fetchClientsForDropdown,
   fetchReconciliationStats
-} from 'server/src/lib/actions/reconciliationReportActions';
+} from '@product/actions/reconciliationReportActions';
 import { 
   BarChart, 
   Bar, 

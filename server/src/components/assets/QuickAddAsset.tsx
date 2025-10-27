@@ -6,11 +6,11 @@ import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
+import { createAsset } from '@product/actions/asset-actions/assetActions';
 import { CreateAssetRequest } from 'server/src/interfaces/asset.interfaces';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { IClient } from 'server/src/interfaces';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface QuickAddAssetProps {

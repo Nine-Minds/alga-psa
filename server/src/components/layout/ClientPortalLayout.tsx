@@ -7,11 +7,11 @@ import { signOut } from "next-auth/react";
 import { LogOut, User, CreditCard } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { getContactAvatarUrlAction } from '@product/actions/avatar-actions';
+import { checkClientPortalPermissions } from '@product/actions/client-portal-actions/clientUserActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
 

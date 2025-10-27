@@ -9,7 +9,7 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Input } from 'server/src/components/ui/Input';
 import DocumentStorageCard from './DocumentStorageCard';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getAllDocuments, createDocumentAssociations } from 'server/src/lib/actions/document-actions/documentActions';
+import { getAllDocuments, createDocumentAssociations } from '@product/actions/document-actions/documentActions';
 import { Text } from '@radix-ui/themes';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import Pagination from 'server/src/components/ui/Pagination';

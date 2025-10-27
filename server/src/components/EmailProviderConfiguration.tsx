@@ -19,8 +19,8 @@ import {
   getEmailProviders,
   deleteEmailProvider,
   testEmailProviderConnection
-} from '../lib/actions/email-actions/emailProviderActions';
-import { getCurrentUser } from '../lib/actions/user-actions/userActions';
+} from '@product/actions/email-actions/emailProviderActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 
 export interface EmailProvider {
   id: string;

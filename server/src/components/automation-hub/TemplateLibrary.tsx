@@ -5,7 +5,7 @@ import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { LayoutTemplate, Search, Filter } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input';
-import { getAllTemplates, TemplateData } from 'server/src/lib/actions/template-library-actions';
+import { getAllTemplates, TemplateData } from '@product/actions/template-library-actions';
 import TemplatePreview from 'server/src/components/template-library/TemplatePreview';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { toast } from 'react-hot-toast';

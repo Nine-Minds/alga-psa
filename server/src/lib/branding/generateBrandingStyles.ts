@@ -1,4 +1,4 @@
-import { TenantBranding } from '../actions/tenant-actions/tenantBrandingActions';
+import { TenantBranding } from '@product/actions/tenant-actions/tenantBrandingActions';
 
 // Helper function to convert hex to RGB
 const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {

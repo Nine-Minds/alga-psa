@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { 
   verifyPortalToken, 
   completePortalSetup 
-} from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+} from '@product/actions/portal-actions/portalInvitationActions';
 import { signIn } from 'next-auth/react';
 
 interface ContactInfo {

@@ -3,7 +3,7 @@
  * GET /api/v1/categories/ticket/tree/[boardId] - Get ticket category tree for a board
  */
 
-import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategoryController';
+import { ApiCategoryController } from '@product/api/controllers/ApiCategoryController';
 
 const controller = new ApiCategoryController();
 

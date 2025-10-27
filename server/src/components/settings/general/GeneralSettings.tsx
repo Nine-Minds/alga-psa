@@ -9,8 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "s
 import { Checkbox } from "server/src/components/ui/Checkbox";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "server/src/lib/actions/tenantActions";
-import { getAllClients } from "server/src/lib/actions/client-actions/clientActions";
+import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "@product/actions/tenantActions";
+import { getAllClients } from "@product/actions/client-actions/clientActions";
 import { ClientPicker } from "server/src/components/clients/ClientPicker";
 import { IClient } from "server/src/interfaces/client.interfaces";
 

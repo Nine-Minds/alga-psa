@@ -1,7 +1,7 @@
 // server/src/test/actions/billingCycleActions.test.ts
 
 import { describe, it, expect, beforeEach, vi, MockedFunction } from 'vitest';
-import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '../../lib/actions/billingCycleActions';
+import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '@product/actions/billingCycleActions';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';

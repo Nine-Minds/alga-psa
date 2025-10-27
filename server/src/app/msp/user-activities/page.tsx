@@ -1,5 +1,5 @@
 import { UserActivitiesDashboard } from 'server/src/components/user-activities/UserActivitiesDashboard';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { redirect } from 'next/navigation';
 
 export default async function UserActivitiesPage() {

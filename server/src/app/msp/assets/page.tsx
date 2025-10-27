@@ -1,7 +1,7 @@
-import { listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
+import { listAssets } from '@product/actions/asset-actions/assetActions';
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { AssetListResponse } from 'server/src/interfaces/asset.interfaces';
 import AssetDashboard from 'server/src/components/assets/AssetDashboard';
 import { getConnection } from 'server/src/lib/db/db';

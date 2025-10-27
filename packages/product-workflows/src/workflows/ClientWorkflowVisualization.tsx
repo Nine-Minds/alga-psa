@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import WorkflowVisualizer from './visualization/WorkflowVisualizer';
-import { getWorkflowDefinition, getWorkflowExecutionStatus, getWorkflowDSLContent } from '@server/lib/actions/workflow-visualization-actions';
+import { getWorkflowDefinition, getWorkflowExecutionStatus, getWorkflowDSLContent } from '@product/actions/workflow-visualization-actions';
 
 interface ClientWorkflowVisualizationProps {
   workflowDefinitionId: string;

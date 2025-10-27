@@ -5,7 +5,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Card, CardHeader, CardContent, CardFooter } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input'; // Import Input component
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert'; // Import Alert components
-import { getInvoiceTemplate, saveInvoiceTemplate } from 'server/src/lib/actions/invoiceTemplates'; // Correct function name
+import { getInvoiceTemplate, saveInvoiceTemplate } from '@product/actions/invoiceTemplates'; // Correct function name
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 import { Editor } from '@monaco-editor/react';

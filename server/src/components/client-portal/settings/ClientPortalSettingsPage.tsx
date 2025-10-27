@@ -6,7 +6,7 @@ import { ClientDetailsSettings } from './ClientDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
 import { DrawerProvider } from "server/src/context/DrawerContext";
-import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { checkClientPortalPermissions } from '@product/actions/client-portal-actions/clientUserActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 export default function ClientPortalSettingsPage() {

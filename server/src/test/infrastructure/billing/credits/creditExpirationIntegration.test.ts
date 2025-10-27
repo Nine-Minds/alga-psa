@@ -8,8 +8,8 @@ import {
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { createPrepaymentInvoice } from '@product/actions/creditActions';
+import { finalizeInvoice } from '@product/actions/invoiceModification';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';

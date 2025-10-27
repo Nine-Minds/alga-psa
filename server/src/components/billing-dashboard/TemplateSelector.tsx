@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 // Import compileAndSaveTemplate instead of saveInvoiceTemplate
-import { getInvoiceTemplates, compileAndSaveTemplate } from 'server/src/lib/actions/invoiceTemplates';
+import { getInvoiceTemplates, compileAndSaveTemplate } from '@product/actions/invoiceTemplates';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { TextArea } from 'server/src/components/ui/TextArea';

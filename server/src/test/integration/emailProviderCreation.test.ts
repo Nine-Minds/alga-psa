@@ -7,14 +7,14 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createEmailProvider } from '../../lib/actions/email-actions/emailProviderActions';
-import { getCurrentTenant } from '../../lib/actions/tenantActions';
+import { createEmailProvider } from '@product/actions/email-actions/emailProviderActions';
+import { getCurrentTenant } from '@product/actions/tenantActions';
 
 let testDb: Knex;
 let testTenant: string;
 
 // Mock the tenant functions to return our test tenant
-vi.mock('../../lib/actions/tenantActions', () => ({
+vi.mock('@product/actions/tenantActions', () => ({
   getCurrentTenant: vi.fn()
 }));
 

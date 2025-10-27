@@ -6,7 +6,7 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';import { Card, 
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Clock } from 'lucide-react';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import type { ClientHoursByServiceResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
+import type { ClientHoursByServiceResult } from '@product/actions/client-portal-actions/client-billing-metrics';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 interface HoursByServiceTabProps {

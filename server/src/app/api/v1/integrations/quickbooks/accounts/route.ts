@@ -3,8 +3,8 @@
  * GET /api/v1/integrations/quickbooks/accounts - Get QuickBooks chart of accounts
  */
 
-import { ApiQuickBooksController } from 'server/src/lib/api/controllers/ApiQuickBooksController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiQuickBooksController } from '@product/api/controllers/ApiQuickBooksController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 const controller = new ApiQuickBooksController();
 

@@ -5,8 +5,8 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { Button } from 'server/src/components/ui/Button';
 import Spinner from 'server/src/components/ui/Spinner';
 import { AlertCircle } from 'lucide-react';
-import { createClientTicket } from 'server/src/lib/actions/client-portal-actions/client-tickets';
-import { getClientTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
+import { createClientTicket } from '@product/actions/client-portal-actions/client-tickets';
+import { getClientTicketFormData } from '@product/actions/ticket-actions/ticketFormActions';
 import { IPriority } from 'server/src/interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';

@@ -6,7 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { IContractLineService, IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
-import { updateContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
+import { updateContractLineFixedConfig } from '@product/actions/contractLineAction';
 import {
   IContractLineServiceConfiguration,
   IContractLineServiceFixedConfig,
@@ -16,11 +16,11 @@ import {
   IContractLineServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { updateContractLineService } from 'server/src/lib/actions/contractLineServiceActions';
+import { updateContractLineService } from '@product/actions/contractLineServiceActions';
 import {
   getConfigurationForService,
   getConfigurationWithDetails
-} from 'server/src/lib/actions/contractLineServiceConfigurationActions';
+} from '@product/actions/contractLineServiceConfigurationActions';
 import { useTenant } from 'server/src/components/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
 

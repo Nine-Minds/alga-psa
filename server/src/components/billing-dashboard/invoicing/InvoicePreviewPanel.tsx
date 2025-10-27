@@ -7,7 +7,7 @@ import LoadingIndicator from '../../ui/LoadingIndicator';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
 import { IInvoiceTemplate } from '../../../interfaces/invoice.interfaces';
 import { WasmInvoiceViewModel } from '../../../lib/invoice-renderer/types';
-import { getInvoiceForRendering } from '../../../lib/actions/invoiceQueries';
+import { getInvoiceForRendering } from '@product/actions/invoiceQueries';
 import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapters';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';

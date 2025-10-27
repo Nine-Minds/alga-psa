@@ -4,10 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { getContractById } from 'server/src/lib/actions/contractActions';
+import { getContractById } from '@product/actions/contractActions';
 import ContractTemplateDetail from './ContractTemplateDetail';
 import ContractDetail from './ContractDetail';
-import { getClientContractById } from 'server/src/lib/actions/client-actions/clientContractActions';
+import { getClientContractById } from '@product/actions/client-actions/clientContractActions';
 
 type ViewMode = 'loading' | 'template' | 'client' | 'error';
 

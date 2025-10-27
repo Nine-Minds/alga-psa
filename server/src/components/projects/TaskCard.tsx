@@ -6,9 +6,9 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip } from 'lucide-react';
-import { findPriorityById } from 'server/src/lib/actions/priorityActions';
+import { findPriorityById } from '@product/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { getTaskTicketLinksAction, getTaskResourcesAction } from '@product/actions/project-actions/projectTaskActions';
 import { TagList, TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import {

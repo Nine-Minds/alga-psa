@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Text } from '@radix-ui/themes';
 import { DataTable } from 'server/src/components/ui/DataTable'; // Import DataTable
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces'; // Import ColumnDefinition
-import { getRecentClientInvoices, RecentInvoice } from 'server/src/lib/actions/report-actions'; // Import action and type
+import { getRecentClientInvoices, RecentInvoice } from '@product/actions/report-actions'; // Import action and type
 import { Skeleton } from 'server/src/components/ui/Skeleton'; // Import Skeleton for loading state
 import { formatCurrency } from 'server/src/lib/utils/formatters'; // Import currency formatter
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils'; // Import date formatter
@@ -15,7 +15,7 @@ import {
  getHoursByServiceType, HoursByServiceResult,
  getRemainingBucketUnits, RemainingBucketUnitsResult,
  getUsageDataMetrics, UsageMetricResult // Import usage action and type
-} from 'server/src/lib/actions/report-actions'; // Import actions and types
+} from '@product/actions/report-actions'; // Import actions and types
 import ChartSkeleton from 'server/src/components/ui/skeletons/ChartSkeleton';
 import BucketUsageChart from './BucketUsageChart';
 

@@ -20,7 +20,7 @@ import {
   configureTicketing,
   completeOnboarding,
   validateOnboardingDefaults
-} from 'server/src/lib/actions/onboarding-actions/onboardingActions';
+} from '@product/actions/onboarding-actions/onboardingActions';
 
 interface OnboardingWizardProps {
   open?: boolean;

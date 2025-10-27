@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { IInvoiceAnnotation } from 'server/src/interfaces/invoice.interfaces';
-import { addInvoiceAnnotation, getInvoiceAnnotations } from 'server/src/lib/actions/invoiceTemplates';
+import { addInvoiceAnnotation, getInvoiceAnnotations } from '@product/actions/invoiceTemplates';
 
 interface InvoiceAnnotationsProps {
   invoiceId: string;

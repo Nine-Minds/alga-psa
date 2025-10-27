@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IUser, IUserWithRoles, IRoleWithPermissions, IPermission, IRole } from '../../interfaces/auth.interfaces';
 import { IProject } from '../../interfaces/project.interfaces';
-import * as projectActions from '../../lib/actions/project-actions/projectActions';
+import * as projectActions from '@product/actions/project-actions/projectActions';
 import ProjectModel from '../../lib/models/project';
 
 // Mock the Project model methods
@@ -52,7 +52,7 @@ vi.mock('../../lib/models/project', () => ({
 }));
 
 // Mock the userActions with both required functions
-vi.mock('../../lib/actions/user-actions/userActions', () => ({
+vi.mock('@product/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn(),
   getAllUsers: vi.fn().mockResolvedValue([]),
 }));
@@ -78,7 +78,7 @@ vi.mock('next/cache', () => ({
 }));
 
 // Import getCurrentUser after mocking
-import { getCurrentUser } from '../../lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 
 describe('Project Permissions', () => {
   let viewProjectPermission: IPermission;

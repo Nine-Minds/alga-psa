@@ -1,5 +1,5 @@
 import { Card } from 'server/src/components/ui/Card';
-import { JobMetrics } from 'server/src/lib/actions/job-actions';
+import { JobMetrics } from '@product/actions/job-actions';
 
 interface JobMetricsDisplayProps {
   metrics: JobMetrics;

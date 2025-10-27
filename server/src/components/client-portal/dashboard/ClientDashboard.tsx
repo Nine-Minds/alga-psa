@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { getDashboardMetrics, getRecentActivity, type RecentActivity } from 'server/src/lib/actions/client-portal-actions/dashboard';
+import { getDashboardMetrics, getRecentActivity, type RecentActivity } from '@product/actions/client-portal-actions/dashboard';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
 import { useTranslation } from 'server/src/lib/i18n/client';
 

@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { getWorkflowExecutionDetails } from 'server/src/lib/actions/workflow-actions';
+import { getWorkflowExecutionDetails } from '@product/actions/workflow-actions';
 import ClientWorkflowVisualization from '@product/workflows/workflows/ClientWorkflowVisualization';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';

@@ -1,6 +1,6 @@
 'use client';
 
-import { getProjectMetadata, updateProject } from 'server/src/lib/actions/project-actions/projectActions';
+import { getProjectMetadata, updateProject } from '@product/actions/project-actions/projectActions';
 import ProjectInfo from 'server/src/components/projects/ProjectInfo';
 import ProjectDetail from 'server/src/components/projects/ProjectDetail';
 import { useEffect, useState } from 'react';

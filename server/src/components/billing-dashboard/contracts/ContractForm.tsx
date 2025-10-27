@@ -9,7 +9,7 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Save } from 'lucide-react';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
-import { updateContract } from 'server/src/lib/actions/contractActions';
+import { updateContract } from '@product/actions/contractActions';
 import { useTenant } from 'server/src/components/TenantProvider';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';

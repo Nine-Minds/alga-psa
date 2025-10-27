@@ -24,9 +24,9 @@ import {
   getContractAssignments,
   updateContract,
   IContractSummary
-} from 'server/src/lib/actions/contractActions';
-import { updateClientContract } from 'server/src/lib/actions/client-actions/clientContractActions';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+} from '@product/actions/contractActions';
+import { updateClientContract } from '@product/actions/client-actions/clientContractActions';
+import { getClientById } from '@product/actions/client-actions/clientActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from 'server/src/components/TenantProvider';
 import ContractHeader from './ContractHeader';

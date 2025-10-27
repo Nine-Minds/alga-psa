@@ -12,10 +12,10 @@ import {
   updateBillingCycle,
   canCreateNextBillingCycle,
   createNextBillingCycle
-} from 'server/src/lib/actions/billingCycleActions';
-import { getAllClientsPaginated } from 'server/src/lib/actions/client-actions/clientActions';
-import { getClientContracts } from 'server/src/lib/actions/client-actions/clientContractActions';
-import { getContracts } from 'server/src/lib/actions/contractActions';
+} from '@product/actions/billingCycleActions';
+import { getAllClientsPaginated } from '@product/actions/client-actions/clientActions';
+import { getClientContracts } from '@product/actions/client-actions/clientContractActions';
+import { getContracts } from '@product/actions/contractActions';
 import { BillingCycleType, IClient } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IClientContract, IContract } from 'server/src/interfaces/contract.interfaces';

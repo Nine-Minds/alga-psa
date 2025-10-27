@@ -126,7 +126,7 @@ vi.mock('../../../components/ui/CustomSelect', () => ({
 }));
 
 // Mock server actions used by Manager and Form
-vi.mock('../../../lib/actions/email-actions/inboundTicketDefaultsActions', () => ({
+vi.mock('@product/actions/email-actions/inboundTicketDefaultsActions', () => ({
   __esModule: true,
   getInboundTicketDefaults: mockGetInboundTicketDefaults,
   createInboundTicketDefaults: mockCreateInboundTicketDefaults,
@@ -134,28 +134,28 @@ vi.mock('../../../lib/actions/email-actions/inboundTicketDefaultsActions', () =>
   deleteInboundTicketDefaults: vi.fn(),
 }));
 
-vi.mock('../../../lib/actions/email-actions/ticketFieldOptionsActions', () => ({
+vi.mock('@product/actions/email-actions/ticketFieldOptionsActions', () => ({
   __esModule: true,
   getTicketFieldOptions: mockGetTicketFieldOptions,
   getCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [] }),
 }));
 
-vi.mock('server/src/lib/actions/board-actions/boardActions', () => ({
+vi.mock('@product/actions/board-actions/boardActions', () => ({
   __esModule: true,
   getAllBoards: mockGetAllBoards,
 }));
 
-vi.mock('server/src/lib/actions/client-actions/clientActions', () => ({
+vi.mock('@product/actions/client-actions/clientActions', () => ({
   __esModule: true,
   getAllClients: mockGetAllClients,
 }));
 
-vi.mock('server/src/lib/actions/priorityActions', () => ({
+vi.mock('@product/actions/priorityActions', () => ({
   __esModule: true,
   getAllPriorities: mockGetAllPriorities,
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@product/actions/user-actions/userActions', () => ({
   __esModule: true,
   getAllUsers: mockGetAllUsers,
 }));

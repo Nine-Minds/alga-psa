@@ -8,7 +8,7 @@ import { Card } from "@server/components/ui/Card";
 import { Button } from "@server/components/ui/Button";
 import { ReflectionContainer } from "@server/types/ui-reflection/ReflectionContainer";
 import { Play, Code2, AlertTriangle } from "lucide-react";
-import { getRegisteredWorkflowActions } from "@server/lib/actions/workflow-actions/workflowActionRegistry";
+import { getRegisteredWorkflowActions } from "@product/actions/workflow-actions/workflowActionRegistry";
 import { ActionParameterDefinition } from "@alga-psa/shared/workflow/core";
 import EditorSkeleton from "@server/components/ui/skeletons/EditorSkeleton";
 

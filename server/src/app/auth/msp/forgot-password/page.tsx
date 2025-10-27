@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link'; 
 import * as Label from '@radix-ui/react-label';
 import * as Form from '@radix-ui/react-form';
-import { recoverPassword } from 'server/src/lib/actions/useRegister';
+import { recoverPassword } from '@product/actions/useRegister';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import toast from 'react-hot-toast';

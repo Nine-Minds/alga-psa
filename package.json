@@ -163,7 +163,7 @@
     "redis": "^4.7.0",
     "remark-gfm": "^4.0.0",
     "rrule": "^2.8.1",
-    "sharp": "^0.34.3",
+    "sharp": "^0.34.4",
     "simple-swizzle": "^0.2.4",
     "spawn-sync": "^2.0.0",
     "speakeasy": "^2.0.0",

@@ -28,7 +28,7 @@ const permissionCheckRef = vi.hoisted(() => ({
     user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
 }));
 
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+vi.mock('@product/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user))
 }));
 

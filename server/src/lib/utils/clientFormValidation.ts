@@ -1,4 +1,4 @@
-import { validateEmail } from '../api/schemas/common';
+import { validateEmail } from '@product/api/schemas/common';
 
 // Enhanced validation utilities for client forms
 export interface ValidationResult {
@@ -756,4 +756,3 @@ export function validateClientForm(formData: {
     errors
   };
 }
-

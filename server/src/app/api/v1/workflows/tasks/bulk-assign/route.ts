@@ -3,8 +3,8 @@
  * POST /api/v1/workflows/tasks/bulk-assign - Bulk assign workflow tasks
  */
 
-import { ApiWorkflowController } from 'server/src/lib/api/controllers/ApiWorkflowController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiWorkflowController } from '@product/api/controllers/ApiWorkflowController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 
 export async function POST(request: Request) {

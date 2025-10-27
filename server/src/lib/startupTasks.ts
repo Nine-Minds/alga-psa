@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import { withAdminTransaction } from '@shared/db/index'; // Use admin connection for non-tenant access
-import { compileStandardTemplate } from './actions/invoiceTemplates'; // Import the standard compiler
+import { compileStandardTemplate } from '@product/actions/invoiceTemplates'; // Import the standard compiler
 
 /**
  * Checks standard AssemblyScript invoice templates against the database records

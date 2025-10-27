@@ -4,10 +4,10 @@ import { createContext, useContext, useReducer, useEffect } from 'react';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { TaxRegion } from 'server/src/types/types.d';
-import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
+import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '@product/actions/timeEntryActions';
 import { getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getClientById } from '@product/actions/client-actions/clientActions';
 
 interface Service {
   id: string;

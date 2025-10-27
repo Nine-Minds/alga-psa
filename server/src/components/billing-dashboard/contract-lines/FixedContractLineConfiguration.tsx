@@ -11,13 +11,13 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
 import Spinner from 'server/src/components/ui/Spinner';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@product/actions/serviceActions';
 import {
   getContractLineById,
   updateContractLine,
   updateContractLineFixedConfig,
   getContractLineFixedConfig,
-} from 'server/src/lib/actions/contractLineAction';
+} from '@product/actions/contractLineAction';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces';
 import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';

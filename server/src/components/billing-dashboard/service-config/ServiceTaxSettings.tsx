@@ -5,10 +5,10 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { Card, CardHeader, CardContent, CardTitle, CardFooter } from 'server/src/components/ui/Card';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
-import { updateService } from 'server/src/lib/actions/serviceActions';
+import { updateService } from '@product/actions/serviceActions';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Use ITaxRate
-import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Use getTaxRates
+import { getTaxRates } from '@product/actions/taxSettingsActions'; // Use getTaxRates
 
 interface ServiceTaxSettingsProps {
   service: IService;

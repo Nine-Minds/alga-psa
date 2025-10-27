@@ -4,8 +4,8 @@
  * PUT /api/v1/integrations/quickbooks/accounts/mappings - Configure account mappings
  */
 
-import { ApiQuickBooksController } from 'server/src/lib/api/controllers/ApiQuickBooksController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiQuickBooksController } from '@product/api/controllers/ApiQuickBooksController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 const controller = new ApiQuickBooksController();
 

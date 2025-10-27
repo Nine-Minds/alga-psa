@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Button } from '../ui/Button';
-import { uploadDocument } from '../../lib/actions/document-actions/documentActions';
+import { uploadDocument } from '@product/actions/document-actions/documentActions';
 import { IDocument } from '../../interfaces/document.interface';
 import { Upload, X, FileUp } from 'lucide-react';
 import Spinner from 'server/src/components/ui/Spinner';

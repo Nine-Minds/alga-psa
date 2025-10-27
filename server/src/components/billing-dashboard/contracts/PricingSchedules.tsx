@@ -16,7 +16,7 @@ import { IContractPricingSchedule } from 'server/src/interfaces/contract.interfa
 import {
   getPricingSchedulesByContract,
   deletePricingSchedule
-} from 'server/src/lib/actions/contractPricingScheduleActions';
+} from '@product/actions/contractPricingScheduleActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { PricingScheduleDialog } from './PricingScheduleDialog';

@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { Button } from 'server/src/components/ui/Button'
 import { Input } from 'server/src/components/ui/Input'
 import CustomSelect from 'server/src/components/ui/CustomSelect'
-import { createService, getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'
-import { getActiveTaxRegions, getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Added getTaxRates
+import { createService, getServiceTypesForSelection } from '@product/actions/serviceActions'
+import { getActiveTaxRegions, getTaxRates } from '@product/actions/taxSettingsActions'; // Added getTaxRates
 import { ITaxRate, ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { toast } from 'react-hot-toast';

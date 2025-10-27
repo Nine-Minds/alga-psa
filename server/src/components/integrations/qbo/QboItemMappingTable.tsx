@@ -25,15 +25,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
-import { getExternalEntityMappings, deleteExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
+import { getExternalEntityMappings, deleteExternalEntityMapping } from '@product/actions/externalMappingActions';
 // Placeholder imports for server actions - these need to be created
-import { getQboItems } from 'server/src/lib/actions/integrations/qboActions'; // TODO: Create this action
+import { getQboItems } from '@product/actions/integrations/qboActions'; // TODO: Create this action
 // Placeholder import for the Edit/Create Dialog - needs to be created
 import { QboMappingFormDialog } from './QboMappingFormDialog';
 // Use the existing ConfirmationDialog
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@product/actions/serviceActions';
 // Removed unused import for DeleteConfirmationDialog
 
 // Types matching externalMappingActions.ts and placeholders

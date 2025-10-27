@@ -25,11 +25,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
-import { getExternalEntityMappings, deleteExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
+import { getExternalEntityMappings, deleteExternalEntityMapping } from '@product/actions/externalMappingActions';
 // Use existing action for Alga Tax Regions
-import { getTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Corrected import
+import { getTaxRegions } from '@product/actions/taxSettingsActions'; // Corrected import
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Import the correct type
-import { getQboTaxCodes } from 'server/src/lib/actions/integrations/qboActions'; // TODO: Create this action
+import { getQboTaxCodes } from '@product/actions/integrations/qboActions'; // TODO: Create this action
 import { QboMappingFormDialog } from './QboMappingFormDialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 

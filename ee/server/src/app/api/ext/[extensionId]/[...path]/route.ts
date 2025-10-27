@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { matchEndpoint, pathnameFromParts, filterRequestHeaders, filterResponseHeaders, getTimeoutMs } from '../../../../../lib/extensions/lib/gateway-utils';
 import { getRegistryFacade } from '../../../../../lib/extensions/lib/gateway-registry';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 export const dynamic = 'force-dynamic';
 

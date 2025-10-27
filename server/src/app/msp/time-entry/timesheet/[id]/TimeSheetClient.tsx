@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import { TimeSheet } from 'server/src/components/time-management/time-entry/time-sheet/TimeSheet';
 import { ITimeSheetView, ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
-import { fetchOrCreateTimeSheet } from 'server/src/lib/actions/timeEntryActions';
+import { saveTimeEntry } from '@product/actions/timeEntryActions';
+import { fetchOrCreateTimeSheet } from '@product/actions/timeEntryActions';
 import { useState } from 'react';
 
 interface TimeSheetClientProps {

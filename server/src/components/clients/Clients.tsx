@@ -16,8 +16,8 @@ import {
   exportClientsToCSV,
   getAllClientIds,
   type PaginatedClientsResponse
-} from 'server/src/lib/actions/client-actions/clientActions';
-import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+} from '@product/actions/client-actions/clientActions';
+import { findTagsByEntityIds, findAllTagsByType } from '@product/actions/tagActions';
 import { TagFilter } from 'server/src/components/tags';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';

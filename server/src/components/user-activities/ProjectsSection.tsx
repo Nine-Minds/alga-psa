@@ -3,11 +3,11 @@ import { ProjectTaskActivity, ActivityFilters } from '../../interfaces/activity.
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { ProjectTaskCard } from './ActivityCard';
-import { fetchProjectActivities } from '../../lib/actions/activity-actions/activityServerActions';
+import { fetchProjectActivities } from '@product/actions/activity-actions/activityServerActions';
 import { ProjectSectionFiltersDialog } from './filters/ProjectSectionFiltersDialog';
 import { Filter, XCircleIcon } from 'lucide-react';
 import { IProject, IProjectPhase } from '../../interfaces/project.interfaces';
-import { getProjects } from '../../lib/actions/project-actions/projectActions';
+import { getProjects } from '@product/actions/project-actions/projectActions';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 
 interface ProjectsSectionProps {

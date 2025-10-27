@@ -6,8 +6,8 @@ import { IDocument } from 'server/src/interfaces/document.interface';
 import { 
   getDocumentsByEntity,
   removeDocumentAssociations
-} from 'server/src/lib/actions/document-actions/documentActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+} from '@product/actions/document-actions/documentActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { Button } from 'server/src/components/ui/Button';
 import DocumentUpload from 'server/src/components/documents/DocumentUpload';
 import DocumentSelector from 'server/src/components/documents/DocumentSelector';
@@ -20,9 +20,9 @@ import {
   getBlockContent,
   updateBlockContent,
   createBlockDocument
-} from 'server/src/lib/actions/document-actions/documentBlockContentActions';
-import { updateDocument } from 'server/src/lib/actions/document-actions/documentActions';
-import { downloadDocumentInBrowser } from 'server/src/lib/actions/document-download/downloadHelpers';
+} from '@product/actions/document-actions/documentBlockContentActions';
+import { updateDocument } from '@product/actions/document-actions/documentActions';
+import { downloadDocumentInBrowser } from '@product/actions/document-download/downloadHelpers';
 import { downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { getBlockContent, updateBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
+import { getBlockContent, updateBlockContent } from '@product/actions/document-actions/documentBlockContentActions';
 import { Button } from 'server/src/components/ui/Button';
 import { Card } from 'server/src/components/ui/Card';
 

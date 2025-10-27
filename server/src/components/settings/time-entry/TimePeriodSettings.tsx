@@ -8,7 +8,7 @@ import { Checkbox } from 'server/src/components/ui/Checkbox';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
 import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';
-import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from 'server/src/lib/actions/time-period-settings-actions/timePeriodSettingsActions';
+import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from '@product/actions/time-period-settings-actions/timePeriodSettingsActions';
 import { ISO8601String } from 'server/src/types/types.d';
 import { formatISO, parseISO } from 'date-fns';
 

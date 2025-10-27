@@ -4,7 +4,7 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import toast from 'react-hot-toast';
-import { getClientContractLineSettings, updateClientContractLineSettings, type BillingSettings } from "server/src/lib/actions/billingSettingsActions";
+import { getClientContractLineSettings, updateClientContractLineSettings, type BillingSettings } from "@product/actions/billingSettingsActions";
 
 interface ClientCreditExpirationSettingsProps {
   clientId: string;

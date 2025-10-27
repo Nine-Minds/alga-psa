@@ -7,8 +7,8 @@ import { Input } from 'server/src/components/ui/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'server/src/components/ui/Table';
 import { Search, Plus, Check } from 'lucide-react';
 import { IService } from 'server/src/interfaces/billing.interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { addServiceToContractLine } from 'server/src/lib/actions/contractLineServiceActions';
+import { getServices } from '@product/actions/serviceActions';
+import { addServiceToContractLine } from '@product/actions/contractLineServiceActions';
 
 interface ServiceSelectionDialogProps {
   isOpen: boolean;

@@ -9,7 +9,7 @@ import { Button } from "server/src/components/ui/Button";
 import { Input } from "server/src/components/ui/Input";
 import { Label } from "server/src/components/ui/Label";
 import { TextArea } from "server/src/components/ui/TextArea";
-import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { addContact } from '@product/actions/contact-actions/contactActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';

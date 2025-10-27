@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { IUserWithRoles } from '../interfaces/auth.interfaces';
-import { getAllUsers } from '../lib/actions/user-actions/userActions';
+import { getAllUsers } from '@product/actions/user-actions/userActions';
 
 export function useUsers() {
   const [users, setUsers] = useState<IUserWithRoles[]>([]);

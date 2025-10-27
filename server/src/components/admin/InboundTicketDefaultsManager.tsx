@@ -10,9 +10,9 @@ import { InboundTicketDefaultsForm } from '../forms/InboundTicketDefaultsForm';
 import { 
   getInboundTicketDefaults, 
   deleteInboundTicketDefaults 
-} from '../../lib/actions/email-actions/inboundTicketDefaultsActions';
+} from '@product/actions/email-actions/inboundTicketDefaultsActions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
-import { getTicketFieldOptions } from '../../lib/actions/email-actions/ticketFieldOptionsActions';
+import { getTicketFieldOptions } from '@product/actions/email-actions/ticketFieldOptionsActions';
 import { MoreVertical } from 'lucide-react';
 import { 
   DropdownMenu,

@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import UserList from './UserList';
-import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from 'server/src/lib/actions/contact-actions/contactActions';
-import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from '@product/actions/user-actions/userActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
+import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from '@product/actions/contact-actions/contactActions';
+import { sendPortalInvitation, createClientPortalUser } from '@product/actions/portal-actions/portalInvitationActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import toast from 'react-hot-toast';
@@ -18,7 +18,7 @@ import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { Search, Eye, EyeOff, Info } from 'lucide-react';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import { getLicenseUsageAction } from '@product/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
 import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
 

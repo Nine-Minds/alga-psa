@@ -5,7 +5,7 @@ import { Input } from "server/src/components/ui/Input";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { Button } from "server/src/components/ui/Button";
 import { useState, useEffect } from 'react';
-import { getClientProfile, updateClientProfile, type ClientProfile } from "server/src/lib/actions/account";
+import { getClientProfile, updateClientProfile, type ClientProfile } from "@product/actions/account";
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface ValidationErrors {

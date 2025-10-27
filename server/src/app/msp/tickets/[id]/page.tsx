@@ -1,7 +1,7 @@
 import React from 'react';
-import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { getConsolidatedTicketData } from '@product/actions/ticket-actions/optimizedTicketActions';
 import TicketDetailsContainer from './TicketDetailsContainer';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
 

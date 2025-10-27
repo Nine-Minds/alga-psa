@@ -4,8 +4,8 @@
  * POST /api/v1/workflows/tasks - Create workflow task
  */
 
-import { ApiWorkflowController } from 'server/src/lib/api/controllers/ApiWorkflowController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiWorkflowController } from '@product/api/controllers/ApiWorkflowController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 
 export async function GET(request: Request) {

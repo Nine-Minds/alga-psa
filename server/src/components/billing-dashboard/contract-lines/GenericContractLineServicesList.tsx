@@ -16,10 +16,10 @@ import {
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractLine, IContractLineService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
-import { getContractLineServicesWithConfigurations, addServiceToContractLine, removeServiceFromContractLine } from 'server/src/lib/actions/contractLineServiceActions';
-import { getServices } from 'server/src/lib/actions/serviceActions';
-import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Import action to get plan details
-import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
+import { getContractLineServicesWithConfigurations, addServiceToContractLine, removeServiceFromContractLine } from '@product/actions/contractLineServiceActions';
+import { getServices } from '@product/actions/serviceActions';
+import { getContractLineById } from '@product/actions/contractLineAction'; // Import action to get plan details
+import { getServiceCategories } from '@product/actions/serviceCategoryActions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';

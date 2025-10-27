@@ -15,13 +15,13 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContract, IContractLineMapping } from 'server/src/interfaces/contract.interfaces';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
-import { getContractLines } from 'server/src/lib/actions/contractLineAction';
+import { getContractLines } from '@product/actions/contractLineAction';
 import {
   getDetailedContractLines,
   addContractLine,
   removeContractLine,
   updateContractLineAssociation,
-} from 'server/src/lib/actions/contractLineMappingActions';
+} from '@product/actions/contractLineMappingActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { ContractLineRateDialog } from './ContractLineRateDialog';

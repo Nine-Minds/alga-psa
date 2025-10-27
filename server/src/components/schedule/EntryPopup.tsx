@@ -14,7 +14,7 @@ import { format, isWeekend, addYears } from 'date-fns';
 import { IScheduleEntry, IRecurrencePattern, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { AddWorkItemDialog } from 'server/src/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
 import { IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
+import { getWorkItemById } from '@product/actions/workItemActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import SelectedWorkItem from 'server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem';
 import UserPicker from 'server/src/components/ui/UserPicker';

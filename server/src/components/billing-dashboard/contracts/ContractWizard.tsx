@@ -15,7 +15,7 @@ import {
   getContractTemplateSnapshotForClientWizard,
   ClientContractWizardSubmission,
   ClientTemplateSnapshot,
-} from 'server/src/lib/actions/contractWizardActions';
+} from '@product/actions/contractWizardActions';
 
 const STEPS = [
   'Contract Basics',

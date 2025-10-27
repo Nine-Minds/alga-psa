@@ -3,10 +3,10 @@ import { createTenantKnex } from 'server/src/lib/db'; // For test setup/teardown
 import { Knex } from 'knex';
 
 // Import actions and services involved in the integration
-import { saveTimeEntry, deleteTimeEntry } from 'server/src/lib/actions/timeEntryActions';
-import { createUsageRecord, updateUsageRecord, deleteUsageRecord } from 'server/src/lib/actions/usageActions';
+import { saveTimeEntry, deleteTimeEntry } from '@product/actions/timeEntryActions';
+import { createUsageRecord, updateUsageRecord, deleteUsageRecord } from '@product/actions/usageActions';
 import { findOrCreateCurrentBucketUsageRecord, reconcileBucketUsageRecord } from 'server/src/lib/services/bucketUsageService';
-import { getRemainingBucketUnits } from 'server/src/lib/actions/report-actions/getRemainingBucketUnits';
+import { getRemainingBucketUnits } from '@product/actions/report-actions/getRemainingBucketUnits';
 
 // Test utilities (if any, e.g., for creating test data)
 // import { createTestClient, createTestContractLine, createTestService, assignContractLineToClient, etc } from 'server/test-utils/seed';

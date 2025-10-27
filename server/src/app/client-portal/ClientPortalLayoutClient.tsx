@@ -6,7 +6,7 @@ import { I18nWrapper } from "server/src/components/i18n/I18nWrapper";
 import { PostHogUserIdentifier } from "server/src/components/PostHogUserIdentifier";
 import { BrandingProvider } from "server/src/components/providers/BrandingProvider";
 import type { Session } from "next-auth";
-import type { TenantBranding } from "server/src/lib/actions/tenant-actions/tenantBrandingActions";
+import type { TenantBranding } from "@product/actions/tenant-actions/tenantBrandingActions";
 import type { SupportedLocale } from "server/src/lib/i18n/config";
 
 interface Props {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 // Global vendor CSS for react-big-calendar is added via a <link> tag below
 import { Toaster } from 'react-hot-toast';
-import { getCurrentTenant } from "../lib/actions/tenantActions";
+import { getCurrentTenant } from "@product/actions/tenantActions";
 import { TenantProvider } from "../components/TenantProvider";
 import { Theme } from '@radix-ui/themes';
 import { ThemeProvider } from '../context/ThemeContext';
@@ -13,7 +13,7 @@ import { PostHogProvider } from "../components/PostHogProvider";
 import { I18nWrapper } from "../components/i18n/I18nWrapper";
 import { getServerLocale } from "../lib/i18n/server";
 import { cookies, headers } from 'next/headers';
-import { getTenantBrandingByDomain } from "../lib/actions/tenant-actions/getTenantBrandingByDomain";
+import { getTenantBrandingByDomain } from "@product/actions/tenant-actions/getTenantBrandingByDomain";
 import { generateBrandingStyles } from "../lib/branding/generateBrandingStyles";
 
 // Removed Google Fonts to avoid network fetch during build

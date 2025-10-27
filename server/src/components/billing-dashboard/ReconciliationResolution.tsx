@@ -9,7 +9,7 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { formatDateOnly, formatDateTime } from 'server/src/lib/utils/dateTimeUtils';
 import { parseISO } from 'date-fns';
 import { ICreditReconciliationReport, ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
-import { resolveReconciliationReport } from 'server/src/lib/actions/creditReconciliationActions';
+import { resolveReconciliationReport } from '@product/actions/creditReconciliationActions';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTrigger } from 'server/src/components/ui/Dialog';
 import { TextArea } from 'server/src/components/ui/TextArea';

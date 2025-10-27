@@ -13,16 +13,16 @@ import {
   getAvailableReferenceData, 
   importReferenceData,
   deleteReferenceDataItem
-} from 'server/src/lib/actions/referenceDataActions';
-import { getTenantTicketingData } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
+} from '@product/actions/referenceDataActions';
+import { getTenantTicketingData } from '@product/actions/onboarding-actions/onboardingActions';
 import { IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { IStandardStatus } from 'server/src/interfaces/status.interface';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
-import { createBoard, updateBoard } from 'server/src/lib/actions/board-actions/boardActions';
-import { createCategory } from 'server/src/lib/actions/ticketCategoryActions';
-import { createStatus } from 'server/src/lib/actions/status-actions/statusActions';
-import { createPriority } from 'server/src/lib/actions/priorityActions';
+import { createBoard, updateBoard } from '@product/actions/board-actions/boardActions';
+import { createCategory } from '@product/actions/ticketCategoryActions';
+import { createStatus } from '@product/actions/status-actions/statusActions';
+import { createPriority } from '@product/actions/priorityActions';
 import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 
@@ -489,7 +489,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           const firstOpenStatus = result.imported.find((s: any) => !s.is_closed);
           if (firstOpenStatus) {
             // Update the status to be default
-            const { updateStatus } = await import('server/src/lib/actions/status-actions/statusActions');
+            const { updateStatus } = await import('@product/actions/status-actions/statusActions');
             await updateStatus(firstOpenStatus.status_id, { is_default: true });
             firstOpenStatus.is_default = true;
             toast.success('First open status automatically set as default', {
@@ -873,7 +873,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
       
       // Update status to be default (this will automatically unset others)
-      const { updateStatus } = await import('server/src/lib/actions/status-actions/statusActions');
+      const { updateStatus } = await import('@product/actions/status-actions/statusActions');
       await updateStatus(statusId, { is_default: true });
       
       // Refresh data from server to get updated default states

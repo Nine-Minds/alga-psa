@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getCurrentTenant } from 'server/src/lib/actions/tenantActions';
+import { getCurrentTenant } from '@product/actions/tenantActions';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Bell, Search, Filter, Plus, MoreVertical } from 'lucide-react';
@@ -18,12 +18,12 @@ import { toast } from 'react-hot-toast';
 import {
   getEventCatalogEntries,
   getEventCategories
-} from 'server/src/lib/actions/event-catalog-actions';
+} from '@product/actions/event-catalog-actions';
 import {
   getWorkflowEventAttachmentsForEventType,
   deleteWorkflowEventAttachment,
   updateWorkflowEventAttachment
-} from 'server/src/lib/actions/workflow-event-attachment-actions';
+} from '@product/actions/workflow-event-attachment-actions';
 import {
   IEventCatalogEntry,
   IWorkflowEventAttachment

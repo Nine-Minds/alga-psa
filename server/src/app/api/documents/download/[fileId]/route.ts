@@ -5,7 +5,7 @@ import Document from 'server/src/lib/models/document';
 import { marked } from 'marked';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
 import logger from '@alga-psa/shared/core/logger';
-import { downloadDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { downloadDocument } from '@product/actions/document-actions/documentActions';
 import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { withTransaction } from '@alga-psa/shared/db';

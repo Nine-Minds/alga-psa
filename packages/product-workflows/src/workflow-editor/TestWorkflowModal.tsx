@@ -7,10 +7,10 @@ import { Label } from '@server/components/ui/Label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@server/components/ui/Tabs';
 import { toast } from 'react-hot-toast';
 import CustomSelect, { SelectOption } from '@server/components/ui/CustomSelect';
-import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@server/lib/actions/event-catalog-actions';
+import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@product/actions/event-catalog-actions';
 import { IEventCatalogEntry } from '@alga-psa/shared/workflow';
-import { getCurrentUser } from '@server/lib/actions/user-actions/userActions';
-import *  as workflowEditorActions from '@server/lib/actions/workflow-editor-actions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
+import *  as workflowEditorActions from '@product/actions/workflow-editor-actions';
 import LoadingIndicator from '@server/components/ui/LoadingIndicator';
 
 // JSON Editor component

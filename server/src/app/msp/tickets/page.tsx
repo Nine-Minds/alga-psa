@@ -1,6 +1,6 @@
-import { getConsolidatedTicketListData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import { getConsolidatedTicketListData } from '@product/actions/ticket-actions/optimizedTicketActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
+import { getTicketingDisplaySettings } from '@product/actions/ticket-actions/ticketDisplaySettings';
 import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
 import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 

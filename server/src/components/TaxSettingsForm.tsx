@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getClientTaxSettings, updateClientTaxSettings, getTaxRates, createDefaultTaxSettings } from '../lib/actions/taxSettingsActions';
+import { getClientTaxSettings, updateClientTaxSettings, getTaxRates, createDefaultTaxSettings } from '@product/actions/taxSettingsActions';
 import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../interfaces/tax.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';

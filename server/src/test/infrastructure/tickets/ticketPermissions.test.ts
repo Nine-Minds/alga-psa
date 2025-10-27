@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import { ITicket } from '../../interfaces/ticket.interfaces';
-import * as ticketActions from '../../lib/actions/ticket-actions/ticketActions';
+import * as ticketActions from '@product/actions/ticket-actions/ticketActions';
 import { TestContext } from '../../../../test-utils/testContext';
 import {
   setupCommonMocks,

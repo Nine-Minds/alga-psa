@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { DynamicWorkflowComponent } from 'server/src/lib/workflow/visualization/WorkflowComponentLoader';
 
 export default function WorkflowsPage() {

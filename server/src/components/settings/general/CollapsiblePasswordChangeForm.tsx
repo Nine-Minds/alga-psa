@@ -6,7 +6,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
-import { changeOwnPassword } from 'server/src/lib/actions/user-actions/userActions';
+import { changeOwnPassword } from '@product/actions/user-actions/userActions';
 
 interface CollapsiblePasswordChangeFormProps {
   onSuccess?: () => void;

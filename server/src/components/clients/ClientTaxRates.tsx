@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { ITaxRate, IClientTaxRate } from 'server/src/interfaces/billing.interfaces';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+import { getActiveTaxRegions } from '@product/actions/taxSettingsActions';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import Drawer from 'server/src/components/ui/Drawer'; // Correct: Use default import

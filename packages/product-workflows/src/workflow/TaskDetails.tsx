@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTaskDetails, claimTask, unclaimTask } from '@server/lib/actions/workflow-actions/taskInboxActions';
+import { getTaskDetails, claimTask, unclaimTask } from '@product/actions/workflow-actions/taskInboxActions';
 import { TaskDetails as TaskDetailsType } from '@alga-psa/shared/workflow/persistence';
 import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence';
 import { Button } from '@server/components/ui/Button';

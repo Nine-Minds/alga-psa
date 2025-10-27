@@ -26,12 +26,12 @@ import {
   removeDocumentAssociations,
   updateDocument,
   uploadDocument
-} from 'server/src/lib/actions/document-actions/documentActions';
+} from '@product/actions/document-actions/documentActions';
 import {
   getBlockContent,
   updateBlockContent,
   createBlockDocument
-} from 'server/src/lib/actions/document-actions/documentBlockContentActions';
+} from '@product/actions/document-actions/documentBlockContentActions';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",

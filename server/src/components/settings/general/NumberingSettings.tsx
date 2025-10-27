@@ -7,9 +7,9 @@ import { Button } from 'server/src/components/ui/Button';
 import { toast } from 'react-hot-toast';
 import { Edit2 } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import type { EntityType } from 'server/src/lib/services/numberingService';
-import { getNumberSettings, updateNumberSettings, type NumberSettings } from 'server/src/lib/actions/number-actions/numberingActions';
+import { getNumberSettings, updateNumberSettings, type NumberSettings } from '@product/actions/number-actions/numberingActions';
 
 interface NumberingSettingsProps {
   entityType: EntityType;

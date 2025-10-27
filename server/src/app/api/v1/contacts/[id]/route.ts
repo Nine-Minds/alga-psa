@@ -5,8 +5,8 @@
  * DELETE /api/v1/contacts/{id} - Delete contact
  */
 
-import { ApiContactController } from 'server/src/lib/api/controllers/ApiContactController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiContactController } from '@product/api/controllers/ApiContactController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

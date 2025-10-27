@@ -24,7 +24,7 @@ import {
   getContractTemplates,
   getContractsWithClients,
   updateContract,
-} from 'server/src/lib/actions/contractActions';
+} from '@product/actions/contractActions';
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 

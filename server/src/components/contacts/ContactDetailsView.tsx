@@ -14,16 +14,16 @@ import ClientDetails from 'server/src/components/clients/ClientDetails';
 import InteractionsFeed from 'server/src/components/interactions/InteractionsFeed';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { TagManager } from 'server/src/components/tags';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
-import { updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getClientById } from '@product/actions/client-actions/clientActions';
+import { updateContact } from '@product/actions/contact-actions/contactActions';
 import Documents from 'server/src/components/documents/Documents';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
-import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
+import { getContactAvatarUrlAction } from '@product/actions/avatar-actions';
+import { getDocumentsByEntity } from '@product/actions/document-actions/documentActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 
 interface ContactDetailsViewProps {

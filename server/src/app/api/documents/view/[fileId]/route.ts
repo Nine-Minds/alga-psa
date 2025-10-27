@@ -3,7 +3,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
 import { FileStoreModel } from 'server/src/models/storage';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 
 export async function GET(
   request: NextRequest,

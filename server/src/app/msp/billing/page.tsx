@@ -1,6 +1,6 @@
 import React from 'react';
 import BillingDashboard from '../../../components/billing-dashboard/BillingDashboard';
-import { getServices } from '../../../lib/actions/serviceActions';
+import { getServices } from '@product/actions/serviceActions';
 
 const BillingPage = async () => {
   const servicesResponse = await getServices();

@@ -10,7 +10,7 @@ import { Switch } from '../../components/ui/Switch'; // Corrected path
 import { TextArea } from '../../components/ui/TextArea'; // Corrected component name casing
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/Card'; // Corrected path
 import AssemblyScriptEditor from './AssemblyScriptEditor';
-import { getInvoiceTemplate, compileAndSaveTemplate } from '../../lib/actions/invoiceTemplates'; // Corrected action path
+import { getInvoiceTemplate, compileAndSaveTemplate } from '@product/actions/invoiceTemplates'; // Corrected action path
 import { IInvoiceTemplate } from '../../interfaces'; // Keep assumed path
 import { Save, Play } from 'lucide-react';
 

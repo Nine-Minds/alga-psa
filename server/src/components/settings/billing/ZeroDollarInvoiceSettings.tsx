@@ -3,7 +3,7 @@ import CustomSelect from "server/src/components/ui/CustomSelect";
 import { Switch } from "server/src/components/ui/Switch";
 import { Label } from "server/src/components/ui/Label";
 import toast from 'react-hot-toast';
-import { getDefaultBillingSettings, updateDefaultBillingSettings, type BillingSettings } from "server/src/lib/actions/billingSettingsActions";
+import { getDefaultBillingSettings, updateDefaultBillingSettings, type BillingSettings } from "@product/actions/billingSettingsActions";
 
 const ZeroDollarInvoiceSettings = (): JSX.Element => {
   const [settings, setSettings] = React.useState<BillingSettings>({

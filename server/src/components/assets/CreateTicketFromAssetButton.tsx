@@ -7,10 +7,10 @@ import { Dialog } from 'server/src/components/ui/Dialog';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import { createTicketFromAsset } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { createTicketFromAsset } from '@product/actions/ticket-actions/ticketActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 

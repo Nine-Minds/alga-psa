@@ -3,7 +3,7 @@
  * POST /api/v1/financial/credits/validate - Validate credit balance
  */
 
-import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
+import { ApiFinancialController } from '@product/api/controllers/ApiFinancialController';
 
 export async function POST(request: Request) {
   const controller = new ApiFinancialController();

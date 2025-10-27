@@ -6,7 +6,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { ApiAutomationController } from 'server/src/lib/api/controllers/ApiAutomationController';
+import { ApiAutomationController } from '@product/api/controllers/ApiAutomationController';
 
 const controller = new ApiAutomationController();
 

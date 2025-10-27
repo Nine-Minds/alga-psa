@@ -4,12 +4,12 @@ import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getClientById } from '@product/actions/client-actions/clientActions';
 import ContactModel from 'server/src/lib/models/contact';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
 import { JobStatus } from 'server/src/types/job';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
+import { getInvoiceForRendering } from '@product/actions/invoiceQueries';
 
 export interface InvoiceEmailJobData extends Record<string, unknown> {
   jobServiceId: string;

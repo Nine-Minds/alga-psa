@@ -6,7 +6,7 @@ import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput'
 import { ServiceTaxSettings } from './ServiceTaxSettings';
 import { ServiceRateTiers } from './ServiceRateTiers';
 import { IService } from 'server/src/interfaces/billing.interfaces';
-import { getServiceById } from 'server/src/lib/actions/serviceActions';
+import { getServiceById } from '@product/actions/serviceActions';
 
 interface ServiceConfigurationPanelProps {
   serviceId: string;

@@ -14,10 +14,10 @@ import {
 import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from './TimeEntryDialog';
 import { AddWorkItemDialog } from './AddWorkItemDialog';
-import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, saveTimeEntry, submitTimeSheet, deleteWorkItem } from 'server/src/lib/actions/timeEntryActions';
-import { updateScheduleEntry } from 'server/src/lib/actions/scheduleActions';
+import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, saveTimeEntry, submitTimeSheet, deleteWorkItem } from '@product/actions/timeEntryActions';
+import { updateScheduleEntry } from '@product/actions/scheduleActions';
 import { toast } from 'react-hot-toast';
-import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from 'server/src/lib/actions/timeSheetActions';
+import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from '@product/actions/timeSheetActions';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { formatISO, parseISO } from 'date-fns';
 import { TimeSheetTable } from './TimeSheetTable';

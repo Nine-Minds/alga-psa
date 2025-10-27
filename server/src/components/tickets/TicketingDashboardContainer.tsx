@@ -3,14 +3,14 @@
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
-import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { loadMoreTickets } from '@product/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { IBoard } from 'server/src/interfaces';
-import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import { TicketingDisplaySettings } from '@product/actions/ticket-actions/ticketDisplaySettings';
 
 interface TicketingDashboardContainerProps {
   consolidatedData: {

@@ -4,7 +4,7 @@
  * POST /api/v1/financial/transactions - Create transaction
  */
 
-import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
+import { ApiFinancialController } from '@product/api/controllers/ApiFinancialController';
 
 export async function GET(request: Request) {
   const controller = new ApiFinancialController();

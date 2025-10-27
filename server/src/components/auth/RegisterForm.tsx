@@ -7,8 +7,8 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Eye, EyeOff } from 'lucide-react';
-import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
-import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
+import { verifyContactEmail } from '@product/actions/user-actions/userActions';
+import { initiateRegistration } from '@product/actions/user-actions/registrationActions';
 import { usePostHog } from 'posthog-js/react';
 
 export default function RegisterForm() {

@@ -25,10 +25,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
-import { getExternalEntityMappings, deleteExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
+import { getExternalEntityMappings, deleteExternalEntityMapping } from '@product/actions/externalMappingActions';
 // Use action from billingAndTax.ts
-import { getPaymentTermsList, IPaymentTermOption } from 'server/src/lib/actions/billingAndTax'; // Corrected import
-import { getQboTerms } from 'server/src/lib/actions/integrations/qboActions'; // TODO: Create this action
+import { getPaymentTermsList, IPaymentTermOption } from '@product/actions/billingAndTax'; // Corrected import
+import { getQboTerms } from '@product/actions/integrations/qboActions'; // TODO: Create this action
 import { QboMappingFormDialog } from './QboMappingFormDialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 

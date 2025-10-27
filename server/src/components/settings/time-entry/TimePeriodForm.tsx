@@ -7,7 +7,7 @@ import { Dialog } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
-import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
+import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '@product/actions/timePeriodsActions';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';

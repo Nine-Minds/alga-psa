@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { createTeam, deleteTeam } from 'server/src/lib/actions/team-actions/teamActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { createTeam, deleteTeam } from '@product/actions/team-actions/teamActions';
+import { getAllUsers } from '@product/actions/user-actions/userActions';
 import { ITeam, IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';

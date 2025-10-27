@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import ClientPortalSignIn from 'server/src/components/auth/ClientPortalSignIn';
 import { I18nWrapper } from 'server/src/components/i18n/I18nWrapper';
-import { getTenantBrandingByDomain, getTenantLocaleByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
+import { getTenantBrandingByDomain, getTenantLocaleByDomain } from '@product/actions/tenant-actions/getTenantBrandingByDomain';
 import { getSession } from 'server/src/lib/auth/getSession';
 
 export default async function ClientSignInPage({

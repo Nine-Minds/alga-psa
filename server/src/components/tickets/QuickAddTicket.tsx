@@ -5,12 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from 'server/src/components/ui/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { addTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getClientLocations } from 'server/src/lib/actions/client-actions/clientLocationActions';
-import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
-import { getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
+import { addTicket } from '@product/actions/ticket-actions/ticketActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
+import { getContactsByClient } from '@product/actions/contact-actions/contactActions';
+import { getClientLocations } from '@product/actions/client-actions/clientLocationActions';
+import { getTicketFormData } from '@product/actions/ticket-actions/ticketFormActions';
+import { getTicketCategoriesByBoard, BoardCategoryData } from '@product/actions/ticketCategoryActions';
 import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';

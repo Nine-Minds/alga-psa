@@ -6,7 +6,7 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import CreditExpirationBadge from 'server/src/components/ui/CreditExpirationBadge';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
-import { getCreditDetails } from 'server/src/lib/actions/creditActions';
+import { getCreditDetails } from '@product/actions/creditActions';
 
 interface CreditExpirationInfoProps {
   creditApplied: number;

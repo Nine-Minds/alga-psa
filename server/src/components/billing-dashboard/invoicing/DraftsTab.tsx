@@ -18,10 +18,10 @@ import {
 } from '../../ui/DropdownMenu';
 import { ColumnDefinition } from '../../../interfaces/dataTable.interfaces';
 import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from '../../../interfaces/invoice.interfaces';
-import { fetchAllInvoices } from '../../../lib/actions/invoiceQueries';
-import { getInvoiceTemplates } from '../../../lib/actions/invoiceTemplates';
-import { finalizeInvoice } from '../../../lib/actions/invoiceModification';
-import { downloadInvoicePDF } from '../../../lib/actions/invoiceGeneration';
+import { fetchAllInvoices } from '@product/actions/invoiceQueries';
+import { getInvoiceTemplates } from '@product/actions/invoiceTemplates';
+import { finalizeInvoice } from '@product/actions/invoiceModification';
+import { downloadInvoicePDF } from '@product/actions/invoiceGeneration';
 import { toPlainDate } from '../../../lib/utils/dateTimeUtils';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '../../ui/LoadingIndicator';

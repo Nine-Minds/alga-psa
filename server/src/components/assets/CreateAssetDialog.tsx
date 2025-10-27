@@ -8,8 +8,8 @@ import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset } from 'server/src/interfaces/asset.interfaces';
 import { IClient } from 'server/src/interfaces';
-import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { createAsset } from '@product/actions/asset-actions/assetActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 

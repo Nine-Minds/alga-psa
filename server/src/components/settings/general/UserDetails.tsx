@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from 'server/src/interfaces/auth.interfaces';
-import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from 'server/src/lib/actions/policyActions';
+import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser } from '@product/actions/user-actions/userActions';
+import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from '@product/actions/policyActions';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from 'server/src/components/ui/Input';
@@ -12,7 +12,7 @@ import { Card } from 'server/src/components/ui/Card';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
-import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import { getLicenseUsageAction } from '@product/actions/license-actions';
 import toast from 'react-hot-toast';
 
 interface UserDetailsProps {

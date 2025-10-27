@@ -1,8 +1,8 @@
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { Browser } from 'puppeteer';
 import { FileStore } from 'server/src/types/storage';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
-import { getInvoiceTemplates, getCompiledWasm } from 'server/src/lib/actions/invoiceTemplates';
+import { getInvoiceForRendering } from '@product/actions/invoiceQueries';
+import { getInvoiceTemplates, getCompiledWasm } from '@product/actions/invoiceTemplates';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
 import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
@@ -12,7 +12,7 @@ import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from 'serve
 import { DateValue } from '@alga-psa/shared/types';
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocument } from '@product/actions/document-actions/documentActions';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from 'server/src/lib/storage/StorageProviderFactory';

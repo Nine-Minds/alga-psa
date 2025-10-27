@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import type { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { Download, X, Mail } from 'lucide-react';
-import { getClientInvoiceById, getClientInvoiceLineItems, downloadClientInvoicePdf, sendClientInvoiceEmail } from 'server/src/lib/actions/client-portal-actions/client-billing';
+import { getClientInvoiceById, getClientInvoiceLineItems, downloadClientInvoicePdf, sendClientInvoiceEmail } from '@product/actions/client-portal-actions/client-billing';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { useTranslation } from '@/lib/i18n/client';
 

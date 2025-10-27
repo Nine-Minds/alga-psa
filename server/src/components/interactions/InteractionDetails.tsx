@@ -14,19 +14,19 @@ import { Button } from 'server/src/components/ui/Button';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { QuickAddInteraction } from './QuickAddInteraction';
 import { ITicket } from 'server/src/interfaces';
-import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getClientById, getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
-import { deleteInteraction } from 'server/src/lib/actions/interactionActions';
+import { getContactByContactNameId } from '@product/actions/contact-actions/contactActions';
+import { getClientById, getAllClients } from '@product/actions/client-actions/clientActions';
+import { findUserById } from '@product/actions/user-actions/userActions';
+import { deleteInteraction } from '@product/actions/interactionActions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import RichTextViewer from '../editor/RichTextViewer';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { toast } from 'react-hot-toast';
-import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
-import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentTimePeriod } from '@product/actions/timePeriodsActions';
+import { fetchOrCreateTimeSheet, saveTimeEntry } from '@product/actions/timeEntryActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;

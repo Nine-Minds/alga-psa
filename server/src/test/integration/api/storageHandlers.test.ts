@@ -14,7 +14,7 @@ import { GET as getRecordHandler, PUT as putRecordHandler, DELETE as deleteRecor
 import { GET as listRecordsHandler, POST as bulkPutHandler } from '../../../app/api/v1/storage/namespaces/[namespace]/records/route';
 import { StorageService } from '@/lib/storage/api/service';
 import * as storageFactory from '@/lib/storage/api/factory';
-import * as userActions from 'server/src/lib/actions/user-actions/userActions';
+import * as userActions from '@product/actions/user-actions/userActions';
 import * as rbac from 'server/src/lib/auth/rbac';
 
 if (typeof (globalThis as any).AsyncLocalStorage === 'undefined') {

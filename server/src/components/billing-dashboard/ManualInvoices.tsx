@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { updateInvoiceManualItems } from 'server/src/lib/actions/invoiceModification';
-import { getInvoiceLineItems } from 'server/src/lib/actions/invoiceQueries';
-import type { ManualInvoiceUpdate } from 'server/src/lib/actions/invoiceActions'; // Import the specific type
-import type { ManualInvoiceItem as ManualInvoiceItemForAction } from 'server/src/lib/actions/manualInvoiceActions'; // Import and alias
+import { generateManualInvoice } from '@product/actions/manualInvoiceActions';
+import { updateInvoiceManualItems } from '@product/actions/invoiceModification';
+import { getInvoiceLineItems } from '@product/actions/invoiceQueries';
+import type { ManualInvoiceUpdate } from '@product/actions/invoiceActions'; // Import the specific type
+import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@product/actions/manualInvoiceActions'; // Import and alias
 import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Card } from '../ui/Card';

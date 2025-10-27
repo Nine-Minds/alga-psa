@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
-import { updateService } from 'server/src/lib/actions/serviceActions';
+import { updateService } from '@product/actions/serviceActions';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 
 interface UnitOfMeasureInputProps {

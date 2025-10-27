@@ -14,7 +14,7 @@ import {
   getClientInvoiceById,
   downloadClientInvoicePdf,
   sendClientInvoiceEmail
-} from 'server/src/lib/actions/client-portal-actions/client-billing';
+} from '@product/actions/client-portal-actions/client-billing';
 import {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -21,7 +21,7 @@ vi.mock('next/headers', () => ({
   headers: headersMock,
 }));
 
-vi.mock('server/src/lib/actions/tenant-actions/getTenantBrandingByDomain', () => ({
+vi.mock('@product/actions/tenant-actions/getTenantBrandingByDomain', () => ({
   getTenantBrandingByDomain: getTenantBrandingByDomainMock,
   getTenantLocaleByDomain: getTenantLocaleByDomainMock,
 }));

@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { 
   getTicketingDisplaySettings, 
   updateTicketingDisplaySettings 
-} from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+} from '@product/actions/ticket-actions/ticketDisplaySettings';
 
 const DisplaySettings = (): JSX.Element => {
   // Ticket display preferences (tenant-wide)

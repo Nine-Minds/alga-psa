@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IUserWithRoles, IRole, IRoleWithPermissions, IPermission } from '../../interfaces/auth.interfaces';
 import { ITicket } from '../../interfaces/ticket.interfaces';
-import * as ticketActions from '../../lib/actions/ticket-actions/ticketActions';
+import * as ticketActions from '@product/actions/ticket-actions/ticketActions';
 import Ticket from '../../lib/models/ticket';
 
 // Mock the Ticket model methods

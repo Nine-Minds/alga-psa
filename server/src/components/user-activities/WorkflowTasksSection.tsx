@@ -3,7 +3,7 @@ import { WorkflowTaskActivity, ActivityType, ActivityFilters } from '../../inter
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { WorkflowTaskCard } from './ActivityCard';
-import { fetchDashboardWorkflowTasks } from '../../lib/actions/activity-actions/workflowTaskActions';
+import { fetchDashboardWorkflowTasks } from '@product/actions/activity-actions/workflowTaskActions';
 import { WorkflowTaskListDrawer } from './WorkflowTaskListDrawer';
 import { useDrawer } from '../../context/DrawerContext';
 import { WorkflowTasksSectionFiltersDialog } from './filters/WorkflowTasksSectionFiltersDialog';

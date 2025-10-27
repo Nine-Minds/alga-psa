@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { getSession } from "server/src/lib/auth/getSession";
-import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
+import { getTenantSettings } from "@product/actions/tenant-settings-actions/tenantSettingsActions";
 import { MspLayoutClient } from "./MspLayoutClient";
 
 export default async function MspLayout({

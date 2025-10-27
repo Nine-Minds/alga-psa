@@ -13,10 +13,10 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { ContractLineDialog } from './ContractLineDialog';
 import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
-import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
-import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from 'server/src/lib/actions/contractLineServiceActions';
+import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from '@product/actions/contractLineAction';
+import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from '@product/actions/contractLineServiceActions';
 // Import new action and type
-import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
+import { getServiceTypesForSelection } from '@product/actions/serviceActions';
 import { IContractLine, IContractLineService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { toast } from 'react-hot-toast';

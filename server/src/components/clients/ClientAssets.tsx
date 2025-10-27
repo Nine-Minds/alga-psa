@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ClientMaintenanceSummary, Asset } from 'server/src/interfaces/asset.interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Button } from 'server/src/components/ui/Button';
-import { getClientMaintenanceSummary, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getClientMaintenanceSummary, listAssets } from '@product/actions/asset-actions/assetActions';
 import {
   Boxes,
   AlertTriangle,

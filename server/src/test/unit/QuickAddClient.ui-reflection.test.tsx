@@ -8,11 +8,11 @@ import QuickAddClient from '../../components/clients/QuickAddClient';
 import { UIStateProvider } from '../../types/ui-reflection/UIStateContext';
 
 // Mock the external dependencies
-vi.mock('../../lib/actions/user-actions/userActions', () => ({
+vi.mock('@product/actions/user-actions/userActions', () => ({
   getAllUsers: vi.fn().mockResolvedValue([])
 }));
 
-vi.mock('../../lib/actions/clientActions', () => ({
+vi.mock('@product/actions/clientActions', () => ({
   createClient: vi.fn().mockResolvedValue({ client_id: 'test-id', client_name: 'Test Client' })
 }));
 

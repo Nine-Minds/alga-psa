@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { IWorkflowActionResult } from '@alga-psa/shared/workflow/persistence';
 import { Button } from '@server/components/ui/Button';
-import { retryWorkflowActionAction } from '@server/lib/actions/workflow-actions';
+import { retryWorkflowActionAction } from '@product/actions/workflow-actions';
 import { CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
 import LoadingIndicator from '@server/components/ui/LoadingIndicator';
 

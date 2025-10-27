@@ -8,7 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from '../ui/Button';
 import { RefreshCw, Filter, XCircleIcon } from 'lucide-react';
-import { fetchActivities } from 'server/src/lib/actions/activity-actions/activityServerActions';
+import { fetchActivities } from '@product/actions/activity-actions/activityServerActions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/ActivitiesTableFilters';
 import { useActivityDrawer } from './ActivityDrawerProvider';

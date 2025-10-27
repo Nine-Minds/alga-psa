@@ -13,13 +13,13 @@ import {
   updateContractLine,
   updateContractLineFixedConfig,
   getContractLineFixedConfig,
-} from 'server/src/lib/actions/contractLineAction';
+} from '@product/actions/contractLineAction';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { Package, Clock, Activity, Plus, X, DollarSign } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { IService } from 'server/src/interfaces';
-import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getServices } from '@product/actions/serviceActions';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 

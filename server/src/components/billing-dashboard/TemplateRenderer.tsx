@@ -7,7 +7,7 @@ import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types
 import type { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces'; // Keep this for template structure
 // Removed getCompiledWasm, executeWasmTemplate, renderLayout imports
 // Import the new server action
-import { renderTemplateOnServer } from 'server/src/lib/actions/invoiceTemplates';
+import { renderTemplateOnServer } from '@product/actions/invoiceTemplates';
 
 interface TemplateRendererProps {
   template: IInvoiceTemplate | null; // Allow null template

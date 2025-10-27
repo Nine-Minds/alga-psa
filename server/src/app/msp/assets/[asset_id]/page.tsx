@@ -1,7 +1,7 @@
-import { getAsset } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getAsset } from '@product/actions/asset-actions/assetActions';
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import AssetDetails from 'server/src/components/assets/AssetDetails';
 import { getConnection } from 'server/src/lib/db/db';
 import { getSession } from 'server/src/lib/auth/getSession';

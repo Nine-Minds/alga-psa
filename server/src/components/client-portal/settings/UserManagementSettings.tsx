@@ -20,9 +20,9 @@ import {
   getUserClientId, 
   deleteUser,
   getClientUsersForClient
-} from 'server/src/lib/actions/user-actions/userActions';
-import { createOrFindContactByEmail } from 'server/src/lib/actions/contact-actions/contactActions';
-import { createClientUser, getClientPortalRoles, getClientUserRoles } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+} from '@product/actions/user-actions/userActions';
+import { createOrFindContactByEmail } from '@product/actions/contact-actions/contactActions';
+import { createClientUser, getClientPortalRoles, getClientUserRoles } from '@product/actions/client-portal-actions/clientUserActions';
 import type { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
 import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";

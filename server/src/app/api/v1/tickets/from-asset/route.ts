@@ -3,7 +3,7 @@
  * POST /api/v1/tickets/from-asset - Create ticket from asset
  */
 
-import { ApiTicketController } from 'server/src/lib/api/controllers/ApiTicketController';
+import { ApiTicketController } from '@product/api/controllers/ApiTicketController';
 
 const controller = new ApiTicketController();
 

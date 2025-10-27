@@ -10,7 +10,7 @@ import { TextArea } from '@server/components/ui/TextArea';
 import { Switch } from '@server/components/ui/Switch';
 import { ArrowLeft, Save, BookTemplate, AlertTriangle, Tag } from 'lucide-react';
 import { Badge } from '@server/components/ui/Badge';
-import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from '@server/lib/actions/workflow-editor-actions';
+import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from '@product/actions/workflow-editor-actions';
 import WorkflowEditor from './WorkflowEditor';
 import WorkflowVersionsDialog from './WorkflowVersionsDialog';
 import TestWorkflowModal from './TestWorkflowModal';

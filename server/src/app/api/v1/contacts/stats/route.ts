@@ -3,7 +3,7 @@
  * GET /api/v1/contacts/stats - Get contact statistics
  */
 
-import { ApiContactController } from 'server/src/lib/api/controllers/ApiContactController';
+import { ApiContactController } from '@product/api/controllers/ApiContactController';
 
 const controller = new ApiContactController();
 

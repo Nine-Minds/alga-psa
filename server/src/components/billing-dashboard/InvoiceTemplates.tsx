@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
-import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate, deleteInvoiceTemplate } from 'server/src/lib/actions/invoiceTemplates'; // Added deleteInvoiceTemplate import
+import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate, deleteInvoiceTemplate } from '@product/actions/invoiceTemplates'; // Added deleteInvoiceTemplate import
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 // Removed InvoiceTemplateManager import
 import { FileTextIcon, PencilIcon, MoreVertical } from 'lucide-react'; // Added PencilIcon and MoreVertical imports

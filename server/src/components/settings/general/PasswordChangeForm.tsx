@@ -6,7 +6,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Eye, EyeOff } from 'lucide-react';
-import { changeOwnPassword, checkPasswordResetStatus } from 'server/src/lib/actions/user-actions/userActions';
+import { changeOwnPassword, checkPasswordResetStatus } from '@product/actions/user-actions/userActions';
 import { PasswordResetWarning } from 'server/src/components/ui/PasswordResetWarning';
 import { useTranslation } from 'server/src/lib/i18n/client';
 

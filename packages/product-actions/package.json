@@ -1,0 +1,14 @@
+{
+  "name": "@product/actions",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "build": "echo \"@product/actions: build handled by consumer (no compile step)\""
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

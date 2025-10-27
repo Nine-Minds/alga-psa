@@ -15,15 +15,15 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
-import { initiateEmailOAuth } from 'server/src/lib/actions/email-actions/oauthActions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@product/actions/email-actions/emailProviderActions';
+import { initiateEmailOAuth } from '@product/actions/email-actions/oauthActions';
 import { useOAuthPopup } from './providers/gmail/useOAuthPopup';
 import { BasicConfigCard } from './providers/gmail/BasicConfigCard';
 import { ProcessingSettingsCard } from './providers/gmail/ProcessingSettingsCard';
 import { OAuthSection } from './providers/gmail/OAuthSection';
 import { ceGmailProviderSchema } from './providers/gmail/schemas';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
+import { getInboundTicketDefaults } from '@product/actions/email-actions/inboundTicketDefaultsActions';
 
 type GmailProviderFormData = import('./providers/gmail/schemas').CEGmailProviderFormData;
 

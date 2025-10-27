@@ -4,7 +4,7 @@ import React from 'react';
 import Documents from 'server/src/components/documents/Documents';
 import { useEffect, useState } from 'react';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocumentsByEntity } from '@product/actions/document-actions/documentActions';
 
 interface AssetDocumentsProps {
     assetId: string;

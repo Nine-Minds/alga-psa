@@ -18,11 +18,11 @@ import {
   DialogFooter
 } from 'server/src/components/ui/Dialog';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { createClient } from 'server/src/lib/actions/client-actions/clientActions';
-import { createClientLocation } from 'server/src/lib/actions/client-actions/clientLocationActions';
-import { createClientContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
+import { getAllUsers } from '@product/actions/user-actions/userActions';
+import { createClient } from '@product/actions/client-actions/clientActions';
+import { createClientLocation } from '@product/actions/client-actions/clientLocationActions';
+import { createClientContact } from '@product/actions/contact-actions/contactActions';
+import { getAllCountries, ICountry } from '@product/actions/client-actions/countryActions';
 import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { createRole, updateRole, deleteRole, getRoles } from 'server/src/lib/actions/policyActions';
+import { createRole, updateRole, deleteRole, getRoles } from '@product/actions/policyActions';
 import { IRole } from 'server/src/interfaces/auth.interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';

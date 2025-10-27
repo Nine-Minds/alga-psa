@@ -8,7 +8,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { createApiKey, deactivateApiKey, listApiKeys } from 'server/src/lib/actions/apiKeyActions';
+import { createApiKey, deactivateApiKey, listApiKeys } from '@product/actions/apiKeyActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 

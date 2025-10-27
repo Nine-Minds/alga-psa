@@ -10,10 +10,10 @@ import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { usePathname } from 'next/navigation';
 import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
+import { getUserAvatarUrlAction } from '@product/actions/avatar-actions';
 import { useRouter } from 'next/navigation';
-import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
+import { checkAccountManagementPermission } from '@product/actions/permission-actions';
 
 interface HeaderProps {
   sidebarOpen: boolean;

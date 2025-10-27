@@ -25,7 +25,7 @@ import {
   getWorkflow,
   updateWorkflowStatus,
   WorkflowDataWithSystemFlag // Import the type
-} from 'server/src/lib/actions/workflow-editor-actions';
+} from '@product/actions/workflow-editor-actions';
 import { toast } from 'react-hot-toast';
 import WorkflowEditorComponent from '@product/workflows/workflow-editor/WorkflowEditorComponent';
 import TestWorkflowModal from '@product/workflows/workflow-editor/TestWorkflowModal';

@@ -6,8 +6,8 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';import { Dialog
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, confirmDeleteTaxRate, DeleteTaxRateResult } from 'server/src/lib/actions/taxRateActions';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, confirmDeleteTaxRate, DeleteTaxRateResult } from '@product/actions/taxRateActions';
+import { getActiveTaxRegions } from '@product/actions/taxSettingsActions';
 import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';

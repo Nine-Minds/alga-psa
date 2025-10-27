@@ -38,7 +38,7 @@ import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
-// Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+// Removed import: import { getCurrentUser } from '@product/actions/user-actions/userActions';
 
 // Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {

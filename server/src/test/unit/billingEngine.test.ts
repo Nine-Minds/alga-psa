@@ -31,7 +31,7 @@ vi.mock('jose', () => ({
   // Add any jose methods you're using
 }));
 
-vi.mock('server/src/lib/actions/client-actions/clientActions', () => ({
+vi.mock('@product/actions/client-actions/clientActions', () => ({
   getClientById: vi.fn(() => Promise.resolve({
     client_id: 'mock-client-id',
     client_name: 'Mock Client',

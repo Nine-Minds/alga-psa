@@ -6,7 +6,7 @@ import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomati
 import { Card } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Asset, AssetListResponse, ClientMaintenanceSummary } from 'server/src/interfaces/asset.interfaces';
-import { getClientMaintenanceSummary, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getClientMaintenanceSummary, listAssets } from '@product/actions/asset-actions/assetActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

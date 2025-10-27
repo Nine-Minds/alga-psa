@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions } from 'server/src/lib/actions/tagActions';
+import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions } from '@product/actions/tagActions';
 import { TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
 
 interface TagPermissions {

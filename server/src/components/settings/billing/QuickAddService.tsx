@@ -8,12 +8,12 @@ import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServiceTypeSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
-import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions'
+import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '@product/actions/serviceActions'
 // Import getTaxRates and ITaxRate instead
-import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Removed getActiveTaxRegions
+import { getTaxRates } from '@product/actions/taxSettingsActions'; // Removed getActiveTaxRegions
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITaxRegion
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
-import { getServiceCategories } from 'server/src/lib/actions/categoryActions'
+import { getServiceCategories } from '@product/actions/categoryActions'
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces' // Added IServiceType
 import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput'
 import { useTenant } from 'server/src/components/TenantProvider'

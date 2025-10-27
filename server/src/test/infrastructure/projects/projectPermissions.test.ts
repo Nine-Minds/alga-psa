@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import { IProject } from '../../interfaces/project.interfaces';
-import * as projectActions from '../../lib/actions/project-actions/projectActions';
-import * as userActions from '../../lib/actions/user-actions/userActions';
+import * as projectActions from '@product/actions/project-actions/projectActions';
+import * as userActions from '@product/actions/user-actions/userActions';
 import { TestContext } from '../../../../test-utils/testContext';
 import {
   setupCommonMocks,

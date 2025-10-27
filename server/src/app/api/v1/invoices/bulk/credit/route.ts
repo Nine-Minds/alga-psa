@@ -3,8 +3,8 @@
  * POST /api/v1/invoices/bulk/credit - Bulk apply credit to invoices
  */
 
-import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiInvoiceController } from '@product/api/controllers/ApiInvoiceController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 export async function POST(request: Request) {
   try {

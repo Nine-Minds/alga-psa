@@ -21,13 +21,13 @@ import {
     updatePhase,
     deletePhase,
     deleteProject
-} from 'server/src/lib/actions/project-actions/projectActions';
+} from '@product/actions/project-actions/projectActions';
 import {
     addTaskToPhase,
     updateTaskWithChecklist,
     moveTaskToPhase,
     deleteTask
-} from 'server/src/lib/actions/project-actions/projectTaskActions';
+} from '@product/actions/project-actions/projectTaskActions';
 import { IProject, IProjectPhase, IProjectTask } from 'server/src/interfaces/project.interfaces';
 import ProjectModel from 'server/src/lib/models/project';
 import ProjectTaskModel from 'server/src/lib/models/projectTask';

@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { getContractLineById } from 'server/src/lib/actions/contractLineAction';
+import { getContractLineById } from '@product/actions/contractLineAction';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 
 // Import the specialized components

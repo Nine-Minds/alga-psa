@@ -12,7 +12,7 @@ import {
   downgradeService,
   type Service,
   type ServicePlan
-} from "server/src/lib/actions/account";
+} from "@product/actions/account";
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 export default function ServicesSection() {

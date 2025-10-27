@@ -14,7 +14,7 @@ import {
   updateClientTicketComment,
   deleteClientTicketComment,
   updateTicketStatus
-} from 'server/src/lib/actions/client-portal-actions/client-tickets';
+} from '@product/actions/client-portal-actions/client-tickets';
 import { formatDistanceToNow } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
@@ -23,8 +23,8 @@ import { IDocument } from 'server/src/interfaces/document.interface';
 import TicketConversation from 'server/src/components/tickets/ticket/TicketConversation';
 import { DEFAULT_BLOCK } from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
+import { getTicketStatuses } from '@product/actions/status-actions/statusActions';
 import { IStatus } from 'server/src/interfaces/status.interface';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';

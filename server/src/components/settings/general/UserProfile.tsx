@@ -8,14 +8,14 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
-import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, updateUser } from '@product/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction
-} from 'server/src/lib/actions/notification-actions/notificationActions';
+} from '@product/actions/notification-actions/notificationActions';
 import PasswordChangeForm from './PasswordChangeForm';
 import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';

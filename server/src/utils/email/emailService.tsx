@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';

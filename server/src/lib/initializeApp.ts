@@ -15,7 +15,7 @@ import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHan
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
 import { getConnection } from 'server/src/lib/db/db';
-import { createNextTimePeriod } from './actions/timePeriodsActions';
+import { createNextTimePeriod } from '@product/actions/timePeriodsActions';
 import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';

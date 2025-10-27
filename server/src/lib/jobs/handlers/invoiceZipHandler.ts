@@ -1,7 +1,7 @@
 import { JobService, JobStepResult } from 'server/src/services/job.service';
-import { getTenantDetails } from 'server/src/lib/actions/tenantActions';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
-import { uploadDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { getTenantDetails } from '@product/actions/tenantActions';
+import { getInvoiceForRendering } from '@product/actions/invoiceQueries';
+import { uploadDocument } from '@product/actions/document-actions/documentActions';
 import type { TenantCompany } from 'server/src/lib/types';
 /// <reference types="formdata-node" />
 // @ts-ignore - Types exist but aren't properly exposed in package.json

@@ -3,8 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Table } from 'server/src/components/ui/Table';
-import { getClientClient } from 'server/src/lib/actions/client-portal-actions/client-client';
-import { getClientContractLine, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
+import { getClientClient } from '@product/actions/client-portal-actions/client-client';
+import { getClientContractLine, getClientInvoices } from '@product/actions/client-portal-actions/client-billing';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 import type { IClient } from 'server/src/interfaces/client.interfaces';

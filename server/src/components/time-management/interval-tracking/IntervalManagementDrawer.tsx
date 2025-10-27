@@ -13,7 +13,7 @@ import { ITimeEntry, ITimePeriodView, TimeSheetStatus } from '../../../interface
 import TimeEntryDialog from '../../time-management/time-entry/time-sheet/TimeEntryDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/Tabs';
 import { Tooltip } from '../../ui/Tooltip';
-import { getCurrentTimePeriod } from '../../../lib/actions/timePeriodsActions';
+import { getCurrentTimePeriod } from '@product/actions/timePeriodsActions';
 
 interface IntervalManagementDrawerProps {
   isOpen: boolean;
@@ -58,7 +58,7 @@ export function IntervalManagementDrawer({
         
         // For time entries, we need a time sheet ID, not just a period ID
         // This action will fetch an existing time sheet or create one if it doesn't exist
-        const { fetchOrCreateTimeSheet } = await import('../../../lib/actions/timeEntryActions');
+        const { fetchOrCreateTimeSheet } = await import('@product/actions/timeEntryActions');
         if (fetchOrCreateTimeSheet && userId && period.period_id) {
           try {
             const timeSheet = await fetchOrCreateTimeSheet(userId, period.period_id);

@@ -3,8 +3,8 @@
  * GET /api/v1/schedules/search - Search schedule entries
  */
 
-import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTimeSheetController } from '@product/api/controllers/ApiTimeSheetController';
+import { handleApiError } from '@product/api/middleware/apiMiddleware';
 
 const controller = new ApiTimeSheetController();
 

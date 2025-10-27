@@ -28,16 +28,16 @@ import {
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getNextBillingDate } from 'server/src/lib/actions/billingAndTax'; // Removed getClientTaxRate
+import { getNextBillingDate } from '@product/actions/billingAndTax'; // Removed getClientTaxRate
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
-import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getClientById } from '@product/actions/client-actions/clientActions';
 import { IClient } from 'server/src/interfaces';
 import { get } from 'http';
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import { calculateAndDistributeTax, updateInvoiceTotalsAndRecordTransaction, getClientDetails } from 'server/src/lib/services/invoiceService';
 import { v4 as uuidv4 } from 'uuid';
-import { getClientDefaultTaxRegionCode } from 'server/src/lib/actions/client-actions/clientTaxRateActions'; // Import the correct lookup function
+import { getClientDefaultTaxRegionCode } from '@product/actions/client-actions/clientTaxRateActions'; // Import the correct lookup function
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig'; // Added import for new model
 import { string, number } from 'zod';
 import contractLine from '../models/contractLine';

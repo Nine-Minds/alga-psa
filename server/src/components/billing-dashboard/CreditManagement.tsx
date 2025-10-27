@@ -11,7 +11,7 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
-import { listClientCredits, getCreditDetails } from 'server/src/lib/actions/creditActions';
+import { listClientCredits, getCreditDetails } from '@product/actions/creditActions';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import {
   BarChart,

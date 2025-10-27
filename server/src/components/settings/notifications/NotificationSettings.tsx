@@ -6,7 +6,7 @@ import { Switch } from "server/src/components/ui/Switch";
 import { Input } from "server/src/components/ui/Input";
 import { Label } from "server/src/components/ui/Label";
 import { Button } from "server/src/components/ui/Button";
-import { getNotificationSettingsAction, updateNotificationSettingsAction } from "server/src/lib/actions/notification-actions/notificationActions";
+import { getNotificationSettingsAction, updateNotificationSettingsAction } from "@product/actions/notification-actions/notificationActions";
 import { NotificationSettings as NotificationSettingsType } from "server/src/lib/models/notification";
 import { getCurrentTenant } from "server/src/lib/tenant-client";
 

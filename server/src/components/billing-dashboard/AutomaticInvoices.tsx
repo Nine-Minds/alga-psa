@@ -14,10 +14,10 @@ import { IClientContractLineCycle } from '../../interfaces/billing.interfaces';
 // Import PreviewInvoiceResponse (which uses the correct VM internally)
 import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
 // Import the InvoiceViewModel directly from the renderer types
-import { generateInvoice, previewInvoice } from '../../lib/actions/invoiceGeneration';
+import { generateInvoice, previewInvoice } from '@product/actions/invoiceGeneration';
 // Updated import for billing cycle actions
 import { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
-import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
+import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '@product/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
 import { formatCurrency } from '../../lib/utils/formatters';

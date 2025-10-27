@@ -10,12 +10,12 @@ import { GmailProviderForm } from '../../../components/GmailProviderForm';
 import { renderWithProviders } from '../../utils/testWrapper';
 
 // Mock server actions
-vi.mock('../../../lib/actions/email-actions/emailProviderActions', () => ({
+vi.mock('@product/actions/email-actions/emailProviderActions', () => ({
   autoWireEmailProvider: vi.fn(),
   updateEmailProvider: vi.fn(),
 }));
 
-import * as emailProviderActions from '../../../lib/actions/email-actions/emailProviderActions';
+import * as emailProviderActions from '@product/actions/email-actions/emailProviderActions';
 
 describe('GmailProviderForm', () => {
   const mockOnSuccess = vi.fn();

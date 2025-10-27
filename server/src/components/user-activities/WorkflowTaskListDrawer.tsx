@@ -5,7 +5,7 @@ import {
   ActivityFilters,
   Activity
 } from '../../interfaces/activity.interfaces';
-import { fetchWorkflowTaskActivities } from '../../lib/actions/activity-actions/activityServerActions';
+import { fetchWorkflowTaskActivities } from '@product/actions/activity-actions/activityServerActions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { ActivitiesTableFilters } from './filters/ActivitiesTableFilters';
 import { Button } from '../ui/Button';

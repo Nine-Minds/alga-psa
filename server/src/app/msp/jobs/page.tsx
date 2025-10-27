@@ -1,5 +1,5 @@
-import { getQueueMetricsAction, getJobDetailsWithHistory } from 'server/src/lib/actions/job-actions';
-import { getWorkflowMetricsAction, getWorkflowExecutionsWithDetails } from 'server/src/lib/actions/workflow-actions';
+import { getQueueMetricsAction, getJobDetailsWithHistory } from '@product/actions/job-actions';
+import { getWorkflowMetricsAction, getWorkflowExecutionsWithDetails } from '@product/actions/workflow-actions';
 import WorkflowRegistryViewer from '@product/workflows/workflows/WorkflowRegistryViewer';
 import JobMetricsDisplay from 'server/src/components/jobs/JobMetricsDisplay';
 import JobHistoryTable from 'server/src/components/jobs/JobHistoryTable';

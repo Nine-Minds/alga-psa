@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getUserPreference, setUserPreference } from '@product/actions/user-actions/userActions';
 import { useToast } from 'server/src/hooks/use-toast';
 
 interface UseUserPreferenceOptions<T> {

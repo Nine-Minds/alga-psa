@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import TeamList from './TeamList';
 import TeamDetails from './TeamDetails';
-import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
+import { getTeams } from '@product/actions/team-actions/teamActions';
 import { ITeam } from 'server/src/interfaces/auth.interfaces';
 
 const TeamManagement: React.FC = () => {

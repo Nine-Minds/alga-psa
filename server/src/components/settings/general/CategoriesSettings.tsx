@@ -9,10 +9,10 @@ import {
   createCategory,
   updateCategory,
   deleteCategory
-} from 'server/src/lib/actions/ticketCategoryActions';
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
+} from '@product/actions/ticketCategoryActions';
+import { getAllBoards } from '@product/actions/board-actions/boardActions';
 import { IBoard } from 'server/src/interfaces/board.interface';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@product/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';

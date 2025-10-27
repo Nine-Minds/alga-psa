@@ -8,15 +8,15 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import Spinner from 'server/src/components/ui/Spinner';
 import { IWorkItem, IExtendedWorkItem, WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
-import { searchPickerWorkItems, createWorkItem } from 'server/src/lib/actions/workItemActions';
+import { searchPickerWorkItems, createWorkItem } from '@product/actions/workItemActions';
 import { Button } from 'server/src/components/ui/Button';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { getAllUsers, getCurrentUser } from '@product/actions/user-actions/userActions';
+import { getAllClients } from '@product/actions/client-actions/clientActions';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 

@@ -7,7 +7,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { toast } from 'react-hot-toast';
-import { addProjectPhase } from 'server/src/lib/actions/project-actions/projectActions';
+import { addProjectPhase } from '@product/actions/project-actions/projectActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface PhaseQuickAddProps {

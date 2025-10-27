@@ -25,7 +25,7 @@ import {
   BucketUsage,
   Profitability,
   ContractReportSummary
-} from 'server/src/lib/actions/contractReportActions';
+} from '@product/actions/contractReportActions';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 const ContractReports: React.FC = () => {

@@ -10,9 +10,9 @@ import {
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable as ensureClientContractsTable
 } from '../../../../../test-utils/billingTestHelpers';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { generateInvoice } from '@product/actions/invoiceGeneration';
+import { generateManualInvoice } from '@product/actions/manualInvoiceActions';
+import { finalizeInvoice } from '@product/actions/invoiceModification';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';

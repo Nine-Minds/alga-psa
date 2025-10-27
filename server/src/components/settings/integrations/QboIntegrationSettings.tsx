@@ -6,7 +6,7 @@ import { Button } from '../../ui/Button'; // Use relative path
 import { Alert, AlertDescription } from '../../ui/Alert'; // Use relative path (Removed AlertTitle)
 import { CheckCircle, XCircle, AlertCircle, Link, Unlink } from 'lucide-react'; // Icons
 import LoadingIndicator from '../../ui/LoadingIndicator'; // Use relative path
-import { getQboConnectionStatus, disconnectQbo, QboConnectionStatus } from '../../../lib/actions/integrations/qboActions'; // Use relative path
+import { getQboConnectionStatus, disconnectQbo, QboConnectionStatus } from '@product/actions/integrations/qboActions'; // Use relative path
 import QboDisconnectConfirmModal from './QboDisconnectConfirmModal'; // Import confirmation modal (will be created next)
 import { QboMappingManager } from '../../integrations/qbo/QboMappingManager'; // Import the mapping manager
 

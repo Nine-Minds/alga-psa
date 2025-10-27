@@ -5,12 +5,12 @@ import UserDetails from './UserDetails';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import UserAvatar from '../../ui/UserAvatar';
-import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getUserAvatarUrlAction } from '@product/actions/avatar-actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 
-import { getUsersClientInfo } from 'server/src/lib/actions/user-actions/userClientActions';
+import { getUsersClientInfo } from '@product/actions/user-actions/userClientActions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,7 +127,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
   const handleClientClick = async (clientId: string) => {
     if (clientId) {
       // Fetch the client data first
-      const { getClientById } = await import('server/src/lib/actions/client-actions/clientActions');
+      const { getClientById } = await import('@product/actions/client-actions/clientActions');
       const client = await getClientById(clientId);
       if (client) {
         openDrawer(

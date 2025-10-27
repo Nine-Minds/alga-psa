@@ -5,7 +5,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Card } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { adminListApiKeys, adminDeactivateApiKey } from 'server/src/lib/actions/apiKeyActions';
+import { adminListApiKeys, adminDeactivateApiKey } from '@product/actions/apiKeyActions';
 
 export interface AdminApiKey {
   api_key_id: string;

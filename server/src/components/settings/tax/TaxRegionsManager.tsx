@@ -34,7 +34,7 @@ import {
   getTaxRegions,
   createTaxRegion,
   updateTaxRegion,
-} from 'server/src/lib/actions/taxSettingsActions';
+} from '@product/actions/taxSettingsActions';
 
 // Zod schema for form validation
 const taxRegionSchema = z.object({

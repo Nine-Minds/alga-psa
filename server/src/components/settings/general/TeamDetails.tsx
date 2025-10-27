@@ -1,11 +1,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { getTeamById, updateTeam, removeUserFromTeam, assignManagerToTeam, addUserToTeam } from 'server/src/lib/actions/team-actions/teamActions';
-import { getAllUsers, getMultipleUsersWithRoles } from 'server/src/lib/actions/user-actions/userActions';
+import { getTeamById, updateTeam, removeUserFromTeam, assignManagerToTeam, addUserToTeam } from '@product/actions/team-actions/teamActions';
+import { getAllUsers, getMultipleUsersWithRoles } from '@product/actions/user-actions/userActions';
 import { ITeam, IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import UserAvatar from '../../ui/UserAvatar';
-import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { getUserAvatarUrlAction } from '@product/actions/avatar-actions';
 import { Input } from 'server/src/components/ui/Input';
 
 interface TeamDetailsProps {

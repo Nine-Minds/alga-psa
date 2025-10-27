@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@product/actions/user-actions/userActions';
 import { 
   addTicketLinkAction,
   deleteTaskTicketLinkAction,
   getTaskTicketLinksAction
-} from 'server/src/lib/actions/project-actions/projectTaskActions';
-import { getTicketsForList } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+} from '@product/actions/project-actions/projectTaskActions';
+import { getTicketsForList } from '@product/actions/ticket-actions/ticketActions';
+import { getConsolidatedTicketData } from '@product/actions/ticket-actions/optimizedTicketActions';
 import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
@@ -25,10 +25,10 @@ import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
 import { IBoard } from 'server/src/interfaces';
-import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
-import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getTicketCategories } from '@product/actions/ticketCategoryActions';
+import { getAllBoards } from '@product/actions/board-actions/boardActions';
+import { getTicketStatuses } from '@product/actions/status-actions/statusActions';
+import { getAllPriorities } from '@product/actions/priorityActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import TicketSelect from './TicketSelect';
 

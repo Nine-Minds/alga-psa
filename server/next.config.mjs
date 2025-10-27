@@ -193,6 +193,23 @@ const nextConfig = {
         ? '@product/workflows/ee/entry'
         : '@product/workflows/oss/entry',
       '@product/workflows': '../packages/product-workflows/src',
+      // More specific @product/actions aliases MUST come before the general one
+      '@product/actions/extensionActions': '../ee/server/src/lib/actions/extensionActions.ts',
+      '@product/actions/extensionDomainActions': '../ee/server/src/lib/actions/extensionDomainActions.ts',
+      '@product/actions/extRegistryV2Actions': '../ee/server/src/lib/actions/extRegistryV2Actions.ts',
+      '@product/actions/extBundleActions': '../ee/server/src/lib/actions/extBundleActions.ts',
+      '@product/actions/extMenuActions': '../ee/server/src/lib/actions/extMenuActions.ts',
+      '@product/actions/installDomainActions': '../ee/server/src/lib/actions/installDomainActions.ts',
+      '@product/actions': '../packages/product-actions/src',
+      '@product/actions/': '../packages/product-actions/src/',
+      '@product/api': '../packages/product-api/src',
+      '@product/api/': '../packages/product-api/src/',
+      '@/lib/actions': '../packages/product-actions/src',
+      '@/lib/api': '../packages/product-api/src',
+      'server/src/lib/actions': '../packages/product-actions/src',
+      'server/src/lib/actions/': '../packages/product-actions/src/',
+      'server/src/lib/api': '../packages/product-api/src',
+      'server/src/lib/api/': '../packages/product-api/src/',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -315,6 +332,23 @@ const nextConfig = {
           ? path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
         '@product/workflows': path.join(__dirname, '../packages/product-workflows/src'),
+        // More specific @product/actions aliases MUST come before the general one
+        '@product/actions/extensionActions': path.join(__dirname, '../ee/server/src/lib/actions/extensionActions.ts'),
+        '@product/actions/extensionDomainActions': path.join(__dirname, '../ee/server/src/lib/actions/extensionDomainActions.ts'),
+        '@product/actions/extRegistryV2Actions': path.join(__dirname, '../ee/server/src/lib/actions/extRegistryV2Actions.ts'),
+        '@product/actions/extBundleActions': path.join(__dirname, '../ee/server/src/lib/actions/extBundleActions.ts'),
+        '@product/actions/extMenuActions': path.join(__dirname, '../ee/server/src/lib/actions/extMenuActions.ts'),
+        '@product/actions/installDomainActions': path.join(__dirname, '../ee/server/src/lib/actions/installDomainActions.ts'),
+        '@product/actions': path.join(__dirname, '../packages/product-actions/src'),
+        '@product/actions/': path.join(__dirname, '../packages/product-actions/src/'),
+        '@product/api': path.join(__dirname, '../packages/product-api/src'),
+        '@product/api/': path.join(__dirname, '../packages/product-api/src/'),
+        '@/lib/actions': path.join(__dirname, '../packages/product-actions/src'),
+        '@/lib/api': path.join(__dirname, '../packages/product-api/src'),
+        'server/src/lib/actions': path.join(__dirname, '../packages/product-actions/src'),
+        'server/src/lib/actions/': path.join(__dirname, '../packages/product-actions/src/'),
+        'server/src/lib/api': path.join(__dirname, '../packages/product-api/src'),
+        'server/src/lib/api/': path.join(__dirname, '../packages/product-api/src/'),
         '@product/workflows/entry': isEE
           ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
           : path.join(__dirname, '../packages/product-workflows/oss/entry.ts'),
@@ -457,7 +491,8 @@ const nextConfig = {
       'mysql2',
       'sqlite3',
       'better-sqlite3',
-      'tedious'
+      'tedious',
+      'sharp' // Exclude sharp - optional image processing library with native bindings
     ];
 
     // Externalize ts-morph for both client and server to prevent bundling issues
