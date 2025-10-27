@@ -97,12 +97,7 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
            queryBuilder.whereNotNull('se_ticket.entry_id');
          }
 
-         if (options.assignedToMe && options.assignedTo) {
-           queryBuilder.where(function() {
-             this.where('t.assigned_to', options.assignedTo)
-                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
-           });
-         } else if (options.assignedTo) {
+         if (options.assignedTo) {
            queryBuilder.where(function() {
              this.where('t.assigned_to', options.assignedTo)
                  .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
@@ -147,7 +142,7 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('t.closed_at::timestamp with time zone as due_date'),
-         db.raw("COALESCE(u_assignee.first_name || ' ' || u_assignee.last_name, '') as assigned_to_name"),
+         db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
          db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids'
        );
@@ -319,12 +314,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
            queryBuilder.where('t.status_id', statusFilter);
          }
 
-         if (options.assignedToMe && options.assignedTo) {
-           queryBuilder.where(function() {
-             this.where('t.assigned_to', options.assignedTo)
-                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
-           });
-         } else if (options.assignedTo) {
+         if (options.assignedTo) {
            queryBuilder.where(function() {
              this.where('t.assigned_to', options.assignedTo)
                  .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
@@ -369,7 +359,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('t.closed_at::timestamp with time zone as due_date'),
-         db.raw("COALESCE(u_assignee.first_name || ' ' || u_assignee.last_name, '') as assigned_to_name"),
+         db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
          db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids'
        );
@@ -452,12 +442,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           queryBuilder.where('p.is_inactive', false);
         }
 
-         if (options.assignedToMe && options.assignedTo) {
-           queryBuilder.where(function() {
-             this.where('pt.assigned_to', options.assignedTo)
-                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
-           });
-         } else if (options.assignedTo) {
+         if (options.assignedTo) {
            queryBuilder.where(function() {
              this.where('pt.assigned_to', options.assignedTo)
                  .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
@@ -502,7 +487,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('pt.due_date::timestamp with time zone as due_date'),
-         db.raw("COALESCE(u_assignee.first_name || ' ' || u_assignee.last_name, '') as assigned_to_name"),
+         db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
          db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids'
        );
@@ -519,8 +504,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           db('schedule_entry_assignees')
             .where('tenant', tenant)
             .select('entry_id')
-            .select(db.raw('array_agg(distinct user_id) as assigned_user_ids'))
-            .select(db.raw('(array_agg(distinct user_id))[1] as first_assigned_user_id'))
+            .select(db.raw('array_agg(distinct user_id ORDER BY user_id) as assigned_user_ids'))
+            .select(db.raw('(array_agg(distinct user_id ORDER BY user_id))[1] as first_assigned_user_id'))
             .groupBy('entry_id', 'tenant')
             .as('sea'),
           function() {
@@ -534,9 +519,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         })
         .distinctOn('se.entry_id')
         .modify((queryBuilder) => {
-          if (options.assignedToMe && options.assignedTo) {
-            queryBuilder.whereRaw('? = ANY(sea.assigned_user_ids)', [options.assignedTo]);
-          } else if (options.assignedTo) {
+          if (options.assignedTo) {
             queryBuilder.whereRaw('? = ANY(sea.assigned_user_ids)', [options.assignedTo]);
           }
 
@@ -569,7 +552,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           'se.scheduled_start',
           'se.scheduled_end',
           db.raw('NULL::timestamp with time zone as due_date'),
-          db.raw("COALESCE(u_adhoc_assignee.first_name || ' ' || u_adhoc_assignee.last_name, '') as assigned_to_name"),
+          db.raw("u_adhoc_assignee.first_name || ' ' || u_adhoc_assignee.last_name as assigned_to_name"),
           'sea.assigned_user_ids as assigned_user_ids',
           db.raw('NULL::uuid[] as additional_user_ids')
         );
@@ -609,15 +592,13 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           db.raw('NULL::timestamp with time zone as scheduled_start'),
           db.raw('NULL::timestamp with time zone as scheduled_end'),
           db.raw('NULL::timestamp with time zone as due_date'),
-          db.raw("COALESCE(u_interaction_assignee.first_name || ' ' || u_interaction_assignee.last_name, '') as assigned_to_name"),
+          db.raw("u_interaction_assignee.first_name || ' ' || u_interaction_assignee.last_name as assigned_to_name"),
           db.raw('ARRAY[i.user_id] as assigned_user_ids'),
           db.raw('ARRAY[]::uuid[] as additional_user_ids')
         );
 
       // Apply filters
-      if (options.assignedToMe && options.assignedTo) {
-        interactionsQuery.where('i.user_id', options.assignedTo);
-      } else if (options.assignedTo) {
+      if (options.assignedTo) {
         interactionsQuery.where('i.user_id', options.assignedTo);
       }
 
@@ -706,14 +687,6 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
 
     // Format results
     const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => {
-      if (item.type === 'project_task') {
-        console.log('DEBUG project_task item:', {
-          work_item_id: item.work_item_id,
-          name: item.name,
-          assigned_to_name: item.assigned_to_name,
-          client_name: item.client_name
-        });
-      }
 
       const result: Omit<IExtendedWorkItem, "tenant"> = {
         work_item_id: item.work_item_id,
