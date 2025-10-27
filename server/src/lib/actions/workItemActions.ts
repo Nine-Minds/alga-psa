@@ -147,7 +147,7 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('t.closed_at::timestamp with time zone as due_date'),
-         db.raw("(u_assignee.first_name || ' ' || u_assignee.last_name) as assigned_to_name"),
+         db.raw("COALESCE(u_assignee.first_name || ' ' || u_assignee.last_name, '') as assigned_to_name"),
          db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids'
        );
@@ -369,7 +369,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('t.closed_at::timestamp with time zone as due_date'),
-         db.raw("(u_assignee.first_name || ' ' || u_assignee.last_name) as assigned_to_name"),
+         db.raw("COALESCE(u_assignee.first_name || ' ' || u_assignee.last_name, '') as assigned_to_name"),
          db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids'
        );
@@ -502,7 +502,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('pt.due_date::timestamp with time zone as due_date'),
-         db.raw("(u_task_assignee.first_name || ' ' || u_task_assignee.last_name) as assigned_to_name"),
+         db.raw("COALESCE(u_task_assignee.first_name || ' ' || u_task_assignee.last_name, '') as assigned_to_name"),
          db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids'
        );
@@ -564,7 +564,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           'se.scheduled_start',
           'se.scheduled_end',
           db.raw('NULL::timestamp with time zone as due_date'),
-          db.raw('NULL::text as assigned_to_name'),
+          db.raw("'' as assigned_to_name"),
           'sea.assigned_user_ids as assigned_user_ids',
           db.raw('NULL::uuid[] as additional_user_ids')
         );
@@ -600,7 +600,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           db.raw('NULL::timestamp with time zone as scheduled_start'),
           db.raw('NULL::timestamp with time zone as scheduled_end'),
           db.raw('NULL::timestamp with time zone as due_date'),
-          db.raw('NULL::text as assigned_to_name'),
+          db.raw("'' as assigned_to_name"),
           db.raw('ARRAY[]::uuid[] as assigned_user_ids'),
           db.raw('ARRAY[]::uuid[] as additional_user_ids')
         );

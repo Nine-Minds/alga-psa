@@ -1,6 +1,30 @@
 'use client'
 import { WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 
+interface MetaLinesProps {
+  clientName?: string;
+  assignedToName?: string;
+  dueDate?: Date | string;
+}
+
+const MetaLines: React.FC<MetaLinesProps> = ({ clientName, assignedToName, dueDate }) => {
+  return (
+    <>
+      {clientName && (
+        <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+          {clientName}
+        </div>
+      )}
+      <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+        Assigned to: {assignedToName || 'Unassigned'}
+      </div>
+      <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+        Due Date: {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
+      </div>
+    </>
+  );
+};
+
 interface WorkItemListProps {
   items: WorkItemWithStatus[];
   isSearching: boolean;
@@ -30,15 +54,11 @@ export function WorkItemList({
           <div className="font-medium text-[rgb(var(--color-text-900))] text-lg mb-1">
             {item.ticket_number} - {item.title || 'Untitled'}
           </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            {item.client_name}
-          </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            Assigned to: {item.assigned_to_name || 'Unassigned'}
-          </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            Due Date: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
-          </div>
+          <MetaLines
+            clientName={item.client_name}
+            assignedToName={item.assigned_to_name}
+            dueDate={item.due_date}
+          />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))]">
               Ticket
@@ -60,15 +80,11 @@ export function WorkItemList({
           <div className="text-sm text-[rgb(var(--color-text-600))]">
             {item.project_name} • {item.phase_name}
           </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            {item.client_name}
-          </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            Assigned to: {item.assigned_to_name || 'Unassigned'}
-          </div>
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            Due Date: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
-          </div>
+          <MetaLines
+            clientName={item.client_name}
+            assignedToName={item.assigned_to_name}
+            dueDate={item.due_date}
+          />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))]">
               Project Task
