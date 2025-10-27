@@ -187,6 +187,11 @@ export class AccountingExportService {
         });
       }
 
+      const transactionIds = collectTransactionIds(context.lines);
+      if (transactionIds.length > 0) {
+        await this.repository.attachTransactionsToBatch(transactionIds, batchId);
+      }
+
       await this.repository.updateBatchStatus(batchId, {
         status: 'delivered',
         delivered_at: new Date().toISOString()
@@ -328,4 +333,21 @@ export class AccountingExportService {
       }
     }
   }
+}
+
+function collectTransactionIds(lines: AccountingExportLine[]): string[] {
+  const ids: string[] = [];
+  for (const line of lines) {
+    const payload = line.payload as Record<string, any> | null;
+    if (!payload) continue;
+    const txIds = Array.isArray(payload.transaction_ids) ? payload.transaction_ids : payload.transactionIds;
+    if (Array.isArray(txIds)) {
+      for (const id of txIds) {
+        if (typeof id === 'string' && id.trim().length > 0) {
+          ids.push(id);
+        }
+      }
+    }
+  }
+  return ids;
 }
