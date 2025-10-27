@@ -358,7 +358,7 @@ const subjectTranslations = {
     'invoice-generated': 'Nouvelle facture {{invoice.number}}',
     'payment-received': 'Paiement reçu : {{invoice.number}}',
     'payment-overdue': 'Paiement en retard : {{invoice.number}}',
-    'email-verification': 'Vérifiez votre adresse e-mail{{#if registrationCompanyName}} pour {{registrationCompanyName}}{{/if}}',
+    'email-verification': 'Vérifiez votre adresse e-mail{{#if registrationClientName}} pour {{registrationClientName}}{{/if}}',
     'password-reset': 'Demande de réinitialisation du mot de passe',
     'portal-invitation': 'Invitation au portail client - {{clientName}}',
     'credits-expiring': 'Crédits expirant bientôt : {{company.name}}'
@@ -372,7 +372,7 @@ const subjectTranslations = {
     'invoice-generated': 'Nueva factura {{invoice.number}}',
     'payment-received': 'Pago recibido: {{invoice.number}}',
     'payment-overdue': 'Pago vencido: {{invoice.number}}',
-    'email-verification': 'Verifica tu correo electrónico{{#if registrationCompanyName}} para {{registrationCompanyName}}{{/if}}',
+    'email-verification': 'Verifica tu correo electrónico{{#if registrationClientName}} para {{registrationClientName}}{{/if}}',
     'password-reset': 'Solicitud de restablecimiento de contraseña',
     'portal-invitation': 'Invitación al portal de clientes - {{clientName}}',
     'credits-expiring': 'Créditos por expirar: {{company.name}}'
@@ -386,7 +386,7 @@ const subjectTranslations = {
     'invoice-generated': 'Neue Rechnung {{invoice.number}}',
     'payment-received': 'Zahlung eingegangen: {{invoice.number}}',
     'payment-overdue': 'Zahlung überfällig: {{invoice.number}}',
-    'email-verification': 'Bestätigen Sie Ihre E-Mail-Adresse{{#if registrationCompanyName}} für {{registrationCompanyName}}{{/if}}',
+    'email-verification': 'Bestätigen Sie Ihre E-Mail-Adresse{{#if registrationClientName}} für {{registrationClientName}}{{/if}}',
     'password-reset': 'Anfrage zum Zurücksetzen des Passworts',
     'portal-invitation': 'Einladung zum Kundenportal - {{clientName}}',
     'credits-expiring': 'Guthaben läuft bald ab: {{company.name}}'
@@ -400,7 +400,7 @@ const subjectTranslations = {
     'invoice-generated': 'Nieuwe factuur {{invoice.number}}',
     'payment-received': 'Betaling ontvangen: {{invoice.number}}',
     'payment-overdue': 'Betaling achterstallig: {{invoice.number}}',
-    'email-verification': 'Bevestig je e-mailadres{{#if registrationCompanyName}} voor {{registrationCompanyName}}{{/if}}',
+    'email-verification': 'Bevestig je e-mailadres{{#if registrationClientName}} voor {{registrationClientName}}{{/if}}',
     'password-reset': 'Verzoek om wachtwoord te resetten',
     'portal-invitation': 'Uitnodiging voor het klantenportaal - {{clientName}}',
     'credits-expiring': 'Tegoed verloopt binnenkort: {{company.name}}'
@@ -462,6 +462,8 @@ async function createTranslatedTemplates(knex) {
       const translatedSubject = subjectTranslations[langCode][templateName] || englishTemplate.subject;
 
       // Upsert translated template
+      // Note: Citus doesn't allow CURRENT_TIMESTAMP in DO UPDATE SET clause
+      // The updated_at column will be handled by the table's default or trigger
       await knex('system_email_templates')
         .insert({
           name: templateName,
@@ -476,8 +478,7 @@ async function createTranslatedTemplates(knex) {
           subject: knex.raw('excluded.subject'),
           html_content: knex.raw('excluded.html_content'),
           text_content: knex.raw('excluded.text_content'),
-          notification_subtype_id: knex.raw('excluded.notification_subtype_id'),
-          updated_at: knex.fn.now()
+          notification_subtype_id: knex.raw('excluded.notification_subtype_id')
         });
 
       console.log(`✓ Created ${langCode} translation for ${templateName}`);
