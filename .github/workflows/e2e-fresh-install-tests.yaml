@@ -268,7 +268,7 @@ jobs:
         id: wait_for_setup
         run: |
           echo "Waiting for setup service to complete..."
-          MAX_ATTEMPTS=60 # 10 minutes (60 attempts * 10 seconds)
+          MAX_ATTEMPTS=90 # 15 minutes (90 attempts * 10 seconds) - increased to allow for database creation (2m) + migrations (5m) + seeds (5m)
           ATTEMPT_NUM=1
           
           # Get the container ID before the loop, it might be gone after exit
