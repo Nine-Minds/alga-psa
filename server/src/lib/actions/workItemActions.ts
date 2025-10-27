@@ -520,6 +520,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
             .where('tenant', tenant)
             .select('entry_id')
             .select(db.raw('array_agg(distinct user_id) as assigned_user_ids'))
+            .select(db.raw('(array_agg(distinct user_id))[1] as first_assigned_user_id'))
             .groupBy('entry_id', 'tenant')
             .as('sea'),
           function() {
@@ -527,6 +528,10 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
                 .andOn('se.tenant', '=', db.raw('?', [tenant]));
           }
         )
+        .leftJoin('users as u_adhoc_assignee', function() {
+          this.on('sea.first_assigned_user_id', '=', 'u_adhoc_assignee.user_id')
+              .andOn('se.tenant', '=', 'u_adhoc_assignee.tenant');
+        })
         .distinctOn('se.entry_id')
         .modify((queryBuilder) => {
           if (options.assignedToMe && options.assignedTo) {
@@ -564,7 +569,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           'se.scheduled_start',
           'se.scheduled_end',
           db.raw('NULL::timestamp with time zone as due_date'),
-          db.raw("'' as assigned_to_name"),
+          db.raw("COALESCE(u_adhoc_assignee.first_name || ' ' || u_adhoc_assignee.last_name, '') as assigned_to_name"),
           'sea.assigned_user_ids as assigned_user_ids',
           db.raw('NULL::uuid[] as additional_user_ids')
         );

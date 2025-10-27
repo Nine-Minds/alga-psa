@@ -15,12 +15,16 @@ const MetaLines: React.FC<MetaLinesProps> = ({ clientName, assignedToName, dueDa
           {clientName}
         </div>
       )}
-      <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-        Assigned to: {assignedToName || 'Unassigned'}
-      </div>
-      <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-        Due Date: {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
-      </div>
+      {assignedToName !== undefined && (
+        <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+          Assigned to: {assignedToName || 'Unassigned'}
+        </div>
+      )}
+      {dueDate !== undefined && (
+        <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+          Due Date: {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
+        </div>
+      )}
     </>
   );
 };
@@ -108,6 +112,9 @@ export function WorkItemList({
               Scheduled end: {new Date(item.scheduled_end).toLocaleString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
             </div>
           )}
+          <MetaLines
+            assignedToName={item.assigned_to_name}
+          />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-border-900))]">
               Ad-hoc Entry
@@ -134,6 +141,9 @@ export function WorkItemList({
               Contact: {item.contact_name}
             </div>
           )}
+          <MetaLines
+            assignedToName={item.assigned_to_name}
+          />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-900">
               Interaction
