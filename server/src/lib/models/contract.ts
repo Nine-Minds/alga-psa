@@ -35,7 +35,7 @@ const Contract = {
 
     try {
       // Check if any invoice items exist that reference client_contracts for this specific contract
-      const result = await db('invoice_items as ii')
+      const result = await db('invoice_charges as ii')
         .join('client_contracts as cc', function() {
           this.on('ii.client_contract_id', '=', 'cc.client_contract_id')
               .andOn('ii.tenant', '=', 'cc.tenant');

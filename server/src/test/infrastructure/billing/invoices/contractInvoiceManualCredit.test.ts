@@ -6,7 +6,7 @@ import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { addManualItemsToInvoice } from 'server/src/lib/actions/invoiceModification';
-import type { IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
+import type { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 process.env.DB_PORT = '5432';
@@ -124,9 +124,9 @@ describe('Contract Invoice Manual Credit', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
-        'invoice_item_details',
-        'invoice_item_fixed_details',
+        'invoice_charges',
+        'invoice_charge_details',
+        'invoice_charge_fixed_details',
         'invoices',
         'transactions',
         'client_billing_cycles',
@@ -238,7 +238,7 @@ describe('Contract Invoice Manual Credit', () => {
     expect(generatedInvoice).not.toBeNull();
     const invoiceId = generatedInvoice!.invoice_id;
 
-    const manualCredit: IInvoiceItem = {
+    const manualCredit: IInvoiceCharge = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: undefined,
@@ -271,7 +271,7 @@ describe('Contract Invoice Manual Credit', () => {
     expect(updatedInvoice.tax).toBe(expectedTax);
     expect(updatedInvoice.total_amount).toBe(expectedTotal);
 
-    const invoiceItems = await context.db('invoice_items')
+    const invoiceItems = await context.db('invoice_charges')
       .where({ invoice_id: invoiceId, tenant: context.tenantId })
       .orderBy('created_at', 'asc');
 
@@ -287,7 +287,7 @@ describe('Contract Invoice Manual Credit', () => {
     expect(contractItem).toBeTruthy();
     expect(creditItem).toBeTruthy();
 
-    const contractDetail = await context.db('invoice_item_details')
+    const contractDetail = await context.db('invoice_charge_details')
       .where({
         tenant: context.tenantId,
         item_id: contractItem!.item_id
@@ -310,7 +310,7 @@ describe('Contract Invoice Manual Credit', () => {
     expect(creditItem!.is_discount).toBe(true);
     expect(creditItem!.contract_line_id ?? null).toBeNull();
 
-    const creditDetails = await context.db('invoice_item_details')
+    const creditDetails = await context.db('invoice_charge_details')
       .where({
         tenant: context.tenantId,
         item_id: creditItem!.item_id

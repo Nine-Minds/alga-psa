@@ -1,7 +1,7 @@
 // Import the source and target types with aliases for clarity
 import type {
   InvoiceViewModel as DbInvoiceViewModel, // Source type from DB/interfaces
-  IInvoiceItem
+  IInvoiceCharge
 } from 'server/src/interfaces/invoice.interfaces';
 // Ensure the correct type is imported
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
@@ -45,7 +45,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
 
   try {
     // Check if the input data is in DbInvoiceViewModel format (from database)
-    if (typeof inputData.invoice_number !== 'undefined' && typeof inputData.client !== 'undefined' && typeof inputData.invoice_items !== 'undefined') {
+    if (typeof inputData.invoice_number !== 'undefined' && typeof inputData.client !== 'undefined' && typeof inputData.invoice_charges !== 'undefined') {
       console.log('[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...');
       const dbData = inputData as DbInvoiceViewModel;
 
@@ -60,7 +60,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         // tenantClient does not exist directly in DbInvoiceViewModel, assuming it's not needed or handled elsewhere
         tenantClient: null,
 
-        items: (dbData.invoice_items ?? []).map((item: IInvoiceItem) => ({
+        items: (dbData.invoice_charges ?? []).map((item: IInvoiceCharge) => ({
           id: String(item.item_id ?? ''), // Corrected property name
           description: String(item.description ?? ''),
           quantity: Number(item.quantity ?? 0),

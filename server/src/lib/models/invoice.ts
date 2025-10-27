@@ -2,7 +2,7 @@
 import { Knex } from 'knex';
 import { getCurrentTenantId } from '../db';
 // Restore InvoiceViewModel import from interfaces
-import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
+import { IInvoice, IInvoiceCharge, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
 // Remove direct import from renderer types
 import { Temporal } from '@js-temporal/polyfill';
 import { getClientLogoUrl } from '../utils/avatarUtils';
@@ -35,7 +35,8 @@ export default class Invoice {
         .first();
 
       if (invoice) {
-        invoice.invoice_items = await this.getInvoiceItems(knexOrTrx, invoiceId);
+        invoice.invoice_charges = await this.getInvoiceCharges(knexOrTrx, invoiceId);
+        invoice.invoice_items = invoice.invoice_charges;
         invoice.due_date = Temporal.PlainDate.from(invoice.due_date);
         if (invoice.finalized_at) {
           invoice.finalized_at = Temporal.PlainDate.from(invoice.finalized_at);
@@ -102,7 +103,7 @@ export default class Invoice {
     }
   }
 
-  static async addInvoiceItem(knexOrTrx: Knex | Knex.Transaction, invoiceItem: Omit<IInvoiceItem, 'item_id' | 'tenant'>): Promise<IInvoiceItem> {
+  static async addInvoiceCharge(knexOrTrx: Knex | Knex.Transaction, invoiceItem: Omit<IInvoiceCharge, 'item_id' | 'tenant'>): Promise<IInvoiceCharge> {
     const tenant = await getCurrentTenantId();
 
     if (!Number.isInteger(invoiceItem.total_price)) {
@@ -127,11 +128,11 @@ export default class Invoice {
       delete itemToInsert.service_id;
     }
 
-    const [createdItem] = await knexOrTrx('invoice_items').insert(itemToInsert).returning('*');
+    const [createdItem] = await knexOrTrx('invoice_charges').insert(itemToInsert).returning('*');
     return createdItem;
   }
 
-  static async getInvoiceItems(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<IInvoiceItem[]> {
+  static async getInvoiceCharges(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<IInvoiceCharge[]> {
     const tenant = await getCurrentTenantId();
     
     if (!tenant) {
@@ -141,7 +142,7 @@ export default class Invoice {
     try {
       console.log(`Getting invoice items for invoice ${invoiceId} in tenant ${tenant}`);
       
-      const query = knexOrTrx('invoice_items')
+      const query = knexOrTrx('invoice_charges')
         .select(
           'item_id',
           'invoice_id',
@@ -175,7 +176,7 @@ export default class Invoice {
     }
   }
 
-  static async updateInvoiceItem(knexOrTrx: Knex | Knex.Transaction, itemId: string, updateData: Partial<IInvoiceItem>): Promise<IInvoiceItem> {
+  static async updateInvoiceCharge(knexOrTrx: Knex | Knex.Transaction, itemId: string, updateData: Partial<IInvoiceCharge>): Promise<IInvoiceCharge> {
     const tenant = await getCurrentTenantId();
     
     if (!tenant) {
@@ -183,7 +184,7 @@ export default class Invoice {
     }
 
     try {
-      const [updatedItem] = await knexOrTrx('invoice_items')
+      const [updatedItem] = await knexOrTrx('invoice_charges')
         .where({
           item_id: itemId,
           tenant
@@ -202,6 +203,21 @@ export default class Invoice {
     }
   }
 
+  /** @deprecated Use addInvoiceCharge */
+  static async addInvoiceItem(knexOrTrx: Knex | Knex.Transaction, invoiceItem: Omit<IInvoiceCharge, 'item_id' | 'tenant'>): Promise<IInvoiceCharge> {
+    return this.addInvoiceCharge(knexOrTrx, invoiceItem);
+  }
+
+  /** @deprecated Use getInvoiceCharges */
+  static async getInvoiceItems(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<IInvoiceCharge[]> {
+    return this.getInvoiceCharges(knexOrTrx, invoiceId);
+  }
+
+  /** @deprecated Use updateInvoiceCharge */
+  static async updateInvoiceItem(knexOrTrx: Knex | Knex.Transaction, itemId: string, updateData: Partial<IInvoiceCharge>): Promise<IInvoiceCharge> {
+    return this.updateInvoiceCharge(knexOrTrx, itemId, updateData);
+  }
+
   static async deleteInvoiceItem(knexOrTrx: Knex | Knex.Transaction, itemId: string): Promise<boolean> {
     const tenant = await getCurrentTenantId();
     
@@ -210,7 +226,7 @@ export default class Invoice {
     }
 
     try {
-      const deleted = await knexOrTrx('invoice_items')
+      const deleted = await knexOrTrx('invoice_charges')
         .where({
           item_id: itemId,
           tenant
@@ -504,12 +520,12 @@ export default class Invoice {
     }
     // --- End Fetch Tenant's Default Client ---
   
-    const invoice_items = await this.getInvoiceItems(knexOrTrx, invoiceId);
+    const invoice_charges = await this.getInvoiceCharges(knexOrTrx, invoiceId);
     console.log('Processing invoice items for view model:', {
-      total: invoice_items.length,
-      manual: invoice_items.filter(item => item.is_manual).length,
-      automated: invoice_items.filter(item => !item.is_manual).length,
-      items: invoice_items.map(item => ({
+      total: invoice_charges.length,
+      manual: invoice_charges.filter(item => item.is_manual).length,
+      automated: invoice_charges.filter(item => !item.is_manual).length,
+      items: invoice_charges.map(item => ({
         id: item.item_id,
         isManual: item.is_manual,
         serviceId: item.service_id,
@@ -590,15 +606,15 @@ export default class Invoice {
         tax: tax,
         total: totalAmount, // Use totalAmount which includes tax
         total_amount: totalAmount, // Keep for compatibility if needed, same as total
-        invoice_items: invoice_items.map(item => ({ // Map to IInvoiceItem structure
+        invoice_charges: invoice_charges.map(item => ({ // Map to IInvoiceCharge structure
           ...item, // Spread existing item properties
-          // Ensure types match IInvoiceItem (they should already from getInvoiceItems)
+          // Ensure types match IInvoiceCharge (they should already from getInvoiceCharges)
           unit_price: typeof item.unit_price === 'string' ? parseInt(item.unit_price, 10) : item.unit_price,
           total_price: typeof item.total_price === 'string' ? parseInt(item.total_price, 10) : item.total_price,
           tax_amount: typeof item.tax_amount === 'string' ? parseInt(item.tax_amount, 10) : item.tax_amount,
           net_amount: typeof item.net_amount === 'string' ? parseInt(item.net_amount, 10) : item.net_amount,
           quantity: typeof item.quantity === 'string' ? parseInt(item.quantity, 10) : item.quantity,
-          // Add any missing required fields from IInvoiceItem with defaults if necessary
+          // Add any missing required fields from IInvoiceCharge with defaults if necessary
           tenant: tenant ?? undefined, // Map null tenant to undefined
           is_manual: item.is_manual || false,
           rate: typeof item.unit_price === 'string' ? parseInt(item.unit_price, 10) : item.unit_price, // Add rate if needed, using unit_price
@@ -612,7 +628,7 @@ export default class Invoice {
 
       console.log('Returning original invoice view model:', {
         number: viewModel.invoice_number,
-        itemCount: viewModel.invoice_items.length,
+        itemCount: viewModel.invoice_charges.length,
         total: viewModel.total,
       });
 
@@ -625,7 +641,7 @@ export default class Invoice {
         errorStack: error instanceof Error ? error.stack : undefined,
         invoiceData: invoice, // Log raw invoice data
         tenantClientInfo: tenantClientInfo, // Log tenant info
-        itemsData: invoice_items // Log items data
+        itemsData: invoice_charges // Log items data
       });
       // Decide how to handle: re-throw, return null, or return specific error object
       throw new Error(`Failed to construct final InvoiceViewModel: ${error instanceof Error ? error.message : 'Unknown error'}`);

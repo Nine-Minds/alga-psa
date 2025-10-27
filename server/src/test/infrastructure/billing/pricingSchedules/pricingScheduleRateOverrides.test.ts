@@ -166,7 +166,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -311,7 +311,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(result).not.toBeNull();
       expect(result!.subtotal).toBe(15000);
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
@@ -377,7 +377,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(result).not.toBeNull();
       expect(result!.subtotal).toBe(10000); // Should use base rate
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
@@ -477,10 +477,10 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(januaryInvoice!.subtotal).toBe(10000);
       expect(marchInvoice!.subtotal).toBe(15000);
 
-      const januaryItems = await context.db('invoice_items')
+      const januaryItems = await context.db('invoice_charges')
         .where('invoice_id', januaryInvoice!.invoice_id)
         .select('*');
-      const marchItems = await context.db('invoice_items')
+      const marchItems = await context.db('invoice_charges')
         .where('invoice_id', marchInvoice!.invoice_id)
         .select('*');
 
@@ -560,7 +560,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(result).not.toBeNull();
       expect(result!.subtotal).toBe(10000); // Falls back to base rate
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         ;
 
@@ -635,7 +635,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(result).not.toBeNull();
       expect(result!.subtotal).toBe(10000); // Uses base rate, not schedule rate
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         ;
 

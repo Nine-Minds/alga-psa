@@ -18,12 +18,12 @@ async function run() {
     return;
   }
 
-  const items = await knex('invoice_items')
+  const items = await knex('invoice_charges')
     .where({ invoice_id: targetInvoiceId })
     .orderBy('created_at', 'asc');
   console.log('Invoice items:', items);
 
-  const itemDetails = await knex('invoice_item_details')
+  const itemDetails = await knex('invoice_charge_details')
     .where({ invoice_id: targetInvoiceId })
     .orderBy('created_at', 'asc');
   console.log('Invoice item details:', itemDetails);

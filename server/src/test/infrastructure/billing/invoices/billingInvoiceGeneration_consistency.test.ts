@@ -126,7 +126,7 @@ async function ensureDefaultBillingSettings() {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -257,7 +257,7 @@ async function ensureDefaultBillingSettings() {
       const autoInvoiceRow = await context.db('invoices')
         .where({ invoice_id: createdAutoInvoice.invoice_id, tenant: context.tenantId })
         .first();
-      const autoItems = await context.db('invoice_items').where({
+      const autoItems = await context.db('invoice_charges').where({
         invoice_id: createdAutoInvoice.invoice_id,
         tenant: context.tenantId
       });
@@ -266,7 +266,7 @@ async function ensureDefaultBillingSettings() {
         tax: Number(autoInvoiceRow?.tax ?? 0),
         total_amount: Number(autoInvoiceRow?.total_amount ?? 0)
       };
-      const manualItems = await context.db('invoice_items').where({
+      const manualItems = await context.db('invoice_charges').where({
         invoice_id: manualInvoice.invoice_id,
         tenant: context.tenantId
       });

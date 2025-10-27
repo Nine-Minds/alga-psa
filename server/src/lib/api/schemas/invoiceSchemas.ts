@@ -150,7 +150,7 @@ const updateInvoiceSchema = createUpdateSchema(createInvoiceSchema);
 
 // Invoice response schema
 const invoiceResponseSchema = baseInvoiceSchema.merge(baseEntitySchema).extend({
-  invoice_items: z.array(invoiceItemResponseSchema).optional()
+  invoice_charges: z.array(invoiceItemResponseSchema).optional()
 });
 
 // ============================================================================
@@ -184,7 +184,7 @@ const invoiceViewModelSchema = z.object({
   tax: z.number(),
   total: z.number(),
   total_amount: z.number(),
-  invoice_items: z.array(invoiceItemResponseSchema),
+  invoice_charges: z.array(invoiceItemResponseSchema),
   custom_fields: z.record(z.any()).optional(),
   finalized_at: z.string().optional(),
   credit_applied: z.number().default(0),

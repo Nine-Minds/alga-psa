@@ -316,7 +316,7 @@ export async function upsertContractLineTerms(
 
         const previousTiming = existingTerms?.billing_timing ?? 'arrears';
         if (previousTiming !== billingTiming) {
-            const invoiceCountResult = await trx('invoice_items')
+            const invoiceCountResult = await trx('invoice_charges')
                 .where({ tenant })
                 .where('client_contract_line_id', contractLineId)
                 .count<{ count: string }>('item_id as count')

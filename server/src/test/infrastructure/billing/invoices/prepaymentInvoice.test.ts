@@ -290,7 +290,7 @@ describe('Prepayment Invoice System', () => {
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'transactions',
         'credit_tracking',
@@ -701,7 +701,7 @@ describe('Multiple Credit Applications', () => {
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'transactions',
         'credit_tracking',

@@ -500,9 +500,9 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Placeholder for get_invoice_items
+  // Placeholder for get_invoice_charges
   actionRegistry.registerSimpleAction(
-    'get_invoice_items',
+    'get_invoice_charges',
     'Get invoice items by invoice ID (placeholder)',
     [
       { name: 'invoiceId', type: 'string', required: true },
@@ -510,20 +510,20 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      logger.info(`${logPrefix} get_invoice_items called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
+      logger.info(`${logPrefix} get_invoice_charges called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
       try {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
 
-        const items = await knex('invoice_items')
-          .select('invoice_items.*', 'service_catalog.service_name')
-          .leftJoin('service_catalog', 'invoice_items.service_id', 'service_catalog.service_id')
-          .where({ 'invoice_items.invoice_id': params.invoiceId, 'invoice_items.tenant': context.tenant });
+        const items = await knex('invoice_charges')
+          .select('invoice_charges.*', 'service_catalog.service_name')
+          .leftJoin('service_catalog', 'invoice_charges.service_id', 'service_catalog.service_id')
+          .where({ 'invoice_charges.invoice_id': params.invoiceId, 'invoice_charges.tenant': context.tenant });
 
-        logger.info(`${logPrefix} get_invoice_items: Successfully fetched ${items.length} items for invoiceId: ${params.invoiceId}`);
+        logger.info(`${logPrefix} get_invoice_charges: Successfully fetched ${items.length} items for invoiceId: ${params.invoiceId}`);
         return { success: true, items };
       } catch (error: any) {
-        logger.error(`${logPrefix} get_invoice_items: Error fetching items for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`, error);
+        logger.error(`${logPrefix} get_invoice_charges: Error fetching items for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`, error);
         return { success: false, message: error.message, error };
       }
     }

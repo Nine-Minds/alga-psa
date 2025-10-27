@@ -12,7 +12,7 @@ import { ClientPicker } from '../clients/ClientPicker';
 import { IClient } from '../../interfaces';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IService } from '../../interfaces/billing.interfaces';
-import { InvoiceViewModel, DiscountType, IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
+import { InvoiceViewModel, DiscountType, IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
@@ -40,7 +40,7 @@ interface ManualInvoicesProps {
 
 // This is the primary state type for manual items within this component
 // Reverted: Keep is_taxable, remove tax_rate_id
-interface EditableInvoiceItem extends Omit<IInvoiceItem, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_region' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
+interface EditableInvoiceItem extends Omit<IInvoiceCharge, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_region' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
   rate: number; // Represents unit_price for editing (in cents)
   // tax_rate_id?: string | null; // Removed
   is_taxable?: boolean; // Add is_taxable back to the interface
@@ -76,7 +76,7 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
 const AutomatedItemsTable: React.FC<{
   items: Array<{
     service_name: string;
-    total: number; // Should be total_price from IInvoiceItem (in cents)
+    total: number; // Should be total_price from IInvoiceCharge (in cents)
   }>;
 }> = ({ items }) => {
   console.log('[Render] Rendering automated items table:', {
@@ -146,7 +146,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       ...it,
       is_bundle_header: it?.is_bundle_header ?? (it as any)[LEGACY_HEADER_KEY]
     });
-    const initialManualItems = invoice?.invoice_items?.filter(item => item.is_manual) || [];
+    const initialManualItems = invoice?.invoice_charges?.filter(item => item.is_manual) || [];
     const mappedItems = initialManualItems.map((item): EditableInvoiceItem => {
       const i = normalizeHeaderAlias(item as any);
       return ({
@@ -209,7 +209,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // Update local state with fetched items
           setCurrentInvoiceData(prevData => {
             const baseData = prevData || invoice;
-            return baseData ? { ...baseData, invoice_items: fetchedItems } : undefined;
+            return baseData ? { ...baseData, invoice_charges: fetchedItems } : undefined;
           });
           console.log('[Effect] Updated currentInvoiceData state with fetched items');
 
@@ -380,8 +380,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           .filter(item => item.isExisting && item.isRemoved && item.item_id)
           .map(item => item.item_id!); // item_id is guaranteed here by filter
 
-        // Map EditableInvoiceItem to IInvoiceItem for newItems
-        const mapToNewItemSaveFormat = (item: EditableInvoiceItem): IInvoiceItem => ({
+        // Map EditableInvoiceItem to IInvoiceCharge for newItems
+        const mapToNewItemSaveFormat = (item: EditableInvoiceItem): IInvoiceCharge => ({
           item_id: item.item_id || uuidv4(), // Ensure ID exists
           invoice_id: item.invoice_id,
           tenant: '', // Backend handles tenant
@@ -399,7 +399,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
-          // Include other potentially relevant fields from IInvoiceItem if needed by backend logic
+          // Include other potentially relevant fields from IInvoiceCharge if needed by backend logic
           applies_to_service_id: item.applies_to_service_id,
           client_contract_id: item.client_contract_id,
           contract_name: item.contract_name,
@@ -447,7 +447,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         // We need to create a new object with updated values since we don't have a direct way to get the full invoice
         const updatedInvoiceData = {
           ...currentInvoiceData,
-          invoice_items: refreshedItems
+          invoice_charges: refreshedItems
         };
         
         // Update the state with the refreshed data
@@ -455,9 +455,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         console.log('[Submit] Updated currentInvoiceData state with refreshed items');
 
         // Update manual items state from the refreshed items
-        const manualItemsFromRefresh = refreshedItems.filter((item: IInvoiceItem) => item.is_manual);
+        const manualItemsFromRefresh = refreshedItems.filter((item: IInvoiceCharge) => item.is_manual);
         console.log('[Submit] Setting manual items state from refreshed items:', manualItemsFromRefresh.length);
-        const mappedUpdatedManual = manualItemsFromRefresh.map((item: IInvoiceItem): EditableInvoiceItem => ({
+        const mappedUpdatedManual = manualItemsFromRefresh.map((item: IInvoiceCharge): EditableInvoiceItem => ({
             item_id: item.item_id,
             invoice_id: item.invoice_id,
             service_id: item.service_id || '',
@@ -564,13 +564,13 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const automatedSubtotal = useMemo(() => {
     console.log('[Memo] Recalculating automatedSubtotal. currentInvoiceData:', currentInvoiceData);
-    if (!currentInvoiceData || !currentInvoiceData.invoice_items) return 0;
-    const calculatedSubtotal = currentInvoiceData.invoice_items
+    if (!currentInvoiceData || !currentInvoiceData.invoice_charges) return 0;
+    const calculatedSubtotal = currentInvoiceData.invoice_charges
       .filter(item => !item.is_manual)
       .reduce((sum, item) => sum + (Number(item.total_price) || 0), 0); // total_price is in cents
     console.log('[Memo] Calculated automatedSubtotal:', calculatedSubtotal);
     return calculatedSubtotal;
-  }, [currentInvoiceData?.invoice_items]);
+  }, [currentInvoiceData?.invoice_charges]);
 
   // Calculate the total based on the items
   const manualTotal = calculateManualItemsTotal(); // In cents
@@ -585,7 +585,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     console.log('[Render] Difference between calculated and stored total (cents):', calculatedGrandTotal - currentInvoiceData.total_amount);
   }
   
-  console.log('[Render] Rendering ManualInvoicesContent. currentInvoiceData items:', currentInvoiceData?.invoice_items?.length);
+  console.log('[Render] Rendering ManualInvoicesContent. currentInvoiceData items:', currentInvoiceData?.invoice_charges?.length);
 
   // Helper to prepare item prop for LineItem component
   const mapToLineItemEditable = (item: EditableInvoiceItem): LineItemEditableItem => ({
@@ -693,9 +693,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 </div>
               )}
 
-              {currentInvoiceData && !currentInvoiceData.is_manual && currentInvoiceData.invoice_items && (
+              {currentInvoiceData && !currentInvoiceData.is_manual && currentInvoiceData.invoice_charges && (
                 <AutomatedItemsTable
-                  items={currentInvoiceData.invoice_items
+                  items={currentInvoiceData.invoice_charges
                     .filter(item => !item.is_manual)
                     .map(item => ({
                       service_name: services.find(s => s.service_id === item.service_id)?.service_name || item.description || 'Unknown Service',

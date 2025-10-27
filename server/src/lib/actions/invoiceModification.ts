@@ -9,9 +9,9 @@ import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
 // import { auditLog } from 'server/src/lib/logging/auditLog';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions'; // Assuming this stays or moves appropriately
-import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceCharge, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import { persistInvoiceItems, persistManualInvoiceItems } from 'server/src/lib/services/invoiceService'; // Import persistManualInvoiceItems
+import { persistInvoiceCharges, persistManualInvoiceCharges } from 'server/src/lib/services/invoiceService'; // Import persistManualInvoiceCharges
 import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
@@ -37,7 +37,7 @@ export interface ManualInvoiceUpdate {
 }
 
 interface ManualItemsUpdate {
-  newItems: IInvoiceItem[];
+  newItems: IInvoiceCharge[];
   updatedItems: ManualInvoiceUpdate[]; // This uses the interface above, but it's not used in the functions moved here? Recheck original file.
   removedItemIds: string[];
   invoice_number?: string; // Added based on usage in updateManualInvoiceItems
@@ -409,7 +409,7 @@ async function updateManualInvoiceItemsInternal(
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Process removals
     if (changes.removedItemIds && changes.removedItemIds.length > 0) {
-      await trx('invoice_items')
+      await trx('invoice_charges')
         .whereIn('item_id', changes.removedItemIds)
         .andWhere({ tenant: tenant, is_manual: true }) // Ensure we only delete manual items intended for removal
         .delete();
@@ -436,7 +436,7 @@ async function updateManualInvoiceItemsInternal(
         const filteredUpdateData = Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== undefined));
 
         if (Object.keys(filteredUpdateData).length > 0) {
-           await trx('invoice_items')
+           await trx('invoice_charges')
             .where({ item_id: item.item_id, tenant: tenant, is_manual: true }) // Ensure we only update manual items
             .update(filteredUpdateData);
         }
@@ -446,7 +446,7 @@ async function updateManualInvoiceItemsInternal(
       for (const item of changes.updatedItems) {
         if (item.is_discount) {
           // Get the updated item from the database
-          const updatedItem = await trx('invoice_items')
+          const updatedItem = await trx('invoice_charges')
             .where({ item_id: item.item_id, tenant: tenant, is_manual: true })
             .first();
           
@@ -456,7 +456,7 @@ async function updateManualInvoiceItemsInternal(
             
             // Calculate current subtotal of non-discount items for percentage discounts
             if (updatedItem.discount_type === 'percentage') {
-              const nonDiscountItems = await trx('invoice_items')
+              const nonDiscountItems = await trx('invoice_charges')
                 .where({ invoice_id: invoiceId, tenant: tenant })
                 .whereNot('is_discount', true)
                 .select('*');
@@ -465,7 +465,7 @@ async function updateManualInvoiceItemsInternal(
               
               // If discount applies to a specific item, get that item's amount
               if (updatedItem.applies_to_item_id) {
-                const applicableItem = await trx('invoice_items')
+                const applicableItem = await trx('invoice_charges')
                   .where({ item_id: updatedItem.applies_to_item_id, tenant: tenant })
                   .first();
                 applicableAmount = applicableItem?.net_amount;
@@ -485,7 +485,7 @@ async function updateManualInvoiceItemsInternal(
             }
             
             // Update the net_amount
-            await trx('invoice_items')
+            await trx('invoice_charges')
               .where({ item_id: item.item_id, tenant: tenant, is_manual: true })
               .update({
                 net_amount: newNetAmount,
@@ -498,8 +498,8 @@ async function updateManualInvoiceItemsInternal(
 
     // Add new items
     if (changes.newItems && changes.newItems.length > 0) {
-      // Use persistManualInvoiceItems for adding new manual items during update
-      await persistManualInvoiceItems(
+      // Use persistManualInvoiceCharges for adding new manual items during update
+      await persistManualInvoiceCharges(
         trx,
         invoiceId,
         changes.newItems.map(item => ({ // Ensure mapping matches ManualInvoiceItemInput
@@ -519,7 +519,7 @@ async function updateManualInvoiceItemsInternal(
         client,
         session,
         tenant
-        // No 'isManual' boolean needed for persistManualInvoiceItems
+        // No 'isManual' boolean needed for persistManualInvoiceCharges
       );
     }
 
@@ -629,7 +629,7 @@ async function updateManualInvoiceItemsInternal(
 
 export async function addManualItemsToInvoice(
   invoiceId: string,
-  items: IInvoiceItem[]
+  items: IInvoiceCharge[]
 ): Promise<InvoiceViewModel> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
@@ -679,7 +679,7 @@ export async function addManualItemsToInvoice(
 // Internal helper function
 async function addManualInvoiceItemsInternal(
   invoiceId: string,
-  items: IInvoiceItem[],
+  items: IInvoiceCharge[],
   session: Session,
   tenant: string
 ): Promise<void> {
@@ -710,8 +710,8 @@ async function addManualInvoiceItemsInternal(
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Use persistManualInvoiceItems for adding manual items
-    await persistManualInvoiceItems(
+    // Use persistManualInvoiceCharges for adding manual items
+    await persistManualInvoiceCharges(
       trx,
       invoiceId,
       items.map(item => ({ // Ensure mapping matches ManualInvoiceItemInput
@@ -731,7 +731,7 @@ async function addManualInvoiceItemsInternal(
       client,
       session,
       tenant
-      // No 'isManual' boolean needed for persistManualInvoiceItems
+      // No 'isManual' boolean needed for persistManualInvoiceCharges
     );
      // Touch updated_at when items are added
      await trx('invoices')
@@ -923,7 +923,7 @@ export async function hardDeleteInvoice(invoiceId: string) {
       .delete();
 
     // 8. Delete invoice items
-    await trx('invoice_items')
+    await trx('invoice_charges')
       .where({
         invoice_id: invoiceId,
         tenant

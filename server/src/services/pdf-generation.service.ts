@@ -8,7 +8,7 @@ import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
 import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
-import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
+import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import { DateValue } from '@alga-psa/shared/types';
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -181,7 +181,7 @@ export class PDFGenerationService {
         name: dbData.client?.name || 'N/A',
         address: dbData.contact?.address || dbData.client?.address || 'N/A',
       },
-      items: dbData.invoice_items.map((item: IInvoiceItem) => ({
+      items: dbData.invoice_charges.map((item: IInvoiceCharge) => ({
         id: item.item_id,
         description: item.description,
         quantity: item.quantity,

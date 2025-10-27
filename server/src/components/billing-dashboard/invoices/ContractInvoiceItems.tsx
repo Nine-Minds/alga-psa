@@ -1,16 +1,16 @@
 'use client';
 
 import React from 'react';
-import { IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 
 interface ContractInvoiceItemsProps {
-  items: IInvoiceItem[];
+  items: IInvoiceCharge[];
 }
 
 interface GroupedItems {
   [key: string]: {
     contractName: string;
-    items: IInvoiceItem[];
+    items: IInvoiceCharge[];
     subtotal: number;
   };
 }
@@ -18,7 +18,7 @@ interface GroupedItems {
 const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items }) => {
   // Group items by contract
   const groupedItems: GroupedItems = {};
-  const nonContractItems: IInvoiceItem[] = [];
+  const nonContractItems: IInvoiceCharge[] = [];
 
   // First pass: group items by contract
   items.forEach(item => {
