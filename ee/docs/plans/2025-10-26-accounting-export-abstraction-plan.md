@@ -150,6 +150,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 - [x] **Workflow alignment**
   - `AccountingExportService.executeBatch` emits `ACCOUNTING_EXPORT_COMPLETED` / `ACCOUNTING_EXPORT_FAILED` via event bus once delivery succeeds or fails; events added to `server/src/lib/eventBus/events.ts` and shared workflow schemas.
   - Execution API path above allows workflows/Automation Hub to invoke the canonical exporter in place of bespoke scripts (hook-up pending but interface ready).
+  - Registered workflow actions (`accounting_export.create_batch`, `accounting_export.execute_batch`) so Automation Hub/typed workflows can orchestrate new exporter without legacy QBO scripts.
 - [x] **Status tracking**
   - Repository `updateBatchStatus` now preserves timestamps unless explicitly overwritten; service records `validating`, `ready`, `delivered`, `failed` transitions with `validated_at`/`delivered_at` stamps.
   - Delivery loop updates `accounting_export_lines.status` + `external_document_ref` and keeps batch notes for failure messaging.
@@ -168,12 +169,12 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 ## Phase 5 – Xero Adapter Implementation
 - [ ] **Connectivity**
   - [x] Introduce `XeroClientService` scaffold with OAuth placeholders and logging hooks for future API calls.
-  - [ ] Implement retrieval of Xero items, accounts, tax rates, and tracking categories for mapping UI.
+  - [x] Implement retrieval of Xero items, accounts, tax rates, and tracking categories for mapping UI (`listAccounts`, `listItems`, `listTaxRates`, `listTrackingCategories`).
 - [ ] **Invoice payload**
   - [x] Group canonical export lines into per-invoice payload drafts and prime connection metadata for future API mapping.
-  - [ ] Handle multi-tax lines (GST/VAT) per Xero requirements and map contact references via resolver lookups.
+  - [x] Handle multi-tax lines (GST/VAT) per Xero requirements and map contact references via resolver lookups (service + tax resolver integration, tracking normalization).
 - [ ] **Error handling**
-  - Normalize Xero API errors into export error records; support manual retries per invoice.
+  - Normalize Xero API errors into export error records; support manual retries per invoice. *(Adapter now surfaces structured `AppError` results, but repository integration to persist per-line failures remains outstanding.)*
 
 ## Phase 6 – UI & Operational Tooling
 - [ ] **Export dashboard**
@@ -362,23 +363,23 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     1. After correcting mapping, click `Retry Failed Lines`; confirm new file generated and appended to activity log.
     2. Verify previous failed lines now marked delivered.
 - **Adapters – Xero**
-  - `XeroScaffold#L0`
-    1. Trigger export with target realm set; confirm adapter groups lines into per-invoice payload and logs delivery stub message.
-    2. Inspect response to ensure each export line references stubbed `XERO-STUB-*` invoice id.
-    3. Verify `XeroClientService` log output includes tenant/connection metadata without real API calls.
+  - `XeroConnectivity#L0`
+    1. Provision demo credentials; call `listAccounts`, `listItems`, `listTaxRates`, and `listTrackingCategories`; verify non-empty payloads cached per tenant.
+    2. Force access-token expiry; re-run `listAccounts`; confirm refresh token flow executes once and persistence updates secret store.
+    3. Inspect structured logs to ensure tenant/connection metadata logged without leaking secrets.
   - `XeroInvoiceCreate#L1`
-    1. Connect tenant to Xero; ensure mappings present.
-    2. Run export; confirm API payload contains `AccountCode`, `TaxType`, `Tracking` arrays matching mapping.
-    3. Verify in Xero sandbox invoice created with correct data.
+    1. Connect tenant to Xero; ensure client/service/tax mappings exist.
+    2. Run export; capture payload ensuring `AccountCode`, `TaxType`, and tracking categories align with mapping metadata.
+    3. Verify in Xero sandbox invoice posts successfully with correct totals, currency, and reference number.
   - `XeroMultipleTax#L1`
-    1. Prepare invoice with mixed GST/PST lines; export.
-    2. Confirm payload includes separate tax components; Xero invoice shows correct totals.
+    1. Prepare invoice mixing GST/PST components; export.
+    2. Confirm adapter assembles `taxComponents` metadata and resulting Xero invoice splits tax detail correctly.
   - `XeroErrorHandling#L1`
-    1. Deactivate tax rate in Xero; run export; expect line error recorded with message from Xero.
-    2. Reactivate or remap tax; use `Retry Failed Lines`; ensure success status updates.
+    1. Disable mapped tax rate in Xero; execute export; expect service to raise `XERO_VALIDATION_ERROR` with per-document detail.
+    2. After remapping, rerun export and ensure success path clears prior validation error (batch currently fails fast pending error persistence automation).
   - `XeroCreditNote#L1`
-    1. Create PSA credit memo linked to original invoice; export.
-    2. Validate Xero credit note references original document and amounts are negative.
+    1. Create PSA credit memo linked to original invoice; export via Xero adapter.
+    2. Validate Xero credit note references source invoice and issues negative line totals with matching tracking metadata.
 - **User Interface & Operations**
   - `ExportDashboard#L1`
     1. Navigate to dashboard; apply filters; confirm table updates.
@@ -447,3 +448,6 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - `CLITrigger#L1`
     1. Run `scripts/trigger-accounting-export.ts` and confirm it creates a placeholder batch/line.
     2. Validate seeded data appears through the API and can be managed alongside UI-driven batches.
+  - `WorkflowActions#L0`
+    1. Open Automation Hub template builder; search action registry for `accounting_export.create_batch` and `accounting_export.execute_batch`.
+    2. Add each action to a draft workflow and verify parameter prompts align with adapter, dates, and batch id expectations.
