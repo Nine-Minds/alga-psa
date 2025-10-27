@@ -198,7 +198,7 @@ EOF
         log "Migration directory contents:"
         ls -la /app/server/combined-migrations/ || log "Could not list migration directory"
 
-        cd /app/server && timeout 300 NODE_ENV=migration npx knex migrate:latest --knexfile knexfile-ee.cjs --verbose || {
+        cd /app/server && NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile knexfile-ee.cjs --verbose || {
             local exit_code=$?
             if [ $exit_code -eq 124 ]; then
                 log "ERROR: EE migrations timed out after 300 seconds"
@@ -219,7 +219,7 @@ EOF
         log "Migration directory: /app/server/migrations"
         ls -la /app/server/migrations/ || log "Could not list migration directory"
 
-        timeout 300 NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose || {
+        NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose || {
             local exit_code=$?
             if [ $exit_code -eq 124 ]; then
                 log "ERROR: Migrations timed out after 300 seconds"
@@ -237,7 +237,7 @@ EOF
         log "Seed directory: /app/server/seeds"
         ls -la /app/server/seeds/ || log "Could not list seed directory"
 
-        timeout 300 NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose || {
+        NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose || {
             local exit_code=$?
             if [ $exit_code -eq 124 ]; then
                 log "WARNING: Seeds timed out after 300 seconds, but continuing since database may already be seeded"
