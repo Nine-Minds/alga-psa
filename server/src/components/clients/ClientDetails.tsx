@@ -852,17 +852,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     // },
     {
       label: "Billing",
-      content: isBillingEnabled ? (
+      content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <BillingConfiguration
             client={editedClient}
             onSave={handleBillingConfigSave}
             contacts={contacts}
           />
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
-          <FeaturePlaceholder />
         </div>
       )
     },
@@ -913,13 +909,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       label: "Tax Settings",
-      content: isBillingEnabled ? (
+      content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <TaxSettingsForm clientId={client.client_id} />
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
-          <FeaturePlaceholder />
         </div>
       )
     },

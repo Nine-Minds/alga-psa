@@ -342,7 +342,7 @@ def "main cleanup" [
         "contract_line_service_fixed_config" "contract_line_service_configuration" "contract_line_fixed_config"
         "service_rate_tiers" "contract_line_discounts" "discounts"
         "client_contract_lines" "client_billing_cycles" "client_billing_settings"
-        "contract_line_services" "contract_line_mappings" "contracts"
+        "contract_line_services" "contract_lines" "contracts"
         
         # Client details (must come before clients)
         "client_tax_rates" "client_tax_settings"

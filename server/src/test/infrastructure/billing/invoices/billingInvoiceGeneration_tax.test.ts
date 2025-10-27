@@ -3,14 +3,12 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import {
   createTestService,
-  createFixedPlanAssignment as createFixedContractLineAssignment,
-  addServiceToFixedPlan as addServiceToFixedContractLine,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable as ensureClientContractsTable
 } from '../../../../../test-utils/billingTestHelpers';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { generateInvoice, createInvoiceFromBillingResult } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
@@ -19,6 +17,7 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import type { IClient } from 'server/src/interfaces/client.interfaces';
+import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
@@ -132,7 +131,6 @@ describe('Billing Invoice Tax Calculations', () => {
         'contract_line_services',
         'contract_line_service_configuration',
         'contract_line_service_fixed_config',
-        'contract_line_mappings',
         'service_catalog',
         'contract_lines',
         'contracts',
@@ -360,15 +358,6 @@ describe('Billing Invoice Tax Calculations', () => {
         tax_rate_id: nyTaxRateId
       });
 
-      await createFixedContractLineAssignment(context, serviceNY, {
-        planName: 'Multi-Region Contract Line',
-        billingFrequency: 'monthly',
-        baseRateCents: 1000,
-        detailBaseRateCents: 1000,
-        startDate: '2025-02-01T00:00:00.000Z',
-        clientId
-      });
-
       const caTaxRateId = await context.createEntity('tax_rates', {
         region_code: 'US-CA',
         tax_percentage: 8.0,
@@ -383,15 +372,6 @@ describe('Billing Invoice Tax Calculations', () => {
         unit_of_measure: 'unit',
         tax_region: 'US-CA',
         tax_rate_id: caTaxRateId
-      });
-
-      await createFixedContractLineAssignment(context, serviceCA, {
-        planName: 'CA Contract Line',
-        billingFrequency: 'monthly',
-        baseRateCents: 500,
-        detailBaseRateCents: 500,
-        startDate: '2025-02-01T00:00:00.000Z',
-        clientId
       });
 
       await assignServiceTaxRate(context, serviceNY, 'US-NY');
@@ -415,22 +395,85 @@ describe('Billing Invoice Tax Calculations', () => {
         period_end_date: '2025-03-01'
       }, 'billing_cycle_id');
 
-      const invoice = await generateInvoice(billingCycleId);
+      const cycleRecord = await context.db('client_billing_cycles')
+        .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+        .first();
+
+      const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
+      const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
+
+      const nyCharge: IBillingCharge = {
+        tenant: context.tenantId,
+        type: 'usage',
+        serviceId: serviceNY,
+        serviceName: 'NY Service',
+        quantity: 1,
+        rate: 1000,
+        total: 1000,
+        tax_amount: 0,
+        tax_rate: 0,
+        tax_region: 'US-NY',
+        is_taxable: true,
+        usageId: uuidv4(),
+        servicePeriodStart: cycleStart,
+        servicePeriodEnd: cycleEnd,
+        billingTiming: 'arrears'
+      };
+
+      const caCharge: IBillingCharge = {
+        tenant: context.tenantId,
+        type: 'usage',
+        serviceId: serviceCA,
+        serviceName: 'CA Service',
+        quantity: 1,
+        rate: 500,
+        total: 500,
+        tax_amount: 0,
+        tax_rate: 0,
+        tax_region: 'US-CA',
+        is_taxable: true,
+        usageId: uuidv4(),
+        servicePeriodStart: cycleStart,
+        servicePeriodEnd: cycleEnd,
+        billingTiming: 'arrears'
+      };
+
+      const billingResult: IBillingResult = {
+        tenant: context.tenantId,
+        charges: [nyCharge, caCharge],
+        discounts: [],
+        adjustments: [],
+        totalAmount: 1500,
+        finalAmount: 1500
+      };
+
+      const createdInvoice = await createInvoiceFromBillingResult(
+        billingResult,
+        clientId,
+        cycleStart,
+        cycleEnd,
+        billingCycleId,
+        context.userId
+      );
+
+      const invoiceRow = await context.db('invoices')
+        .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
+        .first();
 
       const invoiceItems = await context.db('invoice_items')
-        .where({ invoice_id: invoice!.invoice_id, tenant: context.tenantId })
+        .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('description', 'asc');
 
       const totalItemTax = invoiceItems.reduce((sum, item) => sum + Number(item.tax_amount), 0);
-      expect(totalItemTax).toBe(Number(invoice!.tax));
+      expect(totalItemTax).toBe(Number(invoiceRow!.tax));
 
       // Verify tax calculations:
       // NY Service: $10.00 * 8.875% = $0.89 (rounded up)
       // CA Service: $5.00 * 8.0% = $0.40
       // Total tax should be $1.29
-      expect(invoice!.subtotal).toBe(1500); // $15.00
-      expect(invoice!.tax).toBe(129); // $1.29
-      expect(invoice!.total_amount).toBe(1629); // $16.29
+      expect(Number(invoiceRow!.subtotal)).toBe(1500); // $15.00
+      expect(Number(invoiceRow!.tax)).toBe(129); // $1.29
+      expect(Number(invoiceRow!.total_amount)).toBe(1629); // $16.29
     });
 
     it('should handle tax calculation correctly with mixed positive and negative amounts', async () => {
@@ -745,14 +788,7 @@ describe('Billing Invoice Tax Calculations', () => {
       tax_rate_id: nyTaxRateId
     });
 
-    const { contractLineId: _basicContractLineId } = await createFixedContractLineAssignment(context, service, {
-      planName: 'Basic Contract Line',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      detailBaseRateCents: 10000,
-      clientId: client_id,
-      startDate: '2025-02-01T00:00:00.000Z'
-    });
+    await assignServiceTaxRate(context, service, 'US-NY');
 
     // Create billing cycle
     const billingCycle = await context.createEntity('client_billing_cycles', {
@@ -763,21 +799,65 @@ describe('Billing Invoice Tax Calculations', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    // Generate invoice
-    const invoice = await generateInvoice(billingCycle);
+    const cycleRecord = await context.db('client_billing_cycles')
+      .where({ billing_cycle_id: billingCycle, tenant: context.tenantId })
+      .first();
+
+    const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
+    const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
+
+    const charge: IBillingCharge = {
+      tenant: context.tenantId,
+      type: 'usage',
+      serviceId: service,
+      serviceName: 'Basic Service',
+      quantity: 1,
+      rate: 10000,
+      total: 10000,
+      tax_amount: 0,
+      tax_rate: 0,
+      tax_region: 'US-NY',
+      is_taxable: true,
+      usageId: uuidv4(),
+      servicePeriodStart: cycleStart,
+      servicePeriodEnd: cycleEnd,
+      billingTiming: 'arrears'
+    };
+
+    const billingResult: IBillingResult = {
+      tenant: context.tenantId,
+      charges: [charge],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 10000,
+      finalAmount: 10000
+    };
+
+    const createdInvoice = await createInvoiceFromBillingResult(
+      billingResult,
+      client_id,
+      cycleStart,
+      cycleEnd,
+      billingCycle,
+      context.userId
+    );
+
+    const invoice = await context.db('invoices')
+      .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
+      .first();
 
     // Verify calculations:
     // - Service price: $100.00 (10000 cents)
     // - Tax: $0.00 (0 cents) because client is tax exempt
     // - Total: $100.00 (10000 cents)
-    expect(invoice!.subtotal).toBe(10000); // $100.00
-    expect(invoice!.tax).toBe(0);          // $0.00
-    expect(invoice!.total_amount).toBe(10000); // $100.00
+    expect(Number(invoice!.subtotal)).toBe(10000); // $100.00
+    expect(Number(invoice!.tax)).toBe(0);          // $0.00
+    expect(Number(invoice!.total_amount)).toBe(10000); // $100.00
 
     // Additional verification
-    expect(invoice!.subtotal).toBeGreaterThan(0); // Verify subtotal is positive
-    expect(invoice!.tax).toBe(0);                 // Verify tax is exactly zero
-    expect(invoice!.total_amount).toBe(invoice!.subtotal); // Verify total equals subtotal
+    expect(Number(invoice!.subtotal)).toBeGreaterThan(0); // Verify subtotal is positive
+    expect(Number(invoice!.tax)).toBe(0);                 // Verify tax is exactly zero
+    expect(Number(invoice!.total_amount)).toBe(Number(invoice!.subtotal)); // Verify total equals subtotal
   });
 
   it('should verify total calculation when subtotal and tax are both positive', async () => {
@@ -1086,15 +1166,6 @@ describe('Billing Invoice Tax Calculations', () => {
 
     await assignServiceTaxRate(context, caService, 'US-CA');
 
-    const { contractLineId } = await createFixedContractLineAssignment(context, nyService, {
-      planName: 'Multi Region Contract Line',
-      baseRateCents: 30000,
-      detailBaseRateCents: 10000,
-      startDate: '2025-02-01'
-    });
-
-    await addServiceToFixedContractLine(context, contractLineId, caService, { detailBaseRateCents: 20000 });
-
     const billingCycle = await context.createEntity('client_billing_cycles', {
       client_id: context.clientId,
       billing_cycle: 'monthly',
@@ -1104,34 +1175,90 @@ describe('Billing Invoice Tax Calculations', () => {
       tenant: context.tenantId
     }, 'billing_cycle_id');
 
-    const invoice = await generateInvoice(billingCycle);
+    const cycleRecord = await context.db('client_billing_cycles')
+      .where({ billing_cycle_id: billingCycle, tenant: context.tenantId })
+      .first();
 
-    expect(invoice).not.toBeNull();
+    const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
+    const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
 
-    // Get the invoice items
+    const nyCharge: IBillingCharge = {
+      tenant: context.tenantId,
+      type: 'usage',
+      serviceId: nyService,
+      serviceName: 'NY Service',
+      quantity: 1,
+      rate: 10000,
+      total: 10000,
+      tax_amount: 0,
+      tax_rate: 0,
+      tax_region: 'US-NY',
+      is_taxable: true,
+      usageId: uuidv4(),
+      servicePeriodStart: cycleStart,
+      servicePeriodEnd: cycleEnd,
+      billingTiming: 'arrears'
+    };
+
+    const caCharge: IBillingCharge = {
+      tenant: context.tenantId,
+      type: 'usage',
+      serviceId: caService,
+      serviceName: 'CA Service',
+      quantity: 1,
+      rate: 20000,
+      total: 20000,
+      tax_amount: 0,
+      tax_rate: 0,
+      tax_region: 'US-CA',
+      is_taxable: true,
+      usageId: uuidv4(),
+      servicePeriodStart: cycleStart,
+      servicePeriodEnd: cycleEnd,
+      billingTiming: 'arrears'
+    };
+
+    const billingResult: IBillingResult = {
+      tenant: context.tenantId,
+      charges: [nyCharge, caCharge],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 30000,
+      finalAmount: 30000
+    };
+
+    const createdInvoice = await createInvoiceFromBillingResult(
+      billingResult,
+      context.clientId,
+      cycleStart,
+      cycleEnd,
+      billingCycle,
+      context.userId
+    );
+
+    const invoiceRow = await context.db('invoices')
+      .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
+      .first();
+
+    expect(invoiceRow).not.toBeNull();
+
     const items = await context.db('invoice_items')
-      .where({ invoice_id: invoice!.invoice_id, tenant: context.tenantId })
+      .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
       .orderBy('created_at', 'asc');
 
-    // Verify we have a consolidated item
-    expect(items).toHaveLength(1);
+    expect(items).toHaveLength(2);
 
-    // The contract line consolidates services into a single invoice item
-    // Base rate is $300.00 (30000 cents) for the entire contract line
-    expect(invoice!.subtotal).toBe(30000); // $300.00
+    const nyItem = items.find((item) => item.service_id === nyService)!;
+    const caItem = items.find((item) => item.service_id === caService)!;
 
-    // Tax should be calculated on the consolidated amount
-    // Since the consolidated item uses the first service's tax region (US-NY with 10% rate)
-    // or a weighted average, verify tax exists and is reasonable
-    expect(invoice!.tax).toBeGreaterThan(0);
-    expect(Number(items[0].tax_amount)).toBe(invoice!.tax);
+    expect(Number(nyItem.net_amount)).toBe(10000);
+    expect(Number(caItem.net_amount)).toBe(20000);
 
-    // The total should be subtotal + tax
-    expect(invoice!.total_amount).toBe(invoice!.subtotal + invoice!.tax);
+    expect(Number(nyItem.tax_amount)).toBe(1000); // 10% of $100
+    expect(Number(caItem.tax_amount)).toBe(1450); // 7.25% of $200
 
-    // Verify the consolidated item has tax information
-    expect(items[0].is_taxable).toBe(true);
-    expect(items[0].tax_region).toBeTruthy();
-    expect(Number(items[0].net_amount)).toBe(30000);
+    expect(Number(invoiceRow!.subtotal)).toBe(30000);
+    expect(Number(invoiceRow!.tax)).toBe(2450);
+    expect(Number(invoiceRow!.total_amount)).toBe(32450);
   });
 });

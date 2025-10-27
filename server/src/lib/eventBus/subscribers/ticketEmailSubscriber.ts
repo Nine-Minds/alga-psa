@@ -15,6 +15,63 @@ import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
+import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
+import type { Knex } from 'knex';
+import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+
+/**
+ * Get the base URL from NEXTAUTH_URL environment variable
+ */
+function getBaseUrl(): string {
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+function normalizeHost(host: string): string {
+  return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+}
+
+async function resolveTicketLinks(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string,
+  ticketNumber?: string | null
+): Promise<{ internalUrl: string; portalUrl: string }> {
+  const internalBase = getBaseUrl();
+  const identifier = (ticketNumber && ticketNumber.trim()) || ticketId;
+  const internalUrl = `${internalBase}/msp/tickets/${ticketId}`;
+
+  let portalHost: string | null = null;
+
+  try {
+    const portalDomain = await getPortalDomain(knex, tenantId);
+    if (portalDomain) {
+      if (portalDomain.status === 'active' && portalDomain.domain) {
+        portalHost = portalDomain.domain;
+      } else if (portalDomain.canonicalHost) {
+        portalHost = portalDomain.canonicalHost;
+      }
+    }
+  } catch (error) {
+    logger.warn('[TicketEmailSubscriber] Failed to resolve portal domain for ticket link', {
+      tenantId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+
+  const clientPortalPath = `/client-portal/tickets`;
+  const clientPortalWithTicket = `${clientPortalPath}?ticket=${encodeURIComponent(identifier)}`;
+  let portalUrl: string;
+  if (portalHost) {
+    const sanitizedHost = normalizeHost(portalHost);
+    portalUrl = `https://${sanitizedHost}${clientPortalWithTicket}`;
+  } else {
+    const fallbackBase = internalBase.endsWith('/') ? internalBase.slice(0, -1) : internalBase;
+    portalUrl = `${fallbackBase}${clientPortalWithTicket}`;
+  }
+
+  return { internalUrl, portalUrl };
+}
 
 /**
  * Wrapper function that checks notification preferences before sending email
@@ -203,11 +260,31 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
     }
 
     default:
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
       if (typeof value === 'boolean') {
         return value ? 'Yes' : 'No';
       }
+      if (typeof value === 'string') {
+        const formatted = formatBlockNoteContent(value);
+        const formattedText = formatted.text?.trim?.();
+        if (formattedText) {
+          return formattedText;
+        }
+        return value;
+      }
       if (typeof value === 'object') {
-        return JSON.stringify(value);
+        const formatted = formatBlockNoteContent(value);
+        const formattedText = formatted.text?.trim?.();
+        if (formattedText && formattedText !== JSON.stringify(value)) {
+          return formattedText;
+        }
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return String(value);
+        }
       }
       return String(value);
   }
@@ -464,37 +541,43 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const requesterDetailsForText = requesterDetails;
     const assignedDetailsForText = assignedDetails;
 
-    const emailContext = {
-      ticket: {
-        id: ticket.ticket_number,
-        title: ticket.title,
-        description,
-        descriptionText: description,
-        descriptionHtml: descriptionHtml,
-        priority: priorityName,
-        priorityColor,
-        status: statusName,
-        createdAt,
-        createdBy: createdByName,
-        createdDetails,
-        assignedToName,
-        assignedToEmail: assignedToEmailDisplay,
-        assignedDetails: assignedDetailsForText,
-        requesterName,
-        requesterEmail,
-        requesterPhone,
-        requesterContact,
-        requesterDetails: requesterDetailsForText,
-        board: boardName,
-        category: categoryName || 'Not categorized',
-        subcategory: subcategoryName || 'Not specified',
-        categoryDetails,
-        locationSummary,
-        clientName,
-        metaLine,
-        url: `/tickets/${ticket.ticket_number}`
-      }
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      description,
+      descriptionText: description,
+      descriptionHtml: descriptionHtml,
+      priority: priorityName,
+      priorityColor,
+      status: statusName,
+      createdAt,
+      createdBy: createdByName,
+      createdDetails,
+      assignedToName,
+      assignedToEmail: assignedToEmailDisplay,
+      assignedDetails: assignedDetailsForText,
+      requesterName,
+      requesterEmail,
+      requesterPhone,
+      requesterContact,
+      requesterDetails: requesterDetailsForText,
+      board: boardName,
+      category: categoryName || 'Not categorized',
+      subcategory: subcategoryName || 'Not specified',
+      categoryDetails,
+      locationSummary,
+      clientName,
+      metaLine
     };
+
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url
+      }
+    });
 
     const replyContext = {
       ticketId: ticket.ticket_id || payload.ticketId,
@@ -509,7 +592,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         to: primaryEmail,
         subject: emailSubject,
         template: 'ticket-created',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
       }, 'Ticket Created');
     }
@@ -521,7 +604,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         to: assignedEmail,
         subject: emailSubject,
         template: 'ticket-created',
-        context: emailContext,
+        context: buildContext(internalUrl),
         replyContext
       }, 'Ticket Created', ticket.assigned_to);
     }
@@ -624,17 +707,23 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       .where({ user_id: payload.userId, tenant: tenantId })
       .first();
 
-    const emailContext = {
-      ticket: {
-        id: ticket.ticket_number,
-        title: ticket.title,
-        priority: ticket.priority_name || 'Unknown',
-        status: ticket.status_name || 'Unknown',
-        changes: formattedChanges,
-        updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId,
-        url: `/tickets/${ticket.ticket_number}`
-      }
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      priority: ticket.priority_name || 'Unknown',
+      status: ticket.status_name || 'Unknown',
+      changes: formattedChanges,
+      updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : payload.userId
     };
+
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url
+      }
+    });
 
     // Send to primary recipient (contact or client) - external user, no userId
     await sendNotificationIfEnabled({
@@ -642,7 +731,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       to: primaryEmail,
       subject: `Ticket Updated: ${ticket.title}`,
       template: 'ticket-updated',
-      context: emailContext,
+      context: buildContext(portalUrl),
       replyContext: {
         ticketId: ticket.ticket_id || payload.ticketId,
         threadId: ticket.email_metadata?.threadId
@@ -652,16 +741,16 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     // Send to assigned user if different from primary recipient
     if (ticket.assigned_to_email && ticket.assigned_to_email !== primaryEmail) {
       await sendNotificationIfEnabled({
-        tenantId,
-        to: ticket.assigned_to_email,
-        subject: `Ticket Updated: ${ticket.title}`,
-        template: 'ticket-updated',
-        context: emailContext,
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          threadId: ticket.email_metadata?.threadId
-        }
-      }, 'Ticket Updated', ticket.assigned_to);
+      tenantId,
+      to: ticket.assigned_to_email,
+      subject: `Ticket Updated: ${ticket.title}`,
+      template: 'ticket-updated',
+      context: buildContext(internalUrl),
+      replyContext: {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        threadId: ticket.email_metadata?.threadId
+      }
+    }, 'Ticket Updated', ticket.assigned_to);
     }
 
     // Get and notify all additional resources
@@ -680,16 +769,16 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     for (const resource of additionalResources) {
       if (resource.email) {
         await sendNotificationIfEnabled({
-          tenantId,
-          to: resource.email,
-          subject: `Ticket Updated: ${ticket.title}`,
-          template: 'ticket-updated',
-          context: emailContext,
-          replyContext: {
-            ticketId: ticket.ticket_id || payload.ticketId,
-            threadId: ticket.email_metadata?.threadId
-          }
-        }, 'Ticket Updated', resource.user_id);
+        tenantId,
+        to: resource.email,
+        subject: `Ticket Updated: ${ticket.title}`,
+        template: 'ticket-updated',
+        context: buildContext(internalUrl),
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
+        }
+      }, 'Ticket Updated', resource.user_id);
       }
     }
 
@@ -765,16 +854,22 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       .first()
       .then(user => user ? `${user.first_name} ${user.last_name}` : 'System');
 
-    const emailContext = {
-      ticket: {
-        id: ticket.ticket_number,
-        title: ticket.title,
-        priority: ticket.priority_name || 'Unknown',
-        status: ticket.status_name || 'Unknown',
-        assignedBy: assignerName,
-        url: `/tickets/${ticket.ticket_number}`
-      }
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      priority: ticket.priority_name || 'Unknown',
+      status: ticket.status_name || 'Unknown',
+      assignedBy: assignerName
     };
+
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url
+      }
+    });
 
     const replyContext = {
       ticketId: ticket.ticket_id || payload.ticketId,
@@ -788,7 +883,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         to: ticket.assigned_to_email,
         subject: `You have been assigned to ticket: ${ticket.title}`,
         template: 'ticket-assigned',
-        context: emailContext,
+        context: buildContext(internalUrl),
         replyContext
       }, 'Ticket Assigned', ticket.assigned_to);
     }
@@ -803,7 +898,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         to: locationEmail,
         subject: `Ticket Assigned: ${ticket.title}`,
         template: 'ticket-assigned',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
       }, 'Ticket Assigned');
     }
@@ -815,7 +910,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         to: contactEmail,
         subject: `Ticket Assigned: ${ticket.title}`,
         template: 'ticket-assigned',
-        context: emailContext,
+        context: buildContext(portalUrl),
         replyContext
       }, 'Ticket Assigned');
     }
@@ -840,7 +935,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
           to: resource.email,
           subject: `You have been added as additional resource to ticket: ${ticket.title}`,
           template: 'ticket-assigned',
-          context: emailContext,
+          context: buildContext(internalUrl),
           replyContext
         }, 'Ticket Assigned', resource.user_id);
       }
@@ -922,6 +1017,21 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       rawContent: payload.comment?.content ?? null
     };
 
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title
+    };
+
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url
+      },
+      comment: commentContext
+    });
+
     // Determine primary email (contact first, then client)
     const primaryEmail = ticket.contact_email || ticket.client_email;
 
@@ -932,14 +1042,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         to: primaryEmail,
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
-        context: {
-          ticket: {
-            id: ticket.ticket_number,
-            title: ticket.title,
-            url: `/tickets/${ticket.ticket_number}`
-          },
-          comment: commentContext
-        },
+        context: buildContext(portalUrl),
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           commentId: payload.comment?.id,
@@ -955,14 +1058,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         to: ticket.assigned_to_email,
         subject: `New Comment on Ticket: ${ticket.title}`,
         template: 'ticket-comment-added',
-        context: {
-          ticket: {
-            id: ticket.ticket_number,
-            title: ticket.title,
-            url: `/tickets/${ticket.ticket_number}`
-          },
-          comment: commentContext
-        },
+        context: buildContext(internalUrl),
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           commentId: payload.comment?.id,
@@ -979,18 +1075,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           to: resource.email,
           subject: `New Comment on Ticket: ${ticket.title}`,
           template: 'ticket-comment-added',
-        context: {
-          ticket: {
-            id: ticket.ticket_number,
-            title: ticket.title,
-            url: `/tickets/${ticket.ticket_number}`
-          },
-          comment: commentContext
-        },
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          commentId: payload.comment?.id,
-          threadId: ticket.email_metadata?.threadId
+          context: buildContext(internalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: ticket.email_metadata?.threadId
           }
         }, 'Ticket Comment Added', resource.user_id);
       }
@@ -1050,16 +1139,28 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       return;
     }
 
-    const emailContext = {
+    const changes = await formatChanges(db, payload.changes || {}, tenantId);
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+    const baseTicketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      priority: ticket.priority_name || 'Unknown',
+      status: ticket.status_name || 'Unknown',
+      changes,
+      closedBy: payload.userId,
+      resolution: ticket.resolution || ''
+    };
+    const externalContext = {
       ticket: {
-        id: ticket.ticket_number,
-        title: ticket.title,
-        priority: ticket.priority_name || 'Unknown',
-        status: ticket.status_name || 'Unknown',
-        changes: await formatChanges(db, payload.changes || {}, tenantId),
-        closedBy: payload.userId,
-        resolution: ticket.resolution || '',
-        url: `/tickets/${ticket.ticket_number}`
+        ...baseTicketContext,
+        url: portalUrl
+      }
+    };
+    const internalContext = {
+      ticket: {
+        ...baseTicketContext,
+        url: internalUrl
       }
     };
 
@@ -1069,7 +1170,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       to: ticket.client_email,
       subject: `Ticket Closed: ${ticket.title}`,
       template: 'ticket-closed',
-      context: emailContext,
+      context: externalContext,
       replyContext: {
         ticketId: ticket.ticket_id || payload.ticketId,
         threadId: ticket.email_metadata?.threadId
@@ -1096,7 +1197,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           to: resource.email,
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
-          context: emailContext,
+          context: internalContext,
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId
@@ -1176,9 +1277,12 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
       'TICKET_COMMENT_ADDED'
     ];
 
+    const channel = getEmailEventChannel();
+    console.log(`[TicketEmailSubscriber] Using channel "${channel}" for ticket email events`);
+
     for (const eventType of ticketEventTypes) {
-      await getEventBus().subscribe(eventType, handleTicketEvent);
-      console.log(`[TicketEmailSubscriber] Successfully subscribed to ${eventType} events`);
+      await getEventBus().subscribe(eventType, handleTicketEvent, { channel });
+      console.log(`[TicketEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
 
     console.log('[TicketEmailSubscriber] Registered handler for all ticket events');
@@ -1196,14 +1300,18 @@ export async function unregisterTicketEmailSubscriber(): Promise<void> {
     const ticketEventTypes: EventType[] = [
       'TICKET_CREATED',
       'TICKET_UPDATED',
-      'TICKET_CLOSED'
+      'TICKET_CLOSED',
+      'TICKET_ASSIGNED',
+      'TICKET_COMMENT_ADDED'
     ];
 
+    const channel = getEmailEventChannel();
+
     for (const eventType of ticketEventTypes) {
-      await getEventBus().unsubscribe(eventType, handleTicketEvent);
+      await getEventBus().unsubscribe(eventType, handleTicketEvent, { channel });
     }
 
-    logger.info('[TicketEmailSubscriber] Successfully unregistered from all ticket events');
+    logger.info(`[TicketEmailSubscriber] Successfully unregistered from ticket events on channel "${channel}"`);
   } catch (error) {
     logger.error('Failed to unregister email notification subscribers:', error);
     throw error;

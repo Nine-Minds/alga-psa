@@ -15,13 +15,23 @@ NC='\033[0m' # No Color
 REGISTRY="ghcr.io/nine-minds/alga-psa-ce"
 MAX_FALLBACK_ATTEMPTS=10
 
+LAST_CHECK_ERROR=""
+
+# Ensure docker CLI is available before proceeding.
+if ! command -v docker >/dev/null 2>&1; then
+  echo -e "${RED}✗${NC} Docker CLI not found (command 'docker' is missing)." >&2
+  echo -e "${YELLOW}ℹ${NC}  Install Docker Desktop or ensure 'docker' is on your PATH, then rerun this script." >&2
+  exit 1
+fi
+
 # Function to check if a tag exists in the registry
 check_tag_exists() {
   local tag="$1"
   echo -e "${BLUE}→${NC} Checking if tag '${tag}' exists in registry..." >&2
 
   # Use docker manifest inspect to check if the image exists
-  if docker manifest inspect "${REGISTRY}:${tag}" >/dev/null 2>&1; then
+  if LAST_CHECK_ERROR="$(docker manifest inspect "${REGISTRY}:${tag}" 2>&1)"; then
+    LAST_CHECK_ERROR=""
     return 0
   else
     return 1
@@ -67,6 +77,13 @@ fi
 # Validate that the tag exists in the registry
 if ! check_tag_exists "${tag}"; then
   echo -e "${RED}✗${NC} Tag '${tag}' not found in registry: ${REGISTRY}" >&2
+
+  if [[ -n "${LAST_CHECK_ERROR}" ]]; then
+    echo -e "${YELLOW}ℹ${NC}  docker manifest inspect failed with:" >&2
+    while IFS= read -r line; do
+      echo -e "      ${line}" >&2
+    done <<<"${LAST_CHECK_ERROR}"
+  fi
 
   if valid_tag=$(find_valid_tag); then
     tag="${valid_tag}"

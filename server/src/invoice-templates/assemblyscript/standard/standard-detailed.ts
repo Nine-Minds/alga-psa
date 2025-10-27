@@ -9,7 +9,7 @@ import { formatCurrency } from "../assembly/common/format-helpers";
 
 // --- Constants ---
 const DEFAULT_CATEGORY = "Items";
-const TAX_RATE: f64 = 0.10;
+const FALLBACK_TAX_RATE: f64 = 0.10;
 
 // --- Main Export ---
 // @ts-ignore: decorator
@@ -33,13 +33,20 @@ export function generateLayout(dataString: string): string {
   createHeaderSection_StdDetailed(viewModel, documentChildren);
 
   // createItemsSection now returns only the subtotal and modifies documentChildren directly
-  const calculatedSubtotal = createItemsSection_StdDetailed(viewModel.items, documentChildren);
+  const derivedSubtotal = createItemsSection_StdDetailed(viewModel.items, documentChildren);
 
-  const calculatedTax = calculatedSubtotal * TAX_RATE;
-  const calculatedTotal = calculatedSubtotal + calculatedTax;
+  const hasProvidedTotals = (viewModel.subtotal > 0) || (viewModel.tax > 0) || (viewModel.total > 0);
+
+  let displaySubtotal = hasProvidedTotals ? viewModel.subtotal : derivedSubtotal;
+  let displayTax = hasProvidedTotals ? viewModel.tax : derivedSubtotal * FALLBACK_TAX_RATE;
+  let displayTotal = hasProvidedTotals ? viewModel.total : displaySubtotal + displayTax;
+
+  if (displayTotal <= 0 && displaySubtotal > 0) {
+    displayTotal = displaySubtotal + displayTax;
+  }
 
   // Pass children array to totals and notes sections
-  createTotalsSection_StdDetailed(calculatedSubtotal, calculatedTax, calculatedTotal, documentChildren);
+  createTotalsSection_StdDetailed(displaySubtotal, displayTax, displayTotal, documentChildren);
   createNotesSection_StdDetailed(viewModel, documentChildren);
 
   // documentChildren array is now populated by the helper functions

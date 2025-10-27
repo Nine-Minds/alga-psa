@@ -26,7 +26,7 @@ const baseServiceSchema = z.object({
   tenant: z.string().min(1, 'Tenant is required'),
   service_name: z.string(),
   custom_service_type_id: z.string().uuid(),   // Now required, not nullable
-  billing_method: z.enum(['fixed', 'hourly', 'usage']),
+  billing_method: z.enum(['fixed', 'hourly', 'usage', 'per_unit']),
   default_rate: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ),

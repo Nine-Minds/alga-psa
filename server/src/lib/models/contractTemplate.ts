@@ -28,16 +28,16 @@ const ContractTemplateModel = {
       return null;
     }
 
-    const lines = await knex('contract_template_line_mappings as map')
-      .join('contract_template_lines as lines', function joinLines() {
-        this.on('map.template_line_id', '=', 'lines.template_line_id')
-          .andOn('map.tenant', '=', 'lines.tenant');
+    const lines = await knex('contract_template_lines as lines')
+      .leftJoin('contract_template_line_terms as terms', function joinTerms() {
+        this.on('terms.template_line_id', '=', 'lines.template_line_id')
+          .andOn('terms.tenant', '=', 'lines.tenant');
       })
       .where({
-        'map.tenant': tenant,
-        'map.template_id': templateId,
+        'lines.tenant': tenant,
+        'lines.template_id': templateId,
       })
-      .orderBy('map.display_order', 'asc')
+      .orderBy('lines.display_order', 'asc')
       .select([
         'lines.template_line_id',
         'lines.template_line_name',
@@ -45,11 +45,20 @@ const ContractTemplateModel = {
         'lines.billing_frequency',
         'lines.is_active',
         'lines.description',
-        'map.display_order',
-        'map.custom_rate',
+        'lines.display_order',
+        'lines.custom_rate',
+        'lines.billing_timing',
+        'terms.billing_timing as terms_billing_timing',
       ]);
 
-    return { ...template, lines };
+    const normalizedLines = lines.map((line) => ({
+      ...line,
+      custom_rate: line.custom_rate != null ? Number(line.custom_rate) : null,
+      display_order: line.display_order ?? 0,
+      billing_timing: line.billing_timing ?? line.terms_billing_timing ?? 'arrears',
+    }));
+
+    return { ...template, lines: normalizedLines };
   },
 
   async create(
@@ -187,11 +196,6 @@ const ContractTemplateModel = {
           .whereIn('template_line_id', lineIds)
           .delete();
 
-        await trx('contract_template_line_mappings')
-          .where({ tenant })
-          .whereIn('template_line_id', lineIds)
-          .delete();
-
         await trx('contract_template_lines')
           .where({ tenant })
           .whereIn('template_line_id', lineIds)
@@ -208,16 +212,6 @@ const ContractTemplateModel = {
           .delete();
 
         await trx('contract_line_template_terms')
-          .where({ tenant })
-          .whereIn('contract_line_id', lineIds)
-          .delete();
-
-        await trx('contract_line_fixed_config')
-          .where({ tenant })
-          .whereIn('contract_line_id', lineIds)
-          .delete();
-
-        await trx('contract_line_mappings')
           .where({ tenant })
           .whereIn('contract_line_id', lineIds)
           .delete();

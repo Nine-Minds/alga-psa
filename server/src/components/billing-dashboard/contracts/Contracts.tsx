@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
@@ -30,6 +30,7 @@ import { TemplateWizard } from './template-wizard/TemplateWizard';
 
 const Contracts: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
@@ -60,6 +61,25 @@ const Contracts: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const subtab = searchParams?.get('subtab');
+    const desiredView = subtab === 'clients' ? 'Client Contracts' : 'Templates';
+    if (activeView !== desiredView) {
+      setActiveView(desiredView);
+    }
+  }, [searchParams, activeView]);
+
+  const updateUrlForView = (view: 'Templates' | 'Client Contracts') => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    params.set('tab', 'contracts');
+    if (view === 'Client Contracts') {
+      params.set('subtab', 'clients');
+    } else {
+      params.set('subtab', 'templates');
+    }
+    router.replace(`/msp/billing?${params.toString()}`);
   };
 
   const handleDeleteContract = async (contractId: string) => {
@@ -120,9 +140,13 @@ const Contracts: React.FC = () => {
     if (contractId) {
       const params = new URLSearchParams();
       params.set('tab', 'contracts');
-      params.set('contractId', contractId);
       if (clientContractId) {
+        params.set('subtab', 'clients');
+        params.set('contractId', contractId);
         params.set('clientContractId', clientContractId);
+      } else {
+        params.set('subtab', 'templates');
+        params.set('contractId', contractId);
       }
       router.push(`/msp/billing?${params.toString()}`);
     }
@@ -390,9 +414,11 @@ const renderStatusBadge = (status: string) => {
             <CustomTabs
               tabs={tabs}
               defaultTab={activeView}
-              onTabChange={(tab) =>
-                setActiveView(tab === 'Client Contracts' ? 'Client Contracts' : 'Templates')
-              }
+              onTabChange={(tab) => {
+                const view = tab === 'Client Contracts' ? 'Client Contracts' : 'Templates';
+                setActiveView(view);
+                updateUrlForView(view);
+              }}
             />
           )}
         </Box>

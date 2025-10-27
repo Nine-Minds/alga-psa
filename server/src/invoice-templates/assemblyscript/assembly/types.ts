@@ -35,6 +35,10 @@ export class InvoiceViewModel {
   tenantClient: TenantClient | null = null;
   items: Array<InvoiceItem> = [];
   notes: string | null = null;
+  subtotal: f64 = 0;
+  tax: f64 = 0;
+  total: f64 = 0;
+  creditApplied: f64 = 0;
 }
 
 // Layout element base classes

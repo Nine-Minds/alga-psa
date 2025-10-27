@@ -471,9 +471,14 @@ exports.up = async function up(knex) {
   }
 
   // Comparison helpers for legacy vs new template storage
-  const hasLegacyTemplateFlag = await knex.schema.hasColumn('contracts', 'is_template');
-  const legacyContractsSelect = hasLegacyTemplateFlag
-    ? `
+  const contractsTableExists = await knex.schema.hasTable('contracts');
+  const hasLegacyTemplateFlag = contractsTableExists
+    ? await knex.schema.hasColumn('contracts', 'is_template')
+    : false;
+
+  const legacyContractsSelect = contractsTableExists
+    ? (hasLegacyTemplateFlag
+        ? `
     SELECT
       'legacy'::text AS source,
       c.tenant,
@@ -487,7 +492,7 @@ exports.up = async function up(knex) {
       c.updated_at
     FROM contracts c
     WHERE c.is_template = true`
-    : `
+        : `
     SELECT
       'legacy'::text AS source,
       c.tenant,
@@ -500,7 +505,20 @@ exports.up = async function up(knex) {
       c.created_at,
       c.updated_at
     FROM contracts c
-    WHERE 1 = 0`;
+    WHERE 1 = 0`)
+    : `
+    SELECT
+      'legacy'::text AS source,
+      NULL::uuid AS tenant,
+      NULL::uuid AS template_identifier,
+      NULL::text AS template_name,
+      NULL::text AS template_description,
+      NULL::text AS cadence,
+      NULL::text AS status,
+      NULL::jsonb AS template_metadata,
+      NULL::timestamptz AS created_at,
+      NULL::timestamptz AS updated_at
+    WHERE false`;
 
   // Create view only if it doesn't exist
   const hasCompareView = await knex.raw(`
@@ -530,11 +548,17 @@ exports.up = async function up(knex) {
     `);
   }
 
-  const hasLegacyTemplateLineFlag = await knex.schema.hasColumn('contract_lines', 'is_template');
-  const hasLegacyTemplateTerms = await knex.schema.hasTable('contract_line_template_terms');
+  const contractLinesTableExists = await knex.schema.hasTable('contract_lines');
+  const hasLegacyTemplateLineFlag = contractLinesTableExists
+    ? await knex.schema.hasColumn('contract_lines', 'is_template')
+    : false;
+  const hasLegacyTemplateTerms = contractLinesTableExists
+    ? await knex.schema.hasTable('contract_line_template_terms')
+    : false;
 
-  const legacyTemplateLinesSelect = hasLegacyTemplateLineFlag
-    ? `
+  const legacyTemplateLinesSelect = contractLinesTableExists
+    ? (hasLegacyTemplateLineFlag
+        ? `
     SELECT
       'legacy'::text AS source,
       cl.tenant,
@@ -557,7 +581,7 @@ exports.up = async function up(knex) {
       ON terms.tenant = cl.tenant
      AND terms.contract_line_id = cl.contract_line_id` : ''}
     WHERE cl.is_template = true`
-    : `
+        : `
     SELECT
       'legacy'::text AS source,
       cl.tenant,
@@ -576,7 +600,26 @@ exports.up = async function up(knex) {
       cl.created_at,
       cl.updated_at
     FROM contract_lines cl
-    WHERE 1 = 0`;
+    WHERE 1 = 0`)
+    : `
+    SELECT
+      'legacy'::text AS source,
+      NULL::uuid AS tenant,
+      NULL::uuid AS template_line_identifier,
+      NULL::text AS template_line_name,
+      NULL::text AS line_type,
+      NULL::text AS billing_frequency,
+      NULL::boolean AS is_active,
+      NULL::boolean AS enable_overtime,
+      NULL::numeric AS overtime_rate,
+      NULL::integer AS overtime_threshold,
+      NULL::boolean AS enable_after_hours_rate,
+      NULL::numeric AS after_hours_multiplier,
+      NULL::integer AS minimum_billable_time,
+      NULL::integer AS round_up_to_nearest,
+      NULL::timestamptz AS created_at,
+      NULL::timestamptz AS updated_at
+    WHERE false`;
 
   // Create view only if it doesn't exist
   const hasLinesCompareView = await knex.raw(`

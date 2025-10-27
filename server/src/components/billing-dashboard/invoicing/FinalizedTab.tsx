@@ -262,11 +262,6 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       render: (value) => `$${(Number(value) / 100).toFixed(2)}`,
     },
     {
-      title: 'Invoice Date',
-      dataIndex: 'invoice_date',
-      render: (value) => toPlainDate(value).toLocaleString(),
-    },
-    {
       title: 'Finalized Date',
       dataIndex: 'finalized_at',
       render: (value) => value ? toPlainDate(value).toLocaleString() : '',
@@ -421,7 +416,6 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 rowClassName={(record) =>
                   selectedInvoiceId === record.invoice_id ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"
                 }
-                initialSorting={[{ id: 'invoice_date', desc: true }]}
               />
             </div>
           </Panel>

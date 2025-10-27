@@ -1,6 +1,8 @@
 import { IContract, IContractWithClient } from 'server/src/interfaces/contract.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
+import { withTransaction } from '@shared/db';
+import { Knex as KnexType } from 'knex';
 
 /**
  * Data access helpers for contracts.
@@ -104,10 +106,58 @@ const Contract = {
           .where({ contract_id: contractId, tenant })
           .delete();
 
-        // Delete contract line mappings
-        await trx('contract_line_mappings')
+        const contractLineIds = await trx('contract_lines')
           .where({ contract_id: contractId, tenant })
-          .delete();
+          .pluck('contract_line_id');
+
+        if (contractLineIds.length > 0) {
+          const configIds = await trx('contract_line_service_configuration')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .pluck('config_id');
+
+          if (configIds.length > 0) {
+            await trx('contract_line_service_bucket_config')
+              .where({ tenant })
+              .whereIn('config_id', configIds)
+              .delete();
+
+            await trx('contract_line_service_hourly_config')
+              .where({ tenant })
+              .whereIn('config_id', configIds)
+              .delete();
+
+            await trx('contract_line_service_usage_config')
+              .where({ tenant })
+              .whereIn('config_id', configIds)
+              .delete();
+
+            await trx('contract_line_service_configuration')
+              .where({ tenant })
+              .whereIn('config_id', configIds)
+              .delete();
+          }
+
+          await trx('contract_line_service_defaults')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .delete();
+
+          await trx('contract_line_services')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .delete();
+
+          await trx('contract_line_template_terms')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .delete();
+
+          await trx('contract_lines')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .delete();
+        }
 
         // Delete the contract itself
         const deleted = await trx('contracts')
@@ -132,22 +182,22 @@ const Contract = {
     }
 
     try {
-      const rows = await db('contracts')
-        .where({ tenant })
-        .whereNot('is_template', true)
-        .select('*');
+      return await withTransaction(db, async (trx) => {
+        const contracts = await trx('contracts')
+          .where({ tenant })
+          .whereNot('is_template', true)
+          .select('*');
 
-      // Check and update expired status for all contracts
-      await Promise.all(rows.map(contract =>
-        Contract.checkAndUpdateExpiredStatus(contract.contract_id)
-      ));
+        // Update contract statuses sequentially within the same connection
+        for (const contract of contracts) {
+          await Contract.checkAndUpdateExpiredStatus(contract.contract_id, { trx, tenant });
+        }
 
-      // Re-fetch to get updated statuses
-      const updatedRows = await db('contracts')
-        .where({ tenant })
-        .whereNot('is_template', true)
-        .select('*');
-      return updatedRows;
+        return await trx('contracts')
+          .where({ tenant })
+          .whereNot('is_template', true)
+          .select('*');
+      });
     } catch (error) {
       console.error('Error fetching contracts:', error);
       throw error;
@@ -161,45 +211,44 @@ const Contract = {
     }
 
     try {
-      // First get all contract IDs to check expiration
-      const contractIds = await db('contracts')
-        .where({ tenant })
-        .select('contract_id');
+      return await withTransaction(db, async (trx) => {
+        const contractIds = await trx('contracts')
+          .where({ tenant })
+          .select('contract_id');
 
-      // Check and update expired status for all contracts
-      await Promise.all(contractIds.map(({ contract_id }) =>
-        Contract.checkAndUpdateExpiredStatus(contract_id)
-      ));
+        for (const { contract_id } of contractIds) {
+          await Contract.checkAndUpdateExpiredStatus(contract_id, { trx, tenant });
+        }
 
-      // Now fetch with updated statuses
-      const rows = await db('contracts as co')
-        .leftJoin('client_contracts as cc', function joinClientContracts() {
-          this.on('co.contract_id', '=', 'cc.contract_id')
-            .andOn('co.tenant', '=', 'cc.tenant');
-        })
-        .leftJoin('contract_templates as template', function joinTemplateContracts() {
-          this.on('cc.template_contract_id', '=', 'template.template_id')
-            .andOn('cc.tenant', '=', 'template.tenant');
-        })
-        .leftJoin('clients as c', function joinClients() {
-          this.on('cc.client_id', '=', 'c.client_id')
-            .andOn('cc.tenant', '=', 'c.tenant');
-        })
-        .where({ 'co.tenant': tenant })
-        .andWhere((builder) => builder.whereNull('co.is_template').orWhere('co.is_template', false))
-        .select(
-          'co.*',
-          'cc.client_contract_id',
-          'cc.template_contract_id',
-          'c.client_id',
-          'c.client_name',
-          'cc.start_date',
-          'cc.end_date',
-          'template.template_name as template_contract_name'
-        )
-        .orderBy('co.created_at', 'desc');
+        const rows = await trx('contracts as co')
+          .leftJoin('client_contracts as cc', function joinClientContracts() {
+            this.on('co.contract_id', '=', 'cc.contract_id')
+              .andOn('co.tenant', '=', 'cc.tenant');
+          })
+          .leftJoin('contract_templates as template', function joinTemplateContracts() {
+            this.on('cc.template_contract_id', '=', 'template.template_id')
+              .andOn('cc.tenant', '=', 'template.tenant');
+          })
+          .leftJoin('clients as c', function joinClients() {
+            this.on('cc.client_id', '=', 'c.client_id')
+              .andOn('cc.tenant', '=', 'c.tenant');
+          })
+          .where({ 'co.tenant': tenant })
+          .andWhere((builder) => builder.whereNull('co.is_template').orWhere('co.is_template', false))
+          .select(
+            'co.*',
+            'cc.client_contract_id',
+            'cc.template_contract_id',
+            'c.client_id',
+            'c.client_name',
+            'cc.start_date',
+            'cc.end_date',
+            'template.template_name as template_contract_name'
+          )
+          .orderBy('co.created_at', 'desc');
 
-      return rows;
+        return rows;
+      });
     } catch (error) {
       console.error('Error fetching contracts with clients:', error);
       throw error;
@@ -291,13 +340,17 @@ const Contract = {
     }
 
     try {
-      return await db('contract_line_mappings as clm')
-        .join('contract_lines as cl', function joinLines() {
-          this.on('clm.contract_line_id', '=', 'cl.contract_line_id').andOn('clm.tenant', '=', 'cl.tenant');
-        })
-        .where({ 'clm.contract_id': contractId, 'clm.tenant': tenant })
+      return await db('contract_lines as cl')
+        .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
         .select(
-          'clm.*',
+          'cl.tenant',
+          'cl.contract_id',
+          'cl.contract_line_id',
+          'cl.display_order',
+          'cl.custom_rate',
+          'cl.billing_timing',
+          'cl.created_at',
+          'cl.updated_at',
           'cl.contract_line_name',
           'cl.billing_frequency',
           'cl.contract_line_type',
@@ -394,71 +447,81 @@ const Contract = {
    * Check if a contract should be expired based on its end date and update if necessary.
    * A contract is expired if ALL of its client assignments have end dates in the past.
    */
-  async checkAndUpdateExpiredStatus(contractId: string): Promise<void> {
+  async checkAndUpdateExpiredStatus(
+    contractId: string,
+    options?: { trx?: KnexType.Transaction; tenant?: string }
+  ): Promise<void> {
+    if (options?.trx) {
+      if (!options.tenant) {
+        throw new Error('Tenant context is required for checking contract expiration');
+      }
+      await checkAndUpdateExpiredStatusWithContext(contractId, options.trx, options.tenant);
+      return;
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required for checking contract expiration');
     }
 
-    try {
-      // Get the contract
-      const contract = await db('contracts')
-        .where({ contract_id: contractId, tenant })
-        .first();
-
-      if (!contract) {
-        return;
-      }
-
-      // Only check active contracts - don't override terminated, draft, or already expired
-      if (contract.status !== 'active') {
-        return;
-      }
-
-      // Get all client assignments for this contract
-      const assignments = await db('client_contracts')
-        .where({ contract_id: contractId, tenant })
-        .select('end_date');
-
-      // If no assignments, nothing to check
-      if (assignments.length === 0) {
-        return;
-      }
-
-      // Filter to get end dates that exist (not null)
-      const endDates = assignments
-        .map(a => a.end_date)
-        .filter((date): date is string => date !== null && date !== undefined);
-
-      // If there are no end dates (all ongoing), contract is not expired
-      if (endDates.length === 0) {
-        return;
-      }
-
-      // If not all assignments have end dates, contract is not expired (some are ongoing)
-      if (endDates.length < assignments.length) {
-        return;
-      }
-
-      // Find the latest end date
-      const latestEndDate = endDates.sort().reverse()[0];
-      const now = new Date();
-      const latestEndDateObj = new Date(latestEndDate);
-
-      // If the latest end date is in the past, expire the contract
-      if (latestEndDateObj < now) {
-        await db('contracts')
-          .where({ contract_id: contractId, tenant })
-          .update({
-            status: 'expired',
-            updated_at: new Date().toISOString()
-          });
-      }
-    } catch (error) {
-      console.error(`Error checking contract ${contractId} expiration:`, error);
-      // Don't throw - this is a background check, don't fail the main operation
-    }
+    await checkAndUpdateExpiredStatusWithContext(contractId, db, tenant);
   },
 };
+
+async function checkAndUpdateExpiredStatusWithContext(
+  contractId: string,
+  db: KnexType | KnexType.Transaction,
+  tenant: string
+): Promise<void> {
+  try {
+    const contract = await db('contracts')
+      .where({ contract_id: contractId, tenant })
+      .first();
+
+    if (!contract) {
+      return;
+    }
+
+    if (contract.status !== 'active') {
+      return;
+    }
+
+    const assignments = await db('client_contracts')
+      .where({ contract_id: contractId, tenant })
+      .select('end_date');
+
+    if (assignments.length === 0) {
+      return;
+    }
+
+    const endDates = assignments
+      .map(a => a.end_date)
+      .filter((date): date is string => date !== null && date !== undefined);
+
+    if (endDates.length === 0) {
+      return;
+    }
+
+    if (endDates.length < assignments.length) {
+      return;
+    }
+
+    const latestEndDate = endDates.sort().reverse()[0];
+    const now = new Date();
+    const latestEndDateObj = new Date(latestEndDate);
+
+    if (latestEndDateObj < now) {
+      await db('contracts')
+        .where({ contract_id: contractId, tenant })
+        .update({
+          status: 'expired',
+          updated_at: new Date().toISOString()
+        });
+    }
+  } catch (error) {
+    console.error(`Error checking contract ${contractId} expiration:`, error);
+    // Don't throw - this is a background check, don't fail the main operation
+  }
+}
 
 export default Contract;

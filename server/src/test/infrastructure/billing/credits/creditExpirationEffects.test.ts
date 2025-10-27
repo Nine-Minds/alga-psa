@@ -71,7 +71,7 @@ describe('Credit Expiration Effects Tests', () => {
   let context: TestContext;
 
   async function setupDefaultTax() {
-    await setupyClientTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',

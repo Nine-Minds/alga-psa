@@ -9,6 +9,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { getEventBus } from '../../lib/eventBus';
+import { getEmailEventChannel } from '../notifications/emailChannel';
 
 export async function addTicketResource(
   ticketId: string,
@@ -61,14 +62,17 @@ export async function addTicketResource(
       .returning('*');
 
       // Publish TICKET_ASSIGNED event for additional user assignment
-      await getEventBus().publish({
-        eventType: 'TICKET_ASSIGNED',
-        payload: {
-          tenantId: tenant,
-          ticketId: ticketId,
-          userId: additionalUserId
-        }
-      });
+      await getEventBus().publish(
+        {
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            tenantId: tenant,
+            ticketId: ticketId,
+            userId: additionalUserId
+          }
+        },
+        { channel: getEmailEventChannel() }
+      );
 
       return resource;
     } catch (error) {

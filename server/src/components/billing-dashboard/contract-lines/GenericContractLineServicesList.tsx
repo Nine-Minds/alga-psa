@@ -47,7 +47,7 @@ interface EnhancedPlanService extends IContractLineService {
   // Added fields for display consistency
   service_name?: string;
   service_type_name?: string; // Changed from service_category
-  billing_method?: 'fixed' | 'hourly' | 'usage' | null; // Allow null to match IService
+  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null; // Allow null and per_unit to match IService
   unit_of_measure?: string;
   default_rate?: number;
 }
