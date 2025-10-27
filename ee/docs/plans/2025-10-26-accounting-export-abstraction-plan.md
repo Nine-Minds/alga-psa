@@ -135,6 +135,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - Replace placeholder lookup actions with shared resolver (`AccountingMappingResolver`) that queries `tenant_external_entity_mappings`, supports fallback rules, and caches results during batch export.
 - [x] **Validation hooks**
   - Add pre-export validation step that flags invoices/lines missing required mappings (service, tax code, payment term) and records them in the error table.
+  - API append-line path now triggers validation immediately to transition batches to `ready` or `needs_attention`.
 
 ## Phase 3 – Export Engine & Workflow Integration
 - [x] **Batch orchestration**
