@@ -429,3 +429,16 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - `CLITrigger#L1`
     1. Run `scripts/trigger-accounting-export.ts` and confirm it creates a placeholder batch/line.
     2. Validate seeded data appears through the API and can be managed alongside UI-driven batches.
+- [x] **Batch orchestration**
+  - Service API (`createAccountingExportBatch`, `executeAccountingExportBatch`) handling filters (date range, invoice status, tenant, integration target).
+  - Option to schedule recurring exports via Automation Hub or cron jobs; record source trigger.
+- [x] **API surface**
+  - Expose REST endpoints under `/api/accounting/exports` for batch CRUD, line/error append, and status updates to support UI and automation integrations.
+- [ ] **Adapter interface**
+  - Define `AccountingExportAdapter` contract with methods `capabilities`, `transform(batch)`, `deliver(transformedPayload)`, `postProcess`.
+  - Implement adapter registry to resolve by integration type (`quickbooks_online`, `quickbooks_desktop`, `xero`).
+- [ ] **Workflow alignment**
+  - Emit events (`ACCOUNTING_EXPORT_COMPLETED`, `ACCOUNTING_EXPORT_FAILED`) into event bus for downstream automation.
+  - Optionally wrap export execution as Automation Hub workflow action so existing QBO workflows can invoke the canonical exporter instead of bespoke logic.
+- [ ] **Status tracking**
+  - Persist batch states (`pending`, `validating`, `ready`, `delivered`, `posted`, `failed`, `needs_attention`) and expose in UI + API.
