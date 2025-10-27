@@ -415,9 +415,9 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
               .andOn('pt.tenant', '=', db.raw('?', [tenant]));
         }
       )
-      .leftJoin('users as u_task_assignee', function() {
-        this.on('pt.assigned_to', '=', 'u_task_assignee.user_id')
-            .andOn('pt.tenant', '=', 'u_task_assignee.tenant');
+      .leftJoin('users as u_assignee', function() {
+        this.on('pt.assigned_to', '=', 'u_assignee.user_id')
+            .andOn('pt.tenant', '=', 'u_assignee.tenant');
       })
        .whereILike('pt.task_name', db.raw('?', [`%${searchTerm}%`]))
        .distinctOn('pt.task_id')
@@ -502,7 +502,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('pt.due_date::timestamp with time zone as due_date'),
-         db.raw("COALESCE(u_task_assignee.first_name || ' ' || u_task_assignee.last_name, '') as assigned_to_name"),
+         db.raw("COALESCE(u_assignee.first_name || ' ' || u_assignee.last_name, '') as assigned_to_name"),
          db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids'
        );
@@ -589,6 +589,10 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           this.on('i.type_id', '=', 'it.type_id')
               .andOn('i.tenant', '=', 'it.tenant');
         })
+        .leftJoin('users as u_interaction_assignee', function() {
+          this.on('i.user_id', '=', 'u_interaction_assignee.user_id')
+              .andOn('i.tenant', '=', 'u_interaction_assignee.tenant');
+        })
         .whereILike('i.title', db.raw('?', [`%${searchTerm}%`]))
         .select(
           'i.interaction_id as work_item_id',
@@ -605,16 +609,22 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           db.raw('NULL::timestamp with time zone as scheduled_start'),
           db.raw('NULL::timestamp with time zone as scheduled_end'),
           db.raw('NULL::timestamp with time zone as due_date'),
-          db.raw("'' as assigned_to_name"),
-          db.raw('ARRAY[]::uuid[] as assigned_user_ids'),
+          db.raw("COALESCE(u_interaction_assignee.first_name || ' ' || u_interaction_assignee.last_name, '') as assigned_to_name"),
+          db.raw('ARRAY[i.user_id] as assigned_user_ids'),
           db.raw('ARRAY[]::uuid[] as additional_user_ids')
         );
 
       // Apply filters
+      if (options.assignedToMe && options.assignedTo) {
+        interactionsQuery.where('i.user_id', options.assignedTo);
+      } else if (options.assignedTo) {
+        interactionsQuery.where('i.user_id', options.assignedTo);
+      }
+
       if (options.clientId) {
         interactionsQuery.where('c.client_id', options.clientId);
       }
-      
+
       if (options.dateRange?.start || options.dateRange?.end) {
         if (options.dateRange.start) {
           interactionsQuery.where('i.interaction_date', '>=', options.dateRange.start);
@@ -693,8 +703,18 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
       });
     }
 
+
     // Format results
     const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => {
+      if (item.type === 'project_task') {
+        console.log('DEBUG project_task item:', {
+          work_item_id: item.work_item_id,
+          name: item.name,
+          assigned_to_name: item.assigned_to_name,
+          client_name: item.client_name
+        });
+      }
+
       const result: Omit<IExtendedWorkItem, "tenant"> = {
         work_item_id: item.work_item_id,
         type: item.type,
@@ -707,18 +727,19 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         phase_name: item.phase_name,
         task_name: item.task_name,
         client_name: item.client_name,
+        assigned_to_name: item.assigned_to_name,
         due_date: item.due_date,
         additional_user_ids: item.additional_user_ids || [],
         assigned_user_ids: item.assigned_user_ids || [],
         scheduled_start: item.scheduled_start,
         scheduled_end: item.scheduled_end
       };
-      
+
       // Add interaction type if it's an interaction
       if (item.type === 'interaction' && interactionTypesMap.has(item.work_item_id)) {
         result.interaction_type = interactionTypesMap.get(item.work_item_id);
       }
-      
+
       return result;
     });
 
@@ -728,7 +749,9 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     };
   } catch (error) {
     console.error('Error searching picker work items:', error);
-    throw new Error('Failed to search picker work items');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Error message:', error instanceof Error ? error.message : error);
+    throw new Error('Failed to search picker work items: ' + (error instanceof Error ? error.message : error));
   }
 }
 
