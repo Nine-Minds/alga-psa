@@ -14,10 +14,13 @@ import {
 import { AccountingAdapterRegistry } from '../adapters/accounting/registry';
 import {
   AccountingExportAdapterContext,
-  AccountingExportDeliveryResult
+  AccountingExportDeliveryResult,
+  AccountingExportTransformResult,
+  AccountingExportDocument
 } from '../adapters/accounting/accountingExportAdapter';
 import { AccountingExportValidation } from '../validation/accountingExportValidation';
 import { publishEvent } from '../eventBus/publishers';
+import { AppError } from '../errors';
 
 export interface CreateExportBatchOptions extends CreateExportBatchInput {}
 
@@ -141,8 +144,10 @@ export class AccountingExportService {
       lines: refreshed.lines
     };
 
+    let transformResult: AccountingExportTransformResult | null = null;
+
     try {
-      const transformResult = await adapter.transform(context);
+      transformResult = await adapter.transform(context);
       const deliveryResult = await adapter.deliver(transformResult, context);
 
       for (const delivered of deliveryResult.deliveredLines) {
@@ -173,6 +178,14 @@ export class AccountingExportService {
 
       return deliveryResult;
     } catch (error: any) {
+      await this.persistAdapterFailure({
+        batchId,
+        adapterType: adapter.type,
+        context,
+        transformResult,
+        error
+      });
+
       await this.repository.updateBatchStatus(batchId, {
         status: 'failed',
         notes: error?.message ?? 'Accounting export failed'
@@ -190,6 +203,99 @@ export class AccountingExportService {
         }
       });
       throw error;
+    }
+  }
+
+  private async persistAdapterFailure(params: {
+    batchId: string;
+    adapterType: string;
+    context: AccountingExportAdapterContext;
+    transformResult: AccountingExportTransformResult | null;
+    error: unknown;
+  }): Promise<void> {
+    const { error, transformResult, context, batchId, adapterType } = params;
+    if (!(error instanceof AppError)) {
+      return;
+    }
+
+    const details = Array.isArray((error.details as any)?.errors)
+      ? ((error.details as any).errors as Array<Record<string, any>>)
+      : [];
+
+    if (details.length === 0) {
+      return;
+    }
+
+    const documentsById: Map<string, AccountingExportDocument> = new Map();
+    if (transformResult) {
+      for (const document of transformResult.documents) {
+        documentsById.set(document.documentId, document);
+      }
+    }
+
+    const correlationId =
+      typeof (error.details as any)?.correlationId === 'string'
+        ? (error.details as any).correlationId
+        : undefined;
+
+    for (const detail of details) {
+      const documentId =
+        typeof detail.documentId === 'string'
+          ? detail.documentId
+          : typeof detail.document_id === 'string'
+            ? detail.document_id
+            : undefined;
+
+      const document = documentId ? documentsById.get(documentId) : undefined;
+      const lineIds = document?.lineIds ?? [];
+
+      const validationMessages = Array.isArray(detail.validationErrors)
+        ? detail.validationErrors
+            .map((item: any) => item?.message)
+            .filter((message: unknown): message is string => typeof message === 'string' && message.trim().length > 0)
+        : [];
+
+      const detailMessageParts = [
+        typeof detail.message === 'string' ? detail.message : undefined,
+        ...validationMessages
+      ].filter((part): part is string => Boolean(part));
+
+      const detailMessage =
+        detailMessageParts.length > 0 ? detailMessageParts.join(' | ') : error.message;
+
+      const metadata = {
+        adapterType,
+        adapterCode: error.code,
+        documentId: documentId ?? null,
+        correlationId: correlationId ?? null,
+        validationErrors: Array.isArray(detail.validationErrors) ? detail.validationErrors : undefined,
+        raw: detail.raw ?? undefined
+      };
+
+      if (lineIds.length > 0) {
+        for (const lineId of lineIds) {
+          await this.repository.updateLine(lineId, {
+            status: 'failed',
+            external_document_ref: null,
+            notes: detailMessage
+          });
+          await this.repository.addError({
+            batch_id: batchId,
+            line_id: lineId,
+            code: error.code,
+            message: detailMessage,
+            metadata
+          });
+        }
+      } else {
+        await this.repository.addError({
+          batch_id: batchId,
+          line_id: null,
+          code: error.code,
+          message: detailMessage,
+          metadata
+        });
+      }
     }
   }
 }

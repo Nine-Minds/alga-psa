@@ -160,7 +160,8 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - [x] Build adapter transform/deliver pipeline that assembles invoices from canonical export lines, hydrates service/customer mappings, and calls `QboClientService` for create/update with mapping persistence.
   - [x] Map tax codes and payment terms via extended resolver helpers; persist SyncToken + `last_exported_at` metadata (`tenant_external_entity_mappings.metadata`).
   - [ ] Implement rate limiting, partial failure retries per invoice, and richer status propagation back to batch tables.
-  - [ ] Retire placeholder workflow actions (`lookup_qbo_item_id`, `create_qbo_invoice`) in favor of adapter orchestration; route workflows through export service.
+  - [x] Retire placeholder workflow actions (`lookup_qbo_item_id`, `create_qbo_invoice`) in favor of adapter orchestration; route workflows through export service (actions now emit deprecation failures that instruct callers to use `accounting_export.*`).
+  - [x] Update `qboInvoiceSyncWorkflow` to seed accounting export batches and call `AccountingExportService` instead of invoking legacy QBO invoice actions directly.
 - [ ] **QuickBooks Desktop GL Export**
   - Define IIF (or CSV) writer that translates canonical batches into `TRNS`/`SPL` rows with account codes, classes, terms, and due dates.
   - Store generated file path in `accounting_export_batches` and expose Download action in UI.
@@ -174,7 +175,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - [x] Group canonical export lines into per-invoice payload drafts and prime connection metadata for future API mapping.
   - [x] Handle multi-tax lines (GST/VAT) per Xero requirements and map contact references via resolver lookups (service + tax resolver integration, tracking normalization).
 - [ ] **Error handling**
-  - Normalize Xero API errors into export error records; support manual retries per invoice. *(Adapter now surfaces structured `AppError` results, but repository integration to persist per-line failures remains outstanding.)*
+  - [x] Normalize Xero API errors into export error records and flag failed lines for targeted retries via batch metadata. *(UI trigger for manual retry remains to be implemented.)*
 
 ## Phase 6 – UI & Operational Tooling
 - [ ] **Export dashboard**
@@ -277,6 +278,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     5. Open row actions (`service-mapping-actions-menu-{rowId}`) → Edit; change QBO item to `Consulting - Premium`; save; verify table updates.
     6. Open row actions → Delete; confirm removal; entry disappears.
     7. Open Audit Log (existing system) and confirm create/update/delete entries referencing mapping ID.
+    - *Integration coverage:* `server/src/test/integration/accounting/mappingCrud.integration.test.ts` exercises create/list/update/delete flows via server actions.
   - `MappingFallback#L1`
     1. From same screen, click `Configure Fallback` chip in Service Items card.
     2. Reorder fallback list to `Contract Line`, `Service`, `Category` by dragging handles.
@@ -284,6 +286,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     4. Save; run test export (see `ValidationUnmapped#L1` steps) with invoice covering contract line, confirm exported payload uses contracted mapping.
     5. Move category fallback to top; run batch preview again; verify preview now shows category-based mapping.
     6. Remove category fallback, save; attempt batch creation; ensure validation error highlights unmapped line with instruction to add mapping.
+    - *Integration coverage:* `server/src/test/integration/accounting/accountingMappingResolver.integration.test.ts` validates service vs. category fallback and realm-specific resolution behaviour.
   - `XeroMappings#L1`
     1. Navigate to Xero tab; click `Refresh from Adapter` to pull latest accounts/tax/tracking; ensure spinner resolves without error.
     2. Add Service mapping selecting PSA service and Xero revenue account; ensure `AccountCode` column populated.
