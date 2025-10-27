@@ -330,6 +330,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     1. Open delivered batch drawer; download canonical JSON snapshot via link.
     2. Confirm `transactions` row now stores integer `amount` matching invoice charge totals (in cents) and contains `accounting_export_batch_id` referencing batch.
     3. Run reporting query to ensure batch ID appears in finance audit view.
+    - *Integration coverage:* `server/src/test/integration/accounting/auditTrail.integration.test.ts` exercises batch delivery, transaction linkage, and repository CRUD paths (status updates, line/error management).
 - **Adapters – QuickBooks Online**
   - `QBOInvoiceCreate#L1`
     1. Ensure tenant connected to QBO via OAuth and mappings configured.
@@ -370,6 +371,8 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     1. After correcting mapping, click `Retry Failed Lines`; confirm new file generated and appended to activity log.
     2. Verify previous failed lines now marked delivered.
 - **Adapters – Xero**
+  - *Spec compliance:* `server/src/test/unit/accounting/xeroAdapter.spec.ts` asserts invoice payload construction and delivery stubs align with https://developer.xero.com/documentation/accounting/invoices (required fields, line structure, date formatting).
+  - *Spec coverage (API client):* `server/src/test/unit/accounting/xeroClientService.spec.ts` verifies POST `/Invoices` payload/response handling and OAuth token refresh headers follow Xero API documentation.
   - `XeroConnectivity#L0`
     1. Provision demo credentials; call `listAccounts`, `listItems`, `listTaxRates`, and `listTrackingCategories`; verify non-empty payloads cached per tenant.
     2. Force access-token expiry; re-run `listAccounts`; confirm refresh token flow executes once and persistence updates secret store.

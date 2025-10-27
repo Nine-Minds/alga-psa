@@ -225,4 +225,25 @@ export class AccountingExportRepository {
     const existing = await query.first();
     return existing ?? null;
   }
+
+  async attachTransactionsToBatch(transactionIds: string[], batchId: string): Promise<number> {
+    const tenant = this.requireTenant();
+    if (transactionIds.length === 0) {
+      return 0;
+    }
+
+    const uniqueIds = Array.from(new Set(transactionIds.filter((id): id is string => Boolean(id))));
+    if (uniqueIds.length === 0) {
+      return 0;
+    }
+
+    const updated = await this.knex('transactions')
+      .where({ tenant })
+      .whereIn('transaction_id', uniqueIds)
+      .update({
+        accounting_export_batch_id: batchId
+      });
+
+    return typeof updated === 'number' ? updated : uniqueIds.length;
+  }
 }
