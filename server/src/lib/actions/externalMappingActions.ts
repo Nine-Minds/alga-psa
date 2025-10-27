@@ -6,6 +6,8 @@ import { createTenantKnex } from 'server/src/lib/db'; // Assuming path based on 
 import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'; // For tenant context
 import { Knex } from 'knex'; // Import Knex type
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 // --- Types based on schema from QBO Integration Project Plan.md (Section 6.1) ---
 
@@ -53,7 +55,7 @@ interface UpdateMappingData {
 
 // --- Helper Function for Tenant Context ---
 
-async function getTenantContext(): Promise<{ tenantId: string; knex: Knex }> {
+async function getTenantContext(): Promise<{ tenantId: string; knex: Knex; user: IUserWithRoles }> {
   const user = await getCurrentUser();
   // Corrected based on TS error: Use user.tenant
   if (!user?.tenant) {
@@ -61,7 +63,7 @@ async function getTenantContext(): Promise<{ tenantId: string; knex: Knex }> {
   }
   const { knex } = await createTenantKnex(); // Gets Knex instance
   // Corrected based on TS error: Use user.tenant
-  return { tenantId: user.tenant, knex };
+  return { tenantId: user.tenant, knex, user };
 }
 
 // --- CRUD Server Actions ---
@@ -71,7 +73,11 @@ async function getTenantContext(): Promise<{ tenantId: string; knex: Knex }> {
  * with optional filtering.
  */
 export async function getExternalEntityMappings(params: GetMappingsParams): Promise<ExternalEntityMapping[]> {
-  const { tenantId, knex } = await getTenantContext();
+  const { tenantId, knex, user } = await getTenantContext();
+  const allowed = await hasPermission(user, 'billing_settings', 'read', knex);
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
   const { integrationType, algaEntityType, externalRealmId, algaEntityId, externalEntityId } = params;
 
   console.log(`[External Mapping Action - Server] Getting mappings for tenant ${tenantId} with filters:`, params);
@@ -120,7 +126,11 @@ export async function getExternalEntityMappings(params: GetMappingsParams): Prom
  * Creates a new external entity mapping for the current user's tenant.
  */
 export async function createExternalEntityMapping(mappingData: CreateMappingData): Promise<ExternalEntityMapping> {
-  const { tenantId, knex } = await getTenantContext();
+  const { tenantId, knex, user } = await getTenantContext();
+  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
   const { integration_type, alga_entity_type, alga_entity_id, external_entity_id, external_realm_id, sync_status, metadata } = mappingData;
 
   console.log(`[External Mapping Action - Server] Creating mapping for tenant ${tenantId}:`, mappingData);
@@ -167,7 +177,12 @@ export async function createExternalEntityMapping(mappingData: CreateMappingData
  * Updates an existing external entity mapping for the current user's tenant.
  */
 export async function updateExternalEntityMapping(mappingId: string, updates: UpdateMappingData): Promise<ExternalEntityMapping> {
-  const { tenantId, knex } = await getTenantContext();
+  const { tenantId, knex, user } = await getTenantContext();
+
+  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
 
   if (!mappingId) {
     throw new Error('Mapping ID is required for update.');
@@ -228,7 +243,12 @@ export async function updateExternalEntityMapping(mappingId: string, updates: Up
  * Deletes an external entity mapping for the current user's tenant.
  */
 export async function deleteExternalEntityMapping(mappingId: string): Promise<void> {
-  const { tenantId, knex } = await getTenantContext();
+  const { tenantId, knex, user } = await getTenantContext();
+
+  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
 
   if (!mappingId) {
     throw new Error('Mapping ID is required for deletion.');

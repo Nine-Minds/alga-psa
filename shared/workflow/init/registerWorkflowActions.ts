@@ -664,45 +664,23 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Placeholder for lookup_qbo_item_id
+  // Retired legacy lookup action
   actionRegistry.registerSimpleAction(
     'lookup_qbo_item_id',
-    'Lookup QBO item ID by Alga product ID (placeholder)',
+    'Lookup QBO item ID by Alga product ID (retired)',
     [
       { name: 'algaProductId', type: 'string', required: true },
       { name: 'realmId', type: 'string', required: true },
-      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
+      { name: 'qboCredentials', type: 'object', required: false }
     ],
-    async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] lookup_qbo_item_id called for algaProductId: ${params.algaProductId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
-      try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
-        const knex = await getAdminConnection();
-
-        const mapping = await knex('tenant_external_entity_mappings')
-          .select('external_entity_id')
-          .where({
-            tenant: context.tenant,
-            alga_entity_id: params.algaProductId,
-            alga_entity_type: 'service', // Assuming this mapping type
-            integration_type: 'quickbooks_online',
-            external_realm_id: params.realmId
-          })
-          .first();
-
-        if (mapping) { // Check if mapping is not null/undefined
-          logger.info(`[ACTION] lookup_qbo_item_id: Found QBO item ID: ${mapping.external_entity_id} for Alga product ID: ${params.algaProductId} via DB mapping.`);
-          return { success: true, found: true, qboItemId: mapping.external_entity_id };
-        } else {
-          logger.info(`[ACTION] lookup_qbo_item_id: Alga product ID ${params.algaProductId} not found in DB mapping.`);
-          return { success: true, found: false, qboItemId: null };
-        }
-
-      } catch (error: any) {
-        logger.error(`[ACTION] lookup_qbo_item_id: Error looking up QBO item ID for Alga product ID: ${params.algaProductId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
-        const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
-        return { success: false, message: `QBO API Error: ${errorMessage}`, errorDetails: error.response?.data || error };
-      }
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      const message = 'lookup_qbo_item_id has been retired. Use accounting_export.create_batch + accounting_export.execute_batch for new QuickBooks exports.';
+      logger.warn(`[ACTION] lookup_qbo_item_id (deprecated) invoked for tenant: ${context.tenant}. Returning failure notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        message
+      };
     }
   );
 
@@ -861,66 +839,23 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Placeholder for create_qbo_invoice
+  // Retired legacy QBO invoice creation action
   actionRegistry.registerSimpleAction(
     'create_qbo_invoice',
-    'Create a new QBO invoice (placeholder)',
+    'Create a new QBO invoice (retired)',
     [
-      { name: 'qboInvoiceData', type: 'object', required: true },
-      { name: 'realmId', type: 'string', required: true },
-      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
+      { name: 'qboInvoiceData', type: 'object', required: false },
+      { name: 'realmId', type: 'string', required: false },
+      { name: 'qboCredentials', type: 'object', required: false }
     ],
-    async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] create_qbo_invoice called for realmId: ${params.realmId}, tenant: ${context.tenant}`);
-      try {
-        const qboCredentials = params.qboCredentials as QboCredentials;
-
-        if (!qboCredentials) {
-          logger.error(`[ACTION] create_qbo_invoice: QBO credentials not provided for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, message: 'QBO credentials not provided.' };
-        }
-
-        const { accessToken, accessTokenExpiresAt } = qboCredentials;
-
-        if (!accessToken || !accessTokenExpiresAt) {
-          logger.error(`[ACTION] create_qbo_invoice: Missing QBO accessToken or accessTokenExpiresAt in provided credentials for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing in provided credentials).' };
-        }
-
-        if (new Date(accessTokenExpiresAt) < new Date()) {
-          logger.warn(`[ACTION] create_qbo_invoice: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
-          return { success: false, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
-        }
-
-        // params.qboInvoiceData should be the complete QBO Invoice object structure for creation
-        const invoiceToCreatePayload = { ...params.qboInvoiceData };
-
-        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/invoice?minorversion=69`;
-        logger.debug(`[ACTION] create_qbo_invoice: Posting to QBO: ${apiUrl}`, invoiceToCreatePayload);
-
-        const response = await axios.post(apiUrl, invoiceToCreatePayload, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`, // Using accessToken from params.qboCredentials
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000,
-        });
-
-        const qboResponseData = response.data?.Invoice;
-        if (!qboResponseData || !qboResponseData.Id) {
-            logger.error(`[ACTION] create_qbo_invoice: QBO API response did not contain expected Invoice data. Tenant: ${context.tenant}`, response.data);
-            return { success: false, message: 'QBO API response malformed or missing Invoice data after creation.', qboRawResponse: response.data };
-        }
-
-        logger.info(`[ACTION] create_qbo_invoice: Successfully created QBO invoice. New ID: ${qboResponseData.Id}, SyncToken: ${qboResponseData.SyncToken}`);
-        return { success: true, qboResponse: qboResponseData };
-
-      } catch (error: any) {
-        logger.error(`[ACTION] create_qbo_invoice: Error creating QBO invoice, realmId: ${params.realmId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
-        const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
-        return { success: false, message: `QBO API Error: ${errorMessage}`, errorDetails: error.response?.data || error };
-      }
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      const message = 'create_qbo_invoice has been retired. Use accounting_export.create_batch + accounting_export.execute_batch to push invoices to QuickBooks.';
+      logger.warn(`[ACTION] create_qbo_invoice (deprecated) invoked for tenant: ${context.tenant}. Returning failure notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        message
+      };
     }
   );
 
