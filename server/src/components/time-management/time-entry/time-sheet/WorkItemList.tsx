@@ -1,4 +1,5 @@
 'use client'
+import React, { useMemo } from 'react';
 import { WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 
 interface MetaLinesProps {
@@ -10,36 +11,55 @@ interface MetaLinesProps {
   workItemType?: WorkItemType;
 }
 
-const MetaLines: React.FC<MetaLinesProps> = ({ clientName, assignedToName, dueDate, assignedUserIds, additionalUserIds, workItemType }) => {
+const MetaLines: React.FC<MetaLinesProps> = ({
+  clientName,
+  assignedToName,
+  dueDate,
+  assignedUserIds,
+  additionalUserIds,
+  workItemType
+}) => {
 
-  const getAssignedUsersDisplay = () => {
-    if (assignedToName === undefined) return null;
-
+  const assignedDisplay = useMemo(() => {
     // For interactions, just show the assigned user name as before
     if (workItemType === 'interaction') {
-      return assignedToName || 'Unassigned';
+      return assignedToName ? assignedToName : (assignedToName === undefined ? null : 'Unassigned');
     }
 
-    // For tickets and project tasks, calculate total assigned users
-    const assignedCount = (assignedUserIds || []).filter(id => id).length;
-    const additionalCount = (additionalUserIds || []).filter(id => id).length;
-    const totalUsers = assignedCount + additionalCount;
+    // For tickets and project tasks, calculate total unique assigned users
+    const allUserIds = [
+      ...(assignedUserIds || []),
+      ...(additionalUserIds || [])
+    ].filter(id => id);
 
+    // Use Set to get unique user count
+    const uniqueUserIds = new Set(allUserIds);
+    const totalUsers = uniqueUserIds.size;
+
+    // No assigned name and no users
     if (!assignedToName && totalUsers === 0) {
-      return 'Unassigned';
+      return assignedToName === undefined ? null : 'Unassigned';
     }
 
-    if (!assignedToName) {
+    // No assigned name but have users
+    if (!assignedToName && totalUsers > 0) {
       return totalUsers === 1 ? '1 user assigned' : `${totalUsers} users assigned`;
     }
 
-    if (totalUsers <= 1) {
-      return assignedToName;
+    // Have assigned name
+    if (assignedToName) {
+      if (totalUsers <= 1) {
+        return assignedToName;
+      }
+      // Show primary user plus count of additional users
+      const additionalUsersCount = totalUsers - 1;
+      return `${assignedToName}, +${additionalUsersCount} user${
+        additionalUsersCount === 1 ? '' : 's'
+      }`;
     }
 
-    const additionalUsersCount = totalUsers - 1;
-    return `${assignedToName}, +${additionalUsersCount} user${additionalUsersCount === 1 ? '' : 's'}`;
-  };
+    return null;
+  }, [assignedToName, assignedUserIds, additionalUserIds, workItemType]);
 
   return (
     <>
@@ -48,9 +68,9 @@ const MetaLines: React.FC<MetaLinesProps> = ({ clientName, assignedToName, dueDa
           {clientName}
         </div>
       )}
-      {assignedToName !== undefined && (
+      {assignedDisplay !== null && (
         <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-          Assigned to: {getAssignedUsersDisplay()}
+          Assigned to: {assignedDisplay}
         </div>
       )}
       {dueDate !== undefined && (
