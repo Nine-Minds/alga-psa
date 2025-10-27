@@ -1,9 +1,9 @@
-import { 
+import {
   BaseEmailService,
   BaseEmailParams,
   EmailSendResult
 } from '../BaseEmailService';
-import { 
+import {
   SystemEmailTemplate,
   EmailVerificationData,
   PasswordResetData,
@@ -11,12 +11,18 @@ import {
 } from './types';
 import { IEmailProvider } from '../../../types/email.types';
 import { SystemEmailProviderFactory } from './SystemEmailProviderFactory';
+import { getConnection } from '@/lib/db/db';
+import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '@/lib/i18n/config';
+import { resolveEmailLocale } from '@/lib/notifications/emailLocaleResolver';
 
 // Extend BaseEmailParams for system-specific parameters
 export interface SystemEmailParams extends BaseEmailParams {
   subject?: string;
   html?: string;
   text?: string;
+  locale?: SupportedLocale;
+  tenantId?: string;
+  userId?: string;
 }
 
 /**
@@ -63,6 +69,162 @@ export class SystemEmailService extends BaseEmailService {
   }
 
   /**
+   * Determine the best locale for the email
+   */
+  private async determineLocale(
+    email: string,
+    options?: { locale?: SupportedLocale; tenantId?: string; userId?: string }
+  ): Promise<SupportedLocale> {
+    // 1. Explicit locale parameter
+    if (options?.locale) {
+      return options.locale;
+    }
+
+    // 2. Use emailLocaleResolver if we have tenant context
+    if (options?.tenantId) {
+      try {
+        const recipientLocale = await resolveEmailLocale(options.tenantId, {
+          email,
+          userId: options.userId
+        });
+        return recipientLocale;
+      } catch (error) {
+        console.error('Error resolving email locale:', error);
+      }
+    }
+
+    // 3. System default
+    return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+  }
+
+  /**
+   * Fetch email template from database with language fallback
+   */
+  private async fetchTemplate(
+    templateName: string,
+    locale: SupportedLocale,
+    tenantId?: string
+  ): Promise<SystemEmailTemplate | null> {
+    if (!tenantId) {
+      // Without tenant context, we can only check system templates
+      try {
+        const knex = await getConnection();
+
+        // Try system template in requested language
+        const systemTemplate = await knex('system_email_templates')
+          .where({ name: templateName, language_code: locale })
+          .first();
+
+        if (systemTemplate) {
+          return {
+            subject: systemTemplate.subject,
+            html: systemTemplate.html_content,
+            text: systemTemplate.text_content
+          };
+        }
+
+        // Fallback to English for system
+        if (locale !== 'en') {
+          const systemTemplateEn = await knex('system_email_templates')
+            .where({ name: templateName, language_code: 'en' })
+            .first();
+
+          if (systemTemplateEn) {
+            return {
+              subject: systemTemplateEn.subject,
+              html: systemTemplateEn.html_content,
+              text: systemTemplateEn.text_content
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching template from database:', error);
+      }
+
+      return null;
+    }
+
+    // With tenant context, check tenant and system templates
+    try {
+      const knex = await getConnection(tenantId);
+
+      // Try tenant-specific template in requested language
+      const tenantTemplate = await knex('tenant_email_templates')
+        .where({ tenant: tenantId, name: templateName, language_code: locale })
+        .first();
+
+      if (tenantTemplate) {
+        return {
+          subject: tenantTemplate.subject,
+          html: tenantTemplate.html_content,
+          text: tenantTemplate.text_content
+        };
+      }
+
+      // Fallback to English for tenant
+      if (locale !== 'en') {
+        const tenantTemplateEn = await knex('tenant_email_templates')
+          .where({ tenant: tenantId, name: templateName, language_code: 'en' })
+          .first();
+
+        if (tenantTemplateEn) {
+          return {
+            subject: tenantTemplateEn.subject,
+            html: tenantTemplateEn.html_content,
+            text: tenantTemplateEn.text_content
+          };
+        }
+      }
+
+      // Try system template in requested language
+      const systemTemplate = await knex('system_email_templates')
+        .where({ name: templateName, language_code: locale })
+        .first();
+
+      if (systemTemplate) {
+        return {
+          subject: systemTemplate.subject,
+          html: systemTemplate.html_content,
+          text: systemTemplate.text_content
+        };
+      }
+
+      // Fallback to English for system
+      if (locale !== 'en') {
+        const systemTemplateEn = await knex('system_email_templates')
+          .where({ name: templateName, language_code: 'en' })
+          .first();
+
+        if (systemTemplateEn) {
+          return {
+            subject: systemTemplateEn.subject,
+            html: systemTemplateEn.html_content,
+            text: systemTemplateEn.text_content
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching template from database:', error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Replace template variables
+   */
+  private replaceVariables(template: string, data: Record<string, any>): string {
+    let result = template;
+
+    for (const [key, value] of Object.entries(data)) {
+      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+      result = result.replace(regex, String(value || ''));
+    }
+
+    return result;
+  }
+
+  /**
    * Override sendEmail to handle both direct params and template processor
    */
   public async sendEmail(params: SystemEmailParams): Promise<EmailSendResult> {
@@ -71,30 +233,78 @@ export class SystemEmailService extends BaseEmailService {
   }
 
   /**
-   * Send email verification
+   * Send email verification with i18n support
    */
-  public async sendEmailVerification(data: EmailVerificationData): Promise<EmailSendResult> {
-    const template = this.getEmailVerificationTemplate(data);
-    
+  public async sendEmailVerification(
+    data: EmailVerificationData,
+    options?: { locale?: SupportedLocale; tenantId?: string; userId?: string }
+  ): Promise<EmailSendResult> {
+    const locale = await this.determineLocale(data.email, options);
+
+    // Try to fetch template from database
+    const dbTemplate = await this.fetchTemplate('email-verification', locale, options?.tenantId);
+
+    let template: SystemEmailTemplate;
+
+    if (dbTemplate) {
+      // Use database template and replace variables
+      template = {
+        subject: this.replaceVariables(dbTemplate.subject, data),
+        html: this.replaceVariables(dbTemplate.html, data),
+        text: this.replaceVariables(dbTemplate.text || '', data)
+      };
+    } else {
+      // Fall back to hardcoded template
+      console.warn('[SystemEmailService] Using emergency fallback template for email-verification');
+      template = this.getEmailVerificationTemplate(data);
+    }
+
     return this.sendEmail({
       to: data.email,
       subject: template.subject,
       html: template.html,
-      text: template.text
+      text: template.text,
+      locale,
+      tenantId: options?.tenantId,
+      userId: options?.userId
     });
   }
 
   /**
-   * Send password reset email
+   * Send password reset email with i18n support
    */
-  public async sendPasswordReset(data: PasswordResetData): Promise<EmailSendResult> {
-    const template = this.getPasswordResetTemplate(data);
-    
+  public async sendPasswordReset(
+    data: PasswordResetData,
+    options?: { locale?: SupportedLocale; tenantId?: string; userId?: string }
+  ): Promise<EmailSendResult> {
+    const locale = await this.determineLocale(data.username, options);
+
+    // Try to fetch template from database
+    const dbTemplate = await this.fetchTemplate('password-reset', locale, options?.tenantId);
+
+    let template: SystemEmailTemplate;
+
+    if (dbTemplate) {
+      // Use database template and replace variables
+      template = {
+        subject: this.replaceVariables(dbTemplate.subject, data),
+        html: this.replaceVariables(dbTemplate.html, data),
+        text: this.replaceVariables(dbTemplate.text || '', data)
+      };
+    } else {
+      // Fall back to hardcoded template
+      console.warn('[SystemEmailService] Using emergency fallback template for password-reset');
+      template = this.getPasswordResetTemplate(data);
+    }
+
     return this.sendEmail({
       to: data.username, // Assuming username is email
       subject: template.subject,
       html: template.html,
-      text: template.text
+      text: template.text,
+      locale,
+      tenantId: options?.tenantId,
+      userId: options?.userId
     });
   }
 

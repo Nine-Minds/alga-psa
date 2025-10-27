@@ -4,6 +4,8 @@ import { getConnection } from '../db/db';
 import logger from '@alga-psa/shared/core/logger';
 import { TenantEmailService } from '../services/TenantEmailService';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
+import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
+import { SupportedLocale } from '../i18n/config';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 
@@ -28,6 +30,16 @@ export interface SendEmailParams {
     threadId?: string;
     conversationToken?: string;
   };
+  /**
+   * Optional: explicitly specify recipient's locale
+   * If not provided, will be resolved based on user preferences
+   */
+  locale?: SupportedLocale;
+  /**
+   * Optional: recipient user ID for locale resolution
+   * If not provided, will attempt to lookup by email
+   */
+  recipientUserId?: string;
 }
 
 function applyReplyMarkers(
@@ -118,12 +130,32 @@ async function persistReplyToken(
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
-      to: params.to,    
+      to: params.to,
       subject: params.subject,
       tenantId: params.tenantId,
       template: params.template,
-      contextKeys: Object.keys(params.context)
+      contextKeys: Object.keys(params.context),
+      explicitLocale: params.locale
     });
+
+    // Resolve recipient locale for language-aware email templates
+    let recipientLocale: SupportedLocale;
+    if (params.locale) {
+      recipientLocale = params.locale;
+      logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: recipientLocale });
+    } else {
+      // Get recipient information for locale resolution
+      const recipientInfo = params.recipientUserId
+        ? { email: params.to, userId: params.recipientUserId }
+        : await getUserInfoForEmail(params.tenantId, params.to);
+
+      recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
+      logger.debug('[SendEventEmail] Resolved recipient locale:', {
+        locale: recipientLocale,
+        email: params.to,
+        userId: recipientInfo.userId
+      });
+    }
 
     // Get the template content using tenant-aware connection
     const knex = await getConnection(params.tenantId);
@@ -133,32 +165,67 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     });
 
     let templateContent;
-    let emailSubject = params.subject; 
+    let emailSubject = params.subject;
     let templateSource = 'system';
 
     logger.debug('[SendEventEmail] Looking up tenant template:', {
       tenant: params.tenantId,
-      template: params.template
+      template: params.template,
+      locale: recipientLocale
     });
 
     try {
-      // First try to get tenant-specific template
-      const tenantTemplateQuery = knex('tenant_email_templates')
-        .where({ tenant: params.tenantId, name: params.template })
+      // First try to get tenant-specific template in recipient's language
+      let tenantTemplateQuery = knex('tenant_email_templates')
+        .where({
+          tenant: params.tenantId,
+          name: params.template,
+          language_code: recipientLocale
+        })
         .first();
 
-      logger.debug('[SendEventEmail] Executing tenant template query:', {
+      logger.debug('[SendEventEmail] Executing tenant template query (with locale):', {
         sql: tenantTemplateQuery.toSQL().sql,
-        bindings: tenantTemplateQuery.toSQL().bindings
+        bindings: tenantTemplateQuery.toSQL().bindings,
+        locale: recipientLocale
       });
 
-      const template = await tenantTemplateQuery;
+      let template = await tenantTemplateQuery;
+
+      // If no template found for recipient's locale, try English fallback
+      if (!template && recipientLocale !== 'en') {
+        logger.debug('[SendEventEmail] No template found for locale, trying English fallback');
+        tenantTemplateQuery = knex('tenant_email_templates')
+          .where({
+            tenant: params.tenantId,
+            name: params.template,
+            language_code: 'en'
+          })
+          .first();
+
+        template = await tenantTemplateQuery;
+      }
+
+      // If still no template, try without language filter (legacy templates)
+      if (!template) {
+        logger.debug('[SendEventEmail] No language-specific template, trying legacy template');
+        tenantTemplateQuery = knex('tenant_email_templates')
+          .where({
+            tenant: params.tenantId,
+            name: params.template
+          })
+          .whereNull('language_code')
+          .first();
+
+        template = await tenantTemplateQuery;
+      }
 
       if (template) {
         logger.debug('[SendEventEmail] Found tenant template:', {
           templateId: template.id,
           templateName: template.name,
           tenant: template.tenant,
+          languageCode: template.language_code,
           htmlContentLength: template.html_content?.length,
           subject: template.subject
         });
@@ -167,18 +234,46 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         templateSource = 'tenant';
       } else {
         logger.debug('[SendEventEmail] Tenant template not found, falling back to system template');
-        
-        // Fall back to system template
-        const systemTemplateQuery = knex('system_email_templates')
-          .where({ name: params.template })
+
+        // Fall back to system template in recipient's language
+        let systemTemplateQuery = knex('system_email_templates')
+          .where({
+            name: params.template,
+            language_code: recipientLocale
+          })
           .first();
 
-        logger.debug('[SendEventEmail] Executing system template query:', {
+        logger.debug('[SendEventEmail] Executing system template query (with locale):', {
           sql: systemTemplateQuery.toSQL().sql,
-          bindings: systemTemplateQuery.toSQL().bindings
+          bindings: systemTemplateQuery.toSQL().bindings,
+          locale: recipientLocale
         });
 
-        const systemTemplate = await systemTemplateQuery;
+        let systemTemplate = await systemTemplateQuery;
+
+        // If no template found for recipient's locale, try English fallback
+        if (!systemTemplate && recipientLocale !== 'en') {
+          logger.debug('[SendEventEmail] No system template found for locale, trying English fallback');
+          systemTemplateQuery = knex('system_email_templates')
+            .where({
+              name: params.template,
+              language_code: 'en'
+            })
+            .first();
+
+          systemTemplate = await systemTemplateQuery;
+        }
+
+        // If still no template, try without language filter (legacy templates)
+        if (!systemTemplate) {
+          logger.debug('[SendEventEmail] No language-specific system template, trying legacy template');
+          systemTemplateQuery = knex('system_email_templates')
+            .where({ name: params.template })
+            .whereNull('language_code')
+            .first();
+
+          systemTemplate = await systemTemplateQuery;
+        }
 
         if (!systemTemplate) {
           throw new Error(`Template not found: ${params.template}`);
@@ -187,6 +282,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         logger.debug('[SendEventEmail] Found system template:', {
           templateId: systemTemplate.id,
           templateName: systemTemplate.name,
+          languageCode: systemTemplate.language_code,
           htmlContentLength: systemTemplate.html_content?.length,
           subject: systemTemplate.subject
         });
@@ -198,6 +294,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         error,
         tenantId: params.tenantId,
         template: params.template,
+        locale: recipientLocale,
         errorMessage: error instanceof Error ? error.message : 'Unknown error'
       });
       throw new Error(`Failed to lookup email template: ${params.template}`);

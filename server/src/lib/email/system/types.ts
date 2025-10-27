@@ -62,3 +62,13 @@ export interface SystemNotificationData {
   actionUrl?: string;
   actionText?: string;
 }
+
+export interface PortalInvitationData {
+  email: string;
+  contactName: string;
+  clientName: string;
+  portalLink: string;
+  expirationTime: string;
+  clientLocationEmail: string;
+  clientLocationPhone: string;
+}
