@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
 import ClientPortalSignIn from 'server/src/components/auth/ClientPortalSignIn';
+import ClientPortalTenantDiscovery from 'server/src/components/auth/ClientPortalTenantDiscovery';
 import { I18nWrapper } from 'server/src/components/i18n/I18nWrapper';
 import { getTenantBrandingByDomain, getTenantLocaleByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { isValidTenantSlug } from 'server/src/lib/utils/tenantSlug';
 
 export default async function ClientSignInPage({
   searchParams,
@@ -36,6 +38,15 @@ export default async function ClientSignInPage({
 
   // Get portalDomain from query parameter (set by middleware for vanity domains)
   const portalDomain = typeof params?.portalDomain === 'string' ? params.portalDomain : null;
+
+  // Get tenant slug from query parameter
+  const tenantParam = typeof params?.tenant === 'string' ? params.tenant : '';
+  const tenantSlug = isValidTenantSlug(tenantParam) ? tenantParam.toLowerCase() : undefined;
+
+  // If no tenant slug and no vanity domain, show tenant discovery form
+  if (!tenantSlug && !portalDomain) {
+    return <ClientPortalTenantDiscovery callbackUrl={callbackUrl} />;
+  }
 
   // Fetch tenant branding and locale based on portalDomain (if present)
   const [branding, locale] = portalDomain

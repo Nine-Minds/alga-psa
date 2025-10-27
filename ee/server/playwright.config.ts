@@ -69,7 +69,6 @@ export default defineConfig({
     /* Global test timeout */
     actionTimeout: 15000,
     navigationTimeout: 30000,
-    headless: false
   },
 
   /* Configure projects for major browsers */
