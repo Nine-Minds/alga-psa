@@ -377,19 +377,24 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     1. Provision demo credentials; call `listAccounts`, `listItems`, `listTaxRates`, and `listTrackingCategories`; verify non-empty payloads cached per tenant.
     2. Force access-token expiry; re-run `listAccounts`; confirm refresh token flow executes once and persistence updates secret store.
     3. Inspect structured logs to ensure tenant/connection metadata logged without leaking secrets.
+    - *Unit coverage:* `server/src/test/unit/accounting/xeroClientService.spec.ts` stubs `/Accounts`, `/Items`, `/TaxRates`, `/TrackingCategories`, enforces refresh-on-401, and asserts logging/secret persistence behavior.
   - `XeroInvoiceCreate#L1`
     1. Connect tenant to Xero; ensure client/service/tax mappings exist.
     2. Run export; capture payload ensuring `AccountCode`, `TaxType`, and tracking categories align with mapping metadata.
     3. Verify in Xero sandbox invoice posts successfully with correct totals, currency, and reference number.
+    - *Unit coverage:* `server/src/test/unit/accounting/xeroAdapter.spec.ts` + `xeroClientService.spec.ts` validate payload composition, mapping metadata, and successful API response handling.
   - `XeroMultipleTax#L1`
     1. Prepare invoice mixing GST/PST components; export.
     2. Confirm adapter assembles `taxComponents` metadata and resulting Xero invoice splits tax detail correctly.
+    - *Unit coverage:* `server/src/test/unit/accounting/xeroAdapter.spec.ts` ensures multi-component tax metadata flows into invoice payload before delivery.
   - `XeroErrorHandling#L1`
     1. Disable mapped tax rate in Xero; execute export; expect service to raise `XERO_VALIDATION_ERROR` with per-document detail.
     2. After remapping, rerun export and ensure success path clears prior validation error (batch currently fails fast pending error persistence automation).
+    - *Unit coverage:* `server/src/test/unit/accounting/xeroClientService.spec.ts` exercises validation error normalization and subsequent success retry.
   - `XeroCreditNote#L1`
     1. Create PSA credit memo linked to original invoice; export via Xero adapter.
     2. Validate Xero credit note references source invoice and issues negative line totals with matching tracking metadata.
+    - *Status:* Credit-note export path not yet implemented; add adapter support before finalizing tests.
 - **User Interface & Operations**
   - `ExportDashboard#L1`
     1. Navigate to dashboard; apply filters; confirm table updates.

@@ -192,6 +192,105 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     expect(Array.isArray(line.taxComponents ?? [])).toBe(true);
   });
 
+  it('merges mapping and resolver tax metadata to include multiple tax components', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: 'ITEM-002',
+      metadata: {
+        accountCode: '400',
+        taxType: 'TAX001',
+        tracking: [{ name: 'Region', option: 'West' }],
+        taxComponents: [
+          { name: 'GST', rate: 5, amountCents: 500 },
+          { name: 'PST', rate: 7, amountCents: 700 }
+        ]
+      }
+    });
+
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue({
+      external_entity_id: 'TAX001',
+      metadata: {
+        components: [
+          { name: 'GST', rate: 5, amountCents: 500 },
+          { name: 'PST', rate: 7, amountCents: 700 }
+        ]
+      }
+    });
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-2001',
+            invoice_date: '2025-03-01',
+            due_date: '2025-03-15',
+            client_id: CLIENT_ID,
+            currency_code: 'CAD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          CHARGE_ID,
+          {
+            item_id: CHARGE_ID,
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-456',
+            description: 'Managed backup',
+            quantity: 1,
+            unit_price: 20_000,
+            total_price: 20_000,
+            tax_amount: 2_400,
+            tax_region: 'tax-region'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [
+          CLIENT_ID,
+          {
+            client_id: CLIENT_ID,
+            client_name: 'Northwind',
+            billing_email: 'finance@northwind.test'
+          }
+        ]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-1',
+            integration_type: 'xero',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-contact-20',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const document = result.documents[0];
+    const invoice = (document.payload as Record<string, any>).invoice;
+    const line = invoice.lines[0];
+    expect(line.taxComponents).toEqual([
+      { name: 'GST', rate: 5, amountCents: 500 },
+      { name: 'PST', rate: 7, amountCents: 700 }
+    ]);
+    expect(invoice.lineAmountType).toBe('Exclusive');
+  });
+
   it('delivers payloads conforming to Xero POST expectations', async () => {
     const adapter = new XeroAdapter();
     const context = buildContext([baseLine]);
