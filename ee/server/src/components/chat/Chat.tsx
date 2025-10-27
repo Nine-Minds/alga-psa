@@ -224,7 +224,7 @@ export const Chat: React.FC<ChatProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'anthropic',
+          model: 'openrouter',
           inputs: allMessages,
           functions: functions,
           options: {
