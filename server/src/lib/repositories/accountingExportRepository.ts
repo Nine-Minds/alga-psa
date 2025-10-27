@@ -2,11 +2,11 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '../../lib/db';
 import {
   AccountingExportBatch,
-  AccountingExportLine,
   AccountingExportError,
-  AccountingExportStatus,
+  AccountingExportErrorResolutionState,
+  AccountingExportLine,
   AccountingExportLineStatus,
-  AccountingExportErrorResolutionState
+  AccountingExportStatus
 } from '../../interfaces/accountingExport.interfaces';
 
 type Nullable<T> = T | null | undefined;
@@ -56,17 +56,33 @@ export interface CreateExportErrorInput {
 }
 
 export class AccountingExportRepository {
-  constructor(private readonly knex: Knex) {}
+  constructor(private readonly knex: Knex, private readonly tenantId: string | null) {}
 
   static async create(): Promise<AccountingExportRepository> {
-    const { knex } = await createTenantKnex();
-    return new AccountingExportRepository(knex);
+    const { knex, tenant } = await createTenantKnex();
+    return new AccountingExportRepository(knex, tenant ?? null);
+  }
+
+  getTenantId(): string | null {
+    return this.tenantId;
+  }
+
+  private requireTenant(): string {
+    if (!this.tenantId) {
+      throw new Error('AccountingExportRepository requires tenant context');
+    }
+    return this.tenantId;
   }
 
   async createBatch(input: CreateExportBatchInput): Promise<AccountingExportBatch> {
+    const tenant = this.requireTenant();
+    const normalizedFilters = input.filters && Object.keys(input.filters).length > 0 ? input.filters : null;
+
     const [batch] = await this.knex<AccountingExportBatch>('accounting_export_batches')
       .insert({
         ...input,
+        tenant,
+        filters: normalizedFilters,
         status: 'pending'
       })
       .returning('*');
@@ -75,15 +91,20 @@ export class AccountingExportRepository {
   }
 
   async getBatch(batchId: string): Promise<AccountingExportBatch | null> {
+    const tenant = this.requireTenant();
     const batch = await this.knex<AccountingExportBatch>('accounting_export_batches')
-      .where({ batch_id: batchId })
+      .where({ batch_id: batchId, tenant })
       .first();
 
     return batch || null;
   }
 
   async listBatches(params: { status?: AccountingExportStatus; adapter_type?: string } = {}): Promise<AccountingExportBatch[]> {
-    const query = this.knex<AccountingExportBatch>('accounting_export_batches').orderBy('created_at', 'desc');
+    const tenant = this.requireTenant();
+    const query = this.knex<AccountingExportBatch>('accounting_export_batches')
+      .where({ tenant })
+      .orderBy('created_at', 'desc');
+
     if (params.status) {
       query.where({ status: params.status });
     }
@@ -94,8 +115,9 @@ export class AccountingExportRepository {
   }
 
   async updateBatch(batchId: string, updates: Partial<AccountingExportBatch>): Promise<AccountingExportBatch | null> {
+    const tenant = this.requireTenant();
     const [batch] = await this.knex<AccountingExportBatch>('accounting_export_batches')
-      .where({ batch_id: batchId })
+      .where({ batch_id: batchId, tenant })
       .update(updates)
       .returning('*');
     return batch || null;
@@ -127,9 +149,11 @@ export class AccountingExportRepository {
   }
 
   async addLine(input: CreateExportLineInput): Promise<AccountingExportLine> {
+    const tenant = this.requireTenant();
     const [line] = await this.knex<AccountingExportLine>('accounting_export_lines')
       .insert({
         ...input,
+        tenant,
         status: input.status ?? 'pending'
       })
       .returning('*');
@@ -137,23 +161,27 @@ export class AccountingExportRepository {
   }
 
   async listLines(batchId: string): Promise<AccountingExportLine[]> {
+    const tenant = this.requireTenant();
     return this.knex<AccountingExportLine>('accounting_export_lines')
-      .where({ batch_id: batchId })
+      .where({ batch_id: batchId, tenant })
       .orderBy('created_at');
   }
 
   async updateLine(lineId: string, updates: Partial<AccountingExportLine>): Promise<AccountingExportLine | null> {
+    const tenant = this.requireTenant();
     const [line] = await this.knex<AccountingExportLine>('accounting_export_lines')
-      .where({ line_id: lineId })
+      .where({ line_id: lineId, tenant })
       .update({ ...updates, updated_at: new Date().toISOString() })
       .returning('*');
     return line || null;
   }
 
   async addError(input: CreateExportErrorInput): Promise<AccountingExportError> {
+    const tenant = this.requireTenant();
     const [error] = await this.knex<AccountingExportError>('accounting_export_errors')
       .insert({
         ...input,
+        tenant,
         resolution_state: input.resolution_state ?? 'open'
       })
       .returning('*');
@@ -161,16 +189,40 @@ export class AccountingExportRepository {
   }
 
   async listErrors(batchId: string): Promise<AccountingExportError[]> {
+    const tenant = this.requireTenant();
     return this.knex<AccountingExportError>('accounting_export_errors')
-      .where({ batch_id: batchId })
+      .where({ batch_id: batchId, tenant })
       .orderBy('created_at');
   }
 
   async updateError(errorId: string, updates: Partial<AccountingExportError>): Promise<AccountingExportError | null> {
+    const tenant = this.requireTenant();
     const [error] = await this.knex<AccountingExportError>('accounting_export_errors')
-      .where({ error_id: errorId })
+      .where({ error_id: errorId, tenant })
       .update({ ...updates, resolved_at: updates.resolved_at ?? null })
       .returning('*');
     return error || null;
+  }
+
+  async findActiveBatchByFilters(params: {
+    adapterType: string;
+    exportType: string;
+    filters: Record<string, unknown> | null;
+    blockingStatuses: AccountingExportStatus[];
+  }): Promise<AccountingExportBatch | null> {
+    const tenant = this.requireTenant();
+    const query = this.knex<AccountingExportBatch>('accounting_export_batches')
+      .where({ tenant, adapter_type: params.adapterType, export_type: params.exportType })
+      .whereIn('status', params.blockingStatuses)
+      .orderBy('created_at', 'desc');
+
+    if (!params.filters) {
+      query.whereNull('filters');
+    } else {
+      query.whereRaw('filters::jsonb = ?::jsonb', [JSON.stringify(params.filters)]);
+    }
+
+    const existing = await query.first();
+    return existing ?? null;
   }
 }
