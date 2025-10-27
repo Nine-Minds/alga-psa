@@ -137,9 +137,11 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - Add pre-export validation step that flags invoices/lines missing required mappings (service, tax code, payment term) and records them in the error table.
 
 ## Phase 3 – Export Engine & Workflow Integration
-- [ ] **Batch orchestration**
+- [x] **Batch orchestration**
   - Service API (`createAccountingExportBatch`, `executeAccountingExportBatch`) handling filters (date range, invoice status, tenant, integration target).
   - Option to schedule recurring exports via Automation Hub or cron jobs; record source trigger.
+- [x] **API surface**
+  - Expose REST endpoints under `/api/accounting/exports` for batch CRUD, line/error append, and status updates to support UI and automation integrations.
 - [ ] **Adapter interface**
   - Define `AccountingExportAdapter` contract with methods `capabilities`, `transform(batch)`, `deliver(transformedPayload)`, `postProcess`.
   - Implement adapter registry to resolve by integration type (`quickbooks_online`, `quickbooks_desktop`, `xero`).
@@ -413,3 +415,13 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - `SystemRestart#L1`
     1. Launch export; midway, restart worker service.
     2. Confirm batch resumes automatically and delivered payload contains no duplicates.
+- **API & Tooling**
+  - `APIExports#L1`
+    1. Call `POST /api/accounting/exports` to create a batch and verify response schema matches DTO definitions.
+    2. Call `GET /api/accounting/exports` with filters to confirm listings respect status/adapter parameters.
+  - `APIExportDetails#L1`
+    1. Append lines/errors via `POST /api/accounting/exports/{batchId}/lines` and `/errors`; ensure subsequent batch fetch returns appended data.
+    2. Update batch status using `PATCH /api/accounting/exports/{batchId}` and verify state transitions recorded.
+  - `CLITrigger#L1`
+    1. Run `scripts/trigger-accounting-export.ts` and confirm it creates a placeholder batch/line.
+    2. Validate seeded data appears through the API and can be managed alongside UI-driven batches.

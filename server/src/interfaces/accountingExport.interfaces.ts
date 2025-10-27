@@ -16,7 +16,7 @@ export interface AccountingExportBatch extends TenantEntity {
   adapter_type: string;
   target_realm?: string | null;
   export_type: string;
-  filters?: Record<string, unknown> | null;
+  filters?: Record<string, any> | null;
   status: AccountingExportStatus;
   queued_at: ISO8601String;
   validated_at?: ISO8601String | null;
@@ -47,8 +47,8 @@ export interface AccountingExportLine extends TenantEntity {
   exchange_rate_basis_points?: number | null;
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
-  mapping_resolution?: Record<string, unknown> | null;
-  payload?: Record<string, unknown> | null;
+  mapping_resolution?: Record<string, any> | null;
+  payload?: Record<string, any> | null;
   status: AccountingExportLineStatus;
   external_document_ref?: string | null;
   notes?: string | null;
@@ -68,7 +68,7 @@ export interface AccountingExportError extends TenantEntity {
   line_id?: string | null;
   code: string;
   message: string;
-  metadata?: Record<string, unknown> | null;
+  metadata?: Record<string, any> | null;
   resolution_state: AccountingExportErrorResolutionState;
   created_at: ISO8601String;
   resolved_at?: ISO8601String | null;
