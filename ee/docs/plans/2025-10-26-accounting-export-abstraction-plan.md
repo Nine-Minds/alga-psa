@@ -51,8 +51,8 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - `accounting_export_errors` (batch_id, line_id nullable, code, message, resolution_status).
 - [ ] **Normalize currency handling**
   - Introduce `currency_code` + `exchange_rate` columns on `invoices` (defaulting to tenant currency) and extend billing engine to populate them.
-  - Store `transactions.amount_cents` (new integer column) and migrate existing decimal `transactions.amount` values; once validated, drop legacy column and update services/reports to rely on cents.
-  - Ensure `invoice_charges.unit_price/total_price` and `transactions.amount_cents` use the same integer-based representation; add helper to convert when interfacing with external APIs.
+  - Convert `transactions.amount` to an integer column (representing cents) via staged migration: add temp integer column, backfill by multiplying existing decimals, swap, and remove the legacy decimal.
+  - Ensure `invoice_charges.unit_price/total_price` and `transactions.amount` share the same integer-based representation; add helper utilities when interfacing with external APIs that expect decimals.
 - [ ] **Canonical DTOs**
   - Create TypeScript interfaces (e.g., `AccountingInvoiceExport`, `AccountingLineExport`) under `server/src/interfaces/accountingExport.interfaces.ts`.
   - Implement a builder (e.g., `AccountingExportAssembler`) that reads invoices, joins `invoice_charge_details`, `client_contract_lines`, `services`, `tax_rates`, and emits canonical DTOs.
@@ -313,7 +313,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     3. Verify same invoice ID cannot enter two `pending` batches by inspecting batch detail data.
   - `AuditTrail#L1`
     1. Open delivered batch drawer; download canonical JSON snapshot via link.
-    2. Confirm `transactions` row stores `amount_cents` integer matching invoice charge totals and contains `accounting_export_batch_id` referencing batch.
+    2. Confirm `transactions` row now stores integer `amount` matching invoice charge totals (in cents) and contains `accounting_export_batch_id` referencing batch.
     3. Run reporting query to ensure batch ID appears in finance audit view.
 - **Adapters – QuickBooks Online**
   - `QBOInvoiceCreate#L1`
