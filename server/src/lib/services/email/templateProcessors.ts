@@ -103,10 +103,18 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
 
     // Fall back to system template if no tenant template
     if (!template) {
+      logger.debug(`[DatabaseTemplateProcessor] Looking for template '${this.templateName}' with locale '${locale}'`);
+
       // Try to get template in requested language
       template = await this.knex('system_email_templates')
         .where({ name: this.templateName, language_code: locale })
         .first();
+
+      logger.debug(`[DatabaseTemplateProcessor] Template found:`, template ? {
+        name: template.name,
+        language_code: template.language_code,
+        subject: template.subject
+      } : 'null');
 
       // If requested language not found, fall back to English
       if (!template && locale !== 'en') {
@@ -114,6 +122,12 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
         template = await this.knex('system_email_templates')
           .where({ name: this.templateName, language_code: 'en' })
           .first();
+
+        logger.debug(`[DatabaseTemplateProcessor] English fallback template:`, template ? {
+          name: template.name,
+          language_code: template.language_code,
+          subject: template.subject
+        } : 'null');
       }
     }
 

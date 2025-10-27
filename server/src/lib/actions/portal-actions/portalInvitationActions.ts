@@ -407,7 +407,8 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         tenant: tenant,
         clientLocationEmail: mspLocation.email,  // MSP's email for reply-to
         clientLocationPhone: mspLocation.phone || 'Not provided',  // MSP's phone
-        fromName: `${tenantDefaultClient.client_name} Portal`  // MSP's name for the portal
+        fromName: `${tenantDefaultClient.client_name} Portal`,  // MSP's name for the portal
+        clientId: contact.client_id  // Pass client ID (stored in company_id field) for locale resolution
       });
 
       return {

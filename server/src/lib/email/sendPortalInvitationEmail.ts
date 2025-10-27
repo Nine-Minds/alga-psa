@@ -19,6 +19,7 @@ interface SendPortalInvitationEmailParams {
   clientLocationPhone?: string;
   fromName?: string;
   recipientUserId?: string;
+  clientId?: string;  // Client ID (from contact.company_id) for locale resolution when user doesn't exist yet
 }
 
 export async function sendPortalInvitationEmail({
@@ -31,7 +32,8 @@ export async function sendPortalInvitationEmail({
   clientLocationEmail,
   clientLocationPhone,
   fromName: _fromName,
-  recipientUserId
+  recipientUserId,
+  clientId
 }: SendPortalInvitationEmailParams): Promise<boolean> {
   try {
     return await runWithTenant(tenant, async () => {
@@ -41,28 +43,22 @@ export async function sendPortalInvitationEmail({
       let recipientLocale: SupportedLocale;
 
       // Get recipient information for locale resolution
+      // For portal invitations, we need to include clientId for contacts who don't have user accounts yet
       const recipientInfo = recipientUserId
         ? { email, userId: recipientUserId }
-        : await getUserInfoForEmail(tenant, email) ?? { email };
+        : await getUserInfoForEmail(tenant, email) ?? { email, clientId };
 
-      // Only do full locale resolution for client portal users
-      // MSP portal doesn't have i18n yet, so internal users always get English
-      if (recipientInfo.userType === 'client') {
-        recipientLocale = await resolveEmailLocale(tenant, recipientInfo);
-        logger.debug('[SendPortalInvitationEmail] Resolved client user locale:', {
-          locale: recipientLocale,
-          email,
-          userId: recipientInfo.userId
-        });
-      } else {
-        // Internal users always get English (MSP portal not i18n yet)
-        recipientLocale = 'en';
-        logger.debug('[SendPortalInvitationEmail] Using English for internal/unknown user:', {
-          locale: recipientLocale,
-          email,
-          userType: recipientInfo.userType
-        });
-      }
+      logger.info('[SendPortalInvitationEmail] Recipient info:', recipientInfo);
+
+      // Portal invitations are ALWAYS for client users (contacts), never internal users
+      // So we should always do full locale resolution with client/tenant hierarchy
+      recipientLocale = await resolveEmailLocale(tenant, recipientInfo);
+      logger.info('[SendPortalInvitationEmail] Resolved locale:', {
+        locale: recipientLocale,
+        email,
+        userId: recipientInfo.userId,
+        clientId: recipientInfo.clientId
+      });
 
       // Prepare template data
       const templateData = {
