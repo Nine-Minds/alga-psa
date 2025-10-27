@@ -4,7 +4,7 @@ import { createTenantKnex } from '../db';
 export interface MappingResolution {
   external_entity_id: string;
   metadata?: Record<string, any> | null;
-  source: 'service' | 'service_category' | 'fallback';
+  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term';
 }
 
 interface ResolveParams {
@@ -13,8 +13,17 @@ interface ResolveParams {
   targetRealm?: string | null;
 }
 
+interface GenericResolveParams {
+  adapterType: string;
+  entityType: string;
+  entityId: string;
+  source: MappingResolution['source'];
+  targetRealm?: string | null;
+}
+
 export class AccountingMappingResolver {
   private cache = new Map<string, MappingResolution | null>();
+  private genericCache = new Map<string, MappingResolution | null>();
 
   constructor(private readonly knex: Knex) {}
 
@@ -62,6 +71,57 @@ export class AccountingMappingResolver {
     return null;
   }
 
+  async resolveTaxCodeMapping(params: { adapterType: string; taxRegionId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+    if (!params.taxRegionId) {
+      return null;
+    }
+    return this.resolveGenericMapping({
+      adapterType: params.adapterType,
+      entityType: 'tax_code',
+      entityId: params.taxRegionId,
+      source: 'tax_code',
+      targetRealm: params.targetRealm ?? null
+    });
+  }
+
+  async resolvePaymentTermMapping(params: { adapterType: string; paymentTermId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+    if (!params.paymentTermId) {
+      return null;
+    }
+    return this.resolveGenericMapping({
+      adapterType: params.adapterType,
+      entityType: 'payment_term',
+      entityId: params.paymentTermId,
+      source: 'payment_term',
+      targetRealm: params.targetRealm ?? null
+    });
+  }
+
+  private async resolveGenericMapping(params: GenericResolveParams): Promise<MappingResolution | null> {
+    const cacheKey = this.buildGenericCacheKey(params);
+    if (this.genericCache.has(cacheKey)) {
+      return this.genericCache.get(cacheKey) ?? null;
+    }
+
+    const row = await this.lookupMapping(params.adapterType, params.entityType, params.entityId, params.targetRealm);
+    if (!row) {
+      this.genericCache.set(cacheKey, null);
+      return null;
+    }
+
+    const result: MappingResolution = {
+      external_entity_id: row.external_entity_id,
+      metadata: row.metadata ?? null,
+      source: params.source
+    };
+    this.genericCache.set(cacheKey, result);
+    return result;
+  }
+
+  private buildGenericCacheKey(params: GenericResolveParams): string {
+    return `${params.adapterType}:${params.targetRealm ?? 'default'}:${params.entityType}:${params.entityId}`;
+  }
+
   private async lookupMapping(
     adapterType: string,
     entityType: string,
@@ -81,7 +141,7 @@ export class AccountingMappingResolver {
         builder.where('external_realm_id', targetRealm).orWhereNull('external_realm_id');
       });
     } else {
-      query.andWhereNull('external_realm_id');
+      query.whereNull('external_realm_id');
     }
 
     return query.first();

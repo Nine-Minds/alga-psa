@@ -17,6 +17,8 @@ export const EventTypeEnum = z.enum([
   'TIME_ENTRY_APPROVED',
   'INVOICE_GENERATED',
   'INVOICE_FINALIZED',
+  'ACCOUNTING_EXPORT_COMPLETED',
+  'ACCOUNTING_EXPORT_FAILED',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -88,6 +90,19 @@ export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   amount: z.number(),
 });
 
+export const AccountingExportEventPayloadSchema = BasePayloadSchema.extend({
+  batchId: z.string().uuid(),
+  adapterType: z.string(),
+  deliveredLineIds: z.array(z.string().uuid()).optional(),
+  error: z
+    .object({
+      message: z.string(),
+      status: z.string().optional(),
+      code: z.string().optional(),
+    })
+    .optional(),
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -105,6 +120,8 @@ export const EventPayloadSchemas = {
   TIME_ENTRY_APPROVED: TimeEntryEventPayloadSchema,
   INVOICE_GENERATED: InvoiceEventPayloadSchema,
   INVOICE_FINALIZED: InvoiceEventPayloadSchema,
+  ACCOUNTING_EXPORT_COMPLETED: AccountingExportEventPayloadSchema,
+  ACCOUNTING_EXPORT_FAILED: AccountingExportEventPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -136,6 +153,8 @@ export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
 export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
 export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>;
 export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
+export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;
+export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_FAILED>;
 
 export type Event =
   | TicketCreatedEvent
@@ -152,4 +171,6 @@ export type Event =
   | TimeEntryApprovedEvent
   | InvoiceGeneratedEvent
   | InvoiceFinalizedEvent
-  | TicketDeletedEvent;
+  | TicketDeletedEvent
+  | AccountingExportCompletedEvent
+  | AccountingExportFailedEvent;

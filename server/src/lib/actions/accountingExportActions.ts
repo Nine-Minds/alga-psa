@@ -13,6 +13,7 @@ import {
   CreateExportErrorInput,
   UpdateExportBatchStatusInput
 } from '../repositories/accountingExportRepository';
+import { AccountingExportDeliveryResult } from '../adapters/accounting/accountingExportAdapter';
 
 export async function createAccountingExportBatch(input: CreateExportBatchInput): Promise<AccountingExportBatch> {
   const service = await AccountingExportService.create();
@@ -46,4 +47,9 @@ export async function getAccountingExportBatch(batchId: string): Promise<{
 export async function listAccountingExportBatches(params: { status?: AccountingExportStatus; adapter_type?: string } = {}): Promise<AccountingExportBatch[]> {
   const service = await AccountingExportService.create();
   return service.listBatches(params);
+}
+
+export async function executeAccountingExportBatch(batchId: string): Promise<AccountingExportDeliveryResult> {
+  const service = await AccountingExportService.create();
+  return service.executeBatch(batchId);
 }

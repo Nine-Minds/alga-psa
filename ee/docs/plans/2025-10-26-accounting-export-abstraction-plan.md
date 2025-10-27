@@ -143,21 +143,23 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - Option to schedule recurring exports via Automation Hub or cron jobs; record source trigger.
 - [x] **API surface**
   - Expose REST endpoints under `/api/accounting/exports` for batch CRUD, line/error append, and status updates to support UI and automation integrations.
-- [ ] **Adapter interface**
-  - Define `AccountingExportAdapter` contract with methods `capabilities`, `transform(batch)`, `deliver(transformedPayload)`, `postProcess`.
-  - Implement adapter registry to resolve by integration type (`quickbooks_online`, `quickbooks_desktop`, `xero`).
-- [ ] **Workflow alignment**
-  - Emit events (`ACCOUNTING_EXPORT_COMPLETED`, `ACCOUNTING_EXPORT_FAILED`) into event bus for downstream automation.
-  - Optionally wrap export execution as Automation Hub workflow action so existing QBO workflows can invoke the canonical exporter instead of bespoke logic.
-- [ ] **Status tracking**
-  - Persist batch states (`pending`, `validating`, `ready`, `delivered`, `posted`, `failed`, `needs_attention`) and expose in UI + API.
+  - Added `POST /api/accounting/exports/{batchId}/execute` route (Next controller delegates to `AccountingExportService.executeBatch`).
+- [x] **Adapter interface**
+  - New `AccountingExportAdapter` contract under `server/src/lib/adapters/accounting/accountingExportAdapter.ts` covers `capabilities`, `transform`, `deliver`, optional `postProcess` plus unified payload/result types.
+  - `AccountingAdapterRegistry` now bootstraps QuickBooks Online/Desktop and Xero stubs (`server/src/lib/adapters/accounting/*Adapter.ts`) so integrations resolve by `adapter_type`.
+- [x] **Workflow alignment**
+  - `AccountingExportService.executeBatch` emits `ACCOUNTING_EXPORT_COMPLETED` / `ACCOUNTING_EXPORT_FAILED` via event bus once delivery succeeds or fails; events added to `server/src/lib/eventBus/events.ts` and shared workflow schemas.
+  - Execution API path above allows workflows/Automation Hub to invoke the canonical exporter in place of bespoke scripts (hook-up pending but interface ready).
+- [x] **Status tracking**
+  - Repository `updateBatchStatus` now preserves timestamps unless explicitly overwritten; service records `validating`, `ready`, `delivered`, `failed` transitions with `validated_at`/`delivered_at` stamps.
+  - Delivery loop updates `accounting_export_lines.status` + `external_document_ref` and keeps batch notes for failure messaging.
 
 ## Phase 4 – QuickBooks Adapter Implementation
 - [ ] **QuickBooks Online**
-  - Use canonical DTOs to build QBO `Invoice` payloads; reuse `QboClientService` for OAuth/refresh.
-  - Map items/tax codes/terms via the new resolver; persist SyncToken in mapping metadata (`tenant_external_entity_mappings.metadata.sync_token`).
-  - Implement rate limiting, partial failure handling (retry per invoice), and write success/failure to batch tables.
-  - Retire placeholder actions (`lookup_qbo_item_id`, `create_qbo_invoice`) in favor of adapter calls; update workflows to use the adapter service.
+  - [x] Build adapter transform/deliver pipeline that assembles invoices from canonical export lines, hydrates service/customer mappings, and calls `QboClientService` for create/update with mapping persistence.
+  - [x] Map tax codes and payment terms via extended resolver helpers; persist SyncToken + `last_exported_at` metadata (`tenant_external_entity_mappings.metadata`).
+  - [ ] Implement rate limiting, partial failure retries per invoice, and richer status propagation back to batch tables.
+  - [ ] Retire placeholder workflow actions (`lookup_qbo_item_id`, `create_qbo_invoice`) in favor of adapter orchestration; route workflows through export service.
 - [ ] **QuickBooks Desktop GL Export**
   - Define IIF (or CSV) writer that translates canonical batches into `TRNS`/`SPL` rows with account codes, classes, terms, and due dates.
   - Store generated file path in `accounting_export_batches` and expose Download action in UI.
@@ -165,11 +167,11 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 
 ## Phase 5 – Xero Adapter Implementation
 - [ ] **Connectivity**
-  - Introduce Xero OAuth client (tenant-secret storage similar to QBO) and throttling guard.
-  - Implement retrieval of Xero items, accounts, tax rates, and tracking categories for mapping UI.
+  - [x] Introduce `XeroClientService` scaffold with OAuth placeholders and logging hooks for future API calls.
+  - [ ] Implement retrieval of Xero items, accounts, tax rates, and tracking categories for mapping UI.
 - [ ] **Invoice payload**
-  - Map canonical DTOs to Xero `Invoice` API structure (or CSV template) including `AccountCode`, `TaxType`, `Tracking` arrays, and contact references.
-  - Handle multi-tax lines (GST/VAT) per Xero requirements.
+  - [x] Group canonical export lines into per-invoice payload drafts and prime connection metadata for future API mapping.
+  - [ ] Handle multi-tax lines (GST/VAT) per Xero requirements and map contact references via resolver lookups.
 - [ ] **Error handling**
   - Normalize Xero API errors into export error records; support manual retries per invoice.
 
@@ -203,7 +205,9 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 - `tenant_external_entity_mappings` (extend schema and UI) and associated RLS policies (`server/migrations/20250512135501_update_constrains_and_fks.cjs`).
 - Billing engine outputs (`server/src/lib/billing/billingEngine.ts`, `server/src/lib/services/invoiceService.ts`) for canonical data assembly.
 - Event bus + Automation Hub if exports are scheduled or triggered by workflows (`server/src/lib/eventBus`, `shared/workflow/init/registerWorkflowActions.ts`).
+- Event bus now exposes `ACCOUNTING_EXPORT_COMPLETED` / `ACCOUNTING_EXPORT_FAILED` types; downstream consumers must update catalogs (`shared/workflow/streams/eventBusSchema.ts`, `shared/workflow/types/eventCatalog.ts`).
 - Secret management (`@shared/core` secret provider) for QuickBooks/Xero credentials.
+- QuickBooks Online adapter now persists invoice-level mappings in `tenant_external_entity_mappings` (`alga_entity_type='invoice'`); ensure migrations/cleanup scripts account for the new entity type.
 
 ---
 
@@ -324,11 +328,13 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     2. Run export with new invoices; monitor job logs for create API call payload; confirm includes Line ServiceDate per invoice item.
     3. After success, open mapping table and confirm metadata column shows QBO invoice ID + SyncToken.
     4. In QBO sandbox, verify invoice exists with matching totals and tax.
+    5. Inspect payload/assertions to ensure `Line[].SalesItemLineDetail.TaxCodeRef` matches mapped tax code and `SalesTermRef` reflects mapped payment term.
+    6. Check `tenant_external_entity_mappings` has `alga_entity_type='invoice'` row for exported invoice with `sync_token` metadata set.
   - `QBOInvoiceUpdate#L1`
     1. Modify exported invoice in PSA (e.g., adjust quantity).
     2. Initiate re-export via Invoice detail `Re-export` button.
     3. Confirm system performs update call (sparse, includes SyncToken).
-    4. Validate QBO invoice reflects change and mapping metadata updated.
+    4. Validate QBO invoice reflects change and mapping metadata updated with new SyncToken timestamp.
   - `QBOErrorHandling#L1`
     1. Configure mock to respond 429; execute export; ensure adapter retries with exponential backoff and records attempt log.
     2. Force 401 (expire token); verify adapter refreshes token and retries once; if refresh fails, batch flagged failed with reconnect prompt.
@@ -356,6 +362,10 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     1. After correcting mapping, click `Retry Failed Lines`; confirm new file generated and appended to activity log.
     2. Verify previous failed lines now marked delivered.
 - **Adapters – Xero**
+  - `XeroScaffold#L0`
+    1. Trigger export with target realm set; confirm adapter groups lines into per-invoice payload and logs delivery stub message.
+    2. Inspect response to ensure each export line references stubbed `XERO-STUB-*` invoice id.
+    3. Verify `XeroClientService` log output includes tenant/connection metadata without real API calls.
   - `XeroInvoiceCreate#L1`
     1. Connect tenant to Xero; ensure mappings present.
     2. Run export; confirm API payload contains `AccountCode`, `TaxType`, `Tracking` arrays matching mapping.
@@ -426,19 +436,14 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - `ValidationMissingMapping#L1`
     1. Create batch, append a line lacking service mapping, and confirm validation marks batch `needs_attention` with error record.
     2. Add mapping and re-run validation (re-append or trigger) to see batch flip to `ready`.
+  - `APIExecute#L1`
+    1. Call `POST /api/accounting/exports/{batchId}/execute`; expect 200 with delivery summary containing delivered line IDs.
+    2. Retrieve batch and lines; confirm statuses updated to `delivered` and `external_document_ref` populated with adapter stub values.
+    3. Repeat call on already delivered batch; expect idempotent failure response (status remains `failed` or `delivered` without duplicate lines).
+  - `ExportEvents#L1`
+    1. Subscribe test consumer to event bus stream.
+    2. Execute export via API; inspect emitted event includes `ACCOUNTING_EXPORT_COMPLETED`, correct tenant, adapter type, and delivered line IDs.
+    3. Force adapter error (throw in stub) to confirm `ACCOUNTING_EXPORT_FAILED` fires with error payload and batch marked failed.
   - `CLITrigger#L1`
     1. Run `scripts/trigger-accounting-export.ts` and confirm it creates a placeholder batch/line.
     2. Validate seeded data appears through the API and can be managed alongside UI-driven batches.
-- [x] **Batch orchestration**
-  - Service API (`createAccountingExportBatch`, `executeAccountingExportBatch`) handling filters (date range, invoice status, tenant, integration target).
-  - Option to schedule recurring exports via Automation Hub or cron jobs; record source trigger.
-- [x] **API surface**
-  - Expose REST endpoints under `/api/accounting/exports` for batch CRUD, line/error append, and status updates to support UI and automation integrations.
-- [ ] **Adapter interface**
-  - Define `AccountingExportAdapter` contract with methods `capabilities`, `transform(batch)`, `deliver(transformedPayload)`, `postProcess`.
-  - Implement adapter registry to resolve by integration type (`quickbooks_online`, `quickbooks_desktop`, `xero`).
-- [ ] **Workflow alignment**
-  - Emit events (`ACCOUNTING_EXPORT_COMPLETED`, `ACCOUNTING_EXPORT_FAILED`) into event bus for downstream automation.
-  - Optionally wrap export execution as Automation Hub workflow action so existing QBO workflows can invoke the canonical exporter instead of bespoke logic.
-- [ ] **Status tracking**
-  - Persist batch states (`pending`, `validating`, `ready`, `delivered`, `posted`, `failed`, `needs_attention`) and expose in UI + API.
