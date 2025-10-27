@@ -326,21 +326,40 @@ const fetchContacts = async (): Promise<void> => {
               toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
             }
           } else {
-            const contact = await addContact({
-              full_name: `${newUser.firstName} ${newUser.lastName}`,
-              email: newUser.email,
-              client_id: newUser.clientId || undefined,
-              is_inactive: false
-            });
             try {
-              const invitationResult = await sendPortalInvitation(contact.contact_name_id);
-              if (invitationResult.success) {
-                toast.success('Portal invitation sent successfully!');
-              } else {
-                toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+              const contact = await addContact({
+                full_name: `${newUser.firstName} ${newUser.lastName}`,
+                email: newUser.email,
+                client_id: newUser.clientId || undefined,
+                is_inactive: false
+              });
+              try {
+                const invitationResult = await sendPortalInvitation(contact.contact_name_id);
+                if (invitationResult.success) {
+                  toast.success('Portal invitation sent successfully!');
+                } else {
+                  toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+                }
+              } catch (inviteError) {
+                toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
               }
-            } catch (inviteError) {
-              toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
+            } catch (contactError: any) {
+              // Handle contact creation errors
+              console.error('Error creating contact:', contactError);
+
+              if (contactError.message?.includes('EMAIL_EXISTS:')) {
+                const errorMsg = contactError.message.replace('EMAIL_EXISTS:', '').trim();
+                toast.error(errorMsg);
+                setError(errorMsg);
+              } else if (contactError.message?.includes('VALIDATION_ERROR:')) {
+                const errorMsg = contactError.message.replace('VALIDATION_ERROR:', '').trim();
+                toast.error(errorMsg);
+                setError(errorMsg);
+              } else {
+                toast.error('Failed to create contact: ' + (contactError.message || 'Unknown error'));
+                setError('Failed to create contact: ' + (contactError.message || 'Unknown error'));
+              }
+              return; // Stop execution to prevent further processing
             }
           }
           await fetchUsers();
@@ -401,11 +420,25 @@ const fetchContacts = async (): Promise<void> => {
       console.error('Error creating user:', error);
       // Display specific error message if available
       if (error.message === "A user with this email address already exists") {
-        setError('This email address is already in use. Please use a different email address.');
+        const errorMsg = 'This email address is already in use. Please use a different email address.';
+        toast.error(errorMsg);
+        setError(errorMsg);
+      } else if (error.message?.includes('EMAIL_EXISTS:')) {
+        const errorMsg = error.message.replace('EMAIL_EXISTS:', '').trim();
+        toast.error(errorMsg);
+        setError(errorMsg);
+      } else if (error.message?.includes('VALIDATION_ERROR:')) {
+        const errorMsg = error.message.replace('VALIDATION_ERROR:', '').trim();
+        toast.error(errorMsg);
+        setError(errorMsg);
       } else if (error.message.includes("Cannot assign")) {
-        setError('Please select an appropriate role for this user type');
+        const errorMsg = 'Please select an appropriate role for this user type';
+        toast.error(errorMsg);
+        setError(errorMsg);
       } else {
-        setError(error.message || 'Failed to create user');
+        const errorMsg = error.message || 'Failed to create user';
+        toast.error(errorMsg);
+        setError(errorMsg);
       }
     }
   };
@@ -553,6 +586,11 @@ const fetchContacts = async (): Promise<void> => {
             <h3 className="text-lg font-semibold mb-2">
               Create New {portalType === 'msp' ? 'MSP User' : 'Client Portal User'}
             </h3>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
             <div className="space-y-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left column: manual details */}

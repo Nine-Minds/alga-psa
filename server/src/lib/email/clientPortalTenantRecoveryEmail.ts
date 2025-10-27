@@ -1,25 +1,88 @@
 'use server';
 
-import { getSystemEmailService } from './index';
+import { getSystemEmailService } from './system/SystemEmailService';
 import logger from '@alga-psa/shared/core/logger';
 import { TenantLoginInfo } from '../actions/portal-actions/tenantRecoveryActions';
+import { getConnection } from '@/lib/db/db';
+import { SupportedLocale, LOCALE_CONFIG } from '@/lib/i18n/config';
+import { resolveEmailLocale } from '@/lib/notifications/emailLocaleResolver';
 
 interface SendTenantRecoveryEmailParams {
   email: string;
   tenantLoginInfos: TenantLoginInfo[];
+  locale?: SupportedLocale;
 }
 
 /**
- * Generates HTML content for the tenant recovery email
+ * Fetch email template from database with language fallback
  */
-function generateEmailContent(tenantLoginInfos: TenantLoginInfo[]): { subject: string; html: string; text: string } {
-  const currentYear = new Date().getFullYear();
-  const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Client Portal';
+async function fetchTemplate(
+  templateName: string,
+  locale: SupportedLocale
+): Promise<{ subject: string; html: string; text: string } | null> {
+  try {
+    const knex = await getConnection();
 
-  const subject = `${platformName} - Your Login Links`;
+    // Try system template in requested language
+    let template = await knex('system_email_templates')
+      .where({ name: templateName, language_code: locale })
+      .first();
 
-  // Generate HTML for tenant login links
-  const tenantLinksHtml = tenantLoginInfos.map((info) => `
+    if (template) {
+      return {
+        subject: template.subject,
+        html: template.html_content,
+        text: template.text_content
+      };
+    }
+
+    // Fallback to English
+    if (locale !== 'en') {
+      template = await knex('system_email_templates')
+        .where({ name: templateName, language_code: 'en' })
+        .first();
+
+      if (template) {
+        return {
+          subject: template.subject,
+          html: template.html_content,
+          text: template.text_content
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error(`[fetchTemplate] Error fetching template ${templateName}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Replace template variables including dynamic content
+ */
+function replaceVariables(template: string, variables: Record<string, any>): string {
+  let result = template;
+
+  // Handle {{#if condition}} blocks
+  result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match, condition, content) => {
+    return variables[condition] ? content : '';
+  });
+
+  // Replace simple variables {{variableName}}
+  for (const [key, value] of Object.entries(variables)) {
+    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    result = result.replace(regex, String(value || ''));
+  }
+
+  return result;
+}
+
+/**
+ * Generate HTML for tenant login links
+ */
+function generateTenantLinksHtml(tenantLoginInfos: TenantLoginInfo[]): string {
+  return tenantLoginInfos.map((info) => `
     <tr>
       <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
         <div style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 5px;">
@@ -32,12 +95,79 @@ function generateEmailContent(tenantLoginInfos: TenantLoginInfo[]): { subject: s
       </td>
     </tr>
   `).join('');
+}
 
-  // Generate text version
-  const tenantLinksText = tenantLoginInfos.map((info, index) => `
+/**
+ * Generate text version of tenant login links
+ */
+function generateTenantLinksText(tenantLoginInfos: TenantLoginInfo[]): string {
+  return tenantLoginInfos.map((info, index) => `
 ${index + 1}. ${info.tenantName}
    Login URL: ${info.loginUrl}
   `).join('\n');
+}
+
+/**
+ * Determine the best locale for the email
+ */
+async function determineLocale(
+  email: string,
+  explicitLocale?: SupportedLocale
+): Promise<SupportedLocale> {
+  // 1. Explicit locale parameter
+  if (explicitLocale) {
+    return explicitLocale;
+  }
+
+  // 2. Try to determine from user preferences (if we have tenant context)
+  // For now, we don't have tenant context in tenant recovery
+  // In the future, we could look up user preferences across all tenants
+
+  // 3. System default
+  return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+}
+
+/**
+ * Generates email content for tenant recovery using database templates
+ */
+async function generateEmailContent(
+  tenantLoginInfos: TenantLoginInfo[],
+  locale: SupportedLocale
+): Promise<{ subject: string; html: string; text: string }> {
+  const currentYear = new Date().getFullYear();
+  const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Client Portal';
+
+  // Try to fetch template from database
+  const dbTemplate = await fetchTemplate('tenant-recovery', locale);
+
+  if (dbTemplate) {
+    // Generate dynamic tenant links
+    const tenantLinksHtml = generateTenantLinksHtml(tenantLoginInfos);
+    const tenantLinksText = generateTenantLinksText(tenantLoginInfos);
+
+    // Replace all variables
+    const variables = {
+      platformName,
+      currentYear,
+      tenantCount: tenantLoginInfos.length,
+      tenantLinksHtml,
+      tenantLinksText,
+      isMultiple: tenantLoginInfos.length > 1
+    };
+
+    return {
+      subject: replaceVariables(dbTemplate.subject, variables),
+      html: replaceVariables(dbTemplate.html, variables),
+      text: replaceVariables(dbTemplate.text, variables)
+    };
+  }
+
+  // Fallback to hardcoded English template (emergency only)
+  logger.warn('[generateEmailContent] Using emergency fallback template for tenant-recovery');
+
+  const subject = `${platformName} - Your Login Links`;
+  const tenantLinksHtml = generateTenantLinksHtml(tenantLoginInfos);
+  const tenantLinksText = generateTenantLinksText(tenantLoginInfos);
 
   const html = `
 <!DOCTYPE html>
@@ -51,8 +181,6 @@ ${index + 1}. ${info.tenantName}
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
-
-          <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
@@ -63,8 +191,6 @@ ${index + 1}. ${info.tenantName}
               </p>
             </td>
           </tr>
-
-          <!-- Content -->
           <tr>
             <td style="padding: 40px 30px;">
               <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
@@ -76,25 +202,19 @@ ${index + 1}. ${info.tenantName}
                   ? `We found ${tenantLoginInfos.length} organizations associated with your email address.`
                   : 'Here is your login link:'}
               </p>
-
-              <!-- Tenant Links Table -->
               <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin: 25px 0;">
                 ${tenantLinksHtml}
               </table>
-
               <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 25px 0;">
                 <p style="color: #4b5563; font-size: 14px; line-height: 1.5; margin: 0;">
                   <strong>Security Note:</strong> If you didn't request these login links, you can safely ignore this email. Your account remains secure.
                 </p>
               </div>
-
               <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 25px 0 0 0;">
                 If you have any questions or need assistance, please contact your organization's support team.
               </p>
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #6b7280; font-size: 12px; line-height: 1.5; margin: 0;">
@@ -139,12 +259,32 @@ This is an automated message. Please do not reply to this email.
 }
 
 /**
- * Generates email content for when no account is found
- * This is intentionally vague to prevent account enumeration
+ * Generates email content for when no account is found using database templates
  */
-function generateNoAccountEmailContent(): { subject: string; html: string; text: string } {
+async function generateNoAccountEmailContent(
+  locale: SupportedLocale
+): Promise<{ subject: string; html: string; text: string }> {
   const currentYear = new Date().getFullYear();
   const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Client Portal';
+
+  // Try to fetch template from database
+  const dbTemplate = await fetchTemplate('no-account-found', locale);
+
+  if (dbTemplate) {
+    const variables = {
+      platformName,
+      currentYear
+    };
+
+    return {
+      subject: replaceVariables(dbTemplate.subject, variables),
+      html: replaceVariables(dbTemplate.html, variables),
+      text: replaceVariables(dbTemplate.text, variables)
+    };
+  }
+
+  // Fallback to hardcoded English template (emergency only)
+  logger.warn('[generateNoAccountEmailContent] Using emergency fallback template for no-account-found');
 
   const subject = `${platformName} - Access Request`;
 
@@ -160,8 +300,6 @@ function generateNoAccountEmailContent(): { subject: string; html: string; text:
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;">
-
-          <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
@@ -172,8 +310,6 @@ function generateNoAccountEmailContent(): { subject: string; html: string; text:
               </p>
             </td>
           </tr>
-
-          <!-- Content -->
           <tr>
             <td style="padding: 40px 30px;">
               <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
@@ -191,13 +327,11 @@ function generateNoAccountEmailContent(): { subject: string; html: string; text:
                 <li>Your account may be inactive</li>
                 <li>The email may have been filtered to your spam folder</li>
               </ul>
-
               <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 25px 0;">
                 <p style="color: #4b5563; font-size: 14px; line-height: 1.5; margin: 0;">
                   <strong>Need Help?</strong> If you believe you should have access to a client portal, please contact your service provider's support team for assistance.
                 </p>
               </div>
-
               <div style="background-color: #fef3c7; border-radius: 6px; padding: 20px; margin: 25px 0;">
                 <p style="color: #92400e; font-size: 14px; line-height: 1.5; margin: 0;">
                   <strong>Security Note:</strong> If you didn't request access, you can safely ignore this email.
@@ -205,8 +339,6 @@ function generateNoAccountEmailContent(): { subject: string; html: string; text:
               </div>
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="color: #6b7280; font-size: 12px; line-height: 1.5; margin: 0;">
@@ -255,11 +387,15 @@ This is an automated message. Please do not reply to this email.
  * Sends a generic email when no account is found
  * This prevents account enumeration while still being helpful
  */
-export async function sendNoAccountFoundEmail(email: string): Promise<boolean> {
+export async function sendNoAccountFoundEmail(
+  email: string,
+  locale?: SupportedLocale
+): Promise<boolean> {
   try {
     logger.info('[sendNoAccountFoundEmail] Sending no-account email to:', email);
 
-    const { subject, html, text } = generateNoAccountEmailContent();
+    const resolvedLocale = await determineLocale(email, locale);
+    const { subject, html, text } = await generateNoAccountEmailContent(resolvedLocale);
 
     // Use SystemEmailService for sending
     const systemEmailService = await getSystemEmailService();
@@ -268,6 +404,7 @@ export async function sendNoAccountFoundEmail(email: string): Promise<boolean> {
       subject,
       html,
       text,
+      locale: resolvedLocale
     });
 
     if (!result.success) {
@@ -288,13 +425,15 @@ export async function sendNoAccountFoundEmail(email: string): Promise<boolean> {
  */
 export async function sendTenantRecoveryEmail(
   email: string,
-  tenantLoginInfos: TenantLoginInfo[]
+  tenantLoginInfos: TenantLoginInfo[],
+  locale?: SupportedLocale
 ): Promise<boolean> {
   try {
     logger.info('[sendTenantRecoveryEmail] Sending recovery email to:', email);
     logger.info('[sendTenantRecoveryEmail] Number of tenants:', tenantLoginInfos.length);
 
-    const { subject, html, text } = generateEmailContent(tenantLoginInfos);
+    const resolvedLocale = await determineLocale(email, locale);
+    const { subject, html, text } = await generateEmailContent(tenantLoginInfos, resolvedLocale);
 
     // Use SystemEmailService for sending
     const systemEmailService = await getSystemEmailService();
@@ -303,6 +442,7 @@ export async function sendTenantRecoveryEmail(
       subject,
       html,
       text,
+      locale: resolvedLocale
     });
 
     if (!result.success) {
