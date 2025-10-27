@@ -464,8 +464,22 @@ export class TypeScriptWorkflowRuntime {
       // Passing knex ensures actions use the same connection, avoiding Citus cross-shard FK issues
       const context = await this.createWorkflowContext(executionId, tenant, userId, knex);
 
-      // Start workflow execution in background
-      this.executeWorkflow(workflowDefinition.execute, context, executionState);
+      const scheduleExecution = () => {
+        setImmediate(() => {
+          this.executeWorkflow(workflowDefinition.execute, context, executionState)
+            .catch(error => {
+              logger.error(`Error executing workflow ${executionId} in background:`, error);
+            });
+        });
+      };
+
+      if (knex && typeof (knex as any).afterCommit === 'function') {
+        (knex as any).afterCommit(() => {
+          scheduleExecution();
+        });
+      } else {
+        scheduleExecution();
+      }
       
       return {
         executionId,
