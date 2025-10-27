@@ -8,6 +8,7 @@ import {
   listAccountingExportBatches
 } from '../../actions/accountingExportActions';
 import { CreateExportBatchInput, CreateExportLineInput, CreateExportErrorInput, UpdateExportBatchStatusInput } from '../../lib/repositories/accountingExportRepository';
+import { AccountingExportValidation } from '../../validation/accountingExportValidation';
 
 export class ApiAccountingExportController {
   static async createBatch(req: NextRequest) {
@@ -38,6 +39,7 @@ export class ApiAccountingExportController {
   static async appendLines(req: NextRequest, { params }: { params: { batchId: string } }) {
     const body = (await req.json()) as { lines: CreateExportLineInput[] };
     const lines = await appendAccountingExportLines(params.batchId, body.lines);
+    await AccountingExportValidation.ensureMappingsForBatch(params.batchId);
     return NextResponse.json(lines, { status: 201 });
   }
 
