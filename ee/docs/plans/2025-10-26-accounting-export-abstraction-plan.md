@@ -133,7 +133,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - Add Xero mapping pages (items/accounts, tax rates, tracking categories) reusing the same `externalMappingActions`.
 - [ ] **Lookup services**
   - Replace placeholder lookup actions with shared resolver (`AccountingMappingResolver`) that queries `tenant_external_entity_mappings`, supports fallback rules, and caches results during batch export.
-- [ ] **Validation hooks**
+- [x] **Validation hooks**
   - Add pre-export validation step that flags invoices/lines missing required mappings (service, tax code, payment term) and records them in the error table.
 
 ## Phase 3 – Export Engine & Workflow Integration
