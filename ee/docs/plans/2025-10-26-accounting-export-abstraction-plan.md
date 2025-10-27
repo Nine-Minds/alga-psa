@@ -296,6 +296,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     1. Log in as `billing_manager`; confirm Add/Edit/Delete buttons enabled.
     2. Log in as `support_agent`; navigate to same screen; verify controls disabled and tooltip text “Finance role required”.
     3. Attempt to POST via API as support agent; expect 403 and audit log entry for denied attempt.
+    - *Integration coverage:* `server/src/test/integration/accounting/mappingPermissions.integration.test.ts` verifies mapping CRUD is permitted for finance users (`billing_settings` update) and denied for read-only users.
 - **Export Validation & Execution**
   - `ValidationUnmapped#L1`
     1. Create invoice with service lacking mapping.
@@ -303,6 +304,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     3. Select adapter, date range covering invoice, proceed to Preview; expect preview table shows red badge “Mapping Required”.
     4. Attempt to confirm; modal blocks with error banner referencing missing mapping.
     5. After adding mapping, reopen modal, preview shows green check, confirmation succeeds.
+    - *Integration coverage:* `server/src/test/integration/accounting/validationUnmapped.integration.test.ts` seeds an invoice with no service mapping, verifies `ensureMappingsForBatch` records the error/status, then confirms the batch flips to `ready` once the mapping exists.
   - `ValidationCurrency#L1`
     1. Create invoice in EUR with stored exchange rate on invoice record.
     2. Run export wizard; on preview confirm displayed home currency totals match converted values.
@@ -313,11 +315,13 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     3. From drawer, click `Mark as Posted`; status updates.
     4. Attempt to re-run same filter range; wizard displays warning “Batch already exists”; prevents duplicate creation.
     5. Create second batch, cancel from drawer before delivery; status becomes `cancelled`; confirm actions disabled thereafter.
+    - *Integration coverage:* `server/src/test/integration/accounting/batchLifecycle.integration.test.ts` exercises lifecycle transitions, duplicate guard, and cancellation execution blocks.
   - `InvoiceSelection#L1`
     1. Use filters: set date range, choose invoice statuses, select specific client.
     2. Click `Preview Invoices` to ensure only matching invoices appear.
     3. Verify manual invoices, multi-period items, credit memos, zero-dollar lines display with correct metadata.
     4. On confirm, ensure resulting batch references proper `transaction_id` links.
+    - *Integration coverage:* `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` validates filtered previews, metadata flags, and transaction linkage on batch creation.
   - `Concurrency#L1`
     1. Start batch creation for Tenant A; simultaneously attempt same range for Tenant B; both succeed.
     2. Attempt to create overlapping batch for Tenant A before first finishes; wizard shows blocking message referencing existing batch.

@@ -10,12 +10,28 @@ import {
 } from '../../actions/accountingExportActions';
 import { CreateExportBatchInput, CreateExportLineInput, CreateExportErrorInput, UpdateExportBatchStatusInput } from '../../repositories/accountingExportRepository';
 import { AccountingExportValidation } from '../../validation/accountingExportValidation';
+import { AppError } from '../../errors';
 
 export class ApiAccountingExportController {
   static async createBatch(req: NextRequest) {
     const body = (await req.json()) as CreateExportBatchInput;
-    const batch = await createAccountingExportBatch(body);
-    return NextResponse.json(batch, { status: 201 });
+    try {
+      const batch = await createAccountingExportBatch(body);
+      return NextResponse.json(batch, { status: 201 });
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_DUPLICATE') {
+        return NextResponse.json(
+          {
+            error: error.code,
+            message: error.message,
+            existingBatchId: error.details?.batchId,
+            status: error.details?.status
+          },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
   }
 
   static async listBatches(req: NextRequest) {
@@ -60,7 +76,21 @@ export class ApiAccountingExportController {
   }
 
   static async execute(req: NextRequest, { params }: { params: { batchId: string } }) {
-    const result = await executeAccountingExportBatch(params.batchId);
-    return NextResponse.json(result);
+    try {
+      const result = await executeAccountingExportBatch(params.batchId);
+      return NextResponse.json(result);
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_INVALID_STATE') {
+        return NextResponse.json(
+          {
+            error: error.code,
+            message: error.message,
+            status: error.details?.status
+          },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
   }
 }

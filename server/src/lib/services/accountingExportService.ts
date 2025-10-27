@@ -47,7 +47,29 @@ export class AccountingExportService {
   }
 
   async createBatch(input: CreateExportBatchOptions): Promise<AccountingExportBatch> {
-    return this.repository.createBatch(input);
+    const exportType = input.export_type ?? 'invoice';
+    const normalizedFilters = input.filters && Object.keys(input.filters).length > 0 ? input.filters : null;
+
+    const blockingStatuses: AccountingExportStatus[] = ['pending', 'validating', 'needs_attention', 'ready', 'delivered', 'posted'];
+    const existing = await this.repository.findActiveBatchByFilters({
+      adapterType: input.adapter_type,
+      exportType,
+      filters: normalizedFilters,
+      blockingStatuses
+    });
+
+    if (existing) {
+      throw new AppError('ACCOUNTING_EXPORT_DUPLICATE', 'An export batch already exists for this filter selection', {
+        batchId: existing.batch_id,
+        status: existing.status
+      });
+    }
+
+    return this.repository.createBatch({
+      ...input,
+      export_type: exportType,
+      filters: normalizedFilters
+    });
   }
 
   async appendLines(batchId: string, options: AppendLinesOptions): Promise<AccountingExportLine[]> {
@@ -91,9 +113,17 @@ export class AccountingExportService {
   }
 
   async executeBatch(batchId: string): Promise<AccountingExportDeliveryResult> {
-    const { batch, lines } = await this.getBatchWithDetails(batchId);
+    const { batch } = await this.getBatchWithDetails(batchId);
     if (!batch) {
       throw new Error(`Export batch ${batchId} not found`);
+    }
+
+    const nonExecutableStates: AccountingExportStatus[] = ['cancelled', 'posted', 'delivered', 'validating'];
+    if (nonExecutableStates.includes(batch.status)) {
+      throw new AppError('ACCOUNTING_EXPORT_INVALID_STATE', `Cannot execute batch in status ${batch.status}`, {
+        status: batch.status,
+        batchId
+      });
     }
 
     const adapter = this.adapterRegistry.get(batch.adapter_type);
