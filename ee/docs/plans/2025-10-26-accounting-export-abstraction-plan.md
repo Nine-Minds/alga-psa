@@ -12,7 +12,7 @@ Primary outcomes:
 ---
 
 ## Discovery Highlights *(Completed)*
-- **Billing data richness:** `invoice_items` and `invoice_item_details` already store service, contract, tax, and service-period metadata (`server/migrations/20250412214804_add_invoice_item_details_tables.cjs`, `docs/billing.md`). Amounts are persisted in cents (integers) while `transactions.amount` stays decimal, so the export layer must normalize currency precision.
+- **Billing data richness:** Current `invoice_items` / `invoice_item_details` tables—slated to become `invoice_charges` / `invoice_charge_details`—already store service, contract, tax, and service-period metadata (`server/migrations/20250412214804_add_invoice_item_details_tables.cjs`, `docs/billing.md`). Amounts are persisted in cents (integers) while `transactions.amount` stays decimal, so the export layer must normalize currency precision.
 - **Mappings backbone:** `tenant_external_entity_mappings` tracks per-tenant relationships between Alga entities and external IDs with optional metadata (`server/migrations/20250502173321_create_tenant_external_entity_mappings.cjs`). UI scaffolding exists under `server/src/components/integrations/qbo/*`, and server actions (`server/src/lib/actions/externalMappingActions.ts`) expose CRUD, but lookups inside QBO workflows still rely on placeholders.
 - **Event-driven QBO sync (WIP):** Workflows (`server/src/lib/workflows/qboInvoiceSyncWorkflow.ts`, `qboCustomerSyncWorkflow.ts`) and `QboClientService` provide OAuth token management and API calls. Many actions (`lookup_qbo_item_id`, `create_qbo_invoice`) still simulate results, so the accounting export layer should either replace or harden these flows.
 - **Client + tax metadata:** `clients`, `client_locations`, `client_tax_rates`, and `tax_rates` tables hold billing contacts, addresses, tax regions, and default tax codes (`server/migrations/20251003000001_company_to_client_migration.cjs`). Invoice generation already calls `TaxService` and stores `tax_rate` and `tax_region` on each line.
@@ -40,16 +40,21 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 ---
 
 ## Phase 1 – Data Model & Canonical Schema
+- [ ] **Terminology alignment (Charges)**
+  - Rename `invoice_items` table to `invoice_charges`; create compatibility view `invoice_items` for interim references and update ORM/Knex bindings.
+  - Rename supporting detail tables (`invoice_item_details` → `invoice_charge_details`, `invoice_item_fixed_details` → `invoice_charge_fixed_details`) and adjust foreign keys.
+  - Update TypeScript interfaces (`IInvoiceItem` → `IInvoiceCharge`), billing engine services, and API serializers to use “charge” terminology while maintaining backward-compatible DTO aliases where external integrations rely on the old name.
+  - Migrate tests, seeds, and documentation to the new naming; publish release notes and migration guidance for self-hosted tenants.
 - [ ] **Add export tables**
   - `accounting_export_batches` (tenant, adapter, target_company/realm, export_type, filters, triggered_by, status timestamps, checksum).
-  - `accounting_export_lines` (batch_id, tenant, invoice_id, invoice_item_id, canonical amounts, currency, service dates, mapping references, tax breakdown, export payload snapshot).
+  - `accounting_export_lines` (batch_id, tenant, invoice_id, invoice_charge_id, canonical amounts, currency, service dates, mapping references, tax breakdown, export payload snapshot).
   - `accounting_export_errors` (batch_id, line_id nullable, code, message, resolution_status).
 - [ ] **Normalize currency handling**
   - Introduce `currency_code` + `exchange_rate` columns on `invoices` (defaulting to tenant currency) and extend billing engine to populate them.
-  - Ensure `invoice_items.unit_price/total_price` and `transactions.amount` are reconciled in cents vs. decimals; add helper to convert consistently.
+  - Ensure `invoice_charges.unit_price/total_price` and `transactions.amount` are reconciled in cents vs. decimals; add helper to convert consistently.
 - [ ] **Canonical DTOs**
   - Create TypeScript interfaces (e.g., `AccountingInvoiceExport`, `AccountingLineExport`) under `server/src/interfaces/accountingExport.interfaces.ts`.
-  - Implement a builder (e.g., `AccountingExportAssembler`) that reads invoices, joins `invoice_item_details`, `client_contract_lines`, `services`, `tax_rates`, and emits canonical DTOs.
+  - Implement a builder (e.g., `AccountingExportAssembler`) that reads invoices, joins `invoice_charge_details`, `client_contract_lines`, `services`, `tax_rates`, and emits canonical DTOs.
 - [ ] **Audit trails**
   - Store rendered adapter payload (JSON blob / file path) per line or batch for traceability.
   - Add relationship from `transactions` to `accounting_export_batches` (nullable FK) for reconciliation reporting.
@@ -79,7 +84,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
                | batch_id (FK -> accounting_export_batches.batch_id)      |
                | tenant                                                   |
                | invoice_id (FK -> invoices)                              |
-               | invoice_item_id (FK -> invoice_items)                    |
+               | invoice_charge_id (FK -> invoice_charges)                |
                | canonical_amount_cents                                   |
                | currency_code / exchange_rate                            |
                | service_period_start / service_period_end                |
@@ -108,7 +113,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
  existing tables:
    invoices ---------+
                      |
-   invoice_items ----+--> accounting_export_lines (line-level joins)
+   invoice_charges --+--> accounting_export_lines (line-level joins)
 
    tenant_external_entity_mappings --(
         referenced via mapping_resolution_json lookup metadata
