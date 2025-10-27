@@ -182,17 +182,17 @@ def update-hosted-env-canary-route [
         return
     }
 
-    let repo_url = "https://github.com/nine-minds/nm-kube-connect"
-    let repo_dir = "/tmp/nm-kube-connect"
+    let repo_url = "https://github.com/nine-minds/nm-kube-config"
+    let repo_dir = "/tmp/nm-kube-config"
 
     mut repo_ready = false
     if ($repo_dir | path exists) {
         let git_check = (do { cd $repo_dir; git rev-parse --is-inside-work-tree | complete })
         if $git_check.exit_code != 0 {
-            print $"($env.ALGA_COLOR_YELLOW)Existing nm-kube-connect path at ($repo_dir) is not a git repository; re-cloning...($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_YELLOW)Existing nm-kube-config path at ($repo_dir) is not a git repository; re-cloning...($env.ALGA_COLOR_RESET)"
             (rm -rf $repo_dir | complete) | ignore
         } else {
-            print $"($env.ALGA_COLOR_CYAN)Updating existing nm-kube-connect checkout...($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_CYAN)Updating existing nm-kube-config checkout...($env.ALGA_COLOR_RESET)"
             let fetch_res = (do { cd $repo_dir; git fetch --prune origin | complete })
             if $fetch_res.exit_code != 0 {
                 print $"($env.ALGA_COLOR_YELLOW)git fetch failed: ($fetch_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
@@ -208,83 +208,54 @@ def update-hosted-env-canary-route [
     }
 
     if not $repo_ready {
-        print $"($env.ALGA_COLOR_CYAN)Cloning nm-kube-connect repository to ($repo_dir)...($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_CYAN)Cloning nm-kube-config repository to ($repo_dir)...($env.ALGA_COLOR_RESET)"
         let clone_res = (git clone $repo_url $repo_dir | complete)
         if $clone_res.exit_code != 0 {
-            print $"($env.ALGA_COLOR_RED)Failed to clone nm-kube-connect: ($clone_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_RED)Failed to clone nm-kube-config: ($clone_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
             return
         }
         $repo_ready = true
     }
 
     if not $repo_ready {
-        print $"($env.ALGA_COLOR_YELLOW)nm-kube-connect repository unavailable; skipping VirtualService update.($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)nm-kube-config repository unavailable; skipping VirtualService update.($env.ALGA_COLOR_RESET)"
         return
     }
 
-    let workflow_path = $"($repo_dir)/argo-workflow/alga-psa-dev/templates/composite/alga-psa-build-migrate-deploy.yaml"
-    if not ($workflow_path | path exists) {
-        print $"($env.ALGA_COLOR_YELLOW)VirtualService definition not found at ($workflow_path); skipping update.($env.ALGA_COLOR_RESET)"
-        return
-    }
-
-    let base_fullname = (trim-dns-name $"($release)-sebastian")
+    let base_fullname = (trim-dns-name $release)
     let service_name = (trim-dns-name $"($base_fullname)-code-server")
     let destination_host = $"($service_name).($namespace).svc.cluster.local"
     let desired_port = 3000
 
-    let docs_raw = (open --raw $workflow_path | from yaml)
-    let docs_list = if (($docs_raw | describe) | str starts-with "list<") { $docs_raw } else { [ $docs_raw ] }
+    let candidate_rel_paths = [
+        "alga-psa/istio-gateway-sebastian.yaml"
+        "argo-workflow/alga-psa-dev/templates/composite/alga-psa-build-migrate-deploy.yaml"
+    ]
 
-    mut updated_docs = []
+    mut target_rel = null
     mut updated_vs = null
-    mut changed = false
 
-    for doc in $docs_list {
-        mut doc_mut = $doc
-        if (($doc_mut.kind? | default "") == "VirtualService" and ($doc_mut.metadata.name? | default "") == "alga-psa-vs-sebastian") {
-            let http_raw = ($doc_mut.spec.http? | default [])
-            let http_routes = if (($http_raw | describe) | str starts-with "list<") { $http_raw } else if ($http_raw | is-empty) { [] } else { [ $http_raw ] }
-            let route_candidates = (
-                $http_routes
-                | enumerate
-                | where {|row|
-                    let route_entry = $row.item
-                    let match_raw = ($route_entry.match? | default [])
-                    let match_list = if (($match_raw | describe) | str starts-with "list<") { $match_raw } else if ($match_raw | is-empty) { [] } else { [ $match_raw ] }
-                    $match_list | any {|m|
-                        let headers_rec = ($m.headers? | default {})
-                        let header_value = if (($headers_rec | describe) | str contains "record<") {
-                            let lower = ($headers_rec | get "x-canary"?)
-                            if $lower == null { $headers_rec | get "X-Canary"? } else { $lower }
-                        } else { null }
-                        if $header_value == null {
-                            false
-                        } else {
-                            let header_desc = ($header_value | describe)
-                            if ($header_desc | str contains "record<") {
-                                (($header_value.exact? | default "") == $trimmed_canary)
-                            } else {
-                                $header_value == $trimmed_canary
-                            }
-                        }
-                    }
-                }
-            )
-            let route_match = ($route_candidates | get 0? | default null)
-            let route_idx = if $route_match == null { null } else { $route_match.index }
+    for rel_path in $candidate_rel_paths {
+        let file_path = $"($repo_dir)/($rel_path)"
+        if not ($file_path | path exists) {
+            continue
+        }
 
-            mut http_updated = $http_routes
-            if $route_idx == null {
-                let new_route = {
+        let docs_raw = (open --raw $file_path | from yaml)
+        let docs_list = if (($docs_raw | describe) | str starts-with "list<") { $docs_raw } else { [ $docs_raw ] }
+
+        mut updated_docs = []
+        mut changed = false
+
+        for doc in $docs_list {
+            mut doc_mut = $doc
+            if (($doc_mut.kind? | default "") == "VirtualService" and ($doc_mut.metadata.name? | default "") == "alga-psa-vs-sebastian") {
+                let http_raw = ($doc_mut.spec.http? | default [])
+                let http_routes = if (($http_raw | describe) | str starts-with "list<") { $http_raw } else if ($http_raw | is-empty) { [] } else { [ $http_raw ] }
+
+                let desired_route = {
                     name: $"canary-($trimmed_canary)"
-                    match: [
-                        {
-                            headers: {
-                                x-canary: { exact: $trimmed_canary }
-                            }
-                        }
-                    ]
+                    match: [ { headers: { x-canary: { exact: $trimmed_canary } } } ]
                     route: [
                         {
                             destination: {
@@ -294,91 +265,237 @@ def update-hosted-env-canary-route [
                         }
                     ]
                 }
-                $http_updated = [ $new_route ] ++ $http_routes
-            } else {
-                let current_route = if $route_match == null { {} } else { $route_match.item }
-                let routes_raw = ($current_route.route? | default [])
-                let routes_list = if (($routes_raw | describe) | str starts-with "list<") { $routes_raw } else if ($routes_raw | is-empty) { [] } else { [ $routes_raw ] }
-                mut new_routes = $routes_list
-                if ($new_routes | is-empty) {
-                    $new_routes = [
-                        { destination: { host: $destination_host, port: { number: $desired_port } } }
-                    ]
-                } else {
-                    let first_route = ($new_routes | first)
-                    let dest_raw = ($first_route.destination? | default {})
-                    let dest_port = (($dest_raw.port? | default {}) | upsert number $desired_port)
-                    let dest_updated = ($dest_raw | upsert host $destination_host | upsert port $dest_port)
-                    let first_updated = ($first_route | upsert destination $dest_updated)
-                    $new_routes = [ $first_updated ] ++ ($new_routes | skip 1)
-                }
-                let updated_route = ($current_route | upsert route $new_routes)
-                $http_updated = ($http_routes | update $route_idx $updated_route)
-            }
 
-            $doc_mut = ($doc_mut | upsert spec (
-                ($doc_mut.spec? | default {}) | upsert http $http_updated
-            ))
-            $updated_vs = $doc_mut
-            $changed = true
+                let exact_match = (
+                    $http_routes
+                    | enumerate
+                    | where {|row|
+                        let route_entry = $row.item
+                        let match_raw = ($route_entry.match? | default [])
+                        let match_list = if (($match_raw | describe) | str starts-with "list<") { $match_raw } else if ($match_raw | is-empty) { [] } else { [ $match_raw ] }
+                        $match_list | any {|m|
+                            let headers_rec = ($m.headers? | default {})
+                            let header_value = if (($headers_rec | describe) | str contains "record<") {
+                                let lower = ($headers_rec | get "x-canary"?)
+                                if $lower == null { $headers_rec | get "X-Canary"? } else { $lower }
+                            } else { null }
+                            if $header_value == null {
+                                false
+                            } else {
+                                let header_desc = ($header_value | describe)
+                let header_text = if ($header_desc | str contains "record<") {
+                    ($header_value.exact? | default "") | str trim
+                } else if ($header_desc | str starts-with "list<") {
+                    ($header_value | get 0? | default "") | str trim
+                } else {
+                    ($header_value | into string | default "") | str trim
+                }
+                $header_text == $trimmed_canary
+                            }
+                        }
+                    }
+                )
+                let route_match = ($exact_match | get 0? | default null)
+
+                let fallback_match = if $route_match == null {
+                    (
+                        $http_routes
+                        | enumerate
+                        | where {|row|
+                            let route_entry = $row.item
+                            let match_raw = ($route_entry.match? | default [])
+                            let match_list = if (($match_raw | describe) | str starts-with "list<") { $match_raw } else if ($match_raw | is-empty) { [] } else { [ $match_raw ] }
+                            $match_list | any {|m|
+                                let headers_rec = ($m.headers? | default {})
+                                (($headers_rec | describe) | str contains "record<") and (
+                                    ($headers_rec | get "x-canary"? ) != null or ($headers_rec | get "X-Canary"? ) != null
+                                )
+                            }
+                        }
+                    ) | get 0? | default null
+                } else { null }
+
+                let target_route_idx = if $route_match != null {
+                    $route_match.index
+                } else if $fallback_match != null {
+                    $fallback_match.index
+                } else {
+                    null
+                }
+
+                let http_updated = if $target_route_idx == null {
+                    [ $desired_route ] ++ $http_routes
+                } else {
+                    ($http_routes | update $target_route_idx $desired_route)
+                }
+
+                let raw_metadata = ($doc_mut.metadata? | default {})
+                let annotations_raw = ($raw_metadata.annotations? | default {})
+                let cleaned_annotations = (
+                    if (($annotations_raw | describe) | str starts-with "record<") {
+                        let has_last_applied = ($annotations_raw | columns | any {|c| $c == "kubectl.kubernetes.io/last-applied-configuration"})
+                        if $has_last_applied {
+                            $annotations_raw | reject "kubectl.kubernetes.io/last-applied-configuration"
+                        } else {
+                            $annotations_raw
+                        }
+                    } else {
+                        $annotations_raw
+                    }
+                )
+                let base_metadata = (
+                    ["name", "namespace", "labels"]
+                    | reduce -f {} { |key, acc|
+                        let maybe_value = (try { $raw_metadata | get $key } catch { null })
+                        if $maybe_value == null {
+                            $acc
+                        } else {
+                            $acc | upsert $key $maybe_value
+                        }
+                    }
+                )
+                let final_metadata = ($base_metadata | upsert annotations $cleaned_annotations)
+
+                $doc_mut = (
+                    $doc_mut
+                    | upsert metadata $final_metadata
+                    | upsert spec (
+                        ($doc_mut.spec? | default {}) | upsert http $http_updated
+                    )
+                )
+                $updated_vs = $doc_mut
+                $changed = true
+            }
+            $updated_docs = $updated_docs ++ [ $doc_mut ]
         }
-        $updated_docs = $updated_docs ++ [ $doc_mut ]
+
+        if $changed {
+            let doc_strings = ($updated_docs | each {|d| $d | to yaml })
+            let joined = ($doc_strings | str join "\n---\n")
+            let final_content = if ($joined | str ends-with "\n") { $joined } else { $"($joined)\n" }
+            $final_content | save --force --raw $file_path
+            $target_rel = $rel_path
+            break
+        }
     }
 
-    if not $changed {
-        print $"($env.ALGA_COLOR_YELLOW)VirtualService alga-psa-vs-sebastian not found in nm-kube-connect; skipping update.($env.ALGA_COLOR_RESET)"
+    if $target_rel == null or $updated_vs == null {
+        print $"($env.ALGA_COLOR_YELLOW)VirtualService alga-psa-vs-sebastian not found in nm-kube-config; skipping update.($env.ALGA_COLOR_RESET)"
         return
     }
 
-    let workflow_relative = "argo-workflow/alga-psa-dev/templates/composite/alga-psa-build-migrate-deploy.yaml"
-    let doc_strings = ($updated_docs | each {|d| $d | to yaml })
-    let joined = ($doc_strings | str join "\n---\n")
-    let final_content = if ($joined | str ends-with "\n") { $joined } else { $"($joined)\n" }
-    $final_content | save --force --raw $workflow_path
+    let temp_vs_path = $"($repo_dir)/.tmp-alga-psa-vs-sebastian.yaml"
+    let vs_metadata = ($updated_vs.metadata? | default {})
+    let vs_name = ($vs_metadata | get name? | default "")
+    let vs_namespace = ($vs_metadata | get namespace? | default "")
+    let metadata_without_version = if (($vs_metadata | columns | default []) | any {|c| $c == "resourceVersion"}) {
+        $vs_metadata | reject resourceVersion
+    } else {
+        $vs_metadata
+    }
+    let base_doc = (
+        $updated_vs
+        | default {}
+        | upsert metadata $metadata_without_version
+    )
 
-    if $updated_vs != null {
-        let temp_vs_path = $"($repo_dir)/.tmp-alga-psa-vs-sebastian.yaml"
-        ($updated_vs | to yaml) | save --force --raw $temp_vs_path
+    let max_apply_attempts = 3
+    mut attempt = 0
+    mut applied = false
+    mut last_error = ""
+    while (not $applied) and ($attempt < $max_apply_attempts) {
+        if ($vs_name | str length) == 0 {
+            if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+            error make {
+                msg: $"($env.ALGA_COLOR_RED)VirtualService metadata missing name; cannot apply update.($env.ALGA_COLOR_RESET)"
+            }
+        }
+
+        let ns = if ($vs_namespace | str length) > 0 { $vs_namespace } else { "msp" }
+        let rv_res = (kubectl get virtualservice $vs_name -n $ns -o jsonpath='{.metadata.resourceVersion}' | complete)
+        if $rv_res.exit_code != 0 {
+            if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+            error make {
+                msg: $"($env.ALGA_COLOR_RED)Unable to fetch current resourceVersion for VirtualService ($vs_name): ($rv_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+            }
+        }
+
+        let server_rv = ($rv_res.stdout | str trim)
+        if ($server_rv | str length) == 0 {
+            if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+            error make {
+                msg: $"($env.ALGA_COLOR_RED)Received empty resourceVersion for VirtualService ($vs_name); aborting update.($env.ALGA_COLOR_RESET)"
+            }
+        }
+
+        let doc_to_apply = (
+            $base_doc
+            | upsert metadata (
+                ($base_doc.metadata? | default {}) | upsert resourceVersion $server_rv
+            )
+        )
+
+        ($doc_to_apply | to yaml) | save --force --raw $temp_vs_path
         let apply_res = (kubectl apply -f $temp_vs_path | complete)
         if $apply_res.exit_code == 0 {
             print $"($env.ALGA_COLOR_GREEN)Updated x-canary route '($trimmed_canary)' → ($destination_host):($desired_port).($env.ALGA_COLOR_RESET)"
+            $applied = true
         } else {
-            print $"($env.ALGA_COLOR_YELLOW)kubectl apply for VirtualService failed: ($apply_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+            let err_detail = ($apply_res.stderr | str trim)
+            if ($err_detail | str contains "the object has been modified") or ($err_detail | str contains "conflict") {
+                $attempt = $attempt + 1
+                $last_error = $err_detail
+                sleep 500ms
+                continue
+            } else {
+                if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+                error make {
+                    msg: $"($env.ALGA_COLOR_RED)Failed to apply VirtualService update: ($err_detail)($env.ALGA_COLOR_RESET)"
+                }
+            }
         }
-        (rm -f $temp_vs_path | complete) | ignore
     }
+
+    if not $applied {
+        if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
+        error make {
+            msg: $"($env.ALGA_COLOR_RED)Failed to apply VirtualService update after retries: ($last_error)($env.ALGA_COLOR_RESET)"
+        }
+    }
+
+    if ($temp_vs_path | path exists) { rm --force $temp_vs_path | ignore }
 
     let status_res = (do { cd $repo_dir; git status --porcelain | complete })
     if $status_res.exit_code != 0 {
-        print $"($env.ALGA_COLOR_YELLOW)Unable to determine nm-kube-connect git status: ($status_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)Unable to determine nm-kube-config git status: ($status_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
         return
     }
     if ($status_res.stdout | str trim | is-empty) {
         return
     }
 
-    let add_res = (do { cd $repo_dir; git add $workflow_relative | complete })
+    let target_rel_path = $target_rel
+    let add_res = (do { cd $repo_dir; git add $target_rel_path | complete })
     if $add_res.exit_code != 0 {
-        print $"($env.ALGA_COLOR_YELLOW)git add failed for nm-kube-connect: ($add_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)git add failed for nm-kube-config: ($add_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
         return
     }
 
     let commit_message = $"Update canary ($trimmed_canary) VirtualService target"
     let commit_res = (do { cd $repo_dir; git commit -m $commit_message | complete })
     if $commit_res.exit_code != 0 {
-        print $"($env.ALGA_COLOR_YELLOW)git commit failed for nm-kube-connect: ($commit_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)git commit failed for nm-kube-config: ($commit_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
         return
     }
 
     let push_res = (do { cd $repo_dir; git push origin HEAD | complete })
     if $push_res.exit_code != 0 {
-        print $"($env.ALGA_COLOR_YELLOW)git push failed for nm-kube-connect: ($push_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)git push failed for nm-kube-config: ($push_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
         return
     }
 
-    print $"($env.ALGA_COLOR_GREEN)Pushed VirtualService update to nm-kube-connect for canary '($trimmed_canary)'.($env.ALGA_COLOR_RESET)"
+    print $"($env.ALGA_COLOR_GREEN)Pushed VirtualService update to nm-kube-config for canary '($trimmed_canary)'.($env.ALGA_COLOR_RESET)"
 }
-
 # Show diagnostics for a Kubernetes Job: describe job, list pods, and print logs
 def show-job-diagnostics [ns: string, job: string] {
     print $"($env.ALGA_COLOR_CYAN)Job describe: ($ns)/($job)($env.ALGA_COLOR_RESET)"
@@ -846,7 +963,11 @@ export def hosted-env-connect [
     print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
 
     # Wait for user to stop
-    input "Press Enter to stop port forwarding..."
+    try {
+        input "Press Enter to stop port forwarding..."
+    } catch {
+        print $"($env.ALGA_COLOR_YELLOW)Non-interactive session detected; stopping port forwarding immediately.($env.ALGA_COLOR_RESET)"
+    }
 
     # Kill all kubectl port-forward processes for this env
     bash -c $"pkill -f 'kubectl port-forward.*pod/($pod_name)'" | complete | ignore
