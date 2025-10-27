@@ -131,7 +131,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 - [ ] **Mapping UI upgrades**
   - Update QBO mapping tables to support fallback resolution order and surface validation warnings for unmapped entities.
   - Add Xero mapping pages (items/accounts, tax rates, tracking categories) reusing the same `externalMappingActions`.
-- [ ] **Lookup services**
+- [x] **Lookup services**
   - Replace placeholder lookup actions with shared resolver (`AccountingMappingResolver`) that queries `tenant_external_entity_mappings`, supports fallback rules, and caches results during batch export.
 - [x] **Validation hooks**
   - Add pre-export validation step that flags invoices/lines missing required mappings (service, tax code, payment term) and records them in the error table.
@@ -422,6 +422,9 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - `APIExportDetails#L1`
     1. Append lines/errors via `POST /api/accounting/exports/{batchId}/lines` and `/errors`; ensure subsequent batch fetch returns appended data.
     2. Update batch status using `PATCH /api/accounting/exports/{batchId}` and verify state transitions recorded.
+  - `ValidationMissingMapping#L1`
+    1. Create batch, append a line lacking service mapping, and confirm validation marks batch `needs_attention` with error record.
+    2. Add mapping and re-run validation (re-append or trigger) to see batch flip to `ready`.
   - `CLITrigger#L1`
     1. Run `scripts/trigger-accounting-export.ts` and confirm it creates a placeholder batch/line.
     2. Validate seeded data appears through the API and can be managed alongside UI-driven batches.
