@@ -283,6 +283,29 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           />
         </div>
 
+        {/* Last Login Info */}
+        {user?.last_login_at && (
+          <div className="p-3 rounded-lg border bg-gray-50">
+            <Text as="label" size="2" weight="medium" className="block mb-1">
+              Last Login
+            </Text>
+            <Text size="2" color="gray" className="block">
+              {new Date(user.last_login_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </Text>
+            {user.last_login_method && (
+              <Text size="1" color="gray" className="block mt-1">
+                via {user.last_login_method}
+              </Text>
+            )}
+          </div>
+        )}
+
         <div>
           <Text as="label" size="2" weight="medium" className="mb-2 block">
             Roles

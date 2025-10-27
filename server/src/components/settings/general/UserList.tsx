@@ -148,7 +148,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
     {
       title: 'First Name',
       dataIndex: 'first_name',
-      width: '20%',
+      width: '15%',
       render: (firstName: string, record: IUser) => (
         <div className="flex items-center space-x-3">
           <UserAvatar
@@ -164,18 +164,18 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
     {
       title: 'Last Name',
       dataIndex: 'last_name',
-      width: '20%'
+      width: '15%'
     },
     {
       title: 'Email',
       dataIndex: 'email',
-      width: '20%'
+      width: '18%'
     },
     ...(hasClientUsers
       ? [{
           title: 'Client',
           dataIndex: 'client',
-          width: '20%',
+          width: '15%',
           render: (_: any, record: IUser) => {
             const client = userClients[record.user_id];
             if (client === undefined) {
@@ -202,18 +202,42 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
     {
       title: 'Role',
       dataIndex: 'roles',
-      width: '20%',
+      width: '12%',
       render: (roles: any[], record: IUser) => {
         if (!roles || roles.length === 0) {
           return <span>No Role</span>;
         }
-        
+
         if (roles.length === 1) {
           return <span>{roles[0].role_name}</span>;
         }
-        
+
         const roleNames = roles.map(role => role.role_name).join(', ');
         return <span>{roleNames}</span>;
+      },
+    },
+    {
+      title: 'Last Login',
+      dataIndex: 'last_login_at',
+      width: '17%',
+      render: (lastLoginAt: string | null, record: IUser) => {
+        if (!lastLoginAt) {
+          return <span className="text-gray-400 text-sm">Never</span>;
+        }
+        const date = new Date(lastLoginAt);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm">{formattedDate}</span>
+            {record.last_login_method && (
+              <span className="text-xs text-gray-500">via {record.last_login_method}</span>
+            )}
+          </div>
+        );
       },
     },
     {

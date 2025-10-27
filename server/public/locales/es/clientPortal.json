@@ -493,6 +493,8 @@
       "invite": "Enviar invitación",
       "resendInvite": "Reenviar invitación",
       "lastLogin": "Último acceso",
+      "never": "Nunca",
+      "via": "vía",
       "userNotFound": "Usuario no encontrado",
       "failedToLoad": "No se pudieron cargar los detalles del usuario",
       "failedToUpdate": "No se pudo actualizar el usuario",
