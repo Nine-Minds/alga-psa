@@ -2,7 +2,6 @@ import { IDocument, PreviewResponse } from 'server/src/interfaces/document.inter
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegStatic from 'ffmpeg-static';
 import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
 import type { Knex } from 'knex';
 import { existsSync, promises as fs } from 'fs';
@@ -21,8 +20,14 @@ function resolveFfmpegPath(): string | null {
     return candidateFromEnv;
   }
 
-  if (typeof ffmpegStatic === 'string' && existsSync(ffmpegStatic)) {
-    return ffmpegStatic;
+  // Try to load ffmpeg-static if available (optional dependency)
+  try {
+    const ffmpegStatic = moduleRequire('ffmpeg-static');
+    if (typeof ffmpegStatic === 'string' && existsSync(ffmpegStatic)) {
+      return ffmpegStatic;
+    }
+  } catch (error) {
+    // ffmpeg-static not installed, continue with other resolution methods
   }
 
   try {
