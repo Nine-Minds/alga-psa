@@ -45,7 +45,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - Rename supporting detail tables (`invoice_item_details` → `invoice_charge_details`, `invoice_item_fixed_details` → `invoice_charge_fixed_details`) and adjust foreign keys.
   - Update TypeScript interfaces (`IInvoiceItem` → `IInvoiceCharge`), billing engine services, and API serializers to use “charge” terminology while maintaining backward-compatible DTO aliases where external integrations rely on the old name.
   - Migrate tests, seeds, and documentation to the new naming; publish release notes and migration guidance for self-hosted tenants.
-- [ ] **Add export tables**
+- [x] **Add export tables**
   - `accounting_export_batches` (tenant, adapter, target_company/realm, export_type, filters, triggered_by, status timestamps, checksum).
   - `accounting_export_lines` (batch_id, tenant, invoice_id, invoice_charge_id, canonical amounts, currency, service dates, mapping references, tax breakdown, export payload snapshot).
   - `accounting_export_errors` (batch_id, line_id nullable, code, message, resolution_status).
@@ -53,7 +53,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - Introduce `currency_code` + `exchange_rate` columns on `invoices` (defaulting to tenant currency) and extend billing engine to populate them.
   - Convert `transactions.amount` to an integer column (representing cents) via staged migration: add temp integer column, backfill by multiplying existing decimals, swap, and remove the legacy decimal.
   - Ensure `invoice_charges.unit_price/total_price` and `transactions.amount` share the same integer-based representation; add helper utilities when interfacing with external APIs that expect decimals.
-- [ ] **Canonical DTOs**
+- [x] **Canonical DTOs**
   - Create TypeScript interfaces (e.g., `AccountingInvoiceExport`, `AccountingLineExport`) under `server/src/interfaces/accountingExport.interfaces.ts`.
   - Implement a builder (e.g., `AccountingExportAssembler`) that reads invoices, joins `invoice_charge_details`, `client_contract_lines`, `services`, `tax_rates`, and emits canonical DTOs.
 - [ ] **Audit trails**
