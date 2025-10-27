@@ -7,7 +7,7 @@ USER root
 
 RUN apk add --no-cache \
     postgresql-client \
-    sqlite3 \
+    sqlite \
     curl
 
 WORKDIR /opt/setup
