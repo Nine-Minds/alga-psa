@@ -1,0 +1,49 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/categories/service"
+      },
+      "metadata": {
+        "playbooks": [
+          "service-categories/list-basic"
+        ],
+        "examples": [
+          {
+            "name": "List active categories",
+            "request": {
+              "query": {
+                "is_active": true
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/categories/service"
+      },
+      "metadata": {
+        "playbooks": [
+          "service-categories/create-basic"
+        ],
+        "examples": [
+          {
+            "name": "Create a new service category",
+            "request": {
+              "body": {
+                "category_name": "Remote Support",
+                "description": "Standard remote troubleshooting",
+                "is_active": true
+              }
+            }
+          }
+        ],
+        "approvalRequired": true
+      }
+    }
+  ]
+}

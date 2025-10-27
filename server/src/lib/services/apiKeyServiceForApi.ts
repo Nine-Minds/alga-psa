@@ -13,6 +13,10 @@ interface ApiKey {
   updated_at: Date;
   last_used_at: Date | null;
   expires_at: Date | null;
+  purpose: string;
+  metadata: Record<string, unknown> | null;
+  usage_limit: number | null;
+  usage_count: number;
 }
 
 /**
@@ -71,6 +75,19 @@ export class ApiKeyServiceForApi {
         return null;
       }
       
+      if (record.usage_limit !== null && record.usage_limit !== undefined && record.usage_count >= record.usage_limit) {
+        await knex('api_keys')
+          .where({
+            api_key_id: record.api_key_id,
+            tenant: tenantId
+          })
+          .update({
+            active: false,
+            updated_at: knex.fn.now(),
+          });
+        return null;
+      }
+
       // Update last_used_at timestamp
       await knex('api_keys')
         .where({
@@ -81,7 +98,7 @@ export class ApiKeyServiceForApi {
           last_used_at: knex.fn.now(),
           updated_at: knex.fn.now(),
         });
-      
+
       return record;
     } catch (error) {
       console.error(`Error validating API key in tenant ${tenantId}:`, error);
@@ -124,6 +141,19 @@ export class ApiKeyServiceForApi {
         return null;
       }
       
+      if (record.usage_limit !== null && record.usage_limit !== undefined && record.usage_count >= record.usage_limit) {
+        await knex('api_keys')
+          .where({
+            api_key_id: record.api_key_id,
+            tenant: record.tenant
+          })
+          .update({
+            active: false,
+            updated_at: knex.fn.now(),
+          });
+        return null;
+      }
+
       // Update last_used_at timestamp
       await knex('api_keys')
         .where({
@@ -134,11 +164,52 @@ export class ApiKeyServiceForApi {
           last_used_at: knex.fn.now(),
           updated_at: knex.fn.now(),
         });
-      
+
       return record;
     } catch (error) {
       console.error('Error validating API key:', error);
       return null;
     }
+  }
+
+  static async consumeApiKey(
+    knex: Knex,
+    apiKeyId: string,
+    tenantId: string,
+    increment: number = 1
+  ): Promise<{ active: boolean; usageCount: number; usageLimit: number | null }> {
+    const updated = await knex('api_keys')
+      .where({
+        api_key_id: apiKeyId,
+        tenant: tenantId,
+        active: true,
+      })
+      .increment('usage_count', increment)
+      .returning(['usage_count', 'usage_limit']);
+
+    if (!updated.length) {
+      throw new Error(`API key ${apiKeyId} not found or inactive for tenant ${tenantId}`);
+      }
+
+    const [{ usage_count: usageCount, usage_limit: usageLimit }] = updated as Array<{
+      usage_count: number;
+      usage_limit: number | null;
+    }>;
+
+    if (usageLimit !== null && usageLimit !== undefined && usageCount >= usageLimit) {
+      await knex('api_keys')
+        .where({
+          api_key_id: apiKeyId,
+          tenant: tenantId,
+        })
+        .update({
+          active: false,
+          updated_at: knex.fn.now(),
+        });
+
+      return { active: false, usageCount, usageLimit };
+    }
+
+    return { active: true, usageCount, usageLimit };
   }
 }

@@ -10,6 +10,7 @@ import { creditReconciliationHandler, CreditReconciliationJobData } from './hand
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
+import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -79,6 +80,12 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await cleanupTemporaryFormsJob();
     });
 
+    if (process.env.EDITION === 'enterprise') {
+      jobScheduler.registerJobHandler<CleanupAiSessionKeysJobData>('cleanup-ai-session-keys', async () => {
+        await cleanupAiSessionKeysHandler();
+      });
+    }
+
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
 
@@ -88,7 +95,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
 
 
 // Export types
-export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData, ReconcileBucketUsageJobData };
+export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData, ReconcileBucketUsageJobData, CleanupAiSessionKeysJobData };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
   clientId: string,
@@ -194,6 +201,20 @@ export const scheduleReconcileBucketUsageJob = async (
   );
 };
 
+export const scheduleCleanupAiSessionKeysJob = async (
+  cronExpression: string = '*/10 * * * *'
+): Promise<string | null> => {
+  if (process.env.EDITION !== 'enterprise') {
+    return null;
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<CleanupAiSessionKeysJobData>(
+    'cleanup-ai-session-keys',
+    cronExpression,
+    { trigger: 'cron' }
+  );
+};
+
 /**
  * Schedule a recurring job to run credit reconciliation
  * This job validates credit balances and creates reconciliation reports for any discrepancies
@@ -221,4 +242,3 @@ export { scheduleCleanupTemporaryFormsJob } from '../../services/cleanupTemporar
 
 // Note: Password reset token cleanup is handled automatically during token operations
 // No scheduled job needed since pg-boss is unreliable and auto-cleanup is more efficient
-

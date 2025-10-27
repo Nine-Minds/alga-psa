@@ -148,6 +148,10 @@ export function registerStorageRoutes(
     extensions: {
       'x-tenant-header-required': true,
       'x-rbac-resource': 'storage',
+      'x-chat-callable': true,
+      'x-chat-display-name': 'List Storage Records',
+      'x-chat-rbac-resource': 'storage',
+      'x-chat-approval-required': false,
     },
     edition: 'ce',
   });
@@ -173,6 +177,10 @@ export function registerStorageRoutes(
     extensions: {
       'x-tenant-header-required': true,
       'x-rbac-resource': 'storage',
+      'x-chat-callable': true,
+      'x-chat-display-name': 'Upsert Storage Records',
+      'x-chat-rbac-resource': 'storage',
+      'x-chat-approval-required': true,
     },
     edition: 'ce',
   });
@@ -198,6 +206,10 @@ export function registerStorageRoutes(
     extensions: {
       'x-tenant-header-required': true,
       'x-rbac-resource': 'storage',
+      'x-chat-callable': true,
+      'x-chat-display-name': 'Get Storage Record',
+      'x-chat-rbac-resource': 'storage',
+      'x-chat-approval-required': false,
     },
     edition: 'ce',
   });
@@ -223,6 +235,10 @@ export function registerStorageRoutes(
     extensions: {
       'x-tenant-header-required': true,
       'x-rbac-resource': 'storage',
+      'x-chat-callable': true,
+      'x-chat-display-name': 'Put Storage Record',
+      'x-chat-rbac-resource': 'storage',
+      'x-chat-approval-required': true,
     },
     edition: 'ce',
   });

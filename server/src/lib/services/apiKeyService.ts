@@ -12,6 +12,10 @@ interface ApiKey {
   updated_at: Date;
   last_used_at: Date | null;
   expires_at: Date | null;
+  purpose: string;
+  metadata: Record<string, unknown> | null;
+  usage_limit: number | null;
+  usage_count: number;
 }
 
 export class ApiKeyService {
@@ -40,7 +44,17 @@ export class ApiKeyService {
    * Create a new API key for a user
    * @returns The record with the plaintext API key (only available at creation time)
    */
-  static async createApiKey(userId: string, description?: string, expiresAt?: Date): Promise<ApiKey> {
+  static async createApiKey(
+    userId: string,
+    description?: string,
+    expiresAt?: Date,
+    options?: {
+      purpose?: string;
+      metadata?: Record<string, unknown> | null;
+      usageLimit?: number | null;
+      usageCount?: number;
+    }
+  ): Promise<ApiKey> {
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
@@ -57,6 +71,10 @@ export class ApiKeyService {
           user_id: userId,
           tenant,
           description,
+          purpose: options?.purpose ?? 'general',
+          metadata: options?.metadata ?? null,
+          usage_limit: options?.usageLimit ?? null,
+          usage_count: options?.usageCount ?? 0,
           expires_at: expiresAt,
         })
         .returning('*');
@@ -108,6 +126,20 @@ export class ApiKeyService {
         return null;
       }
       
+      if (record.usage_limit !== null && record.usage_limit !== undefined && record.usage_count >= record.usage_limit) {
+        // Deactivate keys that have reached their usage limit
+        await knex('api_keys')
+          .where({
+            api_key_id: record.api_key_id,
+            tenant
+          })
+          .update({
+            active: false,
+            updated_at: knex.fn.now(),
+          });
+        return null;
+      }
+
       // Update last_used_at timestamp
       await knex('api_keys')
         .where({
@@ -118,7 +150,7 @@ export class ApiKeyService {
           last_used_at: knex.fn.now(),
           updated_at: knex.fn.now(),
         });
-      
+
       return record;
     } catch (error) {
       console.error(`Error validating API key in tenant ${tenant}:`, error);
@@ -232,5 +264,50 @@ export class ApiKeyService {
       console.error(`Error admin deactivating API key ${apiKeyId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to admin deactivate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Increment usage count for an API key and optionally deactivate when exhausted.
+   */
+  static async consumeApiKey(
+    apiKeyId: string,
+    tenant: string,
+    increment: number = 1
+  ): Promise<{ active: boolean; usageCount: number; usageLimit: number | null }> {
+    const { knex, tenant: currentTenant } = await createTenantKnex();
+
+    if (!currentTenant || currentTenant !== tenant) {
+      throw new Error(`Tenant context mismatch while consuming API key ${apiKeyId}`);
+    }
+
+    const updated = await knex('api_keys')
+      .where({
+        api_key_id: apiKeyId,
+        tenant,
+        active: true,
+      })
+      .increment('usage_count', increment)
+      .returning(['usage_count', 'usage_limit']);
+
+    if (!updated.length) {
+      throw new Error(`API key ${apiKeyId} not found or inactive for tenant ${tenant}`);
+    }
+
+    const [{ usage_count: usageCount, usage_limit: usageLimit }] = updated;
+
+    if (usageLimit !== null && usageLimit !== undefined && usageCount >= usageLimit) {
+      await knex('api_keys')
+        .where({
+          api_key_id: apiKeyId,
+          tenant,
+        })
+        .update({
+          active: false,
+          updated_at: knex.fn.now(),
+        });
+      return { active: false, usageCount, usageLimit };
+    }
+
+    return { active: true, usageCount, usageLimit };
   }
 }
