@@ -210,7 +210,7 @@ describe('Negative Invoice Credit Tests', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'transactions',
         'client_billing_cycles',
@@ -509,7 +509,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(Number(invoice.total_amount)).toBe(-11500); // -$115.00 (-$125 + $10)
 
       // Get invoice items to verify individual calculations
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: invoiceId })
         .orderBy('net_amount', 'desc');
 

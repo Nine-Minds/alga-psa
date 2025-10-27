@@ -301,7 +301,7 @@ def "main cleanup" [
         "project_ticket_links"
         
         # Invoice details
-        "invoice_items" "invoice_annotations" "invoice_time_entries" "invoice_usage_records"
+        "invoice_charges" "invoice_annotations" "invoice_time_entries" "invoice_usage_records"
         "invoice_item_details" "invoice_item_fixed_details"
         
         # Time tracking

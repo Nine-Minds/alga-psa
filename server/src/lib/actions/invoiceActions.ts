@@ -13,7 +13,7 @@ import {
   IConditionalRule,
   IInvoiceAnnotation,
   InvoiceViewModel,
-  IInvoiceItem,
+  IInvoiceCharge,
   IInvoice,
   DiscountType,
   PreviewInvoiceResponse
@@ -33,7 +33,7 @@ import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
-import { getClientDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
+import { getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 
 export interface ManualInvoiceUpdate { // Add export
   service_id?: string;
@@ -49,7 +49,7 @@ export interface ManualInvoiceUpdate { // Add export
 }
 
 interface ManualItemsUpdate {
-  newItems: IInvoiceItem[];
+  newItems: IInvoiceCharge[];
   updatedItems: ManualInvoiceUpdate[];
   removedItemIds: string[];
   invoice_number?: string;

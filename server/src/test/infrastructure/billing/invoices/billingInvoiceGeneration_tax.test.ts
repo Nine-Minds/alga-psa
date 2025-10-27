@@ -120,7 +120,7 @@ describe('Billing Invoice Tax Calculations', () => {
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -275,7 +275,7 @@ describe('Billing Invoice Tax Calculations', () => {
       expect(Number(invoice!.tax)).toBe(1000);      // $10.00 (10% of original $100)
       expect(Number(invoice!.total_amount)).toBe(1000); // $10.00 (tax only)
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('net_amount', 'desc');
 
@@ -460,7 +460,7 @@ describe('Billing Invoice Tax Calculations', () => {
         .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
         .first();
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('description', 'asc');
 
@@ -582,7 +582,7 @@ describe('Billing Invoice Tax Calculations', () => {
         .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
         .first();
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('net_amount', 'desc');
 
@@ -707,7 +707,7 @@ describe('Billing Invoice Tax Calculations', () => {
         .where({ invoice_id: mixedTaxInvoice.invoice_id, tenant: context.tenantId })
         .first();
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: mixedTaxInvoice.invoice_id, tenant: context.tenantId })
         .orderBy('net_amount', 'desc');
 
@@ -1066,10 +1066,10 @@ describe('Billing Invoice Tax Calculations', () => {
     const billingEngine = new BillingEngine();
     
     // First update the invoice items
-    await context.db('invoice_items').where({ invoice_id: invoiceId }).delete();
+    await context.db('invoice_charges').where({ invoice_id: invoiceId }).delete();
     
     // Insert both the NY and CA items
-    await context.db('invoice_items').insert([
+    await context.db('invoice_charges').insert([
       {
         item_id: uuidv4(),
         invoice_id: invoiceId,
@@ -1117,7 +1117,7 @@ describe('Billing Invoice Tax Calculations', () => {
       .first();
       
     // Fetch updated items
-    const updatedItems = await context.db('invoice_items')
+    const updatedItems = await context.db('invoice_charges')
       .where({ invoice_id: invoiceId })
       .orderBy('created_at', 'asc');
 
@@ -1242,7 +1242,7 @@ describe('Billing Invoice Tax Calculations', () => {
 
     expect(invoiceRow).not.toBeNull();
 
-    const items = await context.db('invoice_items')
+    const items = await context.db('invoice_charges')
       .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
       .orderBy('created_at', 'asc');
 

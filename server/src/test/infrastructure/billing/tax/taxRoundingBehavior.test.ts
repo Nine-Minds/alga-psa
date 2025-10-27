@@ -68,7 +68,7 @@ describe('Tax Allocation Strategy', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'service_catalog',
         'tax_rates',
@@ -165,7 +165,7 @@ describe('Tax Allocation Strategy', () => {
       // - $30.00 item (60% of positive $50) gets $3.00 tax
       // - $20.00 item (40% of positive $50) gets $2.00 tax
       // - Negative item gets no tax
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: invoice.invoice_id })
         .orderBy('net_amount', 'desc');
 
@@ -220,7 +220,7 @@ describe('Tax Allocation Strategy', () => {
       // - $30.00 item: Math.floor($2.6625) = $2.66
       // - $20.00 item: Math.floor($1.775) = $1.77
       // - $10.00 item: Gets remaining to match total = $0.90 (rounds up from $0.8875)
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: invoice.invoice_id })
         .orderBy('net_amount', 'desc');
 
@@ -271,7 +271,7 @@ describe('Tax Allocation Strategy', () => {
       });
 
       // Total: $6.00 * 1% = $0.06 total tax
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: invoice.invoice_id })
         .orderBy('net_amount', 'desc');
 

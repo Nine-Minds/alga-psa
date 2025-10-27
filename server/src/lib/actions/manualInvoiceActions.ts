@@ -3,7 +3,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
-import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceCharge, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { WorkflowEventModel, IWorkflowEvent } from '@alga-psa/shared/workflow/persistence';
 import { getRedisStreamClient, toStreamEvent } from '@alga-psa/shared/workflow/streams';
@@ -67,7 +67,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     await trx('invoices').insert(invoice);
 
     // Persist manual invoice items using the dedicated service function
-    const subtotal = await invoiceService.persistManualInvoiceItems(
+    const subtotal = await invoiceService.persistManualInvoiceCharges(
       trx,
       invoiceId,
       items, // Assuming items match ManualInvoiceItemInput structure
@@ -97,7 +97,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     );
 
     // Get updated invoice items with tax
-    const updatedItems = await trx('invoice_items')
+    const updatedItems = await trx('invoice_charges')
       .where({ invoice_id: invoiceId, tenant })
       .orderBy('created_at', 'asc');
 
@@ -135,7 +135,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       tax: Math.ceil(computedTotalTax),
       total: Math.ceil(subtotal + computedTotalTax),
       total_amount: Math.ceil(subtotal + computedTotalTax),
-      invoice_items: updatedItems.map((item: any): IInvoiceItem => ({
+      invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
         item_id: item.item_id,
         invoice_id: invoiceId,
         service_id: item.service_id,
@@ -189,7 +189,7 @@ export async function updateManualInvoice(
   // Delete existing items and insert new ones
   await knex.transaction(async (trx) => {
     // Delete existing items
-    await trx('invoice_items')
+    await trx('invoice_charges')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -197,7 +197,7 @@ export async function updateManualInvoice(
       .delete();
 
     // Insert new items using the dedicated manual service function
-    await invoiceService.persistManualInvoiceItems(
+    await invoiceService.persistManualInvoiceCharges(
       trx,
       invoiceId,
       items, // Assuming items match ManualInvoiceItemInput structure
@@ -229,7 +229,7 @@ export async function updateManualInvoice(
     throw new Error(`Invoice ${invoiceId} not found for tenant ${tenant}`);
   }
 
-  const updatedItems = await knex('invoice_items')
+  const updatedItems = await knex('invoice_charges')
     .where({
       invoice_id: invoiceId,
       tenant
@@ -307,7 +307,7 @@ export async function updateManualInvoice(
     tax: updatedInvoice.tax,
     total: updatedInvoice.total_amount,
     total_amount: parseInt(updatedInvoice.total_amount.toString()),
-    invoice_items: updatedItems.map((item): IInvoiceItem => ({
+    invoice_charges: updatedItems.map((item): IInvoiceCharge => ({
       item_id: item.item_id,
       invoice_id: invoiceId,
       service_id: item.service_id,

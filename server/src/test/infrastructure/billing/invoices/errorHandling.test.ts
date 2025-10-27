@@ -121,7 +121,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -351,7 +351,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
 
     // Verify invoice was created with consolidated fixed-fee item
     expect(firstInvoice).not.toBeNull();
-    const invoiceItems = await context.db('invoice_items')
+    const invoiceItems = await context.db('invoice_charges')
       .where({ invoice_id: firstInvoice!.invoice_id, tenant: context.tenantId });
     expect(invoiceItems).toHaveLength(1);
 

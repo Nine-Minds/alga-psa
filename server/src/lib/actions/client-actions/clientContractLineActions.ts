@@ -27,7 +27,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
   // Check for invoices with items linked to this specific client_contract via client_contract_id
   // This ensures we only check invoices generated from THIS specific contract assignment
   const latestInvoice = await db('invoices as i')
-    .join('invoice_items as ii', function(this: Knex.JoinClause) {
+    .join('invoice_charges as ii', function(this: Knex.JoinClause) {
       this.on('i.invoice_id', '=', 'ii.invoice_id')
           .andOn('i.tenant', '=', 'ii.tenant');
     })

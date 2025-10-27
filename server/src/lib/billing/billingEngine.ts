@@ -1961,7 +1961,7 @@ export class BillingEngine {
       throw new Error('Database connection not initialized');
     }
 
-    const existing = await this.knex('invoice_item_details as iid')
+    const existing = await this.knex('invoice_charge_details as iid')
       .join('client_contract_service_configuration as ccsc', function () {
         this.on('iid.config_id', '=', 'ccsc.config_id')
           .andOn('iid.tenant', '=', 'ccsc.tenant');

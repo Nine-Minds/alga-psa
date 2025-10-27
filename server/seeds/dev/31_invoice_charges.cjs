@@ -2,7 +2,7 @@ exports.seed = function (knex) {
     return knex('tenants').select('tenant').first()
         .then((tenant) => {
             if (!tenant) return;
-            return knex('invoice_items').insert([
+            return knex('invoice_charges').insert([
                 {
                     tenant: tenant.tenant,
                     invoice_id: knex('invoices').where({ 

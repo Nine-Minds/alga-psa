@@ -16,6 +16,9 @@ export interface IInvoice extends TenantEntity {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  invoice_charges: IInvoiceCharge[];
+  /** @deprecated Use invoice_charges instead. */
+  invoice_items?: IInvoiceCharge[];
 }
 
 export interface NetAmountItem {
@@ -28,7 +31,7 @@ export interface NetAmountItem {
   applies_to_service_id?: string; // Reference a service instead of an item
 }
 
-export interface IInvoiceItem extends TenantEntity, NetAmountItem {
+export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
   service_id?: string;
@@ -79,8 +82,11 @@ export type DiscountType = 'percentage' | 'fixed';
  */
 export interface IAddManualItemsRequest {
   invoice_id: string;
-  items: IInvoiceItem[];
+  items: IInvoiceCharge[];
 }
+
+// Temporary alias to avoid breaking external imports during the rename rollout.
+export type IInvoiceItem = IInvoiceCharge;
 
 export type BlockType = 'text' | 'dynamic' | 'image';
 
@@ -289,7 +295,7 @@ export interface InvoiceViewModel {
   tax: number;
   total: number;
   total_amount: number;
-  invoice_items: IInvoiceItem[];
+  invoice_charges: IInvoiceCharge[];
   custom_fields?: Record<string, any>;
   finalized_at?: DateValue;
   credit_applied: number;

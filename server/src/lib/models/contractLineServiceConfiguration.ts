@@ -138,7 +138,7 @@ export default class ContractLineServiceConfiguration {
     
     // Use a transaction to ensure both operations succeed or fail together
     return await this.knex.transaction(async (trx) => {
-      const updatedDetails = await trx('invoice_item_details')
+      const updatedDetails = await trx('invoice_charge_details')
         .where({
           config_id: configId,
           tenant: this.tenant

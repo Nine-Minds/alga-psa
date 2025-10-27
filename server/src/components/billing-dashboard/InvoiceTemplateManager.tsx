@@ -45,7 +45,7 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
         name: sample.contact?.name || 'N/A', // Use contact name for customer name
         address: sample.contact?.address || 'N/A', // Use contact address
       },
-      items: sample.invoice_items.map(item => ({
+      items: sample.invoice_charges.map(item => ({
         id: item.item_id || `item-${Math.random()}`, // Ensure an ID exists
         description: item.description,
         quantity: item.quantity,

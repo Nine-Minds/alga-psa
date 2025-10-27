@@ -120,7 +120,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',

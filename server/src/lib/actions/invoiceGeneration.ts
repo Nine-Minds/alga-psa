@@ -7,7 +7,7 @@ import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { Session } from 'next-auth';
 import {
-  IInvoiceItem,
+  IInvoiceCharge,
   IInvoice,
   PreviewInvoiceResponse,
   InvoiceViewModel
@@ -27,7 +27,7 @@ import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { getClientLogoUrl } from '../utils/avatarUtils';
-import { calculateAndDistributeTax, getClientDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
+import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { analytics } from '../analytics/posthog';
@@ -160,7 +160,7 @@ function getPaymentTermDays(paymentTerms: string): number {
 async function adaptToWasmViewModel(
   billingResult: IBillingResult,
   client: IClientWithLocation | null,
-  invoiceItems: IInvoiceItem[],
+  invoiceItems: IInvoiceCharge[],
   dueDate: string,
   previewTax: number,
   tenant: string | null // Added tenant for fetching tenant client info
@@ -320,7 +320,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     }
 
     // Prepare invoice items
-    const invoiceItems: IInvoiceItem[] = [];
+    const invoiceItems: IInvoiceCharge[] = [];
 
     // Add non-contract-associated charges
     nonContractAssociatedCharges.forEach(charge => {
@@ -404,7 +404,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     const previewTax = await calculatePreviewTax(billingResult.charges, client_id, cycleEnd, client?.tax_region || '');
     const previewTotal = billingResult.totalAmount + previewTax;
 
-    // Map IInvoiceItem[] to the structure expected by InvoiceViewModel.items
+    // Map IInvoiceCharge[] to the structure expected by InvoiceViewModel.items
     const previewViewModelItems = invoiceItems.map(item => ({
       id: item.item_id,
       description: item.description,
@@ -758,7 +758,7 @@ export async function createInvoiceFromBillingResult(
   const currentDate = Temporal.Now.plainDateISO().toString();
   const due_date = await getDueDate(clientId, cycleEnd); // Uses temporary import
   const taxService = new TaxService();
-  // let subtotal = 0; // Subtotal will be calculated by persistInvoiceItems
+  // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 
   // Create base invoice object
   const invoiceData = {
@@ -837,7 +837,7 @@ export async function createInvoiceFromBillingResult(
       },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
     };
-    const calculatedSubtotal = await persistInvoiceItems(
+    const calculatedSubtotal = await persistInvoiceCharges(
       trx,
       newInvoice!.invoice_id,
       billingResult.charges,
@@ -846,7 +846,7 @@ export async function createInvoiceFromBillingResult(
       tenant
     );
 
-    // Process discounts (if any) - This might need adjustment if persistInvoiceItems handles them
+    // Process discounts (if any) - This might need adjustment if persistInvoiceCharges handles them
     // For now, assume discounts are separate and need processing here.
     let discountSubtotalAdjustment = 0;
     for (const discount of billingResult.discounts) {
@@ -867,11 +867,11 @@ export async function createInvoiceFromBillingResult(
         tenant,
         created_by: userId
       };
-      await trx('invoice_items').insert(discountItem);
+      await trx('invoice_charges').insert(discountItem);
       discountSubtotalAdjustment += netAmount; // Add negative amount
     }
 
-    // Use the subtotal returned by persistInvoiceItems + discount adjustment
+    // Use the subtotal returned by persistInvoiceCharges + discount adjustment
     const subtotal = calculatedSubtotal + discountSubtotalAdjustment;
 
     // Leverage the shared tax helper so automated invoices mirror manual invoices
