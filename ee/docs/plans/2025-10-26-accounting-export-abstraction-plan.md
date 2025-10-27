@@ -54,6 +54,69 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
   - Store rendered adapter payload (JSON blob / file path) per line or batch for traceability.
   - Add relationship from `transactions` to `accounting_export_batches` (nullable FK) for reconciliation reporting.
 
+### Schema Overview (ASCII)
+```
+                             +-------------------------------+
+                             | accounting_export_batches     |
+                             |-------------------------------|
+                             | batch_id (PK)                 |
+                             | tenant                        |
+                             | adapter_type                  |
+                             | target_realm                  |
+                             | export_type                   |
+                             | filters_json                  |
+                             | status                        |
+                             | started_at / completed_at     |
+                             | checksum                      |
+                             +---------------+---------------+
+                                             |
+                              1 batch : N lines
+                                             v
+               +-----------------------------+-----------------------------+
+               | accounting_export_lines                                  |
+               |----------------------------------------------------------|
+               | line_id (PK)                                             |
+               | batch_id (FK -> accounting_export_batches.batch_id)      |
+               | tenant                                                   |
+               | invoice_id (FK -> invoices)                              |
+               | invoice_item_id (FK -> invoice_items)                    |
+               | canonical_amount_cents                                   |
+               | currency_code / exchange_rate                            |
+               | service_period_start / service_period_end                |
+               | mapping_resolution_json                                  |
+               | delivery_status                                          |
+               | external_document_ref                                    |
+               +-----------------------------+----------------------------+
+                                             |
+                              1 line : N errors
+                                             v
+               +----------------------------------------------------------+
+               | accounting_export_errors                                 |
+               |----------------------------------------------------------|
+               | error_id (PK)                                            |
+               | batch_id (FK -> accounting_export_batches.batch_id)      |
+               | line_id NULLABLE (FK -> accounting_export_lines.line_id) |
+               | code                                                     |
+               | message                                                  |
+               | resolution_state                                         |
+               | created_at / resolved_at                                 |
+               +----------------------------------------------------------+
+                                             ^
+                                             |
+                         nullable link from transactions ledger
+
+ existing tables:
+   invoices ---------+
+                     |
+   invoice_items ----+--> accounting_export_lines (line-level joins)
+
+   tenant_external_entity_mappings --(
+        referenced via mapping_resolution_json lookup metadata
+
+   transactions -----(
+        optional FK -> accounting_export_batches for reconciliation
+```
+
 ## Phase 2 – Mapping & Configuration Enhancements
 - [ ] **Extend mapping schema**
   - Allow hierarchical keys (service_id, contract_line_id, service_category) with priority ordering; store in `metadata` or add dedicated columns.
