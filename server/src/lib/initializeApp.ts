@@ -3,6 +3,7 @@ import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import { logger } from '@alga-psa/shared/core';
 import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
+import { registerAccountingExportWorkflowActions } from './workflow/registerAccountingExportActions';
 import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
@@ -126,6 +127,7 @@ export async function initializeApp() {
     // Initialize workflow system
     try {
       await initializeServerWorkflows();
+      registerAccountingExportWorkflowActions();
       logger.info('Workflow system initialized');
     } catch (error) {
       logger.error('Failed to initialize workflow system:', error);
