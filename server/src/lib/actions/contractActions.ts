@@ -26,6 +26,8 @@ import {
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from 'server/src/lib/repositories/contractLineRepository';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   tenant: template.tenant,
@@ -178,9 +180,19 @@ export async function addContractLine(
   customRate?: number
 ): Promise<IContractLineMapping> {
   await ensureSession();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
+  }
+
+  const canUpdate = await hasPermission(currentUser, 'contractLines', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: Cannot modify contract lines');
   }
 
   return knex.transaction((trx: Knex.Transaction) =>
@@ -190,9 +202,19 @@ export async function addContractLine(
 
 export async function removeContractLine(contractId: string, contractLineId: string): Promise<void> {
   await ensureSession();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
+  }
+
+  const canUpdate = await hasPermission(currentUser, 'contractLines', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: Cannot modify contract lines');
   }
 
   await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
@@ -204,9 +226,19 @@ export async function updateContractLineAssociation(
   updateData: Partial<IContractLineMapping>
 ): Promise<IContractLineMapping> {
   await ensureSession();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
+  }
+
+  const canUpdate = await hasPermission(currentUser, 'contractLines', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: Cannot modify contract lines');
   }
 
   return repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
@@ -219,9 +251,19 @@ export async function updateContractLineRate(
   billingTiming?: 'arrears' | 'advance'
 ): Promise<void> {
   await ensureSession();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('tenant context not found');
+  }
+
+  const canUpdate = await hasPermission(currentUser, 'contractLines', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: Cannot modify contract lines');
   }
 
   await knex.transaction(async (trx) => {
