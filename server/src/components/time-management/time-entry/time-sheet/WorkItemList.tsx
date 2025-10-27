@@ -5,9 +5,42 @@ interface MetaLinesProps {
   clientName?: string;
   assignedToName?: string;
   dueDate?: Date | string;
+  assignedUserIds?: string[];
+  additionalUserIds?: string[];
+  workItemType?: WorkItemType;
 }
 
-const MetaLines: React.FC<MetaLinesProps> = ({ clientName, assignedToName, dueDate }) => {
+const MetaLines: React.FC<MetaLinesProps> = ({ clientName, assignedToName, dueDate, assignedUserIds, additionalUserIds, workItemType }) => {
+
+  const getAssignedUsersDisplay = () => {
+    if (assignedToName === undefined) return null;
+
+    // For interactions, just show the assigned user name as before
+    if (workItemType === 'interaction') {
+      return assignedToName || 'Unassigned';
+    }
+
+    // For tickets and project tasks, calculate total assigned users
+    const assignedCount = (assignedUserIds || []).filter(id => id).length;
+    const additionalCount = (additionalUserIds || []).filter(id => id).length;
+    const totalUsers = assignedCount + additionalCount;
+
+    if (!assignedToName && totalUsers === 0) {
+      return 'Unassigned';
+    }
+
+    if (!assignedToName) {
+      return totalUsers === 1 ? '1 user assigned' : `${totalUsers} users assigned`;
+    }
+
+    if (totalUsers <= 1) {
+      return assignedToName;
+    }
+
+    const additionalUsersCount = totalUsers - 1;
+    return `${assignedToName}, +${additionalUsersCount} user${additionalUsersCount === 1 ? '' : 's'}`;
+  };
+
   return (
     <>
       {clientName && (
@@ -17,7 +50,7 @@ const MetaLines: React.FC<MetaLinesProps> = ({ clientName, assignedToName, dueDa
       )}
       {assignedToName !== undefined && (
         <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-          Assigned to: {assignedToName || 'Unassigned'}
+          Assigned to: {getAssignedUsersDisplay()}
         </div>
       )}
       {dueDate !== undefined && (
@@ -62,6 +95,9 @@ export function WorkItemList({
             clientName={item.client_name}
             assignedToName={item.assigned_to_name}
             dueDate={item.due_date}
+            assignedUserIds={item.assigned_user_ids}
+            additionalUserIds={item.additional_user_ids}
+            workItemType={item.type}
           />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))]">
@@ -88,6 +124,9 @@ export function WorkItemList({
             clientName={item.client_name}
             assignedToName={item.assigned_to_name}
             dueDate={item.due_date}
+            assignedUserIds={item.assigned_user_ids}
+            additionalUserIds={item.additional_user_ids}
+            workItemType={item.type}
           />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))]">
@@ -114,6 +153,7 @@ export function WorkItemList({
           )}
           <MetaLines
             assignedToName={item.assigned_to_name}
+            workItemType={item.type}
           />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-border-900))]">
@@ -143,6 +183,7 @@ export function WorkItemList({
           )}
           <MetaLines
             assignedToName={item.assigned_to_name}
+            workItemType={item.type}
           />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-900">
