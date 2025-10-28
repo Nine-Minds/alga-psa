@@ -11,6 +11,9 @@ import {
 import { CreateExportBatchInput, CreateExportLineInput, CreateExportErrorInput, UpdateExportBatchStatusInput } from '../../repositories/accountingExportRepository';
 import { AccountingExportValidation } from '../../validation/accountingExportValidation';
 import { AppError } from '../../errors';
+import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
+
+const PREVIEW_LINE_LIMIT = 50;
 
 export class ApiAccountingExportController {
   static async createBatch(req: NextRequest) {
@@ -51,6 +54,59 @@ export class ApiAccountingExportController {
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
     return NextResponse.json(data);
+  }
+
+  static async preview(req: NextRequest) {
+    const body = ((await req.json()) as { filters?: Record<string, unknown> }) ?? {};
+    const filters = (body?.filters ?? {}) as Record<string, unknown>;
+
+    const selector = await AccountingExportInvoiceSelector.create();
+    const normalizedFilters = {
+      startDate: typeof filters.startDate === 'string' && filters.startDate ? filters.startDate : undefined,
+      endDate: typeof filters.endDate === 'string' && filters.endDate ? filters.endDate : undefined,
+      invoiceStatuses: Array.isArray(filters.invoiceStatuses)
+        ? (filters.invoiceStatuses as unknown[]).map((status) => String(status)).filter(Boolean)
+        : typeof filters.invoiceStatuses === 'string'
+          ? filters.invoiceStatuses
+              .split(',')
+              .map((status) => status.trim())
+              .filter(Boolean)
+          : undefined,
+      clientIds: Array.isArray(filters.clientIds)
+        ? (filters.clientIds as unknown[]).map((id) => String(id)).filter(Boolean)
+        : undefined,
+      clientSearch: typeof filters.clientSearch === 'string' && filters.clientSearch ? filters.clientSearch : undefined
+    };
+
+    const lines = await selector.previewInvoiceLines(normalizedFilters);
+    const totalsByCurrency = lines.reduce<Record<string, number>>((acc, line) => {
+      const currency = line.currencyCode || 'USD';
+      const existing = acc[currency] ?? 0;
+      acc[currency] = existing + line.amountCents;
+      return acc;
+    }, {});
+    const invoiceCount = new Set(lines.map((line) => line.invoiceId)).size;
+
+    const limitedLines = lines.slice(0, PREVIEW_LINE_LIMIT).map((line) => ({
+      invoiceId: line.invoiceId,
+      invoiceNumber: line.invoiceNumber,
+      invoiceDate: line.invoiceDate,
+      invoiceStatus: line.invoiceStatus,
+      clientName: line.clientName,
+      chargeId: line.chargeId,
+      amountCents: line.amountCents,
+      currencyCode: line.currencyCode || 'USD',
+      servicePeriodStart: line.servicePeriodStart ?? null,
+      servicePeriodEnd: line.servicePeriodEnd ?? null
+    }));
+
+    return NextResponse.json({
+      invoiceCount,
+      lineCount: lines.length,
+      totalsByCurrency,
+      lines: limitedLines,
+      truncated: lines.length > limitedLines.length
+    });
   }
 
   static async appendLines(req: NextRequest, { params }: { params: { batchId: string } }) {

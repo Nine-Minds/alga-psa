@@ -28,6 +28,29 @@ interface AccountingExportRow {
   raw: AccountingExportBatch;
 }
 
+type ExportPreviewLine = {
+  invoiceId: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  invoiceStatus: string;
+  clientName: string | null;
+  chargeId: string;
+  amountCents: number;
+  currencyCode: string;
+  servicePeriodStart: string | null;
+  servicePeriodEnd: string | null;
+};
+
+type ExportPreviewResponse = {
+  invoiceCount: number;
+  lineCount: number;
+  totalsByCurrency: Record<string, number>;
+  lines: ExportPreviewLine[];
+  truncated: boolean;
+};
+
+type CreateFormState = typeof DEFAULT_CREATE_FORM;
+
 const STATUS_OPTIONS: Array<{ label: string; value: AccountingExportStatus | 'all' }> = [
   { label: 'All', value: 'all' },
   { label: 'Pending', value: 'pending' },
@@ -107,6 +130,31 @@ const amountFromCents = (amountCents: number, currency?: string | null) => {
   return formatCurrency(amountCents / 100, undefined, safeCurrency);
 };
 
+const formatServicePeriod = (start: string | null, end: string | null) => {
+  if (!start && !end) {
+    return '—';
+  }
+  const formattedStart = start ? formatDate(start) : '—';
+  const formattedEnd = end ? formatDate(end) : '—';
+  return `${formattedStart} → ${formattedEnd}`;
+};
+
+const formatTotalsSummary = (totals: Record<string, number>) => {
+  const entries = Object.entries(totals);
+  if (entries.length === 0) {
+    return '—';
+  }
+  return entries
+    .map(([currency, cents]) => `${formatCurrency(cents / 100, undefined, currency)} (${currency})`)
+    .join(', ');
+};
+
+const parseInvoiceStatuses = (value: string) =>
+  value
+    .split(',')
+    .map((status) => status.trim())
+    .filter((status) => status.length > 0);
+
 const AccountingExportsTab: React.FC = () => {
   const [filters, setFilters] = useState({
     status: 'all' as AccountingExportStatus | 'all',
@@ -129,6 +177,24 @@ const AccountingExportsTab: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [detailActionError, setDetailActionError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<ExportPreviewResponse | null>(null);
+  const [previewLoading, setPreviewLoading] = useState<boolean>(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const updateCreateFormField = (field: keyof CreateFormState, value: string) => {
+    setCreateForm((prev) => ({ ...prev, [field]: value }));
+    setPreviewData(null);
+    setPreviewError(null);
+  };
+
+  const resetCreateDialog = (force = false) => {
+    if (!force && creating) return;
+    setCreateDialogOpen(false);
+    setCreateForm(DEFAULT_CREATE_FORM);
+    setCreateError(null);
+    setPreviewData(null);
+    setPreviewError(null);
+  };
 
   const fetchBatches = useCallback(async () => {
     setLoading(true);
@@ -312,10 +378,47 @@ const AccountingExportsTab: React.FC = () => {
     });
   };
 
+  const handlePreview = async () => {
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const invoiceStatuses = parseInvoiceStatuses(createForm.invoiceStatuses);
+      const response = await fetch('/api/accounting/exports/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          filters: {
+            startDate: createForm.startDate || undefined,
+            endDate: createForm.endDate || undefined,
+            invoiceStatuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Failed to generate preview (${response.status})`);
+      }
+
+      const data: ExportPreviewResponse = await response.json();
+      setPreviewData(data);
+    } catch (err: any) {
+      console.error('Error generating export preview:', err);
+      setPreviewError(err?.message ?? 'Unable to generate preview.');
+      setPreviewData(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const handleCreate = async () => {
     setCreating(true);
     setCreateError(null);
     try {
+      const invoiceStatuses = parseInvoiceStatuses(createForm.invoiceStatuses);
       const body = {
         adapter_type: createForm.adapterType,
         export_type: 'invoice',
@@ -323,9 +426,7 @@ const AccountingExportsTab: React.FC = () => {
         filters: {
           start_date: createForm.startDate || undefined,
           end_date: createForm.endDate || undefined,
-          invoice_statuses: createForm.invoiceStatuses
-            ? createForm.invoiceStatuses.split(',').map((status) => status.trim()).filter(Boolean)
-            : undefined
+          invoice_statuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined
         },
         notes: createForm.notes || undefined
       };
@@ -344,9 +445,7 @@ const AccountingExportsTab: React.FC = () => {
       }
 
       const createdBatch: AccountingExportBatch = await response.json();
-      setCreateDialogOpen(false);
-      setCreateForm(DEFAULT_CREATE_FORM);
-      setCreateError(null);
+      resetCreateDialog(true);
       await fetchBatches();
       await handleRowClick({
         batch_id: createdBatch.batch_id,
@@ -492,6 +591,9 @@ const AccountingExportsTab: React.FC = () => {
             id="accounting-export-new"
             onClick={() => {
               setCreateError(null);
+              setCreateForm(DEFAULT_CREATE_FORM);
+              setPreviewData(null);
+              setPreviewError(null);
               setCreateDialogOpen(true);
             }}
           >
@@ -700,12 +802,7 @@ const AccountingExportsTab: React.FC = () => {
       <Dialog
         id="accounting-export-create-dialog"
         isOpen={createDialogOpen}
-        onClose={() => {
-          if (creating) return;
-          setCreateDialogOpen(false);
-          setCreateForm(DEFAULT_CREATE_FORM);
-          setCreateError(null);
-        }}
+        onClose={() => resetCreateDialog()}
         title="Create Accounting Export"
       >
         <div className="space-y-4">
@@ -714,7 +811,7 @@ const AccountingExportsTab: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Adapter</label>
               <select
                 value={createForm.adapterType}
-                onChange={(e) => setCreateForm((prev) => ({ ...prev, adapterType: e.target.value }))}
+                onChange={(e) => updateCreateFormField('adapterType', e.target.value)}
                 className="border rounded-md w-full px-3 py-2 text-sm"
               >
                 <option value="quickbooks_online">QuickBooks Online</option>
@@ -727,7 +824,7 @@ const AccountingExportsTab: React.FC = () => {
               <input
                 type="text"
                 value={createForm.targetRealm}
-                onChange={(e) => setCreateForm((prev) => ({ ...prev, targetRealm: e.target.value }))}
+                onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
                 className="border rounded-md w-full px-3 py-2 text-sm"
                 placeholder="Optional target identifier"
               />
@@ -737,7 +834,7 @@ const AccountingExportsTab: React.FC = () => {
               <input
                 type="date"
                 value={createForm.startDate}
-                onChange={(e) => setCreateForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                onChange={(e) => updateCreateFormField('startDate', e.target.value)}
                 className="border rounded-md w-full px-3 py-2 text-sm"
               />
             </div>
@@ -746,7 +843,7 @@ const AccountingExportsTab: React.FC = () => {
               <input
                 type="date"
                 value={createForm.endDate}
-                onChange={(e) => setCreateForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                onChange={(e) => updateCreateFormField('endDate', e.target.value)}
                 className="border rounded-md w-full px-3 py-2 text-sm"
               />
             </div>
@@ -755,7 +852,7 @@ const AccountingExportsTab: React.FC = () => {
               <input
                 type="text"
                 value={createForm.invoiceStatuses}
-                onChange={(e) => setCreateForm((prev) => ({ ...prev, invoiceStatuses: e.target.value }))}
+                onChange={(e) => updateCreateFormField('invoiceStatuses', e.target.value)}
                 className="border rounded-md w-full px-3 py-2 text-sm"
                 placeholder="Comma-separated invoice statuses (e.g. finalized, ready)"
               />
@@ -764,12 +861,98 @@ const AccountingExportsTab: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
               <textarea
                 value={createForm.notes}
-                onChange={(e) => setCreateForm((prev) => ({ ...prev, notes: e.target.value }))}
+                onChange={(e) => updateCreateFormField('notes', e.target.value)}
                 className="border rounded-md w-full px-3 py-2 text-sm"
                 rows={3}
                 placeholder="Optional notes for finance team"
               />
             </div>
+          </div>
+          <div className="border-t border-gray-200 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-gray-900">Preview</h3>
+              <Button
+                id="accounting-export-preview"
+                variant="outline"
+                onClick={handlePreview}
+                disabled={previewLoading}
+              >
+                {previewLoading ? 'Loading preview…' : previewData ? 'Refresh Preview' : 'Preview Selection'}
+              </Button>
+            </div>
+            {previewError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded mb-2">
+                {previewError}
+              </div>
+            )}
+            {previewLoading && (
+              <div className="text-sm text-gray-500">Generating preview…</div>
+            )}
+            {!previewLoading && previewData === null && !previewError && (
+              <div className="text-xs text-gray-500">
+                Set your filter criteria and click “Preview Selection” to see which invoices will be included in the export.
+              </div>
+            )}
+            {!previewLoading && previewData && (
+              <>
+                {previewData.lineCount === 0 ? (
+                  <div className="text-sm text-gray-600">
+                    No invoices match the current filters. Adjust the filters above and preview again.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+                      <div>
+                        <span className="font-medium text-gray-900">Invoices:</span> {previewData.invoiceCount}
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-900">Charges:</span> {previewData.lineCount}
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-900">Total Amount:</span> {formatTotalsSummary(previewData.totalsByCurrency)}
+                      </div>
+                    </div>
+                    <div className="border rounded-md overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Period</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {previewData.lines.map((line) => (
+                            <tr key={`${line.invoiceId}-${line.chargeId}`}>
+                              <td className="px-3 py-2 text-sm text-gray-900">
+                                {line.invoiceNumber || line.invoiceId}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-gray-900">{localDateString(line.invoiceDate)}</td>
+                              <td className="px-3 py-2 text-sm text-gray-900">{line.clientName || '—'}</td>
+                              <td className="px-3 py-2 text-sm text-gray-900">{line.invoiceStatus}</td>
+                              <td className="px-3 py-2 text-sm text-gray-900">
+                                {amountFromCents(line.amountCents, line.currencyCode)}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-gray-900">
+                                {formatServicePeriod(line.servicePeriodStart, line.servicePeriodEnd)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {previewData.truncated && (
+                      <div className="text-xs text-gray-500">
+                        Showing the first {previewData.lines.length} of {previewData.lineCount} charges. Narrow the filters to preview a smaller selection.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
           {createError && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded">
@@ -780,12 +963,7 @@ const AccountingExportsTab: React.FC = () => {
             <Button
               id="accounting-export-create-cancel"
               variant="ghost"
-              onClick={() => {
-                if (creating) return;
-                setCreateDialogOpen(false);
-                setCreateForm(DEFAULT_CREATE_FORM);
-                setCreateError(null);
-              }}
+              onClick={() => resetCreateDialog()}
               disabled={creating}
             >
               Cancel

@@ -748,16 +748,25 @@ export async function createInvoiceFromBillingResult(
 
   const client = await getClientDetails(knex, tenant, clientId);
   let region_code = await getClientDefaultTaxRegionCode(clientId);
+  const taxService = new TaxService();
 
-  // --- Add Check for Client Default Tax Region ---
   if (!region_code) {
-    console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code).`);
+    console.warn(`[createInvoiceFromBillingResult] Client ${clientId} (${client.client_name}) has no default tax region. Attempting to create default tax settings automatically.`);
+    try {
+      await taxService.ensureDefaultTaxSettings(clientId);
+      region_code = await getClientDefaultTaxRegionCode(clientId);
+    } catch (autoConfigError) {
+      console.error(`[createInvoiceFromBillingResult] Failed to auto-configure default tax region for client ${clientId}:`, autoConfigError);
+    }
+  }
+
+  if (!region_code) {
+    console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code) even after auto-configuration attempt.`);
     throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
-  // --- End Check ---
   const currentDate = Temporal.Now.plainDateISO().toString();
   const due_date = await getDueDate(clientId, cycleEnd); // Uses temporary import
-  const taxService = new TaxService();
+  // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 
   // Create base invoice object
