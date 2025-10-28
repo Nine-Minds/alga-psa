@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 
 import { Message } from '../../components/message/Message';
 import { IChat } from '../../interfaces/chat.interface';
 import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
 import { HfInference } from '@huggingface/inference';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
 
 import '../../components/chat/chat.css';
 
@@ -104,6 +106,8 @@ export const Chat: React.FC<ChatProps> = ({
   const [isExecutingFunction, setIsExecutingFunction] = useState(false);
   const [functionError, setFunctionError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
 
   const resolveMessageId = (candidate?: string | null) =>
     candidate ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -145,9 +149,28 @@ export const Chat: React.FC<ChatProps> = ({
     }
   }, [generatingResponse, fullMessage, botMessageId]);
 
+  const autoResizeTextarea = useCallback(() => {
+    if (!inputRef.current) {
+      return;
+    }
+    const textarea = inputRef.current;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 320)}px`;
+  }, []);
+
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [autoResizeTextarea]);
+
+  const closeValidationDialog = useCallback(() => {
+    setShowValidationDialog(false);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setMessageText(value);
+    requestAnimationFrame(autoResizeTextarea);
     if (onUserInput) {
       onUserInput();
     }
@@ -179,10 +202,8 @@ export const Chat: React.FC<ChatProps> = ({
   const sendMessage = () => {
     const trimmedMessage = messageText.trim();
     if (!trimmedMessage.length) {
-      alert('Please enter a message');
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
+      setValidationMessage('Please enter a message before sending.');
+      setShowValidationDialog(true);
       return;
     }
 
@@ -193,8 +214,8 @@ export const Chat: React.FC<ChatProps> = ({
     }
   };
 
-  const handleEnter = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       sendMessage();
     }
@@ -276,6 +297,10 @@ export const Chat: React.FC<ChatProps> = ({
     ]);
 
     setMessageText('');
+    if (inputRef.current) {
+      inputRef.current.style.height = '';
+      requestAnimationFrame(autoResizeTextarea);
+    }
 
     try {
       const response = await fetch('/api/chat/v1/completions', {
@@ -490,11 +515,12 @@ export const Chat: React.FC<ChatProps> = ({
               value={messageText}
               onChange={handleInputChange}
               placeholder={generatingResponse ? 'Generating text...' : 'Send a message'}
-              className="w-full resize-none rounded-md p-2 text-black"
-              onKeyDown={handleEnter}
-              rows={1}
+              className="w-full resize-y rounded-md p-2 text-black min-h-[3rem]"
+              onKeyDown={handleTextareaKeyDown}
+              rows={3}
               disabled={generatingResponse || isFunction}
             />
+            <p className="mt-1 text-xs text-gray-500">Press Ctrl+Enter or ⌘+Enter to send.</p>
           </div>
 
           <button
@@ -510,6 +536,25 @@ export const Chat: React.FC<ChatProps> = ({
           </button>
         </div>
       </footer>
+
+      <Dialog
+        isOpen={showValidationDialog}
+        onClose={closeValidationDialog}
+        title="Message Required"
+        id="chat-empty-message-dialog"
+      >
+        <DialogContent>
+          <p className="text-sm text-gray-700">{validationMessage}</p>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="chat-empty-message-dialog-ok"
+            onClick={closeValidationDialog}
+          >
+            OK
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 };
