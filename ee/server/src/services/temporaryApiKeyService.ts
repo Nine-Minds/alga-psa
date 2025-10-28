@@ -26,8 +26,6 @@ export interface IssuedTemporaryKey {
 }
 
 export class TemporaryApiKeyService {
-  static readonly FALLBACK_KEY_ID = 'ai-session-fallback';
-
   /**
    * Issue a short-lived API key for AI chat session usage.
    */
