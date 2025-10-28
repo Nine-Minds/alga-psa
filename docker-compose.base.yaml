@@ -100,6 +100,7 @@ services:
     environment:
       <<: *shared-environment
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=md5"
     secrets:
       - postgres_password
     ports:
