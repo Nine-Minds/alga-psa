@@ -198,22 +198,22 @@ export function UserManagementSettings() {
     {
       title: t('clientSettings.users.firstName'),
       dataIndex: 'first_name',
-      width: '20%',
+      width: '15%',
     },
     {
       title: t('clientSettings.users.lastName'),
       dataIndex: 'last_name',
-      width: '20%',
+      width: '15%',
     },
     {
       title: t('clientSettings.users.email'),
       dataIndex: 'email',
-      width: '25%',
+      width: '20%',
     },
     {
       title: t('clientSettings.users.phone'),
       dataIndex: 'phone',
-      width: '15%',
+      width: '12%',
       render: (value, record) => (
         <span>{record.phone || 'N/A'}</span>
       ),
@@ -221,15 +221,39 @@ export function UserManagementSettings() {
     {
       title: t('clientSettings.users.roles'),
       dataIndex: 'user_id',
-      width: '20%',
+      width: '13%',
       render: (userId) => {
         const roles = userRoles[userId] || [];
         return (
           <span className="text-sm">
-            {roles.length > 0 
+            {roles.length > 0
               ? roles.map(role => role.role_name).join(', ')
               : 'No roles assigned'}
           </span>
+        );
+      },
+    },
+    {
+      title: t('clientSettings.users.lastLogin', 'Last Login'),
+      dataIndex: 'last_login_at',
+      width: '15%',
+      render: (lastLoginAt: string | null, record: IUser) => {
+        if (!lastLoginAt) {
+          return <span className="text-gray-400 text-sm">{t('clientSettings.users.never', 'Never')}</span>;
+        }
+        const date = new Date(lastLoginAt);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm">{formattedDate}</span>
+            {record.last_login_method && (
+              <span className="text-xs text-gray-500">{t('clientSettings.users.via', 'via')} {record.last_login_method}</span>
+            )}
+          </div>
         );
       },
     },

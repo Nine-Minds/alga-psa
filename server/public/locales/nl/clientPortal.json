@@ -493,6 +493,8 @@
       "invite": "Uitnodiging verzenden",
       "resendInvite": "Uitnodiging opnieuw verzenden",
       "lastLogin": "Laatste login",
+      "never": "Nooit",
+      "via": "via",
       "userNotFound": "Gebruiker niet gevonden",
       "failedToLoad": "Gebruikersgegevens laden is mislukt",
       "failedToUpdate": "Gebruiker bijwerken is mislukt",
