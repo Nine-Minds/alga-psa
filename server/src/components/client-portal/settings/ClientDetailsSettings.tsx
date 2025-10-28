@@ -99,6 +99,7 @@ export function ClientDetailsSettings() {
         }
 
         setClientDetails(client);
+
       } catch (error) {
         console.error('Error loading client details:', error);
         setError(t('clientSettings.messages.detailsLoadError', 'Failed to load client details'));
@@ -109,7 +110,7 @@ export function ClientDetailsSettings() {
   }, [router]);
 
   const handleFieldChange = (field: string, value: string) => {
-    setClientDetails(prevClient => {
+    setClientDetails((prevClient) => {
       if (!prevClient) return prevClient;
       
       const updatedClient = JSON.parse(JSON.stringify(prevClient)) as IClient;
@@ -201,7 +202,6 @@ export function ClientDetailsSettings() {
             uploadAction={uploadClientLogo}
             deleteAction={deleteClientLogo}
             onImageChange={async (newLogoUrl) => {
-              setClientDetails(prev => prev ? { ...prev, logoUrl: newLogoUrl } : null);
               
               // If logo was deleted (newLogoUrl is null), refresh client data to ensure consistency
               if (newLogoUrl === null && clientDetails?.client_id) {
@@ -209,7 +209,6 @@ export function ClientDetailsSettings() {
                 try {
                   const refreshedClient = await getClientById(clientDetails.client_id);
                   if (refreshedClient) {
-                    setClientDetails(refreshedClient);
                   }
                 } catch (error) {
                   console.error('Error refreshing client data after logo deletion:', error);

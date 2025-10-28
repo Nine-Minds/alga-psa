@@ -242,6 +242,209 @@
     "showing": "Showing {{from}} to {{to}} of {{total}} results",
     "rowsPerPage": "Rows per page",
     "first": "First",
-    "last": "Last"
+    "last": "Last",
+    "itemsLabel": "items",
+    "itemsPerPageOption": "{{count}} items/page",
+    "itemsPerPagePlaceholder": "Items per page",
+    "reflectionLabel": "Pagination",
+    "range": "{{from}} - {{to}} of {{total}} {{itemLabel}}",
+    "ariaLabel": "Pagination",
+    "totalItems": "{{count}} {{itemLabel}} total",
+    "totalRecordsInline": "({{count}} total records)",
+    "pageOf": "Page {{current}} of {{total}}"
+  },
+  "documents": {
+    "title": "Documents",
+    "noDocuments": "No documents attached",
+    "upload": "Upload Document",
+    "download": "Download",
+    "remove": "Remove",
+    "preview": "Preview",
+    "linkDocuments": "Link Documents",
+    "editDocument": "Edit Document",
+    "viewDocument": "View Document",
+    "downloadToPlay": "Download to Play",
+    "delete": "Delete",
+    "previewUnavailable": "Preview unavailable",
+    "newDocument": "New Document",
+    "uploadFile": "Upload File",
+    "deleteTitle": "Delete Document",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "deleteVideoTitle": "Delete Video",
+    "deleteVideoMessage": "Are you sure you want to delete the video \"{{name}}\"? This action cannot be undone.",
+    "removeTitle": "Remove Document",
+    "removeMessage": "Are you sure you want to remove \"{{name}}\" from this item? The document will still be available in the document library.",
+    "removeVideoTitle": "Remove Video",
+    "removeVideoMessage": "Are you sure you want to remove the video \"{{name}}\" from this item? The file will remain available in the document library.",
+    "downloadFile": "Download File",
+    "videoUnsupported": "Video format ({{mimeType}}) not supported for browser playback",
+    "videoTagUnsupported": "Your browser does not support the video tag.",
+    "unnamed": "Untitled",
+    "videoDownloadInfo": "The video will be downloaded and can be played with your system's default video player",
+    "previewUnavailableNoId": "Preview not available (no identifier)",
+    "previewLoadFailed": "Failed to load preview",
+    "videoCodecWarning": "Chrome may not support this video codec. Try downloading or use Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Failed to fetch documents.",
+      "folderCreated": "Folder \"{{name}}\" created successfully",
+      "folderCreateFailed": "Failed to create folder",
+      "moveDocumentsSuccess_one": "{{count}} document moved to {{destination}}",
+      "moveDocumentsSuccess_other": "{{count}} documents moved to {{destination}}",
+      "moveDocumentsFailed": "Failed to move documents",
+      "deleteSuccess": "Document \"{{name}}\" deleted successfully",
+      "deleteFailed": "Failed to delete document",
+      "removeAssociationFailed": "Failed to remove document association",
+      "moveDocumentSuccess": "Document \"{{name}}\" moved successfully",
+      "moveDocumentFailed": "Failed to move document",
+      "createFailed": "Failed to create document",
+      "saveFailed": "Failed to save document",
+      "loadContentFailed": "Failed to load document content",
+      "downloadFailed": "Failed to download document",
+      "bulkDeleteFailed": "Failed to delete some documents",
+      "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
+      "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
+    },
+    "validation": {
+      "nameRequired": "Document name is required"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} document selected",
+      "selected_other": "{{count}} documents selected",
+      "moveToFolder": "Move to Folder",
+      "deleteSelected": "Delete Selected",
+      "clearSelection": "Clear Selection"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Are you sure you want to delete {{count}} document?",
+      "confirmBulkDelete_other": "Are you sure you want to delete {{count}} documents?"
+    },
+    "pagination": {
+      "perPage": "{{count}} per page"
+    },
+    "folderSelector": {
+      "defaultTitle": "Select Destination Folder",
+      "defaultDescription": "Choose where to save this document",
+      "singleDescription": "Where would you like to save \"{{fileName}}\"?",
+      "multipleDescription": "Where would you like to save these {{count}} files?",
+      "newDocumentTitle": "Select Folder for New Document",
+      "newDocumentDescription": "Choose where to save this new document",
+      "moveTitle": "Move Document",
+      "moveDescriptionWithName": "Select destination folder for \"{{name}}\"",
+      "moveDescription": "Select destination folder",
+      "bulkMoveTitle": "Move Selected Documents",
+      "bulkMoveDescription_one": "Select destination folder for {{count}} document",
+      "bulkMoveDescription_other": "Select destination folder for {{count}} documents",
+      "errors": {
+        "nameRequired": "Please enter a folder name",
+        "invalidCharacters": "Folder name cannot contain \"/\"",
+        "createFailed": "Failed to create folder"
+      },
+      "creating": "Creating...",
+      "createButton": "Create Folder",
+      "newFolderButton": "New Folder",
+      "parentLabel": "Parent folder: {{folder}}",
+      "rootLabel": "/ (Root)",
+      "namePlaceholder": "Enter folder name",
+      "loading": "Loading folders...",
+      "rootOption": "Root (No folder)",
+      "empty": "No folders available. Documents will be saved to root."
+    },
+    "filters": {
+      "searchLabel": "Search Documents",
+      "searchPlaceholder": "Search by document name...",
+      "typeLabel": "Document Type",
+      "entityTypeLabel": "Associated Entity Type",
+      "uploadedByLabel": "Uploaded By",
+      "uploadedByPlaceholder": "All Users",
+      "updatedStartLabel": "Updated Date Start",
+      "updatedEndLabel": "Updated Date End",
+      "startDatePlaceholder": "Select start date",
+      "endDatePlaceholder": "Select end date",
+      "sortByLabel": "Sort By",
+      "clear": "Clear Filters",
+      "showAllDocuments": "Show All Documents",
+      "typeOptions": {
+        "all": "All Document Types",
+        "pdf": "PDF",
+        "image": "Images",
+        "text": "Documents",
+        "video": "Video",
+        "other": "Other"
+      },
+      "sortOptions": {
+        "updated_at": "Date",
+        "document_name": "Document name",
+        "file_size": "File size",
+        "created_by_full_name": "Created By"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Show ascending order",
+          "desc": "Show descending order"
+        },
+        "document_name": {
+          "asc": "Show A-Z",
+          "desc": "Show Z-A"
+        },
+        "updated_at": {
+          "asc": "Show Oldest First",
+          "desc": "Show Newest First"
+        },
+        "file_size": {
+          "asc": "Show Smallest First",
+          "desc": "Show Largest First"
+        },
+        "created_by_full_name": {
+          "asc": "Show A-Z",
+          "desc": "Show Z-A"
+        }
+      }
+    },
+    "selector": {
+      "title": "Select Documents",
+      "reflectionLabel": "Document Selector",
+      "searchPlaceholder": "Search documents...",
+      "foldersLabel": "Folders",
+      "folderHint": "in folder \"{{folder}}\"",
+      "saving": "Saving...",
+      "selectDocument": "Select Document",
+      "associateSelected": "Associate Selected",
+      "errors": {
+        "configuration": "Configuration error: Missing entity information",
+        "invalidData": "Invalid document data received",
+        "load": "Failed to load documents",
+        "save": "Failed to save document selection"
+      },
+      "configErrorTitle": "Configuration Error",
+      "configErrorMessage": "Missing required configuration. Please contact support."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Document Upload",
+      "dragDrop": "Drag and drop your files here, or",
+      "browse": "Browse Files",
+      "uploading": "Uploading...",
+      "uploadingProgress": "Uploading {{current}} of {{total}}",
+      "pending": "Pending",
+      "error": "Failed to upload document",
+      "fileError": "Failed to upload file"
+    },
+    "folders": {
+      "root": "Root",
+      "loadFailed": "Failed to load folder tree",
+      "deleteConfirm": "Are you sure you want to delete the folder \"{{name}}\"? This will only work if the folder is empty.",
+      "deleteSuccess": "Folder \"{{name}}\" deleted successfully",
+      "deleteFailed": "Failed to delete folder",
+      "deleteAction": "Delete folder",
+      "loading": "Loading folders...",
+      "title": "Folders",
+      "collapse": "Collapse folders",
+      "allDocuments": "All Documents"
+    },
+    "folderManager": {
+      "title": "Create New Folder",
+      "nameLabel": "Folder Name",
+      "namePlaceholder": "Enter folder name",
+      "willCreateIn": "Will be created in: {{folder}}"
+    }
   }
 }

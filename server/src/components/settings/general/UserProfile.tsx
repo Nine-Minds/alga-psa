@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
@@ -21,6 +23,7 @@ import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
 import { toast } from 'react-hot-toast';
 import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
+import { validateContactName, validateEmailAddress, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';
 
 interface UserProfileProps {
   userId?: string; // Optional - if not provided, uses current user
@@ -33,6 +36,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [countryCode, setCountryCode] = useState('US');
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -60,6 +67,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
         // Get user avatar URL
         const userAvatarUrl = await getUserAvatarUrlAction(currentUser.user_id, currentUser.tenant);
         setAvatarUrl(userAvatarUrl);
+
+        // Load countries for phone input
+        const countriesData = await getAllCountries();
+        setCountries(countriesData);
 
         // Get notification categories and subtypes
         const notificationCategories = await getCategoriesAction();
@@ -89,6 +100,56 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const handleSave = async () => {
     if (!user) {
       setError('User not found');
+      return;
+    }
+
+    setHasAttemptedSubmit(true);
+
+    // Professional PSA validation pattern: Check required fields
+    const requiredFields = {
+      first_name: firstName.trim() || '',
+      last_name: lastName.trim() || '',
+      email: email.trim() || ''
+    };
+
+    // Clear previous errors and validate required fields
+    const newErrors: Record<string, string> = {};
+    let hasValidationErrors = false;
+
+    Object.entries(requiredFields).forEach(([field, value]) => {
+      if (field === 'first_name' || field === 'last_name') {
+        // Make name fields required for profile saves
+        if (!value || !value.trim()) {
+          newErrors[field] = field === 'first_name' ? 'First name is required' : 'Last name is required';
+          hasValidationErrors = true;
+        } else {
+          const error = validateContactName(value);
+          if (error) {
+            newErrors[field] = error;
+            hasValidationErrors = true;
+          }
+        }
+      } else if (field === 'email') {
+        const error = validateEmailAddress(value);
+        if (error) {
+          newErrors[field] = error;
+          hasValidationErrors = true;
+        }
+      }
+    });
+
+    // Validate optional phone field if provided
+    if (phone.trim()) {
+      const phoneError = validatePhoneNumber(phone.trim());
+      if (phoneError) {
+        newErrors.phone = phoneError;
+        hasValidationErrors = true;
+      }
+    }
+
+    setFieldErrors(newErrors);
+
+    if (hasValidationErrors) {
       return;
     }
 
@@ -138,6 +199,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       );
 
       // Show success confirmation
+      setHasAttemptedSubmit(false);
       toast.success('Profile updated successfully');
 
     } catch (err) {
@@ -208,39 +270,107 @@ export default function UserProfile({ userId }: UserProfileProps) {
             
             <div className="grid grid-cols-2 gap-x-4 gap-y-4">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="firstName">
+                  First Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="firstName"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    // Clear error when user starts typing
+                    if (fieldErrors.first_name) {
+                      setFieldErrors(prev => ({ ...prev, first_name: '' }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const error = validateContactName(firstName);
+                    setFieldErrors(prev => ({ ...prev, first_name: error || '' }));
+                  }}
+                  className={fieldErrors.first_name ? 'border-red-500' : ''}
                 />
+                {fieldErrors.first_name && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.first_name}</p>
+                )}
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">
+                  Last Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="lastName"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    // Clear error when user starts typing
+                    if (fieldErrors.last_name) {
+                      setFieldErrors(prev => ({ ...prev, last_name: '' }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const error = validateContactName(lastName);
+                    setFieldErrors(prev => ({ ...prev, last_name: error || '' }));
+                  }}
+                  className={fieldErrors.last_name ? 'border-red-500' : ''}
                 />
+                {fieldErrors.last_name && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.last_name}</p>
+                )}
               </div>
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">
+                Email <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear error when user starts typing
+                  if (fieldErrors.email) {
+                    setFieldErrors(prev => ({ ...prev, email: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  const error = validateEmailAddress(email);
+                  setFieldErrors(prev => ({ ...prev, email: error || '' }));
+                }}
+                className={fieldErrors.email ? 'border-red-500' : ''}
               />
+              {fieldErrors.email && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>
+              )}
             </div>
             <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
+              <PhoneInput
                 id="phone"
-                type="tel"
+                label="Phone Number"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(value) => {
+                  setPhone(value);
+                  // Clear error when user starts typing
+                  if (fieldErrors.phone) {
+                    setFieldErrors(prev => ({ ...prev, phone: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  if (phone.trim()) {
+                    const error = validatePhoneNumber(phone);
+                    setFieldErrors(prev => ({ ...prev, phone: error || '' }));
+                  }
+                }}
+                countryCode={countryCode}
+                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
+                countries={countries}
+                onCountryChange={setCountryCode}
+                allowExtensions={true}
+                data-automation-id="profile-phone"
               />
+              {fieldErrors.phone && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.phone}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="timezone">Time Zone</Label>
@@ -308,10 +438,16 @@ export default function UserProfile({ userId }: UserProfileProps) {
       />
 
       {/* Action Buttons */}
-      <div className="flex justify-end space-x-2">
-        <Button 
+      <div className="flex justify-end items-center space-x-2">
+        {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+          <span className="text-red-600 text-sm mr-2" role="alert">
+            Please fill in all required fields
+          </span>
+        )}
+        <Button
           id="save-button"
           onClick={handleSave}
+          variant="default"
         >
           Save Changes
         </Button>

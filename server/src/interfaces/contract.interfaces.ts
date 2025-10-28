@@ -44,7 +44,8 @@ export interface IContractLineMapping extends TenantEntity {
   contract_id: string;
   contract_line_id: string;
   display_order?: number;
-  custom_rate?: number;
+  custom_rate?: number | null;
+  billing_timing?: 'arrears' | 'advance';
   created_at?: ISO8601String;
 }
 

@@ -13,6 +13,7 @@ import {
   updateContractLine,
   updateContractLineFixedConfig,
   getContractLineFixedConfig,
+  upsertContractLineTerms,
 } from 'server/src/lib/actions/contractLineAction';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
@@ -22,6 +23,17 @@ import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
+
+const BILLING_TIMING_OPTIONS = [
+  {
+    value: 'arrears',
+    label: 'Arrears – invoice after the period closes',
+  },
+  {
+    value: 'advance',
+    label: 'Advance – invoice at the start of the period',
+  },
+] as const;
 
 interface ContractLineDialogProps {
   onPlanAdded: (newPlanId?: string) => void;
@@ -37,6 +49,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [isCustom, setIsCustom] = useState(false);
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
 
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
@@ -91,6 +104,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       setBillingFrequency(editingPlan.billing_frequency);
       setPlanType(editingPlan.contract_line_type as PlanType);
       setIsCustom(editingPlan.is_custom);
+      setBillingTiming(editingPlan.billing_timing ?? 'arrears');
       if (editingPlan.contract_line_id && editingPlan.contract_line_type === 'Fixed') {
         getContractLineFixedConfig(editingPlan.contract_line_id)
           .then((cfg) => {
@@ -106,6 +120,12 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingPlan]);
+
+  useEffect(() => {
+    if (planType !== 'Fixed' && billingTiming !== 'arrears') {
+      setBillingTiming('arrears');
+    }
+  }, [planType, billingTiming]);
 
   // Reset form when dialog closes
   useEffect(() => {
@@ -216,6 +236,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         });
       }
 
+      if (savedPlanId) {
+        await upsertContractLineTerms(savedPlanId, planType === 'Fixed' ? billingTiming : 'arrears');
+      }
+
       resetForm();
       setOpen(false);
       onPlanAdded(savedPlanId);
@@ -233,6 +257,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     setPlanType(null);
     setBillingFrequency('monthly');
     setIsCustom(false);
+    setBillingTiming('arrears');
     setBaseRate(undefined);
     setBaseRateInput('');
     setEnableProration(false);
@@ -830,6 +855,36 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     placeholder="Select billing frequency"
                     className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="billing-timing">Billing Timing *</Label>
+                  <CustomSelect
+                    id="billing-timing"
+                    value={billingTiming}
+                    onValueChange={(value) => {
+                      if (planType !== 'Fixed') {
+                        return;
+                      }
+                      setBillingTiming(value as 'arrears' | 'advance');
+                      clearErrorIfSubmitted();
+                      markDirty();
+                    }}
+                    options={BILLING_TIMING_OPTIONS.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                    disabled={planType !== 'Fixed'}
+                    placeholder="Select billing timing"
+                  />
+                  {planType !== 'Fixed' ? (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Hourly and usage-based lines always bill in arrears.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Advance billing invoices the upcoming period at the cycle start.
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

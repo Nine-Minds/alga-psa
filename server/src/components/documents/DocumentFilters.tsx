@@ -7,7 +7,10 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { IUserWithRoles } from 'server/src/interfaces/index';
 import { Card } from 'server/src/components/ui/Card';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { Button } from 'server/src/components/ui/Button';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { useMemo } from 'react';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface DocumentFiltersProps {
   filters: DocumentFilters;
@@ -15,16 +18,9 @@ interface DocumentFiltersProps {
   onClearFilters: () => void;
   entityTypeOptions: SelectOption[];
   allUsersData: IUserWithRoles[];
+  onShowAllDocuments?: () => void;
+  showAllDocumentsButton?: boolean;
 }
-
-const documentTypes: SelectOption[] = [
-  { value: 'all', label: 'All Document Types' },
-  { value: 'application/pdf', label: 'PDF' },
-  { value: 'image', label: 'Images' },
-  { value: 'text', label: 'Documents' },
-  { value: 'video', label: 'Video' },
-  { value: 'application', label: 'Other' }
-];
 
 // Define default sort orders for each field
 const defaultSortOrders: Record<string, 'asc' | 'desc'> = {
@@ -34,29 +30,62 @@ const defaultSortOrders: Record<string, 'asc' | 'desc'> = {
   'created_by_full_name': 'asc'  // A-Z
 };
 
-const sortOptions: SelectOption[] = [
-  { value: 'updated_at', label: 'Date' },
-  { value: 'document_name', label: 'Document name' },
-  { value: 'file_size', label: 'File size' },
-  { value: 'created_by_full_name', label: 'Created By' }
-];
-
 export default function DocumentFilters({
   filters,
   onFiltersChange,
   onClearFilters,
   entityTypeOptions,
-  allUsersData
+  allUsersData,
+  onShowAllDocuments,
+  showAllDocumentsButton = false
 }: DocumentFiltersProps) {
+  const { t } = useTranslation('common');
+
+  const documentTypes = useMemo<SelectOption[]>(
+    () => [
+      { value: 'all', label: t('documents.filters.typeOptions.all', 'All Document Types') },
+      { value: 'application/pdf', label: t('documents.filters.typeOptions.pdf', 'PDF') },
+      { value: 'image', label: t('documents.filters.typeOptions.image', 'Images') },
+      { value: 'text', label: t('documents.filters.typeOptions.text', 'Documents') },
+      { value: 'video', label: t('documents.filters.typeOptions.video', 'Video') },
+      { value: 'application', label: t('documents.filters.typeOptions.other', 'Other') }
+    ],
+    [t]
+  );
+
+  const sortOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'updated_at', label: t('documents.filters.sortOptions.updated_at', 'Date') },
+      { value: 'document_name', label: t('documents.filters.sortOptions.document_name', 'Document name') },
+      { value: 'file_size', label: t('documents.filters.sortOptions.file_size', 'File size') },
+      { value: 'created_by_full_name', label: t('documents.filters.sortOptions.created_by_full_name', 'Created By') }
+    ],
+    [t]
+  );
+
+  const sortTooltip = (
+    field: DocumentFilters['sortBy'],
+    order: DocumentFilters['sortOrder']
+  ) => {
+    const sortField = field || 'updated_at';
+    const sortOrder = order || defaultSortOrders[sortField] || 'desc';
+    return t(`documents.filters.sortOrder.${sortField}.${sortOrder}`, {
+      defaultValue:
+        sortOrder === 'asc'
+          ? t('documents.filters.sortOrder.default.asc', 'Show ascending order')
+          : t('documents.filters.sortOrder.default.desc', 'Show descending order')
+    });
+  };
+
   return (
     <Card className="p-4 sticky top-6">
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Search Documents
+            {t('documents.filters.searchLabel', 'Search Documents')}
           </label>
           <Input
-            placeholder="Search by document name..."
+            placeholder={t('documents.filters.searchPlaceholder', 'Search by document name...')}
             value={filters.searchTerm || ''}
             onChange={(e) => onFiltersChange({ ...filters, searchTerm: e.target.value })}
           />
@@ -64,7 +93,7 @@ export default function DocumentFilters({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Document Type
+            {t('documents.filters.typeLabel', 'Document Type')}
           </label>
           <CustomSelect
             options={documentTypes}
@@ -83,7 +112,7 @@ export default function DocumentFilters({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Associated Entity Type
+            {t('documents.filters.entityTypeLabel', 'Associated Entity Type')}
           </label>
           <CustomSelect
             options={entityTypeOptions}
@@ -100,7 +129,7 @@ export default function DocumentFilters({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Uploaded By
+            {t('documents.filters.uploadedByLabel', 'Uploaded By')}
           </label>
           <UserPicker
             users={allUsersData}
@@ -108,7 +137,7 @@ export default function DocumentFilters({
             onValueChange={(value: string) => {
               onFiltersChange({ ...filters, uploadedBy: value });
             }}
-            placeholder="All Users"
+            placeholder={t('documents.filters.uploadedByPlaceholder', 'All Users')}
             buttonWidth="full"
             className="w-full"
           />
@@ -116,7 +145,7 @@ export default function DocumentFilters({
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Updated Date Start
+            {t('documents.filters.updatedStartLabel', 'Updated Date Start')}
           </label>
           <DatePicker
             value={filters.updated_at_start ? new Date(filters.updated_at_start) : undefined}
@@ -126,14 +155,14 @@ export default function DocumentFilters({
                 updated_at_start: date ? date.toISOString().split('T')[0] : ''
               })
             }
-            placeholder="Select start date"
+            placeholder={t('documents.filters.startDatePlaceholder', 'Select start date')}
             className="w-full"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Updated Date End
+            {t('documents.filters.updatedEndLabel', 'Updated Date End')}
           </label>
           <DatePicker
             value={filters.updated_at_end ? new Date(filters.updated_at_end) : undefined}
@@ -143,14 +172,14 @@ export default function DocumentFilters({
                 updated_at_end: date ? date.toISOString().split('T')[0] : ''
               })
             }
-            placeholder="Select end date"
+            placeholder={t('documents.filters.endDatePlaceholder', 'Select end date')}
             className="w-full"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Sort By
+            {t('documents.filters.sortByLabel', 'Sort By')}
           </label>
           <div className="flex items-center space-x-2">
             <CustomSelect
@@ -177,15 +206,7 @@ export default function DocumentFilters({
                 });
               }}
               className="p-2 border border-gray-300 rounded-md hover:bg-gray-50"
-              title={
-                filters.sortOrder === 'asc'
-                  ? `Show ${filters.sortBy === 'document_name' ? 'Z-A' :
-                      filters.sortBy === 'updated_at' ? 'Newest First' :
-                      filters.sortBy === 'file_size' ? 'Largest First' : 'Z-A'}`
-                  : `Show ${filters.sortBy === 'document_name' ? 'A-Z' :
-                      filters.sortBy === 'updated_at' ? 'Oldest First' :
-                      filters.sortBy === 'file_size' ? 'Smallest First' : 'A-Z'}`
-              }
+              title={sortTooltip(filters.sortBy, filters.sortOrder)}
             >
               {filters.sortOrder === 'asc' ? (
                 <ArrowUp className="h-4 w-4" />
@@ -196,13 +217,25 @@ export default function DocumentFilters({
           </div>
         </div>
 
-        <div className="pt-4">
-          <button
+        <div className="pt-4 space-y-2">
+          {showAllDocumentsButton && onShowAllDocuments && (
+            <Button
+              id="show-all-documents-button"
+              onClick={onShowAllDocuments}
+              variant="default"
+              className="w-full"
+            >
+              {t('documents.filters.showAllDocuments', 'Show All Documents')}
+            </Button>
+          )}
+          <Button
+            id="clear-filters-button"
             onClick={onClearFilters}
-            className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            variant="outline"
+            className="w-full"
           >
-            Clear Filters
-          </button>
+            {t('documents.filters.clear', 'Clear Filters')}
+          </Button>
         </div>
       </div>
     </Card>

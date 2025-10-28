@@ -17,8 +17,8 @@ This document lists all action files that import and use models, along with the 
   - `ContractLine.isInUse(planId)`
   - `ContractLine.hasAssociatedServices(planId)`
 
-### 2. **contractLineMappingActions.ts**
-- **Model**: `ContractLineMapping` from 'server/src/lib/models/contractLineMapping'
+### 2. **contractActions.ts (contract line helpers)**
+- **Repository**: `contractLineRepository` consolidates template and contract line metadata
 
 ### 3. **channel-actions/channelActions.ts**
 - **Model**: `Channel` from '../../models/channel'

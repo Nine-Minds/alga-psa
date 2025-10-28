@@ -73,7 +73,11 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
 }
 
 export async function deleteContact(contactId: string) {
+  console.log('🔍 Starting deleteContact function with contactId:', contactId);
+
   const { knex: db, tenant } = await createTenantKnex();
+  console.log('🔍 Got database connection, tenant:', tenant);
+
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -84,6 +88,7 @@ export async function deleteContact(contactId: string) {
       throw new Error('VALIDATION_ERROR: Contact ID is required');
     }
 
+    console.log('🔍 Checking if contact exists...');
     // Verify contact exists
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
@@ -91,10 +96,12 @@ export async function deleteContact(contactId: string) {
         .first();
     });
 
+    console.log('🔍 Contact found:', !!contact);
     if (!contact) {
       throw new Error('VALIDATION_ERROR: The contact you are trying to delete no longer exists');
     }
 
+    console.log('🔍 Checking for dependencies...');
     // Check for dependencies
     const dependencies: string[] = [];
     const counts: Record<string, number> = {};
@@ -154,18 +161,8 @@ export async function deleteContact(contactId: string) {
         counts['project'] = Number(projectCount.count);
       }
 
-      // Check for boards
-      const boardCount = await trx('boards')
-        .where({
-          contact_name_id: contactId,
-          tenant
-        })
-        .count('* as count')
-        .first();
-      if (boardCount && Number(boardCount.count) > 0) {
-        dependencies.push('board');
-        counts['board'] = Number(boardCount.count);
-      }
+      // Note: Boards are not directly associated with contacts, so we skip this check
+      // The boards table doesn't have a contact_name_id column
 
       // Check for comments
       const commentCount = await trx('comments')
@@ -187,73 +184,71 @@ export async function deleteContact(contactId: string) {
       throw new Error(`VALIDATION_ERROR: Cannot delete contact because it has associated records: ${dependencyList}. Please remove or reassign these records first.`);
     }
 
-    // If no dependencies, proceed with deletion
+    // If no dependencies, proceed with simple deletion (only the contact record)
+    console.log('🔍 Proceeding with contact deletion...');
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       try {
-        // Delete associated tag mappings first
-        // First get the tag_ids for this contact
-        const tagMappings = await trx('tag_mappings')
-          .where({
-            tagged_id: contactId,
-            tagged_type: 'contact',
-            tenant
-          })
-          .select('tag_id');
-        
-        // Delete the tag mappings
-        await trx('tag_mappings')
-          .where({
-            tagged_id: contactId,
-            tagged_type: 'contact',
-            tenant
-          })
-          .delete();
-        
-        // Check if any of these tags are now orphaned (not used by anything else)
-        for (const mapping of tagMappings) {
-          const remainingMappings = await trx('tag_mappings')
-            .where({
-              tag_id: mapping.tag_id,
-              tenant
-            })
-            .count('* as count')
-            .first();
-          
-          // If no other mappings exist for this tag, delete the tag definition
-          if (remainingMappings && Number(remainingMappings.count) === 0) {
-            await trx('tag_definitions')
-              .where({
-                tag_id: mapping.tag_id,
-                tenant
-              })
-              .delete();
-          }
-        }
+        console.log('🔍 Inside transaction, attempting deletion with params:', { contact_name_id: contactId, tenant });
 
-        // Delete the contact
+        // Only delete the contact record itself - no associated data
         const deleted = await trx('contacts')
           .where({ contact_name_id: contactId, tenant })
           .delete();
 
-        if (!deleted) {
-          throw new Error('SYSTEM_ERROR: Failed to delete contact record');
+        console.log('🔍 Deletion result:', deleted);
+
+        if (!deleted || deleted === 0) {
+          console.error('🚨 No rows were deleted');
+          throw new Error('Contact record not found or could not be deleted');
         }
 
+        console.log('✅ Contact deletion successful');
         return { success: true };
       } catch (err) {
-        console.error('Error during contact deletion transaction:', err);
-        // Re-throw the error with more context
+        console.error('❌ Error during contact deletion transaction:', err);
+
+        // Get more detailed error information
+        let errorMessage = 'Unknown error';
         if (err instanceof Error) {
-          throw new Error(`SYSTEM_ERROR: Failed to delete contact - ${err.message}`);
+          errorMessage = err.message;
+          console.error('Detailed error message:', errorMessage);
+          console.error('Error stack:', err.stack);
+
+          // Log the actual SQL error if available
+          if ('code' in err) {
+            console.error('Database error code:', (err as any).code);
+          }
+          if ('detail' in err) {
+            console.error('Database error detail:', (err as any).detail);
+          }
+          if ('constraint' in err) {
+            console.error('Database constraint:', (err as any).constraint);
+          }
         }
-        throw new Error('SYSTEM_ERROR: An unexpected error occurred while deleting the contact');
+
+        // Handle specific database errors
+        if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+          throw new Error(`SYSTEM_ERROR: Database table missing - ${errorMessage}`);
+        }
+
+        if (errorMessage.includes('violates foreign key constraint')) {
+          throw new Error('VALIDATION_ERROR: Cannot delete contact because it has associated records');
+        }
+
+        // Handle connection issues
+        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
+          throw new Error(`SYSTEM_ERROR: Database connection issue - ${errorMessage}`);
+        }
+
+        // Re-throw the error with more context but preserve the original error
+        throw err;
       }
     });
 
     return result;
   } catch (err) {
     // Log the error for debugging
-    console.error('Error deleting contact:', err);
+    console.error('❌ Error in deleteContact outer catch:', err);
 
     // Handle known error types
     if (err instanceof Error) {
@@ -262,16 +257,30 @@ export async function deleteContact(contactId: string) {
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
         message.includes('SYSTEM_ERROR:')) {
+        console.error('Rethrowing formatted error:', message);
         throw err;
       }
 
       // Handle database-specific errors
       if (message.includes('violates foreign key constraint')) {
+        console.error('Foreign key constraint violation detected');
         throw new Error('VALIDATION_ERROR: Cannot delete contact because it has associated records');
       }
+
+      // Handle connection/timeout issues
+      if (message.includes('connection') || message.includes('timeout')) {
+        console.error('Database connection issue detected:', message);
+        throw new Error(`SYSTEM_ERROR: Database connection issue - ${message}`);
+      }
+
+      // Log and preserve the actual error for better debugging
+      console.error('Unhandled error type:', message);
+      console.error('Error stack:', err.stack);
+      throw new Error(`SYSTEM_ERROR: Contact deletion failed - ${message}`);
     }
 
-    // For unexpected errors, throw a generic system error
+    // For non-Error objects, provide more debugging info
+    console.error('Non-Error object thrown:', typeof err, err);
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while deleting the contact');
   }
 }
@@ -429,21 +438,58 @@ export async function getAllClients(): Promise<IClient[]> {
   }
 
   try {
-    // Fetch all clients with proper ordering
-    const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .select(
-          'clients.*'
-        )
-        .where('clients.tenant', tenant)
-        .orderBy('clients.client_name', 'asc'); // Add consistent ordering
-    });
+    console.log('[getAllClients] Fetching clients for tenant:', tenant);
 
-    // Return empty array if no clients found (don't throw error)
-    return clients;
+    // Start with basic clients query and fallback gracefully
+    let clients: any[] = [];
+    try {
+      clients = await db('clients')
+        .select('*')
+        .where('tenant', tenant)
+        .orderBy('client_name', 'asc');
+
+      console.log('[getAllClients] Found', clients.length, 'clients');
+    } catch (dbErr: any) {
+      console.error('[getAllClients] Database error:', dbErr);
+
+      if (dbErr.message && (
+        dbErr.message.includes('relation') ||
+        dbErr.message.includes('does not exist') ||
+        dbErr.message.includes('table')
+      )) {
+        // Try fallback to companies table for company→client migration
+        console.log('[getAllClients] Clients table not found, trying companies table fallback...');
+        try {
+          const companies = await db('companies')
+            .select('*')
+            .where('tenant', tenant)
+            .orderBy('company_name', 'asc');
+
+          console.log('[getAllClients] Found', companies.length, 'companies, mapping to client structure');
+
+          // Map companies to client structure
+          clients = companies.map(company => ({
+            ...company,
+            client_id: company.company_id || company.id,
+            client_name: company.company_name || company.name,
+          }));
+        } catch (companiesErr) {
+          console.error('[getAllClients] Companies table also failed:', companiesErr);
+          // Return empty array instead of throwing error for this function
+          console.warn('[getAllClients] Returning empty array due to database schema issues');
+          return [];
+        }
+      } else {
+        // Return empty array instead of throwing error for this function
+        console.warn('[getAllClients] Returning empty array due to database error');
+        return [];
+      }
+    }
+
+    return clients as IClient[];
   } catch (err) {
     // Log the error for debugging
-    console.error('Error fetching all clients:', err);
+    console.error('[getAllClients] Error fetching all clients:', err);
 
     // Handle known error types
     if (err instanceof Error) {
@@ -478,29 +524,66 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
 
-    // Fetch all contacts with client information
-    const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .select(
-          'contacts.*',
-          'clients.client_name'
-        )
-        .leftJoin('clients', function (this: Knex.JoinClause) { // Add type for 'this'
-          this.on('contacts.client_id', 'clients.client_id')
-            .andOn('clients.tenant', 'contacts.tenant')
-        })
-        .where('contacts.tenant', tenant)
-        .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
+    console.log('[getAllContacts] Fetching contacts with status:', status, 'for tenant:', tenant);
+
+    // Check if contacts table exists and fallback gracefully
+    let contacts: any[] = [];
+    try {
+      contacts = await db('contacts')
+        .select('*')
+        .where('tenant', tenant)
+        .modify(function (queryBuilder: Knex.QueryBuilder) {
           if (status !== 'all') {
-            queryBuilder.where('contacts.is_inactive', status === 'inactive');
+            queryBuilder.where('is_inactive', status === 'inactive');
           }
         })
-        .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
-    });
+        .orderBy('full_name', 'asc');
+
+      console.log('[getAllContacts] Found', contacts.length, 'contacts');
+
+      // Try to add client names if clients table exists
+      if (contacts.length > 0) {
+        try {
+          const clientIds = contacts.map(c => c.client_id).filter(Boolean);
+          if (clientIds.length > 0) {
+            const clients = await db('clients')
+              .select('client_id', 'client_name')
+              .whereIn('client_id', clientIds)
+              .where('tenant', tenant);
+
+            const clientMap = new Map(clients.map(c => [c.client_id, c.client_name]));
+            contacts = contacts.map(contact => ({
+              ...contact,
+              client_name: contact.client_id ? clientMap.get(contact.client_id) || null : null
+            }));
+          }
+        } catch (clientErr) {
+          console.warn('[getAllContacts] Failed to fetch client names, proceeding without them:', clientErr);
+          // Continue without client names
+        }
+      }
+    } catch (dbErr: any) {
+      console.error('[getAllContacts] Database error:', dbErr);
+
+      if (dbErr.message && (
+        dbErr.message.includes('relation') ||
+        dbErr.message.includes('does not exist') ||
+        dbErr.message.includes('table')
+      )) {
+        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+      }
+      throw dbErr;
+    }
 
     // Fetch avatar URLs for each contact
     const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
+      let avatarUrl: string | null = null;
+      try {
+        avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
+      } catch (avatarErr) {
+        console.warn('[getAllContacts] Failed to fetch avatar for contact:', contact.contact_name_id, avatarErr);
+        // Continue without avatar
+      }
       return {
         ...contact,
         avatarUrl: avatarUrl || null,

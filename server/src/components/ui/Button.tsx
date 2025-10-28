@@ -56,7 +56,23 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps & AutomationProps>(
-  ({ className, variant, size, asChild = false, tooltipText, tooltip, id, label, disabled, children, ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      tooltipText,
+      tooltip,
+      id,
+      label,
+      disabled,
+      children,
+      type = 'button',
+      ...props
+    },
+    ref
+  ) => {
     const Comp = asChild ? Slot : 'button'
     const buttonRef = React.useRef<HTMLButtonElement | null>(null)
     const [tooltipPosition, setTooltipPosition] = React.useState({ x: 0, y: 0 })
@@ -139,6 +155,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps & AutomationProps
           buttonVariants({ variant, size, tooltip, className }),
           'group'
         )}
+        type={type}
         ref={(node) => {
           if (typeof ref === 'function') {
             ref(node)

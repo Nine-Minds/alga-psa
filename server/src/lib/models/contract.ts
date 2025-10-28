@@ -106,10 +106,58 @@ const Contract = {
           .where({ contract_id: contractId, tenant })
           .delete();
 
-        // Delete contract line mappings
-        await trx('contract_line_mappings')
+        const contractLineIds = await trx('contract_lines')
           .where({ contract_id: contractId, tenant })
-          .delete();
+          .pluck('contract_line_id');
+
+        if (contractLineIds.length > 0) {
+          const configIds = await trx('contract_line_service_configuration')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .pluck('config_id');
+
+          if (configIds.length > 0) {
+            await trx('contract_line_service_bucket_config')
+              .where({ tenant })
+              .whereIn('config_id', configIds)
+              .delete();
+
+            await trx('contract_line_service_hourly_config')
+              .where({ tenant })
+              .whereIn('config_id', configIds)
+              .delete();
+
+            await trx('contract_line_service_usage_config')
+              .where({ tenant })
+              .whereIn('config_id', configIds)
+              .delete();
+
+            await trx('contract_line_service_configuration')
+              .where({ tenant })
+              .whereIn('config_id', configIds)
+              .delete();
+          }
+
+          await trx('contract_line_service_defaults')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .delete();
+
+          await trx('contract_line_services')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .delete();
+
+          await trx('contract_line_template_terms')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .delete();
+
+          await trx('contract_lines')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .delete();
+        }
 
         // Delete the contract itself
         const deleted = await trx('contracts')
@@ -292,13 +340,17 @@ const Contract = {
     }
 
     try {
-      return await db('contract_line_mappings as clm')
-        .join('contract_lines as cl', function joinLines() {
-          this.on('clm.contract_line_id', '=', 'cl.contract_line_id').andOn('clm.tenant', '=', 'cl.tenant');
-        })
-        .where({ 'clm.contract_id': contractId, 'clm.tenant': tenant })
+      return await db('contract_lines as cl')
+        .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
         .select(
-          'clm.*',
+          'cl.tenant',
+          'cl.contract_id',
+          'cl.contract_line_id',
+          'cl.display_order',
+          'cl.custom_rate',
+          'cl.billing_timing',
+          'cl.created_at',
+          'cl.updated_at',
           'cl.contract_line_name',
           'cl.billing_frequency',
           'cl.contract_line_type',

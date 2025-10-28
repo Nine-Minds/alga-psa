@@ -12,7 +12,7 @@ import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/s
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { ContactPicker } from 'server/src/components/ui/ContactPicker'; // Import ContactPicker
+import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';

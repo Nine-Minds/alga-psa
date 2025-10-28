@@ -21,7 +21,7 @@ import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewS
 import { Search, Eye, EyeOff, Info } from 'lucide-react';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
-import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
+import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -89,13 +89,7 @@ const UserManagement = (): JSX.Element => {
   // Show live password requirements feedback when typing
   useEffect(() => {
     const pw = newUser.password || '';
-    setPwdReq({
-      minLength: pw.length >= 8,
-      hasUpper: /[A-Z]/.test(pw),
-      hasLower: /[a-z]/.test(pw),
-      hasNumber: /\d/.test(pw),
-      hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)
-    });
+    setPwdReq(getPasswordRequirements(pw));
   }, [newUser.password]);
 
   // Validation functions
@@ -140,15 +134,20 @@ const UserManagement = (): JSX.Element => {
     // Update the user state using the camelCase property names
     const userFieldMap = {
       first_name: 'firstName',
-      last_name: 'lastName', 
+      last_name: 'lastName',
       email: 'email'
     } as const;
-    
+
     const userField = userFieldMap[fieldName];
     setNewUser(prev => ({ ...prev, [userField]: value }));
-    
-    // Validate the field in real-time
-    validateField(fieldName, value);
+
+    // Clear existing errors when user starts typing (but don't validate yet)
+    if (fieldErrors[fieldName].length > 0) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [fieldName]: []
+      }));
+    }
   };
 
   const fetchLicenseUsage = async (): Promise<void> => {
@@ -364,9 +363,10 @@ const fetchContacts = async (): Promise<void> => {
           }
           await fetchUsers();
         } else {
-          // pwd validation
-          if (!(pwdReq.minLength && pwdReq.hasUpper && pwdReq.hasLower && pwdReq.hasNumber && pwdReq.hasSpecial)) {
-            toast.error('Password must be at least 8 characters and include upper, lower, number, and special character.');
+          // Use unified password validation
+          const passwordError = validatePassword(newUser.password);
+          if (passwordError) {
+            toast.error(passwordError);
             return;
           }
           const result = await createClientPortalUser(
@@ -600,7 +600,12 @@ const fetchContacts = async (): Promise<void> => {
                     <Input
                       id="first-name"
                       value={newUser.firstName}
-                      onChange={(e) => handleFieldChange('first_name', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('first_name', e.target.value);
+                      }}
+                      onBlur={() => {
+                        validateField('first_name', newUser.firstName);
+                      }}
                       className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.first_name.length > 0 && (
@@ -616,7 +621,12 @@ const fetchContacts = async (): Promise<void> => {
                     <Input
                       id="last-name"
                       value={newUser.lastName}
-                      onChange={(e) => handleFieldChange('last_name', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('last_name', e.target.value);
+                      }}
+                      onBlur={() => {
+                        validateField('last_name', newUser.lastName);
+                      }}
                       className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.last_name.length > 0 && (
@@ -633,7 +643,12 @@ const fetchContacts = async (): Promise<void> => {
                       id="email"
                       type="email"
                       value={newUser.email}
-                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('email', e.target.value);
+                      }}
+                      onBlur={() => {
+                        validateField('email', newUser.email);
+                      }}
                       className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.email.length > 0 && (
@@ -715,11 +730,6 @@ const fetchContacts = async (): Promise<void> => {
                         label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
                         placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
                       />
-                      {contactValidationError && (
-                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
-                          <p className="text-sm text-red-600">{contactValidationError}</p>
-                        </div>
-                      )}
                     </div>
                   )}
                   <div>

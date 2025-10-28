@@ -20,11 +20,11 @@ import {
   getDetailedContractLines,
   addContractLine,
   removeContractLine,
-  updateContractLineAssociation,
-} from 'server/src/lib/actions/contractLineMappingActions';
+  updateContractLineRate,
+} from 'server/src/lib/actions/contractActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { ContractLineRateDialog } from './ContractLineRateDialog';
+import { ContractLineEditDialog } from './ContractLineEditDialog';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface ContractLinesProps {
@@ -33,10 +33,11 @@ interface ContractLinesProps {
 }
 
 interface DetailedContractLineMapping extends IContractLineMapping {
-  contract_line_name: string;
-  billing_frequency: string;
-  contract_line_type: string;
-  default_rate?: number;
+  contract_line_name?: string;
+  contract_line_type?: string;
+  billing_frequency?: string;
+  rate?: number | null;
+  billing_timing?: 'arrears' | 'advance';
 }
 
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged }) => {
@@ -107,17 +108,21 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
-  const handleCustomRateSave = async (contractLineId: string, customRate?: number) => {
+  const handleContractLineSave = async (
+    contractLineId: string,
+    rate: number,
+    billingTiming?: 'arrears' | 'advance'
+  ) => {
     if (!contract.contract_id) return;
 
     try {
-      await updateContractLineAssociation(contract.contract_id, contractLineId, { custom_rate: customRate });
+      await updateContractLineRate(contract.contract_id, contractLineId, rate, billingTiming);
       await fetchData();
       setEditingLine(null);
       onContractLinesChanged?.();
     } catch (err) {
-      console.error('Error updating contract line rate:', err);
-      setError('Failed to update contract line rate');
+      console.error('Error updating contract line:', err);
+      setError('Failed to update contract line');
     }
   };
 
@@ -136,18 +141,22 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         dataIndex: 'billing_frequency',
       },
       {
-        title: 'Default Rate',
-        dataIndex: 'default_rate',
-        render: (value) =>
-          value !== undefined ? `$${parseFloat(value.toString()).toFixed(2)}` : 'N/A',
+        title: 'Rate',
+        dataIndex: 'rate',
+        render: (value) => {
+          if (value === undefined || value === null) {
+            return '—';
+          }
+          return `$${parseFloat(value.toString()).toFixed(2)}`;
+        },
       },
       {
-        title: 'Custom Rate',
-        dataIndex: 'custom_rate',
-        render: (value) =>
-          value !== undefined && value !== null
-            ? `$${parseFloat(value.toString()).toFixed(2)}`
-            : 'Same as default',
+        title: 'Billing Timing',
+        dataIndex: 'billing_timing',
+        render: (value) => {
+          const timing = value || 'arrears';
+          return <span className="capitalize">{timing}</span>;
+        },
       },
       {
         title: 'Actions',
@@ -168,7 +177,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditingLine(record)}>
                 <Settings className="h-4 w-4 mr-2" />
-                Set Custom Rate
+                Edit Contract Line
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-600"
@@ -247,10 +256,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       </Box>
 
       {editingLine && (
-        <ContractLineRateDialog
-          plan={editingLine}
+        <ContractLineEditDialog
+          line={editingLine}
           onClose={() => setEditingLine(null)}
-          onSave={handleCustomRateSave}
+          onSave={handleContractLineSave}
         />
       )}
     </Card>

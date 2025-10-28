@@ -5,14 +5,22 @@ import Pagination from 'server/src/components/ui/Pagination';
 interface DocumentsPaginationProps {
     id: string;
     currentPage: number;
-    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
     onPageChange: (page: number) => void;
+    onItemsPerPageChange?: (itemsPerPage: number) => void;
+    itemsPerPageOptions?: Array<{ value: string; label: string }>;
 }
 
-const DocumentsPagination = ({ id, currentPage, totalPages, onPageChange }: DocumentsPaginationProps) => {
-    const itemsPerPage = 15;
-    const totalItems = totalPages * itemsPerPage;
-
+const DocumentsPagination = ({
+    id,
+    currentPage,
+    totalItems,
+    itemsPerPage,
+    onPageChange,
+    onItemsPerPageChange,
+    itemsPerPageOptions
+}: DocumentsPaginationProps) => {
     return (
         <Pagination
             id={id}
@@ -20,7 +28,9 @@ const DocumentsPagination = ({ id, currentPage, totalPages, onPageChange }: Docu
             totalItems={totalItems}
             itemsPerPage={itemsPerPage}
             onPageChange={onPageChange}
-            variant="compact"
+            onItemsPerPageChange={onItemsPerPageChange}
+            itemsPerPageOptions={itemsPerPageOptions}
+            variant={onItemsPerPageChange ? "clients" : "compact"}
         />
     );
 };

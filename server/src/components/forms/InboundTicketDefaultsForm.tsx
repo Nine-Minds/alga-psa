@@ -353,7 +353,7 @@ export function InboundTicketDefaultsForm({
               id="client_id"
               clients={clients}
               selectedClientId={formData.client_id || null}
-              onSelect={(value) => handleDefaultChange('client_id', value || '')}
+              onSelect={(clientId) => handleDefaultChange('client_id', clientId || '')}
               filterState={clientFilterState}
               onFilterStateChange={setClientFilterState}
               clientTypeFilter={clientTypeFilter}

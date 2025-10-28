@@ -9,14 +9,14 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
-import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
 import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
 } from 'server/src/lib/actions/contractLineServiceActions';
 import { getSession } from 'server/src/lib/auth/getSession';
-import { ensureTemplateLineSnapshot } from 'server/src/lib/actions/contractLineMappingActions';
+import { ensureTemplateLineSnapshot } from 'server/src/lib/repositories/contractLineRepository';
+import { fetchDetailedContractLines } from 'server/src/lib/repositories/contractLineRepository';
 import {
   IContractLineServiceBucketConfig,
   IContractLineServiceHourlyConfig,
@@ -329,21 +329,24 @@ export async function createContractTemplateFromWizard(
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
 
     const recordTemplateMapping = async (lineId: string, customRate?: number | null) => {
-      await ensureTemplateLineSnapshot(trx, tenant, templateId, lineId, customRate ?? undefined);
+      const effectiveLineId = await ensureTemplateLineSnapshot(
+        trx,
+        tenant,
+        templateId,
+        lineId,
+        customRate ?? undefined
+      );
 
-      await trx('contract_template_line_mappings')
-        .insert({
+      await trx('contract_template_lines')
+        .where({
           tenant,
           template_id: templateId,
-          template_line_id: lineId,
-          display_order: nextDisplayOrder,
-          custom_rate: customRate ?? null,
-          created_at: nowIso,
+          template_line_id: effectiveLineId,
         })
-        .onConflict(['tenant', 'template_id', 'template_line_id'])
-        .merge({
+        .update({
           display_order: nextDisplayOrder,
           custom_rate: customRate ?? null,
+          updated_at: trx.fn.now(),
         });
 
       nextDisplayOrder += 1;
@@ -640,6 +643,11 @@ export async function createClientContractFromWizard(
         overtime_threshold: null,
         enable_after_hours_rate: null,
         after_hours_multiplier: null,
+        contract_id: contractId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        billing_timing: 'arrears',
+        is_template: false,
       } as any);
       const planId = createdFixedLine.contract_line_id!;
       createdContractLineIds.push(planId);
@@ -705,14 +713,6 @@ export async function createClientContractFromWizard(
         tenant,
       });
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
-        contract_line_id: planId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
-      });
       nextDisplayOrder += 1;
     }
 
@@ -723,6 +723,11 @@ export async function createClientContractFromWizard(
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
+        contract_id: contractId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        billing_timing: 'arrears',
+        is_template: false,
       } as any);
       const hourlyPlanId = createdHourlyLine.contract_line_id!;
       createdContractLineIds.push(hourlyPlanId);
@@ -757,14 +762,6 @@ export async function createClientContractFromWizard(
         }
       }
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
-        contract_line_id: hourlyPlanId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
-      });
       nextDisplayOrder += 1;
     }
 
@@ -775,6 +772,11 @@ export async function createClientContractFromWizard(
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Usage',
+        contract_id: contractId,
+        display_order: nextDisplayOrder,
+        custom_rate: null,
+        billing_timing: 'arrears',
+        is_template: false,
       } as any);
       const usagePlanId = createdUsageLine.contract_line_id!;
       createdContractLineIds.push(usagePlanId);
@@ -809,14 +811,6 @@ export async function createClientContractFromWizard(
         }
       }
 
-      await trx('contract_line_mappings').insert({
-        tenant,
-        contract_id: contractId,
-        contract_line_id: usagePlanId,
-        display_order: nextDisplayOrder,
-        custom_rate: null,
-        created_at: now.toISOString(),
-      });
       nextDisplayOrder += 1;
     }
 
@@ -898,7 +892,7 @@ export async function getContractTemplateSnapshotForClientWizard(
     throw new Error('Template not found');
   }
 
-  const detailedLines = await ContractLineMapping.getDetailedContractLines(templateId);
+  const detailedLines = await fetchDetailedContractLines(knex, tenant, templateId);
 
   const fixedServices: ClientTemplateSnapshot['fixed_services'] = [];
   const hourlyServices: ClientTemplateSnapshot['hourly_services'] = [];
@@ -912,15 +906,10 @@ export async function getContractTemplateSnapshotForClientWizard(
     const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
 
     if (line.contract_line_type === 'Fixed') {
-      const fixedConfig = await knex('contract_template_line_fixed_config')
-        .where({ tenant, template_line_id: line.contract_line_id })
-        .first();
-      if (fixedConfig) {
-        const baseRateValue =
-          fixedConfig.base_rate != null ? Number(fixedConfig.base_rate) : undefined;
-        fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
-        enableProration = Boolean(fixedConfig.enable_proration);
-      }
+      const baseRateValue =
+        line.rate != null ? Number(line.rate) : undefined;
+      fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
+      enableProration = line.enable_proration ?? false;
 
       servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
         const quantity =

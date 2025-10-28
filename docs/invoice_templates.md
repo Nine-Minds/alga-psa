@@ -18,7 +18,7 @@ The system follows a typical web application flow involving the UI, backend serv
 3.  **Database (PostgreSQL):**
     *   `invoice_templates`: Stores custom templates specific to each tenant.
     *   `standard_invoice_templates`: Stores the system's standard templates.
-    *   `companies`: Links companies to their chosen default invoice template.
+    *   `invoice_template_assignments`: Persists default selections per tenant and per client. `scope_type` is either `tenant` or `company` (legacy label for client-level overrides); each row points to a `standard_invoice_template_code` *or* an `invoice_template_id`.
 4.  **Compilation (AssemblyScript Compiler `asc`):** When a custom template is saved or a standard template needs updating, the `compileAndSaveTemplate` or `compileStandardTemplate` action uses the `asc` compiler to transform the AssemblyScript source code into Wasm bytecode.
 5.  **Execution (Wasm Executor):** The `getCompiledWasm` action retrieves the Wasm binary. The `renderTemplateOnServer` action (or similar logic during invoice generation) uses a Wasm executor (`wasm-executor.ts`, leveraging `@assemblyscript/loader`) to run the compiled Wasm template code with specific invoice data.
 6.  **Rendering (`layout-renderer.ts`):** The executed Wasm code interacts with a provided rendering context (likely defined in `layout-renderer.ts` or similar) to generate the final invoice layout (e.g., HTML or data structure for PDF generation).
@@ -51,7 +51,7 @@ Located under `server/src/components/billing-dashboard/`.
         *   **View Standard:** (Implied, no direct action, cannot edit/delete)
         *   **Edit Custom:** Navigates to the `InvoiceTemplateEditor` for the selected custom template (triggered by "Edit" menu item or row click). ID: `edit-invoice-template-menu-item`.
         *   **Clone:** Creates a copy of a standard or custom template, opening it in the `InvoiceTemplateEditor` as a new custom template. ID: `clone-invoice-template-menu-item`.
-        *   **Set as Default:** Marks a custom template as the default for the company. Disabled if already default. ID: `set-default-invoice-template-menu-item`.
+        *   **Set as Default:** Marks a custom template as the default for the selected client (scope type `company`). Disabled if already default. ID: `set-default-invoice-template-menu-item`.
         *   **Delete:** Removes an unused custom template after confirmation via a `Dialog`. Disabled for standard templates or templates in use. ID: `delete-invoice-template-menu-item`.
     *   Navigation handled via `useRouter` and URL parameters managed by `BillingDashboard.tsx`.
 *   **Relevant Props/State:** Fetches data using `getInvoiceTemplates` server action, manages loading/error states, handles user interactions for actions.
@@ -85,7 +85,7 @@ These Next.js Server Actions handle the core logic for managing invoice template
 *   **`getInvoiceTemplate(templateId, tenantId)`:** Fetches a single custom invoice template by its ID and tenant ID. Used by the editor view. Includes `created_at` and `updated_at` fields.
 *   **`saveInvoiceTemplate(templateData, tenantId)`:** Creates or updates a custom invoice template in the `invoice_templates` table for the specified tenant. Does *not* handle compilation itself but saves the source code. Called internally by `compileAndSaveTemplate`.
 *   **`setDefaultTemplate({ templateSource, templateId?, standardTemplateCode? })`:** Persists the tenant-scoped default selection in `invoice_template_assignments`. When `templateSource = 'custom'`, the action also synchronizes the legacy `invoice_templates.is_default` column for backward compatibility.
-*   **`deleteInvoiceTemplate(templateId, tenantId)`:** Deletes a custom invoice template from the `invoice_templates` table after checking it's not a standard template, not currently set as the default for the company, and not referenced in any conditional display rules (logic for this check needs confirmation).
+*   **`deleteInvoiceTemplate(templateId, tenantId)`:** Deletes a custom invoice template from the `invoice_templates` table after checking it's not a standard template, not currently set as the default in `invoice_template_assignments`, and not referenced in any conditional display rules (logic for this check needs confirmation).
 *   **`compileAndSaveTemplate(templateData, tenantId)`:**
     1.  Validates input data (e.g., template name).
     2.  Calls the AssemblyScript compiler (`asc`) to compile `templateData.assemblyScriptSource` into Wasm bytecode.
@@ -127,13 +127,19 @@ These Next.js Server Actions handle the core logic for managing invoice template
 *   `created_at` (TIMESTAMP): Timestamp of creation.
 *   `updated_at` (TIMESTAMP): Timestamp of last update (reflects last compilation).
 
-### 5.3. `companies` (Tenant Company Information)
+### 5.3. `invoice_template_assignments` (Default Template Scopes)
 
-*   `company_id` (UUID, PK): Unique identifier for the company.
-*   `tenant` (VARCHAR, FK to `tenants.id`): Tenant identifier.
-*   `invoice_template_id` (UUID, FK to `invoice_templates.template_id`, nullable): Foreign key referencing the *custom* template set as default for this company. If NULL, a standard template (likely determined by system settings) is used.
+*   `assignment_id` (UUID, PK): Surrogate identifier for the record.
+*   `tenant` (UUID, FK): Tenant identifier.
+*   `scope_type` (TEXT): Either `'tenant'` or `'company'`. The latter label is legacy but represents a client-level override.
+*   `scope_id` (UUID, nullable): `NULL` when `scope_type = 'tenant'`; otherwise the client identifier for the override.
+*   `template_source` (TEXT): `'standard'` or `'custom'`.
+*   `standard_invoice_template_code` (TEXT, nullable): Populated when `template_source = 'standard'`.
+*   `invoice_template_id` (UUID, nullable): Populated when `template_source = 'custom'`.
+*   `created_by` (UUID, nullable): User who set the assignment.
+*   `created_at`, `updated_at` (TIMESTAMP): Audit timestamps.
 
-**Relationship:** A company (linked to a tenant) can optionally select one of its custom `invoice_templates` as its default via the `invoice_template_id` field. Standard templates are implicitly available to all tenants.
+**Relationship:** Each `(tenant, scope_type, scope_id)` tuple can appear only once, guaranteeing a single default per tenant or per client. Legacy columns `invoice_templates.is_default` and `clients.invoice_template_id` are maintained for backward compatibility but the assignments table is the source of truth.
 
 **Migration:** Fields `standard_invoice_template_code`, `sha`, and `assemblyScriptSource` were added to `standard_invoice_templates` via migration `server/migrations/20250430143709_add_standard_template_fields.cjs`.
 
@@ -198,8 +204,8 @@ A process runs at server startup to ensure the `standard_invoice_templates` tabl
     4.  `deleteInvoiceTemplate` action runs: verifies template is deletable, removes record from `invoice_templates`.
     5.  List refreshes.
 *   **Render Invoice:**
-    1.  System needs to generate an invoice for a company.
-    2.  Determines the correct template ID (checks `companies.invoice_template_id`, falls back to a system default standard template code if null).
+    1.  System needs to generate an invoice for a client.
+    2.  Determines the correct template assignment by querying `invoice_template_assignments` for `(tenant, 'company', client_id)` and falling back to `(tenant, 'tenant', NULL)` if no client-specific row exists. Legacy columns are ignored.
     3.  Calls backend logic (e.g., `renderTemplateOnServer` or similar).
     4.  Logic fetches invoice data.
     5.  Calls `executeWasmTemplate` (from `wasm-executor.ts`) with the Wasm binary and invoice data.

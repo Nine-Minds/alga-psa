@@ -17,6 +17,7 @@ import {
   updateContractLine,
   updateContractLineFixedConfig,
   getContractLineFixedConfig,
+  upsertContractLineTerms,
 } from 'server/src/lib/actions/contractLineAction';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces';
 import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
@@ -29,6 +30,17 @@ interface FixedPlanConfigurationProps {
 }
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
+
+const BILLING_TIMING_OPTIONS = [
+  {
+    value: 'arrears',
+    label: 'Arrears – invoice after the period closes',
+  },
+  {
+    value: 'advance',
+    label: 'Advance – invoice at the start of the period',
+  },
+] as const;
 
 export function FixedPlanConfiguration({
   contractLineId,
@@ -45,6 +57,7 @@ export function FixedPlanConfiguration({
   const [planType, setPlanType] = useState<PlanType>('Fixed');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [isCustom, setIsCustom] = useState(false);
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
   const [enableProration, setEnableProration] = useState<boolean>(false);
@@ -70,6 +83,7 @@ export function FixedPlanConfiguration({
         setBillingFrequency(fetchedPlan.billing_frequency);
         setPlanType(fetchedPlan.contract_line_type as PlanType);
         setIsCustom(fetchedPlan.is_custom);
+        setBillingTiming((fetchedPlan.billing_timing ?? 'arrears') as 'arrears' | 'advance');
 
         // Fetch fixed config
         if (fetchedPlan.contract_line_id) {
@@ -140,6 +154,11 @@ export function FixedPlanConfiguration({
             billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',
           });
         }
+
+        await upsertContractLineTerms(
+          plan.contract_line_id,
+          planType === 'Fixed' ? billingTiming : 'arrears'
+        );
       }
 
       await fetchPlanData();
@@ -229,6 +248,25 @@ export function FixedPlanConfiguration({
                   options={BILLING_FREQUENCY_OPTIONS}
                   placeholder="Select billing frequency"
                 />
+              </div>
+              <div>
+                <Label htmlFor="billing-timing">Billing Timing *</Label>
+                <CustomSelect
+                  id="billing-timing"
+                  value={billingTiming}
+                  onValueChange={(value) => {
+                    setBillingTiming(value as 'arrears' | 'advance');
+                    markDirty();
+                  }}
+                  options={BILLING_TIMING_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  placeholder="Select billing timing"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Advance billing invoices the upcoming period at the start of each cycle.
+                </p>
               </div>
             </div>
           </section>

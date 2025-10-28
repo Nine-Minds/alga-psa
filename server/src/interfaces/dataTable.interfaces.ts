@@ -51,4 +51,8 @@ export interface DataTableProps<T> {
   sortDirection?: 'asc' | 'desc';
   /** Callback invoked when sort configuration changes */
   onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+  /** Callback invoked when items per page changes */
+  onItemsPerPageChange?: (itemsPerPage: number) => void;
+  /** Options for items per page dropdown */
+  itemsPerPageOptions?: Array<{ value: string; label: string }>;
 }

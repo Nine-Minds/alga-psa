@@ -84,12 +84,9 @@ const ClientContract = {
 
       const normalized = normalizeClientContract(clientContract);
 
-      const contractLines = await db('contract_line_mappings as clm')
-        .join('contract_lines as cl', function joinContractLines() {
-          this.on('clm.contract_line_id', '=', 'cl.contract_line_id').andOn('clm.tenant', '=', 'cl.tenant');
-        })
-        .where({ 'clm.contract_id': normalized.contract_id, 'clm.tenant': tenant })
-        .select('cl.contract_line_name');
+      const contractLines = await db('contract_lines')
+        .where({ contract_id: normalized.contract_id, tenant })
+        .select('contract_line_name');
 
       normalized.contract_line_names = contractLines.map((line) => line.contract_line_name);
       normalized.contract_line_count = contractLines.length;
@@ -287,16 +284,20 @@ const ClientContract = {
         throw new Error(`Client contract ${clientContractId} not found`);
       }
 
-      return await db('contract_line_mappings as clm')
-        .join('contract_lines as cl', function joinContractLines() {
-          this.on('clm.contract_line_id', '=', 'cl.contract_line_id').andOn('clm.tenant', '=', 'cl.tenant');
-        })
+      return await db('contract_lines as cl')
         .join('contracts as c', function joinContracts() {
-          this.on('clm.contract_id', '=', 'c.contract_id').andOn('clm.tenant', '=', 'c.tenant');
+          this.on('cl.contract_id', '=', 'c.contract_id').andOn('cl.tenant', '=', 'c.tenant');
         })
-        .where({ 'clm.contract_id': clientContract.contract_id, 'clm.tenant': tenant })
+        .where({ 'cl.contract_id': clientContract.contract_id, 'cl.tenant': tenant })
         .select(
-          'clm.*',
+          'cl.tenant',
+          'cl.contract_id',
+          'cl.contract_line_id',
+          'cl.display_order',
+          'cl.custom_rate',
+          'cl.billing_timing',
+          'cl.created_at',
+          'cl.updated_at',
           'cl.contract_line_name',
           'c.billing_frequency as contract_billing_frequency',
           'cl.is_custom',

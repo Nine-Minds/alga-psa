@@ -117,7 +117,7 @@ export class E2ETestContext {
     // Create browser context
     this.context = await this.browser.newContext({
       baseURL: this.baseUrl,
-      viewport: { width: 1280, height: 720 },
+      viewport: { width: 1920, height: 1080 },
       // Add any additional context options
     });
 

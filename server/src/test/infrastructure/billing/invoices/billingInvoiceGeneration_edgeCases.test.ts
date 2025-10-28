@@ -177,7 +177,8 @@ describe('Billing Invoice Edge Cases', () => {
       baseRateCents: -12500,
       detailBaseRateCents: 5000,
       startDate: '2025-02-01',
-      clientId: context.clientId
+      clientId: context.clientId,
+      billingTiming: 'advance'
     });
 
     await addServiceToFixedPlan(context, creditContractLineId, creditServiceB, {

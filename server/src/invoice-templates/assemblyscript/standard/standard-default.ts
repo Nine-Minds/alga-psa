@@ -10,7 +10,7 @@ import { formatCurrency } from "../assembly/common/format-helpers"; // Adjusted 
 
 // --- Constants ---
 const DEFAULT_CATEGORY = "Items"; // Simpler default category
-const TAX_RATE: f64 = 0.10; // Example tax rate (10%) - Should ideally come from host if variable
+const FALLBACK_TAX_RATE: f64 = 0.10; // Example tax rate (10%) - used only when invoice data does not provide totals
 
 // --- Main Export ---
 // @ts-ignore: decorator
@@ -36,10 +36,19 @@ export function generateLayout(dataString: string): string {
   const headerSection = createHeaderSection_StdDefault(viewModel);
   const itemsResult = createItemsSection_StdDefault(viewModel.items);
   const itemsSection = itemsResult.section;
-  const calculatedSubtotal = itemsResult.subtotal;
-  const calculatedTax = calculatedSubtotal * TAX_RATE; // Simple tax calculation
-  const calculatedTotal = calculatedSubtotal + calculatedTax;
-  const totalsSection = createTotalsSection_StdDefault(calculatedSubtotal, calculatedTax, calculatedTotal);
+  const derivedSubtotal = itemsResult.subtotal;
+
+  const hasProvidedTotals = (viewModel.subtotal > 0) || (viewModel.tax > 0) || (viewModel.total > 0);
+
+  let displaySubtotal = hasProvidedTotals ? viewModel.subtotal : derivedSubtotal;
+  let displayTax = hasProvidedTotals ? viewModel.tax : derivedSubtotal * FALLBACK_TAX_RATE;
+  let displayTotal = hasProvidedTotals ? viewModel.total : displaySubtotal + displayTax;
+
+  if (displayTotal <= 0 && displaySubtotal > 0) {
+    displayTotal = displaySubtotal + displayTax;
+  }
+
+  const totalsSection = createTotalsSection_StdDefault(displaySubtotal, displayTax, displayTotal);
 
   // Create Notes Section with Thank You message
   const notesContent = new Array<LayoutElement>();

@@ -52,13 +52,9 @@ class ClientContractLine {
 
         // Check for plans from contracts that overlap
         const contractAssociationQuery = db('client_contracts as cc')
-            .join('contract_line_mappings as clm', function() {
-                this.on('cc.contract_id', '=', 'clm.contract_id')
-                    .andOn('clm.tenant', '=', 'cc.tenant');
-            })
             .join('contract_lines as cl', function() {
-                this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
-                    .andOn('cl.tenant', '=', 'clm.tenant');
+                this.on('cc.contract_id', '=', 'cl.contract_id')
+                    .andOn('cl.tenant', '=', 'cc.tenant');
             })
             .where({
                 'cc.client_id': clientId,
@@ -84,13 +80,13 @@ class ClientContractLine {
 
         const contractAssociationResults = await contractAssociationQuery
             .select(
-                'clm.contract_line_id',
+                'cl.contract_line_id',
                 'cl.contract_line_name',
                 'cl.service_category',
                 'cc.start_date',
                 'cc.end_date',
                 'cc.client_contract_id',
-                'clm.custom_rate'
+                'cl.custom_rate'
             );
 
         // Convert contract plans to client contract line format for consistent return
@@ -202,13 +198,9 @@ class ClientContractLine {
 
             // Get plans from contracts
             const contractPlans = await db('client_contracts as cc')
-                .join('contract_line_mappings as clm', function() {
-                    this.on('cc.contract_id', '=', 'clm.contract_id')
-                        .andOn('clm.tenant', '=', 'cc.tenant');
-                })
                 .join('contract_lines as cl', function() {
-                    this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
-                        .andOn('cl.tenant', '=', 'clm.tenant');
+                    this.on('cc.contract_id', '=', 'cl.contract_id')
+                        .andOn('cl.tenant', '=', 'cc.tenant');
                 })
                 .join('contracts as c', function() {
                     this.on('cc.contract_id', '=', 'c.contract_id')
@@ -220,11 +212,11 @@ class ClientContractLine {
                     'cc.tenant': tenant
                 })
                 .select(
-                    'clm.contract_line_id',
+                    'cl.contract_line_id',
                     'cl.contract_line_name',
                     'cl.billing_frequency',
                     'cl.service_category',
-                    'clm.custom_rate',
+                    'cl.custom_rate',
                     'cc.start_date',
                     'cc.end_date',
                     'cc.client_contract_id',
@@ -381,17 +373,20 @@ class ClientContractLine {
 
             // For each contract, get its associated contract lines
             const contractsWithContractLines = await Promise.all(contracts.map(async (contract) => {
-                const contract_lines = await db('contract_line_mappings as clm')
-                    .join('contract_lines as cl', function() {
-                        this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
-                            .andOn('cl.tenant', '=', 'clm.tenant');
-                    })
+                const contract_lines = await db('contract_lines as cl')
                     .where({
-                        'clm.contract_id': contract.contract_id,
-                        'clm.tenant': tenant
+                        'cl.contract_id': contract.contract_id,
+                        'cl.tenant': tenant
                     })
                     .select(
-                        'clm.*',
+                        'cl.tenant',
+                        'cl.contract_id',
+                        'cl.contract_line_id',
+                        'cl.display_order',
+                        'cl.custom_rate',
+                        'cl.billing_timing',
+                        'cl.created_at',
+                        'cl.updated_at',
                         'cl.contract_line_name',
                         'cl.billing_frequency',
                         'cl.service_category',

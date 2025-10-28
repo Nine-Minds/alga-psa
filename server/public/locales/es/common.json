@@ -242,6 +242,209 @@
     "showing": "Mostrando {{from}} a {{to}} de {{total}} resultados",
     "rowsPerPage": "Filas por página",
     "first": "Primera",
-    "last": "Última"
+    "last": "Última",
+    "itemsLabel": "elementos",
+    "itemsPerPageOption": "{{count}} elementos/página",
+    "itemsPerPagePlaceholder": "Elementos por página",
+    "reflectionLabel": "Paginación",
+    "range": "{{from}} - {{to}} de {{total}} {{itemLabel}}",
+    "ariaLabel": "Paginación",
+    "totalItems": "{{count}} {{itemLabel}} en total",
+    "totalRecordsInline": "({{count}} registros en total)",
+    "pageOf": "Página {{current}} de {{total}}"
+  },
+  "documents": {
+    "title": "Documentos",
+    "noDocuments": "No hay documentos adjuntos",
+    "upload": "Subir documento",
+    "download": "Descargar",
+    "remove": "Quitar",
+    "preview": "Vista previa",
+    "linkDocuments": "Vincular documentos",
+    "editDocument": "Editar documento",
+    "viewDocument": "Ver documento",
+    "downloadToPlay": "Descargar para reproducir",
+    "delete": "Eliminar",
+    "previewUnavailable": "Vista previa no disponible",
+    "newDocument": "Nuevo documento",
+    "uploadFile": "Subir archivo",
+    "deleteTitle": "Eliminar documento",
+    "deleteMessage": "¿Seguro que deseas eliminar \"{{name}}\"? Esta acción no se puede deshacer.",
+    "deleteVideoTitle": "Eliminar video",
+    "deleteVideoMessage": "¿Seguro que deseas eliminar el video \"{{name}}\"? Esta acción no se puede deshacer.",
+    "removeTitle": "Quitar documento",
+    "removeMessage": "¿Seguro que deseas quitar \"{{name}}\" de este elemento? El documento seguirá disponible en la biblioteca de documentos.",
+    "removeVideoTitle": "Quitar video",
+    "removeVideoMessage": "¿Seguro que deseas quitar el video \"{{name}}\" de este elemento? El archivo seguirá disponible en la biblioteca de documentos.",
+    "downloadFile": "Descargar archivo",
+    "videoUnsupported": "Formato de video ({{mimeType}}) no compatible para la reproducción en el navegador",
+    "videoTagUnsupported": "Tu navegador no admite la etiqueta de video.",
+    "unnamed": "Sin título",
+    "videoDownloadInfo": "El video se descargará y podrá reproducirse con el reproductor predeterminado de tu sistema.",
+    "previewUnavailableNoId": "Vista previa no disponible (sin identificador)",
+    "previewLoadFailed": "No se pudo cargar la vista previa",
+    "videoCodecWarning": "Es posible que Chrome no admita este códec de video. Intenta descargarlo o usa Safari/Edge.",
+    "messages": {
+      "fetchFailed": "No se pudieron obtener los documentos.",
+      "folderCreated": "La carpeta \"{{name}}\" se creó correctamente",
+      "folderCreateFailed": "No se pudo crear la carpeta",
+      "moveDocumentsSuccess_one": "Se movió {{count}} documento a {{destination}}",
+      "moveDocumentsSuccess_other": "Se movieron {{count}} documentos a {{destination}}",
+      "moveDocumentsFailed": "No se pudieron mover los documentos",
+      "deleteSuccess": "El documento \"{{name}}\" se eliminó correctamente",
+      "deleteFailed": "No se pudo eliminar el documento",
+      "removeAssociationFailed": "No se pudo quitar la asociación del documento",
+      "moveDocumentSuccess": "El documento \"{{name}}\" se movió correctamente",
+      "moveDocumentFailed": "No se pudo mover el documento",
+      "createFailed": "No se pudo crear el documento",
+      "saveFailed": "No se pudo guardar el documento",
+      "loadContentFailed": "No se pudo cargar el contenido del documento",
+      "downloadFailed": "No se pudo descargar el documento",
+      "bulkDeleteFailed": "No se pudieron eliminar algunos documentos",
+      "bulkDeleteSuccess_one": "Se eliminó correctamente {{count}} documento",
+      "bulkDeleteSuccess_other": "Se eliminaron correctamente {{count}} documentos"
+    },
+    "validation": {
+      "nameRequired": "El nombre del documento es obligatorio"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} documento seleccionado",
+      "selected_other": "{{count}} documentos seleccionados",
+      "moveToFolder": "Mover a carpeta",
+      "deleteSelected": "Eliminar seleccionados",
+      "clearSelection": "Borrar selección"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "¿Seguro que deseas eliminar {{count}} documento?",
+      "confirmBulkDelete_other": "¿Seguro que deseas eliminar {{count}} documentos?"
+    },
+    "pagination": {
+      "perPage": "{{count}} por página"
+    },
+    "folderSelector": {
+      "defaultTitle": "Selecciona la carpeta de destino",
+      "defaultDescription": "Elige dónde guardar este documento",
+      "singleDescription": "¿Dónde te gustaría guardar \"{{fileName}}\"?",
+      "multipleDescription": "¿Dónde te gustaría guardar estos {{count}} archivos?",
+      "newDocumentTitle": "Selecciona la carpeta para el nuevo documento",
+      "newDocumentDescription": "Elige dónde guardar este nuevo documento",
+      "moveTitle": "Mover documento",
+      "moveDescriptionWithName": "Selecciona la carpeta de destino para \"{{name}}\"",
+      "moveDescription": "Selecciona la carpeta de destino",
+      "bulkMoveTitle": "Mover documentos seleccionados",
+      "bulkMoveDescription_one": "Selecciona la carpeta de destino para {{count}} documento",
+      "bulkMoveDescription_other": "Selecciona la carpeta de destino para {{count}} documentos",
+      "errors": {
+        "nameRequired": "Ingresa un nombre de carpeta",
+        "invalidCharacters": "El nombre de la carpeta no puede contener \"/\"",
+        "createFailed": "No se pudo crear la carpeta"
+      },
+      "creating": "Creando...",
+      "createButton": "Crear carpeta",
+      "newFolderButton": "Nueva carpeta",
+      "parentLabel": "Carpeta principal: {{folder}}",
+      "rootLabel": "/ (Raíz)",
+      "namePlaceholder": "Ingresa el nombre de la carpeta",
+      "loading": "Cargando carpetas...",
+      "rootOption": "Raíz (sin carpeta)",
+      "empty": "No hay carpetas disponibles. Los documentos se guardarán en la raíz."
+    },
+    "filters": {
+      "searchLabel": "Buscar documentos",
+      "searchPlaceholder": "Buscar por nombre de documento...",
+      "typeLabel": "Tipo de documento",
+      "entityTypeLabel": "Tipo de entidad asociada",
+      "uploadedByLabel": "Subido por",
+      "uploadedByPlaceholder": "Todos los usuarios",
+      "updatedStartLabel": "Fecha de actualización (inicio)",
+      "updatedEndLabel": "Fecha de actualización (fin)",
+      "startDatePlaceholder": "Selecciona la fecha inicial",
+      "endDatePlaceholder": "Selecciona la fecha final",
+      "sortByLabel": "Ordenar por",
+      "clear": "Borrar filtros",
+      "showAllDocuments": "Mostrar todos los documentos",
+      "typeOptions": {
+        "all": "Todos los tipos de documento",
+        "pdf": "PDF",
+        "image": "Imágenes",
+        "text": "Documentos",
+        "video": "Video",
+        "other": "Otros"
+      },
+      "sortOptions": {
+        "updated_at": "Fecha",
+        "document_name": "Nombre del documento",
+        "file_size": "Tamaño de archivo",
+        "created_by_full_name": "Creado por"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Mostrar en orden ascendente",
+          "desc": "Mostrar en orden descendente"
+        },
+        "document_name": {
+          "asc": "Mostrar de A a Z",
+          "desc": "Mostrar de Z a A"
+        },
+        "updated_at": {
+          "asc": "Mostrar los más antiguos primero",
+          "desc": "Mostrar los más recientes primero"
+        },
+        "file_size": {
+          "asc": "Mostrar los más pequeños primero",
+          "desc": "Mostrar los más grandes primero"
+        },
+        "created_by_full_name": {
+          "asc": "Mostrar de A a Z",
+          "desc": "Mostrar de Z a A"
+        }
+      }
+    },
+    "selector": {
+      "title": "Seleccionar documentos",
+      "reflectionLabel": "Selector de documentos",
+      "searchPlaceholder": "Buscar documentos...",
+      "foldersLabel": "Carpetas",
+      "folderHint": "en la carpeta \"{{folder}}\"",
+      "saving": "Guardando...",
+      "selectDocument": "Seleccionar documento",
+      "associateSelected": "Asociar selección",
+      "errors": {
+        "configuration": "Error de configuración: faltan datos de la entidad",
+        "invalidData": "Datos de documento no válidos recibidos",
+        "load": "No se pudieron cargar los documentos",
+        "save": "No se pudo guardar la selección de documentos"
+      },
+      "configErrorTitle": "Error de configuración",
+      "configErrorMessage": "Falta la configuración necesaria. Ponte en contacto con soporte."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Carga de documentos",
+      "dragDrop": "Arrastra y suelta tus archivos aquí o",
+      "browse": "Buscar archivos",
+      "uploading": "Subiendo...",
+      "uploadingProgress": "Subiendo {{current}} de {{total}}",
+      "pending": "Pendiente",
+      "error": "No se pudo subir el documento",
+      "fileError": "No se pudo subir el archivo"
+    },
+    "folders": {
+      "root": "Raíz",
+      "loadFailed": "No se pudo cargar el árbol de carpetas",
+      "deleteConfirm": "¿Seguro que deseas eliminar la carpeta \"{{name}}\"? Solo funcionará si la carpeta está vacía.",
+      "deleteSuccess": "La carpeta \"{{name}}\" se eliminó correctamente",
+      "deleteFailed": "No se pudo eliminar la carpeta",
+      "deleteAction": "Eliminar carpeta",
+      "loading": "Cargando carpetas...",
+      "title": "Carpetas",
+      "collapse": "Contraer carpetas",
+      "allDocuments": "Todos los documentos"
+    },
+    "folderManager": {
+      "title": "Crear nueva carpeta",
+      "nameLabel": "Nombre de la carpeta",
+      "namePlaceholder": "Ingresa el nombre de la carpeta",
+      "willCreateIn": "Se creará en: {{folder}}"
+    }
   }
 }

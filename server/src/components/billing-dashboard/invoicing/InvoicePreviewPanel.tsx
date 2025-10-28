@@ -21,6 +21,7 @@ interface InvoicePreviewPanelProps {
   onTemplateChange: (templateId: string) => void;
   onFinalize?: () => Promise<void>;
   onDownload?: () => Promise<void>;
+  onReverse?: () => Promise<void>;
   onEmail?: () => Promise<void>;
   onEdit?: () => void;
   onUnfinalize?: () => Promise<void>;
@@ -35,6 +36,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   onTemplateChange,
   onFinalize,
   onDownload,
+  onReverse,
   onEmail,
   onEdit,
   onUnfinalize,
@@ -205,6 +207,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   className="flex-1"
                 >
                   Download PDF
+                </Button>
+              )}
+
+              {!isFinalized && onReverse && (
+                <Button
+                  id="invoice-reverse-draft-button"
+                  variant="destructive"
+                  onClick={() => handleAction(onReverse, 'reverse draft')}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  Reverse Draft
                 </Button>
               )}
 

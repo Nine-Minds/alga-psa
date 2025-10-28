@@ -1,222 +1,323 @@
-/**
- * Integration test for email provider UI functionality
- * Tests the complete flow from UI form submission to database persistence
- */
-
-import React from 'react';
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
-import { Knex } from 'knex';
-import { v4 as uuidv4 } from 'uuid';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { GmailProviderForm } from '../../components/GmailProviderForm';
-import { getCurrentTenant } from '../../lib/actions/tenantActions';
-
 // @vitest-environment jsdom
 
-let testDb: Knex;
-let testTenant: string;
+import '@testing-library/jest-dom';
+import React from 'react';
+import { beforeAll, afterAll, beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
 
-// Mock the tenant functions
-vi.mock('../../lib/actions/tenantActions', () => ({
-  getCurrentTenant: vi.fn()
+import { GmailProviderForm } from '../../components/GmailProviderForm';
+import type { EmailProvider } from '../../components/EmailProviderConfiguration';
+import { TestContext } from '../../../test-utils/testContext';
+import * as tenantActions from '../../lib/actions/tenantActions';
+import * as userActions from '../../lib/actions/user-actions/userActions';
+
+const localStorageProviderMock = vi.hoisted(() => ({
+  LocalStorageProvider: class {
+    getCapabilities() {
+      return {
+        supportsBuckets: false,
+        supportsStreaming: false,
+        supportsMetadata: false,
+        supportsTags: false,
+        supportsVersioning: false,
+        maxFileSize: 0,
+        allowedMimeTypes: []
+      };
+    }
+  }
 }));
 
-// Mock createTenantKnex to use our test database
-vi.mock('../../lib/db', () => ({
-  createTenantKnex: vi.fn().mockImplementation(async () => ({
-    knex: testDb,
-    tenant: testTenant
-  }))
+vi.mock('server/src/lib/storage/providers/LocalStorageProvider', () => localStorageProviderMock);
+vi.mock('server/src/lib/document-handlers/VideoDocumentHandler', () => ({
+  VideoDocumentHandler: class {
+    canHandle() {
+      return false;
+    }
+  }
 }));
+
+vi.mock('../../lib/actions/email-actions/inboundTicketDefaultsActions', () => ({
+  getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] })
+}));
+
+vi.mock('../../lib/actions/email-actions/configureGmailProvider', () => ({
+  configureGmailProvider: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('@shared/core', () => {
+  const getAppSecret = vi.fn().mockResolvedValue(undefined);
+  const tenantSecrets = new Map<string, Map<string, string>>();
+
+  return {
+    getSecretProviderInstance: vi.fn().mockResolvedValue({
+      getAppSecret,
+      setAppSecret: vi.fn().mockResolvedValue(undefined),
+      deleteAppSecret: vi.fn().mockResolvedValue(undefined),
+      listAppSecrets: vi.fn().mockResolvedValue([]),
+      getTenantSecret: vi.fn(async (tenant: string, key: string) => tenantSecrets.get(tenant)?.get(key)),
+      setTenantSecret: vi.fn(async (tenant: string, key: string, value: string) => {
+        const bucket = tenantSecrets.get(tenant) ?? new Map<string, string>();
+        bucket.set(key, value);
+        tenantSecrets.set(tenant, bucket);
+      }),
+      deleteTenantSecret: vi.fn(async (tenant: string, key: string) => {
+        tenantSecrets.get(tenant)?.delete(key);
+      })
+    })
+  };
+});
+
+process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
+process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'test_password';
+process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || 'test_password';
+process.env.DB_HOST = process.env.DB_HOST || '127.0.0.1';
+process.env.DB_PORT = process.env.DB_PORT || '5432';
+process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
+
+const testHelpers = TestContext.createHelpers();
 
 describe('Email Provider UI Integration', () => {
-  
+  let ctx: TestContext;
+  let db: Knex;
+  let tenantId: string;
+  let getCurrentTenantSpy: ReturnType<typeof vi.spyOn> | undefined;
+  let getCurrentUserSpy: ReturnType<typeof vi.spyOn> | undefined;
+
   beforeAll(async () => {
-    testDb = await createTestDbConnection();
-    testTenant = uuidv4();
-    
-    // Create test tenant
-    await testDb('tenants').insert({
-      tenant: testTenant,
-      client_name: 'UI Test Client',
-      email: 'ui-test@client.com',
-      created_at: new Date(),
-      updated_at: new Date()
+    ctx = await testHelpers.beforeAll({
+      cleanupTables: [
+        'google_email_provider_config',
+        'email_providers',
+        'email_provider_configs',
+        'email_processed_messages'
+      ]
     });
-    
-    // Mock getCurrentTenant to return our test tenant
-    vi.mocked(getCurrentTenant).mockResolvedValue(testTenant);
+    db = ctx.db;
+    tenantId = ctx.tenantId;
   });
 
   afterAll(async () => {
-    // Cleanup
-    await testDb('email_provider_configs').where('tenant', testTenant).delete();
-    await testDb('tenants').where('tenant', testTenant).delete();
-    await testDb.destroy();
+    await testHelpers.afterAll();
   });
 
-  it('should save a Gmail provider to the database when form is submitted', async () => {
-    const user = userEvent.setup();
-    const mockOnSuccess = vi.fn();
-    const mockOnCancel = vi.fn();
+  beforeEach(async () => {
+    ctx = await testHelpers.beforeEach();
+    db = ctx.db;
+    tenantId = ctx.tenantId;
 
-    // Render the form
+    getCurrentTenantSpy?.mockRestore();
+    getCurrentUserSpy?.mockRestore();
+
+    getCurrentTenantSpy = vi.spyOn(tenantActions, 'getCurrentTenant').mockResolvedValue(tenantId);
+    getCurrentUserSpy = vi.spyOn(userActions, 'getCurrentUser').mockResolvedValue({
+      ...ctx.user,
+      tenant: tenantId
+    } as any);
+  });
+
+  afterEach(async () => {
+    await testHelpers.afterEach();
+    getCurrentTenantSpy?.mockRestore();
+    getCurrentUserSpy?.mockRestore();
+    getCurrentTenantSpy = undefined;
+    getCurrentUserSpy = undefined;
+  });
+
+  it('saves a Gmail provider when the form is submitted', async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    const onCancel = vi.fn();
+
     render(
       <GmailProviderForm
-        onSuccess={mockOnSuccess}
-        onCancel={mockOnCancel}
+        tenant={tenantId}
+        onSuccess={onSuccess}
+        onCancel={onCancel}
       />
     );
 
-    // Fill in the form fields
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Production Gmail');
     await user.type(screen.getByPlaceholderText('support@client.com'), 'production@client.com');
+    const projectIdField = screen.getByPlaceholderText('my-project-id');
+    await user.clear(projectIdField);
+    await user.type(projectIdField, 'production-project');
     await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'prod-client-id.apps.googleusercontent.com');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'prod-client-secret');
-    await user.type(screen.getByPlaceholderText('my-project-id'), 'production-project');
-    const topicInput = screen.getByPlaceholderText('gmail-notifications');
-    await user.clear(topicInput);
-    await user.type(topicInput, 'prod-notifications');
-    
-    const subscriptionInput = screen.getByPlaceholderText('gmail-webhook-subscription');
-    await user.clear(subscriptionInput);
-    await user.type(subscriptionInput, 'prod-webhook-sub');
+    const redirectField = screen.getByPlaceholderText('https://yourapp.com/api/auth/google/callback');
+    await user.clear(redirectField);
+    await user.type(redirectField, 'http://localhost:3000/api/auth/google/callback');
+    const labelsField = screen.getByPlaceholderText('INBOX, Support, Custom Label');
+    await user.clear(labelsField);
+    await user.type(labelsField, 'INBOX, Escalations');
 
-    // Submit the form
-    const submitButton = screen.getByRole('button', { name: /add provider/i });
-    await user.click(submitButton);
+    await user.click(screen.getByRole('button', { name: /add provider/i }));
 
-    // Wait for the form submission to complete
-    await waitFor(() => {
-      expect(mockOnSuccess).toHaveBeenCalled();
-    }, { timeout: 5000 });
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
 
-    // Verify the provider was saved to the database
-    const savedProvider = await testDb('email_provider_configs')
-      .where('tenant', testTenant)
-      .where('mailbox', 'production@client.com')
+    const baseProvider = await db('email_providers')
+      .where({ tenant: tenantId, mailbox: 'production@client.com' })
       .first();
 
-    expect(savedProvider).toBeDefined();
-    expect(savedProvider.name).toBe('Production Gmail');
-    expect(savedProvider.provider_type).toBe('google');
-    expect(savedProvider.active).toBe(true);
-    
-    // Verify the configuration was saved correctly
-    const config = savedProvider.provider_config;
-    expect(config.clientId).toBe('prod-client-id.apps.googleusercontent.com');
-    expect(config.projectId).toBe('production-project');
-    expect(config.pubSubTopic).toBe('prod-notifications');
+    expect(baseProvider).toBeDefined();
+    expect(baseProvider?.provider_name).toBe('Production Gmail');
+    expect(baseProvider?.provider_type).toBe('google');
+    expect(baseProvider?.is_active).toBe(true);
+
+    const googleConfig = await db('google_email_provider_config')
+      .where({ tenant: tenantId, email_provider_id: baseProvider?.id })
+      .first();
+
+    expect(googleConfig).toBeDefined();
+    expect(googleConfig?.client_id).toBe('prod-client-id.apps.googleusercontent.com');
+    expect(googleConfig?.project_id).toBe('production-project');
+
+    const labelFilters = Array.isArray(googleConfig?.label_filters)
+      ? googleConfig?.label_filters
+      : JSON.parse(googleConfig?.label_filters ?? '[]');
+
+    expect(labelFilters).toEqual(['INBOX', 'Escalations']);
+    expect(googleConfig?.pubsub_topic_name).toBe(`gmail-notifications-${tenantId}`);
+    expect(googleConfig?.pubsub_subscription_name).toBe(`gmail-webhook-${tenantId}`);
   });
 
-  it('should update an existing Gmail provider when form is submitted in edit mode', async () => {
-    const user = userEvent.setup();
-    const mockOnSuccess = vi.fn();
-    const mockOnCancel = vi.fn();
+  it('updates an existing Gmail provider when submitted in edit mode', async () => {
+    const providerId = uuidv4();
+    await db('email_providers').insert({
+      id: providerId,
+      tenant: tenantId,
+      provider_type: 'google',
+      provider_name: 'Existing Gmail',
+      mailbox: 'existing@client.com',
+      is_active: true,
+      status: 'disconnected',
+      inbound_ticket_defaults_id: null,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now()
+    });
 
-    // First create a provider directly in the database
-    const [existingProvider] = await testDb('email_provider_configs')
-      .insert({
-        id: testDb.raw('gen_random_uuid()'),
-        tenant: testTenant,
-        name: 'Existing Gmail',
-        provider_type: 'google',
-        mailbox: 'existing@client.com',
-        active: true,
-        connection_status: 'disconnected',
-        folder_to_monitor: 'Inbox',
-        webhook_notification_url: '',
-        provider_config: JSON.stringify({
-          clientId: 'existing-client.apps.googleusercontent.com',
-          clientSecret: 'existing-secret',
-          projectId: 'existing-project',
-          pubsubTopicName: 'existing-topic',
-          pubsubSubscriptionName: 'existing-sub',
-          redirectUri: 'http://localhost:3000/api/auth/google/callback'
-        }),
-        created_at: new Date(),
-        updated_at: new Date()
-      })
-      .returning('*');
+    await db('google_email_provider_config').insert({
+      email_provider_id: providerId,
+      tenant: tenantId,
+      client_id: 'existing-client.apps.googleusercontent.com',
+      client_secret: 'existing-secret',
+      project_id: 'existing-project',
+      redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+      pubsub_topic_name: `gmail-notifications-${tenantId}`,
+      pubsub_subscription_name: `gmail-webhook-${tenantId}`,
+      auto_process_emails: true,
+      max_emails_per_sync: 50,
+      label_filters: JSON.stringify(['INBOX']),
+      created_at: db.fn.now(),
+      updated_at: db.fn.now()
+    });
 
-    // Convert to the format expected by the form
-    const provider = {
-      id: existingProvider.id,
-      providerType: 'google' as const,
-      providerName: existingProvider.name,
-      mailbox: existingProvider.mailbox,
-      isActive: existingProvider.active,
-      vendorConfig: existingProvider.provider_config
+    const baseRow = await db('email_providers')
+      .where({ id: providerId, tenant: tenantId })
+      .first();
+    const configRow = await db('google_email_provider_config')
+      .where({ email_provider_id: providerId, tenant: tenantId })
+      .first();
+
+    const provider: EmailProvider = {
+      id: baseRow.id,
+      tenant: tenantId,
+      providerType: 'google',
+      providerName: baseRow.provider_name,
+      mailbox: baseRow.mailbox,
+      isActive: baseRow.is_active,
+      status: baseRow.status,
+      lastSyncAt: baseRow.last_sync_at ?? undefined,
+      errorMessage: baseRow.error_message ?? undefined,
+      createdAt: baseRow.created_at.toISOString(),
+      updatedAt: baseRow.updated_at.toISOString(),
+      inboundTicketDefaultsId: baseRow.inbound_ticket_defaults_id ?? undefined,
+      googleConfig: {
+        email_provider_id: configRow.email_provider_id,
+        tenant: configRow.tenant,
+        client_id: configRow.client_id,
+        client_secret: configRow.client_secret,
+        project_id: configRow.project_id,
+        redirect_uri: configRow.redirect_uri,
+        pubsub_topic_name: configRow.pubsub_topic_name,
+        pubsub_subscription_name: configRow.pubsub_subscription_name,
+        auto_process_emails: configRow.auto_process_emails,
+        max_emails_per_sync: configRow.max_emails_per_sync,
+        label_filters: Array.isArray(configRow.label_filters)
+          ? configRow.label_filters
+          : JSON.parse(configRow.label_filters ?? '[]'),
+        access_token: configRow.access_token ?? undefined,
+        refresh_token: configRow.refresh_token ?? undefined,
+        token_expires_at: configRow.token_expires_at ?? undefined,
+        history_id: configRow.history_id ?? undefined,
+        watch_expiration: configRow.watch_expiration ?? undefined,
+        created_at: configRow.created_at.toISOString(),
+        updated_at: configRow.updated_at.toISOString()
+      }
     };
 
-    // Render the form in edit mode
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    const onCancel = vi.fn();
+
     render(
       <GmailProviderForm
+        tenant={tenantId}
         provider={provider}
-        onSuccess={mockOnSuccess}
-        onCancel={mockOnCancel}
+        onSuccess={onSuccess}
+        onCancel={onCancel}
       />
     );
 
-    // Update the provider name
     const nameInput = screen.getByDisplayValue('Existing Gmail');
     await user.clear(nameInput);
     await user.type(nameInput, 'Updated Gmail');
 
-    // Submit the form
-    const submitButton = screen.getByRole('button', { name: /update provider/i });
-    await user.click(submitButton);
+    const labelsField = screen.getByDisplayValue('INBOX');
+    await user.clear(labelsField);
+    await user.type(labelsField, 'INBOX, Escalations');
 
-    // Wait for the update to complete
-    await waitFor(() => {
-      expect(mockOnSuccess).toHaveBeenCalled();
-    }, { timeout: 5000 });
+    await user.click(screen.getByRole('button', { name: /update provider/i }));
 
-    // Verify the provider was updated in the database
-    const updatedProvider = await testDb('email_provider_configs')
-      .where('id', existingProvider.id)
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+
+    const updatedBase = await db('email_providers')
+      .where({ id: providerId, tenant: tenantId })
       .first();
+    expect(updatedBase?.provider_name).toBe('Updated Gmail');
+    expect(updatedBase?.mailbox).toBe('existing@client.com');
 
-    expect(updatedProvider.name).toBe('Updated Gmail');
-    expect(updatedProvider.mailbox).toBe('existing@client.com'); // Should not change
+    const updatedConfig = await db('google_email_provider_config')
+      .where({ email_provider_id: providerId, tenant: tenantId })
+      .first();
+    const updatedFilters = Array.isArray(updatedConfig?.label_filters)
+      ? updatedConfig?.label_filters
+      : JSON.parse(updatedConfig?.label_filters ?? '[]');
+
+    expect(updatedFilters).toEqual(['INBOX', 'Escalations']);
   });
 
-  it('should show validation errors when required fields are missing', async () => {
+  it('surfaces validation errors when required fields are missing', async () => {
     const user = userEvent.setup();
-    const mockOnSuccess = vi.fn();
-    const mockOnCancel = vi.fn();
+    const onSuccess = vi.fn();
+    const onCancel = vi.fn();
 
     render(
       <GmailProviderForm
-        onSuccess={mockOnSuccess}
-        onCancel={mockOnCancel}
+        tenant={tenantId}
+        onSuccess={onSuccess}
+        onCancel={onCancel}
       />
     );
 
-    // Try to submit without filling required fields
-    const submitButton = screen.getByRole('button', { name: /add provider/i });
-    
-    // The button should be disabled initially
-    expect(submitButton).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /add provider/i }));
 
-    // Fill only some fields
-    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Incomplete Provider');
-    await user.type(screen.getByPlaceholderText('support@client.com'), 'incomplete@client.com');
-
-    // Button should still be disabled without all required fields
-    expect(submitButton).toBeDisabled();
-
-    // Fill remaining required fields
-    await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'test.apps.googleusercontent.com');
-    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-secret');
-    await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project');
-    await user.type(screen.getByPlaceholderText('gmail-notifications'), 'test-topic');
-    await user.type(screen.getByPlaceholderText('gmail-webhook-subscription'), 'test-sub');
-
-    // Now button should be enabled
-    expect(submitButton).not.toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByText(/Provider name is required/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Valid Gmail address is required/i)).toBeInTheDocument();
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 });

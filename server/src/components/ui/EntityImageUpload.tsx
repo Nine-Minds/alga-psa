@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useState, useRef, useTransition } from 'react';
 import { toast } from 'react-hot-toast';
-import { Pen, Trash2, Upload } from 'lucide-react';
+import { Pen, Trash2, Upload, Link } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
@@ -11,6 +11,9 @@ import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { EntityType } from 'server/src/lib/services/EntityImageService';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import DocumentSelector from 'server/src/components/documents/DocumentSelector';
+import { linkDocumentAsAvatarAction } from 'server/src/lib/actions/avatar-actions';
+import { IDocument } from 'server/src/interfaces/document.interface';
 
 interface EntityImageUploadProps {
   entityType: EntityType;
@@ -54,9 +57,11 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isPendingUpload, startUploadTransition] = useTransition();
   const [isPendingDelete, startDeleteTransition] = useTransition();
+  const [isPendingLink, startLinkTransition] = useTransition();
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(imageUrl);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update local state when prop changes
@@ -190,7 +195,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
           setCurrentImageUrl(null);
           setIsEditing(false);
           toast.success(result.message || t('profile.imageUpload.deleteSuccess', `${entityType === 'client' ? 'Logo' : 'Avatar'} deleted successfully.`));
-          
+
           // Notify parent component if callback provided
           if (onImageChange) {
             onImageChange(null);
@@ -211,6 +216,54 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
         toast.error(err.message || `Failed to delete ${entityType} image.`);
       } finally {
         setIsDeleteDialogOpen(false);
+      }
+    });
+  };
+
+  const handleLinkDocument = async (document: IDocument) => {
+    startLinkTransition(async () => {
+      try {
+        const result = await linkDocumentAsAvatarAction(
+          entityType,
+          entityId,
+          document.document_id
+        );
+
+        if (result.success) {
+          // Update image URL if provided
+          if (result.imageUrl) {
+            const timestamp = Date.now();
+            const timestampedUrl = `${result.imageUrl}${result.imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
+
+            setCurrentImageUrl(timestampedUrl);
+
+            // Notify parent component if callback provided
+            if (onImageChange) {
+              onImageChange(timestampedUrl);
+            }
+          }
+
+          setIsEditing(false);
+          setIsDocumentSelectorOpen(false);
+
+          toast.success(
+            `${entityType === 'client' || entityType === 'tenant' ? 'Logo' : 'Avatar'} linked successfully`
+          );
+        } else {
+          throw new Error(result.message || 'Failed to link document');
+        }
+      } catch (err: any) {
+        console.error(`[EntityImageUpload] Failed to link document as ${entityType} image:`, {
+          operation: 'handleLinkDocument',
+          entityType,
+          entityId,
+          entityName,
+          documentId: document.document_id,
+          errorMessage: err.message || 'Unknown error',
+          errorStack: err.stack,
+          errorName: err.name
+        });
+        toast.error(err.message || `Failed to link document as ${entityType} image.`);
       }
     });
   };
@@ -271,7 +324,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 variant="soft"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isPendingUpload || isPendingDelete}
+                disabled={isPendingUpload || isPendingDelete || isPendingLink}
                 className="w-fit"
                 data-automation-id={`upload-${entityType}-image-button`}
               >
@@ -294,12 +347,37 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                   </>
                 )}
               </Button>
-              
+
+              {/* Link Document Button */}
+              <Button
+                id={`link-document-${entityType}-image-button`}
+                type="button"
+                variant="soft"
+                size="sm"
+                onClick={() => setIsDocumentSelectorOpen(true)}
+                disabled={isPendingUpload || isPendingDelete || isPendingLink}
+                className="w-fit"
+                data-automation-id={`link-document-${entityType}-image-button`}
+              >
+                {isPendingLink ? (
+                  <LoadingIndicator
+                    spinnerProps={{ size: "sm" }}
+                    text={t('profile.imageUpload.linking', 'Linking...')}
+                    className="mr-2"
+                  />
+                ) : (
+                  <>
+                    <Link className="mr-2 h-4 w-4" />
+                    {t('profile.imageUpload.linkDocument', 'Link Document')}
+                  </>
+                )}
+              </Button>
+
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
-                disabled={isPendingUpload || isPendingDelete}
+                disabled={isPendingUpload || isPendingDelete || isPendingLink}
                 className="hidden"
                 ref={fileInputRef}
                 data-automation-id={`${entityType}-image-file-input`}
@@ -313,7 +391,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                   variant="destructive"
                   size="sm"
                   onClick={handleDeleteImageClick}
-                  disabled={isPendingDelete || isPendingUpload}
+                  disabled={isPendingDelete || isPendingUpload || isPendingLink}
                   className="w-fit"
                   data-automation-id={`delete-${entityType}-image-button`}
                 >
@@ -329,7 +407,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                   {t('profile.imageUpload.delete', 'Delete')}
                 </Button>
               )}
-              
+
               {/* Cancel Button */}
               <Button
                 id={`cancel-${entityType}-image-edit-button`}
@@ -337,7 +415,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsEditing(false)}
-                disabled={isPendingUpload || isPendingDelete}
+                disabled={isPendingUpload || isPendingDelete || isPendingLink}
                 className="w-fit"
                 data-automation-id={`cancel-${entityType}-image-edit-button`}
               >
@@ -370,6 +448,27 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
         confirmLabel={t('common.delete', 'Delete')}
         cancelLabel={t('common.cancel', 'Cancel')}
         isConfirming={isPendingDelete}
+      />
+
+      {/* Document Selector Modal */}
+      <DocumentSelector
+        id={`${entityType}-image-document-selector`}
+        entityId={entityId}
+        entityType={entityType as any} // EntityType is compatible with DocumentSelector's entityType
+        isOpen={isDocumentSelectorOpen}
+        onClose={() => setIsDocumentSelectorOpen(false)}
+        onDocumentSelected={handleLinkDocument}
+        singleSelect={true}
+        typeFilter="image"
+        title={
+          (entityType === 'client' || entityType === 'tenant')
+            ? t('profile.imageUpload.selectLogoDocument', 'Select Logo from Documents')
+            : t('profile.imageUpload.selectAvatarDocument', 'Select Avatar from Documents')
+        }
+        description={t(
+          'profile.imageUpload.selectImageDescription',
+          'Choose an existing image document to use'
+        )}
       />
     </div>
   );

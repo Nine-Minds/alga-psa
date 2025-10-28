@@ -9,7 +9,7 @@ import { Input } from '../../ui/Input';
 import { Checkbox } from '../../ui/Checkbox';
 import { DataTable } from '../../ui/DataTable';
 import { Badge } from '../../ui/Badge';
-import { FileText, MoreVertical, GripVertical, Search, CheckCircle, Download, ArrowRight } from 'lucide-react';
+import { FileText, MoreVertical, GripVertical, Search, CheckCircle, Download, ArrowRight, RotateCcw } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,11 +20,12 @@ import { ColumnDefinition } from '../../../interfaces/dataTable.interfaces';
 import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from '../../../interfaces/invoice.interfaces';
 import { fetchAllInvoices } from '../../../lib/actions/invoiceQueries';
 import { getInvoiceTemplates } from '../../../lib/actions/invoiceTemplates';
-import { finalizeInvoice } from '../../../lib/actions/invoiceModification';
+import { finalizeInvoice, hardDeleteInvoice } from '../../../lib/actions/invoiceModification';
 import { downloadInvoicePDF } from '../../../lib/actions/invoiceGeneration';
 import { toPlainDate } from '../../../lib/utils/dateTimeUtils';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '../../ui/LoadingIndicator';
+import { ConfirmationDialog } from '../../ui/ConfirmationDialog';
 
 interface DraftsTabProps {
   onRefreshNeeded: () => void;
@@ -45,6 +46,8 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tableKey, setTableKey] = useState(0);
+  const [reverseDialogState, setReverseDialogState] = useState<{ isOpen: boolean; invoiceIds: string[] }>({ isOpen: false, invoiceIds: [] });
+  const [isReverseConfirming, setIsReverseConfirming] = useState(false);
 
   const selectedInvoiceId = searchParams?.get('invoiceId');
   const selectedTemplateId = searchParams?.get('templateId');
@@ -151,9 +154,18 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     }
   };
 
+  const openReverseDialog = (invoiceIds: string[]) => {
+    setReverseDialogState({ isOpen: true, invoiceIds });
+  };
+
   const handleFinalizeFromPreview = async () => {
     if (!selectedInvoice) return;
     await handleFinalizeSingle(selectedInvoice.invoice_id);
+  };
+
+  const handleReverseFromPreview = async () => {
+    if (!selectedInvoice) return;
+    openReverseDialog([selectedInvoice.invoice_id]);
   };
 
   const handleBulkFinalize = async () => {
@@ -170,6 +182,11 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       console.error('Failed to finalize selected invoices:', err);
       setError('Failed to finalize selected invoices. Please try again.');
     }
+  };
+
+  const handleBulkReverse = async () => {
+    if (selectedInvoices.size === 0) return;
+    openReverseDialog(Array.from(selectedInvoices));
   };
 
   const handleDownload = async () => {
@@ -264,6 +281,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
               <DropdownMenuItem
                 onClick={async () => await handleFinalizeSingle(record.invoice_id)}
                 className="flex items-center gap-2"
+                id={`finalize-draft-${record.invoice_id}-menu-item`}
               >
                 <CheckCircle className="h-4 w-4" />
                 Finalize
@@ -287,9 +305,18 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
                   }
                 }}
                 className="flex items-center gap-2"
+                id={`download-draft-${record.invoice_id}-menu-item`}
               >
                 <Download className="h-4 w-4" />
                 Download PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => openReverseDialog([record.invoice_id])}
+                className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                id={`reverse-draft-${record.invoice_id}-menu-item`}
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reverse Draft
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -327,9 +354,13 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleBulkFinalize} className="flex items-center gap-2">
+            <DropdownMenuItem onClick={handleBulkFinalize} className="flex items-center gap-2" id="finalize-selected-drafts-menu-item">
               <CheckCircle className="h-4 w-4" />
               Finalize Selected
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleBulkReverse} className="flex items-center gap-2 text-red-600 focus:text-red-600" id="reverse-selected-drafts-menu-item">
+              <RotateCcw className="h-4 w-4" />
+              Reverse Selected
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -397,6 +428,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
                 selectedTemplateId={selectedTemplateId}
                 onTemplateChange={(templateId) => updateUrlParams({ templateId })}
                 onFinalize={handleFinalizeFromPreview}
+                onReverse={handleReverseFromPreview}
                 onDownload={handleDownload}
                 isFinalized={false}
                 creditApplied={selectedInvoice?.credit_applied || 0}
@@ -405,6 +437,56 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
           </Panel>
         </PanelGroup>
       )}
+
+      <ConfirmationDialog
+        id="reverse-draft-confirmation"
+        isOpen={reverseDialogState.isOpen}
+        onClose={() => setReverseDialogState({ isOpen: false, invoiceIds: [] })}
+        onConfirm={async () => {
+          const invoiceIds = [...reverseDialogState.invoiceIds];
+          if (invoiceIds.length === 0) {
+            setReverseDialogState({ isOpen: false, invoiceIds: [] });
+            return;
+          }
+
+          setIsReverseConfirming(true);
+          setError(null);
+
+          try {
+            for (const invoiceId of invoiceIds) {
+              await hardDeleteInvoice(invoiceId);
+            }
+
+            setSelectedInvoices(prev => {
+              const next = new Set(prev);
+              invoiceIds.forEach(id => next.delete(id));
+              return next;
+            });
+
+            if (selectedInvoiceId && invoiceIds.includes(selectedInvoiceId)) {
+              updateUrlParams({ invoiceId: null, templateId: null });
+            }
+
+            await loadData();
+            onRefreshNeeded();
+            setReverseDialogState({ isOpen: false, invoiceIds: [] });
+          } catch (err) {
+            console.error('Failed to reverse draft invoice(s):', err);
+            setError(err instanceof Error ? err.message : 'Failed to reverse draft invoice(s). Please try again.');
+          } finally {
+            setIsReverseConfirming(false);
+          }
+        }}
+        title={reverseDialogState.invoiceIds.length > 1 ? 'Reverse Draft Invoices' : 'Reverse Draft Invoice'}
+        message={
+          reverseDialogState.invoiceIds.length > 1
+            ? `Reversing ${reverseDialogState.invoiceIds.length} draft invoices will delete them and release any linked time entries or usage records. This action cannot be undone.`
+            : 'Reversing this draft invoice will delete it and release any linked time entries or usage records. This action cannot be undone.'
+        }
+        confirmLabel="Reverse Draft"
+        cancelLabel="Cancel"
+        isConfirming={isReverseConfirming}
+      />
     </div>
   );
 };

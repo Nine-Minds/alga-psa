@@ -523,9 +523,24 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
     callbacks: {
         async signIn({ user, account, credentials }) {
             const providerId = account?.provider;
+            const extendedUser = user as ExtendedUser | undefined;
+
+            // Track last login
+            if (extendedUser?.id && extendedUser?.tenant && providerId) {
+                try {
+                    const User = (await import('server/src/lib/models/user')).default;
+                    // Note: IP address would need to be passed from request headers
+                    await User.updateLastLogin(
+                        extendedUser.id,
+                        extendedUser.tenant,
+                        providerId
+                    );
+                } catch (error) {
+                    console.warn('[signIn] failed to update last login', error);
+                }
+            }
 
             if (providerId === 'credentials') {
-                const extendedUser = user as ExtendedUser | undefined;
                 const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
                 const canonicalBaseUrl = process.env.NEXTAUTH_URL;
 
@@ -1022,9 +1037,23 @@ export const options: NextAuthConfig = {
             // }, extendedUser.id);
 
             const providerId = account?.provider;
+            const extendedUser = user as ExtendedUser | undefined;
+
+            // Track last login
+            if (extendedUser?.id && extendedUser?.tenant && providerId) {
+                try {
+                    const User = (await import('server/src/lib/models/user')).default;
+                    await User.updateLastLogin(
+                        extendedUser.id,
+                        extendedUser.tenant,
+                        providerId
+                    );
+                } catch (error) {
+                    console.warn('[signIn] failed to update last login', error);
+                }
+            }
 
             if (providerId === 'credentials') {
-                const extendedUser = user as ExtendedUser | undefined;
                 const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
                 const canonicalBaseUrl = process.env.NEXTAUTH_URL;
 

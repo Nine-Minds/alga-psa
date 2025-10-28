@@ -8,10 +8,10 @@
     "src/**/*.tsx",
     "playwright.config.ts",
     "playwright.global-setup.ts",
+    "playwright.global-teardown.ts",
     "src/components/flow/**/*.ts",
     "src/components/flow/**/*.tsx",
-    "vitest.config.ts",
-    "packages/extension-iframe-sdk/examples/vite-react/vite.config.ts"
+    "vitest.config.ts"
   ],
   "exclude": [
     "node_modules",
