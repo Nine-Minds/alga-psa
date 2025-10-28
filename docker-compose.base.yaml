@@ -96,6 +96,7 @@ services:
   postgres: # Renamed from postgres-base
     image: ankane/pgvector:latest
     #container_name: ${APP_NAME:-sebastian}_postgres
+    command: postgres -c password_encryption=md5
     environment:
       <<: *shared-environment
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
