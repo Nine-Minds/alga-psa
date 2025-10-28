@@ -6,7 +6,6 @@ import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
-  ChatApiParameter,
 } from '../chat/registry/apiRegistry.schema';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
@@ -15,6 +14,10 @@ const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
   process.env.EDITION === 'enterprise' ||
   process.env.EDITION === 'ee';
+
+const SEARCH_TOOL_NAME = 'search_api_registry';
+const EXECUTE_TOOL_NAME = 'call_api_endpoint';
+const MAX_TOOL_ITERATIONS = 6;
 
 export type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
@@ -42,6 +45,7 @@ export interface FunctionCallInfo {
   name: string;
   arguments: Record<string, unknown>;
   toolCallId?: string;
+  entryId?: string;
 }
 
 export interface FunctionProposedResponse {
@@ -238,115 +242,25 @@ export class ChatCompletionsService {
   }
 
   private static async initialCompletion(params: InitialCompletionParams): Promise<CompletionResponse> {
-    const { messages, chatId, baseUrl, tenantId, userId } = params;
-
-    const client = await this.getOpenRouterClient();
-    const registry = getRegistry();
-
-    const openAiMessages = this.buildOpenAiMessages(messages);
-
-    const completion = await client.chat.completions.create({
-      model: process.env.OPENROUTER_CHAT_MODEL ?? 'openai/gpt-4o-mini',
-      messages: openAiMessages,
-      tools: registry.map((entry) => ({
-        type: 'function' as const,
-        function: this.buildFunctionDefinition(entry),
-      })),
-      tool_choice: 'auto',
-      temperature: 0.2,
+    return this.processModelInteraction({
+      messages: params.messages,
+      chatId: params.chatId ?? null,
+      baseUrl: params.baseUrl,
+      tenantId: params.tenantId,
+      userId: params.userId,
     });
-
-    const choice = completion.choices[0];
-    if (!choice) {
-      return {
-        type: 'error',
-        error: 'The model returned no choices.',
-      };
-    }
-
-    const content = this.extractContent(choice);
-    const toolCalls = choice.message?.tool_calls ?? [];
-    if (Array.isArray(toolCalls) && toolCalls.length > 0) {
-      const toolCall = toolCalls[0];
-      const functionName = toolCall?.function?.name;
-      if (!functionName) {
-        return {
-          type: 'error',
-          error: 'The assistant attempted to call an unknown function.',
-        };
-      }
-
-      const entry = registry.find((item) => this.toToolName(item.id) === functionName);
-      if (!entry) {
-        return {
-          type: 'error',
-          error: `Function ${functionName} is not available.`,
-        };
-      }
-
-      const parsedArgs = this.ensureArguments(toolCall.function?.arguments);
-      const toolCallId = toolCall.id ?? uuid();
-
-      const assistantMessage: ChatCompletionMessage = {
-        role: 'assistant',
-        content: content || undefined,
-        function_call: {
-          name: functionName,
-          arguments: parsedArgs,
-        },
-        tool_call_id: toolCallId,
-      };
-
-      const nextMessages: ChatCompletionMessage[] = [...messages, assistantMessage];
-
-      const metadata = this.buildFunctionMetadata(entry, parsedArgs);
-
-      return {
-        type: 'function_proposed',
-        function: metadata,
-        assistantPreview: content ?? '',
-        functionCall: {
-          name: functionName,
-          arguments: parsedArgs,
-          toolCallId,
-          entryId: entry.id,
-        },
-        nextMessages,
-      };
-    }
-
-    const assistantMessage: ChatCompletionMessage = {
-      role: 'assistant',
-      content,
-    };
-
-    const nextMessages: ChatCompletionMessage[] = [...messages, assistantMessage];
-
-    return {
-      type: 'assistant_message',
-      message: {
-        role: 'assistant',
-        content,
-      },
-      nextMessages,
-    };
   }
 
   private static async executeAfterApproval(params: ExecuteCompletionParams): Promise<CompletionResponse> {
     const { messages, functionCall, action, baseUrl, tenantId, userId, chatId, cookieHeader } = params;
 
-    const registry = getRegistry();
-    const entry =
-      registry.find((item) => item.id === functionCall.entryId) ??
-      registry.find((item) => this.toToolName(item.id) === functionCall.name);
+    const entry = this.resolveRegistryEntry(functionCall.entryId ?? functionCall.arguments?.entryId ?? functionCall.name);
     if (!entry) {
       return {
         type: 'error',
         error: `Function ${functionCall.name} is not available.`,
       };
     }
-
-    const client = await this.getOpenRouterClient();
 
     let resultPayload: unknown = { status: 'skipped', reason: 'User declined to execute the function.' };
 
@@ -366,48 +280,271 @@ export class ChatCompletionsService {
 
     const functionMessage: ChatCompletionMessage = {
       role: 'function',
-      name: functionCall.name,
+      name: EXECUTE_TOOL_NAME,
       content: JSON.stringify(resultPayload),
       tool_call_id: toolCallId,
     };
 
-    const openAiMessages = this.buildOpenAiMessages([...messages, functionMessage]);
-
-    const completion = await client.chat.completions.create({
-      model: process.env.OPENROUTER_CHAT_MODEL ?? 'openai/gpt-4o-mini',
-      messages: openAiMessages,
-      temperature: 0.2,
+    const response = await this.processModelInteraction({
+      messages: [...messages, functionMessage],
+      chatId,
+      baseUrl,
+      tenantId,
+      userId,
     });
 
-    const choice = completion.choices[0];
-    if (!choice) {
-      return {
-        type: 'error',
-        error: 'The model returned no choices.',
-      };
-    }
-
-    const content = this.extractContent(choice);
-    const assistantMessage: ChatCompletionMessage = {
-      role: 'assistant',
-      content,
-    };
-
-    const nextMessages: ChatCompletionMessage[] = [...messages, functionMessage, assistantMessage];
-
-    return {
-      type: 'assistant_message',
-      message: {
-        role: 'assistant',
-        content,
-      },
-      functionCall: {
-        name: functionCall.name,
+    if (response.type === 'assistant_message') {
+      response.functionCall = {
+        name: EXECUTE_TOOL_NAME,
         arguments: functionCall.arguments,
         result: resultPayload,
         toolCallId,
+      };
+    }
+
+    return response;
+  }
+
+  private static buildToolDefinitions() {
+    return [
+      {
+        type: 'function' as const,
+        function: {
+          name: SEARCH_TOOL_NAME,
+          description:
+            'Search the enterprise API catalog for relevant endpoints. Use this before calling an endpoint to find the most appropriate entry.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Natural language description of what you want to do (e.g., "list active service categories").',
+              },
+              limit: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 25,
+                description: 'Maximum number of results to return (default 5).',
+              },
+            },
+            required: ['query'],
+          },
+        },
       },
-      nextMessages,
+      {
+        type: 'function' as const,
+        function: {
+          name: EXECUTE_TOOL_NAME,
+          description:
+            'Invoke a documented API endpoint by its registry identifier. Include any path, query, header, or body parameters required by that endpoint.',
+          parameters: {
+            type: 'object',
+            properties: {
+              entryId: {
+                type: 'string',
+                description:
+                  'Registry identifier for the endpoint, for example "serviceCategories.list". Always provide this.',
+              },
+              path: {
+                type: 'object',
+                description: 'Values for path parameters, keyed by parameter name.',
+                additionalProperties: true,
+              },
+              query: {
+                type: 'object',
+                description: 'Values for query string parameters.',
+                additionalProperties: true,
+              },
+              headers: {
+                type: 'object',
+                description: 'Additional headers required by the endpoint.',
+                additionalProperties: true,
+              },
+              body: {
+                description: 'JSON payload for POST/PUT/PATCH requests.',
+                type: ['object', 'array', 'string', 'number', 'boolean', 'null'],
+              },
+            },
+            required: ['entryId'],
+            additionalProperties: true,
+          },
+        },
+      },
+    ];
+  }
+
+  private static resolveRegistryEntry(entryId: unknown): ChatApiRegistryEntry | null {
+    if (typeof entryId !== 'string') {
+      return null;
+    }
+    const registry = getRegistry();
+    return (
+      registry.find((item) => item.id === entryId) ??
+      registry.find((item) => this.toToolName(item.id) === entryId) ??
+      null
+    );
+  }
+
+  private static searchRegistry(query: unknown, limitValue: unknown) {
+    const text = typeof query === 'string' ? query.trim() : '';
+    if (!text) {
+      return [];
+    }
+
+    const limit = Math.max(1, Math.min(typeof limitValue === 'number' ? limitValue : parseInt(String(limitValue ?? ''), 10) || 5, 25));
+    const terms = text.toLowerCase().split(/\s+/).filter(Boolean);
+    const registry = getRegistry();
+
+    const scored = registry
+      .map((entry, index) => {
+        const haystack = [
+          entry.displayName,
+          entry.description,
+          entry.path,
+          entry.tags?.join(' '),
+          entry.id,
+        ]
+          .join(' ')
+          .toLowerCase();
+        const score =
+          terms.reduce((acc, term) => (haystack.includes(term) ? acc + 2 : acc), 0) +
+          (entry.playbooks?.length ?? 0) +
+          Math.max(0, 3 - index * 0.1);
+        return { entry, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const top = scored.slice(0, limit).map(({ entry }) => ({
+      id: entry.id,
+      displayName: entry.displayName,
+      description: entry.description,
+      method: entry.method.toUpperCase(),
+      path: entry.path,
+      approvalRequired: entry.approvalRequired,
+      tags: entry.tags ?? [],
+    }));
+
+    return top;
+  }
+
+  private static async processModelInteraction(params: {
+    messages: ChatCompletionMessage[];
+    chatId: string | null;
+    baseUrl: string;
+    tenantId: string;
+    userId: string;
+  }): Promise<CompletionResponse> {
+    const { messages, chatId, baseUrl, tenantId, userId } = params;
+    const client = await this.getOpenRouterClient();
+    let conversation = messages;
+
+    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+      const completion = await client.chat.completions.create({
+        model: process.env.OPENROUTER_CHAT_MODEL ?? 'openai/gpt-4o-mini',
+        messages: this.buildOpenAiMessages(conversation),
+        tools: this.buildToolDefinitions(),
+        tool_choice: 'auto',
+        temperature: 0.2,
+      });
+
+      const choice = completion.choices[0];
+      if (!choice) {
+        return {
+          type: 'error',
+          error: 'The model returned no choices.',
+        };
+      }
+
+      const content = this.extractContent(choice);
+      const toolCalls = choice.message?.tool_calls ?? [];
+
+      if (toolCalls.length > 0) {
+        const toolCall = toolCalls[0];
+        const functionName = toolCall.function?.name;
+        const parsedArgs = this.ensureArguments(toolCall.function?.arguments);
+        const toolCallId = toolCall.id ?? uuid();
+
+        if (!functionName) {
+          return {
+            type: 'error',
+            error: 'The assistant attempted to call an unknown function.',
+          };
+        }
+
+        const assistantMessage: ChatCompletionMessage = {
+          role: 'assistant',
+          content: content || undefined,
+          function_call: {
+            name: functionName,
+            arguments: parsedArgs,
+          },
+          tool_call_id: toolCallId,
+        };
+
+        conversation = [...conversation, assistantMessage];
+
+        if (functionName === SEARCH_TOOL_NAME) {
+          const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
+          const functionMessage: ChatCompletionMessage = {
+            role: 'function',
+            name: SEARCH_TOOL_NAME,
+            content: JSON.stringify({ results }),
+            tool_call_id: toolCallId,
+          };
+          conversation = [...conversation, functionMessage];
+          continue;
+        }
+
+        if (functionName === EXECUTE_TOOL_NAME) {
+          const entry = this.resolveRegistryEntry(parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name);
+          if (!entry) {
+            return {
+              type: 'error',
+              error: `Function ${parsedArgs.entryId ?? functionName} is not available.`,
+            };
+          }
+
+          const metadata = this.buildFunctionMetadata(entry, parsedArgs);
+          return {
+            type: 'function_proposed',
+            function: metadata,
+            assistantPreview: content ?? '',
+            functionCall: {
+              name: functionName,
+              arguments: parsedArgs,
+              toolCallId,
+              entryId: entry.id,
+            },
+            nextMessages: conversation,
+          };
+        }
+
+        return {
+          type: 'error',
+          error: `Function ${functionName} is not available.`,
+        };
+      }
+
+      const assistantMessage: ChatCompletionMessage = {
+        role: 'assistant',
+        content,
+      };
+
+      const nextMessages = [...conversation, assistantMessage];
+
+      return {
+        type: 'assistant_message',
+        message: {
+          role: 'assistant',
+          content,
+        },
+        nextMessages,
+      };
+    }
+
+    return {
+      type: 'error',
+      error: 'The assistant produced too many tool invocations without completing the task.',
     };
   }
 
@@ -555,43 +692,6 @@ export class ChatCompletionsService {
     return '';
   }
 
-  private static buildFunctionDefinition(entry: ChatApiRegistryEntry) {
-    return {
-      name: this.toToolName(entry.id),
-      description: entry.description ?? entry.displayName,
-      parameters: this.buildParameterSchema(entry),
-    };
-  }
-
-  private static buildParameterSchema(entry: ChatApiRegistryEntry) {
-    const properties: Record<string, unknown> = {};
-    const required: string[] = [];
-
-    const addParameter = (param: ChatApiParameter) => {
-      if (!param.name) {
-        return;
-      }
-
-      properties[param.name] = param.schema ?? { type: 'string' };
-      if (param.required) {
-        required.push(param.name);
-      }
-    };
-
-    entry.parameters.forEach(addParameter);
-
-    if (entry.requestBodySchema) {
-      properties.body = entry.requestBodySchema;
-      required.push('body');
-    }
-
-    return {
-      type: 'object',
-      properties,
-      required: Array.from(new Set(required)),
-    };
-  }
-
   private static buildFunctionMetadata(entry: ChatApiRegistryEntry, args: Record<string, unknown>): FunctionMetadata {
     return {
       id: entry.id,
@@ -653,9 +753,7 @@ export class ChatCompletionsService {
         data = text;
       }
 
-      if (tempKey.apiKeyId !== TemporaryApiKeyService.FALLBACK_KEY_ID) {
-        await TemporaryApiKeyService.revoke(tenantId, tempKey.apiKeyId, 'consumed');
-      }
+      await TemporaryApiKeyService.revoke(tenantId, tempKey.apiKeyId, 'consumed');
 
       return {
         status: response.status,
@@ -663,11 +761,9 @@ export class ChatCompletionsService {
         data,
       };
     } catch (error) {
-      if (tempKey.apiKeyId !== TemporaryApiKeyService.FALLBACK_KEY_ID) {
-        await TemporaryApiKeyService.revoke(tenantId, tempKey.apiKeyId, 'error', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+      await TemporaryApiKeyService.revoke(tenantId, tempKey.apiKeyId, 'error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -682,7 +778,16 @@ export class ChatCompletionsService {
     const method = entry.method.toUpperCase();
     let path = entry.path;
 
-    const queryParams: Record<string, unknown> = {};
+    const normalizeRecord = (value: unknown): Record<string, unknown> =>
+      value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+
+    const pathParamsInput = normalizeRecord(
+      args.path ?? args.pathParams ?? (normalizeRecord(args.parameters)?.path ?? {}),
+    );
+    const queryInput = normalizeRecord(args.query ?? (normalizeRecord(args.parameters)?.query ?? {}));
+    const headerInput = normalizeRecord(args.headers ?? (normalizeRecord(args.parameters)?.headers ?? {}));
+    const genericParameters = normalizeRecord(args.parameters);
+
     const headers: Record<string, string> = {
       'x-tenant-id': tenantId,
     };
@@ -691,26 +796,62 @@ export class ChatCompletionsService {
       headers['x-api-key'] = apiKey;
     }
 
-    const body = args.body;
+    const queryParams: Record<string, unknown> = { ...queryInput };
+
+    const directArgs = normalizeRecord(args);
+    delete directArgs.body;
+    delete directArgs.path;
+    delete directArgs.pathParams;
+    delete directArgs.query;
+    delete directArgs.headers;
+    delete directArgs.parameters;
+    delete directArgs.entryId;
 
     for (const param of entry.parameters) {
-      const value = args[param.name];
-      if (value === undefined || value === null) {
-        continue;
-      }
-
+      let value: unknown;
       if (param.in === 'path') {
-        path = path.replace(`{${param.name}}`, encodeURIComponent(String(value)));
+        value =
+          pathParamsInput[param.name] ??
+          genericParameters[param.name] ??
+          directArgs[param.name];
+        if (value !== undefined && value !== null) {
+          path = path.replace(`{${param.name}}`, encodeURIComponent(String(value)));
+        }
       } else if (param.in === 'query') {
-        queryParams[param.name] = value;
+        value =
+          queryInput[param.name] ??
+          genericParameters[param.name] ??
+          directArgs[param.name];
+        if (value !== undefined && value !== null) {
+          queryParams[param.name] = value;
+        }
       } else if (param.in === 'header') {
-        headers[param.name] = String(value);
+        value =
+          headerInput[param.name] ??
+          genericParameters[param.name] ??
+          directArgs[param.name];
+        if (value !== undefined && value !== null) {
+          headers[param.name] = String(value);
+        }
+      } else if (param.in === 'cookie') {
+        // no-op: cookies handled separately
+      } else {
+        // leave other parameter types untouched for now
       }
     }
 
+    // Include any additional headers/query params provided explicitly
+    Object.entries(headerInput).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        headers[key] = String(value);
+      }
+    });
+
     const url = new URL(path, baseUrl);
     Object.entries(queryParams).forEach(([key, value]) => {
-      url.searchParams.set(key, String(value));
+      if (value !== undefined && value !== null) {
+        url.searchParams.set(key, String(value));
+      }
     });
 
     const init: RequestInit = {
@@ -718,9 +859,19 @@ export class ChatCompletionsService {
       headers,
     };
 
-    if (method !== 'GET' && method !== 'DELETE' && body !== undefined) {
-      headers['Content-Type'] = 'application/json';
-      init.body = JSON.stringify(body);
+    const bodyValue =
+      args.body ??
+      args.data ??
+      args.payload ??
+      genericParameters.body ??
+      undefined;
+
+    if (bodyValue !== undefined && method !== 'GET' && method !== 'DELETE') {
+      headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
+      init.body =
+        typeof bodyValue === 'string'
+          ? bodyValue
+          : JSON.stringify(bodyValue);
     }
 
     return { url: url.toString(), init };
