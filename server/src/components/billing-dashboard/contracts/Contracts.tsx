@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
@@ -40,6 +40,7 @@ const Contracts: React.FC = () => {
   const [activeView, setActiveView] = useState<'Templates' | 'Client Contracts'>('Templates');
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const pendingViewRef = useRef<'Templates' | 'Client Contracts' | null>(null);
 
   useEffect(() => {
     void fetchContracts();
@@ -66,6 +67,13 @@ const Contracts: React.FC = () => {
   useEffect(() => {
     const subtab = searchParams?.get('subtab');
     const desiredView = subtab === 'clients' ? 'Client Contracts' : 'Templates';
+    if (pendingViewRef.current) {
+      if (desiredView === pendingViewRef.current) {
+        pendingViewRef.current = null;
+      } else {
+        return;
+      }
+    }
     if (activeView !== desiredView) {
       setActiveView(desiredView);
     }
@@ -416,6 +424,7 @@ const renderStatusBadge = (status: string) => {
               defaultTab={activeView}
               onTabChange={(tab) => {
                 const view = tab === 'Client Contracts' ? 'Client Contracts' : 'Templates';
+                pendingViewRef.current = view;
                 setActiveView(view);
                 updateUrlForView(view);
               }}
