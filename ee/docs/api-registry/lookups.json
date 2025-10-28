@@ -1,0 +1,292 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/clients"
+      },
+      "metadata": {
+        "displayName": "List Clients",
+        "summary": "Fetch clients for the current tenant",
+        "description": "Returns paginated client records. Use this before creating tickets to map human-readable client names to client_id values.",
+        "parameters": [
+          {
+            "name": "client_name",
+            "in": "query",
+            "required": false,
+            "description": "Optional case-insensitive filter on the client name.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "is_inactive",
+            "in": "query",
+            "required": false,
+            "description": "When true, include inactive clients as well as active ones.",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of records per page (default 25, max 100).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Pagination page number starting at 1.",
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        ],
+        "examples": [
+          {
+            "name": "Find a specific client",
+            "request": {
+              "query": {
+                "client_name": "Acme",
+                "limit": 5
+              }
+            },
+            "notes": "Use a small limit when searching for a client name mentioned by the user so you can quickly grab the matching client_id."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/contacts"
+      },
+      "metadata": {
+        "displayName": "List Contacts",
+        "summary": "Fetch contacts",
+        "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket.",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "description": "Restrict contacts to a specific client.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "search_term",
+            "in": "query",
+            "required": false,
+            "description": "Search text to match against contact names or emails.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of records per page (default 25, max 100).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Pagination page number.",
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        ],
+        "examples": [
+          {
+            "name": "Find client contacts",
+            "request": {
+              "query": {
+                "client_id": "22222222-2222-2222-2222-222222222222",
+                "limit": 5
+              }
+            },
+            "notes": "Use the client_id discovered from the clients endpoint to retrieve matching contacts and resolve contact_name_id."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/clients/{id}/locations"
+      },
+      "metadata": {
+        "displayName": "List Client Locations",
+        "summary": "Fetch locations for a client",
+        "description": "Returns the saved locations for the specified client. Call this when a ticket needs a location_id.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Client identifier whose locations should be listed.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of locations to return (default 25, max 100).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Pagination page number.",
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        ],
+        "examples": [
+          {
+            "name": "List locations for client",
+            "request": {
+              "params": { "id": "22222222-2222-2222-2222-222222222222" },
+              "query": { "limit": 5 }
+            },
+            "notes": "Use the same client_id supplied to the ticket create payload."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/categories/ticket"
+      },
+      "metadata": {
+        "displayName": "List Ticket Categories",
+        "summary": "Fetch ticket categories",
+        "description": "Provides the category catalog used when assigning category_id or subcategory_id to a ticket.",
+        "parameters": [
+          {
+            "name": "board_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter categories that belong to a specific ticket board.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "required": false,
+            "description": "Toggle to include inactive categories.",
+            "schema": { "type": "boolean" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of categories per page (default 25, max 100).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Pagination page number.",
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        ],
+        "examples": [
+          {
+            "name": "Categories for a board",
+            "request": {
+              "query": {
+                "board_id": "11111111-1111-1111-1111-111111111111",
+                "limit": 10
+              }
+            },
+            "notes": "Pair this with the board_id you plan to use on the ticket so category selections stay consistent."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/users"
+      },
+      "metadata": {
+        "displayName": "List Users",
+        "summary": "Fetch users/technicians",
+        "description": "Lists tenant users. Use this to discover the user_id for the assignee field on a ticket.",
+        "parameters": [
+          {
+            "name": "search_term",
+            "in": "query",
+            "required": false,
+            "description": "Match against name or email.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter users belonging to a specific team.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of users per page (default 25, max 100).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          }
+        ],
+        "examples": [
+          {
+            "name": "Find a technician",
+            "request": {
+              "query": {
+                "search_term": "Samantha",
+                "limit": 5
+              }
+            },
+            "notes": "Use the result set to map the human name back to a user_id for the assigned_to field."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tags"
+      },
+      "metadata": {
+        "displayName": "List Tags",
+        "summary": "Fetch tag catalog",
+        "description": "Returns tags configured for the tenant. Reuse these when populating the tags array for a ticket.",
+        "parameters": [
+          {
+            "name": "entity_type",
+            "in": "query",
+            "required": false,
+            "description": "Limit results to tags used for a specific entity type (e.g., ticket).",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of tags per page (default 25, max 200).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 200 }
+          }
+        ],
+        "examples": [
+          {
+            "name": "Retrieve ticket tags",
+            "request": {
+              "query": {
+                "entity_type": "ticket",
+                "limit": 25
+              }
+            },
+            "notes": "Use existing tag names whenever possible rather than inventing new ones."
+          }
+        ]
+      }
+    }
+  ]
+}
