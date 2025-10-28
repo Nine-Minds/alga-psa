@@ -180,7 +180,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
           className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
           {...withDataAutomationId({ id: 'client-forgot-password-link' })}
         >
-          {t('auth.forgotPassword', 'Forgot your password?')}
+          {t('auth.forgotPasswordLink', 'Forgot your password?')}
         </Link>
       </div>
 
