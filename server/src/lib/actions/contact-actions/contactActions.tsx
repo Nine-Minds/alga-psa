@@ -13,6 +13,23 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
 
+export type ContactFilterStatus = 'active' | 'inactive' | 'all';
+
+// Shared column mapping for contact sorting
+const CONTACT_SORT_COLUMNS = {
+  full_name: 'contacts.full_name',
+  created_at: 'contacts.created_at',
+  email: 'contacts.email',
+  phone_number: 'contacts.phone_number'
+} as const;
+
+const CONTACT_SORT_COLUMNS_ALIASED = {
+  full_name: 'full_name',
+  created_at: 'created_at',
+  email: 'email',
+  phone_number: 'phone_number'
+} as const;
+
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
   // Revert to using createTenantKnex for now
   const { knex: db, tenant } = await createTenantKnex();
@@ -335,15 +352,7 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
             queryBuilder.where('contacts.is_inactive', status === 'inactive');
           }
         })
-        .orderBy((() => {
-          const columnMap: Record<string, string> = {
-            full_name: 'contacts.full_name',
-            created_at: 'contacts.created_at',
-            email: 'contacts.email',
-            phone_number: 'contacts.phone_number'
-          };
-          return columnMap[safeSortBy] || 'contacts.full_name';
-        })(), safeSortDirection);
+        .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
     });
 
     // Fetch avatar URLs for each contact
@@ -559,15 +568,7 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
             queryBuilder.where('is_inactive', status === 'inactive');
           }
         })
-        .orderBy((() => {
-          const columnMap: Record<string, string> = {
-            full_name: 'full_name',
-            created_at: 'created_at',
-            email: 'email',
-            phone_number: 'phone_number'
-          };
-          return columnMap[safeSortBy] || 'full_name';
-        })(), safeSortDirection);
+        .orderBy(CONTACT_SORT_COLUMNS_ALIASED[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS_ALIASED] || 'full_name', safeSortDirection);
 
       console.log('[getAllContacts] Found', contacts.length, 'contacts');
 
