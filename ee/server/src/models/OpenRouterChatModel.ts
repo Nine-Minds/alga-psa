@@ -12,7 +12,7 @@ export class OpenRouterChatModel implements ChatModelInterface {
   constructor(apiKey: string, model: string = 'anthropic/claude-3.5-sonnet') {
     this.client = new OpenAI({
       apiKey,
-      baseURL: 'https://openrouter.io/api/v1',
+      baseURL: 'https://openrouter.ai/api/v1',
     });
     this.model = model;
   }

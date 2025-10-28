@@ -11,6 +11,11 @@ import {
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
+const isEnterpriseEdition = () =>
+  process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
+  process.env.EDITION === 'enterprise' ||
+  process.env.EDITION === 'ee';
+
 export type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
@@ -89,7 +94,7 @@ interface ExecuteCompletionParams {
 
 export class ChatCompletionsService {
   static async handleRequest(req: NextRequest): Promise<Response> {
-    if (process.env.EDITION !== 'enterprise') {
+    if (!isEnterpriseEdition()) {
       return new Response(
         JSON.stringify({ error: 'Chat completions are only available in Enterprise Edition' }),
         {
@@ -145,7 +150,7 @@ export class ChatCompletionsService {
   }
 
   static async handleExecute(req: NextRequest): Promise<Response> {
-    if (process.env.EDITION !== 'enterprise') {
+    if (!isEnterpriseEdition()) {
       return new Response(
         JSON.stringify({ error: 'Chat completions are only available in Enterprise Edition' }),
         {
@@ -660,7 +665,7 @@ export class ChatCompletionsService {
 
     return new OpenAI({
       apiKey,
-      baseURL: 'https://openrouter.io/api/v1',
+      baseURL: 'https://openrouter.ai/api/v1',
     });
   }
 }
