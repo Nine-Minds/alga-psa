@@ -72,19 +72,27 @@ export async function POST(request: NextRequest) {
       const raw = await request.text();
       if (!raw) {
         // Empty body — acknowledge to avoid parse crashes during validation probes
+        console.log('Microsoft webhook POST received with empty body (likely validation probe)');
         return new NextResponse('OK', { status: 200 });
       }
       payload = JSON.parse(raw);
-    } catch {
+    } catch (parseErr) {
       // Non-JSON — acknowledge to avoid 500s during validation probes
+      console.warn('Microsoft webhook POST with non-JSON body:', parseErr);
       return new NextResponse('OK', { status: 200 });
     }
     if (!payload) {
+      console.log('Microsoft webhook POST received with null payload');
       return new NextResponse('OK', { status: 200 });
     }
-    console.log('Microsoft webhook notification received:', {
+    console.log('✅ Microsoft webhook notification received:', {
       notificationCount: payload.value?.length || 0,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      firstNotification: payload.value?.[0] ? {
+        subscriptionId: payload.value[0].subscriptionId,
+        changeType: payload.value[0].changeType,
+        resourceType: payload.value[0].resourceData?.['@odata.type'],
+      } : null,
     });
 
     if (!payload.value || payload.value.length === 0) {
@@ -99,7 +107,8 @@ export async function POST(request: NextRequest) {
       try {
         // Validate client state
         const providerId = notification.subscriptionId;
-        
+        console.log(`🔍 Processing notification for subscription: ${providerId}`);
+
         await withTransaction(knex, async (trx) => {
         // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
         const row = await trx('microsoft_email_provider_config as mc')
@@ -124,22 +133,36 @@ export async function POST(request: NextRequest) {
           );
 
         if (!row) {
-          console.error(`Provider not found for subscription: ${providerId}`);
+          console.error(`❌ Provider not found for subscription: ${providerId}`);
+          console.error('This subscription may not exist in the database. Check:');
+          console.error(`  1. Is webhook_subscription_id="${providerId}" in microsoft_email_provider_config?`);
+          console.error(`  2. Has the email_provider been created?`);
           return;
         }
+
+        console.log(`✅ Found provider for subscription ${providerId}:`, {
+          providerId: row.id,
+          mailbox: row.mailbox,
+          tenant: row.tenant,
+        });
 
           // Validate clientState against stored verification token if present
           // Note: MicrosoftGraphAdapter sets clientState to webhook_verification_token (not tenant ID)
           const storedToken = (row as any).mc_webhook_verification_token as string | undefined;
           if (storedToken) {
             if (!notification.clientState) {
-              console.error(`Missing clientState for provider ${row.id}`);
+              console.error(`❌ Missing clientState for provider ${row.id}`);
               return;
             }
             if (notification.clientState !== storedToken) {
-              console.error(`Invalid client state for provider ${row.id}`);
+              console.error(`❌ Invalid client state for provider ${row.id}`);
+              console.error(`  Expected: ${storedToken.substring(0, 8)}...(${storedToken.length} chars)`);
+              console.error(`  Received: ${notification.clientState.substring(0, 8)}...(${notification.clientState.length} chars)`);
               return;
             }
+            console.log(`✅ Client state validation passed for provider ${row.id}`);
+          } else {
+            console.warn(`⚠️ No stored verification token for provider ${row.id} - skipping client state validation`);
           }
 
           // Extract message ID from resource
