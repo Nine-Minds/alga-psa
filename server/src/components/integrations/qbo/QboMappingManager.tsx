@@ -7,7 +7,7 @@
 import React from 'react';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs'; // Import CustomTabs and its TabContent interface
 // Placeholder imports for the specific mapping tables - these will be created next
-import { QboItemMappingTable } from './QboItemMappingTable';
+import { QboItemMappingTable, QboItemMappingTableOverrides } from './QboItemMappingTable';
 import { QboTaxCodeMappingTable } from './QboTaxCodeMappingTable';
 import { QboTermMappingTable } from './QboTermMappingTable';
 
@@ -17,11 +17,22 @@ interface QboMappingManagerProps {
 }
 
 export function QboMappingManager({ realmId }: QboMappingManagerProps) {
+  const mappingOverrides =
+    typeof window !== 'undefined'
+      ? (
+          window as typeof window & {
+            __ALGA_PLAYWRIGHT_QBO__?: {
+              itemMappingOverrides?: QboItemMappingTableOverrides;
+            };
+          }
+        ).__ALGA_PLAYWRIGHT_QBO__?.itemMappingOverrides
+      : undefined;
+
   // Define the tabs according to the TabContent interface
   const mappingTabs: TabContent[] = [
     {
       label: 'Items / Services', // Label used as value and display text
-      content: <QboItemMappingTable realmId={realmId} />, // Removed tenantId
+      content: <QboItemMappingTable realmId={realmId} overrides={mappingOverrides} />, // Removed tenantId
     },
     {
       label: 'Tax Codes',

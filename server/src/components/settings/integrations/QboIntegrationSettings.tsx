@@ -14,6 +14,20 @@ import { QboMappingManager } from '../../integrations/qbo/QboMappingManager'; //
 // Removed tenantId prop
 interface QboIntegrationSettingsProps {}
 
+type PlaywrightQboMocks = {
+  connectionStatus?: QboConnectionStatus;
+};
+
+function getPlaywrightQboMocks(): PlaywrightQboMocks | undefined {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+  const globalWithMocks = window as typeof window & {
+    __ALGA_PLAYWRIGHT_QBO__?: PlaywrightQboMocks;
+  };
+  return globalWithMocks.__ALGA_PLAYWRIGHT_QBO__;
+}
+
 const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
   const [statusInfo, setStatusInfo] = useState<QboConnectionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +38,15 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
 
   // Effect to handle URL parameters from OAuth redirect and fetch initial status
   useEffect(() => {
+    const playwrightMocks = getPlaywrightQboMocks();
+    if (playwrightMocks?.connectionStatus) {
+      setStatusInfo(playwrightMocks.connectionStatus);
+      setIsLoading(false);
+      setError(null);
+      setSuccessMessage(null);
+      return;
+    }
+
     let fetchedStatusAfterRedirect = false; // Flag to prevent double fetching
 
     const fetchStatus = async () => {

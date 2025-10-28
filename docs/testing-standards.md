@@ -213,6 +213,8 @@ Authentication in Playwright (avoiding login flakiness)
 Notes
 - If a specific test must exercise auth flows, disable bypass for that test run (unset `E2E_AUTH_BYPASS`) and use a test-only auth helper to seed a valid session cookie on the expected host.
 - For API E2E tests prefer `x-api-key` with per-test keys rather than browser sessions.
+- When you need bespoke data, prefer hitting the actual product route and seed mocks through Playwright (for example via `page.addInitScript` to populate `window.__ALGA_PLAYWRIGHT_*`) instead of building a dedicated UI harness page.
+- To bypass the MSP login wall, reuse `applyPlaywrightAuthEnvDefaults` and `setupAuthenticatedSession` (or mint your own cookie with `@auth/core/jwt`) from `ee/server/src/__tests__/integration/helpers/playwrightAuthSessionHelper.ts`.
 
 Test File Pattern (seeded data; no DB writes)
 - Use an admin Knex connection to query seed data for test setup (bypasses RLS/ACL).

@@ -24,7 +24,6 @@ import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from 'server/src/components/settings/billing/ServiceCatalogManager';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import AccountingExportsTab from './accounting/AccountingExportsTab';
 
 interface BillingDashboardProps {
@@ -37,14 +36,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error] = useState<string | null>(null);
-  const { enabled: accountingExportsEnabled } = useFeatureFlag('accounting_exports', { defaultValue: false });
 
-  const tabDefinitions = useMemo(() => {
-    if (accountingExportsEnabled) {
-      return billingTabDefinitions;
-    }
-    return billingTabDefinitions.filter((tab) => tab.value !== 'accounting-exports');
-  }, [accountingExportsEnabled]);
+  const tabDefinitions = useMemo(() => billingTabDefinitions, []);
 
   const handleTabChange = (value: string) => {
     const tabValue = value as BillingTabValue;
@@ -178,11 +171,9 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <ServiceCatalogManager />
         </Tabs.Content>
 
-        {accountingExportsEnabled && (
-          <Tabs.Content value="accounting-exports">
-            <AccountingExportsTab />
-          </Tabs.Content>
-        )}
+        <Tabs.Content value="accounting-exports">
+          <AccountingExportsTab />
+        </Tabs.Content>
       </Tabs.Root>
     </div>
   );

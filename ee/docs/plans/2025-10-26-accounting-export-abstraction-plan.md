@@ -262,8 +262,8 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
 - **Toast/Email:** Failed batches raise toast with link to batch drawer and send email to finance distribution list.
 - **Task Inbox Card:** Workflow-generated tasks for failures display `Review Accounting Export` template embedded with summary and quick actions (`Acknowledge`, `Open Batch`).
 
-### Permissions & Feature Toggle
-- Feature flag `accounting_exports` gates navigation entry and API routes. When off, menu item hidden and direct routes return 404.
+### Permissions
+- Navigation and API routes are always available; access remains gated by finance-centric roles.
 - Role matrix: `finance_admin` full access; `billing_manager` can run exports but not edit mappings; others view-only.
 
 ---
@@ -279,7 +279,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     6. Open row actions → Delete; confirm removal; entry disappears.
     7. Open Audit Log (existing system) and confirm create/update/delete entries referencing mapping ID.
     - *Integration coverage:* `server/src/test/integration/accounting/mappingCrud.integration.test.ts` exercises create/list/update/delete flows via server actions.
-    - *Playwright coverage:* `ee/server/src/__tests__/integration/mapping-crud.playwright.test.ts` verifies the UI harness workflow (mock data + audit log).
+    - *Playwright coverage:* `ee/server/src/__tests__/integration/mapping-crud.playwright.test.ts` now drives the real `/msp/settings` screen with Playwright-provided mocks to verify mapping CRUD.
   - `MappingFallback#L1`
     1. From same screen, click `Configure Fallback` chip in Service Items card.
     2. Reorder fallback list to `Contract Line`, `Service`, `Category` by dragging handles.
@@ -319,6 +319,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     4. Attempt to re-run same filter range; wizard displays warning “Batch already exists”; prevents duplicate creation.
     5. Create second batch, cancel from drawer before delivery; status becomes `cancelled`; confirm actions disabled thereafter.
     - *Integration coverage:* `server/src/test/integration/accounting/batchLifecycle.integration.test.ts` exercises lifecycle transitions, duplicate guard, and cancellation execution blocks.
+    - *Playwright coverage:* `ee/server/src/__tests__/integration/batch-lifecycle.playwright.test.ts` drives the lifecycle harness (worker simulation, duplicate guard, posting, and cancellation).
   - `InvoiceSelection#L1`
     1. Use filters: set date range, choose invoice statuses, select specific client.
     2. Click `Preview Invoices` to ensure only matching invoices appear.
@@ -414,7 +415,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     2. Check finance inbox for email summary containing batch ID.
     3. Open Task Inbox, locate “Review Accounting Export” task, mark as resolved; confirm toast disappears and task closed.
   - `FeatureFlag#L1`
-    1. Disable `accounting_exports` via admin settings; confirm navigation entry removed and direct route returns 404.
+    1. Sign in as a non-finance role; confirm Accounting Exports navigation is visible but actions are disabled with “Finance role required” tooltips.
     2. Re-enable; ensure dashboard reappears with prior data intact.
 - **Security & Isolation**
   - `TenantIsolation#L1`
