@@ -9,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'serve
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Eye, EyeOff, Lock, User, Building } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { 
-  verifyPortalToken, 
-  completePortalSetup 
+import {
+  verifyPortalToken,
+  completePortalSetup
 } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import { signIn } from 'next-auth/react';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface ContactInfo {
   contact_name_id: string;
@@ -23,6 +24,7 @@ interface ContactInfo {
 }
 
 export default function PortalSetupPage() {
+  const { t } = useTranslation('clientPortal');
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') || '';
@@ -34,7 +36,7 @@ export default function PortalSetupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
   const [error, setError] = useState<string>('');
-  
+
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -51,13 +53,13 @@ export default function PortalSetupPage() {
 
   useEffect(() => {
     if (!token) {
-      setError('No invitation token provided');
+      setError(t('auth.portalSetup.noTokenProvided', 'No invitation token provided'));
       setIsLoading(false);
       return;
     }
 
     verifyToken();
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     validatePassword();
@@ -66,15 +68,15 @@ export default function PortalSetupPage() {
   const verifyToken = async () => {
     try {
       const result = await verifyPortalToken(token);
-      
+
       if (result.success && result.contact) {
         setContactInfo(result.contact);
       } else {
-        setError(result.error || 'Invalid or expired invitation token');
+        setError(result.error || t('auth.portalSetup.invalidOrExpiredToken', 'Invalid or expired invitation token'));
       }
     } catch (error) {
       console.error('Token verification error:', error);
-      setError('Failed to verify invitation token');
+      setError(t('auth.portalSetup.verificationFailed', 'Failed to verify invitation token'));
     } finally {
       setIsLoading(false);
     }
@@ -108,16 +110,16 @@ export default function PortalSetupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isPasswordValid()) {
-      toast.error('Please ensure all password requirements are met');
+      toast.error(t('auth.portalSetup.requirementsNotMet', 'Please ensure all password requirements are met'));
       return;
     }
 
     setIsSubmitting(true);
     try {
       const result = await completePortalSetup(token, formData.password);
-      
+
       if (result.success) {
         // Attempt auto sign-in with the new credentials
         try {
@@ -128,28 +130,28 @@ export default function PortalSetupPage() {
           });
           if (signinRes && (signinRes as any).error) {
             // Fallback to manual sign-in if auto sign-in fails
-            toast.success('Account ready. Please sign in.');
+            toast.success(t('auth.portalSetup.accountReady', 'Account ready. Please sign in.'));
             const signinUrl = tenantSlug
-              ? `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}&message=Account created successfully. Please sign in.`
-              : '/auth/client-portal/signin?message=Account created successfully. Please sign in.';
+              ? `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}&message=${encodeURIComponent(t('auth.portalSetup.accountCreatedSuccess', 'Account created successfully. Please sign in.'))}`
+              : `/auth/client-portal/signin?message=${encodeURIComponent(t('auth.portalSetup.accountCreatedSuccess', 'Account created successfully. Please sign in.'))}`;
             router.push(signinUrl);
           } else {
-            toast.success('Welcome to the client portal!');
+            toast.success(t('auth.portalSetup.welcome', 'Welcome to the client portal!'));
             router.push('/client-portal/dashboard');
           }
         } catch (e) {
-          toast.success('Account ready. Please sign in.');
+          toast.success(t('auth.portalSetup.accountReady', 'Account ready. Please sign in.'));
           const signinUrl = tenantSlug
-            ? `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}&message=Account created successfully. Please sign in.`
-            : '/auth/client-portal/signin?message=Account created successfully. Please sign in.';
+            ? `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}&message=${encodeURIComponent(t('auth.portalSetup.accountCreatedSuccess', 'Account created successfully. Please sign in.'))}`
+            : `/auth/client-portal/signin?message=${encodeURIComponent(t('auth.portalSetup.accountCreatedSuccess', 'Account created successfully. Please sign in.'))}`;
           router.push(signinUrl);
         }
       } else {
-        toast.error(result.error || 'Failed to create account');
+        toast.error(result.error || t('auth.portalSetup.createFailed', 'Failed to create account'));
       }
     } catch (error) {
       console.error('Setup completion error:', error);
-      toast.error('Failed to create account');
+      toast.error(t('auth.portalSetup.createFailed', 'Failed to create account'));
     } finally {
       setIsSubmitting(false);
     }
@@ -176,15 +178,15 @@ export default function PortalSetupPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-red-600">Invalid Invitation</CardTitle>
+            <CardTitle className="text-red-600">{t('auth.portalSetup.invalidInvitation', 'Invalid Invitation')}</CardTitle>
             <CardDescription>
-              There was a problem with your portal invitation
+              {t('auth.portalSetup.invalidInvitationDescription', 'There was a problem with your portal invitation')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert>
               <AlertDescription>
-                {error || 'The invitation token is invalid or has expired. Please contact your service provider for a new invitation.'}
+                {error || t('auth.portalSetup.invalidTokenMessage', 'The invitation token is invalid or has expired. Please contact your service provider for a new invitation.')}
               </AlertDescription>
             </Alert>
             <Button
@@ -194,10 +196,10 @@ export default function PortalSetupPage() {
                   : '/auth/client-portal/signin';
                 router.push(signinUrl);
               }}
-              id='btn=signin'
+              id="btn-signin"
               className="w-full"
             >
-              Go to Portal Sign In
+              {t('auth.portalSetup.goToPortalSignIn', 'Go to Portal Sign In')}
             </Button>
           </CardContent>
         </Card>
@@ -211,31 +213,31 @@ export default function PortalSetupPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Set Up Portal Access
+            {t('auth.portalSetup.title', 'Set Up Portal Access')}
           </CardTitle>
           <CardDescription>
-            Complete your client portal account setup
+            {t('auth.portalSetup.subtitle', 'Complete your client portal account setup')}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           {/* Account Information */}
           <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium">
               <User className="h-4 w-4" />
-              Account Information
+              {t('auth.portalSetup.accountInformation', 'Account Information')}
             </div>
-            
+
             <div className="space-y-2 text-sm">
               <div>
-                <span className="text-muted-foreground">Name:</span> {contactInfo.full_name}
+                <span className="text-muted-foreground">{t('auth.portalSetup.name', 'Name:')}</span> {contactInfo.full_name}
               </div>
               <div>
-                <span className="text-muted-foreground">Email:</span> {contactInfo.email}
+                <span className="text-muted-foreground">{t('auth.portalSetup.email', 'Email:')}</span> {contactInfo.email}
               </div>
               <div className="flex items-center gap-1">
                 <Building className="h-3 w-3" />
-                <span className="text-muted-foreground">Client:</span> {contactInfo.client_name}
+                <span className="text-muted-foreground">{t('auth.portalSetup.client', 'Client:')}</span> {contactInfo.client_name}
               </div>
             </div>
           </div>
@@ -243,7 +245,7 @@ export default function PortalSetupPage() {
           {/* Password Setup Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.portalSetup.password', 'Password')}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -251,7 +253,7 @@ export default function PortalSetupPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder="Enter your password"
+                  placeholder={t('auth.portalSetup.passwordPlaceholder', 'Enter your password')}
                   className="pr-10"
                   required
                 />
@@ -271,7 +273,7 @@ export default function PortalSetupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">{t('auth.portalSetup.confirmPassword', 'Confirm Password')}</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -279,12 +281,13 @@ export default function PortalSetupPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  placeholder="Confirm your password"
+                  placeholder={t('auth.portalSetup.confirmPasswordPlaceholder', 'Confirm your password')}
                   className="pr-10"
                   required
                 />
                 <button
                   type="button"
+                  id={showConfirmPassword ? 'hide-confirm-password-button' : 'show-confirm-password-button'}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3"
                 >
@@ -299,47 +302,47 @@ export default function PortalSetupPage() {
 
             {/* Password Requirements */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Password Requirements</Label>
+              <Label className="text-sm font-medium">{t('auth.portalSetup.passwordRequirements', 'Password Requirements')}</Label>
               <div className="space-y-1 text-xs">
                 <div className={`flex items-center gap-2 ${passwordRequirements.minLength ? 'text-green-600' : 'text-gray-500'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.minLength ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  At least 8 characters
+                  {t('auth.portalSetup.requirements.minLength', 'At least 8 characters')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasUppercase ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  One uppercase letter
+                  {t('auth.portalSetup.requirements.hasUppercase', 'One uppercase letter')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasLowercase ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  One lowercase letter
+                  {t('auth.portalSetup.requirements.hasLowercase', 'One lowercase letter')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  One number
+                  {t('auth.portalSetup.requirements.hasNumber', 'One number')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.hasSpecialChar ? 'text-green-600' : 'text-gray-500'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasSpecialChar ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  One special character
+                  {t('auth.portalSetup.requirements.hasSpecialChar', 'One special character')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.passwordsMatch ? 'text-green-600' : 'text-gray-500'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.passwordsMatch ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  Passwords match
+                  {t('auth.portalSetup.requirements.passwordsMatch', 'Passwords match')}
                 </div>
               </div>
             </div>
 
             <Button
-              id="btn-create-account"
+              id="create-portal-account-button"
               type="submit"
               className="w-full"
               disabled={!isPasswordValid() || isSubmitting}
             >
-              {isSubmitting ? 'Creating Account...' : 'Create Portal Account'}
+              {isSubmitting ? t('auth.portalSetup.creatingAccount', 'Creating Account...') : t('auth.portalSetup.createAccount', 'Create Portal Account')}
             </Button>
           </form>
 
           <div className="text-center text-xs text-muted-foreground">
-            Already have an account?{' '}
+            {t('auth.portalSetup.alreadyHaveAccount', 'Already have an account?')}{' '}
             <button
               onClick={() => {
                 const signinUrl = tenantSlug
@@ -349,7 +352,7 @@ export default function PortalSetupPage() {
               }}
               className="text-blue-600 hover:underline"
             >
-              Sign in to portal
+              {t('auth.portalSetup.signInToPortal', 'Sign in to portal')}
             </button>
           </div>
         </CardContent>
