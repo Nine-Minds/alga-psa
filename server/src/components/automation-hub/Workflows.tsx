@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle, PlayCircle } from 'lucide-react';
+import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle, PlayCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input'; // Assuming WorkflowDataWithSystemFlag is exported from here
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -119,54 +119,56 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     }
   };
 
-  // Filter and sort workflows
-  const filteredWorkflows = workflows
-    .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
-    .filter(workflow => // Then filter by search term
-      workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .sort((a, b) => {
-      let aValue: string | number = '';
-      let bValue: string | number = '';
+  // Filter, sort and memoize workflows to avoid re-processing on every render
+  const filteredWorkflows = useMemo(() => {
+    return workflows
+      .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
+      .filter(workflow => // Then filter by search term
+        workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+      .sort((a, b) => {
+        let aValue: string | number = '';
+        let bValue: string | number = '';
 
-      switch (sortBy) {
-        case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-          break;
-        case 'version':
-          aValue = a.version;
-          bValue = b.version;
-          break;
-        case 'status':
-          aValue = a.isActive ? 'active' : 'inactive';
-          bValue = b.isActive ? 'active' : 'inactive';
-          break;
-        case 'events':
-          aValue = a.events.length;
-          bValue = b.events.length;
-          break;
-        case 'lastUpdated':
-          aValue = new Date(a.lastUpdated || '').getTime();
-          bValue = new Date(b.lastUpdated || '').getTime();
-          break;
-        default:
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-      }
+        switch (sortBy) {
+          case 'name':
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+            break;
+          case 'version':
+            aValue = a.version;
+            bValue = b.version;
+            break;
+          case 'status':
+            aValue = a.isActive ? 'active' : 'inactive';
+            bValue = b.isActive ? 'active' : 'inactive';
+            break;
+          case 'events':
+            aValue = a.events.length;
+            bValue = b.events.length;
+            break;
+          case 'lastUpdated':
+            aValue = new Date(a.lastUpdated || '').getTime();
+            bValue = new Date(b.lastUpdated || '').getTime();
+            break;
+          default:
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+        }
 
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      } else {
-        return sortDirection === 'asc'
-          ? (aValue as number) - (bValue as number)
-          : (bValue as number) - (aValue as number);
-      }
-    });
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortDirection === 'asc'
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        } else {
+          return sortDirection === 'asc'
+            ? (aValue as number) - (bValue as number)
+            : (bValue as number) - (aValue as number);
+        }
+      });
+  }, [workflows, sortBy, sortDirection, showInactive, searchTerm]);
 
   // Handle creating a new workflow
   const handleCreateWorkflow = () => {
@@ -351,13 +353,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('name')}
+                      id="workflow-name-header"
                     >
                       <div className="flex items-center space-x-1">
                         <span>Name</span>
                         {sortBy === 'name' && (
-                          <span className="text-gray-400">
-                            {sortDirection === 'asc' ? '↑' : '↓'}
-                          </span>
+                          sortDirection === 'asc' ?
+                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
                         )}
                       </div>
                     </th>
@@ -368,13 +371,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('version')}
+                      id="workflow-version-header"
                     >
                       <div className="flex items-center space-x-1">
                         <span>Version</span>
                         {sortBy === 'version' && (
-                          <span className="text-gray-400">
-                            {sortDirection === 'asc' ? '↑' : '↓'}
-                          </span>
+                          sortDirection === 'asc' ?
+                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
                         )}
                       </div>
                     </th>
@@ -382,13 +386,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('status')}
+                      id="workflow-status-header"
                     >
                       <div className="flex items-center space-x-1">
                         <span>Status</span>
                         {sortBy === 'status' && (
-                          <span className="text-gray-400">
-                            {sortDirection === 'asc' ? '↑' : '↓'}
-                          </span>
+                          sortDirection === 'asc' ?
+                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
                         )}
                       </div>
                     </th>
@@ -396,13 +401,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('events')}
+                      id="workflow-events-header"
                     >
                       <div className="flex items-center space-x-1">
                         <span>Events</span>
                         {sortBy === 'events' && (
-                          <span className="text-gray-400">
-                            {sortDirection === 'asc' ? '↑' : '↓'}
-                          </span>
+                          sortDirection === 'asc' ?
+                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
                         )}
                       </div>
                     </th>
@@ -410,13 +416,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('lastUpdated')}
+                      id="workflow-last-updated-header"
                     >
                       <div className="flex items-center space-x-1">
                         <span>Last Updated</span>
                         {sortBy === 'lastUpdated' && (
-                          <span className="text-gray-400">
-                            {sortDirection === 'asc' ? '↑' : '↓'}
-                          </span>
+                          sortDirection === 'asc' ?
+                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
                         )}
                       </div>
                     </th>

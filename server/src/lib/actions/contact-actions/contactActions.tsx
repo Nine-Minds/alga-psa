@@ -299,6 +299,12 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
+    // Validate sortBy parameter against whitelist
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
+    if (!allowedSortBy.includes(sortBy)) {
+      sortBy = 'full_name'; // Fall back to default
+    }
+
     // Verify client exists
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('clients')
@@ -414,7 +420,7 @@ export async function getContactsEligibleForInvitation(
           if (status !== 'all') qb.andWhere('c.is_inactive', status === 'inactive');
         })
         .select('c.*', 'comp.client_name')
-        .orderBy(sortBy === 'created_at' ? 'c.created_at' : 'c.full_name', sortDirection);
+        .orderBy('c.full_name', 'asc');
 
       return q;
     });
@@ -522,6 +528,12 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
     // Validate status parameter
     if (!['active', 'inactive', 'all'].includes(status)) {
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
+    }
+
+    // Validate sortBy parameter against whitelist
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
+    if (!allowedSortBy.includes(sortBy)) {
+      sortBy = 'full_name'; // Fall back to default
     }
 
     console.log('[getAllContacts] Fetching contacts with status:', status, 'for tenant:', tenant);
