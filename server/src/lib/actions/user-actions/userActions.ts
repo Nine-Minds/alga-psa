@@ -192,6 +192,9 @@ export async function deleteUser(userId: string): Promise<void> {
       // Delete user roles
       await trx('user_roles').where({ user_id: userId, tenant: tenant || undefined }).del();
 
+      // Delete user preferences
+      await trx('user_preferences').where({ user_id: userId, tenant: tenant || undefined }).del();
+
       // Delete user
       await trx('users').where({ user_id: userId, tenant: tenant || undefined }).del();
     });

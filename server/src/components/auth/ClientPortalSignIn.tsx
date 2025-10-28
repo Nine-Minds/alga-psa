@@ -10,6 +10,7 @@ import { AlertProps } from 'server/src/interfaces';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { TenantBranding } from 'server/src/lib/actions/tenant-actions/tenantBrandingActions';
+import { isValidTenantSlug } from 'server/src/lib/utils/tenantSlug';
 
 interface ClientPortalSignInProps {
   branding?: TenantBranding | null;
@@ -25,6 +26,10 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
   const callbackUrl = searchParams?.get('callbackUrl') || '/client-portal/dashboard';
   const error = searchParams?.get('error');
   const registered = searchParams?.get('registered');
+  const tenantSlug = (() => {
+    const slug = searchParams?.get('tenant') || '';
+    return isValidTenantSlug(slug) ? slug.toLowerCase() : undefined;
+  })();
 
   // Handle error and success messages from URL parameters
   useEffect(() => {
@@ -266,6 +271,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
                 callbackUrl={callbackUrl}
                 onError={handleError}
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
+                tenantSlug={tenantSlug}
               />
               <div className="mt-6 pt-6 border-t text-center">
                 <a href="/auth/msp/signin" className="text-sm text-gray-600 hover:text-indigo-600">

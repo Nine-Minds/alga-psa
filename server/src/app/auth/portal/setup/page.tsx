@@ -26,6 +26,7 @@ export default function PortalSetupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') || '';
+  const tenantSlug = searchParams?.get('tenant') || '';
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,14 +129,20 @@ export default function PortalSetupPage() {
           if (signinRes && (signinRes as any).error) {
             // Fallback to manual sign-in if auto sign-in fails
             toast.success('Account ready. Please sign in.');
-            router.push('/auth/client-portal/signin?message=Account created successfully. Please sign in.');
+            const signinUrl = tenantSlug
+              ? `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}&message=Account created successfully. Please sign in.`
+              : '/auth/client-portal/signin?message=Account created successfully. Please sign in.';
+            router.push(signinUrl);
           } else {
             toast.success('Welcome to the client portal!');
             router.push('/client-portal/dashboard');
           }
         } catch (e) {
           toast.success('Account ready. Please sign in.');
-          router.push('/auth/client-portal/signin?message=Account created successfully. Please sign in.');
+          const signinUrl = tenantSlug
+            ? `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}&message=Account created successfully. Please sign in.`
+            : '/auth/client-portal/signin?message=Account created successfully. Please sign in.';
+          router.push(signinUrl);
         }
       } else {
         toast.error(result.error || 'Failed to create account');
@@ -180,8 +187,13 @@ export default function PortalSetupPage() {
                 {error || 'The invitation token is invalid or has expired. Please contact your service provider for a new invitation.'}
               </AlertDescription>
             </Alert>
-            <Button 
-              onClick={() => router.push('/auth/client-portal/signin')}
+            <Button
+              onClick={() => {
+                const signinUrl = tenantSlug
+                  ? `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}`
+                  : '/auth/client-portal/signin';
+                router.push(signinUrl);
+              }}
               id='btn=signin'
               className="w-full"
             >
@@ -329,7 +341,12 @@ export default function PortalSetupPage() {
           <div className="text-center text-xs text-muted-foreground">
             Already have an account?{' '}
             <button
-              onClick={() => router.push('/auth/client-portal/signin')}
+              onClick={() => {
+                const signinUrl = tenantSlug
+                  ? `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}`
+                  : '/auth/client-portal/signin';
+                router.push(signinUrl);
+              }}
               className="text-blue-600 hover:underline"
             >
               Sign in to portal

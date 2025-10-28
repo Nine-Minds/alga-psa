@@ -4,6 +4,7 @@ import { getSystemEmailService } from './index';
 import { DatabaseTemplateProcessor } from '../services/email/templateProcessors';
 import { getConnection } from '../db/db';
 import { runWithTenant } from '../db/index';
+import { getUserInfoForEmail, resolveEmailLocale } from '../notifications/emailLocaleResolver';
 import logger from '@alga-psa/shared/core/logger';
 
 interface SendPasswordResetEmailParams {
@@ -16,8 +17,8 @@ interface SendPasswordResetEmailParams {
   clientName: string;
 }
 
-export async function sendPasswordResetEmail({ 
-  email, 
+export async function sendPasswordResetEmail({
+  email,
   userName,
   resetLink,
   expirationTime,
@@ -27,12 +28,28 @@ export async function sendPasswordResetEmail({
 }: SendPasswordResetEmailParams): Promise<boolean> {
   logger.info('[sendPasswordResetEmail] Starting email send for:', email);
   logger.info('[sendPasswordResetEmail] Tenant:', tenant);
-  
+
   try {
     return await runWithTenant(tenant, async () => {
       logger.info('[sendPasswordResetEmail] Getting connection for tenant:', tenant);
       const knex = await getConnection(tenant);
-      
+
+      // Resolve recipient locale for language-aware email
+      const recipientInfo = await getUserInfoForEmail(tenant, email) || { email };
+
+      // Internal users always get English (MSP portal doesn't support i18n)
+      // Client portal users use preference hierarchy
+      const recipientLocale = recipientInfo.userType === 'internal'
+        ? 'en'
+        : await resolveEmailLocale(tenant, recipientInfo);
+
+      logger.info('[sendPasswordResetEmail] Resolved locale for password reset email:', {
+        locale: recipientLocale,
+        email,
+        userId: recipientInfo.userId,
+        userType: recipientInfo.userType
+      });
+
       // Prepare template data
       const templateData = {
         userName,
@@ -51,12 +68,15 @@ export async function sendPasswordResetEmail({
       // Use SystemEmailService for better deliverability
       logger.info('[sendPasswordResetEmail] Getting system email service...');
       const systemEmailService = await getSystemEmailService();
-      
+
       logger.info('[sendPasswordResetEmail] Sending email via SystemEmailService');
       const result = await systemEmailService.sendEmail({
         to: email,
         templateProcessor,
         templateData,
+        locale: recipientLocale, // Pass resolved locale
+        tenantId: tenant,
+        userId: recipientInfo.userId,
         replyTo: supportEmail // Support email as reply-to
       });
       

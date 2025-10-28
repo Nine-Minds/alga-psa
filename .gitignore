@@ -122,6 +122,7 @@ update-*.sql
 *draft*.txt
 *draft*.doc*
 .vscode
+ee/server/playwright-storage/
 
 
 volumes/

@@ -13,6 +13,7 @@ import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { useToast } from 'server/src/hooks/use-toast';
 import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
 import {
   validateContactName,
@@ -53,6 +54,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   clients,
   selectedClientId = null
 }) => {
+  const { toast } = useToast();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -309,26 +311,54 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       };
 
       const newContact = await addContact(contactData);
+
+      // Show success toast
+      toast({
+        title: 'Contact created',
+        description: `${fullName.trim()} has been added successfully.`,
+        variant: 'default'
+      });
+
       onContactAdded(newContact);
       onClose();
     } catch (err) {
       console.error('Error adding contact:', err);
       if (err instanceof Error) {
-        // Preserve the original error message for display
+        let errorTitle = 'Error creating contact';
+        let errorDescription = 'An unexpected error occurred. Please try again.';
+
+        // Parse error messages for better display
         if (err.message.includes('VALIDATION_ERROR:')) {
-          setError(err.message);
+          errorTitle = 'Validation Error';
+          errorDescription = err.message.replace('VALIDATION_ERROR:', '').trim();
         } else if (err.message.includes('EMAIL_EXISTS:')) {
-          // Special handling for email exists errors
-          setError('EMAIL_EXISTS: A contact with this email address already exists in the system');
+          errorTitle = 'Email Already Exists';
+          errorDescription = err.message.replace('EMAIL_EXISTS:', '').trim();
         } else if (err.message.includes('FOREIGN_KEY_ERROR:')) {
-          setError(err.message);
+          errorTitle = 'Invalid Reference';
+          errorDescription = err.message.replace('FOREIGN_KEY_ERROR:', '').trim();
         } else if (err.message.includes('SYSTEM_ERROR:')) {
-          setError(err.message);
+          errorTitle = 'System Error';
+          errorDescription = err.message.replace('SYSTEM_ERROR:', '').trim();
         } else {
-          // For unhandled errors, use a generic message
-          setError('An error occurred while creating the contact. Please try again.');
+          errorDescription = err.message;
         }
+
+        // Show error toast
+        toast({
+          title: errorTitle,
+          description: errorDescription,
+          variant: 'destructive'
+        });
+
+        // Also set the inline error for dialog display
+        setError(err.message);
       } else {
+        toast({
+          title: 'Error',
+          description: 'An unexpected error occurred. Please try again.',
+          variant: 'destructive'
+        });
         setError('An unexpected error occurred. Please try again.');
       }
     }

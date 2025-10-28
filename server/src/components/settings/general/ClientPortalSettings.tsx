@@ -236,7 +236,7 @@ const ClientPortalSettings = () => {
                 data-automation-id="tenant-default-language-select"
               />
               <p className="text-sm text-gray-500">
-                This will be the default language for all client portal users unless overridden by client setting or individual user preferences
+                This will be the default language for all client portal users and email notifications unless overridden by client setting or individual user preferences
               </p>
             </div>
 
@@ -270,12 +270,18 @@ const ClientPortalSettings = () => {
 
             <div className="p-4 bg-blue-50 rounded-lg">
               <h4 className="text-sm font-medium text-blue-900 mb-2">Language Preference Hierarchy</h4>
+              <p className="text-sm text-blue-800 mb-2">
+                This hierarchy applies to both the client portal interface and email notifications sent to client portal users:
+              </p>
               <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
                 <li>Individual user preference (highest priority)</li>
                 <li>Client default language</li>
                 <li>Organization default (configured here)</li>
                 <li>System default (English)</li>
               </ol>
+              <p className="text-sm text-blue-600 mt-2 italic">
+                Note: Internal MSP users always receive emails in English
+              </p>
             </div>
           </div>
         </CardContent>

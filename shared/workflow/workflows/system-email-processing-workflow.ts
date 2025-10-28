@@ -377,8 +377,15 @@ export async function systemEmailProcessingWorkflow(context) {
     console.log('Creating new ticket from email with resolved defaults');
     
     // Override defaults with matched client info if available
-    const finalClientId = matchedClient?.clientId || ticketDefaults.client_id;
+    const defaultClientId = ticketDefaults.client_id ?? null;
+    const matchedClientId = matchedClient?.clientId ?? null;
+    const finalClientId = matchedClientId || defaultClientId;
     const finalContactId = matchedClient?.contactId || null;
+
+    let finalLocationId = ticketDefaults.location_id ?? null;
+    if (matchedClientId && (!defaultClientId || matchedClientId !== defaultClientId)) {
+      finalLocationId = null; // Drop default location when switching to a different client
+    }
     
     const ticketResult = await actions.create_ticket_from_email({
       title: emailData.subject,
@@ -391,7 +398,7 @@ export async function systemEmailProcessingWorkflow(context) {
       priority_id: ticketDefaults.priority_id,
       category_id: ticketDefaults.category_id,
       subcategory_id: ticketDefaults.subcategory_id,
-      location_id: ticketDefaults.location_id,
+      location_id: finalLocationId,
       entered_by: ticketDefaults.entered_by,
       // Store email metadata for future threading
       email_metadata: {

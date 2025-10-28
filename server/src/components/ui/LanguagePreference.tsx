@@ -47,7 +47,7 @@ export function LanguagePreference({
   const { locale: currentLocale, setLocale } = useI18n();
   const { t } = useTranslation('common');
   const fieldLabel = label ?? t('language.preference.label', 'Language Preference');
-  const fieldHelperText = helperText ?? t('language.preference.helper', 'Select your preferred language for the interface');
+  const fieldHelperText = helperText ?? t('language.preference.helper', 'Select your preferred language for the interface and email notifications');
   const effectiveLocale = currentEffectiveLocale || currentLocale;
   const [selectedLocale, setSelectedLocale] = useState<SupportedLocale | 'none'>(
     value === null || value === undefined ? 'none' : value

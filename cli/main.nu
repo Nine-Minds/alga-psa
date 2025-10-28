@@ -55,7 +55,7 @@ def --wrapped main [
        print ""
        print "  nu main.nu hosted-env-create <branch> [--environment hosted|sebastian]     # Create hosted code-server env"
        print "  nu main.nu hosted-env-list [--environment hosted|sebastian]               # List hosted environments"
-       print "  nu main.nu hosted-env-connect <branch> [--environment hosted|sebastian]    # Port-forward code-server"
+       print "  nu main.nu hosted-env-connect <branch> --canary <header> [--environment hosted|sebastian]    # Port-forward code-server"
        print "  nu main.nu hosted-env-destroy <branch> [--force] [--environment hosted|sebastian]"
        print "  nu main.nu hosted-env-status <branch> [--environment hosted|sebastian]     # Show k8s objects"
        print ""
@@ -177,7 +177,7 @@ def --wrapped main [
        print ""
        print "  nu main.nu hosted-env-create <branch> [--environment hosted|sebastian]     # Create hosted code-server env"
        print "  nu main.nu hosted-env-list [--environment hosted|sebastian]               # List hosted environments"
-       print "  nu main.nu hosted-env-connect <branch> [--environment hosted|sebastian]    # Port-forward code-server"
+       print "  nu main.nu hosted-env-connect <branch> --canary <header> [--environment hosted|sebastian]    # Port-forward code-server"
        print "  nu main.nu hosted-env-destroy <branch> [--force] [--environment hosted|sebastian]"
        print "  nu main.nu hosted-env-status <branch> [--environment hosted|sebastian]     # Show k8s objects"
        print ""
@@ -713,14 +713,19 @@ def --wrapped main [
            let env_flag = (parse-flag $args "--environment")
            let env_short = (parse-flag $args "-e")
            let environment = if $env_flag != null { $env_flag } else { $env_short }
-           let branch_state = (($args | skip 1) | reduce -f { branch: null skip_env: false } { |arg, acc|
-               if $acc.skip_env {
-                   { branch: $acc.branch, skip_env: false }
-               } else if $arg == "--environment" or $arg == "-e" {
-                   { branch: $acc.branch, skip_env: true }
+           let canary_flag = (parse-flag $args "--canary")
+           let canary_short = (parse-flag $args "-c")
+           let canary = if $canary_flag != null { $canary_flag } else { $canary_short }
+           let branch_state = (($args | skip 1) | reduce -f { branch: null skip_next: false } { |arg, acc|
+               if $acc.skip_next {
+                   { branch: $acc.branch, skip_next: false }
+               } else if $arg == "--environment" or $arg == "-e" or $arg == "--canary" or $arg == "-c" {
+                   { branch: $acc.branch, skip_next: true }
+               } else if ($arg | str starts-with "-") {
+                   $acc
                } else {
                    if $acc.branch == null {
-                       { branch: $arg, skip_env: false }
+                       { branch: $arg, skip_next: false }
                    } else {
                        $acc
                    }
@@ -728,12 +733,15 @@ def --wrapped main [
            })
            let branch = ($branch_state | get branch)
            if $branch == null {
-               error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-connect requires branch argument($env.ALGA_COLOR_RESET)" }
+                error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-connect requires branch argument($env.ALGA_COLOR_RESET)" }
+           }
+           if $canary == null {
+               error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-connect requires '--canary <header_value>'.($env.ALGA_COLOR_RESET)" }
            }
            if $environment == null {
-               hosted-env-connect $branch
+               hosted-env-connect $branch --canary $canary
            } else {
-               hosted-env-connect $branch --environment $environment
+               hosted-env-connect $branch --environment $environment --canary $canary
            }
        }
        "hosted-env-destroy" => {

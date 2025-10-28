@@ -117,7 +117,7 @@
     "currentLanguage": "Langue actuelle",
     "preference": {
       "label": "Préférence de langue",
-      "helper": "Sélectionnez la langue d'interface que vous préférez",
+      "helper": "Sélectionnez votre langue préférée pour l'interface et les notifications par e-mail",
       "placeholder": "Sélectionnez une langue",
       "cleared": "Préférence de langue réinitialisée. Langue par défaut utilisée...",
       "updating": "Mise à jour de la préférence de langue...",
