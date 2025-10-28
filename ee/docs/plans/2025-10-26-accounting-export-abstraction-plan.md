@@ -279,6 +279,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     6. Open row actions → Delete; confirm removal; entry disappears.
     7. Open Audit Log (existing system) and confirm create/update/delete entries referencing mapping ID.
     - *Integration coverage:* `server/src/test/integration/accounting/mappingCrud.integration.test.ts` exercises create/list/update/delete flows via server actions.
+    - *Playwright coverage:* `ee/server/src/__tests__/integration/mapping-crud.playwright.test.ts` verifies the UI harness workflow (mock data + audit log).
   - `MappingFallback#L1`
     1. From same screen, click `Configure Fallback` chip in Service Items card.
     2. Reorder fallback list to `Contract Line`, `Service`, `Category` by dragging handles.
@@ -287,6 +288,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     5. Move category fallback to top; run batch preview again; verify preview now shows category-based mapping.
     6. Remove category fallback, save; attempt batch creation; ensure validation error highlights unmapped line with instruction to add mapping.
     - *Integration coverage:* `server/src/test/integration/accounting/accountingMappingResolver.integration.test.ts` validates service vs. category fallback and realm-specific resolution behaviour.
+    - *Playwright coverage:* `ee/server/src/__tests__/integration/mapping-fallback.playwright.test.ts` exercises the UI harness for fallback ordering, category overrides, and validation feedback.
   - `XeroMappings#L1`
     1. Navigate to Xero tab; click `Refresh from Adapter` to pull latest accounts/tax/tracking; ensure spinner resolves without error.
     2. Add Service mapping selecting PSA service and Xero revenue account; ensure `AccountCode` column populated.
@@ -305,6 +307,7 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     4. Attempt to confirm; modal blocks with error banner referencing missing mapping.
     5. After adding mapping, reopen modal, preview shows green check, confirmation succeeds.
     - *Integration coverage:* `server/src/test/integration/accounting/validationUnmapped.integration.test.ts` seeds an invoice with no service mapping, verifies `ensureMappingsForBatch` records the error/status, then confirms the batch flips to `ready` once the mapping exists.
+    - *Playwright coverage:* `ee/server/src/__tests__/integration/mapping-validation-unmapped.playwright.test.ts` exercises the export wizard harness, ensuring unmapped services block confirmation until a mapping is added.
   - `ValidationCurrency#L1`
     1. Create invoice in EUR with stored exchange rate on invoice record.
     2. Run export wizard; on preview confirm displayed home currency totals match converted values.
@@ -400,10 +403,12 @@ Out of scope for this iteration: automatic payment imports, two-way sync of jour
     1. Navigate to dashboard; apply filters; confirm table updates.
     2. Use pagination to view additional batches; ensure data persists.
     3. As finance admin, download payload from drawer; as support agent, verify download button hidden/disabled.
+    - *Integration coverage:* `server/src/test/integration/accounting/exportDashboard.integration.test.ts` validates dashboard filters, batch detail retrieval, and re-export dataset preparation.
   - `InvoiceDetail#L1`
     1. Open exported invoice; view Export History card listing batch links.
     2. Click batch link to open drawer; verify context slides in.
     3. Use `Re-export Invoice` button to start guided wizard prefilled with invoice; complete run and confirm new batch appended to history.
+    - *Integration coverage:* `server/src/test/integration/accounting/exportDashboard.integration.test.ts` builds drawer detail data and exercises invoice-selector driven re-export batch creation.
   - `Notifications#L1`
     1. Cause batch failure; ensure toast displays within 5 seconds with “View Batch” CTA.
     2. Check finance inbox for email summary containing batch ID.

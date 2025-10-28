@@ -11,7 +11,12 @@ import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect'; // Correct: Default import
 import { Input } from 'server/src/components/ui/Input'; // For potential metadata
-import { createExternalEntityMapping, updateExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
+import {
+  createExternalEntityMapping,
+  updateExternalEntityMapping,
+  type CreateMappingData,
+  type UpdateMappingData
+} from 'server/src/lib/actions/externalMappingActions';
 // Removed import for placeholder AlgaService type
 import { QboItem } from 'server/src/lib/actions/integrations/qboActions'; // Import type
 // Import DisplayMapping type (assuming definition is compatible/exported from Item table or shared types)
@@ -38,6 +43,10 @@ interface QboMappingFormDialogProps {
   algaEntityLabel: string; // e.g., 'Alga Service'
   externalEntityLabel: string; // e.g., 'QuickBooks Item'
   dialogId: string; // For automation/testing
+  overrides?: {
+    createMapping?: (data: CreateMappingData) => Promise<unknown>;
+    updateMapping?: (mappingId: string, data: UpdateMappingData) => Promise<unknown>;
+  };
 }
 
 export function QboMappingFormDialog({
@@ -54,6 +63,7 @@ export function QboMappingFormDialog({
   algaEntityLabel,
   externalEntityLabel,
   dialogId,
+  overrides,
 }: QboMappingFormDialogProps) {
   const [selectedAlgaEntityId, setSelectedAlgaEntityId] = useState<string>('');
   const [selectedExternalEntityId, setSelectedExternalEntityId] = useState<string>('');
@@ -96,14 +106,19 @@ export function QboMappingFormDialog({
     try {
       if (isEditing) {
         // Update existing mapping
-        await updateExternalEntityMapping(existingMapping.id, {
+        const updatePayload: UpdateMappingData = {
           external_entity_id: selectedExternalEntityId,
           metadata: parsedMetadata,
           // Add other updatable fields like sync_status if needed
-        });
+        };
+        if (overrides?.updateMapping) {
+          await overrides.updateMapping(existingMapping.id, updatePayload);
+        } else {
+          await updateExternalEntityMapping(existingMapping.id, updatePayload);
+        }
       } else {
         // Create new mapping
-        await createExternalEntityMapping({
+        const createPayload: CreateMappingData = {
           integration_type: 'quickbooks_online', // Hardcoded for QBO
           alga_entity_type: algaEntityType,
           alga_entity_id: selectedAlgaEntityId,
@@ -111,7 +126,12 @@ export function QboMappingFormDialog({
           external_realm_id: realmId,
           metadata: parsedMetadata,
           sync_status: 'manual_link', // Indicate it was manually created/linked
-        });
+        };
+        if (overrides?.createMapping) {
+          await overrides.createMapping(createPayload);
+        } else {
+          await createExternalEntityMapping(createPayload);
+        }
       }
       onSave(); // Trigger refresh in parent table
       onClose(); // Close dialog on success

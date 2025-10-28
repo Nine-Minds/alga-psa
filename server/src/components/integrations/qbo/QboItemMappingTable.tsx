@@ -1,7 +1,7 @@
 // server/src/components/integrations/qbo/QboItemMappingTable.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ColumnDef,
   flexRender,
@@ -25,7 +25,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
-import { getExternalEntityMappings, deleteExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
+import {
+  getExternalEntityMappings,
+  deleteExternalEntityMapping,
+  type CreateMappingData,
+  type UpdateMappingData
+} from 'server/src/lib/actions/externalMappingActions';
 // Placeholder imports for server actions - these need to be created
 import { getQboItems } from 'server/src/lib/actions/integrations/qboActions'; // TODO: Create this action
 // Placeholder import for the Edit/Create Dialog - needs to be created
@@ -73,9 +78,21 @@ export interface DisplayMapping extends ExternalEntityMapping {
 interface QboItemMappingTableProps {
   realmId: string;
   // Removed tenantId prop
+  overrides?: QboItemMappingTableOverrides;
 }
 
-export function QboItemMappingTable({ realmId }: QboItemMappingTableProps) {
+export interface QboItemMappingTableOverrides {
+  loadData?: () => Promise<{
+    mappings: DisplayMapping[];
+    services: IService[];
+    items: QboItem[];
+  }>;
+  createMapping?: (data: CreateMappingData) => Promise<unknown>;
+  updateMapping?: (mappingId: string, data: UpdateMappingData) => Promise<unknown>;
+  deleteMapping?: (mappingId: string) => Promise<unknown>;
+}
+
+export function QboItemMappingTable({ realmId, overrides }: QboItemMappingTableProps) {
   const [mappings, setMappings] = useState<DisplayMapping[]>([]);
   const [algaServices, setAlgaServices] = useState<IService[]>([]); // Use IService type
   const [qboItems, setQboItems] = useState<QboItem[]>([]);
@@ -89,10 +106,18 @@ export function QboItemMappingTable({ realmId }: QboItemMappingTableProps) {
   const algaEntityType = 'service'; // Specific to this table
   const externalEntityType = 'Item'; // Specific to QBO Items
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
+      if (overrides?.loadData) {
+        const result = await overrides.loadData();
+        setMappings(result.mappings);
+        setAlgaServices(result.services);
+        setQboItems(result.items);
+        return;
+      }
+
       // Corrected call to getExternalEntityMappings
       // Corrected call to getServices (handles pagination internally, tenant handled internally)
       const [mappingData, servicesResponse, itemsData] = await Promise.all([
@@ -126,11 +151,11 @@ export function QboItemMappingTable({ realmId }: QboItemMappingTableProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [realmId, overrides]);
 
   useEffect(() => {
     fetchData();
-  }, [realmId]); // Removed tenantId from dependency array
+  }, [realmId, fetchData]); // Removed tenantId from dependency array
 
   const handleEdit = (mapping: DisplayMapping) => {
     setEditingMapping(mapping);
@@ -148,7 +173,11 @@ export function QboItemMappingTable({ realmId }: QboItemMappingTableProps) {
     setError(null);
     try {
       // Call delete action (tenantId handled internally)
-      await deleteExternalEntityMapping(deletingMappingId);
+      if (overrides?.deleteMapping) {
+        await overrides.deleteMapping(deletingMappingId);
+      } else {
+        await deleteExternalEntityMapping(deletingMappingId);
+      }
       console.log(`Successfully deleted mapping ${deletingMappingId}`);
       fetchData(); // Refresh data after delete
     } catch (err: any) {
@@ -341,6 +370,10 @@ export function QboItemMappingTable({ realmId }: QboItemMappingTableProps) {
           algaEntityLabel="Alga Service"
           externalEntityLabel="QuickBooks Item"
           dialogId="qbo-item-mapping-dialog" // Unique ID
+          overrides={{
+            createMapping: overrides?.createMapping,
+            updateMapping: overrides?.updateMapping,
+          }}
         />
       )}
 
