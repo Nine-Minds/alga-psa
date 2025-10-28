@@ -192,7 +192,6 @@ function collectOperations(spec) {
     for (const method of HTTP_METHODS) {
       const operation = pathItem[method];
       if (!operation || typeof operation !== 'object') continue;
-      if (!operation['x-chat-callable']) continue;
 
       const id = createEntryId(method, pathName, operation.operationId);
       const parameters = collectParameters(spec, pathItem, operation);

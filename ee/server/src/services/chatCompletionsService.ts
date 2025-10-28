@@ -362,7 +362,34 @@ export class ChatCompletionsService {
               },
               body: {
                 description: 'JSON payload for POST/PUT/PATCH requests.',
-                type: ['object', 'array', 'string', 'number', 'boolean', 'null'],
+                oneOf: [
+                  {
+                    type: 'object',
+                    description: 'Structured JSON object payload.',
+                    additionalProperties: true,
+                  },
+                  {
+                    type: 'array',
+                    description: 'Array payload (e.g., bulk operations).',
+                    items: {},
+                  },
+                  {
+                    type: 'string',
+                    description: 'Raw string payload.',
+                  },
+                  {
+                    type: 'number',
+                    description: 'Numeric payload.',
+                  },
+                  {
+                    type: 'boolean',
+                    description: 'Boolean payload.',
+                  },
+                  {
+                    type: 'null',
+                    description: 'Explicit null payload.',
+                  },
+                ],
               },
             },
             required: ['entryId'],
