@@ -24,6 +24,7 @@ export type ChatCompletionMessage = {
     name: string;
     arguments: Record<string, unknown>;
   };
+  tool_call_id?: string;
 };
 
 export interface FunctionMetadata {
@@ -40,6 +41,7 @@ export interface FunctionMetadata {
 export interface FunctionCallInfo {
   name: string;
   arguments: Record<string, unknown>;
+  toolCallId?: string;
 }
 
 export interface FunctionProposedResponse {
@@ -90,6 +92,7 @@ interface ExecuteCompletionParams {
   baseUrl: string;
   tenantId: string;
   userId: string;
+  cookieHeader?: string;
 }
 
 export class ChatCompletionsService {
@@ -140,6 +143,12 @@ export class ChatCompletionsService {
       });
     } catch (error) {
       console.error('[ChatCompletionsService] Request error', error);
+      if ((error as any)?.error) {
+        console.error(
+          '[ChatCompletionsService] Provider response',
+          JSON.stringify((error as any).error, null, 2),
+        );
+      }
       const message = error instanceof Error ? error.message : 'Internal Server Error';
       const status = message === 'Invalid messages payload' ? 400 : 500;
       return new Response(JSON.stringify({ error: message }), {
@@ -193,12 +202,15 @@ export class ChatCompletionsService {
         functionCall: {
           name: functionCall.name,
           arguments: this.ensureArguments(functionCall.arguments),
+          toolCallId: typeof functionCall.toolCallId === 'string' ? functionCall.toolCallId : undefined,
+          entryId: typeof functionCall.entryId === 'string' ? functionCall.entryId : undefined,
         },
         chatId,
         action,
         baseUrl: req.nextUrl.origin,
         tenantId: user.tenant,
         userId: user.user_id,
+        cookieHeader: req.headers.get('cookie') ?? undefined,
       });
 
       return new Response(JSON.stringify(result), {
@@ -207,6 +219,12 @@ export class ChatCompletionsService {
       });
     } catch (error) {
       console.error('[ChatCompletionsService] Execute error', error);
+      if ((error as any)?.error) {
+        console.error(
+          '[ChatCompletionsService] Provider response',
+          JSON.stringify((error as any).error, null, 2),
+        );
+      }
       const message = error instanceof Error ? error.message : 'Internal Server Error';
       const status =
         message === 'Missing function call information' || message === 'Invalid messages payload'
@@ -228,10 +246,13 @@ export class ChatCompletionsService {
     const openAiMessages = this.buildOpenAiMessages(messages);
 
     const completion = await client.chat.completions.create({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: process.env.OPENROUTER_CHAT_MODEL ?? 'openai/gpt-4o-mini',
       messages: openAiMessages,
-      functions: registry.map((entry) => this.buildFunctionDefinition(entry)),
-      function_call: 'auto',
+      tools: registry.map((entry) => ({
+        type: 'function' as const,
+        function: this.buildFunctionDefinition(entry),
+      })),
+      tool_choice: 'auto',
       temperature: 0.2,
     });
 
@@ -244,26 +265,36 @@ export class ChatCompletionsService {
     }
 
     const content = this.extractContent(choice);
-    const functionCall = choice.message?.function_call;
-
-    if (choice.finish_reason === 'function_call' && functionCall?.name) {
-      const entry = registry.find((item) => item.id === functionCall.name);
-      if (!entry) {
+    const toolCalls = choice.message?.tool_calls ?? [];
+    if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+      const toolCall = toolCalls[0];
+      const functionName = toolCall?.function?.name;
+      if (!functionName) {
         return {
           type: 'error',
-          error: `Function ${functionCall.name} is not available.`,
+          error: 'The assistant attempted to call an unknown function.',
         };
       }
 
-      const parsedArgs = this.ensureArguments(functionCall.arguments);
+      const entry = registry.find((item) => this.toToolName(item.id) === functionName);
+      if (!entry) {
+        return {
+          type: 'error',
+          error: `Function ${functionName} is not available.`,
+        };
+      }
+
+      const parsedArgs = this.ensureArguments(toolCall.function?.arguments);
+      const toolCallId = toolCall.id ?? uuid();
 
       const assistantMessage: ChatCompletionMessage = {
         role: 'assistant',
         content: content || undefined,
         function_call: {
-          name: functionCall.name,
+          name: functionName,
           arguments: parsedArgs,
         },
+        tool_call_id: toolCallId,
       };
 
       const nextMessages: ChatCompletionMessage[] = [...messages, assistantMessage];
@@ -275,8 +306,10 @@ export class ChatCompletionsService {
         function: metadata,
         assistantPreview: content ?? '',
         functionCall: {
-          name: functionCall.name,
+          name: functionName,
           arguments: parsedArgs,
+          toolCallId,
+          entryId: entry.id,
         },
         nextMessages,
       };
@@ -300,10 +333,12 @@ export class ChatCompletionsService {
   }
 
   private static async executeAfterApproval(params: ExecuteCompletionParams): Promise<CompletionResponse> {
-    const { messages, functionCall, action, baseUrl, tenantId, userId, chatId } = params;
+    const { messages, functionCall, action, baseUrl, tenantId, userId, chatId, cookieHeader } = params;
 
     const registry = getRegistry();
-    const entry = registry.find((item) => item.id === functionCall.name);
+    const entry =
+      registry.find((item) => item.id === functionCall.entryId) ??
+      registry.find((item) => this.toToolName(item.id) === functionCall.name);
     if (!entry) {
       return {
         type: 'error',
@@ -323,19 +358,23 @@ export class ChatCompletionsService {
         tenantId,
         userId,
         chatId,
+        cookieHeader,
       });
     }
+
+    const toolCallId = functionCall.toolCallId ?? uuid();
 
     const functionMessage: ChatCompletionMessage = {
       role: 'function',
       name: functionCall.name,
       content: JSON.stringify(resultPayload),
+      tool_call_id: toolCallId,
     };
 
     const openAiMessages = this.buildOpenAiMessages([...messages, functionMessage]);
 
     const completion = await client.chat.completions.create({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: process.env.OPENROUTER_CHAT_MODEL ?? 'openai/gpt-4o-mini',
       messages: openAiMessages,
       temperature: 0.2,
     });
@@ -366,6 +405,7 @@ export class ChatCompletionsService {
         name: functionCall.name,
         arguments: functionCall.arguments,
         result: resultPayload,
+        toolCallId,
       },
       nextMessages,
     };
@@ -393,6 +433,8 @@ export class ChatCompletionsService {
       if (role === 'function') {
         message.name = typeof (item as any).name === 'string' ? (item as any).name : undefined;
         message.content = typeof (item as any).content === 'string' ? (item as any).content : undefined;
+        message.tool_call_id =
+          typeof (item as any).tool_call_id === 'string' ? (item as any).tool_call_id : undefined;
         if (!message.name) {
           throw new Error('Invalid messages payload');
         }
@@ -412,6 +454,8 @@ export class ChatCompletionsService {
           name: fn.name,
           arguments: this.ensureArguments(fn.arguments),
         };
+        message.tool_call_id =
+          typeof (item as any).tool_call_id === 'string' ? (item as any).tool_call_id : undefined;
       }
 
       return message;
@@ -451,21 +495,32 @@ export class ChatCompletionsService {
     const converted = messages.map((message) => {
       if (message.role === 'function') {
         return {
-          role: 'function' as const,
-          name: message.name ?? 'function',
+          role: 'tool' as const,
+          tool_call_id: message.tool_call_id ?? message.name ?? uuid(),
           content: message.content ?? '',
+        };
+      }
+
+      if (message.role === 'assistant' && message.function_call) {
+        return {
+          role: 'assistant' as const,
+          content: message.content ?? '',
+          tool_calls: [
+            {
+              id: message.tool_call_id ?? uuid(),
+              type: 'function' as const,
+              function: {
+                name: message.function_call.name,
+                arguments: JSON.stringify(message.function_call.arguments ?? {}),
+              },
+            },
+          ],
         };
       }
 
       return {
         role: message.role,
-        content: message.content ?? null,
-        function_call: message.function_call
-          ? {
-              name: message.function_call.name,
-              arguments: JSON.stringify(message.function_call.arguments ?? {}),
-            }
-          : undefined,
+        content: message.content ?? '',
       };
     });
 
@@ -502,7 +557,7 @@ export class ChatCompletionsService {
 
   private static buildFunctionDefinition(entry: ChatApiRegistryEntry) {
     return {
-      name: entry.id,
+      name: this.toToolName(entry.id),
       description: entry.description ?? entry.displayName,
       parameters: this.buildParameterSchema(entry),
     };
@@ -550,6 +605,10 @@ export class ChatCompletionsService {
     };
   }
 
+  private static toToolName(id: string): string {
+    return id.replace(/[^a-zA-Z0-9_-]/g, '_');
+  }
+
   private static async executeFunctionCall(params: {
     entry: ChatApiRegistryEntry;
     args: Record<string, unknown>;
@@ -557,8 +616,9 @@ export class ChatCompletionsService {
     tenantId: string;
     userId: string;
     chatId: string | null;
+    cookieHeader?: string;
   }) {
-    const { entry, args, baseUrl, tenantId, userId, chatId } = params;
+    const { entry, args, baseUrl, tenantId, userId, chatId, cookieHeader } = params;
 
     const functionCallId = uuid();
     const approvalId = uuid();
@@ -578,6 +638,12 @@ export class ChatCompletionsService {
 
     try {
       const { url, init } = this.buildFetchRequest(entry, args, baseUrl, tempKey.apiKey, tenantId);
+      if (!tempKey.apiKey && cookieHeader) {
+        init.headers = {
+          ...init.headers,
+          cookie: cookieHeader,
+        };
+      }
       const response = await fetch(url, init);
       const text = await response.text();
       let data: unknown = null;
@@ -587,7 +653,9 @@ export class ChatCompletionsService {
         data = text;
       }
 
-      await TemporaryApiKeyService.revoke(tenantId, tempKey.apiKeyId, 'consumed');
+      if (tempKey.apiKeyId !== TemporaryApiKeyService.FALLBACK_KEY_ID) {
+        await TemporaryApiKeyService.revoke(tenantId, tempKey.apiKeyId, 'consumed');
+      }
 
       return {
         status: response.status,
@@ -595,9 +663,11 @@ export class ChatCompletionsService {
         data,
       };
     } catch (error) {
-      await TemporaryApiKeyService.revoke(tenantId, tempKey.apiKeyId, 'error', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      if (tempKey.apiKeyId !== TemporaryApiKeyService.FALLBACK_KEY_ID) {
+        await TemporaryApiKeyService.revoke(tenantId, tempKey.apiKeyId, 'error', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       throw error;
     }
   }
@@ -614,9 +684,12 @@ export class ChatCompletionsService {
 
     const queryParams: Record<string, unknown> = {};
     const headers: Record<string, string> = {
-      'x-api-key': apiKey,
       'x-tenant-id': tenantId,
     };
+
+    if (apiKey) {
+      headers['x-api-key'] = apiKey;
+    }
 
     const body = args.body;
 
