@@ -19,7 +19,15 @@ interface RightSidebarProps {
   isTitleLocked: boolean;
 }
 
-const isEnterpriseEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+const resolvedEdition =
+  (process.env.NEXT_PUBLIC_EDITION ?? process.env.EDITION ?? '').toLowerCase();
+const isBrowser = typeof window !== 'undefined';
+const isLocalhost =
+  isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const isEnterpriseEdition =
+  resolvedEdition === 'enterprise' ||
+  resolvedEdition === 'ee' ||
+  isLocalhost;
 const EnterpriseRightSidebar = isEnterpriseEdition
   ? lazy(() => import('../../../../ee/server/src/components/layout/RightSidebar'))
   : null;
