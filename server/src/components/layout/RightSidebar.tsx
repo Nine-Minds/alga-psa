@@ -1,7 +1,7 @@
 // server/src/components/layout/RightSidebar.tsx
 'use client';
 
-import React, { useId } from 'react';
+import React, { useId, Suspense, lazy } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 
 interface RightSidebarProps {
@@ -11,6 +11,7 @@ interface RightSidebarProps {
   accountId: string;
   messages: any[];
   userRole: string;
+  userId: string | null;
   selectedAccount: string;
   handleSelectAccount: any;
   auth_token: string;
@@ -18,10 +19,32 @@ interface RightSidebarProps {
   isTitleLocked: boolean;
 }
 
+const isEnterpriseEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+const EnterpriseRightSidebar = isEnterpriseEdition
+  ? lazy(() => import('../../../../ee/server/src/components/layout/RightSidebar'))
+  : null;
+
 const RightSidebar: React.FC<RightSidebarProps> = ({
   isOpen,
-  setIsOpen
+  setIsOpen,
+  ...props
 }) => {
+  if (isEnterpriseEdition && EnterpriseRightSidebar) {
+    return (
+      <Suspense
+        fallback={
+          <div className="fixed top-0 right-0 h-full bg-gray-50 w-96 shadow-xl">
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          </div>
+        }
+      >
+        <EnterpriseRightSidebar isOpen={isOpen} setIsOpen={setIsOpen} {...props} />
+      </Suspense>
+    );
+  }
+
   const collapsibleId = useId();
   
   return (

@@ -1,3 +1,5 @@
+'use client';
+
 import ReactMarkdown from "react-markdown"
 import remarkGfm from 'remark-gfm'
 import Image from 'next/image';
@@ -69,3 +71,5 @@ export const Message: React.FC<MessageProps> = (
     </div>
   )
 }
+
+export default Message;

@@ -1,10 +1,11 @@
+'use client';
+
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 
 import { Message } from '../../components/message/Message';
 import { IChat } from '../../interfaces/chat.interface';
 import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { HfInference } from '@huggingface/inference';
 
 import '../../components/chat/chat.css';
@@ -48,6 +49,7 @@ type ChatProps = {
   accountId: string;
   messages: any[];
   userRole: string;
+  userId: string | null;
   selectedAccount: string;
   handleSelectAccount: any;
   auth_token: string;
@@ -68,6 +70,7 @@ export const Chat: React.FC<ChatProps> = ({
   accountId,
   messages,
   userRole,
+  userId,
   selectedAccount,
   handleSelectAccount,
   auth_token,
@@ -87,7 +90,6 @@ export const Chat: React.FC<ChatProps> = ({
   }[]>([]);
   const [fullMessage, setFullMessage] = useState('');
   const [chatId, setChatId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [userMessageId, setUserMessageId] = useState<string | null>(null);
   const [botMessageId, setBotMessageId] = useState<string | null>(null);
   const [conversation, setConversation] = useState<ChatCompletionMessage[]>(() =>
@@ -100,6 +102,11 @@ export const Chat: React.FC<ChatProps> = ({
   const [functionError, setFunctionError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
+  const resolveMessageId = (candidate?: string | null) =>
+    candidate ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `msg-${Date.now()}-${Math.random()}`);
+
   void accountId;
   void userRole;
   void selectedAccount;
@@ -108,15 +115,6 @@ export const Chat: React.FC<ChatProps> = ({
   void setChatTitle;
   void isTitleLocked;
   void hf;
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const user = await getCurrentUser();
-      setUserId(user?.user_id || '');
-    };
-
-    fetchUser();
-  }, []);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -135,7 +133,7 @@ export const Chat: React.FC<ChatProps> = ({
       setNewChatMessages((prev) => [
         ...prev,
         {
-          _id: botMessageId,
+          _id: resolveMessageId(botMessageId),
           role: 'bot',
           content: fullMessage,
         },
@@ -156,7 +154,7 @@ export const Chat: React.FC<ChatProps> = ({
     chatIdentifier: string | null,
     content: string,
   ) => {
-    if (!content) {
+    if (!content || !chatIdentifier) {
       return;
     }
 
@@ -217,6 +215,13 @@ export const Chat: React.FC<ChatProps> = ({
     setIsFunction(true);
     setIncomingMessage('Thinking...');
 
+    if (!userId) {
+      setGeneratingResponse(false);
+      setIsFunction(false);
+      setFunctionError('Unable to send message: user not identified.');
+      return;
+    }
+
     const userMessage: ChatCompletionMessage = {
       role: 'user',
       content: trimmedMessage,
@@ -236,36 +241,32 @@ export const Chat: React.FC<ChatProps> = ({
           title_is_locked: false,
         };
         const created = await createNewChatAction(conversationInfo);
-        if (!created) {
-          throw new Error('Failed to create new chat');
+        if (created?._id) {
+          createdChatId = created._id;
+          setChatId(created._id);
         }
-        createdChatId = created._id || null;
-        setChatId(createdChatId);
       }
 
-      const messageInfo = {
-        chat_id: createdChatId!,
-        chat_role: 'user' as const,
-        content: trimmedMessage,
-        thumb: null,
-        feedback: null,
-      };
-      const saved = await addMessageToChatAction(messageInfo);
-      setUserMessageId(saved._id || null);
+      if (createdChatId) {
+        const messageInfo = {
+          chat_id: createdChatId,
+          chat_role: 'user' as const,
+          content: trimmedMessage,
+          thumb: null,
+          feedback: null,
+        };
+        const saved = await addMessageToChatAction(messageInfo);
+        setUserMessageId(saved._id || null);
+      }
     } catch (error) {
       console.error('Failed to persist user message', error);
-      setGeneratingResponse(false);
-      setIsFunction(false);
-      setIncomingMessage(
-        'I was unable to send that message. Please try again in a moment.',
-      );
-      return;
+      setFunctionError('Unable to save this message, continuing without persistence for now.');
     }
 
     setNewChatMessages((prev) => [
       ...prev,
       {
-        _id: userMessageId,
+        _id: resolveMessageId(userMessageId),
         role: 'user',
         content: trimmedMessage,
       },
@@ -507,3 +508,5 @@ export const Chat: React.FC<ChatProps> = ({
     </div>
   );
 };
+
+export default Chat;

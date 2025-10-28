@@ -1,3 +1,5 @@
+'use client';
+
 // ee/server/src/components/layout/RightSidebarContent.tsx
 import React, { useState, useEffect } from 'react';
 import { Chat } from '../chat/Chat';
@@ -13,7 +15,7 @@ interface RightSidebarProps {
   clientUrl: string;
   accountId: string;
   messages: any[];
-  userId: string;
+  userId: string | null;
   userRole: string;
   selectedAccount: string;
   handleSelectAccount: any;
@@ -29,6 +31,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   accountId,
   messages,
   userRole,
+  userId,
   selectedAccount,
   handleSelectAccount,
   auth_token,
@@ -80,6 +83,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                 accountId={accountId}
                 messages={messages}
                 userRole={userRole}
+                userId={userId}
                 selectedAccount={selectedAccount}
                 handleSelectAccount={handleSelectAccount}
                 auth_token={auth_token}
