@@ -73,38 +73,290 @@ Si no solicitaste este correo, por favor ignóralo.
     {
       name: 'password-reset',
       language_code: 'es',
-      subject: 'Solicitud de restablecimiento de contraseña',
+      subject: 'Solicitud de Restablecimiento de Contraseña',
       notification_subtype_id: getSubtypeId('password-reset'),
       html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Restablecimiento de contraseña</h2>
-          <p>Hola {{userName}},</p>
-          <p>Has solicitado restablecer tu contraseña para {{email}}. Haz clic en el enlace a continuación para continuar:</p>
-          <p><a href="{{resetLink}}" style="display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px;">Restablecer contraseña</a></p>
-          <p>O copia y pega este enlace en tu navegador:</p>
-          <p>{{resetLink}}</p>
-          <p><small>Este enlace expirará en {{expirationTime}}.</small></p>
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Si no solicitaste este restablecimiento, por favor ignora este correo. Tu contraseña permanecerá sin cambios.</p>
-          {{#if supportEmail}}
-          <p style="color: #666; font-size: 12px;">¿Necesitas ayuda? Contacta {{supportEmail}}</p>
-          {{/if}}
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{clientName}}</p>
-        </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitud de Restablecimiento de Contraseña</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      border-radius: 12px 12px 0 0;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      opacity: 1;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.95);
+    }
+    .content {
+      background: #ffffff;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      border-top: none;
+      border-bottom: none;
+    }
+    .footer {
+      background: #1e293b;
+      color: #cbd5e1;
+      padding: 24px;
+      border-radius: 0 0 12px 12px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .footer p {
+      margin: 6px 0;
+      color: #cbd5e1;
+    }
+    .footer p:last-child {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    .security-box {
+      background: #faf8ff;
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid #e9e5f5;
+      border-left: 4px solid #8a4dea;
+      margin: 24px 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .security-box h3 {
+      color: #0f172a;
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .security-box p {
+      margin: 8px 0;
+      color: #334155;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8a4dea;
+      color: #ffffff !important;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 24px 0;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .action-button:hover {
+      background: #7c3aed;
+      color: #ffffff !important;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+    .warning {
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .warning h4 {
+      color: #92400e;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .warning ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #92400e;
+    }
+    .warning li {
+      margin: 4px 0;
+    }
+    h2 {
+      color: #0f172a;
+      font-family: Poppins, system-ui, sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+    }
+    p {
+      color: #334155;
+      margin: 0 0 16px 0;
+    }
+    a {
+      color: #8a4dea;
+      text-decoration: underline;
+    }
+    a:hover {
+      color: #7c3aed;
+    }
+    .code {
+      font-family: 'Courier New', monospace;
+      background: #e2e8f0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: #0f172a;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 32px 0;
+    }
+    .link-text {
+      word-break: break-all;
+      font-size: 14px;
+      color: #64748b;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin: 12px 0;
+    }
+    .help-section {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+      border: 1px solid #e2e8f0;
+    }
+    .help-section h4 {
+      color: #0f172a;
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .help-section p {
+      margin: 4px 0;
+      color: #334155;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Solicitud de Restablecimiento de Contraseña</h1>
+    <p>Recuperación segura de contraseña para tu cuenta</p>
+  </div>
+
+  <div class="content">
+    <h2>Hola {{userName}},</h2>
+
+    <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta asociada con <strong>{{email}}</strong>.</p>
+
+    <div class="security-box">
+      <h3>🔐 Verificación de Seguridad de la Cuenta</h3>
+      <p><strong>Solicitado:</strong> Hace un momento</p>
+      <p><strong>Correo de la cuenta:</strong> {{email}}</p>
+      <p><strong>Válido por:</strong> {{expirationTime}}</p>
+    </div>
+
+    <p>Para crear una nueva contraseña para tu cuenta, haz clic en el botón a continuación:</p>
+
+    <div style="text-align: center;">
+      <a href="{{resetLink}}" class="action-button">Restablecer Tu Contraseña</a>
+    </div>
+
+    <p style="text-align: center; color: #64748b; font-size: 14px;">
+      O copia y pega este enlace en tu navegador:
+    </p>
+    <div class="link-text">{{resetLink}}</div>
+
+    <div class="warning">
+      <h4>⚠️ Información de Seguridad Importante</h4>
+      <ul>
+        <li>Este enlace de restablecimiento expirará en <strong>{{expirationTime}}</strong></li>
+        <li>Por razones de seguridad, este enlace solo se puede usar <strong>una vez</strong></li>
+        <li>Si no solicitaste este restablecimiento, ignora este correo</li>
+        <li>Tu contraseña no cambiará hasta que crees una nueva</li>
+      </ul>
+    </div>
+
+    <h3>¿Qué Sigue?</h3>
+    <ol>
+      <li>Haz clic en el botón de restablecimiento arriba o usa el enlace proporcionado</li>
+      <li>Crea una contraseña fuerte y única para tu cuenta</li>
+      <li>Iniciarás sesión automáticamente después de restablecer</li>
+      <li>Todas las sesiones existentes se terminarán por seguridad</li>
+      <li>Considera habilitar la autenticación de dos factores para mayor protección</li>
+    </ol>
+
+    <div class="divider"></div>
+
+    <div class="help-section">
+      <h4>¿Necesitas Ayuda?</h4>
+      <p>Si tienes problemas para restablecer tu contraseña, nuestro equipo de soporte está aquí para ayudarte.</p>
+      <p style="margin-top: 12px;"><strong>Contactar Soporte:</strong> {{supportEmail}}</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Este es un correo de seguridad automático enviado a {{email}}.</p>
+    <p>Por tu seguridad, nunca incluimos contraseñas en los correos.</p>
+    <p>© {{currentYear}} {{clientName}}. Todos los derechos reservados.</p>
+  </div>
+</body>
+</html>
       `,
-      text_content: `Solicitud de restablecimiento de contraseña
+      text_content: `Solicitud de Restablecimiento de Contraseña
 
 Hola {{userName}},
 
-Has solicitado restablecer tu contraseña para {{email}}. Visita el siguiente enlace:
+Recibimos una solicitud para restablecer la contraseña de tu cuenta asociada con {{email}}.
+
+VERIFICACIÓN DE SEGURIDAD DE LA CUENTA
+- Solicitado: Hace un momento
+- Correo de la cuenta: {{email}}
+- Válido por: {{expirationTime}}
+
+Para crear una nueva contraseña, visita el siguiente enlace:
 {{resetLink}}
 
-Este enlace expirará en {{expirationTime}}.
+INFORMACIÓN DE SEGURIDAD IMPORTANTE:
+- Este enlace expirará en {{expirationTime}}
+- Solo se puede usar una vez
+- Si no solicitaste esto, ignora este correo
+- Tu contraseña no cambiará hasta que crees una nueva
 
-Si no solicitaste este restablecimiento, por favor ignora este correo.
-{{#if supportEmail}}¿Necesitas ayuda? Contacta {{supportEmail}}{{/if}}
+QUÉ SIGUE:
+1. Usa el enlace proporcionado arriba
+2. Crea una contraseña fuerte y única
+3. Iniciarás sesión automáticamente
+4. Todas las sesiones existentes se terminarán
+5. Considera habilitar autenticación de dos factores
 
-© {{currentYear}} {{clientName}}`
+¿Necesitas ayuda?
+Contactar Soporte: {{supportEmail}}
+
+---
+Este es un correo de seguridad automático enviado a {{email}}.
+© {{currentYear}} {{clientName}}. Todos los derechos reservados.`
     },
     {
       name: 'portal-invitation',
@@ -284,155 +536,496 @@ Este es un mensaje automático. Por favor no respondas a este correo.`
     {
       name: 'ticket-assigned',
       language_code: 'es',
-      subject: 'Te han asignado el ticket: {{ticket.title}}',
+      subject: 'Ticket Asignado • {{ticket.title}} ({{ticket.priority}})',
       notification_subtype_id: getSubtypeId('Ticket Assigned'),
       html_content: `
-        <h2>Ticket asignado</h2>
-        <p>Se te ha asignado un ticket:</p>
-        <div class="details">
-          <p><strong>ID del ticket:</strong> {{ticket.id}}</p>
-          <p><strong>Título:</strong> {{ticket.title}}</p>
-          <p><strong>Prioridad:</strong> {{ticket.priority}}</p>
-          <p><strong>Estado:</strong> {{ticket.status}}</p>
-          <p><strong>Asignado por:</strong> {{ticket.assignedBy}}</p>
-        </div>
-        <a href="{{ticket.url}}" class="button">Ver el ticket</a>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;padding:32px 0;font-family:'Segoe UI',Arial,sans-serif;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
+            <tr>
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
+                <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Asignado</div>
+                <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
+                <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 20px 32px;">
+                <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Se te ha asignado un ticket para <strong>{{ticket.clientName}}</strong>. Revisa los detalles a continuación y toma acción.</p>
+                <div style="margin-bottom:24px;">
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                </div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Prioridad</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:{{ticket.priorityColor}};color:#ffffff;font-weight:600;">{{ticket.priority}}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Estado</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.status}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Asignado por</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.assignedBy}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Asignado a</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.assignedToName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.assignedToEmail}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Solicitante</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.requesterName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.requesterContact}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Tablero</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.board}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Categoría</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.categoryDetails}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-weight:600;color:#475467;">Ubicación</td>
+                    <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
+                  </tr>
+                </table>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Descripción</div>
+                  <div style="color:#475467;line-height:1.5;">{{ticket.description}}</div>
+                </div>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ver Ticket</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniendo a los equipos alineados</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
       `,
       text_content: `
-Ticket asignado
+Ticket Asignado a Ti
 
-Se te ha asignado un ticket:
-
-ID del ticket: {{ticket.id}}
-Título: {{ticket.title}}
-Prioridad: {{ticket.priority}}
-Estado: {{ticket.status}}
+{{ticket.metaLine}}
 Asignado por: {{ticket.assignedBy}}
 
-Ver el ticket: {{ticket.url}}
+Prioridad: {{ticket.priority}}
+Estado: {{ticket.status}}
+Asignado a: {{ticket.assignedDetails}}
+Solicitante: {{ticket.requesterDetails}}
+Tablero: {{ticket.board}}
+Categoría: {{ticket.categoryDetails}}
+Ubicación: {{ticket.locationSummary}}
+
+Descripción:
+{{ticket.description}}
+
+Ver ticket: {{ticket.url}}
       `
     },
     {
       name: 'ticket-created',
       language_code: 'es',
-      subject: 'Nuevo ticket: {{ticket.title}}',
+      subject: 'Nuevo Ticket • {{ticket.title}} ({{ticket.priority}})',
       notification_subtype_id: getSubtypeId('Ticket Created'),
       html_content: `
-        <h2>Nuevo ticket creado</h2>
-        <p>Se ha creado un nuevo ticket en tu sistema PSA:</p>
-        <div class="details">
-          <p><strong>ID del ticket:</strong> {{ticket.id}}</p>
-          <p><strong>Título:</strong> {{ticket.title}}</p>
-          <p><strong>Descripción:</strong> {{ticket.description}}</p>
-          <p><strong>Prioridad:</strong> {{ticket.priority}}</p>
-          <p><strong>Estado:</strong> {{ticket.status}}</p>
-        </div>
-        <a href="{{ticket.url}}" class="button">Ver el ticket</a>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;padding:32px 0;font-family:'Segoe UI',Arial,sans-serif;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
+            <tr>
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
+                <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Nuevo Ticket Creado</div>
+                <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
+                <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 20px 32px;">
+                <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Se ha registrado un nuevo ticket para <strong>{{ticket.clientName}}</strong>. Revisa el resumen a continuación y sigue el enlace para tomar acción.</p>
+                <div style="margin-bottom:24px;">
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                </div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Prioridad</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:{{ticket.priorityColor}};color:#ffffff;font-weight:600;">{{ticket.priority}}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Estado</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.status}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Creado</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.createdAt}} · {{ticket.createdBy}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Asignado a</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.assignedToName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.assignedToEmail}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Solicitante</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.requesterName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.requesterContact}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Tablero</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.board}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Categoría</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.categoryDetails}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-weight:600;color:#475467;">Ubicación</td>
+                    <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
+                  </tr>
+                </table>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Descripción</div>
+                  <div style="color:#475467;line-height:1.5;">{{ticket.description}}</div>
+                </div>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ver Ticket</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniendo a los equipos alineados</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
       `,
       text_content: `
-Nuevo ticket creado
+Nuevo Ticket Creado para {{ticket.clientName}}
 
-Se ha creado un nuevo ticket en tu sistema PSA:
+{{ticket.metaLine}}
+Creado: {{ticket.createdAt}} · {{ticket.createdBy}}
 
-ID del ticket: {{ticket.id}}
-Título: {{ticket.title}}
-Descripción: {{ticket.description}}
 Prioridad: {{ticket.priority}}
 Estado: {{ticket.status}}
+Asignado a: {{ticket.assignedDetails}}
+Solicitante: {{ticket.requesterDetails}}
+Tablero: {{ticket.board}}
+Categoría: {{ticket.categoryDetails}}
+Ubicación: {{ticket.locationSummary}}
 
-Ver el ticket: {{ticket.url}}
+Descripción:
+{{ticket.description}}
+
+Ver ticket: {{ticket.url}}
       `
     },
     {
       name: 'ticket-updated',
       language_code: 'es',
-      subject: 'Ticket actualizado: {{ticket.title}}',
+      subject: 'Ticket Actualizado • {{ticket.title}} ({{ticket.priority}})',
       notification_subtype_id: getSubtypeId('Ticket Updated'),
       html_content: `
-        <h2>Ticket actualizado</h2>
-        <p>Se ha actualizado un ticket en tu sistema PSA:</p>
-        <div class="details">
-          <p><strong>ID del ticket:</strong> {{ticket.id}}</p>
-          <p><strong>Título:</strong> {{ticket.title}}</p>
-          <p><strong>Cambios:</strong> {{ticket.changes}}</p>
-          <p><strong>Actualizado por:</strong> {{ticket.updatedBy}}</p>
-        </div>
-        <a href="{{ticket.url}}" class="button">Ver el ticket</a>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;padding:32px 0;font-family:'Segoe UI',Arial,sans-serif;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
+            <tr>
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
+                <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Actualizado</div>
+                <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
+                <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 20px 32px;">
+                <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Se ha actualizado un ticket para <strong>{{ticket.clientName}}</strong>. Revisa los cambios a continuación.</p>
+                <div style="margin-bottom:24px;">
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                </div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Prioridad</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:{{ticket.priorityColor}};color:#ffffff;font-weight:600;">{{ticket.priority}}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Estado</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.status}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Actualizado por</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.updatedBy}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Asignado a</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.assignedToName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.assignedToEmail}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Solicitante</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.requesterName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.requesterContact}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Tablero</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.board}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Categoría</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.categoryDetails}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-weight:600;color:#475467;">Ubicación</td>
+                    <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
+                  </tr>
+                </table>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#fff9e6;border:1px solid #ffe4a3;">
+                  <div style="font-weight:600;color:#92400e;margin-bottom:8px;">Cambios Realizados</div>
+                  <div style="color:#475467;line-height:1.5;">{{ticket.changes}}</div>
+                </div>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ver Ticket</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniendo a los equipos alineados</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
       `,
       text_content: `
-Ticket actualizado
+Ticket Actualizado
 
-Se ha actualizado un ticket en tu sistema PSA:
-
-ID del ticket: {{ticket.id}}
-Título: {{ticket.title}}
-Cambios: {{ticket.changes}}
+{{ticket.metaLine}}
 Actualizado por: {{ticket.updatedBy}}
 
-Ver el ticket: {{ticket.url}}
+Prioridad: {{ticket.priority}}
+Estado: {{ticket.status}}
+Asignado a: {{ticket.assignedDetails}}
+Solicitante: {{ticket.requesterDetails}}
+Tablero: {{ticket.board}}
+Categoría: {{ticket.categoryDetails}}
+Ubicación: {{ticket.locationSummary}}
+
+Cambios realizados:
+{{ticket.changes}}
+
+Ver ticket: {{ticket.url}}
       `
     },
     {
       name: 'ticket-closed',
       language_code: 'es',
-      subject: 'Ticket cerrado: {{ticket.title}}',
+      subject: 'Ticket Cerrado • {{ticket.title}}',
       notification_subtype_id: getSubtypeId('Ticket Closed'),
       html_content: `
-        <h2>Ticket cerrado</h2>
-        <p>Se ha cerrado un ticket en tu sistema PSA:</p>
-        <div class="details">
-          <p><strong>ID del ticket:</strong> {{ticket.id}}</p>
-          <p><strong>Título:</strong> {{ticket.title}}</p>
-          <p><strong>Resolución:</strong> {{ticket.resolution}}</p>
-          <p><strong>Cerrado por:</strong> {{ticket.closedBy}}</p>
-        </div>
-        <a href="{{ticket.url}}" class="button">Ver el ticket</a>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;padding:32px 0;font-family:'Segoe UI',Arial,sans-serif;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
+            <tr>
+              <td style="padding:32px;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;">
+                <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Cerrado</div>
+                <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
+                <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 20px 32px;">
+                <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Se ha resuelto y cerrado un ticket para <strong>{{ticket.clientName}}</strong>. Revisa los detalles de la resolución a continuación.</p>
+                <div style="margin-bottom:24px;">
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(16,185,129,0.12);color:#047857;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                </div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Estado</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:#10b981;color:#ffffff;font-weight:600;">Cerrado</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Cerrado por</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.closedBy}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Asignado a</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.assignedToName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.assignedToEmail}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Solicitante</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.requesterName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.requesterContact}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Tablero</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.board}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Categoría</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.categoryDetails}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-weight:600;color:#475467;">Ubicación</td>
+                    <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
+                  </tr>
+                </table>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;">
+                  <div style="font-weight:600;color:#047857;margin-bottom:8px;">Resolución</div>
+                  <div style="color:#475467;line-height:1.5;">{{ticket.resolution}}</div>
+                </div>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ver Ticket</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px;background:#f0fdf4;color:#047857;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniendo a los equipos alineados</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
       `,
       text_content: `
-Ticket cerrado
+Ticket Cerrado
 
-Se ha cerrado un ticket en tu sistema PSA:
-
-ID del ticket: {{ticket.id}}
-Título: {{ticket.title}}
-Resolución: {{ticket.resolution}}
+{{ticket.metaLine}}
 Cerrado por: {{ticket.closedBy}}
 
-Ver el ticket: {{ticket.url}}
+Estado: Cerrado
+Asignado a: {{ticket.assignedDetails}}
+Solicitante: {{ticket.requesterDetails}}
+Tablero: {{ticket.board}}
+Categoría: {{ticket.categoryDetails}}
+Ubicación: {{ticket.locationSummary}}
+
+Resolución:
+{{ticket.resolution}}
+
+Ver ticket: {{ticket.url}}
       `
     },
     {
       name: 'ticket-comment-added',
       language_code: 'es',
-      subject: 'Nuevo comentario en el ticket: {{ticket.title}}',
+      subject: 'Nuevo Comentario • {{ticket.title}}',
       notification_subtype_id: getSubtypeId('Ticket Comment Added'),
       html_content: `
-        <h2>Nuevo comentario agregado</h2>
-        <p>Se ha agregado un nuevo comentario al ticket:</p>
-        <div class="details">
-          <p><strong>ID del ticket:</strong> {{ticket.id}}</p>
-          <p><strong>Título:</strong> {{ticket.title}}</p>
-          <p><strong>Comentario de:</strong> {{comment.author}}</p>
-          <p><strong>Comentario:</strong></p>
-          <div class="comment-content">
-            {{comment.content}}
-          </div>
-        </div>
-        <a href="{{ticket.url}}" class="button">Ver el ticket</a>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;padding:32px 0;font-family:'Segoe UI',Arial,sans-serif;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
+            <tr>
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
+                <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Nuevo Comentario Agregado</div>
+                <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
+                <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 20px 32px;">
+                <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">Se ha agregado un nuevo comentario a un ticket para <strong>{{ticket.clientName}}</strong>.</p>
+                <div style="margin-bottom:24px;">
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                </div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Prioridad</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:{{ticket.priorityColor}};color:#ffffff;font-weight:600;">{{ticket.priority}}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Estado</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.status}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Comentario de</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{comment.author}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Asignado a</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.assignedToName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.assignedToEmail}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Solicitante</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.requesterName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.requesterContact}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Tablero</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.board}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Categoría</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.categoryDetails}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-weight:600;color:#475467;">Ubicación</td>
+                    <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
+                  </tr>
+                </table>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">
+                  <div style="font-weight:600;color:#1e40af;margin-bottom:8px;">💬 Comentario</div>
+                  <div style="color:#475467;line-height:1.5;">{{comment.content}}</div>
+                </div>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">Ver Ticket</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Manteniendo a los equipos alineados</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
       `,
       text_content: `
-Nuevo comentario agregado
+Nuevo Comentario Agregado
 
-Se ha agregado un nuevo comentario al ticket:
-
-ID del ticket: {{ticket.id}}
-Título: {{ticket.title}}
+{{ticket.metaLine}}
 Comentario de: {{comment.author}}
+
+Prioridad: {{ticket.priority}}
+Estado: {{ticket.status}}
+Asignado a: {{ticket.assignedDetails}}
+Solicitante: {{ticket.requesterDetails}}
+Tablero: {{ticket.board}}
+Categoría: {{ticket.categoryDetails}}
+Ubicación: {{ticket.locationSummary}}
 
 Comentario:
 {{comment.content}}
 
-Ver el ticket: {{ticket.url}}
+Ver ticket: {{ticket.url}}
       `
     },
 

@@ -66,12 +66,23 @@ async function resolveTicketLinks(
   let portalUrl: string;
   if (portalHost) {
     const sanitizedHost = normalizeHost(portalHost);
-    portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
+    // Check if this is a vanity domain (custom domain) or canonical host
+    const canonicalHost = internalBase ? normalizeHost(internalBase) : '';
+    const isVanityDomain = sanitizedHost !== canonicalHost;
+
+    if (isVanityDomain) {
+      // Vanity domains don't need tenant parameter (they use OTT/domain-based detection)
+      portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
+    } else {
+      // Canonical host always needs tenant parameter for authentication
+      baseParams.set('tenant', tenantSlug);
+      portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
+    }
   } else {
+    // Fallback to canonical host with tenant parameter
     const fallbackBase = internalBase.endsWith('/') ? internalBase.slice(0, -1) : internalBase;
-    const fallbackParams = new URLSearchParams(baseParams);
-    fallbackParams.set('tenant', tenantSlug);
-    portalUrl = `${fallbackBase}${clientPortalPath}?${fallbackParams.toString()}`;
+    baseParams.set('tenant', tenantSlug);
+    portalUrl = `${fallbackBase}${clientPortalPath}?${baseParams.toString()}`;
   }
 
   return { internalUrl, portalUrl };
