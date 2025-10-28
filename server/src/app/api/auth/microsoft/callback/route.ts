@@ -284,6 +284,10 @@ export async function GET(request: NextRequest) {
 
                 const adapter = new MicrosoftGraphAdapter(providerConfig);
                 try {
+                  // Load credentials and authenticated user email before subscription
+                  // This ensures mailbox path auto-detection works correctly
+                  await adapter.connect();
+
                   // Context logging before attempting subscription
                   const maskedToken = providerConfig.webhook_verification_token
                     ? `${String(providerConfig.webhook_verification_token).slice(0, 4)}...(${String(providerConfig.webhook_verification_token).length})`

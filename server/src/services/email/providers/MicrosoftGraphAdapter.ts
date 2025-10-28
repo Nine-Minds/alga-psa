@@ -11,7 +11,8 @@ import { getAdminConnection } from '@alga-psa/shared/db/admin';
 export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private httpClient: AxiosInstance;
   private baseUrl = 'https://graph.microsoft.com/v1.0';
-  
+  private authenticatedUserEmail: string | undefined; // Email of the user who authorized the app
+
   constructor(config: EmailProviderConfig) {
     super(config);
 
@@ -36,14 +37,45 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
   /**
    * Build Microsoft Graph base path for the configured mailbox.
-   * For shared mailboxes, Graph requires the /users/{mailbox} prefix.
+   * Auto-detects whether to use /me or /users/{mailbox} based on:
+   * - If configured mailbox matches the authenticated user → use /me (personal account, no admin consent needed)
+   * - If configured mailbox differs → use /users/{mailbox} (shared/delegated mailbox)
    */
   private getMailboxBasePath(): string {
-    const mailbox = (this.config.mailbox || '').trim();
-    if (!mailbox) {
+    const configuredMailbox = (this.config.mailbox || '').trim();
+
+    // If no mailbox configured, use current user (/me)
+    if (!configuredMailbox) {
       return '/me';
     }
-    return `/users/${encodeURIComponent(mailbox)}`;
+
+    // If we have the authenticated user's email, compare it with the configured mailbox
+    if (this.authenticatedUserEmail) {
+      // Normalize emails for comparison (case-insensitive)
+      const normalizedConfigured = configuredMailbox.toLowerCase();
+      const normalizedAuthenticated = this.authenticatedUserEmail.toLowerCase();
+
+      // If they match, this is the authenticated user's personal mailbox → use /me
+      if (normalizedConfigured === normalizedAuthenticated) {
+        this.log('info', 'Using /me path for personal mailbox', {
+          authenticatedUser: normalizedAuthenticated,
+          configuredMailbox: normalizedConfigured
+        });
+        return '/me';
+      }
+
+      // Otherwise, it's a shared or delegated mailbox → use /users/{mailbox}
+      this.log('info', 'Using /users/{mailbox} path for shared/delegated mailbox', {
+        authenticatedUser: normalizedAuthenticated,
+        configuredMailbox: normalizedConfigured
+      });
+      return `/users/${encodeURIComponent(configuredMailbox)}`;
+    }
+
+    // Fallback: if we haven't fetched authenticated user email yet, assume /users/{mailbox}
+    // This will be corrected once loadAuthenticatedUserEmail() is called
+    this.log('warn', 'Authenticated user email not yet loaded; using /users/{mailbox} path');
+    return `/users/${encodeURIComponent(configuredMailbox)}`;
   }
 
   /**
@@ -152,6 +184,37 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       throw new Error('Microsoft OAuth tokens not found. Please complete authorization.');
     } catch (error) {
       throw this.handleError(error, 'loadCredentials');
+    }
+  }
+
+  /**
+   * Fetch the authenticated user's email address from /me endpoint
+   * This is used to auto-detect whether the configured mailbox is a personal account
+   * or a shared/delegated mailbox
+   */
+  private async loadAuthenticatedUserEmail(): Promise<void> {
+    try {
+      // Query /me endpoint to get the authenticated user's principal email
+      const response = await this.httpClient.get('/me', {
+        params: {
+          $select: 'userPrincipalName,mail'
+        }
+      });
+
+      // Prefer userPrincipalName (common format), fallback to mail field
+      this.authenticatedUserEmail = response.data.userPrincipalName || response.data.mail;
+
+      if (this.authenticatedUserEmail) {
+        this.log('info', 'Loaded authenticated user email for mailbox detection', {
+          email: this.authenticatedUserEmail
+        });
+      } else {
+        this.log('warn', 'Could not determine authenticated user email from /me endpoint');
+      }
+    } catch (error) {
+      // Non-fatal error: log but don't throw
+      // The adapter will still work, it will just default to /users/{mailbox} path
+      this.log('warn', 'Failed to load authenticated user email', error);
     }
   }
 
@@ -266,6 +329,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   async connect(): Promise<void> {
     try {
       await this.loadCredentials();
+      // Load authenticated user email for mailbox path auto-detection
+      await this.loadAuthenticatedUserEmail();
       await this.testConnection();
       this.log('info', 'Connected to Microsoft Graph API successfully');
     } catch (error) {
