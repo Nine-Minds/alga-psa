@@ -80,6 +80,29 @@ interface PreviewLineResult {
   } | null;
 }
 
+type BatchStatus = 'pending' | 'validating' | 'ready' | 'delivered' | 'posted' | 'cancelled';
+
+interface BatchRecord {
+  id: string;
+  displayName: string;
+  status: BatchStatus;
+  createdAt: string;
+  adapter: string;
+  invoiceCount: number;
+  amount: string;
+  createdBy: string;
+  filterKey: string;
+  timeline: { status: BatchStatus; at: string }[];
+}
+
+const formatTimestamp = (iso: string) => iso.replace('T', ' ').slice(0, 19);
+
+const prettyStatus = (status: BatchStatus) =>
+  status
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
 export default function MappingCrudPlaywrightPage(): JSX.Element {
   if (process.env.NODE_ENV !== 'development') {
     return (
@@ -111,7 +134,7 @@ export default function MappingCrudPlaywrightPage(): JSX.Element {
   const [fallbackPreview, setFallbackPreview] = useState<PreviewLineResult[] | null>(null);
   const [fallbackError, setFallbackError] = useState<string | null>(null);
   const [fallbackSuccess, setFallbackSuccess] = useState<string | null>(null);
-  const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
+  const [mappingSuccess, setMappingSuccess] = useState<string | null>(null);
 
   const [isWizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<'filters' | 'preview'>('filters');
@@ -119,6 +142,18 @@ export default function MappingCrudPlaywrightPage(): JSX.Element {
   const [selectedAdapter, setSelectedAdapter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  const [lifecycleWizardOpen, setLifecycleWizardOpen] = useState(false);
+  const [lifecycleWizardStep, setLifecycleWizardStep] = useState<'filters' | 'preview'>('filters');
+  const [lifecycleAdapter, setLifecycleAdapter] = useState('');
+  const [lifecycleStartDate, setLifecycleStartDate] = useState('');
+  const [lifecycleEndDate, setLifecycleEndDate] = useState('');
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
+  const [lifecycleSuccess, setLifecycleSuccess] = useState<string | null>(null);
+  const [batches, setBatches] = useState<BatchRecord[]>([]);
+  const [batchSequence, setBatchSequence] = useState(1);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [isBatchDrawerOpen, setBatchDrawerOpen] = useState(false);
 
   const requiredServiceId = 'svc-001';
   const sampleInvoice = {
@@ -141,7 +176,7 @@ export default function MappingCrudPlaywrightPage(): JSX.Element {
   };
 
   const handleOpenWizard = () => {
-    setGlobalSuccess(null);
+    setMappingSuccess(null);
     setWizardOpen(true);
     setWizardStep('filters');
     setWizardError(null);
@@ -168,13 +203,135 @@ export default function MappingCrudPlaywrightPage(): JSX.Element {
       setWizardError('Mapping required for service svc-001 before exporting.');
       return;
     }
-    setGlobalSuccess('Export batch ready – mapping resolved for INV-1001.');
+    setMappingSuccess('Export batch ready – mapping resolved for INV-1001.');
     setWizardOpen(false);
     setWizardStep('filters');
     setWizardError(null);
     setSelectedAdapter('');
     setStartDate('');
     setEndDate('');
+  };
+
+  const lifecycleFilterKey = (adapter: string, start: string, end: string) =>
+    `${adapter || 'n/a'}|${start || 'n/a'}|${end || 'n/a'}`;
+
+  const resetLifecycleWizard = () => {
+    setLifecycleWizardStep('filters');
+    setLifecycleAdapter('');
+    setLifecycleStartDate('');
+    setLifecycleEndDate('');
+    setLifecycleError(null);
+  };
+
+  const handleOpenLifecycleWizard = () => {
+    setLifecycleError(null);
+    setLifecycleWizardOpen(true);
+    setLifecycleWizardStep('filters');
+  };
+
+  const handleCloseLifecycleWizard = () => {
+    setLifecycleWizardOpen(false);
+    resetLifecycleWizard();
+  };
+
+  const handleLifecyclePreview = () => {
+    if (!lifecycleAdapter || !lifecycleStartDate || !lifecycleEndDate) {
+      setLifecycleError('Please select an adapter and date range before continuing.');
+      return;
+    }
+    setLifecycleWizardStep('preview');
+    setLifecycleError(null);
+  };
+
+  const appendTimeline = (batch: BatchRecord, status: BatchStatus): BatchRecord => ({
+    ...batch,
+    status,
+    timeline: [
+      ...batch.timeline,
+      { status, at: new Date().toISOString() },
+    ],
+  });
+
+  const updateBatchStatus = (ids: string[], status: BatchStatus) => {
+    setBatches((prev) =>
+      prev.map((batch) => (ids.includes(batch.id) ? appendTimeline(batch, status) : batch))
+    );
+  };
+
+  const handleLifecycleConfirm = () => {
+    const filterKey = lifecycleFilterKey(lifecycleAdapter, lifecycleStartDate, lifecycleEndDate);
+    if (!lifecycleAdapter || !lifecycleStartDate || !lifecycleEndDate) {
+      setLifecycleError('Please complete all fields before confirming.');
+      return;
+    }
+    if (batches.some((batch) => batch.filterKey === filterKey)) {
+      setLifecycleError('Batch already exists for the selected adapter and date range.');
+      return;
+    }
+
+    const nextId = `BATCH-${String(batchSequence).padStart(3, '0')}`;
+    const now = new Date().toISOString();
+    const newBatch: BatchRecord = {
+      id: nextId,
+      displayName: `Export ${batchSequence}`,
+      status: 'pending',
+      createdAt: now,
+      adapter: lifecycleAdapter,
+      invoiceCount: 3,
+      amount: '$4,250.00',
+      createdBy: 'Automation Harness',
+      filterKey,
+      timeline: [
+        { status: 'pending', at: now },
+      ],
+    };
+
+    setBatches((prev) => [...prev, newBatch]);
+    setBatchSequence((prev) => prev + 1);
+    setLifecycleSuccess(`Created batch ${nextId} with status pending.`);
+    setLifecycleWizardOpen(false);
+    resetLifecycleWizard();
+  };
+
+  const runWorkerSimulation = () => {
+    const targetIds = batches
+      .filter((batch) => ['pending', 'validating', 'ready'].includes(batch.status))
+      .map((batch) => batch.id);
+
+    if (!targetIds.length) return;
+
+    updateBatchStatus(targetIds, 'validating');
+    setTimeout(() => updateBatchStatus(targetIds, 'ready'), 200);
+    setTimeout(() => updateBatchStatus(targetIds, 'delivered'), 400);
+  };
+
+  const openBatchDrawer = (batchId: string) => {
+    setSelectedBatchId(batchId);
+    setBatchDrawerOpen(true);
+  };
+
+  const closeBatchDrawer = () => {
+    setBatchDrawerOpen(false);
+    setSelectedBatchId(null);
+  };
+
+  const selectedBatch = useMemo(
+    () => batches.find((batch) => batch.id === selectedBatchId) ?? null,
+    [batches, selectedBatchId]
+  );
+
+  const handleMarkPosted = () => {
+    if (!selectedBatch || selectedBatch.status !== 'delivered') return;
+    updateBatchStatus([selectedBatch.id], 'posted');
+    setLifecycleSuccess(`Batch ${selectedBatch.id} marked as posted.`);
+  };
+
+  const handleCancelBatch = () => {
+    if (!selectedBatch || !['pending', 'validating', 'ready'].includes(selectedBatch.status)) {
+      return;
+    }
+    updateBatchStatus([selectedBatch.id], 'cancelled');
+    setLifecycleSuccess(`Batch ${selectedBatch.id} cancelled.`);
   };
 
   const overrides = useMemo<QboItemMappingTableOverrides>(() => ({
@@ -536,166 +693,431 @@ export default function MappingCrudPlaywrightPage(): JSX.Element {
             </div>
           )}
 
-          {fallbackSuccess && (
-            <div
-              id="batch-success"
-              className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700"
-            >
-              {fallbackSuccess}
+      {fallbackSuccess && (
+        <div
+          id="batch-success"
+          className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700"
+        >
+          {fallbackSuccess}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+
+  <Card className="shadow-sm">
+    <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div>
+        <CardTitle>Accounting Export Wizard Harness</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Simulates the accounting export wizard to verify validation behavior for unmapped services.
+        </p>
+      </div>
+      <Button id="open-export-wizard" onClick={handleOpenWizard}>
+        New Export
+      </Button>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      {mappingSuccess && (
+        <div
+          id="export-success-banner"
+          className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700"
+        >
+          {mappingSuccess}
+        </div>
+      )}
+
+      <Dialog
+        isOpen={isWizardOpen}
+        onClose={handleCloseWizard}
+        id="export-wizard"
+        title="Create Accounting Export"
+      >
+        <DialogContent className="space-y-4">
+          {wizardStep === 'filters' && (
+            <div id="wizard-filters" className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="wizard-adapter" className="text-sm font-medium">
+                  Adapter
+                </Label>
+                <select
+                  id="wizard-adapter"
+                  className="rounded border border-border px-3 py-2 text-sm"
+                  value={selectedAdapter}
+                  onChange={(event) => setSelectedAdapter(event.target.value)}
+                >
+                  <option value="">Select adapter</option>
+                  <option value="quickbooks_online">QuickBooks Online</option>
+                  <option value="xero">Xero</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="wizard-date-start" className="text-sm font-medium">
+                    Start Date
+                  </Label>
+                  <input
+                    type="date"
+                    id="wizard-date-start"
+                    className="rounded border border-border px-3 py-2 text-sm"
+                    value={startDate}
+                    onChange={(event) => setStartDate(event.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="wizard-date-end" className="text-sm font-medium">
+                    End Date
+                  </Label>
+                  <input
+                    type="date"
+                    id="wizard-date-end"
+                    className="rounded border border-border px-3 py-2 text-sm"
+                    value={endDate}
+                    onChange={(event) => setEndDate(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Button id="wizard-cancel-button" variant="outline" onClick={handleCloseWizard}>
+                  Cancel
+                </Button>
+                <Button id="wizard-preview-button" onClick={handlePreview}>
+                  Preview
+                </Button>
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+
+          {wizardStep === 'preview' && (
+            <div id="wizard-preview" className="space-y-4">
+              {wizardError && (
+                <div
+                  id="wizard-error-banner"
+                  className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+                >
+                  {wizardError}
+                </div>
+              )}
+              <table
+                className="w-full table-auto border border-border/60 text-sm"
+                id="wizard-preview-table"
+              >
+                <thead className="bg-muted/60">
+                  <tr>
+                    <th className="border border-border/60 px-3 py-2 text-left font-medium">
+                      Invoice
+                    </th>
+                    <th className="border border-border/60 px-3 py-2 text-left font-medium">
+                      Client
+                    </th>
+                    <th className="border border-border/60 px-3 py-2 text-left font-medium">
+                      Total
+                    </th>
+                    <th className="border border-border/60 px-3 py-2 text-left font-medium">
+                      Mapping Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr id="preview-invoice-row">
+                    <td className="border border-border/60 px-3 py-2">{sampleInvoice.number}</td>
+                    <td className="border border-border/60 px-3 py-2">{sampleInvoice.client}</td>
+                    <td className="border border-border/60 px-3 py-2">{sampleInvoice.total}</td>
+                    <td className="border border-border/60 px-3 py-2">
+                      <span id="preview-mapping-status" className={mappingBadgeClass}>
+                        {mappingBadgeText}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <Button id="wizard-back-button" variant="outline" onClick={handleBackToFilters}>
+                  Back
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    id="wizard-cancel-button"
+                    variant="ghost"
+                    onClick={handleCloseWizard}
+                  >
+                    Cancel
+                  </Button>
+                  <Button id="wizard-confirm-button" onClick={handleConfirmExport}>
+                    Confirm Export
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </CardContent>
+  </Card>
+
 
       <Card className="shadow-sm">
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Accounting Export Wizard Harness</CardTitle>
+            <CardTitle>Accounting Export Lifecycle Harness</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Simulates the accounting export wizard to verify validation behavior for unmapped services.
+              Simulates the accounting exports dashboard, worker transitions, and drawer actions.
             </p>
           </div>
-          <Button id="open-export-wizard" onClick={handleOpenWizard}>
-            New Export
-          </Button>
+          <div className="flex gap-2">
+            <Button id="open-lifecycle-wizard" onClick={handleOpenLifecycleWizard}>
+              New Export
+            </Button>
+            <Button id="run-worker-button" variant="secondary" onClick={runWorkerSimulation}>
+              Run Worker
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {globalSuccess && (
+          {lifecycleSuccess && (
             <div
-              id="export-success-banner"
+              id="lifecycle-success-banner"
               className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700"
             >
-              {globalSuccess}
+              {lifecycleSuccess}
             </div>
           )}
 
-          <Dialog
-            isOpen={isWizardOpen}
-            onClose={handleCloseWizard}
-            id="export-wizard"
-            title="Create Accounting Export"
-          >
-            <DialogContent className="space-y-4">
-              {wizardStep === 'filters' && (
-                <div id="wizard-filters" className="space-y-4">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="wizard-adapter" className="text-sm font-medium">
-                      Adapter
-                    </Label>
-                    <select
-                      id="wizard-adapter"
-                      className="rounded border border-border px-3 py-2 text-sm"
-                      value={selectedAdapter}
-                      onChange={(event) => setSelectedAdapter(event.target.value)}
-                    >
-                      <option value="">Select adapter</option>
-                      <option value="quickbooks_online">QuickBooks Online</option>
-                      <option value="xero">Xero</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="wizard-date-start" className="text-sm font-medium">
-                        Start Date
-                      </Label>
-                      <input
-                        type="date"
-                        id="wizard-date-start"
-                        className="rounded border border-border px-3 py-2 text-sm"
-                        value={startDate}
-                        onChange={(event) => setStartDate(event.target.value)}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="wizard-date-end" className="text-sm font-medium">
-                        End Date
-                      </Label>
-                      <input
-                        type="date"
-                        id="wizard-date-end"
-                        className="rounded border border-border px-3 py-2 text-sm"
-                        value={endDate}
-                        onChange={(event) => setEndDate(event.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Button id="wizard-cancel-button" variant="outline" onClick={handleCloseWizard}>
-                      Cancel
-                    </Button>
-                    <Button id="wizard-preview-button" onClick={handlePreview}>
-                      Preview
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {wizardStep === 'preview' && (
-                <div id="wizard-preview" className="space-y-4">
-                  {wizardError && (
-                    <div
-                      id="wizard-error-banner"
-                      className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
-                    >
-                      {wizardError}
-                    </div>
-                  )}
-                  <table
-                    className="w-full table-auto border border-border/60 text-sm"
-                    id="wizard-preview-table"
+          <table className="w-full table-auto border border-border/60 text-sm" id="batch-table">
+            <thead className="bg-muted/60">
+              <tr>
+                <th className="border border-border/60 px-3 py-2 text-left font-medium">Batch ID</th>
+                <th className="border border-border/60 px-3 py-2 text-left font-medium">Created</th>
+                <th className="border border-border/60 px-3 py-2 text-left font-medium">Adapter</th>
+                <th className="border border-border/60 px-3 py-2 text-left font-medium">Amount</th>
+                <th className="border border-border/60 px-3 py-2 text-left font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {batches.length === 0 ? (
+                <tr id="batch-empty-row">
+                  <td
+                    className="border border-border/60 px-3 py-4 text-center text-muted-foreground"
+                    colSpan={5}
                   >
-                    <thead className="bg-muted/60">
-                      <tr>
-                        <th className="border border-border/60 px-3 py-2 text-left font-medium">
-                          Invoice
-                        </th>
-                        <th className="border border-border/60 px-3 py-2 text-left font-medium">
-                          Client
-                        </th>
-                        <th className="border border-border/60 px-3 py-2 text-left font-medium">
-                          Total
-                        </th>
-                        <th className="border border-border/60 px-3 py-2 text-left font-medium">
-                          Mapping Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr id="preview-invoice-row">
-                        <td className="border border-border/60 px-3 py-2">{sampleInvoice.number}</td>
-                        <td className="border border-border/60 px-3 py-2">{sampleInvoice.client}</td>
-                        <td className="border border-border/60 px-3 py-2">{sampleInvoice.total}</td>
-                        <td className="border border-border/60 px-3 py-2">
-                          <span id="preview-mapping-status" className={mappingBadgeClass}>
-                            {mappingBadgeText}
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <Button id="wizard-back-button" variant="outline" onClick={handleBackToFilters}>
-                      Back
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        id="wizard-cancel-button"
-                        variant="ghost"
-                        onClick={handleCloseWizard}
-                      >
-                        Cancel
-                      </Button>
-                      <Button id="wizard-confirm-button" onClick={handleConfirmExport}>
-                        Confirm Export
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                    No batches created yet.
+                  </td>
+                </tr>
+              ) : (
+                batches.map((batch) => (
+                  <tr
+                    key={batch.id}
+                    id={`batch-row-${batch.id}`}
+                    className="cursor-pointer hover:bg-muted/40"
+                    onClick={() => openBatchDrawer(batch.id)}
+                  >
+                    <td className="border border-border/60 px-3 py-2">{batch.id}</td>
+                    <td className="border border-border/60 px-3 py-2">
+                      {formatTimestamp(batch.createdAt)}
+                    </td>
+                    <td className="border border-border/60 px-3 py-2">{batch.adapter}</td>
+                    <td className="border border-border/60 px-3 py-2">{batch.amount}</td>
+                    <td
+                      id={`batch-status-${batch.id}`}
+                      data-status={batch.status}
+                      className="border border-border/60 px-3 py-2 font-medium"
+                    >
+                      {prettyStatus(batch.status)}
+                    </td>
+                  </tr>
+                ))
               )}
-            </DialogContent>
-          </Dialog>
+            </tbody>
+          </table>
         </CardContent>
       </Card>
+
+      <Dialog
+        isOpen={lifecycleWizardOpen}
+        onClose={handleCloseLifecycleWizard}
+        id="lifecycle-export-wizard"
+        title="Create Accounting Export"
+      >
+        <DialogContent className="space-y-4">
+          {lifecycleWizardStep === 'filters' && (
+            <div id="lifecycle-wizard-filters" className="space-y-4">
+              {lifecycleError && (
+                <div
+                  id="lifecycle-duplicate-warning"
+                  className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+                >
+                  {lifecycleError}
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="lifecycle-adapter" className="text-sm font-medium">
+                  Adapter
+                </Label>
+                <select
+                  id="lifecycle-adapter"
+                  className="rounded border border-border px-3 py-2 text-sm"
+                  value={lifecycleAdapter}
+                  onChange={(event) => setLifecycleAdapter(event.target.value)}
+                >
+                  <option value="">Select adapter</option>
+                  <option value="quickbooks_online">QuickBooks Online</option>
+                  <option value="xero">Xero</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="lifecycle-date-start" className="text-sm font-medium">
+                    Start Date
+                  </Label>
+                  <input
+                    type="date"
+                    id="lifecycle-date-start"
+                    className="rounded border border-border px-3 py-2 text-sm"
+                    value={lifecycleStartDate}
+                    onChange={(event) => setLifecycleStartDate(event.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="lifecycle-date-end" className="text-sm font-medium">
+                    End Date
+                  </Label>
+                  <input
+                    type="date"
+                    id="lifecycle-date-end"
+                    className="rounded border border-border px-3 py-2 text-sm"
+                    value={lifecycleEndDate}
+                    onChange={(event) => setLifecycleEndDate(event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Button id="lifecycle-cancel-button" variant="outline" onClick={handleCloseLifecycleWizard}>
+                  Cancel
+                </Button>
+                <Button id="lifecycle-preview-button" onClick={handleLifecyclePreview}>
+                  Preview
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {lifecycleWizardStep === 'preview' && (
+            <div id="lifecycle-wizard-preview" className="space-y-4">
+              {lifecycleError && (
+                <div
+                  id="lifecycle-duplicate-warning"
+                  className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+                >
+                  {lifecycleError}
+                </div>
+              )}
+              <table className="w-full table-auto border border-border/60 text-sm" id="lifecycle-preview-table">
+                <thead className="bg-muted/60">
+                  <tr>
+                    <th className="border border-border/60 px-3 py-2 text-left font-medium">Invoice</th>
+                    <th className="border border-border/60 px-3 py-2 text-left font-medium">Client</th>
+                    <th className="border border-border/60 px-3 py-2 text-left font-medium">Total</th>
+                    <th className="border border-border/60 px-3 py-2 text-left font-medium">Mapping Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr id="lifecycle-preview-invoice-row">
+                    <td className="border border-border/60 px-3 py-2">{sampleInvoice.number}</td>
+                    <td className="border border-border/60 px-3 py-2">{sampleInvoice.client}</td>
+                    <td className="border border-border/60 px-3 py-2">{sampleInvoice.total}</td>
+                    <td className="border border-border/60 px-3 py-2">
+                      <span id="lifecycle-preview-mapping-status" className={mappingBadgeClass}>
+                        {mappingBadgeText}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <Button id="lifecycle-back-button" variant="outline" onClick={() => setLifecycleWizardStep('filters')}>
+                  Back
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    id="lifecycle-cancel-preview-button"
+                    variant="ghost"
+                    onClick={handleCloseLifecycleWizard}
+                  >
+                    Cancel
+                  </Button>
+                  <Button id="lifecycle-confirm-button" onClick={handleLifecycleConfirm}>
+                    Confirm Export
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        isOpen={isBatchDrawerOpen}
+        onClose={closeBatchDrawer}
+        id="batch-drawer"
+        title={selectedBatch ? `Batch ${selectedBatch.id}` : 'Batch Detail'}
+      >
+        <DialogContent className="space-y-4">
+          {selectedBatch ? (
+            <>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <span id="batch-drawer-status" className="text-sm font-semibold">
+                    {prettyStatus(selectedBatch.status)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Adapter</span>
+                  <span>{selectedBatch.adapter}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span>{selectedBatch.amount}</span>
+                </div>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium">Timeline</h4>
+                <ul id="batch-timeline" className="mt-2 space-y-1 text-sm">
+                  {selectedBatch.timeline.map((entry, index) => (
+                    <li key={`${entry.status}-${entry.at}-${index}`} className="flex justify-between">
+                      <span>{prettyStatus(entry.status)}</span>
+                      <time className="text-muted-foreground">{formatTimestamp(entry.at)}</time>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  id="mark-posted-button"
+                  onClick={handleMarkPosted}
+                  disabled={selectedBatch.status !== 'delivered'}
+                >
+                  Mark as Posted
+                </Button>
+                <Button
+                  id="cancel-batch-button"
+                  variant="outline"
+                  onClick={handleCancelBatch}
+                  disabled={!['pending', 'validating', 'ready'].includes(selectedBatch.status)}
+                >
+                  Cancel Batch
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button id="close-batch-drawer" variant="ghost" onClick={closeBatchDrawer}>
+                  Close
+                </Button>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Select a batch to view details.</p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog isOpen={isFallbackDialogOpen} onClose={() => setFallbackDialogOpen(false)} id="fallback-dialog" title="Configure Fallback Order">
         <DialogContent className="space-y-4">
