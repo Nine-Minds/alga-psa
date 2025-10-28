@@ -18,6 +18,7 @@ type ChatCompletionMessage = {
     name: string;
     arguments: Record<string, unknown>;
   };
+  tool_call_id?: string;
 };
 
 type FunctionMetadata = {
@@ -34,6 +35,8 @@ type FunctionMetadata = {
 type FunctionCallInfo = {
   name: string;
   arguments: Record<string, unknown>;
+  toolCallId?: string;
+  entryId?: string;
 };
 
 type PendingFunctionState = {
@@ -392,7 +395,9 @@ export const Chat: React.FC<ChatProps> = ({
     }
   };
 
-  const displayMessages = [...messages, ...newChatMessages];
+  const displayMessages = [...messages, ...newChatMessages].filter(
+    (message) => message.role !== 'function',
+  );
 
   const functionArgumentsPreview = (args: Record<string, unknown>) =>
     JSON.stringify(args, null, 2);
@@ -419,9 +424,9 @@ export const Chat: React.FC<ChatProps> = ({
       {!!displayMessages.length && (
         <div className="chats">
           <div className="mb-auto w-full">
-            {displayMessages.map((message) => (
+            {displayMessages.map((message, index) => (
               <Message
-                key={message._id}
+                key={message._id ?? message.tool_call_id ?? `msg-${index}`}
                 messageId={message._id}
                 role={message.role}
                 content={message.content}

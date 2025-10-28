@@ -26,6 +26,8 @@ export interface IssuedTemporaryKey {
 }
 
 export class TemporaryApiKeyService {
+  static readonly FALLBACK_KEY_ID = 'ai-session-fallback';
+
   /**
    * Issue a short-lived API key for AI chat session usage.
    */
@@ -52,33 +54,60 @@ export class TemporaryApiKeyService {
         throw new Error(`Tenant context mismatch while issuing AI session key for tenant ${tenantId}`);
       }
 
-      // Deactivate any existing active keys for the same chat/function pair
-      const existingKeys = await knex('api_keys')
-        .select('api_key_id', 'metadata')
-        .where({
-          tenant: tenantId,
-          user_id: userId,
-          purpose: PURPOSE_AI_SESSION,
-          active: true,
-        })
-        .andWhereRaw("metadata->>'chat_id' = ?", [chatId])
-        .andWhereRaw("metadata->>'function_call_id' = ?", [functionCallId]);
+      const columnSupport = await ApiKeyService.getColumnSupportFor(knex);
+      const metadataSupported = Boolean(columnSupport.metadata);
+      const purposeSupported = Boolean(columnSupport.purpose);
+      const usageLimitSupported = Boolean(columnSupport.usage_limit);
+      const usageCountSupported = Boolean(columnSupport.usage_count);
+      const expiresAtSupported = Boolean(columnSupport.expires_at);
 
-      if (existingKeys.length > 0) {
-        const existingIds = existingKeys.map((row) => row.api_key_id);
-        await knex('api_keys')
-          .whereIn('api_key_id', existingIds)
-          .update({
-            active: false,
-            updated_at: knex.fn.now(),
-            metadata: knex.raw(
-              "coalesce(metadata, '{}'::jsonb) || ?::jsonb",
-              JSON.stringify({
-                revoked_at: issuedAtIso,
-                revoked_reason: 'replaced',
-              })
-            ),
-          });
+      const missingRequired = (['purpose', 'usage_limit', 'usage_count', 'expires_at'] as const).filter(
+        (column) => !columnSupport[column],
+      );
+
+      if (missingRequired.length > 0) {
+        logger.warn(
+          `[TemporaryApiKeyService] Unable to issue AI session key; missing columns: ${missingRequired.join(
+            ', ',
+          )}. Falling back to cookie authentication.`,
+        );
+        return {
+          apiKeyId: TemporaryApiKeyService.FALLBACK_KEY_ID,
+          apiKey: '',
+          expiresAt: null,
+          metadata: null,
+        };
+      }
+
+      // Deactivate any existing active keys for the same chat/function pair
+      if (metadataSupported && purposeSupported) {
+        const existingKeys = await knex('api_keys')
+          .select('api_key_id')
+          .where({
+            tenant: tenantId,
+            user_id: userId,
+            purpose: PURPOSE_AI_SESSION,
+            active: true,
+          })
+          .andWhereRaw("metadata->>'chat_id' = ?", [chatId])
+          .andWhereRaw("metadata->>'function_call_id' = ?", [functionCallId]);
+
+        if (existingKeys.length > 0) {
+          const existingIds = existingKeys.map((row) => row.api_key_id);
+          await knex('api_keys')
+            .whereIn('api_key_id', existingIds)
+            .update({
+              active: false,
+              updated_at: knex.fn.now(),
+              metadata: knex.raw(
+                "coalesce(metadata, '{}'::jsonb) || ?::jsonb",
+                JSON.stringify({
+                  revoked_at: issuedAtIso,
+                  revoked_reason: 'replaced',
+                })
+              ),
+            });
+        }
       }
 
       const metadata: Record<string, unknown> = {
@@ -96,9 +125,9 @@ export class TemporaryApiKeyService {
         expiresAt,
         {
           purpose: PURPOSE_AI_SESSION,
-          metadata,
-          usageLimit: 1,
-          usageCount: 0,
+          ...(metadataSupported ? { metadata } : {}),
+          usageLimit: usageLimitSupported ? 1 : undefined,
+          usageCount: usageCountSupported ? 0 : undefined,
         }
       );
 
@@ -127,8 +156,12 @@ export class TemporaryApiKeyService {
         throw new Error(`Tenant context mismatch while revoking AI session key ${apiKeyId}`);
       }
 
+      const columnSupport = await ApiKeyService.getColumnSupportFor(knex);
+      const metadataSupported = Boolean(columnSupport.metadata);
+      const selectColumns = metadataSupported ? ['metadata', 'active'] : ['active'];
+
       const record = await knex('api_keys')
-        .select('metadata', 'active')
+        .select(selectColumns)
         .where({
           api_key_id: apiKeyId,
           tenant: tenantId,
@@ -139,28 +172,37 @@ export class TemporaryApiKeyService {
         return false;
       }
 
-      const baseMetadata =
-        record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
-          ? (record.metadata as Record<string, unknown>)
-          : {};
+      let metadataUpdate: Record<string, unknown> | undefined;
 
-      const metadata = {
-        ...baseMetadata,
-        revoked_at: new Date().toISOString(),
-        revoked_reason: reason,
-        ...(additionalMetadata ?? {}),
+      if (metadataSupported) {
+        const baseMetadata =
+          record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
+            ? (record.metadata as Record<string, unknown>)
+            : {};
+
+        metadataUpdate = {
+          ...baseMetadata,
+          revoked_at: new Date().toISOString(),
+          revoked_reason: reason,
+          ...(additionalMetadata ?? {}),
+        };
+      }
+
+      const updatePayload: Record<string, unknown> = {
+        active: false,
+        updated_at: knex.fn.now(),
       };
+
+      if (metadataSupported && metadataUpdate) {
+        updatePayload.metadata = metadataUpdate;
+      }
 
       await knex('api_keys')
         .where({
           api_key_id: apiKeyId,
           tenant: tenantId,
         })
-        .update({
-          active: false,
-          metadata,
-          updated_at: knex.fn.now(),
-        });
+        .update(updatePayload);
 
       return true;
     });
@@ -171,20 +213,37 @@ export class TemporaryApiKeyService {
    */
   static async cleanupExpiredAiKeys(): Promise<number> {
     return withAdminTransaction(async (trx) => {
+      const columnSupport = await ApiKeyService.getColumnSupportFor(trx);
+      const metadataSupported = Boolean(columnSupport.metadata);
+      const purposeSupported = Boolean(columnSupport.purpose);
+      const expiresAtSupported = Boolean(columnSupport.expires_at);
+
+      if (!purposeSupported || !expiresAtSupported) {
+        logger.warn(
+          '[TemporaryApiKeyService] Skipping AI session key cleanup; required columns are not available.',
+        );
+        return 0;
+      }
+
+      const updatePayload: Record<string, unknown> = {
+        active: false,
+        updated_at: trx.fn.now(),
+      };
+
+      if (metadataSupported) {
+        updatePayload.metadata = trx.raw(
+          "coalesce(metadata, '{}'::jsonb) || jsonb_build_object('revoked_at', ?, 'revoked_reason', 'expired')",
+          new Date().toISOString()
+        );
+      }
+
       const result = await trx('api_keys')
         .where({
           purpose: PURPOSE_AI_SESSION,
           active: true,
         })
         .andWhere('expires_at', '<', trx.fn.now())
-        .update({
-          active: false,
-          updated_at: trx.fn.now(),
-          metadata: trx.raw(
-            "coalesce(metadata, '{}'::jsonb) || jsonb_build_object('revoked_at', ?, 'revoked_reason', 'expired')",
-            new Date().toISOString()
-          ),
-        });
+        .update(updatePayload);
 
       if (result > 0) {
         logger.info(`[TemporaryApiKeyService] Deactivated ${result} expired AI session keys.`);
