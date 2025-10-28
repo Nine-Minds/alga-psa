@@ -426,6 +426,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
 
       {/* Tickets Table */}
       <DataTable
+        id="client-tickets-table"
         data={ticketsWithIds}
         columns={columns}
       />

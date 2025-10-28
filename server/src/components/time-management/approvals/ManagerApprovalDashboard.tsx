@@ -161,6 +161,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
         </div>
       </div>
       <DataTable
+        id="manager-approval-timesheets"
         data={timeSheets}
         columns={[
           {

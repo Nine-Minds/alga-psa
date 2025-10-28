@@ -287,6 +287,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         </Button>
       </div>
       <DataTable
+        id="client-contacts-list"
         data={contacts}
         columns={columns}
         pagination={true}

@@ -462,6 +462,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               />
             ) : (
               <DataTable
+                id="usage-tracking-table"
                 data={usageRecords}
                 columns={columns}
                 pagination={true}

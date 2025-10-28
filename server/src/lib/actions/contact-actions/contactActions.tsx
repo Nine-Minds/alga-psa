@@ -335,7 +335,15 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
             queryBuilder.where('contacts.is_inactive', status === 'inactive');
           }
         })
-        .orderBy(safeSortBy === 'created_at' ? 'contacts.created_at' : 'contacts.full_name', safeSortDirection);
+        .orderBy((() => {
+          const columnMap: Record<string, string> = {
+            full_name: 'contacts.full_name',
+            created_at: 'contacts.created_at',
+            email: 'contacts.email',
+            phone_number: 'contacts.phone_number'
+          };
+          return columnMap[safeSortBy] || 'contacts.full_name';
+        })(), safeSortDirection);
     });
 
     // Fetch avatar URLs for each contact
@@ -551,7 +559,15 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
             queryBuilder.where('is_inactive', status === 'inactive');
           }
         })
-        .orderBy(safeSortBy === 'created_at' ? 'created_at' : 'full_name', safeSortDirection);
+        .orderBy((() => {
+          const columnMap: Record<string, string> = {
+            full_name: 'full_name',
+            created_at: 'created_at',
+            email: 'email',
+            phone_number: 'phone_number'
+          };
+          return columnMap[safeSortBy] || 'full_name';
+        })(), safeSortDirection);
 
       console.log('[getAllContacts] Found', contacts.length, 'contacts');
 

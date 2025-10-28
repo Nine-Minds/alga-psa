@@ -228,6 +228,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       )}
       <div id="invoices-table-container" className="mb-8">
         <DataTable
+          id="client-portal-invoices"
           data={invoices}
           columns={invoiceColumns}
           pagination={true}

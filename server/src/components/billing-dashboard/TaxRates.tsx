@@ -276,6 +276,7 @@ const TaxRates: React.FC = () => {
             />
           ) : (
             <DataTable
+              id="tax-rates-table"
               data={taxRates}
               columns={columns}
               onRowClick={handleEditTaxRate}
