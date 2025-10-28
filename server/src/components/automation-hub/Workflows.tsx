@@ -69,7 +69,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
   const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
   const [workflowToTest, setWorkflowToTest] = useState<WorkflowWithEvents | null>(null);
   const [selectedWorkflowForVersions, setSelectedWorkflowForVersions] = useState<WorkflowWithEvents | null>(null);
-  
+  const [sortBy, setSortBy] = useState<string>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
   // Handle workflowId if provided
   useEffect(() => {
     if (workflowId) {
@@ -107,14 +109,64 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     }
   };
   
-  // Filter workflows based on showInactive and search term
+  // Handle sorting
+  const handleSort = (columnKey: string) => {
+    if (sortBy === columnKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(columnKey);
+      setSortDirection('asc');
+    }
+  };
+
+  // Filter and sort workflows
   const filteredWorkflows = workflows
     .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
     .filter(workflow => // Then filter by search term
       workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    )
+    .sort((a, b) => {
+      let aValue: string | number = '';
+      let bValue: string | number = '';
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'version':
+          aValue = a.version;
+          bValue = b.version;
+          break;
+        case 'status':
+          aValue = a.isActive ? 'active' : 'inactive';
+          bValue = b.isActive ? 'active' : 'inactive';
+          break;
+        case 'events':
+          aValue = a.events.length;
+          bValue = b.events.length;
+          break;
+        case 'lastUpdated':
+          aValue = new Date(a.lastUpdated || '').getTime();
+          bValue = new Date(b.lastUpdated || '').getTime();
+          break;
+        default:
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      } else {
+        return sortDirection === 'asc'
+          ? (aValue as number) - (bValue as number)
+          : (bValue as number) - (aValue as number);
+      }
+    });
 
   // Handle creating a new workflow
   const handleCreateWorkflow = () => {
@@ -295,23 +347,78 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Name</span>
+                        {sortBy === 'name' && (
+                          <span className="text-gray-400">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Test
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Version
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('version')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Version</span>
+                        {sortBy === 'version' && (
+                          <span className="text-gray-400">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Status</span>
+                        {sortBy === 'status' && (
+                          <span className="text-gray-400">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Events
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('events')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Events</span>
+                        {sortBy === 'events' && (
+                          <span className="text-gray-400">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Last Updated
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('lastUpdated')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Last Updated</span>
+                        {sortBy === 'lastUpdated' && (
+                          <span className="text-gray-400">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
                     </th>
                     <th scope="col" className="relative px-6 py-3">
                       <span className="sr-only">Actions</span>

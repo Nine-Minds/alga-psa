@@ -419,13 +419,14 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
           'phone_no': 'cl.phone',
           'address': 'cl.address_line1',
           'account_manager_full_name': 'account_manager_full_name',
-          'url': 'c.url'
+          'url': 'c.url',
+          'created_at': 'c.created_at'
         };
-        
+
         const sortColumn = sortColumnMap[sortBy] || 'c.client_name';
         // Validate sortDirection to prevent SQL injection
         const validSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
-        
+
         // Use case-insensitive sorting with LOWER() function
         // This is compatible with both PostgreSQL and Citus distributed tables
         const textColumns = ['client_name', 'client_type', 'address', 'account_manager_full_name', 'url'];
@@ -433,7 +434,7 @@ export async function getAllClientsPaginated(params: ClientPaginationParams = {}
           // Using LOWER() is Citus-compatible and provides case-insensitive sorting
           clientsQuery = clientsQuery.orderByRaw(`LOWER(${sortColumn}) ${validSortDirection}`);
         } else {
-          // Non-text columns use standard ordering
+          // Non-text columns use standard ordering (including created_at which is a timestamp)
           clientsQuery = clientsQuery.orderBy(sortColumn, validSortDirection);
         }
       } else {
