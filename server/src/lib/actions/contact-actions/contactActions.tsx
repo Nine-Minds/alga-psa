@@ -13,8 +13,6 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
 
-export type ContactFilterStatus = 'active' | 'inactive' | 'all';
-
 // Shared column mapping for contact sorting
 const CONTACT_SORT_COLUMNS = {
   full_name: 'contacts.full_name',
@@ -302,7 +300,7 @@ export async function deleteContact(contactId: string) {
   }
 }
 
-type ContactFilterStatus = 'active' | 'inactive' | 'all';
+export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
 export async function getContactsByClient(clientId: string, status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
   const { knex: db, tenant } = await createTenantKnex();
