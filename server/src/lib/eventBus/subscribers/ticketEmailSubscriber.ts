@@ -876,9 +876,32 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       threadId: ticket.email_metadata?.threadId
     };
 
+    const sentEmails = new Set<string>();
+    const normalizeEmail = (email: string) => email.trim().toLowerCase();
+    const sendIfUnique = async (
+      params: SendEmailParams,
+      subtypeName: string,
+      recipientUserId?: string | null
+    ) => {
+      const email = params.to?.trim();
+      if (!email) {
+        return;
+      }
+      const key = normalizeEmail(email);
+      if (sentEmails.has(key)) {
+        return;
+      }
+      sentEmails.add(key);
+      await sendNotificationIfEnabled(
+        params,
+        subtypeName,
+        recipientUserId ?? undefined
+      );
+    };
+
     // Send to assigned user
     if (ticket.assigned_to_email) {
-      await sendNotificationIfEnabled({
+      await sendIfUnique({
         tenantId,
         to: ticket.assigned_to_email,
         subject: `You have been assigned to ticket: ${ticket.title}`,
@@ -893,7 +916,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     // Notify the client's default location email - external user, no userId
     if (locationEmail) {
-      await sendNotificationIfEnabled({
+      await sendIfUnique({
         tenantId,
         to: locationEmail,
         subject: `Ticket Assigned: ${ticket.title}`,
@@ -904,8 +927,8 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     }
 
     // Notify the ticket contact when different from the default location email - external user, no userId
-    if (contactEmail && contactEmail !== locationEmail) {
-      await sendNotificationIfEnabled({
+    if (contactEmail) {
+      await sendIfUnique({
         tenantId,
         to: contactEmail,
         subject: `Ticket Assigned: ${ticket.title}`,
@@ -930,7 +953,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     // Send to all additional resources
     for (const resource of additionalResources) {
       if (resource.email) {
-        await sendNotificationIfEnabled({
+        await sendIfUnique({
           tenantId,
           to: resource.email,
           subject: `You have been added as additional resource to ticket: ${ticket.title}`,
