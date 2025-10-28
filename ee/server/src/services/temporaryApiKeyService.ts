@@ -54,30 +54,12 @@ export class TemporaryApiKeyService {
         throw new Error(`Tenant context mismatch while issuing AI session key for tenant ${tenantId}`);
       }
 
-      const columnSupport = await ApiKeyService.getColumnSupportFor(knex);
+      const columnSupport = await ApiKeyService.getColumnSupportFor(knex, tenantId);
       const metadataSupported = Boolean(columnSupport.metadata);
       const purposeSupported = Boolean(columnSupport.purpose);
       const usageLimitSupported = Boolean(columnSupport.usage_limit);
       const usageCountSupported = Boolean(columnSupport.usage_count);
       const expiresAtSupported = Boolean(columnSupport.expires_at);
-
-      const missingRequired = (['purpose', 'usage_limit', 'usage_count', 'expires_at'] as const).filter(
-        (column) => !columnSupport[column],
-      );
-
-      if (missingRequired.length > 0) {
-        logger.warn(
-          `[TemporaryApiKeyService] Unable to issue AI session key; missing columns: ${missingRequired.join(
-            ', ',
-          )}. Falling back to cookie authentication.`,
-        );
-        return {
-          apiKeyId: TemporaryApiKeyService.FALLBACK_KEY_ID,
-          apiKey: '',
-          expiresAt: null,
-          metadata: null,
-        };
-      }
 
       // Deactivate any existing active keys for the same chat/function pair
       if (metadataSupported && purposeSupported) {
@@ -131,6 +113,10 @@ export class TemporaryApiKeyService {
         }
       );
 
+      logger.info(
+        `[TemporaryApiKeyService] Issued ai_session key for user ${userId} (len=${apiKey.api_key?.length ?? 0})`,
+      );
+
       return {
         apiKeyId: apiKey.api_key_id,
         apiKey: apiKey.api_key,
@@ -156,7 +142,7 @@ export class TemporaryApiKeyService {
         throw new Error(`Tenant context mismatch while revoking AI session key ${apiKeyId}`);
       }
 
-      const columnSupport = await ApiKeyService.getColumnSupportFor(knex);
+      const columnSupport = await ApiKeyService.getColumnSupportFor(knex, tenantId);
       const metadataSupported = Boolean(columnSupport.metadata);
       const selectColumns = metadataSupported ? ['metadata', 'active'] : ['active'];
 
@@ -213,7 +199,7 @@ export class TemporaryApiKeyService {
    */
   static async cleanupExpiredAiKeys(): Promise<number> {
     return withAdminTransaction(async (trx) => {
-      const columnSupport = await ApiKeyService.getColumnSupportFor(trx);
+      const columnSupport = await ApiKeyService.getColumnSupportFor(trx, '__admin__');
       const metadataSupported = Boolean(columnSupport.metadata);
       const purposeSupported = Boolean(columnSupport.purpose);
       const expiresAtSupported = Boolean(columnSupport.expires_at);
@@ -251,4 +237,5 @@ export class TemporaryApiKeyService {
       return result;
     });
   }
+
 }

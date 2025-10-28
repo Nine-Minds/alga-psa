@@ -38,13 +38,20 @@ const OPTIONAL_COLUMNS: ApiKeyOptionalColumn[] = [
 ];
 
 export class ApiKeyService {
-  private static columnSupport: Partial<Record<ApiKeyOptionalColumn, boolean>> | null = null;
+  private static columnSupportCache = new Map<string, Partial<Record<ApiKeyOptionalColumn, boolean>>>();
 
   static async getColumnSupportFor(
     knex: any,
+    cacheKey?: string,
   ): Promise<Partial<Record<ApiKeyOptionalColumn, boolean>>> {
-    if (this.columnSupport !== null) {
-      return this.columnSupport;
+    const key =
+      cacheKey ??
+      knex?.context?.tenant ??
+      knex?.client?.config?.connection?.database ??
+      'default';
+
+    if (this.columnSupportCache.has(key)) {
+      return this.columnSupportCache.get(key)!;
     }
 
     const entries = await Promise.all(
@@ -59,8 +66,9 @@ export class ApiKeyService {
       }),
     );
 
-    this.columnSupport = Object.fromEntries(entries);
-    return this.columnSupport;
+    const support = Object.fromEntries(entries);
+    this.columnSupportCache.set(key, support);
+    return support;
   }
 
   /**
@@ -106,7 +114,7 @@ export class ApiKeyService {
     }
 
     try {
-      const columnSupport = await this.getColumnSupportFor(knex);
+      const columnSupport = await this.getColumnSupportFor(knex, tenant);
       const metadataSupported = columnSupport.metadata ?? false;
       const purposeSupported = columnSupport.purpose ?? false;
       const usageLimitSupported = columnSupport.usage_limit ?? false;
@@ -179,7 +187,7 @@ export class ApiKeyService {
     const hashedKey = this.hashApiKey(plaintextKey);
     
     try {
-      const columnSupport = await this.getColumnSupportFor(knex);
+      const columnSupport = await this.getColumnSupportFor(knex, tenant);
       const usageLimitSupported = columnSupport.usage_limit ?? false;
       const usageCountSupported = columnSupport.usage_count ?? false;
       const lastUsedSupported = columnSupport.last_used_at ?? true;
@@ -367,7 +375,7 @@ export class ApiKeyService {
       throw new Error(`Tenant context mismatch while consuming API key ${apiKeyId}`);
     }
 
-    const columnSupport = await this.getColumnSupportFor(knex);
+    const columnSupport = await this.getColumnSupportFor(knex, tenant);
     const usageCountSupported = columnSupport.usage_count ?? false;
     const usageLimitSupported = columnSupport.usage_limit ?? false;
 
