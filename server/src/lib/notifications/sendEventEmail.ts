@@ -6,6 +6,7 @@ import { TenantEmailService } from '../services/TenantEmailService';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from '../i18n/config';
+import Handlebars from 'handlebars';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 
@@ -338,26 +339,19 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     // Build template content below and send via TenantEmailService
 
-    // Replace template variables with context values in both HTML and subject
-    let html = templateContent;
-    let subject = emailSubject;
-    
-    Object.entries(params.context).forEach(([contextKey, contextValue]) => {
-      if (typeof contextValue === 'object' && contextValue !== null) {
-        Object.entries(contextValue).forEach(([key, value]) => {
-          const placeholder = `{{${contextKey}.${key}}}`;
-          const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-          html = html.replace(regex, String(value));
-          subject = subject.replace(regex, String(value));
-        });
-      }
-    });
+    // Use Handlebars to compile and render the template with context
+    const htmlTemplate = Handlebars.compile(templateContent);
+    const subjectTemplate = Handlebars.compile(emailSubject);
 
-    logger.debug('[SendEventEmail] Template variables replaced:', {
-      originalContent: templateContent,
-      finalContent: html,
+    let html = htmlTemplate(params.context);
+    let subject = subjectTemplate(params.context);
+
+    logger.debug('[SendEventEmail] Template rendered with Handlebars:', {
+      originalContentLength: templateContent.length,
+      finalContentLength: html.length,
       originalSubject: emailSubject,
-      finalSubject: subject
+      finalSubject: subject,
+      contextKeys: Object.keys(params.context)
     });
 
     let text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
