@@ -40,6 +40,12 @@ export interface SendEmailParams {
    * If not provided, will attempt to lookup by email
    */
   recipientUserId?: string;
+  /**
+   * Optional: recipient client ID for locale resolution
+   * Used when sending to contacts/clients without user accounts yet
+   * Ensures client's defaultLocale preference is respected
+   */
+  recipientClientId?: string;
 }
 
 function applyReplyMarkers(
@@ -145,18 +151,25 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: recipientLocale });
     } else {
       // Get recipient information for locale resolution
-      const recipientInfo = params.recipientUserId
+      const baseInfo = params.recipientUserId
         ? { email: params.to, userId: params.recipientUserId }
-        : await getUserInfoForEmail(params.tenantId, params.to) ?? { email: params.to };
+        : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
+
+      // Merge in clientId if provided (for contacts without user accounts yet)
+      const recipientInfo = {
+        ...baseInfo,
+        ...(params.recipientClientId && { clientId: params.recipientClientId })
+      };
 
       // Only do full locale resolution for client portal users
       // MSP portal doesn't have i18n yet, so internal users always get English
-      if (recipientInfo.userType === 'client') {
+      if (recipientInfo.userType === 'client' || recipientInfo.clientId) {
         recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
         logger.debug('[SendEventEmail] Resolved client user locale:', {
           locale: recipientLocale,
           email: params.to,
-          userId: recipientInfo.userId
+          userId: recipientInfo.userId,
+          clientId: recipientInfo.clientId
         });
       } else {
         // Internal users always get English (MSP portal doesn't have i18n yet)

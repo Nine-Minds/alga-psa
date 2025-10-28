@@ -6,8 +6,8 @@
  * ensuring emails are sent in the user's preferred language.
  *
  * Hierarchy (for client portal users):
- * 1. User preference (user_preferences table)
- * 2. Client preference (clients.properties.defaultLocale)
+ * 1. User preference (user_preferences table) - only if userId is provided
+ * 2. Client preference (clients.properties.defaultLocale) - checked if clientId is provided
  * 3. Tenant client portal default (tenant_settings.settings.clientPortal.defaultLocale)
  * 4. Tenant default (tenant_settings.settings.defaultLocale)
  * 5. System default ('en')
@@ -16,6 +16,10 @@
  * 1. User preference
  * 2. Tenant default
  * 3. System default
+ *
+ * Special handling for portal invitations:
+ * When sending portal invitations to contacts without user accounts yet,
+ * provide the clientId to ensure the client's defaultLocale is respected.
  */
 
 import { getConnection } from '../db/db';
@@ -70,55 +74,55 @@ export async function resolveEmailLocale(
 ): Promise<SupportedLocale> {
   const knex = await getConnection(tenantId);
 
-  // If no userId provided, use tenant default
-  if (!recipient.userId) {
-    return await getTenantDefaultLocale(tenantId, 'client');
-  }
-
   try {
     // Get user information if not provided
     let userType = recipient.userType;
     let clientId = recipient.clientId;
 
-    if (!userType) {
-      const user = await knex('users')
+    // If we have a userId, check user preference and get user details
+    if (recipient.userId) {
+      if (!userType) {
+        const user = await knex('users')
+          .where({
+            user_id: recipient.userId,
+            tenant: tenantId
+          })
+          .first();
+
+        userType = user?.user_type || 'internal';
+      }
+
+      // 1. Check user preference
+      const userPref = await knex('user_preferences')
         .where({
           user_id: recipient.userId,
+          setting_name: 'locale',
           tenant: tenantId
         })
         .first();
 
-      userType = user?.user_type || 'internal';
-    }
+      if (userPref?.setting_value) {
+        const locale = typeof userPref.setting_value === 'string'
+          ? userPref.setting_value.replace(/"/g, '')
+          : userPref.setting_value;
 
-    // 1. Check user preference
-    const userPref = await knex('user_preferences')
-      .where({
-        user_id: recipient.userId,
-        setting_name: 'locale',
-        tenant: tenantId
-      })
-      .first();
-
-    if (userPref?.setting_value) {
-      const locale = typeof userPref.setting_value === 'string'
-        ? userPref.setting_value.replace(/"/g, '')
-        : userPref.setting_value;
-
-      if (isSupportedLocale(locale)) {
-        logger.debug('[EmailLocaleResolver] Using user preference:', { locale, userId: recipient.userId });
-        return locale;
+        if (isSupportedLocale(locale)) {
+          logger.debug('[EmailLocaleResolver] Using user preference:', { locale, userId: recipient.userId });
+          return locale;
+        }
       }
-    }
 
-    // For client users, check client and client portal settings
-    if (userType === 'client') {
-      // 2. Check client preference
-      if (!clientId) {
+      // Try to get clientId from user if not provided
+      if (!clientId && userType === 'client') {
         const resolvedClientId = await getUserClientId(recipient.userId, tenantId);
         clientId = resolvedClientId ?? undefined;
       }
+    }
 
+    // For client users (or when clientId is provided without userId), check client and client portal settings
+    // This handles portal invitations sent to contacts who don't have user accounts yet
+    if (userType === 'client' || clientId) {
+      // 2. Check client preference
       if (clientId) {
         const client = await knex('clients')
           .where({
@@ -147,8 +151,8 @@ export async function resolveEmailLocale(
     }
 
     // 4. Check tenant default (for both internal and client users)
-    const defaultLocale = await getTenantDefaultLocale(tenantId, userType);
-    logger.debug('[EmailLocaleResolver] Using tenant/system default:', { locale: defaultLocale, userType });
+    const defaultLocale = await getTenantDefaultLocale(tenantId, userType || 'client');
+    logger.debug('[EmailLocaleResolver] Using tenant/system default:', { locale: defaultLocale, userType: userType || 'client' });
     return defaultLocale;
 
   } catch (error) {

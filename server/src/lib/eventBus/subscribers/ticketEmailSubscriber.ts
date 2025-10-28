@@ -1064,7 +1064,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Send to primary email if available - external user, no userId
     if (primaryEmail) {
-      await sendNotificationIfEnabled({
+      // For client portal users (contacts), pass the clientId so locale resolution respects client preferences
+      const emailParams: SendEmailParams = {
         tenantId,
         to: primaryEmail,
         subject: `New Comment on Ticket: ${ticket.title}`,
@@ -1075,7 +1076,14 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
         }
-      }, 'Ticket Comment Added');
+      };
+
+      // Add clientId for locale resolution if we're sending to a contact/client
+      if (ticket.client_id) {
+        emailParams.recipientClientId = ticket.client_id;
+      }
+
+      await sendNotificationIfEnabled(emailParams, 'Ticket Comment Added');
     }
 
     // Send to assigned user if different from primary email

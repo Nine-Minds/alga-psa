@@ -44,9 +44,14 @@ export async function sendPortalInvitationEmail({
 
       // Get recipient information for locale resolution
       // For portal invitations, we need to include clientId for contacts who don't have user accounts yet
-      const recipientInfo = recipientUserId
+      const baseInfo = recipientUserId
         ? { email, userId: recipientUserId }
-        : await getUserInfoForEmail(tenant, email) ?? { email, clientId };
+        : await getUserInfoForEmail(tenant, email) || { email };
+
+      const recipientInfo = {
+        ...baseInfo,
+        ...(clientId && { clientId }) // Add clientId if provided, ensures it's used even when user doesn't exist yet
+      };
 
       logger.info('[SendPortalInvitationEmail] Recipient info:', recipientInfo);
 
