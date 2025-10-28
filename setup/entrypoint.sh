@@ -81,7 +81,17 @@ main() {
     wait_for_postgres
 
     log "Creating database..."
-    node /app/server/setup/create_database.js
+    log "Running create_database.js with timeout protection..."
+    timeout 120 node /app/server/setup/create_database.js || {
+        local exit_code=$?
+        if [ $exit_code -eq 124 ]; then
+            log "ERROR: Database creation timed out after 120 seconds"
+        else
+            log "ERROR: Database creation failed with exit code $exit_code"
+        fi
+        exit 1
+    }
+    log "Database creation completed!"
 
     # Use DB_HOST_ADMIN for direct postgres connections (admin operations)
     # pgbouncer doesn't support certain admin commands
@@ -125,21 +135,24 @@ main() {
     PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
 
     log "Running migrations..."
-    
+
     # For Enterprise Edition, we need to run migrations from a combined directory
     if [ "${EDITION}" = "enterprise" ] || [ "${EDITION}" = "ee" ]; then
         log "Setting up EE migrations..."
-        
+
         # Create a combined migrations directory within /app/server
         mkdir -p /app/server/combined-migrations
-        
+
         # Copy base migrations first (these should run first)
+        log "Copying base migrations..."
         cp /app/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
-        
+
         # Copy EE migrations (these run after base migrations)
+        log "Copying EE migrations..."
         cp /app/ee/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
-        
+
         # Create a temporary knexfile in /app/server where node_modules exist
+        log "Creating temporary knexfile for EE..."
         cat > /app/server/knexfile-ee.cjs << 'EOF'
 const fs = require('fs');
 const path = require('path');
@@ -181,19 +194,38 @@ module.exports = {
 EOF
         
         log "Running combined migrations for EE..."
-        cd /app/server && NODE_ENV=migration npx knex migrate:latest --knexfile knexfile-ee.cjs || {
-            log "ERROR: EE migrations failed"
+        log "Current directory: $(pwd)"
+        log "Migration directory contents:"
+        ls -la /app/server/combined-migrations/ || log "Could not list migration directory"
+
+        cd /app/server && NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile knexfile-ee.cjs --verbose || {
+            local exit_code=$?
+            if [ $exit_code -eq 124 ]; then
+                log "ERROR: EE migrations timed out after 300 seconds"
+            else
+                log "ERROR: EE migrations failed with exit code $exit_code"
+            fi
             exit 1
         }
         log "EE migrations completed!"
-        
+
         # Clean up
         rm -rf /app/server/combined-migrations
         rm -f /app/server/knexfile-ee.cjs
     else
         # For CE, just run the base migrations
-        NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs || {
-            log "ERROR: Migrations failed"
+        log "Running base migrations for CE..."
+        log "Current directory: $(pwd)"
+        log "Migration directory: /app/server/migrations"
+        ls -la /app/server/migrations/ || log "Could not list migration directory"
+
+        NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose || {
+            local exit_code=$?
+            if [ $exit_code -eq 124 ]; then
+                log "ERROR: Migrations timed out after 300 seconds"
+            else
+                log "ERROR: Migrations failed with exit code $exit_code"
+            fi
             exit 1
         }
         log "Migrations completed!"
@@ -202,8 +234,16 @@ EOF
     # Check if seeds need to be run
     if ! check_seeds_status; then
         log "Running seeds..."
-        NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs || {
-            log "Seeds failed, but continuing since database may already be seeded"
+        log "Seed directory: /app/server/seeds"
+        ls -la /app/server/seeds/ || log "Could not list seed directory"
+
+        NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose || {
+            local exit_code=$?
+            if [ $exit_code -eq 124 ]; then
+                log "WARNING: Seeds timed out after 300 seconds, but continuing since database may already be seeded"
+            else
+                log "WARNING: Seeds failed with exit code $exit_code, but continuing since database may already be seeded"
+            fi
         }
         log "Seeds completed!"
     else

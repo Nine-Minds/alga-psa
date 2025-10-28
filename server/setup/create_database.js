@@ -244,8 +244,9 @@ async function createDatabase(retryCount = 0) {
     // Ensure PgBouncer (md5 auth) can connect by storing md5 hashes for app users
     await dbClient.query("SET password_encryption = 'md5';");
 
-    // Always ensure the postgres superuser stores an MD5-compatible secret
-    await dbClient.query(`ALTER USER postgres WITH PASSWORD '${postgresPassword}'`);
+    // Note: The postgres superuser password is already set via POSTGRES_PASSWORD_FILE during container initialization.
+    // We do NOT re-set it here to avoid authentication issues with concurrent connections.
+    // The password is already in MD5 format as required by PgBouncer.
 
     let skipDbSetup = false;
     try {
