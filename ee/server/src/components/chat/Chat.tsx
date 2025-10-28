@@ -386,27 +386,41 @@ export const Chat: React.FC<ChatProps> = ({
         throw new Error(data?.error || `Request failed with status ${response.status}`);
       }
 
-      if (data.type !== 'assistant_message') {
+      if (data.type === 'assistant_message') {
+        const assistantContent: string = data.message?.content ?? '';
+        await addAssistantMessageToPersistence(
+          pendingFunction.chatId ?? chatId,
+          assistantContent,
+        );
+
+        setConversation(
+          data.nextMessages ?? [
+            ...pendingFunction.nextMessages,
+            { role: 'assistant', content: assistantContent },
+          ],
+        );
+        setFullMessage(assistantContent);
+        setIncomingMessage('');
+        setIsFunction(false);
+        setGeneratingResponse(false);
+        setPendingFunction(null);
+      } else if (data.type === 'function_proposed') {
+        setPendingFunction({
+          metadata: data.function,
+          assistantPreview: data.assistantPreview,
+          functionCall: data.functionCall,
+          nextMessages: data.nextMessages,
+          chatId: pendingFunction.chatId ?? chatId,
+        });
+        setConversation(data.nextMessages);
+        setIncomingMessage(
+          data.assistantPreview || 'I need your approval before running that.',
+        );
+        setIsFunction(true);
+        setGeneratingResponse(false);
+      } else {
         throw new Error('Unexpected response from the assistant.');
       }
-
-      const assistantContent: string = data.message?.content ?? '';
-      await addAssistantMessageToPersistence(
-        pendingFunction.chatId ?? chatId,
-        assistantContent,
-      );
-
-      setConversation(
-        data.nextMessages ?? [
-          ...pendingFunction.nextMessages,
-          { role: 'assistant', content: assistantContent },
-        ],
-      );
-      setFullMessage(assistantContent);
-      setIncomingMessage('');
-      setIsFunction(false);
-      setGeneratingResponse(false);
-      setPendingFunction(null);
     } catch (error) {
       console.error('Error executing function call', error);
       setFunctionError(

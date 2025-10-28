@@ -254,7 +254,10 @@ export class ChatCompletionsService {
   private static async executeAfterApproval(params: ExecuteCompletionParams): Promise<CompletionResponse> {
     const { messages, functionCall, action, baseUrl, tenantId, userId, chatId, cookieHeader } = params;
 
-    const entry = this.resolveRegistryEntry(functionCall.entryId ?? functionCall.arguments?.entryId ?? functionCall.name);
+    const entry = this.resolveRegistryEntry(
+      functionCall.entryId ?? functionCall.arguments?.entryId ?? functionCall.name,
+      functionCall.arguments,
+    );
     if (!entry) {
       return {
         type: 'error',
@@ -262,12 +265,16 @@ export class ChatCompletionsService {
       };
     }
 
+    const preparedArgs = { ...functionCall.arguments };
+    this.populatePathParameters(entry, preparedArgs);
+    console.info('[ChatCompletionsService] executeAfterApproval args', entry.id, preparedArgs);
+
     let resultPayload: unknown = { status: 'skipped', reason: 'User declined to execute the function.' };
 
     if (action === 'approve') {
       resultPayload = await this.executeFunctionCall({
         entry,
-        args: functionCall.arguments,
+        args: preparedArgs,
         baseUrl,
         tenantId,
         userId,
@@ -296,7 +303,7 @@ export class ChatCompletionsService {
     if (response.type === 'assistant_message') {
       response.functionCall = {
         name: EXECUTE_TOOL_NAME,
-        arguments: functionCall.arguments,
+        arguments: preparedArgs,
         result: resultPayload,
         toolCallId,
       };
@@ -344,6 +351,11 @@ export class ChatCompletionsService {
                 type: 'string',
                 description:
                   'Registry identifier for the endpoint, for example "serviceCategories.list". Always provide this.',
+              },
+              method: {
+                type: 'string',
+                description: 'HTTP method to use when invoking the endpoint (defaults to the documented method).',
+                enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
               },
               path: {
                 type: 'object',
@@ -400,14 +412,29 @@ export class ChatCompletionsService {
     ];
   }
 
-  private static resolveRegistryEntry(entryId: unknown): ChatApiRegistryEntry | null {
-    if (typeof entryId !== 'string') {
-      return null;
+  private static resolveRegistryEntry(
+    entryId: unknown,
+    args?: Record<string, unknown>,
+  ): ChatApiRegistryEntry | null {
+    let identifier = typeof entryId === 'string' ? entryId : '';
+    if (!identifier && typeof args?.entryId === 'string') {
+      identifier = args.entryId;
     }
     const registry = getRegistry();
+    const normalizedId = identifier.replace(/-/g, '_');
+    const method = typeof args?.method === 'string' ? args.method.toLowerCase() : undefined;
+    const path = typeof args?.path === 'string' ? args.path : undefined;
+
     return (
-      registry.find((item) => item.id === entryId) ??
-      registry.find((item) => this.toToolName(item.id) === entryId) ??
+      registry.find((item) => item.id === identifier) ??
+      registry.find((item) => this.toToolName(item.id) === identifier) ??
+      registry.find((item) => item.id === normalizedId) ??
+      registry.find((item) => this.toToolName(item.id) === normalizedId) ??
+      (method && path
+        ? registry.find(
+            (item) => item.method.toLowerCase() === method && item.path === path,
+          )
+        : null) ??
       null
     );
   }
@@ -463,7 +490,7 @@ export class ChatCompletionsService {
   }): Promise<CompletionResponse> {
     const { messages, chatId, baseUrl, tenantId, userId } = params;
     const client = await this.getOpenRouterClient();
-    let conversation = messages;
+    let conversation = this.normalizeConversationHistory(messages);
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
       const completion = await client.chat.completions.create({
@@ -523,7 +550,10 @@ export class ChatCompletionsService {
         }
 
         if (functionName === EXECUTE_TOOL_NAME) {
-          const entry = this.resolveRegistryEntry(parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name);
+          const entry = this.resolveRegistryEntry(
+            parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
+            parsedArgs,
+          );
           if (!entry) {
             return {
               type: 'error',
@@ -531,14 +561,17 @@ export class ChatCompletionsService {
             };
           }
 
-          const metadata = this.buildFunctionMetadata(entry, parsedArgs);
+          const preparedArgs = { ...parsedArgs };
+          this.populatePathParameters(entry, preparedArgs);
+          assistantMessage.function_call!.arguments = preparedArgs;
+          const metadata = this.buildFunctionMetadata(entry, preparedArgs);
           return {
             type: 'function_proposed',
             function: metadata,
             assistantPreview: content ?? '',
             functionCall: {
               name: functionName,
-              arguments: parsedArgs,
+              arguments: preparedArgs,
               toolCallId,
               entryId: entry.id,
             },
@@ -647,13 +680,84 @@ export class ChatCompletionsService {
     return {};
   }
 
+  private static normalizeConversationHistory(messages: ChatCompletionMessage[]): ChatCompletionMessage[] {
+    const history = messages.map((message) => ({
+      ...message,
+      function_call: message.function_call
+        ? {
+            name: message.function_call.name,
+            arguments: message.function_call.arguments,
+          }
+        : undefined,
+    }));
+
+    const pendingCalls = new Map<string, number>();
+    const pendingOrder: string[] = [];
+
+    const removeFromOrder = (id: string) => {
+      const orderIndex = pendingOrder.indexOf(id);
+      if (orderIndex !== -1) {
+        pendingOrder.splice(orderIndex, 1);
+      }
+    };
+
+    history.forEach((message, index) => {
+      if (message.role === 'assistant' && message.function_call) {
+        let toolCallId = message.tool_call_id;
+        if (!toolCallId) {
+          toolCallId = this.toToolName(`${message.function_call.name}_${index}`);
+          message.tool_call_id = toolCallId;
+        }
+        pendingCalls.set(toolCallId, index);
+        pendingOrder.push(toolCallId);
+      } else if (message.role === 'function') {
+        let toolCallId = message.tool_call_id;
+        if (toolCallId) {
+          if (pendingCalls.has(toolCallId)) {
+            pendingCalls.delete(toolCallId);
+          }
+          removeFromOrder(toolCallId);
+        } else if (pendingOrder.length > 0) {
+          const matchedId = pendingOrder.shift()!;
+          const assistantIndex = pendingCalls.get(matchedId);
+          if (assistantIndex !== undefined) {
+            pendingCalls.delete(matchedId);
+            toolCallId = matchedId;
+            message.tool_call_id = toolCallId;
+          }
+        } else if (message.name) {
+          message.tool_call_id = this.toToolName(`${message.name}_${index}`);
+        }
+      }
+    });
+
+    for (const [toolCallId, assistantIndex] of pendingCalls.entries()) {
+      const assistantMessage = history[assistantIndex];
+      if (assistantMessage) {
+        delete assistantMessage.function_call;
+        delete assistantMessage.tool_call_id;
+      }
+    }
+
+    return history.filter((message) => {
+      if (message.role === 'function' && !message.tool_call_id) {
+        return false;
+      }
+      return true;
+    });
+  }
+
   private static buildOpenAiMessages(messages: ChatCompletionMessage[]) {
     const systemPrompt = {
       role: 'system' as const,
       content:
         'You are Alga, an assistant that helps users manage PSA workflows. ' +
-        'When you propose calling a function, clearly explain what you plan to do. ' +
-        'After the function result is provided, summarize the outcome for the user.',
+        'Always consult the enterprise API registry before executing actions so you understand every required parameter. ' +
+        'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources), proactively call the appropriate lookup endpoints to gather that information instead of asking the user. ' +
+        'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. ' +
+        'Clearly explain the plan before each tool call, execute the necessary lookup calls to satisfy all requirements, then call the target endpoint once the inputs are ready. ' +
+        'Use the documented request schemas exactly as written—populate *_id fields with the UUIDs you retrieved (never human-friendly names), and skip optional fields when you do not have authoritative values. ' +
+        'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.',
     };
 
     const converted = messages.map((message) => {
@@ -771,7 +875,28 @@ export class ChatCompletionsService {
           cookie: cookieHeader,
         };
       }
+      const requestStarted = Date.now();
+      const requestHeadersForLog = this.sanitizeHeadersForLogging(init.headers);
+      const requestMethodForLog = init.method ?? entry.method.toUpperCase();
+      console.info('[ChatCompletionsService] API request', {
+        entryId: entry.id,
+        method: requestMethodForLog,
+        url,
+        hasBody: init.body !== undefined && init.body !== null,
+        headers: requestHeadersForLog,
+        args,
+      });
       const response = await fetch(url, init);
+      const durationMs = Date.now() - requestStarted;
+      console.info('[ChatCompletionsService] API response', {
+        entryId: entry.id,
+        method: requestMethodForLog,
+        url,
+        status: response.status,
+        ok: response.ok,
+        durationMs,
+        contentType: response.headers.get('content-type') ?? undefined,
+      });
       const text = await response.text();
       let data: unknown = null;
       try {
@@ -802,18 +927,17 @@ export class ChatCompletionsService {
     apiKey: string,
     tenantId: string,
   ) {
-    const method = entry.method.toUpperCase();
+    const requestedMethod =
+      typeof args.method === 'string' ? args.method.toUpperCase() : undefined;
+    const method = requestedMethod ?? entry.method.toUpperCase();
     let path = entry.path;
 
-    const normalizeRecord = (value: unknown): Record<string, unknown> =>
-      value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-
-    const pathParamsInput = normalizeRecord(
-      args.path ?? args.pathParams ?? (normalizeRecord(args.parameters)?.path ?? {}),
+    const pathParamsInput = this.normalizeRecord(
+      args.path ?? args.pathParams ?? (this.normalizeRecord(args.parameters)?.path ?? {}),
     );
-    const queryInput = normalizeRecord(args.query ?? (normalizeRecord(args.parameters)?.query ?? {}));
-    const headerInput = normalizeRecord(args.headers ?? (normalizeRecord(args.parameters)?.headers ?? {}));
-    const genericParameters = normalizeRecord(args.parameters);
+    const queryInput = this.normalizeRecord(args.query ?? (this.normalizeRecord(args.parameters)?.query ?? {}));
+    const headerInput = this.normalizeRecord(args.headers ?? (this.normalizeRecord(args.parameters)?.headers ?? {}));
+    const genericParameters = this.normalizeRecord(args.parameters);
 
     const headers: Record<string, string> = {
       'x-tenant-id': tenantId,
@@ -825,7 +949,7 @@ export class ChatCompletionsService {
 
     const queryParams: Record<string, unknown> = { ...queryInput };
 
-    const directArgs = normalizeRecord(args);
+    const directArgs = this.normalizeRecord(args);
     delete directArgs.body;
     delete directArgs.path;
     delete directArgs.pathParams;
@@ -833,6 +957,7 @@ export class ChatCompletionsService {
     delete directArgs.headers;
     delete directArgs.parameters;
     delete directArgs.entryId;
+    delete directArgs.method;
 
     for (const param of entry.parameters) {
       let value: unknown;
@@ -842,7 +967,10 @@ export class ChatCompletionsService {
           genericParameters[param.name] ??
           directArgs[param.name];
         if (value !== undefined && value !== null) {
-          path = path.replace(`{${param.name}}`, encodeURIComponent(String(value)));
+          const encoded = encodeURIComponent(String(value));
+          path = path.replace(`{${param.name}}`, encoded);
+          pathParamsInput[param.name] = value;
+          directArgs[param.name] = value;
         }
       } else if (param.in === 'query') {
         value =
@@ -866,6 +994,19 @@ export class ChatCompletionsService {
         // leave other parameter types untouched for now
       }
     }
+
+    // Replace any remaining templated segments using the best available sources
+    path = path.replace(/\{([^}]+)\}/g, (match, group) => {
+      const candidate =
+        pathParamsInput[group] ??
+        genericParameters[group] ??
+        directArgs[group] ??
+        (typeof args[group] !== 'object' ? args[group] : undefined);
+      if (candidate === undefined || candidate === null) {
+        return match;
+      }
+      return encodeURIComponent(String(candidate));
+    });
 
     // Include any additional headers/query params provided explicitly
     Object.entries(headerInput).forEach(([key, value]) => {
@@ -904,6 +1045,36 @@ export class ChatCompletionsService {
     return { url: url.toString(), init };
   }
 
+  private static sanitizeHeadersForLogging(headers?: HeadersInit) {
+    const redacted: Record<string, string> = {};
+    if (!headers) {
+      return redacted;
+    }
+
+    if (headers instanceof Headers) {
+      headers.forEach((value, key) => {
+        redacted[key] = this.shouldRedactHeader(key) ? 'REDACTED' : value;
+      });
+      return redacted;
+    }
+
+    if (Array.isArray(headers)) {
+      for (const [key, value] of headers) {
+        redacted[key] = this.shouldRedactHeader(key) ? 'REDACTED' : value;
+      }
+      return redacted;
+    }
+
+    Object.entries(headers as Record<string, string>).forEach(([key, value]) => {
+      redacted[key] = this.shouldRedactHeader(key) ? 'REDACTED' : value;
+    });
+    return redacted;
+  }
+
+  private static shouldRedactHeader(headerName: string) {
+    return /^(authorization|cookie|x-api-key|x-openai-api-key|proxy-authorization)$/i.test(headerName);
+  }
+
   private static async getOpenRouterClient() {
     const secretProvider = await getSecretProviderInstance();
     const apiKey =
@@ -918,5 +1089,68 @@ export class ChatCompletionsService {
       apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
     });
+  }
+
+  private static populatePathParameters(entry: ChatApiRegistryEntry, args: Record<string, unknown>) {
+    if (!entry.parameters?.length) {
+      return;
+    }
+
+    const pathParams = entry.parameters.filter((param) => param.in === 'path');
+    if (pathParams.length === 0) {
+      return;
+    }
+
+    const pathObject = this.normalizeRecord(args.path ?? args.pathParams ?? {});
+    const genericParameters = this.normalizeRecord(args.parameters);
+    const directArgs = this.normalizeRecord(args);
+
+    for (const param of pathParams) {
+      if (pathObject[param.name] !== undefined && pathObject[param.name] !== null) {
+        continue;
+      }
+
+      const aliasCandidates: Array<unknown> = [
+        directArgs[param.name],
+        genericParameters[param.name],
+      ];
+
+      const snakeAlias = `${param.name}_id`;
+      const camelAlias =
+        param.name
+          .split('_')
+          .map((segment, index) =>
+            index === 0 ? segment : segment.charAt(0).toUpperCase() + segment.slice(1),
+          )
+          .join('') + 'Id';
+
+      aliasCandidates.push(directArgs[snakeAlias]);
+      aliasCandidates.push(directArgs[camelAlias]);
+      aliasCandidates.push(directArgs[`${param.name}Id`]);
+
+      if (param.name === 'id') {
+        aliasCandidates.push(directArgs['ticketId']);
+        aliasCandidates.push(directArgs['ticket_id']);
+      }
+
+      const resolved = aliasCandidates.find(
+        (candidate) => candidate !== undefined && candidate !== null,
+      );
+
+      if (resolved !== undefined) {
+        pathObject[param.name] = resolved;
+      }
+    }
+
+    if (Object.keys(pathObject).length > 0) {
+      console.info('[ChatCompletionsService] populatePathParameters', entry.id, pathObject);
+      args.path = pathObject;
+    }
+  }
+
+  private static normalizeRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? { ...(value as Record<string, unknown>) }
+      : {};
   }
 }

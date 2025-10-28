@@ -2455,18 +2455,71 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_categories_ticket",
     "method": "get",
     "path": "/api/v1/categories/ticket",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "List Ticket Categories",
+    "summary": "Fetch ticket categories",
+    "description": "Provides the category catalog used when assigning category_id or subcategory_id to a ticket.",
     "tags": [
       "categories"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "board_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter categories that belong to a specific ticket board.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "description": "Toggle to include inactive categories.",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of categories per page (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
-    }
+    },
+    "examples": [
+      {
+        "name": "Categories for a board",
+        "request": {
+          "query": {
+            "board_id": "11111111-1111-1111-1111-111111111111",
+            "limit": 10
+          }
+        },
+        "notes": "Pair this with the board_id you plan to use on the ticket so category selections stay consistent."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_categories_ticket",
@@ -2603,18 +2656,70 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_clients",
     "method": "get",
     "path": "/api/v1/clients",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "List Clients",
+    "summary": "Fetch clients for the current tenant",
+    "description": "Returns paginated client records. Use this before creating tickets to map human-readable client names to client_id values.",
     "tags": [
       "clients"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "client_name",
+        "in": "query",
+        "required": false,
+        "description": "Optional case-insensitive filter on the client name.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "is_inactive",
+        "in": "query",
+        "required": false,
+        "description": "When true, include inactive clients as well as active ones.",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of records per page (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number starting at 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
-    }
+    },
+    "examples": [
+      {
+        "name": "Find a specific client",
+        "request": {
+          "query": {
+            "client_name": "Acme",
+            "limit": 5
+          }
+        },
+        "notes": "Use a small limit when searching for a client name mentioned by the user so you can quickly grab the matching client_id."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_clients",
@@ -2730,18 +2835,64 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_clients_id_locations",
     "method": "get",
     "path": "/api/v1/clients/{id}/locations",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "List Client Locations",
+    "summary": "Fetch locations for a client",
+    "description": "Returns the saved locations for the specified client. Call this when a ticket needs a location_id.",
     "tags": [
       "clients"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client identifier whose locations should be listed.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of locations to return (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
-    }
+    },
+    "examples": [
+      {
+        "name": "List locations for client",
+        "request": {
+          "params": {
+            "id": "22222222-2222-2222-2222-222222222222"
+          },
+          "query": {
+            "limit": 5
+          }
+        },
+        "notes": "Use the same client_id supplied to the ticket create payload."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_clients_id_locations",
@@ -2823,18 +2974,71 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_contacts",
     "method": "get",
     "path": "/api/v1/contacts",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "List Contacts",
+    "summary": "Fetch contacts",
+    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket.",
     "tags": [
       "contacts"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Restrict contacts to a specific client.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "search_term",
+        "in": "query",
+        "required": false,
+        "description": "Search text to match against contact names or emails.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of records per page (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
-    }
+    },
+    "examples": [
+      {
+        "name": "Find client contacts",
+        "request": {
+          "query": {
+            "client_id": "22222222-2222-2222-2222-222222222222",
+            "limit": 5
+          }
+        },
+        "notes": "Use the client_id discovered from the clients endpoint to retrieve matching contacts and resolve contact_name_id."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_contacts",
@@ -7013,18 +7217,51 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_tags",
     "method": "get",
     "path": "/api/v1/tags",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "List Tags",
+    "summary": "Fetch tag catalog",
+    "description": "Returns tags configured for the tenant. Reuse these when populating the tags array for a ticket.",
     "tags": [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "entity_type",
+        "in": "query",
+        "required": false,
+        "description": "Limit results to tags used for a specific entity type (e.g., ticket).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of tags per page (default 25, max 200).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
-    }
+    },
+    "examples": [
+      {
+        "name": "Retrieve ticket tags",
+        "request": {
+          "query": {
+            "entity_type": "ticket",
+            "limit": 25
+          }
+        },
+        "notes": "Use existing tag names whenever possible rather than inventing new ones."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_tags",
@@ -7791,39 +8028,345 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_tickets",
     "method": "get",
     "path": "/api/v1/tickets",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "List Tickets",
+    "summary": "List tickets",
+    "description": "Returns a paginated list of tickets for the current tenant. Use this both for reporting and to sample existing board_id, status_id, priority_id, and assigned_to values before creating a new ticket.",
     "tags": [
       "tickets"
     ],
+    "rbacResource": "ticket",
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number (default 1).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of tickets per page (max 100, default 25).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "board_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter to a specific board.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "status_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter by ticket status.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "assigned_to",
+        "in": "query",
+        "required": false,
+        "description": "Filter tickets assigned to a specific technician.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter by client identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "is_open",
+        "in": "query",
+        "required": false,
+        "description": "When true, only open tickets are returned.",
+        "schema": {
+          "type": "boolean"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
-    }
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ticket_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "ticket_number": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "client_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "board_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "priority_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "assigned_to": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "entered_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "ticket_id",
+              "ticket_number",
+              "title",
+              "client_id",
+              "board_id",
+              "status_id",
+              "priority_id",
+              "entered_at"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "examples": [
+      {
+        "name": "Sample recent tickets for reference data",
+        "request": {
+          "query": {
+            "limit": 5,
+            "is_open": true
+          }
+        },
+        "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_tickets",
     "method": "post",
     "path": "/api/v1/tickets",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "Create Ticket",
+    "summary": "Create a new ticket",
+    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls.",
     "tags": [
       "tickets"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Ticket subject line."
+        },
+        "board_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket board identifier. If you do not already know an active board_id, call GET /api/v1/tickets?limit=5 to sample existing tickets and reuse a board_id that is valid for this tenant. Always provide the UUID, never the board name."
+        },
+        "client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Owning client identifier. Retrieve clients via GET /api/v1/clients (supporting filters such as name or status) to resolve the correct client_id, and provide that UUID in the payload."
+        },
+        "status_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Initial ticket status identifier. Sample existing tickets via GET /api/v1/tickets?limit=5 to collect a valid status_id and send that UUID (do not send a status label like \"Open\")."
+        },
+        "priority_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket priority identifier. Sample existing tickets with GET /api/v1/tickets?limit=5 to obtain a valid priority_id and include the UUID (not the textual priority name)."
+        },
+        "contact_name_id": {
+          "type": "string",
+          "format": "uuid",
+          "nullable": true,
+          "description": "Primary contact for this ticket. Look up contacts through GET /api/v1/contacts (optionally filter by client_id) before supplying this reference."
+        },
+        "location_id": {
+          "type": "string",
+          "format": "uuid",
+          "nullable": true,
+          "description": "Client location identifier. Call GET /api/v1/clients/{client_id}/locations to enumerate valid locations for the chosen client."
+        },
+        "category_id": {
+          "type": "string",
+          "format": "uuid",
+          "nullable": true,
+          "description": "Ticket category identifier. Fetch categories via GET /api/v1/categories/ticket (filter by board_id if necessary) to resolve the correct category_id."
+        },
+        "subcategory_id": {
+          "type": "string",
+          "format": "uuid",
+          "nullable": true,
+          "description": "Ticket subcategory identifier. After retrieving the category list or tree (GET /api/v1/categories/ticket or GET /api/v1/categories/ticket/tree/{board_id}), choose the desired subcategory_id."
+        },
+        "assigned_to": {
+          "type": "string",
+          "format": "uuid",
+          "nullable": true,
+          "description": "Technician assignment. Use GET /api/v1/users (filtering by role, team, or name) to acquire the user_id of the assignee and submit that UUID."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "nullable": true
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them."
+        }
+      },
+      "required": [
+        "title",
+        "board_id",
+        "client_id",
+        "status_id",
+        "priority_id"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
-    }
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "ticket_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "ticket_number": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "status_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "priority_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "board_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "assigned_to": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "ticket_id",
+            "ticket_number",
+            "title",
+            "status_id",
+            "priority_id",
+            "board_id",
+            "client_id"
+          ]
+        }
+      }
+    },
+    "examples": [
+      {
+        "name": "Create ticket example",
+        "request": {
+          "body": {
+            "title": "Printer offline at HQ",
+            "board_id": "11111111-1111-1111-1111-111111111111",
+            "client_id": "22222222-2222-2222-2222-222222222222",
+            "status_id": "33333333-3333-3333-3333-333333333333",
+            "priority_id": "44444444-4444-4444-4444-444444444444",
+            "contact_name_id": "55555555-5555-5555-5555-555555555555"
+          }
+        },
+        "notes": "Before calling this endpoint, resolve every referenced identifier by invoking the appropriate lookup APIs. For example, call GET /api/v1/clients to choose client_id, GET /api/v1/contacts?client_id=... for contact_name_id, GET /api/v1/clients/{client_id}/locations for location_id, GET /api/v1/categories/ticket for category/subcategory options, GET /api/v1/users to select the assignee, GET /api/v1/tags to reuse tag names, and GET /api/v1/tickets?limit=5 to sample valid board_id, status_id, and priority_id values already in use. Always send the UUID fields exactly as documented—do not substitute human-readable names such as \"High\" or \"In Progress,\" and do not introduce extra fields that are not part of this schema (e.g., project_id or priority)."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_tickets_fromasset",
@@ -7977,17 +8520,47 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_tickets_id_comments",
     "method": "post",
     "path": "/api/v1/tickets/{id}/comments",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "Add Ticket Comment",
+    "summary": "Add a comment to a ticket",
+    "description": "Adds a client or internal comment to the specified ticket.",
     "tags": [
       "tickets"
     ],
-    "approvalRequired": false,
-    "parameters": [],
+    "rbacResource": "ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {
+        "comment_text": {
+          "type": "string",
+          "description": "Comment body text."
+        },
+        "is_internal": {
+          "type": "boolean",
+          "description": "When true, records the comment as internal only.",
+          "default": false
+        },
+        "time_spent": {
+          "type": "number",
+          "description": "Optional time (in minutes) to log with the comment.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "comment_text"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -8906,18 +9479,61 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_users",
     "method": "get",
     "path": "/api/v1/users",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "List Users",
+    "summary": "Fetch users/technicians",
+    "description": "Lists tenant users. Use this to discover the user_id for the assignee field on a ticket.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "search_term",
+        "in": "query",
+        "required": false,
+        "description": "Match against name or email.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "team_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter users belonging to a specific team.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of users per page (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
-    }
+    },
+    "examples": [
+      {
+        "name": "Find a technician",
+        "request": {
+          "query": {
+            "search_term": "Samantha",
+            "limit": 5
+          }
+        },
+        "notes": "Use the result set to map the human name back to a user_id for the assigned_to field."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_users",
