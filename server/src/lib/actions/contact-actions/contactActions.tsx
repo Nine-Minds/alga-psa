@@ -301,9 +301,10 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
 
     // Validate sortBy parameter against whitelist
     const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
-    if (!allowedSortBy.includes(sortBy)) {
-      sortBy = 'full_name'; // Fall back to default
-    }
+    const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
+
+    // Validate sortDirection parameter
+    const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
     // Verify client exists
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -334,7 +335,7 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
             queryBuilder.where('contacts.is_inactive', status === 'inactive');
           }
         })
-        .orderBy(sortBy === 'created_at' ? 'contacts.created_at' : 'contacts.full_name', sortDirection);
+        .orderBy(safeSortBy === 'created_at' ? 'contacts.created_at' : 'contacts.full_name', safeSortDirection);
     });
 
     // Fetch avatar URLs for each contact
@@ -532,9 +533,10 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
 
     // Validate sortBy parameter against whitelist
     const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
-    if (!allowedSortBy.includes(sortBy)) {
-      sortBy = 'full_name'; // Fall back to default
-    }
+    const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
+
+    // Validate sortDirection parameter
+    const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
     console.log('[getAllContacts] Fetching contacts with status:', status, 'for tenant:', tenant);
 
@@ -549,7 +551,7 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
             queryBuilder.where('is_inactive', status === 'inactive');
           }
         })
-        .orderBy(sortBy === 'created_at' ? 'created_at' : 'full_name', sortDirection);
+        .orderBy(safeSortBy === 'created_at' ? 'created_at' : 'full_name', safeSortDirection);
 
       console.log('[getAllContacts] Found', contacts.length, 'contacts');
 

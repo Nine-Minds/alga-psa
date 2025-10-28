@@ -119,7 +119,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     }
   };
 
-  // Filter, sort and memoize workflows to avoid re-processing on every render
+  // Filter by status/search, sort by user preference, and memoize to avoid re-processing on every render
   const filteredWorkflows = useMemo(() => {
     return workflows
       .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
