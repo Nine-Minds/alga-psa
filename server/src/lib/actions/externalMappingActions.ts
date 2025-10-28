@@ -35,7 +35,7 @@ interface GetMappingsParams {
   externalEntityId?: string;
 }
 
-interface CreateMappingData {
+export interface CreateMappingData {
   integration_type: string;
   alga_entity_type: string;
   alga_entity_id: string;
@@ -45,7 +45,7 @@ interface CreateMappingData {
   metadata?: object | null;
 }
 
-interface UpdateMappingData {
+export interface UpdateMappingData {
   external_entity_id?: string;
   sync_status?: 'synced' | 'pending' | 'error' | 'manual_link' | null;
   metadata?: object | null;

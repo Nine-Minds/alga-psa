@@ -5,7 +5,7 @@ import { logger } from '@alga-psa/shared/core';
 
 let accountingActionsRegistered = false;
 
-export function registerAccountingExportWorkflowActions(): void {
+export async function registerAccountingExportWorkflowActions(): Promise<void> {
   if (accountingActionsRegistered) {
     return;
   }
