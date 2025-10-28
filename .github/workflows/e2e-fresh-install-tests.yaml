@@ -15,7 +15,7 @@ on:
 jobs:
   fresh-install-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # Set a timeout for the job
+    timeout-minutes: 45 # Increased timeout to allow for slow builds and setup (was 30)
 
     steps:
       - name: Checkout repository
@@ -276,7 +276,7 @@ jobs:
           if [ -z "$SETUP_CONTAINER_ID" ]; then
             echo "Critical: Could not get initial container ID for setup service. Assuming it failed to start."
             docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
-            echo "::set-output name=status::failure"
+            echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           fi
           echo "Monitoring Setup Container ID: $SETUP_CONTAINER_ID"
@@ -305,12 +305,12 @@ jobs:
               echo "Reported Setup Exit Code: $SETUP_EXIT_CODE"
               if [ "$SETUP_EXIT_CODE" -eq 0 ]; then
                 echo "Setup service completed successfully."
-                echo "::set-output name=status::success"
+                echo "status=success" >> $GITHUB_OUTPUT
                 exit 0
               else
                 echo "Setup service failed with exit code $SETUP_EXIT_CODE."
                 docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
-                echo "::set-output name=status::failure"
+                echo "status=failure" >> $GITHUB_OUTPUT
                 exit 1
               fi
             fi
@@ -331,24 +331,31 @@ jobs:
 
                     if [ "$SETUP_EXIT_CODE_LOG_CHECK" -eq 0 ]; then
                         echo "Setup service completed successfully after log check (Exit Code: $SETUP_EXIT_CODE_LOG_CHECK)."
-                        echo "::set-output name=status::success"
+                        echo "status=success" >> $GITHUB_OUTPUT
                         exit 0 # Successful exit from the script
                     else
                         echo "Setup service showed completion log but exited with code $SETUP_EXIT_CODE_LOG_CHECK."
                         docker-compose -p alga-e2e-test logs setup
-                        echo "::set-output name=status::failure"
+                        echo "status=failure" >> $GITHUB_OUTPUT
                         exit 1 # Failed exit from the script
                     fi
                 fi
             fi
 
             echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Setup service still running. Waiting 10 seconds..."
+
+            # Show setup logs every 10 attempts (every 100 seconds / ~1.5 minutes) to monitor progress
+            if [ $((ATTEMPT_NUM % 10)) -eq 0 ]; then
+              echo "=== SETUP LOGS (attempt $ATTEMPT_NUM) ==="
+              docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup --tail=50
+            fi
+
             sleep 10
             ATTEMPT_NUM=$((ATTEMPT_NUM+1))
           done
           echo "Timeout: Setup service did not complete within the allocated time."
           docker-compose -p alga-e2e-test logs
-          echo "::set-output name=status::failure"
+          echo "status=failure" >> $GITHUB_OUTPUT
           exit 1
         shell: bash
 
@@ -443,8 +450,8 @@ jobs:
           fi
 
           echo "Successfully extracted credentials."
-          echo "::set-output name=e2e_user_email::$USER_EMAIL"
-          echo "::set-output name=e2e_user_password::$USER_PASSWORD"
+          echo "e2e_user_email=$USER_EMAIL" >> $GITHUB_OUTPUT
+          echo "e2e_user_password=$USER_PASSWORD" >> $GITHUB_OUTPUT
           # Mask the password in logs
           echo "::add-mask::$USER_PASSWORD"
         shell: bash
