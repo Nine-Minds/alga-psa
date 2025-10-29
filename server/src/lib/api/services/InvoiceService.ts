@@ -230,8 +230,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       query.orderBy(`invoices.${sortField}`, sortOrder);
       query.limit(limit).offset(offset);
 
-      // Get total count
-      const countQuery = this.buildBaseQuery(trx, context);
+      // Get total count - use a separate query without SELECT columns to avoid GROUP BY issues
+      const countQuery = trx('invoices')
+        .where('invoices.tenant', context.tenant);
+
       if (filters) {
         this.applyInvoiceFilters(countQuery, filters);
       }
