@@ -164,29 +164,31 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
               </button>
             </div>
           </div>
-          <div className="flex-grow overflow-y-auto">
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="p-4 bg-gray-100 text-sm text-gray-500 border-b border-gray-200">
               Chat with AI - Ask anything!
             </div>
-            {hf && aiFeatureEnabled && ( // Only render Chat when hf is initialized and AI-stuff feature flag is enabled
-              <Chat
-                key={chatKey}
-                clientUrl={clientUrl}
-                accountId={accountId}
-                messages={messages}
-                userRole={userRole}
-                userId={userId}
-                selectedAccount={selectedAccount}
-                handleSelectAccount={handleSelectAccount}
-                auth_token={auth_token}
-                setChatTitle={setChatTitle}
-                isTitleLocked={isTitleLocked}
-                onUserInput={handleUserInput}
-                hf={hf} // Pass hf instead of chatModel
-              />
+            {hf && aiFeatureEnabled && (
+              <div className="flex flex-1 min-h-0">
+                <Chat
+                  key={chatKey}
+                  clientUrl={clientUrl}
+                  accountId={accountId}
+                  messages={messages}
+                  userRole={userRole}
+                  userId={userId}
+                  selectedAccount={selectedAccount}
+                  handleSelectAccount={handleSelectAccount}
+                  auth_token={auth_token}
+                  setChatTitle={setChatTitle}
+                  isTitleLocked={isTitleLocked}
+                  onUserInput={handleUserInput}
+                  hf={hf}
+                />
+              </div>
             )}
             {!aiFeatureEnabled && (
-              <div className="flex items-center justify-center h-full p-4">
+              <div className="flex flex-1 items-center justify-center p-4">
                 <div className="text-center">
                   <p className="text-gray-500 text-sm">
                     The AI chat feature is currently unavailable.

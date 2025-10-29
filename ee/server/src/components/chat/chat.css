@@ -229,6 +229,31 @@ textarea::placeholder {
   margin-bottom: 0.75rem;
 }
 
+.function-approval-preferences {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  color: rgb(var(--color-text-600));
+}
+
+.function-approval-preference-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-weight: 500;
+  color: rgb(var(--color-text-700));
+  cursor: pointer;
+}
+
+.function-approval-preferences-help {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgb(var(--color-text-500));
+}
+
 .function-approval-arguments h4 {
   font-size: 0.8125rem;
   font-weight: 600;

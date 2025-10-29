@@ -9,6 +9,7 @@ import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-acti
 import { HfInference } from '@huggingface/inference';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
+import { Switch } from 'server/src/components/ui/Switch';
 
 import '../../components/chat/chat.css';
 
@@ -66,6 +67,10 @@ type ChatProps = {
   hf: HfInference;
 };
 
+const AUTO_APPROVED_METHODS_STORAGE_KEY = 'chat:autoApprovedHttpMethods';
+const STANDARD_HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
+const STANDARD_HTTP_METHOD_SET = new Set<string>(STANDARD_HTTP_METHODS);
+
 const mapMessagesFromProps = (records: any[]): ChatCompletionMessage[] =>
   records.map((record: any) => ({
     role: record.chat_role === 'bot' ? 'assistant' : 'user',
@@ -112,6 +117,7 @@ export const Chat: React.FC<ChatProps> = ({
   const [pendingFunctionStatus, setPendingFunctionStatus] = useState<'idle' | 'awaiting' | 'executing'>('idle');
   const [pendingFunctionAction, setPendingFunctionAction] = useState<'none' | 'approve' | 'decline'>('none');
   const [functionError, setFunctionError] = useState<string | null>(null);
+  const [autoApprovedMethods, setAutoApprovedMethods] = useState<string[]>([]);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
@@ -192,7 +198,7 @@ export const Chat: React.FC<ChatProps> = ({
     }
   };
 
-  const addAssistantMessageToPersistence = async (
+  const addAssistantMessageToPersistence = useCallback(async (
     chatIdentifier: string | null,
     content: string,
   ) => {
@@ -213,7 +219,79 @@ export const Chat: React.FC<ChatProps> = ({
     } catch (error) {
       console.error('Failed to persist assistant message', error);
     }
-  };
+  }, []);
+
+  const persistAutoApprovedMethods = useCallback((methods: string[]) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        AUTO_APPROVED_METHODS_STORAGE_KEY,
+        JSON.stringify(methods),
+      );
+    } catch (error) {
+      console.error('Failed to persist auto-approved methods preference', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      const stored = window.localStorage.getItem(AUTO_APPROVED_METHODS_STORAGE_KEY);
+      if (!stored) {
+        return;
+      }
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        return;
+      }
+      const sanitized = Array.from(
+        new Set(
+          parsed
+            .filter((value): value is string => typeof value === 'string')
+            .map((value) => value.toUpperCase())
+            .filter((value) => STANDARD_HTTP_METHOD_SET.has(value)),
+        ),
+      );
+      if (sanitized.length > 0) {
+        setAutoApprovedMethods(sanitized);
+      }
+    } catch (error) {
+      console.error('Failed to load auto-approved methods preference', error);
+    }
+  }, []);
+
+  const handleAutoApprovePreferenceChange = useCallback(
+    (methodName: string, enabled: boolean) => {
+      const normalized = methodName.toUpperCase();
+      if (!STANDARD_HTTP_METHOD_SET.has(normalized)) {
+        return;
+      }
+
+      setAutoApprovedMethods((prev) => {
+        if (enabled) {
+          if (prev.includes(normalized)) {
+            return prev;
+          }
+          const next = [...prev, normalized];
+          persistAutoApprovedMethods(next);
+          return next;
+        }
+
+        const next = prev.filter((value) => value !== normalized);
+        if (next.length !== prev.length) {
+          persistAutoApprovedMethods(next);
+          return next;
+        }
+
+        return prev;
+      });
+    },
+    [persistAutoApprovedMethods],
+  );
 
   const sendMessage = () => {
     const trimmedMessage = messageText.trim();
@@ -393,7 +471,7 @@ export const Chat: React.FC<ChatProps> = ({
     }
   };
 
-  const handleFunctionAction = async (action: 'approve' | 'decline') => {
+  const handleFunctionAction = useCallback(async (action: 'approve' | 'decline') => {
     if (!pendingFunction) {
       return;
     }
@@ -480,35 +558,96 @@ export const Chat: React.FC<ChatProps> = ({
       } else {
         throw new Error('Unexpected response from the assistant.');
       }
-      } catch (error) {
-        console.error('Error executing function call', error);
-        setFunctionError(
-          error instanceof Error ? error.message : 'An unexpected error occurred.',
-        );
-        setPendingFunctionStatus('awaiting');
-        setPendingFunctionAction('none');
-        setIncomingMessage('');
-        setIsFunction(true);
-        setGeneratingResponse(false);
-      } finally {
-        setIsExecutingFunction(false);
-      }
-  };
+    } catch (error) {
+      console.error('Error executing function call', error);
+      setFunctionError(
+        error instanceof Error ? error.message : 'An unexpected error occurred.',
+      );
+      setPendingFunctionStatus('awaiting');
+      setPendingFunctionAction('none');
+      setIncomingMessage('');
+      setIsFunction(true);
+      setGeneratingResponse(false);
+    } finally {
+      setIsExecutingFunction(false);
+    }
+  }, [pendingFunction, chatId, addAssistantMessageToPersistence]);
 
   const displayMessages = [...messages, ...newChatMessages].filter(
     (message) => message.role !== 'function',
   );
 
   const callArgs = pendingFunction?.functionCall?.arguments ?? {};
-  const method =
-    typeof callArgs['method'] === 'string'
-      ? (callArgs['method'] as string).toUpperCase()
-      : 'GET';
+  const metadataArgs = pendingFunction?.metadata?.arguments ?? {};
+  const normalizeHttpMethod = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const normalized = value.trim().toUpperCase();
+    return STANDARD_HTTP_METHOD_SET.has(normalized) ? normalized : undefined;
+  };
+  const inferHttpMethodFromIdentifier = (identifier?: string | null): string | undefined => {
+    if (!identifier) {
+      return undefined;
+    }
+    const match = identifier.trim().match(/^[A-Za-z]+/);
+    if (!match) {
+      return undefined;
+    }
+    return normalizeHttpMethod(match[0]);
+  };
+  const normalizedMethod =
+    normalizeHttpMethod(callArgs['method']) ??
+    normalizeHttpMethod(metadataArgs['method']) ??
+    inferHttpMethodFromIdentifier(pendingFunction?.functionCall?.entryId) ??
+    inferHttpMethodFromIdentifier(pendingFunction?.metadata?.id) ??
+    inferHttpMethodFromIdentifier(pendingFunction?.functionCall?.name);
+  const method = normalizedMethod ?? 'GET';
+  const isHttpMethod =
+    normalizedMethod !== undefined ? STANDARD_HTTP_METHOD_SET.has(normalizedMethod) : false;
   const path =
     typeof callArgs['path'] === 'string' ? (callArgs['path'] as string) : '';
   const endpointLabel = path
     ? `${method} ${path}`
     : pendingFunction?.functionCall?.entryId ?? pendingFunction?.metadata?.id ?? method;
+  const autoApprovalEnabledForMethod =
+    normalizedMethod !== undefined
+      ? autoApprovedMethods.includes(normalizedMethod)
+      : false;
+  const autoApprovalCheckboxId = normalizedMethod
+    ? `auto-approve-${normalizedMethod.toLowerCase()}`
+    : undefined;
+
+  useEffect(() => {
+    if (
+      !pendingFunction ||
+      !normalizedMethod ||
+      !isHttpMethod ||
+      pendingFunctionStatus !== 'awaiting' ||
+      isExecutingFunction ||
+      pendingFunctionAction !== 'none' ||
+      !autoApprovedMethods.includes(normalizedMethod)
+    ) {
+      return;
+    }
+
+    (async () => {
+      try {
+        await handleFunctionAction('approve');
+      } catch (error) {
+        console.error('Failed to auto-approve function call', error);
+      }
+    })();
+  }, [
+    pendingFunction,
+    normalizedMethod,
+    isHttpMethod,
+    pendingFunctionStatus,
+    isExecutingFunction,
+    pendingFunctionAction,
+    autoApprovedMethods,
+    handleFunctionAction,
+  ]);
 
   const formatArgumentKey = (key: string) =>
     key
@@ -615,7 +754,9 @@ export const Chat: React.FC<ChatProps> = ({
       ? pendingFunctionAction === 'approve'
         ? 'Executing request…'
         : 'Continuing without calling the function…'
-      : 'Review and approve when you are ready.';
+      : autoApprovalEnabledForMethod && isHttpMethod
+        ? `Auto-approval enabled for ${method} requests.`
+        : 'Review and approve when you are ready.';
 
   return (
     <div className="chat-container">
@@ -719,6 +860,25 @@ export const Chat: React.FC<ChatProps> = ({
             {functionError && (
               <div className="function-approval-error">{functionError}</div>
             )}
+            {isHttpMethod && normalizedMethod && autoApprovalCheckboxId ? (
+              <div className="function-approval-preferences">
+                <div className="function-approval-preference-toggle">
+                  <Switch
+                    id={autoApprovalCheckboxId}
+                    checked={autoApprovalEnabledForMethod}
+                    onCheckedChange={(checked) =>
+                      handleAutoApprovePreferenceChange(normalizedMethod, checked)
+                    }
+                    label={`Auto-approve future ${normalizedMethod} requests`}
+                  />
+                </div>
+                <p className="function-approval-preferences-help">
+                  {autoApprovalEnabledForMethod
+                    ? 'Future requests with this method will run automatically.'
+                    : 'Enable to approve this HTTP method without prompts.'}
+                </p>
+              </div>
+            ) : null}
             <div className="function-approval-status">{statusText}</div>
             <div className="function-approval-actions">
               <Button
