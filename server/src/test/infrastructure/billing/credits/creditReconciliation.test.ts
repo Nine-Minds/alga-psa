@@ -121,7 +121,7 @@ async function createManualInvoice(
   });
 
   if (items.length) {
-    await context.db('invoice_items').insert(
+    await context.db('invoice_charges').insert(
       items.map((item) => ({
         item_id: uuidv4(),
         invoice_id: invoiceId,
@@ -167,7 +167,7 @@ describe('Credit Reconciliation Tests', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'transactions',
         'credit_tracking',

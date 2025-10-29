@@ -184,7 +184,7 @@ class ItemsSectionResult {
 
 function createItemsSection_StdDefault(items: Array<InvoiceItem>): ItemsSectionResult {
     // DSL: section items grid 12 x 10 {
-    //          list invoice_items group by category {
+    //          list invoice_charges group by category {
     //              field description at 1 1 span 6 1
     //              field quantity at 7 1 span 2 1
     //              field price at 9 1 span 2 1

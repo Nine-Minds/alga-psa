@@ -359,8 +359,8 @@ async function createFixedContractLine(
 }
 
 async function getInvoiceDetailRows(invoiceId: string) {
-  return db('invoice_item_details as iid')
-    .join('invoice_items as ii', function () {
+  return db('invoice_charge_details as iid')
+    .join('invoice_charges as ii', function () {
       this.on('iid.item_id', '=', 'ii.item_id').andOn('iid.tenant', '=', 'ii.tenant');
     })
     .where('ii.invoice_id', invoiceId)

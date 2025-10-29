@@ -283,8 +283,8 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {selectedInvoice.invoice_items && selectedInvoice.invoice_items.length > 0 ? (
-                      selectedInvoice.invoice_items.map((item, idx) => (
+                    {selectedInvoice.invoice_charges && selectedInvoice.invoice_charges.length > 0 ? (
+                      selectedInvoice.invoice_charges.map((item, idx) => (
                         <tr key={idx}>
                           <td className="px-3 py-2">{item.description}</td>
                           <td className="px-3 py-2">{item.quantity}</td>

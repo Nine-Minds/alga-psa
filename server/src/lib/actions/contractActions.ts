@@ -190,7 +190,7 @@ export async function addContractLine(
     throw new Error('tenant context not found');
   }
 
-  const canUpdate = await hasPermission(currentUser, 'contractLines', 'update', knex);
+  const canUpdate = await hasPermission(currentUser, 'billing', 'delete', knex);
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -212,7 +212,7 @@ export async function removeContractLine(contractId: string, contractLineId: str
     throw new Error('tenant context not found');
   }
 
-  const canUpdate = await hasPermission(currentUser, 'contractLines', 'update', knex);
+  const canUpdate = await hasPermission(currentUser, 'billing', 'update', knex);
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -236,7 +236,7 @@ export async function updateContractLineAssociation(
     throw new Error('tenant context not found');
   }
 
-  const canUpdate = await hasPermission(currentUser, 'contractLines', 'update', knex);
+  const canUpdate = await hasPermission(currentUser, 'billing', 'update', knex);
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -261,7 +261,7 @@ export async function updateContractLineRate(
     throw new Error('tenant context not found');
   }
 
-  const canUpdate = await hasPermission(currentUser, 'contractLines', 'update', knex);
+  const canUpdate = await hasPermission(currentUser, 'billing', 'update', knex);
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }

@@ -120,7 +120,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -235,7 +235,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       // Assert - Fixed plans create a single consolidated invoice item
       expect(result).not.toBeNull();
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
@@ -381,7 +381,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       expect(result).not.toBeNull();
 
       // Assert - Time entries should be billed
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 

@@ -49,7 +49,7 @@ describe('TemplateRenderer', () => {
       due_date: Temporal.PlainDate.from('2023-01-31'),
       total: 0,
       status: 'draft',
-      invoice_items: [],
+      invoice_charges: [],
       client_id: 'test-client-1',
       total_amount: 0,
       credit_applied: 0,
@@ -114,7 +114,7 @@ describe('TemplateRenderer', () => {
       invoice_date: Temporal.PlainDate.from('2023-01-01'),
       due_date: Temporal.PlainDate.from('2023-01-31'),
       status: 'draft',
-      invoice_items: [],
+      invoice_charges: [],
       client_id: 'test-client-1',
       total_amount: 0,
       credit_applied: 0,
@@ -147,7 +147,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
               {
                 type: 'calculation',
                 name: 'total_items',
-                expression: { operation: 'count', field: 'invoice_items' },
+                expression: { operation: 'count', field: 'invoice_charges' },
                 position: { column: 1, row: 1 },
                 span: { columnSpan: 6, rowSpan: 1 },
                 isGlobal: false,
@@ -164,7 +164,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
     };
 
     const invoiceData: InvoiceViewModel = {
-      invoice_items: [
+      invoice_charges: [
         {
           item_id: 'item-1',
           invoice_id: 'invoice-1',
@@ -210,7 +210,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
 
     expect(screen.getByText((content: string, element: Element | null) => {
       return content.indexOf('2') !== -1;
-    })).toBeInTheDocument(); // Count of invoice_items
+    })).toBeInTheDocument(); // Count of invoice_charges
   });
 
   test.todo('renders a sum calculation field', () => {
@@ -228,7 +228,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
                 position: { column: 1, row: 1 },
                 span: { columnSpan: 6, rowSpan: 1 },
                 isGlobal: false,
-                listReference: 'invoice_items'
+                listReference: 'invoice_charges'
               }
             ]
           }
@@ -242,7 +242,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
     };
 
     const invoiceData: InvoiceViewModel = {
-      invoice_items: [
+      invoice_charges: [
         {
           item_id: 'item-1',
           invoice_id: 'invoice-1',
@@ -312,7 +312,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
           {
             type: 'calculation',
             name: 'global_subtotal',
-            expression: { operation: 'sum', field: 'invoice_items' },
+            expression: { operation: 'sum', field: 'invoice_charges' },
             isGlobal: true
           }
         ]
@@ -336,7 +336,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
       status: 'draft',
       subtotal: 150,
       tax: 0,
-      invoice_items: [
+      invoice_charges: [
         {
           item_id: 'item-1',
           invoice_id: 'invoice-1',
@@ -375,6 +375,6 @@ describe('TemplateRenderer - Calculated Fields', () => {
 
     render(<TemplateRenderer template={template} invoiceData={invoiceData} />);
 
-    expect(screen.getByText('150')).toBeInTheDocument(); // The sum of total_price from invoice_items
+    expect(screen.getByText('150')).toBeInTheDocument(); // The sum of total_price from invoice_charges
   });
 });

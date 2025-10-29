@@ -110,7 +110,7 @@ async function createManualInvoice(
   });
 
   if (items.length) {
-    await context.db('invoice_items').insert(
+    await context.db('invoice_charges').insert(
       items.map((item) => ({
         item_id: uuidv4(),
         invoice_id: invoiceId,
@@ -371,7 +371,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     context = await testHelpers.beforeAll({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'transactions',
         'credit_tracking',

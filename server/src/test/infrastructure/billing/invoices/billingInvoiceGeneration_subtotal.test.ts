@@ -119,7 +119,7 @@ async function ensureBillingDefaults() {
 
 async function getInvoiceItems(invoiceId: string) {
   return context
-    .db('invoice_items')
+    .db('invoice_charges')
     .where({ invoice_id: invoiceId, tenant: context.tenantId })
     .orderBy('created_at', 'asc');
 }
@@ -129,7 +129,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',

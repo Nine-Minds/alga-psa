@@ -103,7 +103,7 @@ beforeAll(async () => {
     runSeeds: false,
     cleanupTables: [
       'invoice_annotations',
-      'invoice_items',
+      'invoice_charges',
       'transactions',
       'invoices',
       'contract_line_service_rate_tiers',
@@ -689,7 +689,7 @@ describe('Manual Invoice Generation', () => {
       expect(initialInvoice.subtotal).toBe(1000);
       expect(initialInvoice.tax).toBe(89); // 8.875% of 1000, rounded
       expect(initialInvoice.total_amount).toBe(1089);
-      expect(initialInvoice.invoice_items).toHaveLength(1);
+      expect(initialInvoice.invoice_charges).toHaveLength(1);
 
       // Extract the invoice ID for later use
       const invoiceId = initialInvoice.invoice_id;
@@ -730,7 +730,7 @@ describe('Manual Invoice Generation', () => {
       // New tax: 8.875% of 2000 = 177.5, rounded to 178
       expect(updatedInvoice.tax).toBe(178);
       expect(parseInt(updatedInvoice.total_amount.toString())).toBe(2178);
-      expect(updatedInvoice.invoice_items).toHaveLength(2);
+      expect(updatedInvoice.invoice_charges).toHaveLength(2);
 
       // 6. Verify transaction records are updated
       const transactions = await context.db<ITransaction>('transactions')
@@ -824,7 +824,7 @@ describe('Manual Invoice Generation', () => {
       // Tax: 8.875% of 2000 = 177.5, rounded to 178
       expect(updatedInvoice.tax).toBe(178);
       expect(updatedInvoice.total_amount).toBe(1878); // 1700 + 178
-      expect(updatedInvoice.invoice_items).toHaveLength(3);
+      expect(updatedInvoice.invoice_charges).toHaveLength(3);
     });
 
     it('correctly handles different tax regions when adding new items', async () => {
@@ -940,12 +940,12 @@ describe('Manual Invoice Generation', () => {
       // Total tax: 89 + 40 = 129
       expect(updatedInvoice.tax).toBe(129);
       expect(updatedInvoice.total_amount).toBe(1629); // 1500 + 129
-      expect(updatedInvoice.invoice_items).toHaveLength(2);
+      expect(updatedInvoice.invoice_charges).toHaveLength(2);
       
       // 6. Verify each item has the correct tax amount
-      const nyItem = updatedInvoice.invoice_items.find(item =>
+      const nyItem = updatedInvoice.invoice_charges.find(item =>
         item.description === 'NY Service Item');
-      const caItem = updatedInvoice.invoice_items.find(item =>
+      const caItem = updatedInvoice.invoice_charges.find(item =>
         item.description === 'CA Service Item');
         
       expect(nyItem?.tax_amount).toBe(89);
@@ -972,7 +972,7 @@ describe('Manual Invoice Generation', () => {
       expect(initialInvoice.subtotal).toBe(1000);
       expect(initialInvoice.tax).toBe(89); // 8.875% of 1000, rounded
       expect(initialInvoice.total_amount).toBe(1089);
-      expect(initialInvoice.invoice_items).toHaveLength(1);
+      expect(initialInvoice.invoice_charges).toHaveLength(1);
 
       // Extract the invoice ID for later use
       const invoiceId = initialInvoice.invoice_id;
@@ -1006,10 +1006,10 @@ describe('Manual Invoice Generation', () => {
       // New tax: 8.875% of 3000 = 266.25, rounded up to 267
       expect(updatedInvoice.tax).toBe(267);
       expect(updatedInvoice.total_amount).toBe(3267);
-      expect(updatedInvoice.invoice_items).toHaveLength(1); // Still just one item
+      expect(updatedInvoice.invoice_charges).toHaveLength(1); // Still just one item
       
       // Verify the item was actually modified
-      const modifiedItem = updatedInvoice.invoice_items[0];
+      const modifiedItem = updatedInvoice.invoice_charges[0];
       expect(modifiedItem.quantity).toBeCloseTo(2);
       expect(modifiedItem.rate).toBe(1500);
       expect(modifiedItem.description).toBe('Initial Service Item (Modified)');
@@ -1064,7 +1064,7 @@ describe('Manual Invoice Generation', () => {
       expect(initialInvoice.subtotal).toBe(2000); // 1000 + (2 * 500)
       expect(initialInvoice.tax).toBe(178); // 8.875% of 2000 = 177.5, rounded up to 178
       expect(initialInvoice.total_amount).toBe(2178);
-      expect(initialInvoice.invoice_items).toHaveLength(2);
+      expect(initialInvoice.invoice_charges).toHaveLength(2);
 
       // Extract the invoice ID for later use
       const invoiceId = initialInvoice.invoice_id;
@@ -1096,11 +1096,11 @@ describe('Manual Invoice Generation', () => {
       expect(updatedInvoice.subtotal).toBe(1000); // Only the first item remains
       expect(updatedInvoice.tax).toBe(89); // 8.875% of 1000 = 88.75, rounded up to 89
       expect(updatedInvoice.total_amount).toBe(1089);
-      expect(updatedInvoice.invoice_items).toHaveLength(1); // One item has been removed
+      expect(updatedInvoice.invoice_charges).toHaveLength(1); // One item has been removed
       
       // Verify the correct item was kept
-      expect(updatedInvoice.invoice_items[0].description).toBe('First Service Item');
-      expect(updatedInvoice.invoice_items[0].rate).toBe(1000);
+      expect(updatedInvoice.invoice_charges[0].description).toBe('First Service Item');
+      expect(updatedInvoice.invoice_charges[0].rate).toBe(1000);
 
       // 7. Verify transaction records are updated
       const transactions = await context.db<ITransaction>('transactions')
@@ -1216,11 +1216,11 @@ describe('Manual Invoice Generation', () => {
       expect(initialInvoice.subtotal).toBe(1500); // 1000 + 500
       expect(initialInvoice.tax).toBe(89); // 8.875% of 1000 = 88.75, rounded up to 89
       expect(initialInvoice.total_amount).toBe(1589);
-      expect(initialInvoice.invoice_items).toHaveLength(2);
+      expect(initialInvoice.invoice_charges).toHaveLength(2);
       
       // Verify individual item tax amounts
-      const initialTaxableItem = initialInvoice.invoice_items.find(i => i.description === 'Taxable NY Item');
-      const initialNonTaxableItem = initialInvoice.invoice_items.find(i => i.description === 'Non-Taxable Item');
+      const initialTaxableItem = initialInvoice.invoice_charges.find(i => i.description === 'Taxable NY Item');
+      const initialNonTaxableItem = initialInvoice.invoice_charges.find(i => i.description === 'Non-Taxable Item');
       expect(initialTaxableItem?.tax_amount).toBe(89);
       expect(initialNonTaxableItem?.tax_amount).toBe(0);
 
@@ -1263,7 +1263,7 @@ describe('Manual Invoice Generation', () => {
       expect(regionChangeInvoice.total_amount).toBe(1573);
       
       // Verify individual item tax amounts
-      const regionChangeTaxableItem = regionChangeInvoice.invoice_items.find(i =>
+      const regionChangeTaxableItem = regionChangeInvoice.invoice_charges.find(i =>
         i.description === 'Taxable CA Item (was NY)');
       expect(regionChangeTaxableItem?.tax_amount).toBe(73);
       
@@ -1294,9 +1294,9 @@ describe('Manual Invoice Generation', () => {
       expect(taxStatusChangeInvoice.total_amount).toBe(1545);
       
       // Verify individual item tax amounts
-      const nowNonTaxableItem = taxStatusChangeInvoice.invoice_items.find(i =>
+      const nowNonTaxableItem = taxStatusChangeInvoice.invoice_charges.find(i =>
         i.description === 'Now Non-Taxable Item');
-      const nowTaxableItem = taxStatusChangeInvoice.invoice_items.find(i =>
+      const nowTaxableItem = taxStatusChangeInvoice.invoice_charges.find(i =>
         i.description === 'Now Taxable Item');
       expect(nowNonTaxableItem?.tax_amount).toBe(0);
       expect(nowTaxableItem?.tax_amount).toBe(45);
@@ -1334,7 +1334,7 @@ describe('Manual Invoice Generation', () => {
       expect(discountAdjustmentInvoice.total_amount).toBe(1678);
       
       // Verify discount doesn't have tax
-      const discountItem = discountAdjustmentInvoice.invoice_items.find(i =>
+      const discountItem = discountAdjustmentInvoice.invoice_charges.find(i =>
         i.description === 'Discount');
       expect(discountItem?.is_discount).toBe(true);
       expect(discountItem?.tax_amount).toBe(0);

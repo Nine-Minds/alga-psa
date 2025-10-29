@@ -13,7 +13,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
     total_amount: 1650.00,
     status: 'paid',
     invoice_number: 'WONDER-001',
-    invoice_items: [
+    invoice_charges: [
       {
         description: 'Unbirthday Party Planning Services',
         quantity: 364,
@@ -62,7 +62,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
     total_amount: 3300.00,
     status: 'pending',
     invoice_number: 'QUEEN-002',
-    invoice_items: [
+    invoice_charges: [
       {
         description: 'Royal Croquet Ground Maintenance',
         quantity: 42,

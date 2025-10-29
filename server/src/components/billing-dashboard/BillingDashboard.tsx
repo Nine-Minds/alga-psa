@@ -1,6 +1,6 @@
 // BillingDashboard.tsx
 'use client'
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IService } from 'server/src/interfaces';
@@ -24,6 +24,7 @@ import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from 'server/src/components/settings/billing/ServiceCatalogManager';
+import AccountingExportsTab from './accounting/AccountingExportsTab';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -35,6 +36,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error] = useState<string | null>(null);
+
+  const tabDefinitions = useMemo(() => billingTabDefinitions, []);
 
   const handleTabChange = (value: string) => {
     const tabValue = value as BillingTabValue;
@@ -67,9 +70,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
   // Get current tab from URL or default to overview
   const requestedTab = searchParams?.get('tab') as BillingTabValue | null;
-  const currentTab = billingTabDefinitions.some((tab) => tab.value === requestedTab)
+  const availableValues = tabDefinitions.map((tab) => tab.value);
+  const currentTab = availableValues.includes(requestedTab as BillingTabValue)
     ? (requestedTab as BillingTabValue)
-    : 'contracts';
+    : tabDefinitions[0]?.value ?? 'contracts';
 
   return (
     <div className="p-4">
@@ -101,7 +105,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         className="w-full"
       >
         <Tabs.List className="flex border-b mb-4">
-          {billingTabDefinitions.map((tab): JSX.Element => (
+          {tabDefinitions.map((tab): JSX.Element => (
             <Tabs.Trigger
               key={tab.value}
               value={tab.value}
@@ -165,6 +169,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="service-catalog">
           <ServiceCatalogManager />
+        </Tabs.Content>
+
+        <Tabs.Content value="accounting-exports">
+          <AccountingExportsTab />
         </Tabs.Content>
       </Tabs.Root>
     </div>

@@ -6,7 +6,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import {
   IInvoice,
   InvoiceViewModel,
-  IInvoiceItem
+  IInvoiceCharge
 } from 'server/src/interfaces/invoice.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -52,7 +52,7 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
     credit_applied: Number(invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
     finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
-    invoice_items: [] // Empty array initially
+    invoice_charges: [] // Empty array initially
   };
 }
 
@@ -242,7 +242,7 @@ export async function getInvoiceForRendering(invoiceId: string): Promise<Invoice
 }
 
 // New function to get invoice items on demand
-export async function getInvoiceLineItems(invoiceId: string): Promise<IInvoiceItem[]> {
+export async function getInvoiceLineItems(invoiceId: string): Promise<IInvoiceCharge[]> {
   try {
     const { knex } = await createTenantKnex();
     console.log('Fetching line items for invoice:', invoiceId);

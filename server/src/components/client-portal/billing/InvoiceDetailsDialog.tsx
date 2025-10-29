@@ -135,8 +135,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {invoice.invoice_items && invoice.invoice_items.length > 0 ? (
-                  invoice.invoice_items.map((item, idx) => (
+                {invoice.invoice_charges && invoice.invoice_charges.length > 0 ? (
+                  invoice.invoice_charges.map((item, idx) => (
                     <tr key={idx}>
                       <td className="px-3 py-2">{item.description}</td>
                       <td className="px-3 py-2">{item.quantity}</td>
