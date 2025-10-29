@@ -11,6 +11,14 @@
 exports.up = async function(knex) {
   console.log('Adding system authentication email templates...');
 
+  // Drop old unique constraint on name only if it exists
+  await knex.raw('ALTER TABLE system_email_templates DROP CONSTRAINT IF EXISTS system_email_templates_name_unique');
+  await knex.raw('ALTER TABLE system_email_templates DROP CONSTRAINT IF EXISTS system_email_templates_name_key');
+
+  // Ensure composite unique constraint exists
+  await knex.raw('ALTER TABLE system_email_templates DROP CONSTRAINT IF EXISTS system_email_templates_name_language_key');
+  await knex.raw('ALTER TABLE system_email_templates ADD CONSTRAINT system_email_templates_name_language_key UNIQUE (name, language_code)');
+
   // Fetch or create notification subtype IDs
   const subtypeIds = {};
 
