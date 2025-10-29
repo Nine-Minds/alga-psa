@@ -330,13 +330,15 @@ jobs:
           exit 1
         shell: bash
 
-      - name: Build server with NEXT_PUBLIC_EDITION
+      - name: Build application services with NEXT_PUBLIC_EDITION
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Building server with NEXT_PUBLIC_EDITION=community..."
+          echo "Building application services..."
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --build-arg NEXT_PUBLIC_EDITION=community server
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build workflow-worker
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build hocuspocus
         shell: bash
-      
+
       - name: Start remaining services after setup completion
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
