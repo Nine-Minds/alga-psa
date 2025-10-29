@@ -2,6 +2,7 @@
 
 // ee/server/src/components/layout/RightSidebarContent.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { usePostHog } from 'posthog-js/react';
 import { Chat } from '../chat/Chat';
 import { HfInference } from '@huggingface/inference';
 import * as Collapsible from '@radix-ui/react-collapsible';
@@ -38,10 +39,12 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   setChatTitle,
   isTitleLocked
 }) => {
+  const posthog = usePostHog();
   const [chatKey, setChatKey] = useState(0);
   const [hf, setHf] = useState<HfInference | null>(null);
   const [width, setWidth] = useState(384);
   const [isResizing, setIsResizing] = useState(false);
+  const [aiFeatureEnabled, setAiFeatureEnabled] = useState(false);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(384);
@@ -52,6 +55,17 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
       setHf(inference);
     }
   }, [auth_token]);
+
+  useEffect(() => {
+    if (!posthog) return;
+
+    posthog.onFeatureFlags(function() {
+      // feature flags should be available at this point
+      if (posthog.isFeatureEnabled('AI-stuff')) {
+        setAiFeatureEnabled(true);
+      }
+    });
+  }, [posthog]);
 
   const handleNewChat = () => {
     setChatKey(prev => prev + 1);
@@ -128,7 +142,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
             <div className="p-4 bg-gray-100 text-sm text-gray-500 border-b border-gray-200">
               Chat with AI - Ask anything!
             </div>
-            {hf && ( // Only render Chat when hf is initialized
+            {hf && aiFeatureEnabled && ( // Only render Chat when hf is initialized and AI-stuff feature flag is enabled
               <Chat
                 key={chatKey}
                 clientUrl={clientUrl}
