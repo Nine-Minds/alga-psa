@@ -403,7 +403,7 @@ export class TaxService {
       const defaultTaxRate = await trx<ITaxRate>('tax_rates')
         .where('tenant', tenant)
         .andWhere('is_active', true)
-        .andWhereNotNull('region_code')
+        .whereNotNull('region_code')
         .orderBy('created_at', 'asc')
         .first();
 

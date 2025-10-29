@@ -4,12 +4,10 @@
 // server/src/components/integrations/qbo/QboMappingManager.tsx
 'use client';
 
-import React from 'react';
-import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs'; // Import CustomTabs and its TabContent interface
-// Placeholder imports for the specific mapping tables - these will be created next
-import { QboItemMappingTable, QboItemMappingTableOverrides } from './QboItemMappingTable';
-import { QboTaxCodeMappingTable } from './QboTaxCodeMappingTable';
-import { QboTermMappingTable } from './QboTermMappingTable';
+import React, { useMemo } from 'react';
+import { AccountingMappingManager } from 'server/src/components/accounting-mappings/AccountingMappingManager';
+import type { AccountingMappingContext } from 'server/src/components/accounting-mappings/types';
+import { createQboMappingModules } from './qboMappingModules';
 
 interface QboMappingManagerProps {
   realmId: string;
@@ -17,46 +15,25 @@ interface QboMappingManagerProps {
 }
 
 export function QboMappingManager({ realmId }: QboMappingManagerProps) {
-  const mappingOverrides =
-    typeof window !== 'undefined'
-      ? (
-          window as typeof window & {
-            __ALGA_PLAYWRIGHT_QBO__?: {
-              itemMappingOverrides?: QboItemMappingTableOverrides;
-            };
-          }
-        ).__ALGA_PLAYWRIGHT_QBO__?.itemMappingOverrides
-      : undefined;
+  const modules = useMemo(() => createQboMappingModules(), []);
+  const context = useMemo<AccountingMappingContext>(
+    () => ({
+      realmId
+    }),
+    [realmId]
+  );
 
-  // Define the tabs according to the TabContent interface
-  const mappingTabs: TabContent[] = [
-    {
-      label: 'Items / Services', // Label used as value and display text
-      content: <QboItemMappingTable realmId={realmId} overrides={mappingOverrides} />, // Removed tenantId
-    },
-    {
-      label: 'Tax Codes',
-      content: <QboTaxCodeMappingTable realmId={realmId} />, // Removed tenantId
-    },
-    {
-      label: 'Payment Terms',
-      content: <QboTermMappingTable realmId={realmId} />, // Removed tenantId
-    },
-  ];
-
-  // Define custom styles to make the tabs fill the width
   const tabStyles = {
-    list: 'grid w-full grid-cols-3', // Apply grid styles to the list
-    trigger: 'data-[state=active]:shadow-none', // Optional: remove default active shadow if needed
+    list: 'grid w-full grid-cols-3',
+    trigger: 'data-[state=active]:shadow-none'
   };
 
   return (
-    <CustomTabs
-      tabs={mappingTabs}
-      defaultTab={mappingTabs[0].label} // Use the label as the default tab identifier
+    <AccountingMappingManager
+      modules={modules}
+      context={context}
+      realmLabel="QuickBooks Realm ID"
       tabStyles={tabStyles}
-      // Add component ID for testing/automation
-      data-automation-type="qbo-mapping-tabs"
     />
   );
 }

@@ -105,6 +105,12 @@ export interface XeroTrackingCategory {
   options: XeroTrackingOption[];
 }
 
+export interface XeroConnectionSummary {
+  connectionId: string;
+  xeroTenantId: string;
+  status?: 'connected' | 'expired';
+}
+
 interface XeroConnectionsStore {
   [connectionId: string]: XeroStoredConnection;
 }
@@ -436,6 +442,22 @@ export class XeroClientService {
       originalError: error
     });
   }
+}
+
+export async function getXeroConnectionSummaries(tenantId: string): Promise<XeroConnectionSummary[]> {
+  const connections = await getTenantConnections(tenantId);
+  const summaries: XeroConnectionSummary[] = [];
+
+  for (const connection of Object.values(connections)) {
+    const expiresAt = new Date(connection.accessTokenExpiresAt).getTime();
+    summaries.push({
+      connectionId: connection.connectionId,
+      xeroTenantId: connection.xeroTenantId,
+      status: Date.now() < expiresAt ? 'connected' : 'expired'
+    });
+  }
+
+  return summaries;
 }
 
 async function getTenantConnections(tenantId: string): Promise<XeroConnectionsStore> {

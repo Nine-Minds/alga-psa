@@ -34,6 +34,7 @@ import NotificationsTab from 'server/src/components/settings/general/Notificatio
 import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
+import XeroIntegrationSettings from '../integrations/XeroIntegrationSettings';
 import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from 'server/src/components/admin/EmailSettings';
@@ -260,6 +261,9 @@ const SettingsPage = (): JSX.Element =>  {
 
           {/* QuickBooks Online Integration */}
           <QboIntegrationSettings />
+
+          {/* Xero Integration */}
+          <XeroIntegrationSettings />
 
           {/* Inbound Email Integration */}
           <Card>
