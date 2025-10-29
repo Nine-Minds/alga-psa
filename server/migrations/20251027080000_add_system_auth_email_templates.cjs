@@ -84,6 +84,89 @@ exports.up = async function(knex) {
     }
   }
 
+  console.log('✓ Authentication notification subtypes ready:', Object.keys(subtypeIds));
+
+  // Create Tickets and Invoices categories if they don't exist
+  const ticketsCategory = await knex('notification_categories')
+    .where({ name: 'Tickets' })
+    .first() || (await knex('notification_categories')
+      .insert({
+        name: 'Tickets',
+        description: 'Notifications related to support tickets',
+        is_enabled: true,
+        is_default_enabled: true
+      })
+      .returning('*'))[0];
+
+  const invoicesCategory = await knex('notification_categories')
+    .where({ name: 'Invoices' })
+    .first() || (await knex('notification_categories')
+      .insert({
+        name: 'Invoices',
+        description: 'Notifications related to billing and invoices',
+        is_enabled: true,
+        is_default_enabled: true
+      })
+      .returning('*'))[0];
+
+  // Create ticket notification subtypes if they don't exist
+  const ticketSubtypes = {
+    'Ticket Assigned': 'When a ticket is assigned to a user',
+    'Ticket Created': 'When a new ticket is created',
+    'Ticket Updated': 'When a ticket is modified',
+    'Ticket Closed': 'When a ticket is closed',
+    'Ticket Comment Added': 'When a comment is added to a ticket'
+  };
+
+  for (const [name, description] of Object.entries(ticketSubtypes)) {
+    let subtype = await knex('notification_subtypes')
+      .where({ name })
+      .first();
+
+    if (!subtype) {
+      [subtype] = await knex('notification_subtypes')
+        .insert({
+          category_id: ticketsCategory.id,
+          name,
+          description,
+          is_enabled: true,
+          is_default_enabled: true
+        })
+        .returning('*');
+      console.log(`✓ Created notification subtype: ${name}`);
+    }
+
+    subtypeIds[name] = subtype.id;
+  }
+
+  // Create invoice notification subtypes if they don't exist
+  const invoiceSubtypes = {
+    'Invoice Generated': 'When a new invoice is generated',
+    'Payment Received': 'When a payment is received',
+    'Payment Overdue': 'When an invoice payment is overdue'
+  };
+
+  for (const [name, description] of Object.entries(invoiceSubtypes)) {
+    let subtype = await knex('notification_subtypes')
+      .where({ name })
+      .first();
+
+    if (!subtype) {
+      [subtype] = await knex('notification_subtypes')
+        .insert({
+          category_id: invoicesCategory.id,
+          name,
+          description,
+          is_enabled: true,
+          is_default_enabled: true
+        })
+        .returning('*');
+      console.log(`✓ Created notification subtype: ${name}`);
+    }
+
+    subtypeIds[name] = subtype.id;
+  }
+
   console.log('✓ All notification subtypes ready:', Object.keys(subtypeIds));
 
   // Delete ALL existing portal-invitation templates (all languages)
