@@ -1,7 +1,7 @@
 'use client';
 
 // ee/server/src/components/layout/RightSidebarContent.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Chat } from '../chat/Chat';
 import { HfInference } from '@huggingface/inference';
 import * as Collapsible from '@radix-ui/react-collapsible';
@@ -40,6 +40,11 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
 }) => {
   const [chatKey, setChatKey] = useState(0);
   const [hf, setHf] = useState<HfInference | null>(null);
+  const [width, setWidth] = useState(384);
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(384);
 
   useEffect(() => {
     if (auth_token && !hf) {
@@ -59,11 +64,58 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     }
   };
 
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isResizing) return;
+      const delta = startXRef.current - event.clientX;
+      const newWidth = Math.min(Math.max(startWidthRef.current + delta, 280), 640);
+      if (newWidth !== width) {
+        setWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isResizing) {
+        setIsResizing(false);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, width]);
+
+  const startResize = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsResizing(true);
+    startXRef.current = event.clientX;
+    startWidthRef.current = width;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  };
+
   return (
     <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Collapsible.Content className={`fixed top-0 right-0 h-full bg-gray-50 w-96 shadow-xl overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}>
-        <div className="flex flex-col h-full border-l-2 border-gray-200">
+      <Collapsible.Content
+        style={{ width: `${width}px` }}
+        ref={sidebarRef}
+        className={`fixed top-0 right-0 h-full bg-gray-50 shadow-xl overflow-hidden transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+      >
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          className="absolute top-0 left-0 h-full w-1 cursor-col-resize z-10 transition-colors hover:bg-gray-300/40 active:bg-gray-400/40"
+          onMouseDown={startResize}
+          aria-hidden="true"
+        />
+        <div className="flex flex-col h-full border-l-2 border-gray-200 pl-1">
           <div className="p-4 bg-white border-b-2 border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">Chat</h2>
