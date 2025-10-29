@@ -77,7 +77,8 @@ export class AccountingExportInvoiceSelector {
         'ch.total_price',
         'ch.is_manual as charge_is_manual'
       ])
-      .where('inv.tenant', this.tenantId);
+      .where('inv.tenant', this.tenantId)
+      .andWhere('ch.tenant', this.tenantId);
 
     if (filters.startDate) {
       query.andWhere('inv.invoice_date', '>=', filters.startDate);

@@ -40,6 +40,17 @@ exports.up = async function up(knex) {
     await knex.raw('CREATE OR REPLACE VIEW invoice_items AS SELECT * FROM invoice_charges;');
   }
 
+  // Ensure multi-tenant uniqueness remains explicit after the rename.
+  await knex.raw(`
+    CREATE UNIQUE INDEX IF NOT EXISTS invoice_charges_tenant_invoice_item_uidx
+    ON invoice_charges (tenant, invoice_id, item_id)
+  `);
+
+  await knex.raw(`
+    CREATE UNIQUE INDEX IF NOT EXISTS invoice_charge_details_tenant_item_uidx
+    ON invoice_charge_details (tenant, item_id, item_detail_id)
+  `);
+
   // -----------------------------------------------------------------------
   // 2. Add currency metadata to invoices.
   // -----------------------------------------------------------------------
@@ -135,6 +146,9 @@ exports.down = async function down(knex) {
   // 3. Drop compatibility view and revert table names.
   // -----------------------------------------------------------------------
   await knex.raw('DROP VIEW IF EXISTS invoice_items;');
+
+  await knex.raw('DROP INDEX IF EXISTS invoice_charge_details_tenant_item_uidx');
+  await knex.raw('DROP INDEX IF EXISTS invoice_charges_tenant_invoice_item_uidx');
 
   const reversedTables = tablesToRename.slice().reverse();
   for (const { from, to } of reversedTables) {
