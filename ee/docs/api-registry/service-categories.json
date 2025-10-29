@@ -30,6 +30,8 @@
         "playbooks": [
           "service-categories/create-basic"
         ],
+        "summary": "Create service category",
+        "description": "Creates a new service category. Do not call this while creating tickets unless the user explicitly asks to manage categories.",
         "examples": [
           {
             "name": "Create a new service category",

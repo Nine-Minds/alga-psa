@@ -48,7 +48,7 @@
                 "limit": 5
               }
             },
-            "notes": "Use a small limit when searching for a client name mentioned by the user so you can quickly grab the matching client_id."
+            "notes": "Use a small limit when searching for a client name mentioned by the user so you can quickly grab the matching client_id. If the user did not name a specific client, reuse the first client_id returned."
           }
         ]
       }

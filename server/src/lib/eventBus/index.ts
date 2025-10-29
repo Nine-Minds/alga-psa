@@ -53,8 +53,14 @@ const createRedisClient = async () => {
 // Singleton Redis client
 let client: Awaited<ReturnType<typeof createRedisClient>> | null = null;
 let clientPromise: Promise<Awaited<ReturnType<typeof createRedisClient>>> | null = null;
+let eventBusDisabled = false;
+let eventBusDisabledReason: string | null = null;
 
 async function getClient() {
+  if (eventBusDisabled) {
+    throw new Error(eventBusDisabledReason ?? 'Event bus is disabled');
+  }
+
   if (!client) {
     // If another call is already creating the client, wait for it
     if (!clientPromise) {
@@ -433,6 +439,11 @@ export class EventBus {
     event: Omit<Event, 'id' | 'timestamp'>,
     options?: { channel?: string }
   ): Promise<void> {
+    if (eventBusDisabled) {
+      logger.debug('[EventBus] Skipping publish because the event bus is disabled');
+      return;
+    }
+
     try {
       // Unless a caller specifies otherwise, publish onto the default channel for this service.
       const channel = options?.channel || this.defaultChannel;
@@ -539,6 +550,12 @@ export class EventBus {
       });
     } catch (error) {
       logger.error('Error publishing event:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (!eventBusDisabled && (message.includes('NOAUTH') || message.includes('WRONGPASS'))) {
+        eventBusDisabled = true;
+        eventBusDisabledReason = message;
+        logger.warn('[EventBus] Disabling event publishing due to Redis authentication failure. Events will be skipped until the service is restarted.');
+      }
       // throw error;
     }
   }

@@ -123,7 +123,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/categories/service",
     "displayName": "Create service category",
     "summary": "Create service category",
-    "description": "Creates a new service category for the tenant. Requires the billing settings create permission.",
+    "description": "Creates a new service category. Do not call this while creating tickets unless the user explicitly asks to manage categories.",
     "tags": [
       "Service Categories"
     ],
@@ -2717,7 +2717,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "limit": 5
           }
         },
-        "notes": "Use a small limit when searching for a client name mentioned by the user so you can quickly grab the matching client_id."
+        "notes": "Use a small limit when searching for a client name mentioned by the user so you can quickly grab the matching client_id. If the user did not name a specific client, reuse the first client_id returned."
       }
     ]
   },
@@ -8200,7 +8200,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "is_open": true
           }
         },
-        "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid."
+        "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid. If you only need a single set of identifiers, take the first ticket in the data array that has non-null board_id, status_id, and priority_id and reuse those UUIDs for the new ticket."
       }
     ]
   },
@@ -8227,22 +8227,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "board_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Ticket board identifier. If you do not already know an active board_id, call GET /api/v1/tickets?limit=5 to sample existing tickets and reuse a board_id that is valid for this tenant. Always provide the UUID, never the board name."
+          "description": "Ticket board identifier. If you do not already know an active board_id, call GET /api/v1/tickets?limit=5 to sample existing tickets and reuse a board_id that is valid for this tenant. Always provide the UUID, never the board name, slug, or display label."
         },
         "client_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Owning client identifier. Retrieve clients via GET /api/v1/clients (supporting filters such as name or status) to resolve the correct client_id, and provide that UUID in the payload."
+          "description": "Owning client identifier. Retrieve clients via GET /api/v1/clients (supporting filters such as name or status) to resolve the correct client_id, and provide that UUID in the payload (do not send the client name)."
         },
         "status_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Initial ticket status identifier. Sample existing tickets via GET /api/v1/tickets?limit=5 to collect a valid status_id and send that UUID (do not send a status label like \"Open\")."
+          "description": "Initial ticket status identifier. Sample existing tickets via GET /api/v1/tickets?limit=5 to collect a valid status_id and send that UUID (do not send a status label like \"Open\" or a field named \"status\")."
         },
         "priority_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Ticket priority identifier. Sample existing tickets with GET /api/v1/tickets?limit=5 to obtain a valid priority_id and include the UUID (not the textual priority name)."
+          "description": "Ticket priority identifier. Sample existing tickets with GET /api/v1/tickets?limit=5 to obtain a valid priority_id and include the UUID (never send fields named \"priority\" or the textual priority name)."
         },
         "contact_name_id": {
           "type": "string",
@@ -8364,7 +8364,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "contact_name_id": "55555555-5555-5555-5555-555555555555"
           }
         },
-        "notes": "Before calling this endpoint, resolve every referenced identifier by invoking the appropriate lookup APIs. For example, call GET /api/v1/clients to choose client_id, GET /api/v1/contacts?client_id=... for contact_name_id, GET /api/v1/clients/{client_id}/locations for location_id, GET /api/v1/categories/ticket for category/subcategory options, GET /api/v1/users to select the assignee, GET /api/v1/tags to reuse tag names, and GET /api/v1/tickets?limit=5 to sample valid board_id, status_id, and priority_id values already in use. Always send the UUID fields exactly as documented—do not substitute human-readable names such as \"High\" or \"In Progress,\" and do not introduce extra fields that are not part of this schema (e.g., project_id or priority)."
+        "notes": "Before calling this endpoint, resolve every referenced identifier by invoking the appropriate lookup APIs. For example, call GET /api/v1/clients to choose client_id, GET /api/v1/contacts?client_id=... for contact_name_id, GET /api/v1/clients/{client_id}/locations for location_id, GET /api/v1/categories/ticket for category/subcategory options, GET /api/v1/users to select the assignee, GET /api/v1/tags to reuse tag names, and GET /api/v1/tickets?limit=5 to sample valid board_id, status_id, and priority_id values already in use. Always send the UUID fields exactly as documented—do not substitute human-readable names such as \"High\" or \"In Progress,\" and do not introduce extra fields that are not part of this schema (e.g., project_id or priority). If the user supplies labels, translate them to *_id values and omit the original textual fields. When sampling tickets for IDs, it is acceptable to reuse the first ticket record that contains non-null values for board_id, status_id, and priority_id."
       }
     ]
   },

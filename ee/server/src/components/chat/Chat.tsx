@@ -15,6 +15,7 @@ import '../../components/chat/chat.css';
 type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
+  reasoning?: string;
   name?: string;
   function_call?: {
     name: string;
@@ -44,6 +45,7 @@ type FunctionCallInfo = {
 type PendingFunctionState = {
   metadata: FunctionMetadata;
   assistantPreview: string;
+  assistantReasoning?: string;
   functionCall: FunctionCallInfo;
   nextMessages: ChatCompletionMessage[];
   chatId?: string | null;
@@ -68,6 +70,7 @@ const mapMessagesFromProps = (records: any[]): ChatCompletionMessage[] =>
   records.map((record: any) => ({
     role: record.chat_role === 'bot' ? 'assistant' : 'user',
     content: record.content ?? '',
+    reasoning: record.reasoning ?? undefined,
   }));
 
 export const Chat: React.FC<ChatProps> = ({
@@ -92,8 +95,10 @@ export const Chat: React.FC<ChatProps> = ({
     _id: any;
     role: string;
     content: string;
+    reasoning?: string;
   }[]>([]);
   const [fullMessage, setFullMessage] = useState('');
+  const [fullReasoning, setFullReasoning] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const [userMessageId, setUserMessageId] = useState<string | null>(null);
   const [botMessageId, setBotMessageId] = useState<string | null>(null);
@@ -104,6 +109,8 @@ export const Chat: React.FC<ChatProps> = ({
     null,
   );
   const [isExecutingFunction, setIsExecutingFunction] = useState(false);
+  const [pendingFunctionStatus, setPendingFunctionStatus] = useState<'idle' | 'awaiting' | 'executing'>('idle');
+  const [pendingFunctionAction, setPendingFunctionAction] = useState<'none' | 'approve' | 'decline'>('none');
   const [functionError, setFunctionError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
@@ -143,11 +150,13 @@ export const Chat: React.FC<ChatProps> = ({
           _id: resolveMessageId(botMessageId),
           role: 'bot',
           content: fullMessage,
+          reasoning: fullReasoning ?? undefined,
         },
       ]);
       setFullMessage('');
+      setFullReasoning(null);
     }
-  }, [generatingResponse, fullMessage, botMessageId]);
+  }, [generatingResponse, fullMessage, botMessageId, fullReasoning]);
 
   const autoResizeTextarea = useCallback(() => {
     if (!inputRef.current) {
@@ -161,6 +170,13 @@ export const Chat: React.FC<ChatProps> = ({
   useEffect(() => {
     autoResizeTextarea();
   }, [autoResizeTextarea]);
+
+  useEffect(() => {
+    if (!pendingFunction) {
+      setPendingFunctionStatus('idle');
+      setPendingFunctionAction('none');
+    }
+  }, [pendingFunction]);
 
   const closeValidationDialog = useCallback(() => {
     setShowValidationDialog(false);
@@ -320,26 +336,50 @@ export const Chat: React.FC<ChatProps> = ({
       }
 
       if (data.type === 'assistant_message') {
-        const assistantContent: string = data.message?.content ?? '';
-        await addAssistantMessageToPersistence(createdChatId ?? chatId, assistantContent);
-        setConversation(data.nextMessages ?? [...conversationWithUser, { role: 'assistant', content: assistantContent }]);
-        setFullMessage(assistantContent);
+        const modelMessages = data.modelMessages ?? data.nextMessages;
+        const assistantContentRaw = (data.message?.content ?? '').trim();
+        const assistantReasoning: string | null = data.message?.reasoning ?? null;
+        const finalAssistantContent =
+          assistantContentRaw.length > 0
+            ? assistantContentRaw
+            : (assistantReasoning ?? '').trim();
+
+        await addAssistantMessageToPersistence(
+          createdChatId ?? chatId,
+          finalAssistantContent,
+        );
+        setConversation(
+          modelMessages ?? [
+            ...conversationWithUser,
+            {
+              role: 'assistant',
+              content: finalAssistantContent,
+              reasoning: assistantReasoning ?? undefined,
+            },
+          ],
+        );
+        setFullMessage(finalAssistantContent);
+        setFullReasoning(assistantReasoning);
         setIncomingMessage('');
         setIsFunction(false);
         setGeneratingResponse(false);
+        setPendingFunctionStatus('idle');
+        setPendingFunctionAction('none');
         setPendingFunction(null);
       } else if (data.type === 'function_proposed') {
+        const modelMessages = data.modelMessages ?? data.nextMessages;
         setPendingFunction({
           metadata: data.function,
           assistantPreview: data.assistantPreview,
+          assistantReasoning: data.assistantReasoning,
           functionCall: data.functionCall,
-          nextMessages: data.nextMessages,
+          nextMessages: modelMessages,
           chatId: createdChatId ?? chatId,
         });
-        setConversation(data.nextMessages);
-        setIncomingMessage(
-          data.assistantPreview || 'I need your approval before running that.',
-        );
+        setConversation(modelMessages);
+        setPendingFunctionStatus('awaiting');
+        setPendingFunctionAction('none');
+        setIncomingMessage('');
         setIsFunction(true);
         setGeneratingResponse(false);
       } else {
@@ -361,11 +401,9 @@ export const Chat: React.FC<ChatProps> = ({
     setFunctionError(null);
     setIsExecutingFunction(true);
     setIsFunction(true);
-    setIncomingMessage(
-      action === 'approve'
-        ? 'Executing the requested action...'
-        : 'Okay, I will respond without calling that function.',
-    );
+    setPendingFunctionStatus('executing');
+    setPendingFunctionAction(action);
+    setIncomingMessage('');
 
     try {
       const response = await fetch('/api/chat/v1/execute', {
@@ -387,59 +425,197 @@ export const Chat: React.FC<ChatProps> = ({
       }
 
       if (data.type === 'assistant_message') {
-        const assistantContent: string = data.message?.content ?? '';
+        const modelMessages = data.modelMessages ?? data.nextMessages;
+        const assistantContentRaw = (data.message?.content ?? '').trim();
+        const assistantReasoning: string | null = data.message?.reasoning ?? null;
+        let finalAssistantContent =
+          assistantContentRaw.length > 0
+            ? assistantContentRaw
+            : (assistantReasoning ?? '').trim();
+
+        if (finalAssistantContent.length === 0) {
+          const preview = pendingFunction.assistantPreview?.trim() ?? '';
+          finalAssistantContent =
+            preview.length > 0 ? preview : 'The action completed without additional details.';
+        }
         await addAssistantMessageToPersistence(
           pendingFunction.chatId ?? chatId,
-          assistantContent,
+          finalAssistantContent,
         );
 
         setConversation(
-          data.nextMessages ?? [
+          modelMessages ?? [
             ...pendingFunction.nextMessages,
-            { role: 'assistant', content: assistantContent },
+            {
+              role: 'assistant',
+              content: finalAssistantContent,
+              reasoning: assistantReasoning ?? undefined,
+            },
           ],
         );
-        setFullMessage(assistantContent);
+        setFullMessage(finalAssistantContent);
+        setFullReasoning(assistantReasoning);
         setIncomingMessage('');
         setIsFunction(false);
         setGeneratingResponse(false);
+        setPendingFunctionStatus('idle');
+        setPendingFunctionAction('none');
         setPendingFunction(null);
       } else if (data.type === 'function_proposed') {
+        const modelMessages = data.modelMessages ?? data.nextMessages;
         setPendingFunction({
           metadata: data.function,
           assistantPreview: data.assistantPreview,
+          assistantReasoning: data.assistantReasoning,
           functionCall: data.functionCall,
-          nextMessages: data.nextMessages,
+          nextMessages: modelMessages,
           chatId: pendingFunction.chatId ?? chatId,
         });
-        setConversation(data.nextMessages);
-        setIncomingMessage(
-          data.assistantPreview || 'I need your approval before running that.',
-        );
+        setConversation(modelMessages);
+        setPendingFunctionStatus('awaiting');
+        setPendingFunctionAction('none');
+        setIncomingMessage('');
         setIsFunction(true);
         setGeneratingResponse(false);
       } else {
         throw new Error('Unexpected response from the assistant.');
       }
-    } catch (error) {
-      console.error('Error executing function call', error);
-      setFunctionError(
-        error instanceof Error ? error.message : 'An unexpected error occurred.',
-      );
-      setIncomingMessage('I was unable to complete that action.');
-      setIsFunction(false);
-      setGeneratingResponse(false);
-    } finally {
-      setIsExecutingFunction(false);
-    }
+      } catch (error) {
+        console.error('Error executing function call', error);
+        setFunctionError(
+          error instanceof Error ? error.message : 'An unexpected error occurred.',
+        );
+        setPendingFunctionStatus('awaiting');
+        setPendingFunctionAction('none');
+        setIncomingMessage('');
+        setIsFunction(true);
+        setGeneratingResponse(false);
+      } finally {
+        setIsExecutingFunction(false);
+      }
   };
 
   const displayMessages = [...messages, ...newChatMessages].filter(
     (message) => message.role !== 'function',
   );
 
-  const functionArgumentsPreview = (args: Record<string, unknown>) =>
-    JSON.stringify(args, null, 2);
+  const callArgs = pendingFunction?.functionCall?.arguments ?? {};
+  const method =
+    typeof callArgs['method'] === 'string'
+      ? (callArgs['method'] as string).toUpperCase()
+      : 'GET';
+  const path =
+    typeof callArgs['path'] === 'string' ? (callArgs['path'] as string) : '';
+  const endpointLabel = path
+    ? `${method} ${path}`
+    : pendingFunction?.functionCall?.entryId ?? pendingFunction?.metadata?.id ?? method;
+
+  const formatArgumentKey = (key: string) =>
+    key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const formatArgumentValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return '—';
+    }
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    if (Array.isArray(value)) {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return value.map((item) => formatArgumentValue(item)).join(', ');
+      }
+    }
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        const nested = Object.entries(value as Record<string, unknown>);
+        if (!nested.length) {
+          return '{}';
+        }
+        return nested
+          .map(([nestedKey, nestedValue]) => `${nestedKey}: ${formatArgumentValue(nestedValue)}`)
+          .join(', ');
+      }
+    }
+    return String(value);
+  };
+
+  const renderArgumentValue = (value: unknown) => {
+    const formatted = formatArgumentValue(value);
+    if (formatted === '—') {
+      return formatted;
+    }
+
+    const isLongValue =
+      formatted.length > 140 ||
+      formatted.includes('\n') ||
+      formatted.split(',').length > 6;
+
+    if (!isLongValue) {
+      return formatted;
+    }
+
+    return (
+      <details className="function-arg-value-collapsible">
+        <summary>View full value</summary>
+        <pre className="function-arg-value-full">{formatted}</pre>
+      </details>
+    );
+  };
+
+  const pendingArgumentEntries = pendingFunction
+    ? Object.entries(pendingFunction.metadata.arguments ?? {}).filter(([key]) => key !== 'entryId')
+    : [];
+
+  const sanitizeThinking = (text: string) =>
+    text.replace(/<think>/gi, '').replace(/<\/think>/gi, '').trim();
+
+  const extractPlanItems = (text: string): string[] => {
+    if (!text) {
+      return [];
+    }
+
+    const normalized = text
+      .split(/\n+/)
+      .map((segment) => segment.trim())
+      .filter(Boolean)
+      .flatMap((segment) => {
+        const cleaned = segment.replace(/^[\d\s]*[\-\u2022\*\)]\s*/, '').replace(/^\d+\.\s*/, '');
+        return cleaned
+          .split(/(?<=\.)\s+(?=[A-Z])/)
+          .map((part) => part.trim())
+          .filter(Boolean);
+      })
+      .map((segment) => segment.replace(/^\d+\.\s*/, '').replace(/^[\-\u2022\*]\s*/, '').trim())
+      .filter(Boolean);
+
+    const unique: string[] = [];
+    for (const segment of normalized) {
+      const lower = segment.toLowerCase();
+      if (!unique.some((existing) => existing.toLowerCase() === lower)) {
+        unique.push(segment);
+      }
+    }
+
+    return unique.slice(0, 4);
+  };
+
+  const previewText = sanitizeThinking(pendingFunction?.assistantPreview ?? '');
+  const assistantPlanText = pendingFunction?.assistantReasoning
+    ? sanitizeThinking(pendingFunction.assistantReasoning)
+    : '';
+  const assistantPlanItems = extractPlanItems(assistantPlanText);
+  const statusText =
+    pendingFunctionStatus === 'executing'
+      ? pendingFunctionAction === 'approve'
+        ? 'Executing request…'
+        : 'Continuing without calling the function…'
+      : 'Review and approve when you are ready.';
 
   return (
     <div className="chat-container">
@@ -470,6 +646,7 @@ export const Chat: React.FC<ChatProps> = ({
                 role={message.role}
                 content={message.content}
                 clientUrl={clientUrl}
+                reasoning={message.reasoning}
               />
             ))}
             {!!incomingMessage && (
@@ -480,43 +657,95 @@ export const Chat: React.FC<ChatProps> = ({
       )}
 
       {pendingFunction && (
-        <div className="function-approval-card">
-          <h3 className="text-lg font-semibold mb-2">
-            The assistant wants to call: {pendingFunction.metadata.displayName}
-          </h3>
-          {pendingFunction.metadata.description && (
-            <p className="text-sm mb-2">{pendingFunction.metadata.description}</p>
-          )}
-          <div className="mb-2">
-            <span className="font-semibold">Arguments:</span>
-            <pre className="function-arguments">
-{functionArgumentsPreview(pendingFunction.metadata.arguments)}
-            </pre>
-          </div>
-          {pendingFunction.metadata.playbooks?.length ? (
-            <div className="mb-2 text-sm">
-              <span className="font-semibold">Related playbooks: </span>
-              {pendingFunction.metadata.playbooks.join(', ')}
+        <div className="function-approval-wrapper">
+          <Image
+            className="chat-img"
+            src="/avatar-white.png"
+            alt="Alga"
+            width={18}
+            height={18}
+          />
+          <div className="function-approval-bubble">
+            <div className="function-approval-header">
+              <span className="function-approval-badge">{method}</span>
+              <span className="function-approval-endpoint">{endpointLabel}</span>
             </div>
-          ) : null}
-          {functionError && (
-            <p className="text-sm text-red-500 mb-2">{functionError}</p>
-          )}
-          <div className="flex gap-2">
-            <button
-              className="approve-btn"
-              onClick={() => handleFunctionAction('approve')}
-              disabled={isExecutingFunction}
-            >
-              {isExecutingFunction ? 'Approving…' : 'Approve'}
-            </button>
-            <button
-              className="deny-btn"
-              onClick={() => handleFunctionAction('decline')}
-              disabled={isExecutingFunction}
-            >
-              {isExecutingFunction ? 'Processing…' : 'Deny'}
-            </button>
+            <h3 className="function-approval-title">
+              {pendingFunction.metadata.displayName}
+            </h3>
+            {pendingFunction.metadata.description && (
+              <p className="function-approval-description">
+                {pendingFunction.metadata.description}
+              </p>
+            )}
+            {previewText && (
+              <p className="function-approval-preview">{previewText}</p>
+            )}
+            {assistantPlanText ? (
+              <details className="function-approval-reasoning">
+                <summary>View assistant plan</summary>
+                {assistantPlanItems.length ? (
+                  <ol className="function-approval-plan">
+                    {assistantPlanItems.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p>{assistantPlanText}</p>
+                )}
+              </details>
+            ) : null}
+            {pendingFunction.metadata.playbooks?.length ? (
+              <div className="function-approval-playbooks">
+                <span className="function-arg-key">Playbooks</span>
+                <span className="function-arg-value">
+                  {pendingFunction.metadata.playbooks.join(', ')}
+                </span>
+              </div>
+            ) : null}
+            {pendingArgumentEntries.length > 0 && (
+              <div className="function-approval-arguments">
+                <h4>Parameters</h4>
+                <ul className="function-arg-list">
+                  {pendingArgumentEntries.map(([key, value]) => (
+                    <li key={key} className="function-arg-item">
+                      <span className="function-arg-key">{formatArgumentKey(key)}</span>
+                      <span className="function-arg-value">{renderArgumentValue(value)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {functionError && (
+              <div className="function-approval-error">{functionError}</div>
+            )}
+            <div className="function-approval-status">{statusText}</div>
+            <div className="function-approval-actions">
+              <Button
+                id="chat-approve-function"
+                label="Approve function call"
+                size="sm"
+                variant="default"
+                onClick={() => handleFunctionAction('approve')}
+                disabled={isExecutingFunction}
+              >
+                {isExecutingFunction && pendingFunctionAction === 'approve'
+                  ? 'Approving…'
+                  : 'Approve'}
+              </Button>
+              <Button
+                id="chat-decline-function"
+                label="Decline function call"
+                size="sm"
+                variant="outline"
+                onClick={() => handleFunctionAction('decline')}
+                disabled={isExecutingFunction}
+              >
+                {isExecutingFunction && pendingFunctionAction === 'decline'
+                  ? 'Processing…'
+                  : 'Deny'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
