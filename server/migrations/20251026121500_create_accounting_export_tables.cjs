@@ -10,7 +10,7 @@ exports.up = async function up(knex) {
   const hasBatches = await knex.schema.hasTable('accounting_export_batches');
   if (!hasBatches) {
     await knex.schema.createTable('accounting_export_batches', (table) => {
-      table.uuid('batch_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('batch_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       table.string('adapter_type', 50).notNullable(); // e.g., quickbooks_online, quickbooks_desktop, xero
       table.string('target_realm', 255).nullable(); // Realm/company identifier in target accounting system
@@ -28,6 +28,8 @@ exports.up = async function up(knex) {
       table.text('notes').nullable();
 
       table.foreign('tenant').references('tenant').inTable('tenants');
+      table.primary(['tenant', 'batch_id']);
+      table.unique(['batch_id'], 'accounting_export_batches_batch_id_uidx');
       table.index(['tenant', 'status'], 'accounting_export_batches_tenant_status_idx');
       table.index(['tenant', 'adapter_type'], 'accounting_export_batches_adapter_idx');
     });
@@ -36,7 +38,7 @@ exports.up = async function up(knex) {
   const hasLines = await knex.schema.hasTable('accounting_export_lines');
   if (!hasLines) {
     await knex.schema.createTable('accounting_export_lines', (table) => {
-      table.uuid('line_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('line_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('batch_id').notNullable();
       table.uuid('tenant').notNullable();
       table.uuid('invoice_id').notNullable();
@@ -55,18 +57,21 @@ exports.up = async function up(knex) {
       table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
       table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
 
-      table.foreign('batch_id').references('batch_id').inTable('accounting_export_batches').onDelete('CASCADE');
+      table.primary(['tenant', 'line_id']);
+      table.unique(['line_id'], 'accounting_export_lines_line_id_uidx');
+      table.foreign(['tenant', 'batch_id']).references(['tenant', 'batch_id']).inTable('accounting_export_batches').onDelete('CASCADE');
       table.foreign('tenant').references('tenant').inTable('tenants');
-      table.foreign(['tenant', 'invoice_id']).references(['tenant', 'invoice_id']).inTable('invoices');
       table.index(['batch_id', 'status'], 'accounting_export_lines_batch_status_idx');
-      table.index(['tenant', 'invoice_id'], 'accounting_export_lines_invoice_idx');
+      table.index(['tenant', 'invoice_id'], 'accounting_export_lines_tenant_invoice_idx');
+      // Multiple export lines may reference the same invoice, so keep these composite indexes non-unique.
+      table.index(['tenant', 'invoice_id', 'invoice_charge_id'], 'accounting_export_lines_tenant_invoice_charge_idx');
     });
   }
 
   const hasErrors = await knex.schema.hasTable('accounting_export_errors');
   if (!hasErrors) {
     await knex.schema.createTable('accounting_export_errors', (table) => {
-      table.uuid('error_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('error_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('batch_id').notNullable();
       table.uuid('line_id').nullable();
       table.uuid('tenant').notNullable();
@@ -77,8 +82,10 @@ exports.up = async function up(knex) {
       table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
       table.timestamp('resolved_at', { useTz: true }).nullable();
 
-      table.foreign('batch_id').references('batch_id').inTable('accounting_export_batches').onDelete('CASCADE');
-      table.foreign('line_id').references('line_id').inTable('accounting_export_lines').onDelete('SET NULL');
+      table.primary(['tenant', 'error_id']);
+      table.unique(['error_id'], 'accounting_export_errors_error_id_uidx');
+      table.foreign(['tenant', 'batch_id']).references(['tenant', 'batch_id']).inTable('accounting_export_batches').onDelete('CASCADE');
+      table.foreign(['tenant', 'line_id']).references(['tenant', 'line_id']).inTable('accounting_export_lines').onDelete('SET NULL');
       table.foreign('tenant').references('tenant').inTable('tenants');
       table.index(['tenant', 'resolution_state'], 'accounting_export_errors_state_idx');
     });
