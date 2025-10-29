@@ -1178,7 +1178,7 @@ export async function getDocumentsByEntity(
           trx.raw(`
             CASE
               WHEN documents.document_name ~ '^[0-9]'
-              THEN CAST(COALESCE(NULLIF(regexp_replace(documents.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
               ELSE 0
             END as document_name_sort_key
           `)
@@ -1641,7 +1641,7 @@ export async function getAllDocuments(
           trx.raw(`
             CASE
               WHEN documents.document_name ~ '^[0-9]'
-              THEN CAST(COALESCE(NULLIF(regexp_replace(documents.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
               ELSE 0
             END as document_name_sort_key
           `)
