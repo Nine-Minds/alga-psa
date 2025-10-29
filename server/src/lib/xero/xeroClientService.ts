@@ -10,6 +10,11 @@ const XERO_CLIENT_ID_SECRET = 'xero_client_id';
 const XERO_CLIENT_SECRET_SECRET = 'xero_client_secret';
 const ACCESS_TOKEN_BUFFER_SECONDS = 300;
 
+export const XERO_TOKEN_URL = XERO_TOKEN_ENDPOINT;
+export const XERO_CREDENTIALS_SECRET_NAME = XERO_CREDENTIALS_SECRET;
+export const XERO_CLIENT_ID_SECRET_NAME = XERO_CLIENT_ID_SECRET;
+export const XERO_CLIENT_SECRET_SECRET_NAME = XERO_CLIENT_SECRET_SECRET;
+
 export interface XeroTrackingCategoryOption {
   name: string;
   option: string;
@@ -111,11 +116,11 @@ export interface XeroConnectionSummary {
   status?: 'connected' | 'expired';
 }
 
-interface XeroConnectionsStore {
+export interface XeroConnectionsStore {
   [connectionId: string]: XeroStoredConnection;
 }
 
-interface XeroStoredConnection {
+export interface XeroStoredConnection {
   connectionId: string;
   xeroTenantId: string;
   accessToken: string;
@@ -481,6 +486,38 @@ async function getTenantConnections(tenantId: string): Promise<XeroConnectionsSt
 async function storeTenantConnections(tenantId: string, connections: XeroConnectionsStore): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
   await secretProvider.setTenantSecret(tenantId, XERO_CREDENTIALS_SECRET, JSON.stringify(connections));
+}
+
+export async function getStoredXeroConnections(tenantId: string): Promise<XeroConnectionsStore> {
+  return getTenantConnections(tenantId);
+}
+
+export async function upsertStoredXeroConnections(
+  tenantId: string,
+  updates: XeroConnectionsStore,
+  options: { prioritize?: string[] } = {}
+): Promise<XeroConnectionsStore> {
+  const existing = await getTenantConnections(tenantId);
+  const merged: XeroConnectionsStore = { ...existing, ...updates };
+
+  if (options.prioritize?.length) {
+    const prioritizedEntries: XeroConnectionsStore = {};
+    for (const id of options.prioritize) {
+      if (merged[id]) {
+        prioritizedEntries[id] = merged[id];
+      }
+    }
+    for (const [id, connection] of Object.entries(merged)) {
+      if (!(id in prioritizedEntries)) {
+        prioritizedEntries[id] = connection;
+      }
+    }
+    await storeTenantConnections(tenantId, prioritizedEntries);
+    return prioritizedEntries;
+  }
+
+  await storeTenantConnections(tenantId, merged);
+  return merged;
 }
 
 async function getAppSecrets(): Promise<XeroAppSecrets> {

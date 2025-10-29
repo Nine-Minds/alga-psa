@@ -34,7 +34,11 @@ async function getInternalUser(db: Knex, email?: string) {
   return internal;
 }
 
-async function setInternalSessionCookie(page: Page, user: any, baseUrl: string) {
+async function setInternalSessionCookie(
+  page: Page,
+  user: any,
+  baseUrl: string
+): Promise<{ warmupRequired: boolean; cookieName: string }> {
   if (!process.env.NEXTAUTH_SECRET) {
     throw new Error('NEXTAUTH_SECRET must be defined to mint session cookie.');
   }
@@ -53,11 +57,25 @@ async function setInternalSessionCookie(page: Page, user: any, baseUrl: string) 
   });
 
   const cookieName = process.env.NODE_ENV === 'production' ? '__Secure-authjs.session-token' : 'authjs.session-token';
-  const cookieValue = `${cookieName}=${token}; path=/; SameSite=Lax`;
+  const base = new URL(baseUrl);
 
-  await page.addInitScript((value: string) => {
-    document.cookie = value;
-  }, cookieValue);
+  try {
+    await page.context().addCookies([
+      {
+        name: cookieName,
+        value: token,
+        url: base.origin
+      }
+    ]);
+    return { warmupRequired: false, cookieName };
+  } catch (error) {
+    console.warn('[Playwright] Failed to set auth cookie via context, falling back to client script.', error);
+    const cookieValue = `${cookieName}=${token}; path=/; SameSite=Lax`;
+    await page.addInitScript((value: string) => {
+      document.cookie = value;
+    }, cookieValue);
+    return { warmupRequired: true, cookieName };
+  }
 }
 
 test.describe('Accounting Settings – QuickBooks Mapping CRUD', () => {
@@ -75,10 +93,24 @@ test.describe('Accounting Settings – QuickBooks Mapping CRUD', () => {
       return;
     }
 
-    await setInternalSessionCookie(page, internalUser, BASE_URL);
+    const bypassAuth = process.env.E2E_AUTH_BYPASS === 'true';
+    let tenantQuery: string | undefined;
+    if (bypassAuth) {
+      tenantQuery = internalUser?.tenant ? `tenantId=${internalUser.tenant}` : undefined;
+    } else {
+      const { warmupRequired, cookieName } = await setInternalSessionCookie(page, internalUser, BASE_URL);
+      if (warmupRequired) {
+        await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(
+          (name) => document.cookie.includes(`${name}=`),
+          cookieName,
+          { timeout: 5000 }
+        );
+      }
+    }
 
     try {
-      await page.addInitScript(({ mocks }) => {
+      await page.addInitScript(({ mocks, tenantId }) => {
         const qbStore = {
           status: mocks.qboStatus,
           services: mocks.qboServices,
@@ -309,7 +341,8 @@ test.describe('Accounting Settings – QuickBooks Mapping CRUD', () => {
           },
           status: {
             xero: mocks.xeroStatus,
-          }
+          },
+          tenantId: tenantId ?? null
         };
 
         globalAny.__ALGA_PLAYWRIGHT_QBO__ = {
@@ -395,9 +428,17 @@ test.describe('Accounting Settings – QuickBooks Mapping CRUD', () => {
             defaultConnectionId: 'xero-conn-1',
           },
         },
+        tenantId: bypassAuth ? internalUser?.tenant ?? null : null,
       });
 
-      await page.goto(`${BASE_URL}/msp/settings`, {
+      const searchParamSegments = [tenantQuery, bypassAuth ? 'authBypass=true' : undefined]
+        .filter((segment): segment is string => Boolean(segment));
+      const settingsUrl =
+        searchParamSegments.length > 0
+          ? `${BASE_URL}/msp/settings?${searchParamSegments.join('&')}`
+          : `${BASE_URL}/msp/settings`;
+
+      await page.goto(settingsUrl, {
         waitUntil: 'networkidle',
       });
 
