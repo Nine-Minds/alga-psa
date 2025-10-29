@@ -1,5 +1,5 @@
-import { createTenantKnex } from '@/lib/db';
-import { IChat } from '@ee/interfaces/chat.interface';
+import { createTenantKnex } from '../lib/db';
+import { IChat } from '../interfaces/chat.interface';
 
 const Chat = {
   getAll: async (): Promise<IChat[]> => {

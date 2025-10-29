@@ -3,7 +3,7 @@ import {
   ChatModelInterface,
   ChatMessage,
   ChatResponse,
-} from '@ee/interfaces/ChatModelInterface';
+} from '../interfaces/ChatModelInterface';
 import { parseAssistantContent } from '../utils/chatContent';
 
 export class OpenRouterChatModel implements ChatModelInterface {
@@ -29,7 +29,6 @@ export class OpenRouterChatModel implements ChatModelInterface {
         max_tokens: 4096,
         temperature: 1.0,
         top_p: 0.95,
-        top_k: 20
       });
 
       const message = response.choices?.[0]?.message;
