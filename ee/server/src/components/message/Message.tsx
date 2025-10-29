@@ -1,3 +1,5 @@
+'use client';
+
 import ReactMarkdown from "react-markdown"
 import remarkGfm from 'remark-gfm'
 import Image from 'next/image';
@@ -11,6 +13,7 @@ type MessageProps = {
   content: string;
   clientUrl?: string;
   isFunction?: boolean;
+  reasoning?: string;
 }
 
 export const Message: React.FC<MessageProps> = (
@@ -19,7 +22,8 @@ export const Message: React.FC<MessageProps> = (
     role,
     content,
     clientUrl,
-    isFunction
+    isFunction,
+    reasoning
   }
 ) => {
 
@@ -29,6 +33,7 @@ export const Message: React.FC<MessageProps> = (
       return "";
     }
 
+    msg = msg.replace(/<think>[\s\S]*?<\/think>/gi, '');
     msg = msg.replace(/\[CONTEXT\][\s\S]*?\[\/CONTEXT\]/g, "")
     msg = msg.replace(/\[INST\]|\[\/INST\]/g, "").replace("<|end_of_text|><s>", "")
     msg = msg.replace(/%link_to_ticket\("(\d+)"\)%/g, (match: any, g1: any) => `[Ticket ${g1}](${clientUrl?.replace("ticket_id", g1)})`)
@@ -47,16 +52,31 @@ export const Message: React.FC<MessageProps> = (
           }`}>
           {isFunction && <div className="shapes"></div>}
 
-          <div className="chat-message-content"><ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
-            }}
-          >
-            {
-              transformMessage(content)
-            }
-          </ReactMarkdown></div>
+          <div className="chat-message-content">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
+              }}
+            >
+              {transformMessage(content)}
+            </ReactMarkdown>
+            {reasoning ? (
+              <details className="chat-reasoning">
+                <summary>Show assistant reasoning</summary>
+                <div className="chat-reasoning-content">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />
+                    }}
+                  >
+                    {transformMessage(reasoning)}
+                  </ReactMarkdown>
+                </div>
+              </details>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -69,3 +89,5 @@ export const Message: React.FC<MessageProps> = (
     </div>
   )
 }
+
+export default Message;

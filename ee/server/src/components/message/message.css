@@ -82,3 +82,34 @@ th {
 .chat-message-content a:hover {
   text-decoration: underline;
 }
+
+.chat-reasoning {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.chat-reasoning summary {
+  cursor: pointer;
+  color: rgb(var(--color-primary-500));
+  font-weight: 500;
+  list-style: none;
+}
+
+.chat-reasoning summary::marker {
+  display: none;
+}
+
+.chat-reasoning summary:focus {
+  outline: none;
+}
+
+.chat-reasoning-content {
+  margin-top: 0.25rem;
+  border-left: 2px solid rgb(var(--color-border-300));
+  padding-left: 0.75rem;
+  color: rgb(var(--color-text-700));
+}
+
+.chat-reasoning-content pre {
+  margin: 0.25rem 0;
+}
