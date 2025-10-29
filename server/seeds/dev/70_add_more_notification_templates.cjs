@@ -9,28 +9,16 @@ exports.seed = async function(knex) {
       throw new Error('No tenant found in tenants table');
     }
   
-    // Get subtypes for reference
+    // Get subtypes for reference - only the ones we're adding in this seed
     const subtypes = await knex('notification_subtypes')
       .select('id', 'name')
       .whereIn('name', [
         'Ticket Assigned',
-        'Ticket Created',
-        'Ticket Updated',
-        'Ticket Closed',
         'Ticket Comment Added',
-        'Invoice Generated',
-        'Payment Received',
-        'Payment Overdue',
         'Project Assigned',
         'Project Task Assigned',
-        'Project Created',
         'Project Updated',
-        'Project Closed',
-        'Task Updated',
-        'Milestone Completed',
-        'Time Entry Submitted',
-        'Time Entry Approved',
-        'Time Entry Rejected'
+        'Project Closed'
       ]);
   
     if (subtypes.length === 0) {
@@ -50,256 +38,231 @@ exports.seed = async function(knex) {
       return subtype.id;
     };
   
-    // Clean up any existing notification templates (but keep authentication templates)
-    await knex('tenant_email_templates').del();
+    // Only delete the templates we're about to replace/add in this seed
+    // Don't touch templates from seed 68 or auth templates
+    const templatesToReplace = [
+      'ticket-assigned',
+      'ticket-comment-added',
+      'project-assigned',
+      'project-task-assigned-primary',
+      'project-task-assigned-additional',
+      'project-updated',
+      'project-closed'
+    ];
 
-    // Delete only notification-related system templates, preserve authentication templates
-    const authTemplateNames = ['email-verification', 'password-reset', 'portal-invitation', 'tenant-recovery', 'no-account-found'];
     await knex('system_email_templates')
-      .whereNotIn('name', authTemplateNames)
+      .whereIn('name', templatesToReplace)
+      .where('language_code', 'en')
       .del();
   
     // Insert system-wide default templates
-    const systemTemplates = await knex('system_email_templates').insert([
+    await knex('system_email_templates').insert([
       // Ticket templates
       {
         name: 'ticket-assigned',
-        subject: 'You have been assigned to ticket: {{ticket.title}}',
+        language_code: 'en',
+        subject: 'Ticket Assigned • {{ticket.title}} ({{ticket.priority}})',
         notification_subtype_id: getSubtypeId('Ticket Assigned'),
         html_content: `
-          <h2>Ticket Assigned</h2>
-          <p>You have been assigned to a ticket:</p>
-          <div class="details">
-            <p><strong>Ticket ID:</strong> {{ticket.id}}</p>
-            <p><strong>Title:</strong> {{ticket.title}}</p>
-            <p><strong>Priority:</strong> {{ticket.priority}}</p>
-            <p><strong>Status:</strong> {{ticket.status}}</p>
-            <p><strong>Assigned By:</strong> {{ticket.assignedBy}}</p>
-          </div>
-          <a href="{{ticket.url}}" class="button">View Ticket</a>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;padding:32px 0;font-family:'Segoe UI',Arial,sans-serif;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
+            <tr>
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
+                <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">Ticket Assigned</div>
+                <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
+                <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 20px 32px;">
+                <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">You have been assigned to a ticket for <strong>{{ticket.clientName}}</strong>. Review the details below and take action.</p>
+                <div style="margin-bottom:24px;">
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                </div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Priority</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:{{ticket.priorityColor}};color:#ffffff;font-weight:600;">{{ticket.priority}}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Status</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.status}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Assigned By</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.assignedBy}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Assigned To</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.assignedToName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.assignedToEmail}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Requester</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.requesterName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.requesterContact}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Board</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.board}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Category</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.categoryDetails}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-weight:600;color:#475467;">Location</td>
+                    <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
+                  </tr>
+                </table>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
+                  <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Description</div>
+                  <div style="color:#475467;line-height:1.5;">{{ticket.description}}</div>
+                </div>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
         `,
         text_content: `
-  Ticket Assigned
-  
-  You have been assigned to a ticket:
-  
-  Ticket ID: {{ticket.id}}
-  Title: {{ticket.title}}
-  Priority: {{ticket.priority}}
-  Status: {{ticket.status}}
-  Assigned By: {{ticket.assignedBy}}
-  
-  View ticket at: {{ticket.url}}
-        `
-      },
-      {
-        name: 'ticket-created',
-        subject: 'New Ticket: {{ticket.title}}',
-        notification_subtype_id: getSubtypeId('Ticket Created'),
-        html_content: `
-          <h2>New Ticket Created</h2>
-          <p>A new ticket has been created in your PSA system:</p>
-          <div class="details">
-            <p><strong>Ticket ID:</strong> {{ticket.id}}</p>
-            <p><strong>Title:</strong> {{ticket.title}}</p>
-            <p><strong>Description:</strong> {{ticket.description}}</p>
-            <p><strong>Priority:</strong> {{ticket.priority}}</p>
-            <p><strong>Status:</strong> {{ticket.status}}</p>
-          </div>
-          <a href="{{ticket.url}}" class="button">View Ticket</a>
-        `,
-        text_content: `
-  New Ticket Created
-  
-  A new ticket has been created in your PSA system:
-  
-  Ticket ID: {{ticket.id}}
-  Title: {{ticket.title}}
-  Description: {{ticket.description}}
-  Priority: {{ticket.priority}}
-  Status: {{ticket.status}}
-  
-  View ticket at: {{ticket.url}}
-        `
-      },
-      {
-        name: 'ticket-updated',
-        subject: 'Ticket Updated: {{ticket.title}}',
-        notification_subtype_id: getSubtypeId('Ticket Updated'),
-        html_content: `
-          <h2>Ticket Updated</h2>
-          <p>A ticket has been updated in your PSA system:</p>
-          <div class="details">
-            <p><strong>Ticket ID:</strong> {{ticket.id}}</p>
-            <p><strong>Title:</strong> {{ticket.title}}</p>
-            <p><strong>Changes:</strong> {{ticket.changes}}</p>
-            <p><strong>Updated By:</strong> {{ticket.updatedBy}}</p>
-          </div>
-          <a href="{{ticket.url}}" class="button">View Ticket</a>
-        `,
-        text_content: `
-  Ticket Updated
-  
-  A ticket has been updated in your PSA system:
-  
-  Ticket ID: {{ticket.id}}
-  Title: {{ticket.title}}
-  Changes: {{ticket.changes}}
-  Updated By: {{ticket.updatedBy}}
-  
-  View ticket at: {{ticket.url}}
-        `
-      },
-      {
-        name: 'ticket-closed',
-        subject: 'Ticket Closed: {{ticket.title}}',
-        notification_subtype_id: getSubtypeId('Ticket Closed'),
-        html_content: `
-          <h2>Ticket Closed</h2>
-          <p>A ticket has been closed in your PSA system:</p>
-          <div class="details">
-            <p><strong>Ticket ID:</strong> {{ticket.id}}</p>
-            <p><strong>Title:</strong> {{ticket.title}}</p>
-            <p><strong>Resolution:</strong> {{ticket.resolution}}</p>
-            <p><strong>Closed By:</strong> {{ticket.closedBy}}</p>
-          </div>
-          <a href="{{ticket.url}}" class="button">View Ticket</a>
-        `,
-        text_content: `
-  Ticket Closed
-  
-  A ticket has been closed in your PSA system:
-  
-  Ticket ID: {{ticket.id}}
-  Title: {{ticket.title}}
-  Resolution: {{ticket.resolution}}
-  Closed By: {{ticket.closedBy}}
-  
-  View ticket at: {{ticket.url}}
+Ticket Assigned to You
+
+{{ticket.metaLine}}
+Assigned By: {{ticket.assignedBy}}
+
+Priority: {{ticket.priority}}
+Status: {{ticket.status}}
+Assigned To: {{ticket.assignedDetails}}
+Requester: {{ticket.requesterDetails}}
+Board: {{ticket.board}}
+Category: {{ticket.categoryDetails}}
+Location: {{ticket.locationSummary}}
+
+Description:
+{{ticket.description}}
+
+View ticket: {{ticket.url}}
         `
       },
     {
       name: 'ticket-comment-added',
-      subject: 'New Comment on Ticket: {{ticket.title}}',
+      language_code: 'en',
+      subject: 'New Comment • {{ticket.title}}',
       notification_subtype_id: getSubtypeId('Ticket Comment Added'),
       html_content: `
-        <h2>New Comment Added</h2>
-        <p>A new comment has been added to ticket:</p>
-        <div class="details">
-          <p><strong>Ticket ID:</strong> {{ticket.id}}</p>
-          <p><strong>Title:</strong> {{ticket.title}}</p>
-          <p><strong>Comment By:</strong> {{comment.author}}</p>
-          <p><strong>Comment:</strong></p>
-          <div class="comment-content">
-            {{comment.content}}
-          </div>
-        </div>
-        <a href="{{ticket.url}}" class="button">View Ticket</a>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;padding:32px 0;font-family:'Segoe UI',Arial,sans-serif;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4ddff;box-shadow:0 12px 32px rgba(138,77,234,0.12);">
+            <tr>
+              <td style="padding:32px;background:linear-gradient(135deg,#8A4DEA,#40CFF9);color:#ffffff;">
+                <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">New Comment Added</div>
+                <div style="font-size:22px;font-weight:600;margin-top:8px;">{{ticket.title}}</div>
+                <div style="margin-top:12px;font-size:14px;opacity:0.85;">{{ticket.metaLine}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 20px 32px;">
+                <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">A new comment has been added to a ticket for <strong>{{ticket.clientName}}</strong>.</p>
+                <div style="margin-bottom:24px;">
+                  <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(138,77,234,0.12);color:#5b38b0;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ticket #{{ticket.id}}</div>
+                </div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">Priority</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <span style="display:inline-block;padding:6px 12px;border-radius:999px;background-color:{{ticket.priorityColor}};color:#ffffff;font-weight:600;">{{ticket.priority}}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Status</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.status}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Comment By</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{comment.author}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Assigned To</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.assignedToName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.assignedToEmail}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Requester</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">
+                      <div style="font-weight:600;">{{ticket.requesterName}}</div>
+                      <div style="color:#667085;font-size:13px;">{{ticket.requesterContact}}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Board</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.board}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">Category</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.categoryDetails}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-weight:600;color:#475467;">Location</td>
+                    <td style="padding:12px 0;">{{ticket.locationSummary}}</td>
+                  </tr>
+                </table>
+                <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">
+                  <div style="font-weight:600;color:#1e40af;margin-bottom:8px;">💬 Comment</div>
+                  <div style="color:#475467;line-height:1.5;">{{comment.content}}</div>
+                </div>
+                <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px;background:#f8f5ff;color:#5b38b0;font-size:12px;text-align:center;">Powered by Alga PSA • Keeping teams aligned</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
       `,
       text_content: `
-  New Comment Added
-  
-  A new comment has been added to ticket:
-  
-  Ticket ID: {{ticket.id}}
-  Title: {{ticket.title}}
-  Comment By: {{comment.author}}
-  
-  Comment:
-  {{comment.content}}
-  
-  View ticket at: {{ticket.url}}
+New Comment Added
+
+{{ticket.metaLine}}
+Comment By: {{comment.author}}
+
+Priority: {{ticket.priority}}
+Status: {{ticket.status}}
+Assigned To: {{ticket.assignedDetails}}
+Requester: {{ticket.requesterDetails}}
+Board: {{ticket.board}}
+Category: {{ticket.categoryDetails}}
+Location: {{ticket.locationSummary}}
+
+Comment:
+{{comment.content}}
+
+View ticket: {{ticket.url}}
       `
     },
-      // Invoice templates
-      {
-        name: 'invoice-generated',
-        subject: 'New Invoice #{{invoice.number}}',
-        notification_subtype_id: getSubtypeId('Invoice Generated'),
-        html_content: `
-          <h2>Invoice {{invoice.number}}</h2>
-          <p>A new invoice has been generated for your review:</p>
-          <div class="details">
-            <p><strong>Invoice Number:</strong> {{invoice.number}}</p>
-            <p><strong>Amount:</strong> {{invoice.amount}}</p>
-            <p><strong>Due Date:</strong> {{invoice.dueDate}}</p>
-            <p><strong>Client:</strong> {{invoice.clientName}}</p>
-          </div>
-          <a href="{{invoice.url}}" class="button">View Invoice</a>
-        `,
-        text_content: `
-  Invoice {{invoice.number}}
-  
-  A new invoice has been generated for your review:
-  
-  Invoice Number: {{invoice.number}}
-  Amount: {{invoice.amount}}
-  Due Date: {{invoice.dueDate}}
-  Client: {{invoice.clientName}}
-  
-  View invoice at: {{invoice.url}}
-        `
-      },
-      {
-        name: 'payment-received',
-        subject: 'Payment Received: Invoice #{{invoice.number}}',
-        notification_subtype_id: getSubtypeId('Payment Received'),
-        html_content: `
-          <h2>Payment Received</h2>
-          <p>Payment has been received for invoice #{{invoice.number}}:</p>
-          <div class="details">
-            <p><strong>Invoice Number:</strong> {{invoice.number}}</p>
-            <p><strong>Amount Paid:</strong> {{invoice.amountPaid}}</p>
-            <p><strong>Payment Date:</strong> {{invoice.paymentDate}}</p>
-            <p><strong>Payment Method:</strong> {{invoice.paymentMethod}}</p>
-          </div>
-          <a href="{{invoice.url}}" class="button">View Invoice</a>
-        `,
-        text_content: `
-  Payment Received
-  
-  Payment has been received for invoice #{{invoice.number}}:
-  
-  Invoice Number: {{invoice.number}}
-  Amount Paid: {{invoice.amountPaid}}
-  Payment Date: {{invoice.paymentDate}}
-  Payment Method: {{invoice.paymentMethod}}
-  
-  View invoice at: {{invoice.url}}
-        `
-      },
-      {
-        name: 'payment-overdue',
-        subject: 'Payment Overdue: Invoice #{{invoice.number}}',
-        notification_subtype_id: getSubtypeId('Payment Overdue'),
-        html_content: `
-          <h2>Payment Overdue</h2>
-          <p>The payment for invoice #{{invoice.number}} is overdue:</p>
-          <div class="details">
-            <p><strong>Invoice Number:</strong> {{invoice.number}}</p>
-            <p><strong>Amount Due:</strong> {{invoice.amountDue}}</p>
-            <p><strong>Due Date:</strong> {{invoice.dueDate}}</p>
-            <p><strong>Days Overdue:</strong> {{invoice.daysOverdue}}</p>
-          </div>
-          <a href="{{invoice.url}}" class="button">View Invoice</a>
-        `,
-        text_content: `
-  Payment Overdue
-  
-  The payment for invoice #{{invoice.number}} is overdue:
-  
-  Invoice Number: {{invoice.number}}
-  Amount Due: {{invoice.amountDue}}
-  Due Date: {{invoice.dueDate}}
-  Days Overdue: {{invoice.daysOverdue}}
-  
-  View invoice at: {{invoice.url}}
-        `
-      },
-  
+
       // Project templates
       {
         name: 'project-updated',
+        language_code: 'en',
         subject: 'Project Updated: {{project.name}}',
         notification_subtype_id: getSubtypeId('Project Updated'),
         html_content: `
@@ -330,6 +293,7 @@ exports.seed = async function(knex) {
       },
       {
         name: 'project-closed',
+        language_code: 'en',
         subject: 'Project Closed: {{project.name}}',
         notification_subtype_id: getSubtypeId('Project Closed'),
         html_content: `
@@ -360,6 +324,7 @@ exports.seed = async function(knex) {
       },
       {
         name: 'project-assigned',
+        language_code: 'en',
         subject: 'You have been assigned to project: {{project.name}}',
         notification_subtype_id: getSubtypeId('Project Assigned'),
         html_content: `
@@ -388,6 +353,7 @@ exports.seed = async function(knex) {
       },
       {
         name: 'project-task-assigned-primary',
+        language_code: 'en',
         subject: 'You have been assigned to task: {{task.name}}',
         notification_subtype_id: getSubtypeId('Project Task Assigned'),
         html_content: `
@@ -418,6 +384,7 @@ exports.seed = async function(knex) {
       },
       {
         name: 'project-task-assigned-additional',
+        language_code: 'en',
         subject: 'You have been added as additional agent to task: {{task.name}}',
         notification_subtype_id: getSubtypeId('Project Task Assigned'),
         html_content: `
@@ -445,188 +412,8 @@ exports.seed = async function(knex) {
   
   View task at: {{task.url}}
         `
-      },
-      {
-        name: 'project-created',
-        subject: 'New Project Created: {{project.name}}',
-        notification_subtype_id: getSubtypeId('Project Created'),
-        html_content: `
-          <h2>New Project Created</h2>
-          <p>A new project has been created:</p>
-          <div class="details">
-            <p><strong>Project Name:</strong> {{project.name}}</p>
-            <p><strong>Client:</strong> {{project.client}}</p>
-            <p><strong>Description:</strong> {{project.description}}</p>
-            <p><strong>Start Date:</strong> {{project.startDate}}</p>
-            <p><strong>Project Manager:</strong> {{project.manager}}</p>
-          </div>
-          <a href="{{project.url}}" class="button">View Project</a>
-        `,
-        text_content: `
-  New Project Created
-  
-  A new project has been created:
-  
-  Project Name: {{project.name}}
-  Client: {{project.client}}
-  Description: {{project.description}}
-  Start Date: {{project.startDate}}
-  Project Manager: {{project.manager}}
-  
-  View project at: {{project.url}}
-        `
-      },
-      {
-        name: 'task-updated',
-        subject: 'Task Updated: {{task.name}}',
-        notification_subtype_id: getSubtypeId('Task Updated'),
-        html_content: `
-          <h2>Task Updated</h2>
-          <p>A task has been updated in project {{project.name}}:</p>
-          <div class="details">
-            <p><strong>Task Name:</strong> {{task.name}}</p>
-            <p><strong>Status:</strong> {{task.status}}</p>
-            <p><strong>Progress:</strong> {{task.progress}}%</p>
-            <p><strong>Updated By:</strong> {{task.updatedBy}}</p>
-          </div>
-          <a href="{{task.url}}" class="button">View Task</a>
-        `,
-        text_content: `
-  Task Updated
-  
-  A task has been updated in project {{project.name}}:
-  
-  Task Name: {{task.name}}
-  Status: {{task.status}}
-  Progress: {{task.progress}}%
-  Updated By: {{task.updatedBy}}
-  
-  View task at: {{task.url}}
-        `
-      },
-      {
-        name: 'milestone-completed',
-        subject: 'Milestone Completed: {{milestone.name}}',
-        notification_subtype_id: getSubtypeId('Milestone Completed'),
-        html_content: `
-          <h2>Milestone Completed</h2>
-          <p>A milestone has been completed in project {{project.name}}:</p>
-          <div class="details">
-            <p><strong>Milestone:</strong> {{milestone.name}}</p>
-            <p><strong>Completion Date:</strong> {{milestone.completedDate}}</p>
-            <p><strong>Completed By:</strong> {{milestone.completedBy}}</p>
-            <p><strong>Project Progress:</strong> {{project.progress}}%</p>
-          </div>
-          <a href="{{project.url}}" class="button">View Project</a>
-        `,
-        text_content: `
-  Milestone Completed
-  
-  A milestone has been completed in project {{project.name}}:
-  
-  Milestone: {{milestone.name}}
-  Completion Date: {{milestone.completedDate}}
-  Completed By: {{milestone.completedBy}}
-  Project Progress: {{project.progress}}%
-  
-  View project at: {{project.url}}
-        `
-      },
-  
-      // Time Entry templates
-      {
-        name: 'time-entry-submitted',
-        subject: 'Time Entry Submitted for Review',
-        notification_subtype_id: getSubtypeId('Time Entry Submitted'),
-        html_content: `
-          <h2>Time Entry Submitted</h2>
-          <p>A time entry has been submitted for review:</p>
-          <div class="details">
-            <p><strong>Submitted By:</strong> {{timeEntry.submittedBy}}</p>
-            <p><strong>Date:</strong> {{timeEntry.date}}</p>
-            <p><strong>Duration:</strong> {{timeEntry.duration}}</p>
-            <p><strong>Project:</strong> {{timeEntry.project}}</p>
-            <p><strong>Task:</strong> {{timeEntry.task}}</p>
-          </div>
-          <a href="{{timeEntry.url}}" class="button">Review Time Entry</a>
-        `,
-        text_content: `
-  Time Entry Submitted
-  
-  A time entry has been submitted for review:
-  
-  Submitted By: {{timeEntry.submittedBy}}
-  Date: {{timeEntry.date}}
-  Duration: {{timeEntry.duration}}
-  Project: {{timeEntry.project}}
-  Task: {{timeEntry.task}}
-  
-  Review time entry at: {{timeEntry.url}}
-        `
-      },
-      {
-        name: 'time-entry-approved',
-        subject: 'Time Entry Approved',
-        notification_subtype_id: getSubtypeId('Time Entry Approved'),
-        html_content: `
-          <h2>Time Entry Approved</h2>
-          <p>Your time entry has been approved:</p>
-          <div class="details">
-            <p><strong>Date:</strong> {{timeEntry.date}}</p>
-            <p><strong>Duration:</strong> {{timeEntry.duration}}</p>
-            <p><strong>Project:</strong> {{timeEntry.project}}</p>
-            <p><strong>Task:</strong> {{timeEntry.task}}</p>
-            <p><strong>Approved By:</strong> {{timeEntry.approvedBy}}</p>
-          </div>
-          <a href="{{timeEntry.url}}" class="button">View Time Entry</a>
-        `,
-        text_content: `
-  Time Entry Approved
-  
-  Your time entry has been approved:
-  
-  Date: {{timeEntry.date}}
-  Duration: {{timeEntry.duration}}
-  Project: {{timeEntry.project}}
-  Task: {{timeEntry.task}}
-  Approved By: {{timeEntry.approvedBy}}
-  
-  View time entry at: {{timeEntry.url}}
-        `
-      },
-      {
-        name: 'time-entry-rejected',
-        subject: 'Time Entry Rejected',
-        notification_subtype_id: getSubtypeId('Time Entry Rejected'),
-         html_content: `
-          <h2>Time Entry Rejected</h2>
-          <p>Your time entry has been rejected:</p>
-          <div class="details">
-            <p><strong>Date:</strong> {{timeEntry.date}}</p>
-            <p><strong>Duration:</strong> {{timeEntry.duration}}</p>
-            <p><strong>Project:</strong> {{timeEntry.project}}</p>
-            <p><strong>Task:</strong> {{timeEntry.task}}</p>
-            <p><strong>Rejected By:</strong> {{timeEntry.rejectedBy}}</p>
-            <p><strong>Reason:</strong> {{timeEntry.rejectionReason}}</p>
-          </div>
-          <a href="{{timeEntry.url}}" class="button">View Time Entry</a>
-        `,
-        text_content: `
-  Time Entry Rejected
-  
-  Your time entry has been rejected:
-  
-  Date: {{timeEntry.date}}
-  Duration: {{timeEntry.duration}}
-  Project: {{timeEntry.project}}
-  Task: {{timeEntry.task}}
-  Rejected By: {{timeEntry.rejectedBy}}
-  Reason: {{timeEntry.rejectionReason}}
-  
-  View time entry at: {{timeEntry.url}}
-        `
       }
     ]).returning('*');
-  
+
     // No need to create tenant templates by default - users will customize them as needed
   };
