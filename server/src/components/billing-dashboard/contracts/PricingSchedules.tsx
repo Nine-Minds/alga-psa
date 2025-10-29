@@ -241,6 +241,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
 
                   {/* Data table */}
                   <DataTable
+                    id="pricing-schedules-table"
                     data={schedules}
                     columns={scheduleColumns}
                     pagination={false}

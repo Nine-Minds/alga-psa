@@ -408,6 +408,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
           <Panel defaultSize={60} minSize={30} onResize={() => setTableKey(prev => prev + 1)}>
             <div className="pr-2">
               <DataTable
+                id="invoices-finalized-table"
                 key={tableKey}
                 data={filteredInvoices}
                 columns={columns}

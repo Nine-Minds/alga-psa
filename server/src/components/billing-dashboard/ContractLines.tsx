@@ -371,6 +371,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
               />
             </div>
             <DataTable
+              id="contract-lines-table"
               data={contractLines.filter(plan => plan.contract_line_id !== undefined)}
               columns={contractLineColumns}
               pagination={false}
@@ -388,6 +389,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                 </div>
                 <div className="overflow-x-auto">
                   <DataTable
+                    id="plan-services-table"
                     data={planServices}
                     columns={planServiceColumns}
                     pagination={false}

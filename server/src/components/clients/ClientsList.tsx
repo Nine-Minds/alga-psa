@@ -160,7 +160,7 @@ const ClientsList = ({
         {
             title: 'Name',
             dataIndex: 'client_name',
-            width: '29%',
+            width: '22%',
             render: (text: string, record: IClient) => (
                 <div className="flex items-center">
                     <ClientAvatar
@@ -178,21 +178,31 @@ const ClientsList = ({
             ),
         },
         {
+            title: 'Created',
+            dataIndex: 'created_at',
+            width: '12%',
+            render: (text: string | null, record: IClient) => {
+                if (!record.created_at) return 'N/A';
+                const date = new Date(record.created_at);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            },
+        },
+        {
             title: 'Type',
             dataIndex: 'client_type',
-            width: '9%',
+            width: '8%',
             render: (text: string | null, record: IClient) => record.client_type || 'N/A',
         },
         {
             title: 'Phone',
             dataIndex: 'phone_no',
-            width: '12%',
+            width: '10%',
             render: (text: string | null, record: IClient) => (record as any).location_phone || 'N/A',
         },
         {
             title: 'Address',
             dataIndex: 'address',
-            width: '18%',
+            width: '15%',
             render: (text: string | null, record: IClient) => {
                 const client = record as any;
                 const addressParts = [
@@ -208,14 +218,14 @@ const ClientsList = ({
         {
             title: 'Account Manager',
             dataIndex: 'account_manager_full_name',
-            width: '9%',
+            width: '8%',
             render: (text: string | undefined, record: IClient) =>
                 <span className="break-words" title={record.account_manager_full_name ?? ''}>{record.account_manager_full_name || 'N/A'}</span>,
         },
         {
             title: 'URL',
             dataIndex: 'url',
-            width: '10%',
+            width: '8%',
             render: (text: string | null, record: IClient) => (
                 record.url && record.url.trim() !== '' ? (
                     <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline whitespace-normal break-words block" title={record.url}>
@@ -227,7 +237,7 @@ const ClientsList = ({
         {
             title: 'Tags',
             dataIndex: 'tags',
-            width: '20%',
+            width: '17%',
             render: (value: string, record: IClient) => {
                 if (!record.client_id || !onTagsChange) return null;
                 

@@ -246,6 +246,7 @@ export function TaxRegionsManager() {
         {isLoading && <div className="text-center p-4">Loading regions...</div>}
         {!isLoading && (
           <DataTable
+            id="tax-regions-table"
             columns={columns}
             data={regions}
             onRowClick={(row) => handleOpenDialog(row)}

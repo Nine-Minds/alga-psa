@@ -341,6 +341,7 @@ const renderStatusBadge = (status: string) => {
       </div>
 
       <DataTable
+        id="contracts-table"
         data={filteredTemplateContracts}
         columns={templateColumns}
         pagination
@@ -380,6 +381,7 @@ const renderStatusBadge = (status: string) => {
       </div>
 
       <DataTable
+        id="client-contracts-table"
         data={filteredClientContracts}
         columns={clientContractColumns}
         pagination

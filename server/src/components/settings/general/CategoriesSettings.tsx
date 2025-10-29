@@ -409,6 +409,7 @@ const CategoriesSettings: React.FC = () => {
           </Alert>
         )}
         <DataTable
+          id="categories-settings-table"
           data={filteredCategories}
           columns={columns}
         />

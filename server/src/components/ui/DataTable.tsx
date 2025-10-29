@@ -520,6 +520,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                   return (
                     <th
                       key={`header_${columnId}_${headerIndex}`}
+                      id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
                       onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
                       className={`px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-gray-50' : ''} ${colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left'} ${colDef?.headerClassName ?? ''}`}
                       style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}

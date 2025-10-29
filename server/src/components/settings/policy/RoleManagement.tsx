@@ -144,6 +144,7 @@ export default function RoleManagement() {
         </CardHeader>
         <CardContent>
           <DataTable
+            id="roles-table"
             data={roles}
             columns={columns}
             pagination={false}

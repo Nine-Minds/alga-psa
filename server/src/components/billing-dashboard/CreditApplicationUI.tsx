@@ -216,7 +216,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
             <div className="space-y-2">
               <Label htmlFor="credit-select">Select Credit to Apply</Label>
               <DataTable
-                id="credits-table"
+                id="credit-application-table"
                 data={availableCredits}
                 columns={columns}
                 pagination={true}

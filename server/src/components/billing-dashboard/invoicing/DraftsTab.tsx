@@ -401,6 +401,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
           <Panel defaultSize={60} minSize={30} onResize={() => setTableKey(prev => prev + 1)}>
             <div className="pr-2">
               <DataTable
+                id="invoice-drafts-table"
                 key={tableKey}
                 data={filteredInvoices}
                 columns={columns}

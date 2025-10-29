@@ -13,6 +13,21 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
 
+// Shared column mapping for contact sorting
+const CONTACT_SORT_COLUMNS = {
+  full_name: 'contacts.full_name',
+  created_at: 'contacts.created_at',
+  email: 'contacts.email',
+  phone_number: 'contacts.phone_number'
+} as const;
+
+const CONTACT_SORT_COLUMNS_ALIASED = {
+  full_name: 'full_name',
+  created_at: 'created_at',
+  email: 'email',
+  phone_number: 'phone_number'
+} as const;
+
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
   // Revert to using createTenantKnex for now
   const { knex: db, tenant } = await createTenantKnex();
@@ -285,9 +300,9 @@ export async function deleteContact(contactId: string) {
   }
 }
 
-type ContactFilterStatus = 'active' | 'inactive' | 'all';
+export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
-export async function getContactsByClient(clientId: string, status: ContactFilterStatus = 'active'): Promise<IContact[]> {
+export async function getContactsByClient(clientId: string, status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
@@ -298,6 +313,13 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
     if (!clientId) {
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
+
+    // Validate sortBy parameter against whitelist
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
+    const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
+
+    // Validate sortDirection parameter
+    const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
     // Verify client exists
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -328,7 +350,7 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
             queryBuilder.where('contacts.is_inactive', status === 'inactive');
           }
         })
-        .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
+        .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
     });
 
     // Fetch avatar URLs for each contact
@@ -512,7 +534,7 @@ export async function getAllClients(): Promise<IClient[]> {
   }
 }
 
-export async function getAllContacts(status: ContactFilterStatus = 'active'): Promise<IContact[]> {
+export async function getAllContacts(status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
@@ -523,6 +545,13 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
     if (!['active', 'inactive', 'all'].includes(status)) {
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
+
+    // Validate sortBy parameter against whitelist
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
+    const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
+
+    // Validate sortDirection parameter
+    const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
     console.log('[getAllContacts] Fetching contacts with status:', status, 'for tenant:', tenant);
 
@@ -537,7 +566,7 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
             queryBuilder.where('is_inactive', status === 'inactive');
           }
         })
-        .orderBy('full_name', 'asc');
+        .orderBy(CONTACT_SORT_COLUMNS_ALIASED[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS_ALIASED] || 'full_name', safeSortDirection);
 
       console.log('[getAllContacts] Found', contacts.length, 'contacts');
 

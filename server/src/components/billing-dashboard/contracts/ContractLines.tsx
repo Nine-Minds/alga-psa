@@ -252,7 +252,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
           </Alert>
         )}
 
-        <DataTable data={contractLines} columns={contractLineColumns} pagination={false} />
+        <DataTable id="contracts-contract-lines-table" data={contractLines} columns={contractLineColumns} pagination={false} />
       </Box>
 
       {editingLine && (

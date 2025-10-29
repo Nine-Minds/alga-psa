@@ -220,6 +220,7 @@ const ServiceCategoriesSettings: React.FC = () => {
           </Alert>
         )}
         <DataTable
+          id="service-categories-table"
           data={categories}
           columns={columns}
         />

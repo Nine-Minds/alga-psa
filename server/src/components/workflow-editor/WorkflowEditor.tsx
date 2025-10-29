@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { Monaco } from "@monaco-editor/react";
-import { editor, Uri } from "monaco-editor";
+import type { editor, Uri } from "monaco-editor";
 import { Card } from "server/src/components/ui/Card";
 import { Button } from "server/src/components/ui/Button";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
@@ -476,9 +476,9 @@ ${action.parameters.map((param: ActionParameterDefinition) => `    ${param.name}
   // Create a TypeScript model
   const createTypeScriptModel = (monaco: Monaco, content: string): editor.ITextModel => {
     // Create a URI with a .ts extension
-    const uri = Uri.parse("file:///workflow.ts");
+    const uri = monaco.Uri.parse("file:///workflow.ts");
     modelUri.current = uri;
-    
+
     // Create a new model with TypeScript content
     return monaco.editor.createModel(content, "typescript", uri);
   };

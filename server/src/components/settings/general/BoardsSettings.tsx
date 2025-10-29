@@ -384,6 +384,7 @@ const BoardsSettings: React.FC = () => {
           </Alert>
         )}
         <DataTable
+          id="boards-settings-table"
           data={boards}
           columns={columns}
         />

@@ -157,7 +157,7 @@ const TimePeriodList: React.FC = () => {
           mode={mode}
         />
         <DataTable
-          id="time-periods-table"
+          id="settings-time-periods-table"
           data={timePeriods}
           columns={columns}
           onRowClick={handleRowClick}

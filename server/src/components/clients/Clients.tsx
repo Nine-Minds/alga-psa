@@ -128,7 +128,14 @@ const ClientResults = memo(({
   useEffect(() => {
     const loadClients = async () => {
       try {
-        setIsLoading(true);
+        // Only show loading for the first load and page changes, not for sorting
+        const isInitialLoad = clients.length === 0;
+        const isPageChange = currentPage !== 1 && clients.length > 0;
+
+        if (isInitialLoad || isPageChange) {
+          setIsLoading(true);
+        }
+
         const response = await getAllClientsPaginated({
           page: currentPage,
           pageSize,

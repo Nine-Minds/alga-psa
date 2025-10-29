@@ -256,6 +256,7 @@ useEffect(() => {
             </div>
           ) : invoices.length > 0 ? (
             <DataTable
+              id="client-contract-line-dashboard-table"
               columns={invoiceColumns}
               data={invoices}
               // No pagination needed for a short list of recent items
@@ -279,6 +280,7 @@ useEffect(() => {
            </div>
          ) : hoursData.length > 0 ? (
            <DataTable
+             id="hours-by-service-table"
              columns={hoursColumns}
              data={hoursData}
            />
@@ -366,6 +368,7 @@ useEffect(() => {
            </div>
          ) : usageData.length > 0 ? (
            <DataTable
+             id="usage-metrics-table"
              columns={usageColumns}
              data={usageData}
              // No pagination needed for this view yet

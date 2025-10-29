@@ -167,6 +167,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
             </div>
             <div className="rounded-lg border border-[rgb(var(--color-border-200))]">
                 <DataTable
+                    id="client-service-catalog-table"
                     data={services}
                     columns={columns}
                 />

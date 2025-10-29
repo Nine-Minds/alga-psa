@@ -433,6 +433,7 @@ export function TicketList() {
       <div className="w-full overflow-x-auto">
         <div className="min-w-full">
           <DataTable
+            id="client-portal-tickets-table"
             data={tickets}
             columns={columns}
             pagination={true}

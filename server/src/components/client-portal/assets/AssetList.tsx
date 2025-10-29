@@ -61,6 +61,7 @@ export function AssetList({ assets }: AssetListProps) {
   return (
     <div>
       <DataTable
+        id="client-portal-assets"
         data={assets}
         columns={columns}
         pagination={true}

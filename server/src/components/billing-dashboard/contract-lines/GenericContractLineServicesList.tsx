@@ -308,6 +308,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
         <>
           <div className="mb-4">
             <DataTable
+              id="generic-contract-line-services-table"
               data={planServices}
               columns={planServiceColumns}
               pagination={false}

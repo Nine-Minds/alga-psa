@@ -290,6 +290,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
         <>
           <div className="mb-4">
             <DataTable
+              id="fixed-contract-line-services-table"
               data={planServices}
               columns={planServiceColumns}
               pagination={false} // Assuming pagination isn't needed for typical plan service lists

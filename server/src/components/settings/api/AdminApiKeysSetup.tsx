@@ -122,7 +122,7 @@ export default function AdminApiKeysSetup() {
           </div>
         )}
         <DataTable
-          id="admin-api-keys"
+          id="admin-api-keys-table"
           data={apiKeys}
           columns={columns}
           pagination={true}

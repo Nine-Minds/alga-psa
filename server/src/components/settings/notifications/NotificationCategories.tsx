@@ -195,6 +195,7 @@ function NotificationCategoriesContent({
 
       <Card className="p-6">
         <DataTable
+          id="notification-categories-table"
           data={categories}
           columns={categoryColumns}
           pagination={true}
@@ -213,6 +214,7 @@ function NotificationCategoriesContent({
             )}
           </div>
           <DataTable
+            id="notification-subtypes-table"
             data={subtypes}
             columns={subtypeColumns}
             pagination={true}

@@ -776,6 +776,7 @@ export default function PermissionsMatrix() {
           </div>
         ) : viewType === 'all-roles-specific-resource' ? (
           <DataTable
+            id="permissions-matrix-table"
             data={tableData as RolePermissionRow[]}
             columns={resourceColumns}
             pagination={false}
@@ -783,6 +784,7 @@ export default function PermissionsMatrix() {
           />
         ) : (
           <DataTable
+            id="permissions-matrix-table"
             data={tableData as PermissionRow[]}
             columns={roleColumns}
             pagination={false}
