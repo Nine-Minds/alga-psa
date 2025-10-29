@@ -76,7 +76,7 @@ describe('createClientContractFromWizard', () => {
       billing_method: 'fixed',
       order_number: Math.floor(Math.random() * 1000000),
       created_at: db.fn.now(),
-      updated_at: db.fn.now().  
+      updated_at: db.fn.now()
     });
     createdIds.serviceTypeId = serviceTypeId;
 
