@@ -539,6 +539,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
       <div className="bg-white shadow rounded-lg p-4">
         <DataTable
+          id="projects-table"
           data={filteredProjects}
           columns={columns}
           initialSorting={[{ id: 'end_date', desc: false }]}

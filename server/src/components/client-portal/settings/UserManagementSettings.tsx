@@ -419,7 +419,7 @@ export function UserManagementSettings() {
 
         <div className="mt-4">
           <DataTable
-            id="client-users-table"
+            id="client-portal-user-management-table"
             data={filteredUsers}
             columns={columns}
           />

@@ -193,7 +193,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
   // Memoize the entire DataTable component to prevent unnecessary re-renders
   const MemoizedDataTable = useMemo(() => (
     <DataTable
-      id="activities-data-table"
+      id="user-activities-table"
       data={activities}
       columns={columns}
       pagination={true}

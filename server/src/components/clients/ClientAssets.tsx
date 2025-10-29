@@ -260,6 +260,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
 
       {/* Assets Table */}
       <DataTable
+        id="client-assets-table"
         data={assets}
         columns={columns}
         currentPage={currentPage}

@@ -309,6 +309,7 @@ const BillingCycles: React.FC = () => {
             />
           ) : (
             <DataTable
+              id="billing-cycles-table"
               data={clients}
               columns={columns}
               pagination={true}

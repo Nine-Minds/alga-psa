@@ -161,7 +161,6 @@ const ClientsList = ({
             title: 'Name',
             dataIndex: 'client_name',
             width: '22%',
-            sortable: true,
             render: (text: string, record: IClient) => (
                 <div className="flex items-center">
                     <ClientAvatar
@@ -179,10 +178,9 @@ const ClientsList = ({
             ),
         },
         {
-            title: 'Date',
+            title: 'Created',
             dataIndex: 'created_at',
             width: '12%',
-            sortable: true,
             render: (text: string | null, record: IClient) => {
                 if (!record.created_at) return 'N/A';
                 const date = new Date(record.created_at);

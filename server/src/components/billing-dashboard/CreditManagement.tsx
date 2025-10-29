@@ -415,7 +415,7 @@ const CreditManagement: React.FC = () => {
                 label: "Active Credits",
                 content: (
                   <DataTable
-                    id="active-credits-table"
+                    id="credit-management-table"
                     columns={columns}
                     data={activeCredits}
                     pagination={true}
@@ -429,7 +429,7 @@ const CreditManagement: React.FC = () => {
                 label: "Expired Credits",
                 content: (
                   <DataTable
-                    id="expired-credits-table"
+                    id="credit-management-expired-table"
                     columns={columns}
                     data={expiredCredits}
                     pagination={true}
@@ -443,7 +443,7 @@ const CreditManagement: React.FC = () => {
                 label: "All Credits",
                 content: (
                   <DataTable
-                    id="all-credits-table"
+                    id="credit-management-all-table"
                     columns={columns}
                     data={allCredits}
                     pagination={true}

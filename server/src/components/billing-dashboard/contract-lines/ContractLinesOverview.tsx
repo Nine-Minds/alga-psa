@@ -194,6 +194,7 @@ const ContractLinesOverview: React.FC = () => {
           />
         ) : (
           <DataTable
+            id="contract-lines-overview-table"
             data={contractLines.filter(plan => plan.contract_line_id !== undefined)}
             columns={contractLineColumns}
             pagination={true}

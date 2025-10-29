@@ -133,6 +133,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
             </div>
             <div className="rounded-lg border border-[rgb(var(--color-border-200))]">
                 <DataTable
+                    id="client-contract-lines-table"
                     data={clientContractLines}
                     columns={columns}
                     onRowClick={onEdit} // Add row click handler

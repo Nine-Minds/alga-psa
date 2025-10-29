@@ -424,6 +424,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         )}
       </div>
       <DataTable
+        id="contacts-import-preview-table"
         data={importResults}
         columns={[
           {
@@ -619,6 +620,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               />
               <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
+                  id="contacts-import-preview-table"
                   data={validationResults.map((result: ICSVValidationResult, index: number): Record<string, any> => {
                     const rowData = (previewData?.rows[index] || []).reduce((
                       acc: Record<string, string>,
@@ -678,11 +680,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                       render: (value: any, record: any) => {
                         const errors = record.errors || [];
                         const warnings = record.warnings || [];
-                        
+
                         if (errors.length === 0 && warnings.length === 0) {
                           return <span className="text-gray-400">-</span>;
                         }
-                        
+
                         return (
                           <div className="whitespace-normal break-words text-sm space-y-1 min-w-0">
                             {errors.length > 0 && (

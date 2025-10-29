@@ -502,7 +502,7 @@ const CreditReconciliation: React.FC = () => {
                 label: `All (${reports.length})`,
                 content: (
                   <DataTable
-                    id="all-reports-table"
+                    id="credit-reconciliation-table"
                     columns={columns}
                     data={reports}
                     pagination={true}
@@ -517,7 +517,7 @@ const CreditReconciliation: React.FC = () => {
                 label: `Open (${openReports.length})`,
                 content: (
                   <DataTable
-                    id="open-reports-table"
+                    id="credit-reconciliation-open-table"
                     columns={columns}
                     data={openReports}
                     pagination={true}
@@ -532,7 +532,7 @@ const CreditReconciliation: React.FC = () => {
                 label: `In Review (${inReviewReports.length})`,
                 content: (
                   <DataTable
-                    id="in-review-reports-table"
+                    id="credit-reconciliation-review-table"
                     columns={columns}
                     data={inReviewReports}
                     pagination={true}
@@ -547,7 +547,7 @@ const CreditReconciliation: React.FC = () => {
                 label: `Resolved (${resolvedReports.length})`,
                 content: (
                   <DataTable
-                    id="resolved-reports-table"
+                    id="credit-reconciliation-resolved-table"
                     columns={columns}
                     data={resolvedReports}
                     pagination={true}

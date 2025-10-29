@@ -288,7 +288,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
 
   return (
     <div>
-      <DataTable data={visibleUsers} columns={columns} />
+      <DataTable id="users-table" data={visibleUsers} columns={columns} />
 
       {userToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">

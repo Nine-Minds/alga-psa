@@ -454,7 +454,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       title: 'Name',
       dataIndex: 'full_name',
       width: '20%',
-      sortable: true,
       render: (value, record): React.ReactNode => (
         <div className="flex items-center">
           <ContactAvatar
@@ -482,10 +481,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       ),
     },
     {
-      title: 'Date',
+      title: 'Created',
       dataIndex: 'created_at',
       width: '12%',
-      sortable: true,
       render: (value, record): React.ReactNode => {
         if (!record.created_at) return 'N/A';
         const date = new Date(record.created_at);

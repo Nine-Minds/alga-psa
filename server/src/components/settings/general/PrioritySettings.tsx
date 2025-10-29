@@ -245,6 +245,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         </div>
 
         <DataTable
+          id="priorities-table"
           data={priorities
             .filter(p => p.item_type === selectedPriorityType)
             .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))

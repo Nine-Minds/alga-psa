@@ -324,6 +324,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
                 </div>
               ) : (
                 <DataTable
+                  id="client-contract-assignment-table"
                   data={clientContracts}
                   columns={contractColumns}
                   pagination={false}

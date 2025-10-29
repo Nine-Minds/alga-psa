@@ -507,6 +507,7 @@ const ServiceCatalogManager: React.FC = () => {
               />
             ) : (
               <DataTable
+                id="service-catalog-manager-table"
                 data={memoizedFilteredServices}
                 columns={columns}
                 pagination={true} // Keep this to enable pagination UI

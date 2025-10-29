@@ -390,6 +390,7 @@ const ContractReports: React.FC = () => {
               <p className="text-sm text-gray-500 py-8 text-center">No contract revenue data available</p>
             ) : (
               <DataTable
+                id="contract-reports-table"
                 data={revenueData}
                 columns={revenueColumns}
               />
@@ -410,6 +411,7 @@ const ContractReports: React.FC = () => {
               <p className="text-sm text-gray-500 py-8 text-center">No contracts expiring in the near future</p>
             ) : (
               <DataTable
+                id="contract-expiration-table"
                 data={expirationData}
                 columns={expirationColumns}
               />
@@ -430,6 +432,7 @@ const ContractReports: React.FC = () => {
               <p className="text-sm text-gray-500 py-8 text-center">No bucket-based contracts found</p>
             ) : (
               <DataTable
+                id="bucket-usage-table"
                 data={bucketUsageData}
                 columns={bucketUsageColumns}
               />
@@ -450,6 +453,7 @@ const ContractReports: React.FC = () => {
               <p className="text-sm text-gray-500 py-8 text-center">No profitability data available</p>
             ) : (
               <DataTable
+                id="profitability-table"
                 data={profitabilityData}
                 columns={profitabilityColumns}
               />

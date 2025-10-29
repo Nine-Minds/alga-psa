@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
@@ -110,22 +110,19 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
   };
 
   // Filter by status/search - let DataTable handle sorting
-  const filteredWorkflows = useMemo(() => {
-    return workflows
-      .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
-      .filter(workflow => // Then filter by search term
-        workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-  }, [workflows, showInactive, searchTerm]);
+  const filteredWorkflows = workflows
+    .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
+    .filter(workflow => // Then filter by search term
+      workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
   // Define columns for DataTable
-  const columns: ColumnDefinition<WorkflowWithEvents>[] = useMemo(() => [
+  const columns: ColumnDefinition<WorkflowWithEvents>[] = [
     {
       title: 'Name',
       dataIndex: 'name',
-      sortable: true,
       width: '30%',
       render: (value, workflow) => (
         <div className="flex items-center">
@@ -168,7 +165,6 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     {
       title: 'Version',
       dataIndex: 'version',
-      sortable: true,
       width: '10%',
       render: (value, workflow) => (
         <div className="flex items-center">
@@ -181,7 +177,6 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     {
       title: 'Status',
       dataIndex: 'isActive',
-      sortable: true,
       width: '10%',
       render: (value, workflow) => (
         <Badge
@@ -198,7 +193,6 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     {
       title: 'Events',
       dataIndex: 'events',
-      sortable: true,
       width: '22%',
       render: (value, workflow) => (
         <div className="flex flex-wrap gap-1">
@@ -217,7 +211,6 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     {
       title: 'Last Updated',
       dataIndex: 'lastUpdated',
-      sortable: true,
       width: '12%',
       render: (value, workflow) => (
         <span className="text-sm text-gray-500">
@@ -321,7 +314,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
         </div>
       ),
     },
-  ], [handleTestWorkflow, handleEditWorkflow, handleManageVersions, handleToggleWorkflowStatus, loadWorkflows]);
+  ];
 
   // Handle creating a new workflow
   const handleCreateWorkflow = () => {

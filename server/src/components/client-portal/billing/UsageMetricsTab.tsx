@@ -167,7 +167,7 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
         ) : (
           <div id="usage-metrics-table-container">
             <DataTable
-              id="usage-metrics-table"
+              id="client-portal-usage-metrics-table"
               data={usageMetrics}
               columns={usageMetricsColumns}
               pagination={true}

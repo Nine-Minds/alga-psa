@@ -398,6 +398,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
         </div>
         
         <DataTable
+          id="statuses-table"
           data={statuses.filter(s => s.status_type === selectedStatusType).sort((a, b) => (a.order_number || 0) - (b.order_number || 0))}
           columns={[...getStatusColumns(selectedStatusType), {
             title: 'Actions',

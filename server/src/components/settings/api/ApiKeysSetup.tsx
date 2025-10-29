@@ -165,7 +165,7 @@ export default function ApiKeysSetup() {
       <Card className="p-6">
         <h2 className="text-2xl font-semibold mb-4">Your API Keys</h2>
         <DataTable
-          id="api-keys"
+          id="api-keys-table"
           data={apiKeys}
           columns={columns}
           pagination={true}

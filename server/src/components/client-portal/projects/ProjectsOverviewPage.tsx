@@ -176,7 +176,7 @@ export function ProjectsOverviewPage() {
       
       {/* Projects Table */}
       <DataTable
-        id="projects-table"
+        id="client-portal-projects-table"
         data={projects}
         columns={columns}
         pagination={true}

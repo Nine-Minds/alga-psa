@@ -203,6 +203,7 @@ const InteractionTypesSettings: React.FC = () => {
           </Alert>
         )}
         <DataTable
+          id="interaction-types-table"
           data={interactionTypes}
           columns={tenantTypeColumns}
         />

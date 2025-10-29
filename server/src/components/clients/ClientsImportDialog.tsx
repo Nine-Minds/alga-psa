@@ -549,6 +549,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
               </div>
               <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
+                  id="clients-import-preview-table"
                   data={validationResults.map((result, index): Record<string, any> => ({
                     status: result.isValid,
                     client_name: result.data.client_name,

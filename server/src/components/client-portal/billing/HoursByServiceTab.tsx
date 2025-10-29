@@ -119,7 +119,7 @@ const HoursByServiceTab: React.FC<HoursByServiceTabProps> = React.memo(({
       ) : (
         <div id="hours-table-container">
           <DataTable
-            id="hours-service-table"
+            id="client-portal-hours-by-service-table"
             data={hoursByService}
             columns={hoursColumns}
             pagination={true}

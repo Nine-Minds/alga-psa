@@ -253,6 +253,7 @@ return (
               </Button>
             </div>
             <DataTable
+              id="invoice-templates-table"
               data={invoiceTemplates}
               columns={templateColumns}
               pagination={false}

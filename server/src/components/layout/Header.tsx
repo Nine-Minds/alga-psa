@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useId } from 'react';
+import React, { useEffect, useState } from 'react';
 import { signOut } from "next-auth/react";
 import Link from 'next/link';
 import { LogOut, ChevronRight, Home, User, Settings } from 'lucide-react';
@@ -58,7 +58,6 @@ const Header: React.FC<HeaderProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const router = useRouter();
-  const dropdownId = useId();
   const isDevelopment = process.env.NODE_ENV === 'development';
   console.log('Environment:', process.env.NODE_ENV, 'isDevelopment:', isDevelopment);
 
@@ -154,7 +153,7 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
-            <button id={`user-menu-${dropdownId}`} className="relative" aria-label="User menu">
+            <button id="user-menu-header" className="relative" aria-label="User menu">
               {userData?.user_type === 'client' ? (
                 <ContactAvatar
                   contactId={userData?.contact_id || ''}

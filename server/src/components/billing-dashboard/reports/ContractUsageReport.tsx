@@ -195,6 +195,7 @@ const ContractUsageReport: React.FC = () => {
             </div>
           ) : (
             <DataTable
+              id="contract-usage-report-table"
               data={contractUsage}
               columns={contractUsageColumns}
               pagination={true}
