@@ -9,6 +9,8 @@ import {
 } from '../chat/registry/apiRegistry.schema';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
+import { reprovisionExtension } from '@/lib/actions/extensionDomainActions';
 
 const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -22,6 +24,7 @@ const MAX_TOOL_ITERATIONS = 6;
 export type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
+  reasoning?: string;
   name?: string;
   function_call?: {
     name: string;
@@ -52,8 +55,10 @@ export interface FunctionProposedResponse {
   type: 'function_proposed';
   function: FunctionMetadata;
   assistantPreview: string;
+  assistantReasoning?: string;
   functionCall: FunctionCallInfo;
   nextMessages: ChatCompletionMessage[];
+  modelMessages: ChatCompletionMessage[];
 }
 
 export interface AssistantMessageResponse {
@@ -61,6 +66,7 @@ export interface AssistantMessageResponse {
   message: {
     role: 'assistant';
     content: string;
+    reasoning?: string;
   };
   functionCall?: {
     name: string;
@@ -68,6 +74,7 @@ export interface AssistantMessageResponse {
     result?: unknown;
   };
   nextMessages: ChatCompletionMessage[];
+  modelMessages: ChatCompletionMessage[];
 }
 
 export interface ErrorResponse {
@@ -267,7 +274,7 @@ export class ChatCompletionsService {
 
     const preparedArgs = { ...functionCall.arguments };
     this.populatePathParameters(entry, preparedArgs);
-    console.info('[ChatCompletionsService] executeAfterApproval args', entry.id, preparedArgs);
+    // console.info('[ChatCompletionsService] executeAfterApproval args', entry.id, preparedArgs);
 
     let resultPayload: unknown = { status: 'skipped', reason: 'User declined to execute the function.' };
 
@@ -494,11 +501,13 @@ export class ChatCompletionsService {
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
       const completion = await client.chat.completions.create({
-        model: process.env.OPENROUTER_CHAT_MODEL ?? 'openai/gpt-4o-mini',
+        model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2:free',
         messages: this.buildOpenAiMessages(conversation),
         tools: this.buildToolDefinitions(),
         tool_choice: 'auto',
-        temperature: 0.2,
+        temperature: 1.0,
+        top_p: 0.95,
+        top_k: 20,
       });
 
       const choice = completion.choices[0];
@@ -508,8 +517,24 @@ export class ChatCompletionsService {
           error: 'The model returned no choices.',
         };
       }
+      // console.info(
+      //   '[ChatCompletionsService] OpenRouter raw completion\n%s',
+      //   JSON.stringify(
+      //     {
+      //       finishReason: choice.finish_reason,
+      //       completion,
+      //     },
+      //     null,
+      //     2,
+      //   ),
+      // );
 
-      const content = this.extractContent(choice);
+      const parsedContent = this.extractContent(choice);
+      // console.info('[ChatCompletionsService] OpenRouter parsed content', {
+      //   raw: parsedContent.raw,
+      //   display: parsedContent.display,
+      //   reasoning: parsedContent.reasoning,
+      // });
       const toolCalls = choice.message?.tool_calls ?? [];
 
       if (toolCalls.length > 0) {
@@ -527,7 +552,8 @@ export class ChatCompletionsService {
 
         const assistantMessage: ChatCompletionMessage = {
           role: 'assistant',
-          content: content || undefined,
+          content: parsedContent.raw || undefined,
+          reasoning: parsedContent.reasoning,
           function_call: {
             name: functionName,
             arguments: parsedArgs,
@@ -565,17 +591,20 @@ export class ChatCompletionsService {
           this.populatePathParameters(entry, preparedArgs);
           assistantMessage.function_call!.arguments = preparedArgs;
           const metadata = this.buildFunctionMetadata(entry, preparedArgs);
+          const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
           return {
             type: 'function_proposed',
             function: metadata,
-            assistantPreview: content ?? '',
+            assistantPreview,
+            assistantReasoning: parsedContent.reasoning,
             functionCall: {
               name: functionName,
               arguments: preparedArgs,
               toolCallId,
               entryId: entry.id,
             },
-            nextMessages: conversation,
+            nextMessages: this.sanitizeMessagesForClient(conversation),
+            modelMessages: conversation,
           };
         }
 
@@ -587,7 +616,8 @@ export class ChatCompletionsService {
 
       const assistantMessage: ChatCompletionMessage = {
         role: 'assistant',
-        content,
+        content: parsedContent.raw || undefined,
+        reasoning: parsedContent.reasoning,
       };
 
       const nextMessages = [...conversation, assistantMessage];
@@ -596,9 +626,11 @@ export class ChatCompletionsService {
         type: 'assistant_message',
         message: {
           role: 'assistant',
-          content,
+          content: this.buildUserFacingContent(parsedContent),
+          reasoning: parsedContent.reasoning,
         },
-        nextMessages,
+        nextMessages: this.sanitizeMessagesForClient(nextMessages),
+        modelMessages: nextMessages,
       };
     }
 
@@ -754,9 +786,11 @@ export class ChatCompletionsService {
         'You are Alga, an assistant that helps users manage PSA workflows. ' +
         'Always consult the enterprise API registry before executing actions so you understand every required parameter. ' +
         'When the registry or endpoint descriptions mention prerequisite data (such as IDs for boards, clients, categories, priorities, or other related resources), proactively call the appropriate lookup endpoints to gather that information instead of asking the user. ' +
-        'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. ' +
+        'For ticket-creation calls, first use search_api_registry to locate the list endpoints you need, gather current data (e.g. call GET /api/v1/tickets to sample board_id/status_id/priority_id combinations and GET /api/v1/clients to confirm client_id), and do not proceed until you have concrete UUIDs for board_id, client_id, status_id, and priority_id collected from prior API responses. When sampling GET /api/v1/tickets, pick the first record with non-null board_id, status_id, and priority_id and reuse those UUIDs unless the user specifies different values. ' +
         'Clearly explain the plan before each tool call, execute the necessary lookup calls to satisfy all requirements, then call the target endpoint once the inputs are ready. ' +
         'Use the documented request schemas exactly as written—populate *_id fields with the UUIDs you retrieved (never human-friendly names), and skip optional fields when you do not have authoritative values. ' +
+        'Never include properties that are not defined for the selected endpoint; if the user mentions data that cannot be expressed with the documented schema (for example a project name when the ticket create payload does not accept project_id), acknowledge it in the natural-language response but leave it out of the API request. ' +
+        'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
         'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.',
     };
 
@@ -795,32 +829,65 @@ export class ChatCompletionsService {
     return [systemPrompt, ...converted];
   }
 
-  private static extractContent(choice: OpenAI.Chat.Completions.ChatCompletion.Choice) {
+  private static extractContent(choice: OpenAI.Chat.Completions.ChatCompletion.Choice): ParsedAssistantContent {
     const message = choice?.message;
     if (!message) {
-      return '';
+      return {
+        raw: '',
+        display: '',
+        reasoning: undefined,
+      };
     }
 
-    const content = message.content;
-    if (typeof content === 'string') {
-      return content;
+    return parseAssistantContent(message.content, (message as any)?.reasoning);
+  }
+
+  private static buildUserFacingContent(parsed: ParsedAssistantContent): string {
+    const raw = parsed.raw ?? '';
+    const closingIndex = raw.lastIndexOf('</think>');
+    if (closingIndex !== -1) {
+      const trimmed = raw.slice(closingIndex + '</think>'.length).trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
     }
 
-    if (Array.isArray(content)) {
-      return content
-        .map((part) => {
-          if (typeof part === 'string') {
-            return part;
-          }
-          if (typeof part === 'object' && part !== null && 'text' in part) {
-            return (part as { text?: string }).text ?? '';
-          }
-          return '';
-        })
-        .join('');
+    const display = (parsed.display ?? '').trim();
+    if (display.length > 0) {
+      return display;
     }
 
-    return '';
+    return raw.trim();
+  }
+
+  private static buildFunctionPreview(content: ParsedAssistantContent, entry: ChatApiRegistryEntry) {
+    const trimmedDisplay = (content.display ?? '').trim();
+    if (trimmedDisplay.length > 0) {
+      if (trimmedDisplay.length <= 200) {
+        return trimmedDisplay;
+      }
+      const firstNonEmptyLine = trimmedDisplay
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .find((line) => line.length > 0);
+      if (firstNonEmptyLine && firstNonEmptyLine.length <= 160) {
+        return firstNonEmptyLine;
+      }
+    }
+
+    const trimmedReasoning = (content.reasoning ?? '')
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .find((line) => line.length > 0);
+    if (trimmedReasoning && trimmedReasoning.length <= 160) {
+      return trimmedReasoning;
+    }
+
+    if (entry?.displayName) {
+      return `I'd like to call ${entry.displayName}.`;
+    }
+
+    return 'I need to run an API call to continue.';
   }
 
   private static buildFunctionMetadata(entry: ChatApiRegistryEntry, args: Record<string, unknown>): FunctionMetadata {
@@ -878,26 +945,28 @@ export class ChatCompletionsService {
       const requestStarted = Date.now();
       const requestHeadersForLog = this.sanitizeHeadersForLogging(init.headers);
       const requestMethodForLog = init.method ?? entry.method.toUpperCase();
-      console.info('[ChatCompletionsService] API request', {
-        entryId: entry.id,
-        method: requestMethodForLog,
-        url,
-        hasBody: init.body !== undefined && init.body !== null,
-        headers: requestHeadersForLog,
-        args,
-      });
+      // console.info('[ChatCompletionsService] API request', {
+      //   entryId: entry.id,
+      //   method: requestMethodForLog,
+      //   url,
+      //   hasBody: init.body !== undefined && init.body !== null,
+      //   headers: requestHeadersForLog,
+      //   args,
+      // });
       const response = await fetch(url, init);
       const durationMs = Date.now() - requestStarted;
-      console.info('[ChatCompletionsService] API response', {
-        entryId: entry.id,
-        method: requestMethodForLog,
-        url,
-        status: response.status,
-        ok: response.ok,
-        durationMs,
-        contentType: response.headers.get('content-type') ?? undefined,
-      });
+
       const text = await response.text();
+      // console.info('[ChatCompletionsService] API response', {
+      //   entryId: entry.id,
+      //   method: requestMethodForLog,
+      //   url,
+      //   status: response.status,
+      //   ok: response.ok,
+      //   durationMs,
+      //   contentType: response.headers.get('content-type') ?? undefined,
+      //   text
+      // });      
       let data: unknown = null;
       try {
         data = text ? JSON.parse(text) : null;
@@ -1143,7 +1212,7 @@ export class ChatCompletionsService {
     }
 
     if (Object.keys(pathObject).length > 0) {
-      console.info('[ChatCompletionsService] populatePathParameters', entry.id, pathObject);
+      // console.info('[ChatCompletionsService] populatePathParameters', entry.id, pathObject);
       args.path = pathObject;
     }
   }
@@ -1152,5 +1221,32 @@ export class ChatCompletionsService {
     return value && typeof value === 'object' && !Array.isArray(value)
       ? { ...(value as Record<string, unknown>) }
       : {};
+  }
+
+  private static stripReasoningPrefix(content?: string): string | undefined {
+    if (typeof content !== 'string') {
+      return content;
+    }
+
+    const closingIndex = content.lastIndexOf('</think>');
+    if (closingIndex !== -1) {
+      const trimmed = content.slice(closingIndex + '</think>'.length).trim();
+      return trimmed;
+    }
+
+    return content;
+  }
+
+  private static sanitizeMessagesForClient(messages: ChatCompletionMessage[]): ChatCompletionMessage[] {
+    return messages.map((message) => {
+      if (message.role !== 'assistant' || typeof message.content !== 'string') {
+        return { ...message };
+      }
+
+      return {
+        ...message,
+        content: this.stripReasoningPrefix(message.content),
+      };
+    });
   }
 }

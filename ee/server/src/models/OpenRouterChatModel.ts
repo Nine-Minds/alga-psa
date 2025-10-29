@@ -4,12 +4,13 @@ import {
   ChatMessage,
   ChatResponse,
 } from '@ee/interfaces/ChatModelInterface';
+import { parseAssistantContent } from '../utils/chatContent';
 
 export class OpenRouterChatModel implements ChatModelInterface {
   private client: OpenAI;
   private model: string;
 
-  constructor(apiKey: string, model: string = process.env.OPENROUTER_CHAT_MODEL ?? 'openai/gpt-4o-mini') {
+  constructor(apiKey: string, model: string = process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2:free') {
     this.client = new OpenAI({
       apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
@@ -26,25 +27,18 @@ export class OpenRouterChatModel implements ChatModelInterface {
           content: message.content,
         })),
         max_tokens: 4096,
+        temperature: 1.0,
+        top_p: 0.95,
+        top_k: 20
       });
 
-      const rawContent = response.choices?.[0]?.message?.content ?? '';
-      const text =
-        typeof rawContent === 'string'
-          ? rawContent
-          : Array.isArray(rawContent)
-          ? rawContent
-              .map((part) => {
-                if (typeof part === 'string') return part;
-                if (typeof part === 'object' && part !== null && 'text' in part) {
-                  return (part as { text?: string }).text ?? '';
-                }
-                return '';
-              })
-              .join('')
-          : '';
+      const message = response.choices?.[0]?.message;
+      const parsed = parseAssistantContent(
+        message?.content,
+        (message as any)?.reasoning,
+      );
 
-      return { text };
+      return { text: parsed.display || parsed.raw };
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown OpenRouter error';
