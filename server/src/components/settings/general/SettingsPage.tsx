@@ -48,8 +48,6 @@ const SettingsPage = (): JSX.Element =>  {
   const tabParam = searchParams?.get('tab');
   const billingFeatureFlag = useFeatureFlag('billing-enabled');
   const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
-  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
-  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -251,7 +249,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     { // Add the new Integrations tab definition
       label: "Integrations",
-      content: isAdvancedFeaturesEnabled ? (
+      content: (
         <div className="space-y-6">
           <Alert variant="info">
             <AlertDescription>
@@ -278,7 +276,7 @@ const SettingsPage = (): JSX.Element =>  {
             </CardContent>
           </Card>
         </div>
-      ) : <FeaturePlaceholder />,
+      ),
     }
   ];
 
