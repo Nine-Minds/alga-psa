@@ -16,9 +16,10 @@ import {
 import { AccountingExportDeliveryResult } from '../adapters/accounting/accountingExportAdapter';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from '../auth/rbac';
-import { createTenantKnex } from '../db';
 import { AppError } from '../errors';
 import { IUser } from '../../interfaces/auth.interfaces';
+import { getTenantContext } from '../db';
+import { getConnection } from '../db/db';
 
 type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
@@ -31,7 +32,6 @@ const ACTION_DESCRIPTIONS: Record<AccountingExportPermission, string> = {
 
 interface PermissionOverrideContext {
   user?: IUser;
-  tenant?: string;
 }
 
 async function requireAccountingExportPermission(action: AccountingExportPermission, override?: PermissionOverrideContext) {
@@ -47,13 +47,12 @@ async function requireAccountingExportPermission(action: AccountingExportPermiss
     );
   }
 
-  const { knex, tenant } = await createTenantKnex();
-  const effectiveTenant = override?.tenant ?? tenant;
-
-  if (!effectiveTenant) {
+  const tenant = await getTenantContext();
+  if (!tenant) {
     throw new AppError('ACCOUNTING_EXPORT_TENANT_REQUIRED', 'Tenant context is required for accounting export operations');
   }
 
+  const knex = await getConnection(tenant);
   const allowed = await hasPermission(currentUser, 'accountingExports', action, knex);
   if (!allowed) {
     throw new AppError(
@@ -62,7 +61,7 @@ async function requireAccountingExportPermission(action: AccountingExportPermiss
     );
   }
 
-  return { currentUser, tenant: effectiveTenant };
+  return { currentUser, tenant };
 }
 
 export async function createAccountingExportBatch(

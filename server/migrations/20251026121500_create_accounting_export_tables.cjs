@@ -27,11 +27,10 @@ exports.up = async function up(knex) {
       table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
       table.text('notes').nullable();
 
-      table.foreign('tenant').references('tenant').inTable('tenants');
       table.primary(['tenant', 'batch_id']);
-      table.unique(['batch_id'], 'accounting_export_batches_batch_id_uidx');
       table.index(['tenant', 'status'], 'accounting_export_batches_tenant_status_idx');
       table.index(['tenant', 'adapter_type'], 'accounting_export_batches_adapter_idx');
+      table.index(['tenant', 'created_at'], 'accounting_export_batches_tenant_created_idx');
     });
   }
 
@@ -58,10 +57,9 @@ exports.up = async function up(knex) {
       table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
 
       table.primary(['tenant', 'line_id']);
-      table.unique(['line_id'], 'accounting_export_lines_line_id_uidx');
-      table.foreign(['tenant', 'batch_id']).references(['tenant', 'batch_id']).inTable('accounting_export_batches').onDelete('CASCADE');
-      table.foreign('tenant').references('tenant').inTable('tenants');
-      table.index(['batch_id', 'status'], 'accounting_export_lines_batch_status_idx');
+      table.index(['tenant', 'batch_id'], 'accounting_export_lines_tenant_batch_idx');
+      table.index(['tenant', 'batch_id', 'status'], 'accounting_export_lines_tenant_batch_status_idx');
+      table.index(['tenant', 'status'], 'accounting_export_lines_tenant_status_idx');
       table.index(['tenant', 'invoice_id'], 'accounting_export_lines_tenant_invoice_idx');
       // Multiple export lines may reference the same invoice, so keep these composite indexes non-unique.
       table.index(['tenant', 'invoice_id', 'invoice_charge_id'], 'accounting_export_lines_tenant_invoice_charge_idx');
@@ -83,13 +81,33 @@ exports.up = async function up(knex) {
       table.timestamp('resolved_at', { useTz: true }).nullable();
 
       table.primary(['tenant', 'error_id']);
-      table.unique(['error_id'], 'accounting_export_errors_error_id_uidx');
-      table.foreign(['tenant', 'batch_id']).references(['tenant', 'batch_id']).inTable('accounting_export_batches').onDelete('CASCADE');
-      table.foreign(['tenant', 'line_id']).references(['tenant', 'line_id']).inTable('accounting_export_lines').onDelete('SET NULL');
-      table.foreign('tenant').references('tenant').inTable('tenants');
+      table.index(['tenant', 'batch_id'], 'accounting_export_errors_tenant_batch_idx');
+      table.index(['tenant', 'line_id'], 'accounting_export_errors_tenant_line_idx');
       table.index(['tenant', 'resolution_state'], 'accounting_export_errors_state_idx');
     });
   }
+
+  const citusFn = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1
+      FROM pg_proc
+      WHERE proname = 'create_distributed_table'
+    ) AS exists;
+  `);
+
+  const citusAvailable = citusFn.rows?.[0]?.exists ?? citusFn[0]?.exists ?? false;
+
+  if (citusAvailable) {
+    await distributeTable(knex, 'accounting_export_batches');
+    await distributeTable(knex, 'accounting_export_lines');
+    await distributeTable(knex, 'accounting_export_errors');
+  } else {
+    console.warn('[accounting_export_tables] Skipping create_distributed_table calls (function unavailable)');
+  }
+
+  await ensureTenantPolicy(knex, 'accounting_export_batches');
+  await ensureTenantPolicy(knex, 'accounting_export_lines');
+  await ensureTenantPolicy(knex, 'accounting_export_errors');
 };
 
 /**
@@ -100,3 +118,50 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('accounting_export_lines');
   await knex.schema.dropTableIfExists('accounting_export_batches');
 };
+
+async function ensureTenantPolicy(knex, tableName) {
+  await knex.raw(`ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;`);
+  await knex.raw(`
+    DO $policy$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = '${tableName}'
+          AND policyname = 'tenant_isolation_policy'
+      ) THEN
+        EXECUTE $alter$
+          ALTER POLICY tenant_isolation_policy ON ${tableName}
+            USING (tenant = current_setting('app.current_tenant')::uuid)
+            WITH CHECK (tenant = current_setting('app.current_tenant')::uuid)
+        $alter$;
+      ELSE
+        EXECUTE $create$
+          CREATE POLICY tenant_isolation_policy ON ${tableName}
+            USING (tenant = current_setting('app.current_tenant')::uuid)
+            WITH CHECK (tenant = current_setting('app.current_tenant')::uuid)
+        $create$;
+      END IF;
+    END;
+    $policy$;
+  `);
+}
+
+async function distributeTable(knex, tableName) {
+  await knex.raw(`
+    DO $distribution$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_dist_partition
+        WHERE logicalrelid = '${tableName}'::regclass
+      ) THEN
+        PERFORM create_distributed_table('${tableName}', 'tenant');
+      END IF;
+    END;
+    $distribution$;
+  `);
+}
+
+exports.config = { transaction: false };

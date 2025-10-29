@@ -51,6 +51,16 @@ exports.up = async function up(knex) {
     ON invoice_charge_details (tenant, item_id, item_detail_id)
   `);
 
+  await knex.raw(`
+    CREATE UNIQUE INDEX IF NOT EXISTS invoice_charges_tenant_item_uidx
+    ON invoice_charges (tenant, item_id)
+  `);
+
+  await knex.raw(`
+    CREATE UNIQUE INDEX IF NOT EXISTS invoice_charge_details_tenant_detail_uidx
+    ON invoice_charge_details (tenant, item_detail_id)
+  `);
+
   // -----------------------------------------------------------------------
   // 2. Add currency metadata to invoices.
   // -----------------------------------------------------------------------
@@ -149,6 +159,8 @@ exports.down = async function down(knex) {
 
   await knex.raw('DROP INDEX IF EXISTS invoice_charge_details_tenant_item_uidx');
   await knex.raw('DROP INDEX IF EXISTS invoice_charges_tenant_invoice_item_uidx');
+  await knex.raw('DROP INDEX IF EXISTS invoice_charge_details_tenant_detail_uidx');
+  await knex.raw('DROP INDEX IF EXISTS invoice_charges_tenant_item_uidx');
 
   const reversedTables = tablesToRename.slice().reverse();
   for (const { from, to } of reversedTables) {
