@@ -17,6 +17,9 @@ const isEnterpriseEdition = () =>
   process.env.EDITION === 'enterprise' ||
   process.env.EDITION === 'ee';
 
+const EMPTY_RESPONSE_ERROR = 'EMPTY_MODEL_RESPONSE';
+const NO_MODEL_CHOICES_ERROR = 'NO_MODEL_CHOICES';
+const MAX_MODEL_RETRIES = 2;
 const SEARCH_TOOL_NAME = 'search_api_registry';
 const EXECUTE_TOOL_NAME = 'call_api_endpoint';
 const MAX_TOOL_ITERATIONS = 6;
@@ -500,42 +503,31 @@ export class ChatCompletionsService {
     let conversation = this.normalizeConversationHistory(messages);
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
-      const completion = await client.chat.completions.create({
-        model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2:free',
-        messages: this.buildOpenAiMessages(conversation),
-        tools: this.buildToolDefinitions(),
-        tool_choice: 'auto',
-        temperature: 1.0,
-        top_p: 0.95,
-        top_k: 20,
-      });
+      let completion: OpenAI.Chat.Completions.ChatCompletion;
+      let choice: OpenAI.Chat.Completions.ChatCompletion.Choice | undefined;
+      let parsedContent: ParsedAssistantContent;
+      let toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] = [];
 
-      const choice = completion.choices[0];
-      if (!choice) {
-        return {
-          type: 'error',
-          error: 'The model returned no choices.',
-        };
+      try {
+        ({ completion, choice, parsedContent, toolCalls } =
+          await this.generateCompletionWithRetry(client, conversation));
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message === EMPTY_RESPONSE_ERROR) {
+            return {
+              type: 'error',
+              error: 'The assistant did not return a response. Please try again.',
+            };
+          }
+          if (error.message === NO_MODEL_CHOICES_ERROR) {
+            return {
+              type: 'error',
+              error: 'The model returned no choices.',
+            };
+          }
+        }
+        throw error;
       }
-      // console.info(
-      //   '[ChatCompletionsService] OpenRouter raw completion\n%s',
-      //   JSON.stringify(
-      //     {
-      //       finishReason: choice.finish_reason,
-      //       completion,
-      //     },
-      //     null,
-      //     2,
-      //   ),
-      // );
-
-      const parsedContent = this.extractContent(choice);
-      // console.info('[ChatCompletionsService] OpenRouter parsed content', {
-      //   raw: parsedContent.raw,
-      //   display: parsedContent.display,
-      //   reasoning: parsedContent.reasoning,
-      // });
-      const toolCalls = choice.message?.tool_calls ?? [];
 
       if (toolCalls.length > 0) {
         const toolCall = toolCalls[0];
@@ -840,6 +832,76 @@ export class ChatCompletionsService {
     }
 
     return parseAssistantContent(message.content, (message as any)?.reasoning);
+  }
+
+  private static async generateCompletionWithRetry(
+    client: OpenAI,
+    conversation: ChatCompletionMessage[],
+  ) {
+    for (let attempt = 0; attempt < MAX_MODEL_RETRIES; attempt += 1) {
+      const completion = await client.chat.completions.create({
+        model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2:free',
+        messages: this.buildOpenAiMessages(conversation),
+        tools: this.buildToolDefinitions(),
+        tool_choice: 'auto',
+        temperature: 1.0,
+        top_p: 0.95,
+        top_k: 20,
+      });
+
+      const choice = completion.choices[0];
+      if (!choice) {
+        throw new Error(NO_MODEL_CHOICES_ERROR);
+      }
+
+      console.info(
+        '[ChatCompletionsService] OpenRouter raw completion\n%s',
+        JSON.stringify(
+          {
+            finishReason: choice.finish_reason,
+            completion,
+          },
+          null,
+          2,
+        ),
+      );
+
+      const parsedContent = this.extractContent(choice);
+      console.info('[ChatCompletionsService] OpenRouter parsed content', {
+        raw: parsedContent.raw,
+        display: parsedContent.display,
+        reasoning: parsedContent.reasoning,
+      });
+
+      const toolCalls = choice.message?.tool_calls ?? [];
+      const hasToolCalls = toolCalls.length > 0;
+      const hasContent = this.hasMeaningfulContent(parsedContent);
+
+      if (!hasToolCalls && !hasContent) {
+        console.warn('[ChatCompletionsService] Empty model response, retrying', {
+          attempt,
+          completionId: completion.id,
+        });
+        if (attempt + 1 === MAX_MODEL_RETRIES) {
+          throw new Error(EMPTY_RESPONSE_ERROR);
+        }
+        continue;
+      }
+
+      return { completion, choice, parsedContent, toolCalls };
+    }
+
+    throw new Error(EMPTY_RESPONSE_ERROR);
+  }
+
+  private static hasMeaningfulContent(content: ParsedAssistantContent): boolean {
+    if (!content) {
+      return false;
+    }
+    const display = (content.display ?? '').trim();
+    const reasoning = (content.reasoning ?? '').trim();
+    const rawWithoutThinking = (content.raw ?? '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    return display.length > 0 || reasoning.length > 0 || rawWithoutThinking.length > 0;
   }
 
   private static buildUserFacingContent(parsed: ParsedAssistantContent): string {
