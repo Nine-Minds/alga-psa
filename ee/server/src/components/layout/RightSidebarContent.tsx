@@ -159,6 +159,15 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                 hf={hf} // Pass hf instead of chatModel
               />
             )}
+            {!aiFeatureEnabled && (
+              <div className="flex items-center justify-center h-full p-4">
+                <div className="text-center">
+                  <p className="text-gray-500 text-sm">
+                    The AI chat feature is currently unavailable.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Collapsible.Content>
