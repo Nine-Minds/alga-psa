@@ -103,8 +103,10 @@ const prettyStatus = (status: BatchStatus) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+const IS_DEV_ENV = process.env.NODE_ENV === 'development';
+
 export default function MappingCrudPlaywrightPage(): JSX.Element {
-  if (process.env.NODE_ENV !== 'development') {
+  if (!IS_DEV_ENV) {
     return (
       <div className="container mx-auto max-w-4xl px-6 py-12">
         <h1 className="text-2xl font-semibold mb-4">Playwright Harness Disabled</h1>
@@ -113,6 +115,10 @@ export default function MappingCrudPlaywrightPage(): JSX.Element {
     );
   }
 
+  return <DevMappingCrudPage />;
+}
+
+function DevMappingCrudPage(): JSX.Element {
   const storeRef = useRef<MappingStore>({
     mappings: [],
     services: seedServices,
