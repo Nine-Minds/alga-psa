@@ -37,6 +37,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   setIsOpen,
   ...props
 }) => {
+  const collapsibleId = useId();
+
   if (isEnterpriseEdition && EnterpriseRightSidebar) {
     return (
       <Suspense
@@ -52,8 +54,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       </Suspense>
     );
   }
-
-  const collapsibleId = useId();
   
   return (
     <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
