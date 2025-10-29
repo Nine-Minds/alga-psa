@@ -1,6 +1,32 @@
 const TABLE_NAME = 'contract_lines';
 const FIXED_CONFIG_TABLE = 'contract_line_fixed_config';
 
+const isCitusEnabled = async (knex) => {
+  const { rows } = await knex.raw("SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1");
+  return rows.length > 0;
+};
+
+const isTableDistributed = async (knex, tableName) => {
+  const { rows } = await knex.raw(
+    'SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass LIMIT 1',
+    [tableName]
+  );
+  return rows.length > 0;
+};
+
+const ensureDistributed = async (knex, tableName, distributionColumn) => {
+  if (!(await isCitusEnabled(knex))) {
+    return false;
+  }
+
+  if (await isTableDistributed(knex, tableName)) {
+    return false;
+  }
+
+  await knex.raw('SELECT create_distributed_table(?, ?)', [tableName, distributionColumn]);
+  return true;
+};
+
 exports.up = async function up(knex) {
   // Add new columns to contract_lines
   await knex.schema.alterTable(TABLE_NAME, (table) => {
@@ -25,6 +51,10 @@ exports.up = async function up(knex) {
   if (exists) {
     await knex.schema.dropTable(FIXED_CONFIG_TABLE);
   }
+
+  if (await knex.schema.hasColumn(TABLE_NAME, 'tenant')) {
+    await ensureDistributed(knex, TABLE_NAME, 'tenant');
+  }
 };
 
 exports.down = async function down(knex) {
@@ -40,6 +70,8 @@ exports.down = async function down(knex) {
       table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
       table.primary(['tenant', 'contract_line_id']);
     });
+
+    await ensureDistributed(knex, FIXED_CONFIG_TABLE, 'tenant');
   }
 
   await knex.raw(`
@@ -57,4 +89,8 @@ exports.down = async function down(knex) {
     table.dropColumn('enable_proration');
     table.dropColumn('billing_cycle_alignment');
   });
+
+  if (await knex.schema.hasColumn(TABLE_NAME, 'tenant')) {
+    await ensureDistributed(knex, TABLE_NAME, 'tenant');
+  }
 };

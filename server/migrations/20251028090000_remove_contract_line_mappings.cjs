@@ -1,4 +1,28 @@
-const { v4: uuidv4 } = require('uuid');
+const isCitusEnabled = async (knex) => {
+  const { rows } = await knex.raw("SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1");
+  return rows.length > 0;
+};
+
+const isTableDistributed = async (knex, tableName) => {
+  const { rows } = await knex.raw(
+    'SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass LIMIT 1',
+    [tableName]
+  );
+  return rows.length > 0;
+};
+
+const ensureDistributed = async (knex, tableName, distributionColumn) => {
+  if (!(await isCitusEnabled(knex))) {
+    return false;
+  }
+
+  if (await isTableDistributed(knex, tableName)) {
+    return false;
+  }
+
+  await knex.raw('SELECT create_distributed_table(?, ?)', [tableName, distributionColumn]);
+  return true;
+};
 
 exports.up = async function up(knex) {
   // Extend contract_lines with contract-specific metadata
@@ -44,11 +68,11 @@ exports.up = async function up(knex) {
 
   if (!contractFkExists) {
     await knex.schema.alterTable('contract_lines', (table) => {
+      // Citus disallows cascading actions on distributed foreign keys; remove the cascade and handle deletes externally.
       table
         .foreign(['tenant', 'contract_id'], 'contract_lines_contract_fk')
         .references(['tenant', 'contract_id'])
-        .inTable('contracts')
-        .onDelete('CASCADE');
+        .inTable('contracts');
     });
   }
 
@@ -121,6 +145,13 @@ exports.up = async function up(knex) {
     await knex.schema.dropTable('contract_template_line_mappings');
   }
 
+  if (await knex.schema.hasColumn('contract_lines', 'tenant')) {
+    await ensureDistributed(knex, 'contract_lines', 'tenant');
+  }
+
+  if (await knex.schema.hasColumn('contract_template_lines', 'tenant')) {
+    await ensureDistributed(knex, 'contract_template_lines', 'tenant');
+  }
 };
 
 exports.down = async function down(knex) {
@@ -141,6 +172,8 @@ exports.down = async function down(knex) {
       table.index(['contract_line_id']);
       table.index(['tenant']);
     });
+
+    await ensureDistributed(knex, 'contract_line_mappings', 'tenant');
   }
 
   const hasTemplateMappings = await knex.schema.hasTable('contract_template_line_mappings');
@@ -157,6 +190,8 @@ exports.down = async function down(knex) {
       table.index(['template_line_id']);
       table.index(['tenant']);
     });
+
+    await ensureDistributed(knex, 'contract_template_line_mappings', 'tenant');
   }
 
   // Rehydrate mapping data from inlined columns
