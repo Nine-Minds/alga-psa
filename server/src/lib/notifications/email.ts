@@ -17,7 +17,7 @@
  */
 
 import { createTenantKnex } from '../db';
-import { 
+import {
   NotificationSettings,
   SystemEmailTemplate,
   TenantEmailTemplate,
@@ -32,6 +32,8 @@ import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types'
 import { TenantEmailService } from '../services/TenantEmailService';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getConnection } from '../db/db';
+import { resolveEmailLocale } from './emailLocaleResolver';
+import { SupportedLocale } from '../i18n/config';
 export class EmailNotificationService implements NotificationService {
   /**
    * Get tenant email settings from database
@@ -122,14 +124,36 @@ export class EmailNotificationService implements NotificationService {
     return template;
   }
 
-  async getTenantTemplate(tenant: string, name: string): Promise<TenantEmailTemplate | null> {
+  async getTenantTemplate(tenant: string, name: string, locale?: SupportedLocale): Promise<TenantEmailTemplate | null> {
     if (!tenant) {
       throw new Error('Tenant is required for tenant-specific templates');
     }
 
     const knex = await this.getTenantKnex();
+
+    // If locale is specified, try to get language-specific template
+    if (locale) {
+      // Try requested language first
+      let template = await knex('tenant_email_templates')
+        .where({ tenant, name, language_code: locale })
+        .first();
+
+      if (template) return template;
+
+      // Fallback to English if not found and not already English
+      if (locale !== 'en') {
+        template = await knex('tenant_email_templates')
+          .where({ tenant, name, language_code: 'en' })
+          .first();
+
+        if (template) return template;
+      }
+    }
+
+    // Fallback to template without language code (legacy)
     return knex('tenant_email_templates')
       .where({ tenant, name })
+      .whereNull('language_code')
       .first();
   }
 
@@ -173,14 +197,35 @@ export class EmailNotificationService implements NotificationService {
     return updated;
   }
 
-  async getEffectiveTemplate(tenant: string, name: string): Promise<SystemEmailTemplate | TenantEmailTemplate> {
-    // First try to get tenant-specific template
-    const tenantTemplate = await this.getTenantTemplate(tenant, name);
+  async getEffectiveTemplate(tenant: string, name: string, locale?: SupportedLocale): Promise<SystemEmailTemplate | TenantEmailTemplate> {
+    // First try to get tenant-specific template with locale
+    const tenantTemplate = await this.getTenantTemplate(tenant, name, locale);
     if (tenantTemplate) {
       return tenantTemplate;
     }
-    
-    // Fall back to system template
+
+    // Fall back to system template with locale
+    const knex = await this.getTenantKnex();
+
+    if (locale) {
+      // Try requested language first
+      let systemTemplate = await knex('system_email_templates')
+        .where({ name, language_code: locale })
+        .first();
+
+      if (systemTemplate) return systemTemplate;
+
+      // Fallback to English if not found and not already English
+      if (locale !== 'en') {
+        systemTemplate = await knex('system_email_templates')
+          .where({ name, language_code: 'en' })
+          .first();
+
+        if (systemTemplate) return systemTemplate;
+      }
+    }
+
+    // Final fallback to template without language code (legacy)
     return this.getSystemTemplate(name);
   }
 
@@ -270,13 +315,13 @@ export class EmailNotificationService implements NotificationService {
     data: Record<string, any>;
   }): Promise<void> {
     const knex = await this.getTenantKnex();
-    
+
     // Check global settings
     const settings = await this.getSettings(params.tenant);
     if (!settings.is_enabled) {
       throw new Error('Notifications are disabled for this tenant');
     }
-    
+
     // Check rate limit
     const recentCount = await knex('notification_logs')
       .where({
@@ -287,11 +332,11 @@ export class EmailNotificationService implements NotificationService {
       .count('id')
       .first()
       .then(result => Number(result?.count));
-      
+
     if (recentCount >= settings.rate_limit_per_minute) {
       throw new Error('Rate limit exceeded');
     }
-    
+
     // Check user preferences
     const preference = await knex('user_notification_preferences')
       .where({
@@ -299,17 +344,29 @@ export class EmailNotificationService implements NotificationService {
         subtype_id: params.subtypeId
       })
       .first();
-      
+
     if (preference && !preference.is_enabled) {
       return; // User has opted out
     }
-    
+
     try {
-      // Get the effective template and compile content
-      const template = await this.getEffectiveTemplate(params.tenant, params.templateName);
+      // Resolve recipient locale based on user preferences hierarchy
+      const recipientLocale = await resolveEmailLocale(params.tenant, {
+        email: params.emailAddress,
+        userId: params.userId
+      });
+
+      console.log('[EmailNotificationService] Resolved locale for notification:', {
+        userId: params.userId,
+        email: params.emailAddress,
+        locale: recipientLocale
+      });
+
+      // Get the effective template with locale support and compile content
+      const template = await this.getEffectiveTemplate(params.tenant, params.templateName, recipientLocale);
       const compiledSubject = await this.compileTemplate(template.subject, params.data);
       const compiledBody = await this.compileTemplate(template.html_content || '', params.data);
-      
+
       // Use TenantEmailService which internally handles EE-hosted fallback
       const service = TenantEmailService.getInstance(params.tenant);
       const processor = new StaticTemplateProcessor(compiledSubject, compiledBody, compiledBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim());
@@ -334,10 +391,10 @@ export class EmailNotificationService implements NotificationService {
       if (!success) {
         throw new Error(result.error || 'Failed to send email');
       }
-      
+
     } catch (error) {
       // Log failure
-      
+
       // Log failure with generic subject
       await knex('notification_logs').insert({
         tenant: params.tenant,
@@ -348,7 +405,7 @@ export class EmailNotificationService implements NotificationService {
         status: 'failed',
         error_message: error instanceof Error ? error.message : 'Unknown error'
       });
-      
+
       throw error;
     }
   }

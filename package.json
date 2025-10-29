@@ -173,7 +173,7 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/knex": "^0.16.1",
     "@types/lodash": "^4.17.20",
-    "@types/node": "^20",
+    "@types/node": "^20.19.24",
     "@types/nodemailer": "^6.4.17",
     "@types/parsimmon": "^1.10.9",
     "@types/qrcode": "^1.5.5",

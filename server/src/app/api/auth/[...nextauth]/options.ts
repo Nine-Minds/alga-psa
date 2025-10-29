@@ -13,6 +13,7 @@ import {
     type PortalSessionTokenPayload,
 } from "server/src/lib/auth/sessionCookies";
 import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
+import { buildTenantPortalSlug, isValidTenantSlug } from "server/src/lib/utils/tenantSlug";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -190,6 +191,7 @@ interface ExtendedUser {
     image?: string;
     proToken: string;
     tenant?: string;
+    tenantSlug?: string;
     user_type: string;
     clientId?: string;
     contactId?: string;
@@ -273,6 +275,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 password: { label: "Password", type: "password" },
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
+                tenant: { label: "Tenant", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@shared/db/admin");
@@ -286,6 +289,18 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 });
                 logger.info("Starting Credentials OAuth")
                 try {
+                    const tenantSlug = typeof credentials?.tenant === 'string'
+                        ? credentials.tenant.trim().toLowerCase()
+                        : undefined;
+
+                    if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
+                        logger.warn("Invalid tenant slug provided", {
+                            email: credentials?.email,
+                            tenantSlug,
+                        });
+                        return null;
+                    }
+
                     logger.debug("Authorizing email", credentials?.email);
                     if (!credentials?.email || !credentials.password) {
                         console.log('Authentication failed: Missing credentials');
@@ -296,7 +311,15 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     console.log('Attempting to authenticate user:', credentials.email);
                     console.log('user type', credentials.userType);
                     console.log('next auth secret', process.env.NEXTAUTH_SECRET);
-                    const user = await authenticateUser(credentials.email as string, credentials.password as string, credentials.userType as string);
+                    const user = await authenticateUser(
+                        credentials.email as string,
+                        credentials.password as string,
+                        credentials.userType as string,
+                        {
+                            tenantSlug,
+                            requireTenantMatch: Boolean(tenantSlug),
+                        }
+                    );
                     if (!user) {
                         console.log('Authentication failed: No user returned');
                         return null;
@@ -366,6 +389,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     }
 
                     logger.info("User sign in successful with email", credentials.email);
+                    const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
                     const userResponse = {
                         id: user.user_id.toString(),
                         email: user.email,
@@ -376,7 +400,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         tenant: user.tenant,
                         user_type: user.user_type,
                         clientId: clientId ?? undefined,
-                        contactId: user.contact_id
+                        contactId: user.contact_id,
+                        tenantSlug: tenantSlugForUser,
                     };
                     console.log('Authorization successful. Returning user data:', {
                         id: userResponse.id,
@@ -543,6 +568,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                                 email: extendedUser.email,
                                 name: extendedUser.name,
                                 tenant: extendedUser.tenant,
+                                tenantSlug: extendedUser.tenantSlug,
                                 user_type: extendedUser.user_type,
                                 clientId: extendedUser.clientId,
                                 contactId: extendedUser.contactId,
@@ -591,6 +617,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 token.image = extendedUser.image;
                 token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
+                token.tenantSlug = extendedUser.tenantSlug;
                 token.user_type = extendedUser.user_type;
                 token.clientId = extendedUser.clientId;
                 token.contactId = extendedUser.contactId;
@@ -637,6 +664,9 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 name: validatedUser.first_name + " " + validatedUser.last_name,
                 email: validatedUser.email,
                 tenant: validatedUser.tenant,
+                tenantSlug:
+                    token.tenantSlug ??
+                    (validatedUser.tenant ? buildTenantPortalSlug(validatedUser.tenant) : undefined),
                 user_type: validatedUser.user_type,
                 clientId: clientId, // Use fetched or preserved clientId
                 contactId: contactId  // Use fetched or preserved contactId
@@ -646,6 +676,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 id: result.id,
                 email: result.email,
                 tenant: result.tenant,
+                tenantSlug: result.tenantSlug,
                 clientId: result.clientId
             });
 
@@ -663,6 +694,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 id: token.id,
                 email: token.email,
                 tenant: token.tenant,
+                tenantSlug: token.tenantSlug,
                 user_type: token.user_type,
                 clientId: token.clientId,
                 contactId: token.contactId
@@ -682,6 +714,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 user.image = token.image as string;
                 user.proToken = token.proToken as string;
                 user.tenant = token.tenant as string;
+                user.tenantSlug = token.tenantSlug as string | undefined;
                 user.user_type = token.user_type as string;
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
@@ -750,6 +783,7 @@ export const options: NextAuthConfig = {
                 password: { label: "Password", type: "password" },
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
+                tenant: { label: "Tenant", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@shared/db/admin");
@@ -763,6 +797,18 @@ export const options: NextAuthConfig = {
                 });
                 logger.info("Starting Credentials OAuth")
                 try {
+                    const tenantSlug = typeof credentials?.tenant === 'string'
+                        ? credentials.tenant.trim().toLowerCase()
+                        : undefined;
+
+                    if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
+                        logger.warn("Invalid tenant slug provided", {
+                            email: credentials?.email,
+                            tenantSlug,
+                        });
+                        return null;
+                    }
+
                     logger.debug("Authorizing email", credentials?.email);
                     if (!credentials?.email || !credentials.password) {
                         console.log('Authentication failed: Missing credentials');
@@ -771,7 +817,15 @@ export const options: NextAuthConfig = {
                     }
 
                     console.log('Attempting to authenticate user:', credentials.email);
-                    const user = await authenticateUser(credentials.email as string, credentials.password as string, credentials.userType as string);
+                    const user = await authenticateUser(
+                        credentials.email as string,
+                        credentials.password as string,
+                        credentials.userType as string,
+                        {
+                            tenantSlug,
+                            requireTenantMatch: Boolean(tenantSlug),
+                        }
+                    );
                     if (!user) {
                         console.log('Authentication failed: No user returned');
                         return null;
@@ -841,6 +895,7 @@ export const options: NextAuthConfig = {
                     }
 
                     logger.info("User sign in successful with email", credentials.email);
+                    const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
                     const userResponse = {
                         id: user.user_id.toString(),
                         email: user.email,
@@ -851,7 +906,8 @@ export const options: NextAuthConfig = {
                         tenant: user.tenant,
                         user_type: user.user_type,
                         clientId: clientId,
-                        contactId: user.contact_id
+                        contactId: user.contact_id,
+                        tenantSlug: tenantSlugForUser,
                     };
                     console.log('Authorization successful. Returning user data:', {
                         id: userResponse.id,
@@ -1012,6 +1068,7 @@ export const options: NextAuthConfig = {
                                 email: extendedUser.email,
                                 name: extendedUser.name,
                                 tenant: extendedUser.tenant,
+                                tenantSlug: extendedUser.tenantSlug,
                                 user_type: extendedUser.user_type,
                                 clientId: extendedUser.clientId,
                                 contactId: extendedUser.contactId,
@@ -1057,6 +1114,7 @@ export const options: NextAuthConfig = {
                 token.image = extendedUser.image;
                 token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
+                token.tenantSlug = extendedUser.tenantSlug;
                 token.user_type = extendedUser.user_type;
                 token.clientId = extendedUser.clientId;
                 token.contactId = extendedUser.contactId;
@@ -1103,6 +1161,9 @@ export const options: NextAuthConfig = {
                 name: validatedUser.first_name + " " + validatedUser.last_name,
                 email: validatedUser.email,
                 tenant: validatedUser.tenant,
+                tenantSlug:
+                    token.tenantSlug ??
+                    (validatedUser.tenant ? buildTenantPortalSlug(validatedUser.tenant) : undefined),
                 user_type: validatedUser.user_type,
                 clientId: clientId, // Use fetched or preserved clientId
                 contactId: contactId  // Use fetched or preserved contactId
@@ -1129,6 +1190,7 @@ export const options: NextAuthConfig = {
                 id: token.id,
                 email: token.email,
                 tenant: token.tenant,
+                tenantSlug: token.tenantSlug,
                 user_type: token.user_type,
                 clientId: token.clientId,
                 contactId: token.contactId
@@ -1148,6 +1210,7 @@ export const options: NextAuthConfig = {
                 user.image = token.image as string;
                 user.proToken = token.proToken as string;
                 user.tenant = token.tenant as string;
+                user.tenantSlug = token.tenantSlug as string | undefined;
                 user.user_type = token.user_type as string;
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;

@@ -120,7 +120,7 @@
     "currentLanguage": "Idioma actual",
     "preference": {
       "label": "Preferencia de idioma",
-      "helper": "Selecciona tu idioma preferido para la interfaz",
+      "helper": "Selecciona tu idioma preferido para la interfaz y las notificaciones por correo electrónico",
       "placeholder": "Selecciona un idioma",
       "cleared": "Preferencia de idioma eliminada. Usando el idioma predeterminado...",
       "updating": "Actualizando preferencia de idioma...",

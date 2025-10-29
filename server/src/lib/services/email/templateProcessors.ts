@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/shared/core/logger';
+import { SupportedLocale } from '../../i18n/config';
 
 export interface EmailTemplateContent {
   subject: string;
@@ -10,6 +11,7 @@ export interface EmailTemplateContent {
 export interface TemplateProcessorOptions {
   tenantId?: string;
   templateData?: Record<string, any>;
+  locale?: SupportedLocale;
 }
 
 /**
@@ -77,7 +79,7 @@ export abstract class BaseTemplateProcessor implements ITemplateProcessor {
 
 /**
  * Template processor that loads templates from the database
- * with tenant-specific and system fallback logic
+ * with tenant-specific and system fallback logic, including i18n support
  */
 export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
   constructor(
@@ -88,24 +90,47 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
   }
 
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
-    const { tenantId, templateData } = options;
+    const { tenantId, templateData, locale = 'en' } = options;
 
     // Try to get tenant-specific template first
     let template: any = null;
-    
+
     if (tenantId) {
       template = await this.knex('tenant_email_templates')
         .where({ tenant: tenantId, name: this.templateName })
         .first();
     }
-    
+
     // Fall back to system template if no tenant template
     if (!template) {
+      logger.debug(`[DatabaseTemplateProcessor] Looking for template '${this.templateName}' with locale '${locale}'`);
+
+      // Try to get template in requested language
       template = await this.knex('system_email_templates')
-        .where({ name: this.templateName })
+        .where({ name: this.templateName, language_code: locale })
         .first();
+
+      logger.debug(`[DatabaseTemplateProcessor] Template found:`, template ? {
+        name: template.name,
+        language_code: template.language_code,
+        subject: template.subject
+      } : 'null');
+
+      // If requested language not found, fall back to English
+      if (!template && locale !== 'en') {
+        logger.warn(`[DatabaseTemplateProcessor] Template '${this.templateName}' not found for locale '${locale}', falling back to English`);
+        template = await this.knex('system_email_templates')
+          .where({ name: this.templateName, language_code: 'en' })
+          .first();
+
+        logger.debug(`[DatabaseTemplateProcessor] English fallback template:`, template ? {
+          name: template.name,
+          language_code: template.language_code,
+          subject: template.subject
+        } : 'null');
+      }
     }
-    
+
     if (!template) {
       throw new Error(`Template '${this.templateName}' not found`);
     }

@@ -4,6 +4,8 @@ import { getSystemEmailService } from './index';
 import { DatabaseTemplateProcessor } from '../services/email/templateProcessors';
 import { getConnection } from '../db/db';
 import { runWithTenant } from '../db/index';
+import { getUserInfoForEmail, resolveEmailLocale } from '../notifications/emailLocaleResolver';
+import { SupportedLocale } from '../i18n/config';
 import logger from '@alga-psa/shared/core/logger';
 
 interface SendPortalInvitationEmailParams {
@@ -16,10 +18,12 @@ interface SendPortalInvitationEmailParams {
   clientLocationEmail?: string;
   clientLocationPhone?: string;
   fromName?: string;
+  recipientUserId?: string;
+  clientId?: string;  // Client ID (from contact.company_id) for locale resolution when user doesn't exist yet
 }
 
-export async function sendPortalInvitationEmail({ 
-  email, 
+export async function sendPortalInvitationEmail({
+  email,
   contactName,
   clientName,
   portalLink,
@@ -27,12 +31,40 @@ export async function sendPortalInvitationEmail({
   tenant,
   clientLocationEmail,
   clientLocationPhone,
-  fromName: _fromName
+  fromName: _fromName,
+  recipientUserId,
+  clientId
 }: SendPortalInvitationEmailParams): Promise<boolean> {
   try {
     return await runWithTenant(tenant, async () => {
       const knex = await getConnection(tenant);
-      
+
+      // Resolve recipient locale for language-aware email
+      let recipientLocale: SupportedLocale;
+
+      // Get recipient information for locale resolution
+      // For portal invitations, we need to include clientId for contacts who don't have user accounts yet
+      const baseInfo = recipientUserId
+        ? { email, userId: recipientUserId }
+        : await getUserInfoForEmail(tenant, email) || { email };
+
+      const recipientInfo = {
+        ...baseInfo,
+        ...(clientId && { clientId }) // Add clientId if provided, ensures it's used even when user doesn't exist yet
+      };
+
+      logger.info('[SendPortalInvitationEmail] Recipient info:', recipientInfo);
+
+      // Portal invitations are ALWAYS for client users (contacts), never internal users
+      // So we should always do full locale resolution with client/tenant hierarchy
+      recipientLocale = await resolveEmailLocale(tenant, recipientInfo);
+      logger.info('[SendPortalInvitationEmail] Resolved locale:', {
+        locale: recipientLocale,
+        email,
+        userId: recipientInfo.userId,
+        clientId: recipientInfo.clientId
+      });
+
       // Prepare template data
       const templateData = {
         contactName,
@@ -44,16 +76,16 @@ export async function sendPortalInvitationEmail({
         clientLocationPhone: clientLocationPhone || 'Not provided'
       };
 
-      // Create database template processor to get the template from tenant DB
+      // Create database template processor with locale support
       const templateProcessor = new DatabaseTemplateProcessor(knex, 'portal-invitation');
 
-      // Use SystemEmailService temporarily until domain approval is implemented
-      // This ensures better deliverability using the platform's authenticated domain
+      // Use SystemEmailService for better deliverability
       const systemEmailService = await getSystemEmailService();
       const result = await systemEmailService.sendEmail({
         to: email,
         templateProcessor,
         templateData,
+        locale: recipientLocale,
         replyTo: clientLocationEmail // Client email as reply-to
       });
 

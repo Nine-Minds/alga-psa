@@ -120,7 +120,7 @@
     "currentLanguage": "Current Language",
     "preference": {
       "label": "Language Preference",
-      "helper": "Select your preferred language for the interface",
+      "helper": "Select your preferred language for the interface and email notifications",
       "placeholder": "Select a language",
       "cleared": "Language preference cleared. Using default language...",
       "updating": "Updating language preference...",

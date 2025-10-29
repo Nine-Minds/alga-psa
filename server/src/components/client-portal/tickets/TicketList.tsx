@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { useSearchParams } from 'next/navigation';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
@@ -25,6 +26,7 @@ import { useTranslation } from 'server/src/lib/i18n/client';
 
 export function TicketList() {
   const { t } = useTranslation('clientPortal');
+  const searchParams = useSearchParams();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -166,6 +168,20 @@ export function TicketList() {
   useEffect(() => {
     loadTickets();
   }, [loadTickets]);
+
+  // Handle deep link - open ticket from URL parameter
+  useEffect(() => {
+    const ticketParam = searchParams.get('ticket');
+    if (ticketParam && tickets.length > 0 && !selectedTicketId) {
+      // Find ticket by ticket_number (e.g., TIC001025) or ticket_id
+      const ticket = tickets.find(
+        t => t.ticket_number === ticketParam || t.ticket_id === ticketParam
+      );
+      if (ticket && ticket.ticket_id) {
+        setSelectedTicketId(ticket.ticket_id);
+      }
+    }
+  }, [searchParams, tickets, selectedTicketId]);
 
   const handleSort = useCallback((field: string) => {
     setSortDirection(current => 

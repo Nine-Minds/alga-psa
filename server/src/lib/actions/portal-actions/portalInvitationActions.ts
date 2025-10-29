@@ -4,6 +4,7 @@ import { createTenantKnex, runWithTenant } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { PortalInvitationService } from '../../services/PortalInvitationService';
 import { sendPortalInvitationEmail } from '../../email/sendPortalInvitationEmail';
+import { getTenantSlugForTenant } from '../tenant-actions/tenantSlugActions';
 import { getSystemEmailService } from '../../email';
 import { TenantEmailService } from '../../services/TenantEmailService';
 import { UserService } from '../../api/services/UserService';
@@ -373,9 +374,25 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         .where({ tenant, client_id: contact.client_id })
         .first() : null;
 
+      const tenantSlug = await getTenantSlugForTenant(tenant);
+
       // Generate portal setup URL with robust base URL fallback
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || (process.env.HOST ? `https://${process.env.HOST}` : '');
-      const portalSetupUrl = `${baseUrl}/auth/portal/setup?token=${encodeURIComponent(invitationResult.token || '')}`;
+      const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        process.env.NEXTAUTH_URL ||
+        (process.env.HOST ? `https://${process.env.HOST}` : '');
+
+      if (!baseUrl) {
+        throw new Error('Base URL is not configured for portal invitations');
+      }
+
+      const setupUrl = new URL(
+        '/auth/portal/setup',
+        baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
+      );
+      setupUrl.searchParams.set('token', invitationResult.token || '');
+      setupUrl.searchParams.set('tenant', tenantSlug);
+      const portalSetupUrl = setupUrl.toString();
 
       // Calculate expiration time for display
       const expirationTime = '24 hours';
@@ -390,7 +407,8 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         tenant: tenant,
         clientLocationEmail: mspLocation.email,  // MSP's email for reply-to
         clientLocationPhone: mspLocation.phone || 'Not provided',  // MSP's phone
-        fromName: `${tenantDefaultClient.client_name} Portal`  // MSP's name for the portal
+        fromName: `${tenantDefaultClient.client_name} Portal`,  // MSP's name for the portal
+        clientId: contact.client_id  // Pass client ID (stored in company_id field) for locale resolution
       });
 
       return {

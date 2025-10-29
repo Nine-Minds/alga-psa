@@ -117,7 +117,7 @@
     "currentLanguage": "Huidige taal",
     "preference": {
       "label": "Taalvoorkeur",
-      "helper": "Selecteer je voorkeurstaal voor de interface",
+      "helper": "Selecteer je voorkeurstaal voor de interface en e-mailmeldingen",
       "placeholder": "Selecteer een taal",
       "cleared": "Taalvoorkeur verwijderd. Standaardtaal wordt gebruikt...",
       "updating": "Taalvoorkeur wordt bijgewerkt...",

@@ -1,10 +1,11 @@
 import logger from '@alga-psa/shared/core/logger';
-import { 
+import {
   IEmailProvider,
   EmailMessage as ProviderEmailMessage,
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
 } from '../../types/email.types';
+import { SupportedLocale } from '../i18n/config';
 
 export interface EmailAddress {
   email: string;
@@ -24,6 +25,7 @@ export interface ITemplateProcessor {
 export interface TemplateProcessorOptions {
   templateData?: Record<string, any>;
   tenantId?: string;
+  locale?: SupportedLocale;
 }
 
 export interface EmailTemplateContent {
@@ -123,7 +125,8 @@ export abstract class BaseEmailService {
       if (params.templateProcessor) {
         const templateContent = await params.templateProcessor.process({
           templateData: params.templateData,
-          tenantId: params.tenantId
+          tenantId: params.tenantId,
+          locale: params.locale
         });
         subject = templateContent.subject;
         html = templateContent.html;
