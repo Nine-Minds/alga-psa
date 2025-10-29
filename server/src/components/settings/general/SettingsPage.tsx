@@ -39,6 +39,7 @@ import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
@@ -47,8 +48,6 @@ const SettingsPage = (): JSX.Element =>  {
   const tabParam = searchParams?.get('tab');
   const billingFeatureFlag = useFeatureFlag('billing-enabled');
   const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
-  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
-  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -250,8 +249,14 @@ const SettingsPage = (): JSX.Element =>  {
     },
     { // Add the new Integrations tab definition
       label: "Integrations",
-      content: isAdvancedFeaturesEnabled ? (
+      content: (
         <div className="space-y-6">
+          <Alert variant="info">
+            <AlertDescription>
+              QuickBooks Online and Xero integrations are available to testers only. Expect missing pieces while we iterate, and please work in a sandbox environment when evaluating. We appreciate your feedback as we move toward general availability.
+            </AlertDescription>
+          </Alert>
+
           {/* QuickBooks Online Integration */}
           <QboIntegrationSettings />
 
@@ -271,7 +276,7 @@ const SettingsPage = (): JSX.Element =>  {
             </CardContent>
           </Card>
         </div>
-      ) : <FeaturePlaceholder />,
+      ),
     }
   ];
 
