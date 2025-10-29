@@ -2,8 +2,13 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = function(knex) {
-  return knex.schema.createTable('document_folders', (table) => {
+exports.up = async function(knex) {
+  const exists = await knex.schema.hasTable('document_folders');
+  if (exists) {
+    return;
+  }
+
+  await knex.schema.createTable('document_folders', (table) => {
     table.uuid('folder_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.string('folder_path', 500).notNullable();

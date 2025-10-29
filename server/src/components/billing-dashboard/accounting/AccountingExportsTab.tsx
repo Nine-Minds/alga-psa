@@ -9,6 +9,15 @@ import { Dialog } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge, BadgeVariant } from 'server/src/components/ui/Badge';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
+import {
+  listAccountingExportBatches,
+  getAccountingExportBatch,
+  createAccountingExportBatch,
+  updateAccountingExportBatchStatus,
+  executeAccountingExportBatch,
+  previewAccountingExport
+} from 'server/src/lib/actions/accountingExportActions';
+import type { AccountingExportPreviewResult } from 'server/src/lib/actions/accountingExportActions';
 
 type BatchDetail = {
   batch: AccountingExportBatch | null;
@@ -27,27 +36,6 @@ interface AccountingExportRow {
   created_by?: string | null;
   raw: AccountingExportBatch;
 }
-
-type ExportPreviewLine = {
-  invoiceId: string;
-  invoiceNumber: string;
-  invoiceDate: string;
-  invoiceStatus: string;
-  clientName: string | null;
-  chargeId: string;
-  amountCents: number;
-  currencyCode: string;
-  servicePeriodStart: string | null;
-  servicePeriodEnd: string | null;
-};
-
-type ExportPreviewResponse = {
-  invoiceCount: number;
-  lineCount: number;
-  totalsByCurrency: Record<string, number>;
-  lines: ExportPreviewLine[];
-  truncated: boolean;
-};
 
 type CreateFormState = typeof DEFAULT_CREATE_FORM;
 
@@ -177,7 +165,7 @@ const AccountingExportsTab: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [detailActionError, setDetailActionError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [previewData, setPreviewData] = useState<ExportPreviewResponse | null>(null);
+  const [previewData, setPreviewData] = useState<AccountingExportPreviewResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
@@ -200,21 +188,14 @@ const AccountingExportsTab: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
+      const params: { status?: AccountingExportStatus; adapter_type?: string } = {};
       if (filters.status !== 'all') {
-        params.set('status', filters.status);
+        params.status = filters.status;
       }
       if (filters.adapter !== 'all') {
-        params.set('adapter_type', filters.adapter);
+        params.adapter_type = filters.adapter;
       }
-      const query = params.toString();
-      const response = await fetch(`/api/accounting/exports${query ? `?${query}` : ''}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to load export batches (${response.status})`);
-      }
-      const data: AccountingExportBatch[] = await response.json();
+      const data: AccountingExportBatch[] = await listAccountingExportBatches(params);
       setBatches(data);
       setSelectedRow((prev) => {
         if (!prev) return prev;
@@ -243,13 +224,7 @@ const AccountingExportsTab: React.FC = () => {
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const response = await fetch(`/api/accounting/exports/${batchId}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to load batch details (${response.status})`);
-      }
-      const data: BatchDetail = await response.json();
+      const data = await getAccountingExportBatch(batchId);
       setBatchDetail(data);
     } catch (err: any) {
       console.error('Error fetching batch detail:', err);
@@ -383,27 +358,11 @@ const AccountingExportsTab: React.FC = () => {
     setPreviewError(null);
     try {
       const invoiceStatuses = parseInvoiceStatuses(createForm.invoiceStatuses);
-      const response = await fetch('/api/accounting/exports/preview', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          filters: {
-            startDate: createForm.startDate || undefined,
-            endDate: createForm.endDate || undefined,
-            invoiceStatuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined
-          }
-        })
+      const data = await previewAccountingExport({
+        startDate: createForm.startDate || undefined,
+        endDate: createForm.endDate || undefined,
+        invoiceStatuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined
       });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Failed to generate preview (${response.status})`);
-      }
-
-      const data: ExportPreviewResponse = await response.json();
       setPreviewData(data);
     } catch (err: any) {
       console.error('Error generating export preview:', err);
@@ -431,20 +390,7 @@ const AccountingExportsTab: React.FC = () => {
         notes: createForm.notes || undefined
       };
 
-      const response = await fetch('/api/accounting/exports', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create export batch (${response.status})`);
-      }
-
-      const createdBatch: AccountingExportBatch = await response.json();
+      const createdBatch = await createAccountingExportBatch(body);
       resetCreateDialog(true);
       await fetchBatches();
       await handleRowClick({
@@ -471,15 +417,7 @@ const AccountingExportsTab: React.FC = () => {
     setActionLoading(true);
     setDetailActionError(null);
     try {
-      const response = await fetch(`/api/accounting/exports/${selectedRow.batch_id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status })
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to update batch status (${response.status})`);
-      }
+      await updateAccountingExportBatchStatus(selectedRow.batch_id, { status });
       await refreshDetail();
       await fetchBatches();
     } catch (err: any) {
@@ -495,14 +433,7 @@ const AccountingExportsTab: React.FC = () => {
     setActionLoading(true);
     setDetailActionError(null);
     try {
-      const response = await fetch(`/api/accounting/exports/${selectedRow.batch_id}/execute`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Failed to execute batch (${response.status})`);
-      }
+      await executeAccountingExportBatch(selectedRow.batch_id);
       await refreshDetail();
       await fetchBatches();
     } catch (err: any) {

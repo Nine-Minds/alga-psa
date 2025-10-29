@@ -105,9 +105,7 @@ exports.up = async function up(knex) {
     console.warn('[accounting_export_tables] Skipping create_distributed_table calls (function unavailable)');
   }
 
-  await ensureTenantPolicy(knex, 'accounting_export_batches');
-  await ensureTenantPolicy(knex, 'accounting_export_lines');
-  await ensureTenantPolicy(knex, 'accounting_export_errors');
+  // Row level security is managed elsewhere; no automatic policies applied here.
 };
 
 /**
@@ -118,35 +116,6 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('accounting_export_lines');
   await knex.schema.dropTableIfExists('accounting_export_batches');
 };
-
-async function ensureTenantPolicy(knex, tableName) {
-  await knex.raw(`ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;`);
-  await knex.raw(`
-    DO $policy$
-    BEGIN
-      IF EXISTS (
-        SELECT 1
-        FROM pg_policies
-        WHERE schemaname = 'public'
-          AND tablename = '${tableName}'
-          AND policyname = 'tenant_isolation_policy'
-      ) THEN
-        EXECUTE $alter$
-          ALTER POLICY tenant_isolation_policy ON ${tableName}
-            USING (tenant = current_setting('app.current_tenant')::uuid)
-            WITH CHECK (tenant = current_setting('app.current_tenant')::uuid)
-        $alter$;
-      ELSE
-        EXECUTE $create$
-          CREATE POLICY tenant_isolation_policy ON ${tableName}
-            USING (tenant = current_setting('app.current_tenant')::uuid)
-            WITH CHECK (tenant = current_setting('app.current_tenant')::uuid)
-        $create$;
-      END IF;
-    END;
-    $policy$;
-  `);
-}
 
 async function distributeTable(knex, tableName) {
   await knex.raw(`

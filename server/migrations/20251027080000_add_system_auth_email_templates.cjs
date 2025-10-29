@@ -22,16 +22,45 @@ exports.up = async function(knex) {
   // Fetch or create notification subtype IDs
   const subtypeIds = {};
 
-  // Fetch existing subtypes
+  // Ensure Authentication category exists
+  let authCategory = await knex('notification_categories')
+    .where({ name: 'Authentication' })
+    .first();
+
+  if (!authCategory) {
+    [authCategory] = await knex('notification_categories')
+      .insert({
+        name: 'Authentication',
+        description: 'Authentication and security notifications',
+        is_enabled: true,
+        is_default_enabled: true
+      })
+      .returning('*');
+  }
+
   const existingSubtypes = ['email-verification', 'password-reset', 'portal-invitation'];
+  const existingSubtypeDescriptions = {
+    'email-verification': 'Email verification instructions for new users',
+    'password-reset': 'Password reset instructions for users',
+    'portal-invitation': 'Invitation email for customer portal access'
+  };
 
   for (const name of existingSubtypes) {
-    const subtype = await knex('notification_subtypes')
+    let subtype = await knex('notification_subtypes')
       .where({ name })
       .first();
 
     if (!subtype) {
-      throw new Error(`Notification subtype '${name}' not found in database.`);
+      [subtype] = await knex('notification_subtypes')
+        .insert({
+          category_id: authCategory.id,
+          name,
+          description: existingSubtypeDescriptions[name] ?? name,
+          is_enabled: true,
+          is_default_enabled: true
+        })
+        .returning('*');
+      console.log(`✓ Created notification subtype: ${name}`);
     }
 
     subtypeIds[name] = subtype.id;
@@ -42,24 +71,6 @@ exports.up = async function(knex) {
     'tenant-recovery': 'Tenant/organization account recovery and login links',
     'no-account-found': 'Notification when no account is found for email address'
   };
-
-  // Get or create Authentication category for new subtypes
-  let authCategory = await knex('notification_categories')
-    .where({ name: 'Authentication' })
-    .first();
-
-  if (!authCategory) {
-    // Use the same category as email-verification
-    const emailVerificationSubtype = await knex('notification_subtypes')
-      .where({ id: subtypeIds['email-verification'] })
-      .first();
-
-    if (emailVerificationSubtype) {
-      authCategory = await knex('notification_categories')
-        .where({ id: emailVerificationSubtype.category_id })
-        .first();
-    }
-  }
 
   for (const [name, description] of Object.entries(newSubtypes)) {
     let subtype = await knex('notification_subtypes')

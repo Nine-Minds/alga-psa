@@ -10,6 +10,13 @@ import { PlusIcon } from '@radix-ui/react-icons';
 
 import '../chat/chat.css';
 
+const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
+const featureFlagsAreDisabled =
+  typeof process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS === 'string' &&
+  FEATURE_FLAG_DISABLE_VALUES.has(
+    process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS.toLowerCase()
+  );
+
 interface RightSidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -57,14 +64,33 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   }, [auth_token]);
 
   useEffect(() => {
+    if (featureFlagsAreDisabled) {
+      setAiFeatureEnabled(true);
+      return;
+    }
+
     if (!posthog) return;
 
-    posthog.onFeatureFlags(function() {
-      // feature flags should be available at this point
-      if (posthog.isFeatureEnabled('AI-stuff')) {
-        setAiFeatureEnabled(true);
+    const updateFlagState = () => {
+      try {
+        setAiFeatureEnabled(!!posthog.isFeatureEnabled?.('AI-stuff'));
+      } catch (error) {
+        console.warn('Failed to evaluate AI-stuff feature flag', error);
+        setAiFeatureEnabled(false);
       }
+    };
+
+    updateFlagState();
+
+    const removeListener = posthog.onFeatureFlags?.(() => {
+      updateFlagState();
     });
+
+    return () => {
+      if (typeof removeListener === 'function') {
+        removeListener();
+      }
+    };
   }, [posthog]);
 
   const handleNewChat = () => {
