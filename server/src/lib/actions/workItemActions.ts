@@ -75,6 +75,10 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
               .andOn('t.tenant', '=', db.raw('?', [tenant]));
         }
       )
+      .leftJoin('users as u_assignee', function() {
+        this.on('t.assigned_to', '=', 'u_assignee.user_id')
+            .andOn('t.tenant', '=', 'u_assignee.tenant');
+      })
        .leftJoin('schedule_entries as se_ticket', function() {
          this.on('t.ticket_id', '=', 'se_ticket.work_item_id')
              .andOn('t.tenant', '=', 'se_ticket.tenant')

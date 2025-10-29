@@ -4,11 +4,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle, PlayCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle, PlayCircle } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input'; // Assuming WorkflowDataWithSystemFlag is exported from here
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import {
   DropdownMenu,
@@ -69,8 +71,6 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
   const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
   const [workflowToTest, setWorkflowToTest] = useState<WorkflowWithEvents | null>(null);
   const [selectedWorkflowForVersions, setSelectedWorkflowForVersions] = useState<WorkflowWithEvents | null>(null);
-  const [sortBy, setSortBy] = useState<string>('name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Handle workflowId if provided
   useEffect(() => {
@@ -108,18 +108,8 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
       setLoading(false);
     }
   };
-  
-  // Handle sorting
-  const handleSort = (columnKey: string) => {
-    if (sortBy === columnKey) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(columnKey);
-      setSortDirection('asc');
-    }
-  };
 
-  // Filter by status/search, sort by user preference, and memoize to avoid re-processing on every render
+  // Filter by status/search - let DataTable handle sorting
   const filteredWorkflows = useMemo(() => {
     return workflows
       .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
@@ -127,48 +117,211 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
         workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-      .sort((a, b) => {
-        let aValue: string | number = '';
-        let bValue: string | number = '';
+      );
+  }, [workflows, showInactive, searchTerm]);
 
-        switch (sortBy) {
-          case 'name':
-            aValue = a.name.toLowerCase();
-            bValue = b.name.toLowerCase();
-            break;
-          case 'version':
-            aValue = a.version;
-            bValue = b.version;
-            break;
-          case 'status':
-            aValue = a.isActive ? 'active' : 'inactive';
-            bValue = b.isActive ? 'active' : 'inactive';
-            break;
-          case 'events':
-            aValue = a.events.length;
-            bValue = b.events.length;
-            break;
-          case 'lastUpdated':
-            aValue = new Date(a.lastUpdated || '').getTime();
-            bValue = new Date(b.lastUpdated || '').getTime();
-            break;
-          default:
-            aValue = a.name.toLowerCase();
-            bValue = b.name.toLowerCase();
-        }
-
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortDirection === 'asc'
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        } else {
-          return sortDirection === 'asc'
-            ? (aValue as number) - (bValue as number)
-            : (bValue as number) - (aValue as number);
-        }
-      });
-  }, [workflows, sortBy, sortDirection, showInactive, searchTerm]);
+  // Define columns for DataTable
+  const columns: ColumnDefinition<WorkflowWithEvents>[] = useMemo(() => [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      sortable: true,
+      width: '30%',
+      render: (value, workflow) => (
+        <div className="flex items-center">
+          <div>
+            <div className="text-sm font-medium text-gray-900">
+              {workflow.name} {workflow.isSystemManaged && (
+                <Badge variant="secondary" className="ml-2">
+                  System
+                </Badge>
+              )}
+            </div>
+            <div className="text-sm text-gray-500">{workflow.description}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Test',
+      dataIndex: 'id',
+      width: '8%',
+      render: (value, workflow) => (
+        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+          <Button
+            id={`test-workflow-button-${workflow.id}`}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleTestWorkflow(workflow.id);
+            }}
+            title="Test Workflow"
+          >
+            <span className="sr-only">Test workflow</span>
+            <PlayCircle className="h-5 w-5 text-primary" />
+          </Button>
+        </div>
+      ),
+    },
+    {
+      title: 'Version',
+      dataIndex: 'version',
+      sortable: true,
+      width: '10%',
+      render: (value, workflow) => (
+        <div className="flex items-center">
+          <Badge className="bg-primary-100 text-primary-800">
+            v{workflow.version}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'isActive',
+      sortable: true,
+      width: '10%',
+      render: (value, workflow) => (
+        <Badge
+          className={`${
+            workflow.isActive
+              ? 'bg-success-100 text-success-800'
+              : 'bg-secondary-100 text-secondary-800'
+          }`}
+        >
+          {workflow.isActive ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      title: 'Events',
+      dataIndex: 'events',
+      sortable: true,
+      width: '22%',
+      render: (value, workflow) => (
+        <div className="flex flex-wrap gap-1">
+          {workflow.events.length > 0 ? (
+            workflow.events.map((event) => (
+              <Badge key={event} className="bg-blue-100 text-blue-800">
+                {event}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-sm text-gray-500">No events</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: 'Last Updated',
+      dataIndex: 'lastUpdated',
+      sortable: true,
+      width: '12%',
+      render: (value, workflow) => (
+        <span className="text-sm text-gray-500">
+          {workflow.lastUpdated ? new Date(workflow.lastUpdated).toLocaleDateString() : '-'}
+        </span>
+      ),
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'actions',
+      width: '8%',
+      render: (value, workflow) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id={`${workflow.id}-actions-menu`}
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="sr-only">Open menu</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                id={`edit-${workflow.id}-menu-item`}
+                onClick={() => handleEditWorkflow(workflow.id)}
+                disabled={workflow.isSystemManaged}
+              >
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`versions-${workflow.id}-menu-item`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleManageVersions(workflow);
+                }}
+                disabled={workflow.isSystemManaged}
+              >
+                <History className="h-4 w-4 mr-2" />
+                Manage Versions
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`test-${workflow.id}-menu-item`}
+                onClick={() => handleTestWorkflow(workflow.id)}
+              >
+                <PlayCircle className="h-4 w-4 mr-2" />
+                Test Workflow
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`duplicate-${workflow.id}-menu-item`}
+                disabled={workflow.isSystemManaged}
+              >
+                Duplicate
+              </DropdownMenuItem>
+              {workflow.isActive ? (
+                <DropdownMenuItem
+                  id={`deactivate-${workflow.id}-menu-item`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    console.log(`Deactivate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
+                    handleToggleWorkflowStatus(workflow.id, workflow.isActive);
+                  }}
+                  disabled={workflow.isSystemManaged}
+                >
+                  Deactivate
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  id={`activate-${workflow.id}-menu-item`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    console.log(`Activate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
+                    handleToggleWorkflowStatus(workflow.id, workflow.isActive);
+                  }}
+                  disabled={workflow.isSystemManaged}
+                >
+                  Activate
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                id={`delete-${workflow.id}-menu-item`}
+                className="text-red-600 focus:text-red-600"
+                onClick={async () => {
+                  if (workflow.isSystemManaged) return;
+                  if (confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
+                    toast.success('Workflow deleted');
+                    await loadWorkflows();
+                  }
+                }}
+                disabled={workflow.isSystemManaged}
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    },
+  ], [handleTestWorkflow, handleEditWorkflow, handleManageVersions, handleToggleWorkflowStatus, loadWorkflows]);
 
   // Handle creating a new workflow
   const handleCreateWorkflow = () => {
@@ -345,262 +498,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
               </div>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('name')}
-                      id="workflow-name-header"
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Name</span>
-                        {sortBy === 'name' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                        )}
-                      </div>
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Test
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('version')}
-                      id="workflow-version-header"
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Version</span>
-                        {sortBy === 'version' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                        )}
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('status')}
-                      id="workflow-status-header"
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Status</span>
-                        {sortBy === 'status' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                        )}
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('events')}
-                      id="workflow-events-header"
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Events</span>
-                        {sortBy === 'events' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                        )}
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('lastUpdated')}
-                      id="workflow-last-updated-header"
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Last Updated</span>
-                        {sortBy === 'lastUpdated' && (
-                          sortDirection === 'asc' ?
-                            <ChevronUp className="h-4 w-4 text-gray-400" /> :
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                        )}
-                      </div>
-                    </th>
-                    <th scope="col" className="relative px-6 py-3">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredWorkflows.map((workflow) => (
-                    <tr
-                      key={workflow.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => !workflow.isSystemManaged && handleEditWorkflow(workflow.id)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {workflow.name} {workflow.isSystemManaged && (
-                               <Badge variant="secondary" className="ml-2">
-                                 System
-                               </Badge>
-                             )}
-
-                            </div>
-                            <div className="text-sm text-gray-500">{workflow.description}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Button
-                            id={`test-workflow-button-${workflow.id}`}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTestWorkflow(workflow.id);
-                            }}
-                            title="Test Workflow"
-                          >
-                            <span className="sr-only">Test workflow</span>
-                            <PlayCircle className="h-5 w-5 text-primary" />
-                          </Button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Badge className="bg-primary-100 text-primary-800">
-                            v{workflow.version}
-                          </Badge>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge
-                          className={`${
-                            workflow.isActive
-                              ? 'bg-success-100 text-success-800'
-                              : 'bg-secondary-100 text-secondary-800'
-                          }`}
-                        >
-                          {workflow.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-wrap gap-1">
-                          {workflow.events.length > 0 ? (
-                            workflow.events.map((event) => (
-                              <Badge key={event} className="bg-blue-100 text-blue-800">
-                                {event}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-gray-500">No events</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {workflow.lastUpdated ? new Date(workflow.lastUpdated).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              id={`${workflow.id}-actions-menu`}
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span className="sr-only">Open menu</span>
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              id={`edit-${workflow.id}-menu-item`}
-                              onClick={() => handleEditWorkflow(workflow.id)}
-                              disabled={workflow.isSystemManaged}
-                            >
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              id={`versions-${workflow.id}-menu-item`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleManageVersions(workflow);
-                              }}
-                              disabled={workflow.isSystemManaged}
-                            >
-                              <History className="h-4 w-4 mr-2" />
-                              Manage Versions
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              id={`test-${workflow.id}-menu-item`}
-                              onClick={() => handleTestWorkflow(workflow.id)}
-                            >
-                              <PlayCircle className="h-4 w-4 mr-2" />
-                              Test Workflow
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              id={`duplicate-${workflow.id}-menu-item`}
-                              disabled={workflow.isSystemManaged}
-                            >
-                              Duplicate
-                            </DropdownMenuItem>
-                            {workflow.isActive ? (
-                              <DropdownMenuItem
-                                id={`deactivate-${workflow.id}-menu-item`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  console.log(`Deactivate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
-                                  handleToggleWorkflowStatus(workflow.id, workflow.isActive);
-                                }}
-                                disabled={workflow.isSystemManaged}
-                              >
-                                Deactivate
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem
-                                id={`activate-${workflow.id}-menu-item`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  console.log(`Activate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
-                                  handleToggleWorkflowStatus(workflow.id, workflow.isActive);
-                                }}
-                                disabled={workflow.isSystemManaged}
-                              >
-                                Activate
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              id={`delete-${workflow.id}-menu-item`}
-                              className="text-red-600 focus:text-red-600"
-                              onClick={async () => {
-                                if (workflow.isSystemManaged) return; // Prevent deletion
-                                // TODO: Implement delete workflow functionality
-                                if (confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
-                                  toast.success('Workflow deleted');
-                                  await loadWorkflows();
-                                }
-                              }}
-                              disabled={workflow.isSystemManaged}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              id="workflows-table"
+              data={filteredWorkflows}
+              columns={columns}
+              pagination={false}
+              onRowClick={(workflow) => !workflow.isSystemManaged && handleEditWorkflow(workflow.id)}
+              initialSorting={[{ id: 'name', desc: false }]}
+            />
           )}
         </Card>
       )}
