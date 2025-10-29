@@ -10,7 +10,7 @@ import {
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
-import { reprovisionExtension } from '@/lib/actions/extensionDomainActions';
+import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
 
 const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -75,6 +75,7 @@ export interface AssistantMessageResponse {
     name: string;
     arguments: Record<string, unknown>;
     result?: unknown;
+    toolCallId?: string;
   };
   nextMessages: ChatCompletionMessage[];
   modelMessages: ChatCompletionMessage[];
@@ -262,7 +263,18 @@ export class ChatCompletionsService {
   }
 
   private static async executeAfterApproval(params: ExecuteCompletionParams): Promise<CompletionResponse> {
-    const { messages, functionCall, action, baseUrl, tenantId, userId, chatId, cookieHeader } = params;
+    const {
+      messages,
+      functionCall,
+      action,
+      baseUrl,
+      tenantId,
+      userId,
+      chatId: rawChatId,
+      cookieHeader,
+    } = params;
+
+    const chatId = rawChatId ?? null;
 
     const entry = this.resolveRegistryEntry(
       functionCall.entryId ?? functionCall.arguments?.entryId ?? functionCall.name,
@@ -846,7 +858,6 @@ export class ChatCompletionsService {
         tool_choice: 'auto',
         temperature: 1.0,
         top_p: 0.95,
-        top_k: 20,
       });
 
       const choice = completion.choices[0];

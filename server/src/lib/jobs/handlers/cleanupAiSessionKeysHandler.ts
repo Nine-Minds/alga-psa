@@ -2,6 +2,7 @@ import logger from '@shared/core/logger';
 
 export interface CleanupAiSessionKeysJobData {
   trigger?: 'cron' | 'manual';
+  [key: string]: unknown;
 }
 
 export async function cleanupAiSessionKeysHandler(): Promise<void> {

@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { HuggingFaceChatModel } from '../models/HuggingFaceChatModel';
 import { OpenRouterChatModel } from '../models/OpenRouterChatModel';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
@@ -13,10 +12,6 @@ interface StreamRequestBody {
 }
 
 export class ChatStreamService {
-  private static getHuggingFaceModel() {
-    return new HuggingFaceChatModel();
-  }
-
   private static async getOpenRouterModel() {
     const secretProvider = await getSecretProviderInstance();
     const apiKey =
@@ -45,45 +40,17 @@ export class ChatStreamService {
       });
 
       const writer = transformStream.writable.getWriter();
-      let isStreamComplete = false;
-
-      const onTokenReceived = (token: string) => {
-        if (token === '[DONE]') {
-          isStreamComplete = true;
-          writer.close();
-          return;
-        }
-
-        writer.write({
-          content: token,
-          type: 'text',
-        });
-      };
 
       (async () => {
         try {
-          if (body.model === 'openrouter') {
-            const model = await this.getOpenRouterModel();
-            const response = await model.sendMessage(body.inputs);
-            writer.write({
-              content: response.text,
-              type: response.error ? 'error' : 'text',
-            });
-            isStreamComplete = true;
-            writer.close();
-          } else {
-            const model = this.getHuggingFaceModel();
-            await model.streamMessage(body.inputs, onTokenReceived, {
-              ...body.options,
-              auth_token: body.meta?.authorization,
-            });
-
-            if (!isStreamComplete) {
-              isStreamComplete = true;
-              writer.write({ content: '[DONE]' });
-              writer.close();
-            }
-          }
+          const model = await this.getOpenRouterModel();
+          const response = await model.sendMessage(body.inputs);
+          writer.write({
+            content: response.text,
+            type: response.error ? 'error' : 'text',
+          });
+          writer.write({ content: '[DONE]' });
+          writer.close();
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error occurred';
@@ -95,9 +62,8 @@ export class ChatStreamService {
             content: "An error occurred during streaming",
             type: 'error',
           });
-          if (!isStreamComplete) {
-            writer.close();
-          }
+          writer.write({ content: '[DONE]' });
+          writer.close();
         }
       })();
 
@@ -128,7 +94,7 @@ export class ChatStreamService {
     const requestId = Math.random().toString(36).substring(7);
     try {
       const body = (await req.json()) as StreamRequestBody;
-      const model = this.getHuggingFaceModel();
+      const model = await this.getOpenRouterModel();
 
       const transformStream = new TransformStream({
         transform: (chunk, controller) => {
@@ -141,23 +107,16 @@ export class ChatStreamService {
       });
 
       const writer = transformStream.writable.getWriter();
-      const onTokenReceived = (token: string) => {
-        if (token === '[DONE]') {
-          writer.close();
-          return;
-        }
-        writer.write({
-          content: token,
-          type: 'text',
-        });
-      };
 
       (async () => {
         try {
-          await model.streamMessage(body.inputs, onTokenReceived, {
-            ...body.options,
-            auth_token: body.meta?.authorization,
+          const response = await model.sendMessage(body.inputs);
+          writer.write({
+            content: response.text,
+            type: response.error ? 'error' : 'text',
           });
+          writer.write({ content: '[DONE]' });
+          writer.close();
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error occurred';
@@ -169,6 +128,7 @@ export class ChatStreamService {
             content: "An error occurred during streaming",
             type: 'error',
           });
+          writer.write({ content: '[DONE]' });
           writer.close();
         }
       })();
