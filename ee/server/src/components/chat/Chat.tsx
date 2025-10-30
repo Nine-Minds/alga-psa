@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useId } from 'react';
 import Image from 'next/image';
 
-import { Message } from '../../components/message/Message';
+import { Message, type FunctionCallMeta } from '../../components/message/Message';
 import { IChat } from '../../interfaces/chat.interface';
 import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
 import { HfInference } from '@huggingface/inference';
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 
-import '../../components/chat/chat.css';
+import './chat.css';
 
 type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
@@ -50,6 +50,113 @@ type PendingFunctionState = {
   functionCall: FunctionCallInfo;
   nextMessages: ChatCompletionMessage[];
   chatId?: string | null;
+};
+
+const sanitizeThinking = (text: string) =>
+  text.replace(/<think>/gi, '').replace(/<\/think>/gi, '').trim();
+
+const determineHttpDetails = (fn: PendingFunctionState | null) => {
+  if (!fn) {
+    return {
+      method: 'GET',
+      normalizedMethod: undefined as string | undefined,
+      isHttpMethod: false,
+      endpointLabel: 'GET',
+    };
+  }
+
+  const callArgs = fn.functionCall?.arguments ?? {};
+  const metadataArgs = fn.metadata?.arguments ?? {};
+  const methodValue =
+    typeof callArgs['method'] === 'string'
+      ? callArgs['method']
+      : typeof metadataArgs['method'] === 'string'
+        ? metadataArgs['method']
+        : undefined;
+  let normalizedMethod = methodValue ? methodValue.trim().toUpperCase() : undefined;
+
+  if (!normalizedMethod) {
+    const candidates = [
+      fn.functionCall?.entryId,
+      fn.metadata?.id,
+      fn.functionCall?.name,
+    ];
+    for (const candidate of candidates) {
+      if (typeof candidate !== 'string') {
+        continue;
+      }
+      const match = candidate.trim().match(/^[A-Za-z]+/);
+      if (!match) {
+        continue;
+      }
+      const inferred = match[0].toUpperCase();
+      if (STANDARD_HTTP_METHOD_SET.has(inferred)) {
+        normalizedMethod = inferred;
+        break;
+      }
+    }
+  }
+
+  const method = normalizedMethod ?? 'GET';
+  const isHttpMethod = STANDARD_HTTP_METHOD_SET.has(method);
+  const effectiveNormalizedMethod = isHttpMethod ? method : undefined;
+
+  const pathValue =
+    typeof callArgs['path'] === 'string'
+      ? callArgs['path']
+      : typeof metadataArgs['path'] === 'string'
+        ? metadataArgs['path']
+        : undefined;
+
+  const fallbackIdentifier =
+    fn.functionCall?.entryId ??
+    fn.metadata?.id ??
+    fn.functionCall?.name ??
+    method;
+
+  let endpointLabel: string;
+  if (pathValue) {
+    endpointLabel = `${method} ${pathValue}`;
+  } else {
+    const stripped = fallbackIdentifier.replace(/^[A-Za-z]+-/, '');
+    const normalizedPath = stripped.startsWith('_')
+      ? stripped.replace(/_/g, '/')
+      : stripped;
+    const cleanedPath = normalizedPath
+      .replace(/\/+/g, '/')
+      .replace(/\/$/, '')
+      .trim();
+    if (cleanedPath.length > 0) {
+      const prefixed = cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
+      endpointLabel = `${method} ${prefixed}`;
+    } else {
+      endpointLabel = fallbackIdentifier;
+    }
+  }
+
+  return {
+    method,
+    normalizedMethod: effectiveNormalizedMethod,
+    isHttpMethod,
+    endpointLabel,
+  };
+};
+
+const buildFunctionCallMeta = (
+  fn: PendingFunctionState,
+  action: 'approve' | 'decline',
+  status: FunctionCallMeta['status'],
+): FunctionCallMeta => {
+  const httpDetails = determineHttpDetails(fn);
+  return {
+    displayName: fn.metadata.displayName ?? fn.functionCall?.name ?? 'Function call',
+    method: httpDetails.method,
+    endpoint: httpDetails.endpointLabel,
+    action,
+    status,
+    timestamp: new Date().toISOString(),
+    preview: sanitizeThinking(fn.assistantPreview ?? ''),
+  };
 };
 
 type ChatProps = {
@@ -92,16 +199,20 @@ export const Chat: React.FC<ChatProps> = ({
   onUserInput,
   hf,
 }) => {
+  const textareaId = useId();
   const [messageText, setMessageText] = useState('');
   const [incomingMessage, setIncomingMessage] = useState('');
   const [generatingResponse, setGeneratingResponse] = useState(false);
   const [isFunction, setIsFunction] = useState(false);
-  const [newChatMessages, setNewChatMessages] = useState<{
-    _id: any;
-    role: string;
-    content: string;
-    reasoning?: string;
-  }[]>([]);
+  const [newChatMessages, setNewChatMessages] = useState<
+    {
+      _id: any;
+      role: string;
+      content: string;
+      reasoning?: string;
+      functionCallMeta?: FunctionCallMeta;
+    }[]
+  >([]);
   const [fullMessage, setFullMessage] = useState('');
   const [fullReasoning, setFullReasoning] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
@@ -127,6 +238,26 @@ export const Chat: React.FC<ChatProps> = ({
       ? crypto.randomUUID()
       : `msg-${Date.now()}-${Math.random()}`);
 
+  const appendFunctionCallMarker = (
+    fn: PendingFunctionState | null,
+    action: 'approve' | 'decline',
+    status: FunctionCallMeta['status'],
+  ) => {
+    if (!fn) {
+      return;
+    }
+    const meta = buildFunctionCallMeta(fn, action, status);
+    setNewChatMessages((prev) => [
+      ...prev,
+      {
+        _id: resolveMessageId(),
+        role: 'function-call',
+        content: '',
+        functionCallMeta: meta,
+      },
+    ]);
+  };
+
   void accountId;
   void userRole;
   void selectedAccount;
@@ -140,6 +271,8 @@ export const Chat: React.FC<ChatProps> = ({
     if (inputRef.current) {
       inputRef.current.focus();
     }
+    // Reset auto-approval preferences on component mount (new chat)
+    setAutoApprovedMethods([]);
   }, []);
 
   useEffect(() => {
@@ -157,6 +290,7 @@ export const Chat: React.FC<ChatProps> = ({
           role: 'bot',
           content: fullMessage,
           reasoning: fullReasoning ?? undefined,
+          functionCallMeta: undefined,
         },
       ]);
       setFullMessage('');
@@ -387,6 +521,7 @@ export const Chat: React.FC<ChatProps> = ({
         _id: resolveMessageId(userMessageId),
         role: 'user',
         content: trimmedMessage,
+        functionCallMeta: undefined,
       },
     ]);
 
@@ -502,6 +637,14 @@ export const Chat: React.FC<ChatProps> = ({
         throw new Error(data?.error || `Request failed with status ${response.status}`);
       }
 
+      const outcomeStatus: FunctionCallMeta['status'] =
+        action === 'decline'
+          ? 'declined'
+          : data.type === 'assistant_message'
+            ? 'success'
+            : 'pending';
+      appendFunctionCallMarker(pendingFunction, action, outcomeStatus);
+
       if (data.type === 'assistant_message') {
         const modelMessages = data.modelMessages ?? data.nextMessages;
         const assistantContentRaw = (data.message?.content ?? '').trim();
@@ -560,6 +703,7 @@ export const Chat: React.FC<ChatProps> = ({
       }
     } catch (error) {
       console.error('Error executing function call', error);
+      appendFunctionCallMarker(pendingFunction, action, 'error');
       setFunctionError(
         error instanceof Error ? error.message : 'An unexpected error occurred.',
       );
@@ -577,39 +721,7 @@ export const Chat: React.FC<ChatProps> = ({
     (message) => message.role !== 'function',
   );
 
-  const callArgs = pendingFunction?.functionCall?.arguments ?? {};
-  const metadataArgs = pendingFunction?.metadata?.arguments ?? {};
-  const normalizeHttpMethod = (value: unknown): string | undefined => {
-    if (typeof value !== 'string') {
-      return undefined;
-    }
-    const normalized = value.trim().toUpperCase();
-    return STANDARD_HTTP_METHOD_SET.has(normalized) ? normalized : undefined;
-  };
-  const inferHttpMethodFromIdentifier = (identifier?: string | null): string | undefined => {
-    if (!identifier) {
-      return undefined;
-    }
-    const match = identifier.trim().match(/^[A-Za-z]+/);
-    if (!match) {
-      return undefined;
-    }
-    return normalizeHttpMethod(match[0]);
-  };
-  const normalizedMethod =
-    normalizeHttpMethod(callArgs['method']) ??
-    normalizeHttpMethod(metadataArgs['method']) ??
-    inferHttpMethodFromIdentifier(pendingFunction?.functionCall?.entryId) ??
-    inferHttpMethodFromIdentifier(pendingFunction?.metadata?.id) ??
-    inferHttpMethodFromIdentifier(pendingFunction?.functionCall?.name);
-  const method = normalizedMethod ?? 'GET';
-  const isHttpMethod =
-    normalizedMethod !== undefined ? STANDARD_HTTP_METHOD_SET.has(normalizedMethod) : false;
-  const path =
-    typeof callArgs['path'] === 'string' ? (callArgs['path'] as string) : '';
-  const endpointLabel = path
-    ? `${method} ${path}`
-    : pendingFunction?.functionCall?.entryId ?? pendingFunction?.metadata?.id ?? method;
+  const { method, normalizedMethod, isHttpMethod, endpointLabel } = determineHttpDetails(pendingFunction);
   const autoApprovalEnabledForMethod =
     normalizedMethod !== undefined
       ? autoApprovedMethods.includes(normalizedMethod)
@@ -626,7 +738,8 @@ export const Chat: React.FC<ChatProps> = ({
       pendingFunctionStatus !== 'awaiting' ||
       isExecutingFunction ||
       pendingFunctionAction !== 'none' ||
-      !autoApprovedMethods.includes(normalizedMethod)
+      !autoApprovedMethods.includes(normalizedMethod) ||
+      functionError
     ) {
       return;
     }
@@ -646,6 +759,7 @@ export const Chat: React.FC<ChatProps> = ({
     isExecutingFunction,
     pendingFunctionAction,
     autoApprovedMethods,
+    functionError,
     handleFunctionAction,
   ]);
 
@@ -711,9 +825,6 @@ export const Chat: React.FC<ChatProps> = ({
     ? Object.entries(pendingFunction.metadata.arguments ?? {}).filter(([key]) => key !== 'entryId')
     : [];
 
-  const sanitizeThinking = (text: string) =>
-    text.replace(/<think>/gi, '').replace(/<\/think>/gi, '').trim();
-
   const extractPlanItems = (text: string): string[] => {
     if (!text) {
       return [];
@@ -760,48 +871,49 @@ export const Chat: React.FC<ChatProps> = ({
 
   return (
     <div className="chat-container">
-      {!displayMessages.length && !incomingMessage && (
-        <div className="m-auto justify-center flex items-center text-center h-64">
-          <div className="initial-alga">
-            <Image
-              className="mb-6"
-              src="/avatar-purple-no-shadow.svg"
-              alt="Alga"
-              width={150}
-              height={150}
-            />
-            <h1 className="mt-6 text-2xl mx-1">
-              I am Alga! Your favorite AI assistant. Ask me a question.
-            </h1>
-          </div>
+      <div className="chats">
+        <div className="mb-auto w-full">
+          {!displayMessages.length && !incomingMessage ? (
+            <div className="m-auto justify-center flex items-center text-center" style={{ minHeight: '300px' }}>
+              <div className="initial-alga">
+                <Image
+                  className="mb-6"
+                  src="/avatar-purple-no-shadow.svg"
+                  alt="Alga"
+                  width={150}
+                  height={150}
+                />
+                <h1 className="mt-6 text-2xl mx-1">
+                  I am Alga! Your favorite AI assistant. Ask me a question.
+                </h1>
+              </div>
+            </div>
+          ) : (
+            <>
+              {displayMessages.map((message, index) => (
+                <Message
+                  key={message._id ?? message.tool_call_id ?? `msg-${index}`}
+                  messageId={message._id}
+                  role={message.role}
+                  content={message.content}
+                  clientUrl={clientUrl}
+                  reasoning={message.reasoning}
+                  functionCallMeta={message.functionCallMeta}
+                />
+              ))}
+              {!!incomingMessage && (
+                <Message role="bot" isFunction={isFunction} content={incomingMessage} />
+              )}
+            </>
+          )}
         </div>
-      )}
-
-      {!!displayMessages.length && (
-        <div className="chats">
-          <div className="mb-auto w-full">
-            {displayMessages.map((message, index) => (
-              <Message
-                key={message._id ?? message.tool_call_id ?? `msg-${index}`}
-                messageId={message._id}
-                role={message.role}
-                content={message.content}
-                clientUrl={clientUrl}
-                reasoning={message.reasoning}
-              />
-            ))}
-            {!!incomingMessage && (
-              <Message role="bot" isFunction={isFunction} content={incomingMessage} />
-            )}
-          </div>
-        </div>
-      )}
+      </div>
 
       {pendingFunction && (
         <div className="function-approval-wrapper">
           <Image
             className="chat-img"
-            src="/avatar-white.png"
+            src="/avatar-purple-no-shadow.svg"
             alt="Alga"
             width={18}
             height={18}
@@ -911,29 +1023,30 @@ export const Chat: React.FC<ChatProps> = ({
       )}
 
       <footer className="chat-footer">
-        <div className="input-container">
-          <div className="input">
+        <div className="chat-footer__inner">
+          <div className="chat-footer__input">
             <textarea
               ref={inputRef}
+              id={textareaId}
               value={messageText}
               onChange={handleInputChange}
               placeholder={generatingResponse ? 'Generating text...' : 'Send a message'}
-              className="w-full resize-y rounded-md p-2 text-black min-h-[3rem]"
+              className="chat-input"
               onKeyDown={handleTextareaKeyDown}
               rows={3}
               disabled={generatingResponse || isFunction}
+              aria-label="Message Alga"
+              aria-busy={generatingResponse || isFunction}
             />
-            <p className="mt-1 text-xs text-gray-500">Press Ctrl+Enter or ⌘+Enter to send.</p>
+            <p className="chat-input__hint">
+              Press Ctrl+Enter or ⌘+Enter to send.
+            </p>
           </div>
 
           <button
             onClick={generatingResponse ? handleStop : handleClick}
             type="submit"
-            className={
-              generatingResponse
-                ? 'stop-btn rounded-md px-4 py-2 text-white'
-                : 'send-btn rounded-md px-4 py-2 text-white'
-            }
+            className={generatingResponse ? 'chat-action chat-action--stop' : 'chat-action chat-action--send'}
           >
             {generatingResponse ? 'STOP' : 'SEND'}
           </button>
