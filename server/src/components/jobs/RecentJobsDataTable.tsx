@@ -1,11 +1,10 @@
 'use client';
 
 import React from 'react';
-import { JobData } from 'server/src/lib/jobs/jobScheduler';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import JobDetailsDrawer from './JobDetailsDrawer';
-import { getJobDetailsWithHistory } from 'server/src/lib/actions/job-actions';
+import { getJobDetailsWithHistory, JobRecord } from 'server/src/lib/actions/job-actions';
 import { CheckCircle2, XCircle, Clock, Activity } from 'lucide-react';
 
 const formatDuration = (startTime?: Date, endTime?: Date): string => {
@@ -79,19 +78,19 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 };
 
 interface RecentJobsDataTableProps {
-  initialData?: JobData[];
+  initialData?: JobRecord[];
 }
 
 export default function RecentJobsDataTable({ initialData = [] }: RecentJobsDataTableProps) {
   const [selectedJobId, setSelectedJobId] = React.useState<string | null>(null);
-  const [data, setData] = React.useState<JobData[]>(initialData);
+  const [data, setData] = React.useState<JobRecord[]>(initialData);
   const intervalRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
-  const columns = React.useMemo<ColumnDefinition<JobData>[]>(() => [
+  const columns = React.useMemo<ColumnDefinition<JobRecord>[]>(() => [
     {
       title: 'Job Name',
       dataIndex: 'type',
-      render: (type: string, record: JobData) => (
+      render: (type: string, record: JobRecord) => (
         <div className="flex flex-col">
           <span className="font-medium text-[rgb(var(--color-text-900))]">{type}</span>
           {record.job_id && (
@@ -110,7 +109,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
     {
       title: 'Duration',
       dataIndex: 'processed_at',
-      render: (processedAt: Date | undefined, record: JobData) => {
+      render: (processedAt: Date | undefined, record: JobRecord) => {
         const duration = formatDuration(processedAt, record.updated_at);
         return (
           <span className="text-sm text-[rgb(var(--color-text-700))]">
@@ -131,7 +130,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
     {
       title: 'Completed',
       dataIndex: 'updated_at',
-      render: (value?: Date, record?: JobData) => {
+      render: (value?: Date, record?: JobRecord) => {
         if (record?.status === 'processing' || record?.status === 'pending') {
           return <span className="text-sm text-[rgb(var(--color-text-400))]">-</span>;
         }
@@ -144,13 +143,13 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
     },
   ], []);
 
-  const hasActiveJobs = React.useCallback((jobs: JobData[]) => {
+  const hasActiveJobs = React.useCallback((jobs: JobRecord[]) => {
     return jobs.some(job => job.status === 'processing');
   }, []);
 
   const fetchData = React.useCallback(async () => {
     try {
-      const newData = await getJobDetailsWithHistory({ limit: 50 }) as JobData[];
+      const newData = await getJobDetailsWithHistory({ limit: 50 });
       setData(newData);
       
       // Stop polling if there are no active jobs
@@ -184,7 +183,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
     };
   }, [data, fetchData, hasActiveJobs]);
 
-  const handleRowClick = React.useCallback((row: JobData) => {
+  const handleRowClick = React.useCallback((row: JobRecord) => {
     if (row.job_id) {
       setSelectedJobId(row.job_id);
     }
