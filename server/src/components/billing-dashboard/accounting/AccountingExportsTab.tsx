@@ -1,13 +1,25 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccountingExportBatch, AccountingExportLine, AccountingExportError, AccountingExportStatus } from 'server/src/interfaces/accountingExport.interfaces';
+import {
+  AccountingExportBatch,
+  AccountingExportLine,
+  AccountingExportError,
+  AccountingExportStatus
+} from 'server/src/interfaces/accountingExport.interfaces';
+import {
+  InvoiceStatus,
+  INVOICE_STATUS_METADATA,
+  INVOICE_STATUS_DISPLAY_ORDER,
+  DEFAULT_ACCOUNTING_EXPORT_STATUSES
+} from 'server/src/interfaces/invoice.interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import Drawer from 'server/src/components/ui/Drawer';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge, BadgeVariant } from 'server/src/components/ui/Badge';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
 import {
   listAccountingExportBatches,
@@ -37,7 +49,16 @@ interface AccountingExportRow {
   raw: AccountingExportBatch;
 }
 
-type CreateFormState = typeof DEFAULT_CREATE_FORM;
+type AdapterType = 'quickbooks_online' | 'quickbooks_desktop' | 'xero';
+
+interface CreateFormState {
+  adapterType: AdapterType;
+  targetRealm: string;
+  startDate: string;
+  endDate: string;
+  invoiceStatuses: InvoiceStatus[];
+  notes: string;
+}
 
 const STATUS_OPTIONS: Array<{ label: string; value: AccountingExportStatus | 'all' }> = [
   { label: 'All', value: 'all' },
@@ -69,14 +90,24 @@ const STATUS_VARIANT: Record<AccountingExportStatus, BadgeVariant> = {
   needs_attention: 'warning'
 };
 
-const DEFAULT_CREATE_FORM = {
+const INVOICE_STATUS_OPTIONS = INVOICE_STATUS_DISPLAY_ORDER.map((status) => {
+  const metadata = INVOICE_STATUS_METADATA[status];
+  return {
+    label: metadata.label,
+    value: status,
+    description: metadata.description,
+    recommended: Boolean(metadata.isDefaultForAccountingExport)
+  };
+});
+
+const createDefaultCreateForm = (): CreateFormState => ({
   adapterType: 'quickbooks_online',
   targetRealm: '',
   startDate: '',
   endDate: '',
-  invoiceStatuses: 'finalized',
+  invoiceStatuses: [...DEFAULT_ACCOUNTING_EXPORT_STATUSES],
   notes: ''
-};
+});
 
 function truncateId(batchId: string): string {
   if (batchId.length <= 8) return batchId;
@@ -137,11 +168,8 @@ const formatTotalsSummary = (totals: Record<string, number>) => {
     .join(', ');
 };
 
-const parseInvoiceStatuses = (value: string) =>
-  value
-    .split(',')
-    .map((status) => status.trim())
-    .filter((status) => status.length > 0);
+const normalizeInvoiceStatuses = (statuses: InvoiceStatus[]): InvoiceStatus[] =>
+  Array.from(new Set(statuses));
 
 const AccountingExportsTab: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -160,7 +188,7 @@ const AccountingExportsTab: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
-  const [createForm, setCreateForm] = useState(DEFAULT_CREATE_FORM);
+  const [createForm, setCreateForm] = useState<CreateFormState>(() => createDefaultCreateForm());
   const [creating, setCreating] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [detailActionError, setDetailActionError] = useState<string | null>(null);
@@ -169,19 +197,40 @@ const AccountingExportsTab: React.FC = () => {
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const updateCreateFormField = (field: keyof CreateFormState, value: string) => {
-    setCreateForm((prev) => ({ ...prev, [field]: value }));
+  const resetPreviewState = () => {
     setPreviewData(null);
     setPreviewError(null);
+  };
+
+  const updateCreateFormField = (field: Exclude<keyof CreateFormState, 'invoiceStatuses'>, value: string) => {
+    setCreateForm((prev) => ({ ...prev, [field]: value }));
+    resetPreviewState();
+  };
+
+  const applyInvoiceStatuses = (statuses: InvoiceStatus[]) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      invoiceStatuses: normalizeInvoiceStatuses(statuses)
+    }));
+    resetPreviewState();
+  };
+
+  const handleInvoiceStatusChange = (status: InvoiceStatus, checked: boolean) => {
+    setCreateForm((prev) => {
+      const nextStatuses = checked
+        ? normalizeInvoiceStatuses([...prev.invoiceStatuses, status])
+        : prev.invoiceStatuses.filter((current) => current !== status);
+      return { ...prev, invoiceStatuses: nextStatuses };
+    });
+    resetPreviewState();
   };
 
   const resetCreateDialog = (force = false) => {
     if (!force && creating) return;
     setCreateDialogOpen(false);
-    setCreateForm(DEFAULT_CREATE_FORM);
+    setCreateForm(createDefaultCreateForm());
     setCreateError(null);
-    setPreviewData(null);
-    setPreviewError(null);
+    resetPreviewState();
   };
 
   const fetchBatches = useCallback(async () => {
@@ -357,7 +406,7 @@ const AccountingExportsTab: React.FC = () => {
     setPreviewLoading(true);
     setPreviewError(null);
     try {
-      const invoiceStatuses = parseInvoiceStatuses(createForm.invoiceStatuses);
+      const invoiceStatuses = normalizeInvoiceStatuses(createForm.invoiceStatuses);
       const data = await previewAccountingExport({
         startDate: createForm.startDate || undefined,
         endDate: createForm.endDate || undefined,
@@ -377,7 +426,7 @@ const AccountingExportsTab: React.FC = () => {
     setCreating(true);
     setCreateError(null);
     try {
-      const invoiceStatuses = parseInvoiceStatuses(createForm.invoiceStatuses);
+      const invoiceStatuses = normalizeInvoiceStatuses(createForm.invoiceStatuses);
       const body = {
         adapter_type: createForm.adapterType,
         export_type: 'invoice',
@@ -522,9 +571,8 @@ const AccountingExportsTab: React.FC = () => {
             id="accounting-export-new"
             onClick={() => {
               setCreateError(null);
-              setCreateForm(DEFAULT_CREATE_FORM);
-              setPreviewData(null);
-              setPreviewError(null);
+              setCreateForm(createDefaultCreateForm());
+              resetPreviewState();
               setCreateDialogOpen(true);
             }}
           >
@@ -780,13 +828,61 @@ const AccountingExportsTab: React.FC = () => {
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Statuses</label>
-              <input
-                type="text"
-                value={createForm.invoiceStatuses}
-                onChange={(e) => updateCreateFormField('invoiceStatuses', e.target.value)}
-                className="border rounded-md w-full px-3 py-2 text-sm"
-                placeholder="Comma-separated invoice statuses (e.g. finalized, ready)"
-              />
+              <div className="border rounded-md divide-y divide-gray-200">
+                {INVOICE_STATUS_OPTIONS.map((option) => {
+                  const checked = createForm.invoiceStatuses.includes(option.value);
+                  const description = option.recommended
+                    ? `${option.description} (recommended)`
+                    : option.description;
+                  return (
+                    <Checkbox
+                      key={option.value}
+                      id={`invoice-status-${option.value}`}
+                      checked={checked}
+                      onChange={(e) => handleInvoiceStatusChange(option.value, e.target.checked)}
+                      containerClassName="flex items-start gap-3 px-3 py-3 mb-0"
+                      className="mt-1"
+                      label={
+                        <div>
+                          <span className="text-sm font-medium text-gray-900">{option.label}</span>
+                          <p className="text-xs text-gray-500">{description}</p>
+                        </div>
+                      }
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Button
+                  id="invoice-statuses-recommended"
+                  variant="soft"
+                  size="xs"
+                  onClick={() => applyInvoiceStatuses([...DEFAULT_ACCOUNTING_EXPORT_STATUSES])}
+                >
+                  Use recommended set
+                </Button>
+                <Button
+                  id="invoice-statuses-select-all"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => applyInvoiceStatuses(INVOICE_STATUS_OPTIONS.map((option) => option.value))}
+                >
+                  Select all
+                </Button>
+                <Button
+                  id="invoice-statuses-clear"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => applyInvoiceStatuses([])}
+                >
+                  Clear
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Choose which invoice statuses to include in this export. Recommended statuses cover finalized invoices
+                (sent, paid, partially applied, overdue, prepayment). Only include drafts, pending, or cancelled invoices if
+                you intentionally need them.
+              </p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>

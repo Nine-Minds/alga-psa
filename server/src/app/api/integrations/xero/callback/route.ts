@@ -6,8 +6,8 @@ import axios from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 import {
-  XERO_CLIENT_ID_SECRET_NAME,
-  XERO_CLIENT_SECRET_SECRET_NAME,
+  getXeroClientId,
+  getXeroClientSecret,
   XeroConnectionsStore,
   upsertStoredXeroConnections,
   XERO_TOKEN_URL
@@ -66,8 +66,10 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const tenantId = statePayload.tenantId;
   const secretProvider = await getSecretProviderInstance();
-  const clientId = await secretProvider.getAppSecret(XERO_CLIENT_ID_SECRET_NAME);
-  const clientSecret = await secretProvider.getAppSecret(XERO_CLIENT_SECRET_SECRET_NAME);
+  const [clientId, clientSecret] = await Promise.all([
+    getXeroClientId(secretProvider),
+    getXeroClientSecret(secretProvider)
+  ]);
 
   if (!clientId || !clientSecret) {
     return createRedirect(FAILURE_PATH, { xero_error: 'config_missing' });

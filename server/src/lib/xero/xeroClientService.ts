@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@shared/core/logger';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/shared/core';
 import { AppError } from '../errors';
 
 const XERO_TOKEN_ENDPOINT = 'https://identity.xero.com/connect/token';
@@ -14,6 +14,51 @@ export const XERO_TOKEN_URL = XERO_TOKEN_ENDPOINT;
 export const XERO_CREDENTIALS_SECRET_NAME = XERO_CREDENTIALS_SECRET;
 export const XERO_CLIENT_ID_SECRET_NAME = XERO_CLIENT_ID_SECRET;
 export const XERO_CLIENT_SECRET_SECRET_NAME = XERO_CLIENT_SECRET_SECRET;
+
+const XERO_CLIENT_ID_ENV_FALLBACKS = [
+  XERO_CLIENT_ID_SECRET,
+  'XERO_CLIENT_ID',
+  'XERO_OAUTH_CLIENT_ID',
+  'NEXT_PUBLIC_XERO_CLIENT_ID'
+];
+
+const XERO_CLIENT_SECRET_ENV_FALLBACKS = [
+  XERO_CLIENT_SECRET_SECRET,
+  'XERO_CLIENT_SECRET',
+  'XERO_OAUTH_CLIENT_SECRET'
+];
+
+function resolveEnvSecret(candidateKeys: string[]): string | undefined {
+  for (const key of candidateKeys) {
+    const value = typeof process !== 'undefined' ? process.env?.[key] : undefined;
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+async function resolveAppSecret(
+  secretProvider: ISecretProvider,
+  secretName: string,
+  envKeys: string[]
+): Promise<string | undefined> {
+  const secretValue = await secretProvider.getAppSecret(secretName);
+  if (typeof secretValue === 'string' && secretValue.trim().length > 0) {
+    return secretValue.trim();
+  }
+  return resolveEnvSecret(envKeys);
+}
+
+export async function getXeroClientId(secretProvider?: ISecretProvider): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return resolveAppSecret(provider, XERO_CLIENT_ID_SECRET, XERO_CLIENT_ID_ENV_FALLBACKS);
+}
+
+export async function getXeroClientSecret(secretProvider?: ISecretProvider): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return resolveAppSecret(provider, XERO_CLIENT_SECRET_SECRET, XERO_CLIENT_SECRET_ENV_FALLBACKS);
+}
 
 export interface XeroTrackingCategoryOption {
   name: string;
@@ -520,11 +565,11 @@ export async function upsertStoredXeroConnections(
   return merged;
 }
 
-async function getAppSecrets(): Promise<XeroAppSecrets> {
-  const secretProvider = await getSecretProviderInstance();
+async function getAppSecrets(secretProvider?: ISecretProvider): Promise<XeroAppSecrets> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
   const [clientId, clientSecret] = await Promise.all([
-    secretProvider.getAppSecret(XERO_CLIENT_ID_SECRET),
-    secretProvider.getAppSecret(XERO_CLIENT_SECRET_SECRET)
+    getXeroClientId(provider),
+    getXeroClientSecret(provider)
   ]);
 
   if (!clientId || !clientSecret) {
@@ -532,8 +577,8 @@ async function getAppSecrets(): Promise<XeroAppSecrets> {
   }
 
   return {
-    clientId: String(clientId),
-    clientSecret: String(clientSecret)
+    clientId,
+    clientSecret
   };
 }
 

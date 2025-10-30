@@ -25,7 +25,6 @@ type DbInvoice = {
   invoice_date?: string | Date | null;
   due_date?: string | Date | null;
   client_id?: string | null;
-  company_id?: string | null;
   currency_code?: string | null;
 };
 
@@ -120,7 +119,6 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       const clientId =
         invoice.client_id ??
-        invoice.company_id ??
         exportLines.find((line) => line.client_id)?.client_id ??
         null;
 
@@ -352,7 +350,6 @@ export class XeroAdapter implements AccountingExportAdapter {
         'invoice_date',
         'due_date',
         'client_id',
-        'company_id',
         'currency_code'
       )
       .where('tenant', tenantId)
@@ -403,9 +400,6 @@ export class XeroAdapter implements AccountingExportAdapter {
     for (const invoice of invoices.values()) {
       if (invoice.client_id) {
         clientIds.add(invoice.client_id);
-      }
-      if (invoice.company_id) {
-        clientIds.add(invoice.company_id);
       }
     }
 

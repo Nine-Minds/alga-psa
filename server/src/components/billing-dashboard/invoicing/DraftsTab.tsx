@@ -468,9 +468,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
               updateUrlParams({ invoiceId: null, templateId: null });
             }
 
-            await loadData();
-            onRefreshNeeded();
             setReverseDialogState({ isOpen: false, invoiceIds: [] });
+            void loadData();
+            onRefreshNeeded();
           } catch (err) {
             console.error('Failed to reverse draft invoice(s):', err);
             setError(err instanceof Error ? err.message : 'Failed to reverse draft invoice(s). Please try again.');

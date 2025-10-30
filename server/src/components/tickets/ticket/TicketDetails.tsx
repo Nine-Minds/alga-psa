@@ -510,8 +510,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 return;
             }
             const result = await addTicketResource(ticket.ticket_id!, userId, 'support', currentUser);
-            setAdditionalAgents(prev => [...prev, result]);
-            toast.success('Agent added successfully');
+
+            if (result) {
+                setAdditionalAgents(prev => [...prev, result]);
+                toast.success('Agent added successfully');
+            } else {
+                setTicket(prevTicket => ({
+                    ...prevTicket,
+                    assigned_to: userId
+                }));
+                toast.success('Agent assigned successfully');
+            }
         } catch (error) {
             console.error('Error adding agent:', error);
             toast.error('Failed to add agent');
