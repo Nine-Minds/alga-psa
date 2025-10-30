@@ -117,11 +117,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
-  
+
   // Quick View state
   const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
-  
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
@@ -922,6 +932,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               {...withDataAutomationId({ id: `${id}-tickets-table` })}
               data={ticketsWithIds}
               columns={columns}
+              pagination={true}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onItemsPerPageChange={handlePageSizeChange}
               rowClassName={(record: ITicketListItem) =>
                 record.ticket_id && selectedTicketIds.has(record.ticket_id)
                   ? '!bg-blue-50'

@@ -71,7 +71,17 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
-  
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
     projectTagsRef.current[projectId] = tags;
     
@@ -542,6 +552,11 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           id="projects-table"
           data={filteredProjects}
           columns={columns}
+          pagination={true}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
           initialSorting={[{ id: 'end_date', desc: false }]}
         />
       </div>

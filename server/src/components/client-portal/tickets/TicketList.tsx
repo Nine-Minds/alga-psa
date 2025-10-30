@@ -30,6 +30,7 @@ export function TicketList() {
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>('entered_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -217,6 +218,12 @@ export function TicketList() {
     setSelectedCategories(categoryIds);
     setExcludedCategories(excludedIds);
   }, []);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
 
   const handleResetFilters = useCallback(() => {
     setSelectedStatus('all');
@@ -439,7 +446,8 @@ export function TicketList() {
             pagination={true}
             currentPage={currentPage}
             onPageChange={setCurrentPage}
-            pageSize={10}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
             rowClassName={() => "hover:bg-gray-50"}
           />
         </div>

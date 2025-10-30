@@ -130,6 +130,11 @@ export function ActivitiesDataTableSection({
     setCurrentPage(newPage);
   }, []);
 
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  }, []);
+
   const filteredActivitiesForTable = useMemo(() => {
     const uniqueUpcomingActivities: Activity[] = [];
     const addedRecurringSeriesOnPage = new Set<string>();
@@ -227,6 +232,7 @@ export function ActivitiesDataTableSection({
             pageSize={pageSize}
             totalItems={totalItems}
             onPageChange={handlePageChange}
+            onItemsPerPageChange={handlePageSizeChange}
           />
         )}
       </CardContent>

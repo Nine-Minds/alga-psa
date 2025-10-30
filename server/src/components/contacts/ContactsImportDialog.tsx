@@ -71,6 +71,16 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   }>({ current: 0, total: 0 });
   const [failedRecords, setFailedRecords] = useState<ImportContactResult[]>([]);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
@@ -92,6 +102,8 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       setExistingContactsCount(0);
       setProcessingDetails({ current: 0, total: 0 });
       setFailedRecords([]);
+      setCurrentPage(1);
+      setPageSize(10);
     }
   }, [isOpen]);
 
@@ -426,6 +438,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       <DataTable
         id="contacts-import-preview-table"
         data={importResults}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
         columns={[
           {
             title: 'Status',
@@ -621,6 +638,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
                   id="contacts-import-preview-table"
+                  pagination={true}
+                  currentPage={currentPage}
+                  onPageChange={setCurrentPage}
+                  pageSize={pageSize}
+                  onItemsPerPageChange={handlePageSizeChange}
                   data={validationResults.map((result: ICSVValidationResult, index: number): Record<string, any> => {
                     const rowData = (previewData?.rows[index] || []).reduce((
                       acc: Record<string, string>,

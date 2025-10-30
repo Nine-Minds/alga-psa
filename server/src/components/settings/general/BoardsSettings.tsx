@@ -40,6 +40,16 @@ const BoardsSettings: React.FC = () => {
     boardId: '',
     boardName: ''
   });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
   
   // State for Add/Edit Dialog
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
@@ -387,6 +397,11 @@ const BoardsSettings: React.FC = () => {
           id="boards-settings-table"
           data={boards}
           columns={columns}
+          pagination={true}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
         />
         <div className="mt-4 flex gap-2">
           <Button 

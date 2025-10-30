@@ -27,10 +27,10 @@ interface WorkflowExecutionsTableProps {
   customizeColumns?: (defaultColumns: ColumnDefinition<IWorkflowExecution>[]) => ColumnDefinition<IWorkflowExecution>[];
 }
 
-export default function WorkflowExecutionsTable({ 
-  initialData = [], 
-  onRowClick, 
-  customizeColumns 
+export default function WorkflowExecutionsTable({
+  initialData = [],
+  onRowClick,
+  customizeColumns
 }: WorkflowExecutionsTableProps) {
   const [data, setData] = useState<IWorkflowExecution[]>(initialData);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +40,16 @@ export default function WorkflowExecutionsTable({
   });
   const router = useRouter();
   const intervalRef = useRef<NodeJS.Timeout>();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
 
   const columns: ColumnDefinition<IWorkflowExecution>[] = [
     {
@@ -319,6 +329,11 @@ export default function WorkflowExecutionsTable({
         onRowClick={handleRowClick}
         id="workflow-executions-table"
         rowClassName={() => "hover:bg-[rgb(var(--color-primary-50))] cursor-pointer"}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
       />
       
       {data.length === 0 && (
