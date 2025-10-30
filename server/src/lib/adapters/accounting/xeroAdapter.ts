@@ -16,8 +16,14 @@ import {
   XeroTaxComponentPayload
 } from '../../xero/xeroClientService';
 import { createTenantKnex } from '../../db';
-import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
+import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { AppError } from '../../errors';
+import {
+  CompanyAccountingSyncService,
+  KnexCompanyMappingRepository,
+  buildNormalizedCompanyPayload
+} from '../../services/companySync';
+import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
 
 type DbInvoice = {
   invoice_id: string;
@@ -86,6 +92,7 @@ export class XeroAdapter implements AccountingExportAdapter {
   }
 
   readonly type = XeroAdapter.TYPE;
+  private readonly companyAdapter = new XeroCompanyAdapter();
 
   capabilities(): AccountingExportAdapterCapabilities {
     return {
@@ -102,7 +109,11 @@ export class XeroAdapter implements AccountingExportAdapter {
     }
 
     const { knex } = await createTenantKnex();
-    const resolver = await AccountingMappingResolver.create();
+    const companySyncService = CompanyAccountingSyncService.create({
+      mappingRepository: new KnexCompanyMappingRepository(knex),
+      adapterFactory: (adapterType) => (adapterType === XeroAdapter.TYPE ? this.companyAdapter : null)
+    });
+    const resolver = await AccountingMappingResolver.create({ companySyncService });
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
@@ -126,7 +137,40 @@ export class XeroAdapter implements AccountingExportAdapter {
         throw new AppError('XERO_CLIENT_MISSING', `Invoice ${invoiceId} is missing client mapping data`);
       }
 
-      const clientMapping = clientData.mappings.get(clientId);
+      const clientRow = clientData.clients.get(clientId);
+      if (!clientRow) {
+        throw new AppError('XERO_CLIENT_NOT_FOUND', `Client ${clientId} missing for invoice ${invoiceId}`);
+      }
+
+      let clientMapping = clientData.mappings.get(clientId);
+      if (!clientMapping) {
+        const companyPayload = buildNormalizedCompanyPayload({
+          companyId: clientId,
+          name: clientRow.client_name ?? clientId,
+          primaryEmail: clientRow.billing_email ?? null
+        });
+
+        const mappingResolution = await resolver.ensureCompanyMapping({
+          tenantId,
+          adapterType: this.type,
+          companyId: clientId,
+          payload: companyPayload,
+          targetRealm: context.batch.target_realm ?? null
+        });
+
+        if (!mappingResolution) {
+          throw new AppError('XERO_CLIENT_MAPPING_MISSING', `Unable to resolve Xero contact for client ${clientId}`);
+        }
+
+        clientMapping = mappingFromResolution(
+          clientId,
+          mappingResolution,
+          this.type,
+          context.batch.target_realm ?? null
+        );
+        clientData.mappings.set(clientId, clientMapping);
+      }
+
       if (!clientMapping) {
         throw new AppError('XERO_CLIENT_MAPPING_MISSING', `No Xero contact mapping for client ${clientId}`);
       }
@@ -424,7 +468,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       .select('*')
       .where('tenant', tenantId)
       .andWhere('integration_type', this.type)
-      .andWhere('alga_entity_type', 'client')
+      .whereIn('alga_entity_type', ['client', 'company'])
       .whereIn('alga_entity_id', Array.from(clientIds))
       .modify((qb) => {
         if (context.batch.target_realm) {
@@ -441,7 +485,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     const mappingMap = new Map<string, MappingRow>();
     mappingRows.forEach((row) => {
       const normalized = normalizeMapping(row);
-      mappingMap.set(normalized.alga_entity_id, normalized);
+      const existing = mappingMap.get(normalized.alga_entity_id);
+      if (!existing || existing.alga_entity_type !== 'company') {
+        mappingMap.set(normalized.alga_entity_id, normalized);
+      }
     });
 
     return { clients: clientMap, mappings: mappingMap };
@@ -567,6 +614,23 @@ function normalizeMapping(mapping: MappingRowRaw): MappingRow {
   return {
     ...mapping,
     metadata: parsed ?? null
+  };
+}
+
+function mappingFromResolution(
+  clientId: string,
+  resolution: MappingResolution,
+  adapterType: string,
+  targetRealm: string | null
+): MappingRow {
+  return {
+    id: `runtime-${clientId}`,
+    integration_type: adapterType,
+    alga_entity_type: 'company',
+    alga_entity_id: clientId,
+    external_entity_id: resolution.external_entity_id,
+    external_realm_id: targetRealm,
+    metadata: resolution.metadata ?? null
   };
 }
 

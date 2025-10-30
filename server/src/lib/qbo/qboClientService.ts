@@ -2,6 +2,10 @@ import axios from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { QboTenantCredentials } from '../actions/qbo/types'; // Correct path for type
 import { AppError } from '../errors'; // Re-applying the seemingly correct path for AppError
+import {
+  ExternalCompanyRecord,
+  NormalizedCompanyPayload
+} from '../services/companySync';
 
 // Define QuickBooksInstance type locally
 interface QuickBooksInstance {
@@ -352,6 +356,95 @@ export class QboClientService {
         }
       });
     });
+  }
+
+  async findCustomerByDisplayName(displayName: string): Promise<ExternalCompanyRecord | null> {
+    const escaped = displayName.replace(/'/g, "''");
+    const results = await this.query<any>(`SELECT Id, DisplayName, SyncToken, PrimaryEmailAddr FROM Customer WHERE DisplayName = '${escaped}'`);
+    const customer = Array.isArray(results) && results.length > 0 ? this.unwrapCustomer(results[0]) : null;
+    return customer ? this.mapCustomerRecord(customer) : null;
+  }
+
+  async createOrUpdateCustomer(payload: NormalizedCompanyPayload): Promise<ExternalCompanyRecord> {
+    const existing = await this.findCustomerByDisplayName(payload.name);
+    const customerPayload = this.buildCustomerPayload(payload);
+
+    if (existing) {
+      const syncToken =
+        existing.syncToken ?? (await this.fetchCustomerSyncToken(existing.externalId));
+      if (!syncToken) {
+        return existing;
+      }
+
+      const updated = await this.update<any>('Customer', {
+        ...customerPayload,
+        Id: existing.externalId,
+        SyncToken: syncToken
+      });
+      return this.mapCustomerRecord(this.unwrapCustomer(updated));
+    }
+
+    const created = await this.create<any>('Customer', customerPayload);
+    return this.mapCustomerRecord(this.unwrapCustomer(created));
+  }
+
+  private buildCustomerPayload(payload: NormalizedCompanyPayload): Record<string, any> {
+    const primaryPhone =
+      payload.primaryPhone ??
+      payload.contacts?.find((contact) => contact.phone)?.phone ??
+      null;
+
+    const customer: Record<string, any> = {
+      DisplayName: payload.name,
+      CompanyName: payload.name
+    };
+
+    if (payload.primaryEmail) {
+      customer.PrimaryEmailAddr = { Address: payload.primaryEmail };
+    }
+
+    if (primaryPhone) {
+      customer.PrimaryPhone = { FreeFormNumber: primaryPhone };
+    }
+
+    if (payload.billingAddress) {
+      customer.BillAddr = {
+        Line1: payload.billingAddress.line1 ?? undefined,
+        Line2: payload.billingAddress.line2 ?? undefined,
+        City: payload.billingAddress.city ?? undefined,
+        Country: payload.billingAddress.country ?? undefined,
+        CountrySubDivisionCode: payload.billingAddress.region ?? undefined,
+        PostalCode: payload.billingAddress.postalCode ?? undefined
+      };
+    }
+
+    if (payload.notes) {
+      customer.Notes = payload.notes;
+    }
+
+    return customer;
+  }
+
+  private async fetchCustomerSyncToken(customerId: string): Promise<string | null> {
+    const customer = await this.read<any>('Customer', customerId);
+    const record = this.unwrapCustomer(customer);
+    return record?.SyncToken ?? null;
+  }
+
+  private unwrapCustomer(record: any): any {
+    if (!record) {
+      return record;
+    }
+    return record.Customer ?? record;
+  }
+
+  private mapCustomerRecord(customer: Record<string, any>): ExternalCompanyRecord {
+    return {
+      externalId: customer.Id ?? '',
+      displayName: customer.DisplayName ?? '',
+      syncToken: customer.SyncToken ?? undefined,
+      raw: customer
+    };
   }
 
   /**
