@@ -273,6 +273,13 @@ export const Chat: React.FC<ChatProps> = ({
     }
     // Reset auto-approval preferences on component mount (new chat)
     setAutoApprovedMethods([]);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(AUTO_APPROVED_METHODS_STORAGE_KEY);
+      } catch (error) {
+        console.error('Failed to clear auto-approved methods preference', error);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -355,49 +362,6 @@ export const Chat: React.FC<ChatProps> = ({
     }
   }, []);
 
-  const persistAutoApprovedMethods = useCallback((methods: string[]) => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      window.localStorage.setItem(
-        AUTO_APPROVED_METHODS_STORAGE_KEY,
-        JSON.stringify(methods),
-      );
-    } catch (error) {
-      console.error('Failed to persist auto-approved methods preference', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      const stored = window.localStorage.getItem(AUTO_APPROVED_METHODS_STORAGE_KEY);
-      if (!stored) {
-        return;
-      }
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) {
-        return;
-      }
-      const sanitized = Array.from(
-        new Set(
-          parsed
-            .filter((value): value is string => typeof value === 'string')
-            .map((value) => value.toUpperCase())
-            .filter((value) => STANDARD_HTTP_METHOD_SET.has(value)),
-        ),
-      );
-      if (sanitized.length > 0) {
-        setAutoApprovedMethods(sanitized);
-      }
-    } catch (error) {
-      console.error('Failed to load auto-approved methods preference', error);
-    }
-  }, []);
-
   const handleAutoApprovePreferenceChange = useCallback(
     (methodName: string, enabled: boolean) => {
       const normalized = methodName.toUpperCase();
@@ -411,20 +375,18 @@ export const Chat: React.FC<ChatProps> = ({
             return prev;
           }
           const next = [...prev, normalized];
-          persistAutoApprovedMethods(next);
           return next;
         }
 
         const next = prev.filter((value) => value !== normalized);
         if (next.length !== prev.length) {
-          persistAutoApprovedMethods(next);
           return next;
         }
 
         return prev;
       });
     },
-    [persistAutoApprovedMethods],
+    [],
   );
 
   const sendMessage = () => {
