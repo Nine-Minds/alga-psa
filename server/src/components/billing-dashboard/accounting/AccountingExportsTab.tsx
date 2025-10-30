@@ -30,6 +30,10 @@ import {
   previewAccountingExport
 } from 'server/src/lib/actions/accountingExportActions';
 import type { AccountingExportPreviewResult } from 'server/src/lib/actions/accountingExportActions';
+import {
+  getXeroConnectionStatus,
+  type XeroConnectionStatus
+} from 'server/src/lib/actions/integrations/xeroActions';
 
 type BatchDetail = {
   batch: AccountingExportBatch | null;
@@ -196,6 +200,9 @@ const AccountingExportsTab: React.FC = () => {
   const [previewData, setPreviewData] = useState<AccountingExportPreviewResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [xeroStatus, setXeroStatus] = useState<XeroConnectionStatus | null>(null);
+  const [xeroStatusError, setXeroStatusError] = useState<string | null>(null);
+  const [xeroStatusLoading, setXeroStatusLoading] = useState<boolean>(false);
 
   const resetPreviewState = () => {
     setPreviewData(null);
@@ -427,6 +434,9 @@ const AccountingExportsTab: React.FC = () => {
     setCreateError(null);
     try {
       const invoiceStatuses = normalizeInvoiceStatuses(createForm.invoiceStatuses);
+      if (createForm.adapterType === 'xero' && !createForm.targetRealm.trim()) {
+        throw new Error('Select a Xero connection before creating an export batch.');
+      }
       const body = {
         adapter_type: createForm.adapterType,
         export_type: 'invoice',
@@ -500,6 +510,43 @@ const AccountingExportsTab: React.FC = () => {
   }, [batchDetail]);
 
   const currencyFromLines = batchDetail?.lines?.[0]?.currency_code ?? 'USD';
+
+  useEffect(() => {
+    if (!createDialogOpen || createForm.adapterType !== 'xero') {
+      return;
+    }
+
+    if (!xeroStatus && !xeroStatusLoading) {
+      setXeroStatusLoading(true);
+      void getXeroConnectionStatus()
+        .then((status) => {
+          setXeroStatus(status);
+          setXeroStatusError(status.error ?? null);
+        })
+        .catch((err: any) => {
+          console.error('Error loading Xero connection status:', err);
+          setXeroStatusError(err?.message ?? 'Unable to load Xero connections.');
+        })
+        .finally(() => {
+          setXeroStatusLoading(false);
+        });
+      return;
+    }
+
+    if (!createForm.targetRealm && xeroStatus && xeroStatus.connections?.length) {
+      const defaultRealm =
+        xeroStatus.defaultConnectionId ?? xeroStatus.connections[0]?.connectionId ?? '';
+      if (defaultRealm) {
+        setCreateForm((prev) => (prev.targetRealm ? prev : { ...prev, targetRealm: defaultRealm }));
+      }
+    }
+  }, [
+    createDialogOpen,
+    createForm.adapterType,
+    createForm.targetRealm,
+    xeroStatus,
+    xeroStatusLoading
+  ]);
 
   return (
     <div className="space-y-4">
@@ -807,6 +854,17 @@ const AccountingExportsTab: React.FC = () => {
                 className="border rounded-md w-full px-3 py-2 text-sm"
                 placeholder="Optional target identifier"
               />
+              {createForm.adapterType === 'xero' ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  {xeroStatusLoading
+                    ? 'Loading Xero connections…'
+                    : xeroStatusError
+                      ? xeroStatusError
+                      : xeroStatus?.connections?.length
+                        ? `Using Xero connection ${createForm.targetRealm || xeroStatus.defaultConnectionId || xeroStatus.connections[0]?.connectionId}.`
+                        : 'No Xero connections detected. Connect in Xero integration settings first.'}
+                </p>
+              ) : null}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>

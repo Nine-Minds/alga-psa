@@ -17,6 +17,15 @@ export type AccountingMappingContext = {
    * Optional so configurations that do not require a realm/context can omit it.
    */
   realmId?: string | null;
+  /**
+   * Optional identifier used solely for authenticated API calls (e.g., Xero connectionId).
+   * When provided, components can use this for catalog lookups while persisting realmId separately.
+   */
+  connectionId?: string | null;
+  /**
+   * Human-readable value to display in forms when different from realmId.
+   */
+  realmDisplayValue?: string | null;
 };
 
 export type AccountingMappingOverrides = {

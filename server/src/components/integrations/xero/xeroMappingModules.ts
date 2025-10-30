@@ -2,7 +2,8 @@ import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
   getExternalEntityMappings,
-  updateExternalEntityMapping
+  updateExternalEntityMapping,
+  type ExternalEntityMapping
 } from 'server/src/lib/actions/externalMappingActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
@@ -68,15 +69,22 @@ function createServiceModule(): AccountingMappingModule {
       deleteMenuPrefix: 'delete-xero-item-mapping-menu-item-'
     },
     async load(context) {
-      const [mappingData, servicesResponse, xeroItems] = await Promise.all([
+      const effectiveConnectionId = context.connectionId ?? context.realmId ?? null;
+      const [mappingsForRealm, servicesResponse, xeroItems] = await Promise.all([
         getExternalEntityMappings({
           integrationType: ADAPTER_TYPE,
           algaEntityType: 'service',
           externalRealmId: context.realmId ?? undefined
         }),
         getServices(),
-        getXeroItems(context.realmId ?? null)
+        getXeroItems(effectiveConnectionId)
       ]);
+
+      const mappingData = await normalizeRealmAssignments({
+        mappingsForRealm,
+        context,
+        algaEntityType: 'service'
+      });
 
       const serviceOptions: ServiceListItem[] = servicesResponse.services.map((service) => ({
         service_id: service.service_id,
@@ -158,15 +166,22 @@ function createTaxModule(): AccountingMappingModule {
       deleteMenuPrefix: 'delete-xero-taxrate-mapping-menu-item-'
     },
     async load(context) {
-      const [mappingData, regions, taxRates] = await Promise.all([
+      const effectiveConnectionId = context.connectionId ?? context.realmId ?? null;
+      const [mappingsForRealm, regions, taxRates] = await Promise.all([
         getExternalEntityMappings({
           integrationType: ADAPTER_TYPE,
           algaEntityType: 'tax_region',
           externalRealmId: context.realmId ?? undefined
         }),
         getTaxRegions(),
-        getXeroTaxRates(context.realmId ?? null)
+        getXeroTaxRates(effectiveConnectionId)
       ]);
+
+      const mappingData = await normalizeRealmAssignments({
+        mappingsForRealm,
+        context,
+        algaEntityType: 'tax_region'
+      });
 
       return {
         mappings: mappingData,
@@ -201,6 +216,84 @@ function createTaxModule(): AccountingMappingModule {
       await deleteExternalEntityMapping(mappingId);
     }
   };
+}
+
+async function normalizeRealmAssignments({
+  mappingsForRealm,
+  context,
+  algaEntityType
+}: {
+  mappingsForRealm: ExternalEntityMapping[];
+  context: AccountingMappingContext;
+  algaEntityType: 'service' | 'tax_region';
+}): Promise<ExternalEntityMapping[]> {
+  const desiredRealm = context.realmId ?? null;
+  if (desiredRealm === null) {
+    return mappingsForRealm;
+  }
+
+  if (mappingsForRealm.length > 0) {
+    return mappingsForRealm;
+  }
+
+  const legacyRealmCandidates = new Set<string>();
+  if (context.realmDisplayValue && context.realmDisplayValue !== desiredRealm) {
+    legacyRealmCandidates.add(context.realmDisplayValue);
+  }
+
+  if (legacyRealmCandidates.size === 0) {
+    return mappingsForRealm;
+  }
+
+  const migrated: ExternalEntityMapping[] = [];
+
+  for (const legacyRealm of legacyRealmCandidates) {
+    try {
+      const legacyMappings = await getExternalEntityMappings({
+        integrationType: ADAPTER_TYPE,
+        algaEntityType,
+        externalRealmId: legacyRealm
+      });
+
+      for (const mapping of legacyMappings) {
+        if (mapping.external_realm_id === desiredRealm) {
+          migrated.push(mapping);
+          continue;
+        }
+        try {
+          const updated = await updateExternalEntityMapping(mapping.id, {
+            external_realm_id: desiredRealm
+          });
+          migrated.push(updated);
+        } catch (error) {
+          console.error('[Xero Mapping] Failed to migrate legacy mapping realm', {
+            mappingId: mapping.id,
+            algaEntityType,
+            fromRealm: legacyRealm,
+            toRealm: desiredRealm,
+            error
+          });
+          migrated.push(mapping);
+        }
+      }
+    } catch (error) {
+      console.error('[Xero Mapping] Failed to load legacy mappings for realm', {
+        algaEntityType,
+        legacyRealm,
+        error
+      });
+    }
+  }
+
+  if (!migrated.length) {
+    return mappingsForRealm;
+  }
+
+  const merged = new Map<string, ExternalEntityMapping>();
+  for (const entry of [...mappingsForRealm, ...migrated]) {
+    merged.set(entry.id, entry);
+  }
+  return Array.from(merged.values());
 }
 
 function renderItemLabel(item: XeroItemOption): string {
