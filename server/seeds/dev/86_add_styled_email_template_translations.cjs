@@ -47,14 +47,38 @@ exports.seed = async function(knex) {
   const getSubtypeId = (name) => {
     const subtype = subtypes.find(s => s.name === name);
     if (!subtype) {
-      throw new Error(`Notification subtype '${name}' not found`);
+      console.warn(`⚠️  Notification subtype '${name}' not found, skipping related templates`);
+      return null;
     }
     return subtype.id;
   };
 
+  // Helper function to insert templates, filtering out those with null notification_subtype_id
+  const insertTemplates = async (templates, language) => {
+    const validTemplates = templates.filter(t => t.notification_subtype_id !== null);
+    const skippedCount = templates.length - validTemplates.length;
+
+    if (skippedCount > 0) {
+      console.log(`  ⚠️  Skipped ${skippedCount} ${language} template(s) due to missing notification subtypes`);
+    }
+
+    if (validTemplates.length > 0) {
+      await knex('system_email_templates')
+        .insert(validTemplates)
+        .onConflict(['name', 'language_code'])
+        .merge({
+          subject: knex.raw('excluded.subject'),
+          html_content: knex.raw('excluded.html_content'),
+          text_content: knex.raw('excluded.text_content'),
+          notification_subtype_id: knex.raw('excluded.notification_subtype_id')
+        });
+      console.log(`  ✓ Added/updated ${validTemplates.length} ${language} template(s)`);
+    }
+  };
+
   // French (fr) templates
   console.log('Adding French templates...');
-  await knex('system_email_templates').insert([
+  const frenchTemplates = [
     // Authentication templates
     {
       name: 'email-verification',
@@ -1135,18 +1159,14 @@ Jours de retard : {{invoice.daysOverdue}}
 Voir la facture : {{invoice.url}}
       `
     }
-  ]).onConflict(['name', 'language_code']).merge({
-    subject: knex.raw('excluded.subject'),
-    html_content: knex.raw('excluded.html_content'),
-    text_content: knex.raw('excluded.text_content'),
-    notification_subtype_id: knex.raw('excluded.notification_subtype_id')
-  });
+  ];
 
+  await insertTemplates(frenchTemplates, 'French');
   console.log('✓ French email templates added (auth + tickets + billing)');
 
   // Spanish (es) templates
   console.log('Adding Spanish templates...');
-  await knex('system_email_templates').insert([
+  const spanishTemplates = [
     // Authentication templates
     {
       name: 'email-verification',
@@ -2227,18 +2247,14 @@ Días de retraso: {{invoice.daysOverdue}}
 Ver la factura: {{invoice.url}}
       `
     }
-  ]).onConflict(['name', 'language_code']).merge({
-    subject: knex.raw('excluded.subject'),
-    html_content: knex.raw('excluded.html_content'),
-    text_content: knex.raw('excluded.text_content'),
-    notification_subtype_id: knex.raw('excluded.notification_subtype_id')
-  });
+  ];
 
+  await insertTemplates(spanishTemplates, 'Spanish');
   console.log('✓ Spanish email templates added (auth + tickets + billing)');
 
   // German (de) templates
   console.log('Adding German templates...');
-  await knex('system_email_templates').insert([
+  const germanTemplates = [
     // Authentication templates
     {
       name: 'email-verification',
@@ -3319,18 +3335,14 @@ Tage überfällig: {{invoice.daysOverdue}}
 Rechnung anzeigen: {{invoice.url}}
       `
     }
-  ]).onConflict(['name', 'language_code']).merge({
-    subject: knex.raw('excluded.subject'),
-    html_content: knex.raw('excluded.html_content'),
-    text_content: knex.raw('excluded.text_content'),
-    notification_subtype_id: knex.raw('excluded.notification_subtype_id')
-  });
+  ];
 
+  await insertTemplates(germanTemplates, 'German');
   console.log('✓ German email templates added (auth + tickets + billing)');
 
   // Dutch (nl) templates
   console.log('Adding Dutch templates...');
-  await knex('system_email_templates').insert([
+  const dutchTemplates = [
     // Authentication templates
     {
       name: 'email-verification',
@@ -4411,17 +4423,14 @@ Dagen achterstallig: {{invoice.daysOverdue}}
 Factuur bekijken: {{invoice.url}}
       `
     }
-  ]).onConflict(['name', 'language_code']).merge({
-    subject: knex.raw('excluded.subject'),
-    html_content: knex.raw('excluded.html_content'),
-    text_content: knex.raw('excluded.text_content'),
-    notification_subtype_id: knex.raw('excluded.notification_subtype_id')
-  });
+  ];
 
+  await insertTemplates(dutchTemplates, 'Dutch');
   console.log('✓ Dutch email templates added (auth + tickets + billing)');
+
   // Italian (it) templates
   console.log('Adding Italian templates...');
-  await knex('system_email_templates').insert([
+  const italianTemplates = [
 // Authentication templates
     {
       name: 'email-verification',
@@ -5502,13 +5511,9 @@ Giorni di ritardo: {{invoice.daysOverdue}}
 Apri la fattura: {{invoice.url}}
       `
     }
-  ]).onConflict(['name', 'language_code']).merge({
-    subject: knex.raw('excluded.subject'),
-    html_content: knex.raw('excluded.html_content'),
-    text_content: knex.raw('excluded.text_content'),
-    notification_subtype_id: knex.raw('excluded.notification_subtype_id')
-  });
+  ];
 
+  await insertTemplates(italianTemplates, 'Italian');
   console.log('✓ Italian email templates added (auth + tickets + billing)');
 
   console.log('✓ All styled multi-language email templates added (French, Spanish, German, Dutch, Italian)');
