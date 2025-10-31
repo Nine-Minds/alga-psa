@@ -229,7 +229,7 @@ export default function DocumentsPage() {
           <div className="flex-shrink-0">
             <button
               onClick={() => setIsFiltersPaneCollapsed(false)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border border-gray-200 flex items-center gap-2"
+              className="p-2 hover:bg-gray-100 rounded border border-gray-200 flex items-center gap-2"
               title="Show filters"
             >
               <Filter className="w-4 h-4" />
@@ -244,7 +244,7 @@ export default function DocumentsPage() {
             <div className="absolute top-2 right-2 z-10">
               <button
                 onClick={() => setIsFiltersPaneCollapsed(true)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                className="p-1 hover:bg-gray-100 rounded"
                 title="Collapse filters"
               >
                 <ChevronLeft className="w-4 h-4" />
