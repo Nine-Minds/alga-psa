@@ -208,10 +208,38 @@ const CreditManagement: React.FC = () => {
     totalCreditsIssued: 0,
     totalCreditsApplied: 0
   });
-  
+
   // State for chart data
   const [expiringCreditsData, setExpiringCreditsData] = useState<Array<{name: string, value: number, count: number}>>([]);
   const [creditUsageData] = useState(placeholderCreditUsageData);
+
+  // Pagination state for Active Credits
+  const [activeCurrentPage, setActiveCurrentPage] = useState(1);
+  const [activePageSize, setActivePageSize] = useState(10);
+
+  // Pagination state for Expired Credits
+  const [expiredCurrentPage, setExpiredCurrentPage] = useState(1);
+  const [expiredPageSize, setExpiredPageSize] = useState(10);
+
+  // Pagination state for All Credits
+  const [allCurrentPage, setAllCurrentPage] = useState(1);
+  const [allPageSize, setAllPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handleActivePageSizeChange = (newPageSize: number) => {
+    setActivePageSize(newPageSize);
+    setActiveCurrentPage(1);
+  };
+
+  const handleExpiredPageSizeChange = (newPageSize: number) => {
+    setExpiredPageSize(newPageSize);
+    setExpiredCurrentPage(1);
+  };
+
+  const handleAllPageSizeChange = (newPageSize: number) => {
+    setAllPageSize(newPageSize);
+    setAllCurrentPage(1);
+  };
 
   useEffect(() => {
     // Fetch real credit data from server actions
@@ -419,9 +447,10 @@ const CreditManagement: React.FC = () => {
                     columns={columns}
                     data={activeCredits}
                     pagination={true}
-                    currentPage={1}
-                    pageSize={5}
-                    totalItems={activeCredits.length}
+                    currentPage={activeCurrentPage}
+                    onPageChange={setActiveCurrentPage}
+                    pageSize={activePageSize}
+                    onItemsPerPageChange={handleActivePageSizeChange}
                   />
                 )
               },
@@ -433,9 +462,10 @@ const CreditManagement: React.FC = () => {
                     columns={columns}
                     data={expiredCredits}
                     pagination={true}
-                    currentPage={1}
-                    pageSize={5}
-                    totalItems={expiredCredits.length}
+                    currentPage={expiredCurrentPage}
+                    onPageChange={setExpiredCurrentPage}
+                    pageSize={expiredPageSize}
+                    onItemsPerPageChange={handleExpiredPageSizeChange}
                   />
                 )
               },
@@ -447,9 +477,10 @@ const CreditManagement: React.FC = () => {
                     columns={columns}
                     data={allCredits}
                     pagination={true}
-                    currentPage={1}
-                    pageSize={5}
-                    totalItems={allCredits.length}
+                    currentPage={allCurrentPage}
+                    onPageChange={setAllCurrentPage}
+                    pageSize={allPageSize}
+                    onItemsPerPageChange={handleAllPageSizeChange}
                   />
                 )
               }

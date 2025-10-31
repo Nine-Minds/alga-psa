@@ -111,10 +111,27 @@ export const ticketListFiltersSchema = z.object({
     boardId: z.string().uuid().nullish(),
     statusId: z.string().optional(),
     priorityId: z.string().optional(),
-    categoryId: z.string().nullish(),
+    categoryId: z.union([
+        z.string().uuid(),
+        z.literal('no-category'),
+        z.literal('all')
+    ]).nullish(),
     clientId: z.string().uuid().nullish(),
     contactId: z.string().uuid().nullish(),
     searchQuery: z.string().optional(),
     boardFilterState: z.enum(['active', 'inactive', 'all']),
-    showOpenOnly: z.boolean().optional()
+    showOpenOnly: z.boolean().optional(),
+    tags: z.array(z.string()).optional(),
+    sortBy: z.enum([
+        'ticket_number',
+        'title',
+        'status_name',
+        'priority_name',
+        'board_name',
+        'category_name',
+        'client_name',
+        'entered_at',
+        'entered_by_name'
+    ]).optional(),
+    sortDirection: z.enum(['asc', 'desc']).optional()
 });

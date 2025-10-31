@@ -54,6 +54,26 @@ function NotificationCategoriesContent({
   const [subtypes, setSubtypes] = useState<NotificationSubtype[]>([]);
   const [currentCategory, setCurrentCategory] = useState<NotificationCategory | null>(null);
 
+  // Pagination state for categories table
+  const [currentPageCategories, setCurrentPageCategories] = useState(1);
+  const [pageSizeCategories, setPageSizeCategories] = useState(10);
+
+  // Handle page size change for categories - reset to page 1
+  const handlePageSizeChangeCategories = (newPageSize: number) => {
+    setPageSizeCategories(newPageSize);
+    setCurrentPageCategories(1);
+  };
+
+  // Pagination state for subtypes table
+  const [currentPageSubtypes, setCurrentPageSubtypes] = useState(1);
+  const [pageSizeSubtypes, setPageSizeSubtypes] = useState(10);
+
+  // Handle page size change for subtypes - reset to page 1
+  const handlePageSizeChangeSubtypes = (newPageSize: number) => {
+    setPageSizeSubtypes(newPageSize);
+    setCurrentPageSubtypes(1);
+  };
+
   const handleToggleCategory = async (category: NotificationCategory) => {
     try {
       const updated = await updateCategoryAction(category.id, {
@@ -199,7 +219,10 @@ function NotificationCategoriesContent({
           data={categories}
           columns={categoryColumns}
           pagination={true}
-          pageSize={10}
+          currentPage={currentPageCategories}
+          onPageChange={setCurrentPageCategories}
+          pageSize={pageSizeCategories}
+          onItemsPerPageChange={handlePageSizeChangeCategories}
         />
       </Card>
 
@@ -218,7 +241,10 @@ function NotificationCategoriesContent({
             data={subtypes}
             columns={subtypeColumns}
             pagination={true}
-            pageSize={5}
+            currentPage={currentPageSubtypes}
+            onPageChange={setCurrentPageSubtypes}
+            pageSize={pageSizeSubtypes}
+            onItemsPerPageChange={handlePageSizeChangeSubtypes}
           />
         </Card>
       )}

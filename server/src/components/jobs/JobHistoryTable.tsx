@@ -52,7 +52,17 @@ export default function JobHistoryTable({ initialData = [] }: JobHistoryTablePro
   const [data, setData] = React.useState<JobData[]>(initialData);
   const intervalRef = React.useRef<NodeJS.Timeout>();
 
-  const hasActiveJobs = (jobs: JobData[]) => {
+  // Pagination state
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
+  const hasActiveJobs = (jobs: any[]) => {
     console.log('Checking for active jobs:', jobs);
 
     return jobs.some(job => job.status === 'processing');
@@ -60,9 +70,9 @@ export default function JobHistoryTable({ initialData = [] }: JobHistoryTablePro
 
   const fetchData = async () => {
     try {
-      const newData = await getJobDetailsWithHistory({}) as JobData[];
-      setData(newData);
-      
+      const newData = await getJobDetailsWithHistory({});
+      setData(newData as unknown as JobData[]);
+
       // Stop polling if there are no active jobs
       if (!hasActiveJobs(newData)) {
         clearInterval(intervalRef.current);
@@ -96,6 +106,11 @@ export default function JobHistoryTable({ initialData = [] }: JobHistoryTablePro
         onRowClick={handleRowClick}
         id="job-history-table"
         rowClassName={() => "hover:bg-[rgb(var(--color-primary-50))] cursor-pointer"}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
       />
 
       <JobDetailsDrawer 

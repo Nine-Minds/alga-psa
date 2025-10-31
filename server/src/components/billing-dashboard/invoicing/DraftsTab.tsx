@@ -49,8 +49,18 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
   const [reverseDialogState, setReverseDialogState] = useState<{ isOpen: boolean; invoiceIds: string[] }>({ isOpen: false, invoiceIds: [] });
   const [isReverseConfirming, setIsReverseConfirming] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const selectedInvoiceId = searchParams?.get('invoiceId');
   const selectedTemplateId = searchParams?.get('templateId');
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     loadData();
@@ -406,6 +416,10 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
                 data={filteredInvoices}
                 columns={columns}
                 pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
                 onRowClick={handleInvoiceSelect}
                 rowClassName={(record) =>
                   selectedInvoiceId === record.invoice_id ? 'bg-blue-50' : 'cursor-pointer hover:bg-gray-50'

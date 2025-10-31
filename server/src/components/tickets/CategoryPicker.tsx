@@ -129,67 +129,54 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
 
   // Handle selection changes
   const handleValueChange = (value: string, type: CategoryType, excluded: boolean, path?: TreeSelectPath) => {
+    let nextSelected = selectedCategories;
+    let nextExcluded = excludedCategories;
+
     // Handle reset action
     if (value === '') {
-      onSelect([], []); // Clear both selected and excluded categories
-      return;
-    }
-
-    if (value === 'no-category') {
-      // Selecting "No Category" should reset the selection entirely
+      nextSelected = [];
+      nextExcluded = [];
+    } else if (value === 'no-category') {
       if (excluded) {
-        // Toggle exclusion of "No Category" if exclusion UI is used
-        const newExcluded = excludedCategories.includes(value)
+        nextExcluded = excludedCategories.includes(value)
           ? excludedCategories.filter(id => id !== value)
           : [...excludedCategories, value];
-        onSelect(selectedCategories, newExcluded);
       } else {
-        // Reset selection
-        onSelect([], []);
-      }
-      return;
-    }
-
-    // Find the selected category
-    const selectedCategory = categories.find(c => c.category_id === value);
-    if (!selectedCategory) return;
-
-    if (excluded) {
-      // Handle exclusion toggle
-      if (excludedCategories.includes(value)) {
-        // Remove from exclusions
-        onSelect(selectedCategories, excludedCategories.filter(id => id !== value));
-      } else {
-        // Add to exclusions and remove from selections if present
-        onSelect(
-          selectedCategories.filter(id => id !== value),
-          [...excludedCategories, value]
-        );
+        const isSelected = selectedCategories.includes(value);
+        if (multiSelect) {
+          nextSelected = isSelected
+            ? selectedCategories.filter(id => id !== value)
+            : [...selectedCategories.filter(id => id !== value), value];
+        } else {
+          nextSelected = isSelected ? [] : [value];
+        }
+        nextExcluded = excludedCategories.filter(id => id !== value);
       }
     } else {
-      // Handle selection
-      if (multiSelect) {
-        if (selectedCategories.includes(value)) {
-          // Remove from selection
-          onSelect(
-            selectedCategories.filter(id => id !== value),
-            excludedCategories
-          );
-        } else {
-          // Add to selection and remove from exclusions if present
-          onSelect(
-            [...selectedCategories, value],
-            excludedCategories.filter(id => id !== value)
-          );
-        }
+      // Find the selected category
+      const selectedCategory = categories.find(c => c.category_id === value);
+      if (!selectedCategory) {
+        return;
+      }
+
+      if (excluded) {
+        nextExcluded = excludedCategories.includes(value)
+          ? excludedCategories.filter(id => id !== value)
+          : [...excludedCategories, value];
+        nextSelected = selectedCategories.filter(id => id !== value);
+      } else if (multiSelect) {
+        nextSelected = selectedCategories.includes(value)
+          ? selectedCategories.filter(id => id !== value)
+          : [...selectedCategories, value];
+        nextExcluded = excludedCategories.filter(id => id !== value);
       } else {
-        // Single select mode
-        onSelect([value], []);
+        nextSelected = [value];
+        nextExcluded = [];
       }
     }
 
-    // Update UI reflection state
-    updateMetadata({ value: selectedCategories.join(',') });
+    onSelect(nextSelected, nextExcluded);
+    updateMetadata({ value: nextSelected.join(',') });
   };
 
   // Update display label to show both selected and excluded categories

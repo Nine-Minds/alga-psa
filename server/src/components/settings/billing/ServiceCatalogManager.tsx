@@ -309,7 +309,7 @@ const ServiceCatalogManager: React.FC = () => {
   // The useCallback ensures stable reference but we need to prevent circular updates
   const handlePageChange = useCallback((newPage: number) => {
     console.log(`Page changed to: ${newPage}`);
-    
+
     // Only update if the page is actually changing to prevent circular updates
     if (newPage !== currentPage) {
       // Mark that this page change was from user interaction
@@ -317,6 +317,12 @@ const ServiceCatalogManager: React.FC = () => {
       setCurrentPage(newPage);
     }
   }, [currentPage]); // Include currentPage in dependencies
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  }, []);
 
   const getColumns = (): ColumnDefinition<IService>[] => {
     const baseColumns: ColumnDefinition<IService>[] = [
@@ -515,6 +521,7 @@ const ServiceCatalogManager: React.FC = () => {
                 pageSize={pageSize}
                 totalItems={totalCount} // Pass total count for server-side pagination
                 onPageChange={handlePageChange}
+                onItemsPerPageChange={handlePageSizeChange}
                 onRowClick={(record: IService) => { // Use updated IService
                   // Store the current page before opening the dialog
                   const currentPageBeforeDialog = currentPage;

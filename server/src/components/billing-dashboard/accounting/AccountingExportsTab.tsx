@@ -204,6 +204,16 @@ const AccountingExportsTab: React.FC = () => {
   const [xeroStatusError, setXeroStatusError] = useState<string | null>(null);
   const [xeroStatusLoading, setXeroStatusLoading] = useState<boolean>(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const resetPreviewState = () => {
     setPreviewData(null);
     setPreviewError(null);
@@ -642,7 +652,11 @@ const AccountingExportsTab: React.FC = () => {
         id="accounting-export-table"
         data={tableData}
         columns={columns}
-        pagination
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
         onRowClick={handleRowClick}
       />
 

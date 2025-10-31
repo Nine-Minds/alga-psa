@@ -38,6 +38,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({
     clientId
 }) => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    // Handle page size change - reset to page 1
+    const handlePageSizeChange = (newPageSize: number) => {
+        setPageSize(newPageSize);
+        setCurrentPage(1);
+    };
     const columns: ColumnDefinition<IClientContractLine>[] = [
         {
             title: 'Plan',
@@ -136,6 +146,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                     id="client-contract-lines-table"
                     data={clientContractLines}
                     columns={columns}
+                    pagination={true}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                    pageSize={pageSize}
+                    onItemsPerPageChange={handlePageSizeChange}
                     onRowClick={onEdit} // Add row click handler
                 />
             </div>

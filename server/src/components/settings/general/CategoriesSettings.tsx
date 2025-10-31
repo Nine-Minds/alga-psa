@@ -63,6 +63,16 @@ const CategoriesSettings: React.FC = () => {
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [boardFilter, setBoardFilter] = useState<string>('all');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     fetchCategories();
     fetchBoards();
@@ -412,6 +422,11 @@ const CategoriesSettings: React.FC = () => {
           id="categories-settings-table"
           data={filteredCategories}
           columns={columns}
+          pagination={true}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
         />
         <div className="mt-4 flex gap-2">
           <Button 

@@ -22,9 +22,13 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     // Await searchParams as required in Next.js 15
     const params = await searchParams;
 
+    // Parse pagination parameters
+    const page = params?.page && typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
+    const pageSize = params?.pageSize && typeof params.pageSize === 'string' ? parseInt(params.pageSize, 10) : 10;
+
     // Parse search parameters into filter values
     const filtersFromURL: Partial<ITicketListFilters> = {};
-    
+
     if (params?.boardId && typeof params.boardId === 'string') {
       filtersFromURL.boardId = params.boardId;
     }
@@ -50,14 +54,37 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       }
     }
     if (params?.tags) {
-      // Decode each tag to handle special characters that were encoded
-      if (typeof params.tags === 'string') {
-        filtersFromURL.tags = params.tags.split(',').map(tag => decodeURIComponent(tag));
-      } else if (Array.isArray(params.tags)) {
-        // Handle case where tags might already be an array
-        filtersFromURL.tags = params.tags.map(tag => 
-          typeof tag === 'string' ? decodeURIComponent(tag) : String(tag)
-        );
+      const normalizeTags = (raw: string | string[]) => {
+        const values = Array.isArray(raw) ? raw : raw.split(',');
+        const decoded = values
+          .map(tag => (typeof tag === 'string' ? decodeURIComponent(tag) : String(tag)).trim())
+          .filter(tag => tag.length > 0);
+        return Array.from(new Set(decoded));
+      };
+
+      filtersFromURL.tags = normalizeTags(params.tags);
+    }
+    const allowedSortKeys = [
+      'ticket_number',
+      'title',
+      'status_name',
+      'priority_name',
+      'board_name',
+      'category_name',
+      'client_name',
+      'entered_at',
+      'entered_by_name'
+    ] as const;
+
+    if (params?.sortBy && typeof params.sortBy === 'string') {
+      if ((allowedSortKeys as readonly string[]).includes(params.sortBy)) {
+        filtersFromURL.sortBy = params.sortBy as ITicketListFilters['sortBy'];
+      }
+    }
+    if (params?.sortDirection && typeof params.sortDirection === 'string') {
+      const sortDirection = params.sortDirection.toLowerCase();
+      if (sortDirection === 'asc' || sortDirection === 'desc') {
+        filtersFromURL.sortDirection = sortDirection;
       }
     }
 
@@ -66,6 +93,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       boardFilterState: 'active',
       statusId: 'open',
       priorityId: 'all',
+      sortBy: filtersFromURL.sortBy ?? 'entered_at',
+      sortDirection: filtersFromURL.sortDirection ?? 'desc',
       ...filtersFromURL
     };
 
@@ -79,21 +108,25 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       searchQuery: initialFilters.searchQuery || '',
       boardFilterState: initialFilters.boardFilterState || 'active',
       showOpenOnly: (initialFilters.statusId === 'open') || false,
-      tags: initialFilters.tags || undefined
+      tags: initialFilters.tags || undefined,
+      sortBy: initialFilters.sortBy || 'entered_at',
+      sortDirection: initialFilters.sortDirection || 'desc'
     };
 
-    // Fetch consolidated data for the ticket list with initial filters
+    // Fetch consolidated data for the ticket list with initial filters and pagination
     const [consolidatedData, displaySettings] = await Promise.all([
-      getConsolidatedTicketListData(user!, fetchFilters),
+      getConsolidatedTicketListData(user!, fetchFilters, page, pageSize),
       getTicketingDisplaySettings()
     ]);
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
-        <TicketingDashboardContainer 
-          consolidatedData={consolidatedData} 
+        <TicketingDashboardContainer
+          consolidatedData={consolidatedData}
           currentUser={user!}
           initialFilters={initialFilters}
+          initialPage={page}
+          initialPageSize={pageSize}
           displaySettings={displaySettings}
         />
       </div>
