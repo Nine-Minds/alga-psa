@@ -34,6 +34,10 @@ import {
   getXeroConnectionStatus,
   type XeroConnectionStatus
 } from 'server/src/lib/actions/integrations/xeroActions';
+import {
+  getQboConnectionStatus,
+  type QboConnectionStatus
+} from 'server/src/lib/actions/integrations/qboActions';
 
 type BatchDetail = {
   batch: AccountingExportBatch | null;
@@ -200,6 +204,9 @@ const AccountingExportsTab: React.FC = () => {
   const [previewData, setPreviewData] = useState<AccountingExportPreviewResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [qboStatus, setQboStatus] = useState<QboConnectionStatus | null>(null);
+  const [qboStatusError, setQboStatusError] = useState<string | null>(null);
+  const [qboStatusLoading, setQboStatusLoading] = useState<boolean>(false);
   const [xeroStatus, setXeroStatus] = useState<XeroConnectionStatus | null>(null);
   const [xeroStatusError, setXeroStatusError] = useState<string | null>(null);
   const [xeroStatusLoading, setXeroStatusLoading] = useState<boolean>(false);
@@ -219,8 +226,33 @@ const AccountingExportsTab: React.FC = () => {
     setPreviewError(null);
   };
 
-  const updateCreateFormField = (field: Exclude<keyof CreateFormState, 'invoiceStatuses'>, value: string) => {
-    setCreateForm((prev) => ({ ...prev, [field]: value }));
+  const updateCreateFormField = (
+    field: Exclude<keyof CreateFormState, 'invoiceStatuses'>,
+    value: string
+  ) => {
+    setCreateForm((prev) => {
+      if (field === 'adapterType') {
+        const nextAdapter = value as AdapterType;
+        let nextRealm = '';
+        if (nextAdapter === 'xero') {
+          nextRealm =
+            xeroStatus?.defaultConnectionId ??
+            xeroStatus?.connections?.[0]?.connectionId ??
+            '';
+        } else if (nextAdapter === 'quickbooks_online') {
+          nextRealm =
+            qboStatus?.defaultRealmId ??
+            qboStatus?.connections?.[0]?.realmId ??
+            '';
+        }
+        return {
+          ...prev,
+          adapterType: nextAdapter,
+          targetRealm: nextRealm
+        };
+      }
+      return { ...prev, [field]: value };
+    });
     resetPreviewState();
   };
 
@@ -444,8 +476,15 @@ const AccountingExportsTab: React.FC = () => {
     setCreateError(null);
     try {
       const invoiceStatuses = normalizeInvoiceStatuses(createForm.invoiceStatuses);
-      if (createForm.adapterType === 'xero' && !createForm.targetRealm.trim()) {
-        throw new Error('Select a Xero connection before creating an export batch.');
+      if (
+        (createForm.adapterType === 'xero' || createForm.adapterType === 'quickbooks_online') &&
+        !createForm.targetRealm.trim()
+      ) {
+        throw new Error(
+          createForm.adapterType === 'xero'
+            ? 'Select a Xero connection before creating an export batch.'
+            : 'Select a QuickBooks Online realm before creating an export batch.'
+        );
       }
       const body = {
         adapter_type: createForm.adapterType,
@@ -557,6 +596,54 @@ const AccountingExportsTab: React.FC = () => {
     xeroStatus,
     xeroStatusLoading
   ]);
+
+  useEffect(() => {
+    if (!createDialogOpen || createForm.adapterType !== 'quickbooks_online') {
+      return;
+    }
+
+    if (!qboStatus && !qboStatusLoading) {
+      setQboStatusLoading(true);
+      void getQboConnectionStatus()
+        .then((status) => {
+          setQboStatus(status);
+          setQboStatusError(status.error ?? null);
+        })
+        .catch((err: any) => {
+          console.error('Error loading QuickBooks connection status:', err);
+          setQboStatusError(err?.message ?? 'Unable to load QuickBooks connections.');
+        })
+        .finally(() => {
+          setQboStatusLoading(false);
+        });
+      return;
+    }
+
+    if (!createForm.targetRealm && qboStatus && qboStatus.connections?.length) {
+      const defaultRealm = qboStatus.defaultRealmId ?? qboStatus.connections[0]?.realmId ?? '';
+      if (defaultRealm) {
+        setCreateForm((prev) =>
+          prev.targetRealm ? prev : { ...prev, targetRealm: defaultRealm }
+        );
+      }
+    }
+  }, [
+    createDialogOpen,
+    createForm.adapterType,
+    createForm.targetRealm,
+    qboStatus,
+    qboStatusLoading
+  ]);
+
+  const realmRequired =
+    createForm.adapterType === 'quickbooks_online' || createForm.adapterType === 'xero';
+  const realmMissing = realmRequired && !createForm.targetRealm.trim();
+  const realmUnavailable =
+    createForm.adapterType === 'quickbooks_online'
+      ? !qboStatusLoading && (qboStatus?.connections?.length ?? 0) === 0
+      : createForm.adapterType === 'xero'
+        ? !xeroStatusLoading && (xeroStatus?.connections?.length ?? 0) === 0
+        : false;
 
   return (
     <div className="space-y-4">
@@ -754,6 +841,16 @@ const AccountingExportsTab: React.FC = () => {
                   </div>
                 </div>
 
+                {selectedRow.adapter_type === 'quickbooks_online' ? (
+                  <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                    Verify QuickBooks realm mappings (services, tax codes, payment terms) are complete for{' '}
+                    <span className="font-semibold">
+                      {batchDetail.batch.target_realm || 'the selected realm'}
+                    </span>{' '}
+                    before executing this export.
+                  </div>
+                ) : null}
+
                 <div>
                   <h3 className="text-sm font-medium text-gray-900 mb-2">Lines</h3>
                   <div className="border rounded-md overflow-hidden">
@@ -861,24 +958,72 @@ const AccountingExportsTab: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Target Realm / Connection</label>
-              <input
-                type="text"
-                value={createForm.targetRealm}
-                onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
-                className="border rounded-md w-full px-3 py-2 text-sm"
-                placeholder="Optional target identifier"
-              />
-              {createForm.adapterType === 'xero' ? (
-                <p className="mt-1 text-xs text-gray-500">
-                  {xeroStatusLoading
-                    ? 'Loading Xero connections…'
-                    : xeroStatusError
-                      ? xeroStatusError
-                      : xeroStatus?.connections?.length
-                        ? `Using Xero connection ${createForm.targetRealm || xeroStatus.defaultConnectionId || xeroStatus.connections[0]?.connectionId}.`
-                        : 'No Xero connections detected. Connect in Xero integration settings first.'}
-                </p>
-              ) : null}
+              {createForm.adapterType === 'quickbooks_online' ? (
+                <>
+                  <select
+                    value={createForm.targetRealm}
+                    onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
+                    className="border rounded-md w-full px-3 py-2 text-sm"
+                    disabled={qboStatusLoading || (qboStatus?.connections?.length ?? 0) === 0}
+                  >
+                    <option value="">Select QuickBooks realm…</option>
+                    {(qboStatus?.connections ?? []).map((connection) => (
+                      <option key={connection.realmId} value={connection.realmId}>
+                        {connection.displayName}
+                        {connection.status !== 'active' ? ' (reauthorisation required)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {qboStatusLoading
+                      ? 'Loading QuickBooks realms…'
+                      : qboStatusError
+                        ? qboStatusError
+                        : qboStatus?.connections?.length
+                          ? 'Exports use the selected QuickBooks realm. Confirm service, tax code, and payment term mappings before delivery.'
+                          : 'No QuickBooks realms detected. Connect QuickBooks Online in integration settings first.'}
+                  </p>
+                </>
+              ) : createForm.adapterType === 'xero' ? (
+                <>
+                  <select
+                    value={createForm.targetRealm}
+                    onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
+                    className="border rounded-md w-full px-3 py-2 text-sm"
+                    disabled={xeroStatusLoading || (xeroStatus?.connections?.length ?? 0) === 0}
+                  >
+                    <option value="">Select Xero connection…</option>
+                    {(xeroStatus?.connections ?? []).map((connection) => (
+                      <option key={connection.connectionId} value={connection.connectionId}>
+                        {connection.xeroTenantId}
+                        {connection.status === 'expired' ? ' (reauthorisation required)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {xeroStatusLoading
+                      ? 'Loading Xero connections…'
+                      : xeroStatusError
+                        ? xeroStatusError
+                        : xeroStatus?.connections?.length
+                          ? 'Exports use the selected Xero connection. Ensure mappings are complete before delivery.'
+                          : 'No Xero connections detected. Connect Xero in integration settings first.'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={createForm.targetRealm}
+                    onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
+                    className="border rounded-md w-full px-3 py-2 text-sm"
+                    placeholder="Optional target identifier"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Provide a QuickBooks Desktop target company if required.
+                  </p>
+                </>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
@@ -1067,7 +1212,11 @@ const AccountingExportsTab: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button id="accounting-export-create-submit" onClick={handleCreate} disabled={creating}>
+            <Button
+              id="accounting-export-create-submit"
+              onClick={handleCreate}
+              disabled={creating || realmMissing || realmUnavailable}
+            >
               {creating ? 'Creating…' : 'Create Export'}
             </Button>
           </div>

@@ -86,13 +86,13 @@ The workflow system consists of the following major components:
 
 ### System Workflows and Tenant-Specific Triggering
 
-System workflows represent shared, reusable workflow definitions or templates that are available to all tenants within the platform. Examples of such workflows might include standard processes like `qboInvoiceSyncWorkflow` or other common business operations.
+System workflows represent shared, reusable workflow definitions or templates that are available to all tenants within the platform. Examples might include standard processes like a generic `invoiceLifecycleWorkflow` or other common business operations.
 
-A key aspect to understand is how these system workflows are invoked. Contrary to a potential misunderstanding that they might be triggered by global, non-tenant-specific "system events" (e.g., via a hypothetical `system_workflow_event_attachments` table for such global triggers), system workflows like `qboInvoiceSyncWorkflow` are typically triggered in the context of a *specific tenant*.
+A key aspect to understand is how these system workflows are invoked. Contrary to a potential misunderstanding that they might be triggered by global, non-tenant-specific \"system events\" (e.g., via a hypothetical `system_workflow_event_attachments` table for such global triggers), system workflows such as the invoice lifecycle example are typically triggered in the context of a *specific tenant*.
 
 The triggering mechanism relies on tenant-specific event attachments. When an event relevant to a system workflow (e.g., `INVOICE_UPDATED` for an invoice sync workflow) occurs for a particular tenant, the system consults the tenant-specific `workflow_event_attachments` table. An entry in this table links the `tenant_id`, the `event_type` (e.g., `INVOICE_UPDATED`), and the `workflow_id`. For a system workflow, this `workflow_id` corresponds to its `registration_id`, effectively associating the tenant-specific event with the shared system workflow definition.
 
-This ensures that while the workflow *definition* is shared, its *execution* is always tied to a specific tenant and triggered by events occurring within that tenant's scope. If a table named `system_workflow_event_attachments` exists, its purpose would be distinct from this tenant-specific triggering mechanism for workflows like `qboInvoiceSyncWorkflow`. For these, the attachment and subsequent workflow execution are inherently tenant-specific.
+This ensures that while the workflow *definition* is shared, its *execution* is always tied to a specific tenant and triggered by events occurring within that tenant's scope. If a table named `system_workflow_event_attachments` exists, its purpose would be distinct from this tenant-specific triggering mechanism. For tenant-aware workflows, the attachment and subsequent execution remain tenant-specific.
 
 ### Persistence Model
 
@@ -157,7 +157,7 @@ There are two primary ways dynamic data is presented in forms:
         ```typescript
         // In the workflow, when an error occurs:
         await actions.createHumanTask({
-          taskType: 'qbo_sync_error', // This task type would link to the form definition above
+          taskType: 'accounting_export_error', // This task type would link to the form definition above
           title: 'QuickBooks Sync Error',
           // ... other task parameters
           contextData: {
@@ -175,7 +175,7 @@ There are two primary ways dynamic data is presented in forms:
         2.  Accessing the `contextData` associated with the specific task instance.
         3.  Performing string substitution on the template string, replacing placeholders like `${contextData.errorCode}` with their corresponding values from the `contextData` (e.g., "QBO-123").
         4.  Displaying the resulting formatted string to the user (e.g., in a read-only textarea as specified by the `ui_schema`).
-    *   This pattern allows for flexible and descriptive presentation of dynamic information without requiring a separate form field for every individual piece of data if they are only for display. The `qbo-mapping-error-form`'s `productDetails` field is a prime example of this approach.
+    *   This pattern allows for flexible and descriptive presentation of dynamic information without requiring a separate form field for every individual piece of data if they are only for display. The `accounting-mapping-error-form` example's `productDetails` field demonstrates this approach.
 
 **Key Considerations for Template Substitution:**
 *   The workflow must ensure that all keys referenced in the form's template string are present in the `contextData` it provides when creating the task.

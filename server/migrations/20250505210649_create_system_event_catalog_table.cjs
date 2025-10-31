@@ -73,36 +73,6 @@ exports.up = async function(knex) {
         required: ['companyId', 'updatedFields', 'updatedByUserId']
       })
     },
-    {
-      event_type: 'INVOICE_CREATED',
-      name: 'Invoice Created',
-      description: 'Triggered when a new invoice is generated or manually created.',
-      category: 'Billing',
-      payload_schema: JSON.stringify({
-        type: 'object',
-        properties: {
-          invoiceId: { type: 'string', format: 'uuid', description: 'The ID of the newly created invoice.' },
-          companyId: { type: 'string', format: 'uuid', description: 'The ID of the company the invoice belongs to.' },
-          invoiceNumber: { type: 'string', description: 'The invoice number.' },
-          totalAmount: { type: 'number', description: 'The total amount of the invoice.' },
-          createdByUserId: { type: 'string', format: 'uuid', description: 'The ID of the user who created the invoice (if applicable).' }
-        },
-        required: ['invoiceId', 'companyId', 'invoiceNumber', 'totalAmount']
-      })
-    },
-    {
-      event_type: 'INVOICE_UPDATED',
-      name: 'Invoice Updated',
-      description: 'Triggered when an existing invoice is updated (e.g., status change, payment applied).',
-      category: 'Billing',
-      payload_schema: JSON.stringify({
-        type: 'object',
-        properties: {
-          invoiceId: { type: 'string', format: 'uuid', description: 'The ID of the updated invoice.' },
-          updatedFields: { type: 'array', items: { type: 'string' }, description: "List of fields that were updated (e.g., 'status', 'paid_amount')." },
-          newStatus: { type: 'string', description: 'The new status of the invoice (if changed).' },
-          updatedByUserId: { type: 'string', format: 'uuid', description: 'The ID of the user who updated the invoice (if applicable).' }
-        },
         required: ['invoiceId', 'updatedFields']
       })
     }
