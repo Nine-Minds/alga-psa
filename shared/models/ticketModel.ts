@@ -519,7 +519,9 @@ export class TicketModel {
           trx
         );
         if (!locationResult.valid && locationResult.error) {
-          errors.push(locationResult.error);
+          // Remove invalid location instead of failing validation
+          console.warn(`[TICKET_MODEL] ${locationResult.error}. Removing location from ticket creation.`);
+          input.location_id = undefined;
         }
       }
 

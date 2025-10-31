@@ -143,34 +143,54 @@ export class ActionRegistry {
         knex = await getAdminConnection();
       }
       
-      // Create action result record (pre-execution)
+      // Create action result record (pre-execution) with retry support for FK timing issues
       let resultId;
-      try {
-        // Import uuid for generating missing event_id
-        const { v4: uuidv4 } = await import('uuid');
-        
-        // Ensure event_id is a valid UUID - generate one if missing
-        const eventId = context.eventId && context.eventId.trim() ? context.eventId : uuidv4();
-        
-        const createResult = await WorkflowActionResultModel.create(knex, context.tenant, {
-          execution_id: context.executionId,
-          event_id: eventId,
-          action_name: actionName,
-          idempotency_key: context.idempotencyKey,
-          ready_to_execute: true,
-          success: false,
-          parameters: context.parameters,
-          tenant: context.tenant
-        });
-        
-        resultId = createResult.result_id;
-        // console.log(`[ActionRegistry] Created action result record with ID ${resultId}`);
-        
-        // Mark as started
-        await WorkflowActionResultModel.markAsStarted(knex, context.tenant, resultId);
-      } catch (dbError) {
-        console.error(`[ActionRegistry] Error creating action result record:`, dbError);
-        // Continue execution even if recording fails
+      const maxAttempts = 5;
+      const baseDelayMs = 50;
+      let createdResultSuccessfully = false;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          // Import uuid for generating missing event_id
+          const { v4: uuidv4 } = await import('uuid');
+          
+          // Ensure event_id is a valid UUID - generate one if missing
+          const eventId = context.eventId && context.eventId.trim() ? context.eventId : uuidv4();
+          
+          const createResult = await WorkflowActionResultModel.create(knex, context.tenant, {
+            execution_id: context.executionId,
+            event_id: eventId,
+            action_name: actionName,
+            idempotency_key: context.idempotencyKey,
+            ready_to_execute: true,
+            success: false,
+            parameters: context.parameters,
+            tenant: context.tenant
+          });
+          
+          resultId = createResult.result_id;
+          // console.log(`[ActionRegistry] Created action result record with ID ${resultId}`);
+          
+          // Mark as started
+          await WorkflowActionResultModel.markAsStarted(knex, context.tenant, resultId);
+          if (attempt > 1) {
+            console.info(`[ActionRegistry] Successfully created action result record for ${actionName} on retry attempt ${attempt}`);
+          }
+          createdResultSuccessfully = true;
+          break;
+        } catch (dbError) {
+          const isFkViolation = dbError instanceof Error && dbError.message?.includes('foreign key constraint');
+          const isRetryable = isFkViolation && attempt < maxAttempts;
+          console.error(`[ActionRegistry] Error creating action result record (attempt ${attempt}/${maxAttempts}):`, dbError);
+          if (!isRetryable) {
+            // Continue execution even if recording fails
+            if (!createdResultSuccessfully) {
+              console.warn(`[ActionRegistry] Giving up on creating action result record for ${actionName} after ${attempt} attempts.`);
+            }
+            break;
+          }
+          const delay = baseDelayMs * Math.pow(2, attempt - 1);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
       }
       
       // Execute action
