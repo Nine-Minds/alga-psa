@@ -1,7 +1,3 @@
-// server/src/components/integrations/qbo/QboMappingManager.tsx
-'use client'; // This component will manage state and potentially fetch data client-side
-
-// server/src/components/integrations/qbo/QboMappingManager.tsx
 'use client';
 
 import React, { useMemo } from 'react';
@@ -11,16 +7,17 @@ import { createQboMappingModules } from './qboMappingModules';
 
 interface QboMappingManagerProps {
   realmId: string;
-  // Removed tenantId prop
+  realmDisplayValue?: string | null;
 }
 
-export function QboMappingManager({ realmId }: QboMappingManagerProps) {
+export function QboMappingManager({ realmId, realmDisplayValue }: QboMappingManagerProps) {
   const modules = useMemo(() => createQboMappingModules(), []);
   const context = useMemo<AccountingMappingContext>(
     () => ({
-      realmId
+      realmId,
+      realmDisplayValue: realmDisplayValue ?? realmId
     }),
-    [realmId]
+    [realmId, realmDisplayValue]
   );
 
   const tabStyles = {

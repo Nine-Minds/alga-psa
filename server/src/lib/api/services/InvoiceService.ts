@@ -383,20 +383,6 @@ export class InvoiceService extends BaseService<IInvoice> {
         details: { action: 'invoice.created' }
       });
 
-      // Publish event
-      await publishEvent({
-        eventType: 'INVOICE_CREATED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: invoice.invoice_id,
-          invoiceNumber: invoiceNumber,
-          clientId: data.client_id,
-          totalAmount: invoice.total_amount,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
-      });
-
       return this.getById(invoice.invoice_id, context) as Promise<IInvoice>;
     });
   }
@@ -469,18 +455,6 @@ export class InvoiceService extends BaseService<IInvoice> {
         recordId: id,
         changedData: data,
         details: { action: 'invoice.updated' }
-      });
-
-      // Publish event
-      await publishEvent({
-        eventType: 'INVOICE_UPDATED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: id,
-          changes: data,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
       });
 
       return this.getById(id, context) as Promise<IInvoice>;
