@@ -91,7 +91,7 @@
 ### Phase 0 — Design & Alignment
 
 - [ ] Finalize WIT world/interface definitions covering context, secrets, config, http, and storage.
-- [ ] Align with Security and DX on capability metadata encoded in WIT (e.g., custom annotations).
+- [*] Align with Security and DX on capability metadata encoded in WIT (e.g., custom annotations).
 - [ ] Define secret envelope/token format and Vault roles required for Runner decryption.
 - [ ] Identify tooling requirements (`wit-bindgen`, `componentize-js`, Wasmtime version upgrade).
 
@@ -122,29 +122,11 @@
 - [ ] Add registry validations to enforce component artifacts for new uploads after grace period.
 - [ ] Communicate migration timelines, provide linting/check scripts in `alga-cli`.
 
-### Phase 5 — Observability, Security, Rollout
+# Phase 5 — Rollout (High-Level)
 
-- [ ] Instrument metrics: secret envelope fetch/decrypt latency, cache hit rate, capability denials, WIT call errors.
-- [ ] Emit structured audit logs when secrets are accessed (tenant, install, key name, version, capability).
-- [ ] Add Vault/secretProvider telemetry dashboards for Runner consumers.
-- [ ] Stage rollout with internal extensions, verify rotation flows, then enable for select partners → GA.
-- [ ] Capture runbooks for token rotation, cache flush, incident response.
-
-## Security & Privacy Considerations
-
-- Secrets originate from Vault via `secretProvider`; only ciphertext or sealed tokens traverse the network.
-- Runner Vault tokens delivered as Docker secrets (`/run/secrets/...`) per existing ops practices.
-- Envelopes include short expiry; Runner refuses to decrypt expired material and forces refresh.
-- Capability metadata enforced before fulfilling WIT calls; unauthorized access returns structured errors without hints.
-- Generated SDK zeroizes buffers and discourages logging secret values (lint or runtime guardrails).
-- CI lint prevents accidental `Debug`/`Display` derives on structs holding secret material.
-
-## Observability & Operations
-
-- Metrics: decrypt latency, cache hit/miss, secret fetch failures, binding call errors per interface.
-- Logs: request ID + install + secret key name (no value) for successful retrievals, warnings on rotations/expirations.
-- Alerts: multiple decrypt failures (possible Vault outage), cache TTL misses, capability violations.
-- Runbooks: secret rotation (update via UI/API → ensure Runner refresh), emergency revocation (invalidate envelope, rotate Vault token), bootstrap (provision component bindings).
+- [ ] Enable component-based execution for an internal extension, exercising secret retrieval end to end.
+- [ ] Gradually open access to pilot partners once SDK and migration tooling stabilize.
+- [ ] Track follow-up work for observability, telemetry, and runbooks separately once the foundation is in place.
 
 ## Dependencies & Coordination
 
