@@ -33,6 +33,7 @@ import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
+import Spinner from 'server/src/components/ui/Spinner';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -43,13 +44,19 @@ interface TicketingDashboardProps {
   initialCategories: ITicketCategory[];
   initialClients: IClient[];
   initialTags?: string[];
-  nextCursor: string | null;
-  onLoadMore: () => Promise<void>;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onFiltersChanged: (filters: Partial<ITicketListFilters>) => void;
   initialFilterValues: Partial<ITicketListFilters>;
   isLoadingMore: boolean;
   user?: IUser;
   displaySettings?: TicketingDisplaySettings;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onSortChange: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -74,13 +81,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialCategories,
   initialClients,
   initialTags = [],
-  nextCursor,
-  onLoadMore,
+  totalCount,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
   onFiltersChanged,
   initialFilterValues,
   isLoadingMore,
   user,
-  displaySettings
+  displaySettings,
+  sortBy = 'entered_at',
+  sortDirection = 'desc',
+  onSortChange
 }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
@@ -103,17 +116,30 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [statusOptions] = useState<SelectOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
-  const [selectedBoard, setSelectedBoard] = useState<string | null>(initialFilterValues.boardId || null);
-  const [selectedClient, setSelectedClient] = useState<string | null>(initialFilterValues.clientId === undefined ? null : initialFilterValues.clientId); // Keep previous fix for client
-  const [selectedStatus, setSelectedStatus] = useState<string>(initialFilterValues.statusId || 'open');
-  const [selectedPriority, setSelectedPriority] = useState<string>(initialFilterValues.priorityId || 'all');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []);
+  const [selectedBoard, setSelectedBoard] = useState<string | null>(initialFilterValues.boardId ?? null);
+  const [selectedClient, setSelectedClient] = useState<string | null>(initialFilterValues.clientId ?? null);
+  const [selectedStatus, setSelectedStatus] = useState<string>(initialFilterValues.statusId ?? 'open');
+  const [selectedPriority, setSelectedPriority] = useState<string>(initialFilterValues.priorityId ?? 'all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []
+  );
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery || '');
-  const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState || 'active');
+  const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery ?? '');
+  const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState ?? 'active');
   
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+
+  const filtersHaveInitialValues = useMemo(() => {
+    return Boolean(
+      initialFilterValues.boardId ||
+      initialFilterValues.clientId ||
+      (initialFilterValues.statusId && initialFilterValues.statusId !== 'open') ||
+      (initialFilterValues.priorityId && initialFilterValues.priorityId !== 'all') ||
+      initialFilterValues.categoryId ||
+      (initialFilterValues.tags && initialFilterValues.tags.length > 0)
+    );
+  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags]);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
@@ -122,22 +148,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Handle page size change - reset to page 1
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setCurrentPage(1);
-  };
-
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(
     initialTags.map(tagText => ({ tag_text: tagText } as ITag))
   );
+
+  const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
+    if (columnId === sortBy && direction === sortDirection) {
+      return;
+    }
+    onSortChange(columnId, direction);
+  }, [onSortChange, sortBy, sortDirection]);
   
   const handleTagsChange = (ticketId: string, tags: ITag[]) => {
     ticketTagsRef.current[ticketId] = tags;
@@ -153,6 +176,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useEffect(() => {
     setTickets(initialTickets);
   }, [initialTickets]);
+
+  useEffect(() => {
+    const nextTags = initialFilterValues.tags || [];
+    setSelectedTags(prev => {
+      if (prev.length === nextTags.length && prev.every((tag, index) => tag === nextTags[index])) {
+        return prev;
+      }
+      return [...nextTags];
+    });
+  }, [initialFilterValues.tags]);
 
   // Fetch ticket-specific tags when initial tickets change
   useEffect(() => {
@@ -203,35 +236,43 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return params.toString();
   }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState]);
 
-  const hasSyncedInitialFilters = useRef(false);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
+    // Skip the effect on initial render to prevent unnecessary fetch
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      if (!filtersHaveInitialValues) {
+        return;
+      }
+    }
+
     const currentFilters: Partial<ITicketListFilters> = {
-      boardId: selectedBoard === null ? undefined : selectedBoard,
+      boardId: selectedBoard ?? undefined,
       statusId: selectedStatus,
       priorityId: selectedPriority,
       categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
-      clientId: selectedClient || undefined,
+      clientId: selectedClient ?? undefined,
       searchQuery: debouncedSearchQuery,
       boardFilterState: boardFilterState,
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
     };
-    if (hasSyncedInitialFilters.current) {
-      onFiltersChanged(currentFilters);
-    } else {
-      hasSyncedInitialFilters.current = true;
-    }
+
+    console.log('[Dashboard] Calling onFiltersChanged with:', currentFilters);
+    onFiltersChanged(currentFilters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    selectedBoard, 
-    selectedStatus, 
-    selectedPriority, 
-    selectedCategories, 
-    selectedClient, 
-    debouncedSearchQuery, 
+    selectedBoard,
+    selectedStatus,
+    selectedPriority,
+    selectedCategories,
+    selectedClient,
+    debouncedSearchQuery,
     boardFilterState,
-    selectedTags
-    // Removed onFiltersChanged from dependencies to prevent infinite loop
+    selectedTags,
+    // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
+    filtersHaveInitialValues
   ]);
 
   const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
@@ -328,25 +369,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   };
 
-  // Filter tickets by selected tags
-  const filteredTickets = useMemo(() => {
-    if (selectedTags.length === 0) return tickets;
-    
-    return tickets.filter(ticket => {
-      const ticketTags = ticketTagsRef.current[ticket.ticket_id || ''] || [];
-      const ticketTagTexts = ticketTags.map(tag => tag.tag_text);
-      
-      // Check if ticket has any of the selected tags
-      return selectedTags.some(selectedTag => ticketTagTexts.includes(selectedTag));
-    });
-  }, [tickets, selectedTags]);
-
-  // Add id to each ticket for DataTable keys
+  // Add id to each ticket for DataTable keys (no client-side filtering needed)
   const ticketsWithIds = useMemo(() =>
-    filteredTickets.map((ticket): any => ({
+    tickets.map((ticket): any => ({
       ...ticket,
-      id: ticket.ticket_id 
-    })), [filteredTickets]);
+      id: ticket.ticket_id
+    })), [tickets]);
 
   const selectableTicketIds = useMemo(
     () => {
@@ -440,6 +468,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [visibleTicketIds]);
 
   const handleSelectAllMatchingTickets = useCallback(() => {
+    // For now, only select current page tickets
+    // TODO: Implement server-side select all for all matching tickets
     if (selectableTicketIds.length === 0) {
       return;
     }
@@ -457,8 +487,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => selectedTicketIdsArray.some(id => !visibleTicketIdSet.has(id)),
     [selectedTicketIdsArray, visibleTicketIdSet]
   );
-  const allFilteredTicketsSelected = selectableTicketIds.length > 0 && selectableTicketIds.every(id => selectedTicketIds.has(id));
-  const isSelectionIndeterminate = selectedTicketIds.size > 0 && (!allVisibleTicketsSelected || hasHiddenSelections) && !allFilteredTicketsSelected;
+  // For server-side pagination, we show "select all on page" vs "select all matching filters"
+  const allCurrentPageSelected = selectableTicketIds.length > 0 && selectableTicketIds.every(id => selectedTicketIds.has(id));
+  const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allVisibleTicketsSelected;
   const selectedTicketDetails = useMemo(() => {
     if (selectedTicketIds.size === 0) {
       return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_name?: string }>;
@@ -486,9 +517,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [tickets, selectedTicketIds]);
 
   const hasSelection = selectedTicketIds.size > 0;
-  const totalSelectableTickets = selectableTicketIds.length;
-  const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && !allFilteredTicketsSelected && visibleTicketIds.length > 0;
-  const showAllSelectedBanner = allFilteredTicketsSelected && totalSelectableTickets > 0;
+  const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
+  const showAllSelectedBanner = false; // Disable "all selected" banner for now until we implement server-side select all
 
   const handleVisibleRowsChange = useCallback((rows: ITicketListItem[]) => {
     const ids = rows
@@ -860,12 +890,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               allTags={allUniqueTags}
               selectedTags={selectedTags}
               onTagSelect={(tag) => {
-                setSelectedTags(prev => 
-                  prev.includes(tag) 
+                setSelectedTags(prev =>
+                  prev.includes(tag)
                     ? prev.filter(t => t !== tag)
                     : [...prev, tag]
                 );
               }}
+              onClear={() => setSelectedTags([])}
             />
             <Button
               variant="outline"
@@ -882,10 +913,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           Tickets
         </h2>
         {/* isLoadingMore prop now correctly reflects loading state from container for pagination or filter changes */}
-        {isLoadingMore ? ( 
-          <div className="flex justify-center items-center h-32">
-            <span>Loading tickets...</span>
-          </div>
+        {isLoadingMore ? (
+          <Spinner size="md" className="h-32 w-full" />
         ) : (
           <>
             {showSelectAllBanner && (
@@ -894,14 +923,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.
                 </span>
                 <div className="flex items-center gap-2">
-                  <Button
-                    id={`${id}-select-all-matching`}
-                    variant="link"
-                    onClick={handleSelectAllMatchingTickets}
-                    className="p-0"
-                  >
-                    Select all {totalSelectableTickets} ticket{totalSelectableTickets === 1 ? '' : 's'} matching your filters
-                  </Button>
+                  <span className="text-sm text-blue-600">
+                    {totalCount} total ticket{totalCount === 1 ? '' : 's'} match your filters
+                  </span>
                   <Button
                     id={`${id}-clear-visible-selection`}
                     variant="link"
@@ -913,51 +937,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 </div>
               </div>
             )}
-            {showAllSelectedBanner && (
-              <div className="mb-3 flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
-                <span>
-                  All {totalSelectableTickets} ticket{totalSelectableTickets === 1 ? '' : 's'} matching your filters are selected.
-                </span>
-                <Button
-                  id={`${id}-clear-all-selection`}
-                  variant="link"
-                  onClick={clearSelection}
-                  className="p-0"
-                >
-                  Clear selection
-                </Button>
-              </div>
-            )}
             <DataTable
               {...withDataAutomationId({ id: `${id}-tickets-table` })}
               data={ticketsWithIds}
               columns={columns}
               pagination={true}
               currentPage={currentPage}
-              onPageChange={setCurrentPage}
+              onPageChange={onPageChange}
               pageSize={pageSize}
-              onItemsPerPageChange={handlePageSizeChange}
+              totalItems={totalCount}
+              onItemsPerPageChange={onPageSizeChange}
               rowClassName={(record: ITicketListItem) =>
                 record.ticket_id && selectedTicketIds.has(record.ticket_id)
                   ? '!bg-blue-50'
                   : ''
               }
               onVisibleRowsChange={handleVisibleRowsChange}
+              manualSorting={true}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSortChange={handleTableSortChange}
             />
-            
-            {/* Load More Button */}
-            {nextCursor && (
-              <div className="flex justify-center mt-4">
-                <Button
-                  id="load-more-button"
-                  onClick={onLoadMore}
-                  disabled={isLoadingMore}
-                  variant="outline"
-                >
-                  {isLoadingMore ? 'Loading...' : 'Load More Tickets'}
-                </Button>
-              </div>
-            )}
           </>
         )}
       </div>

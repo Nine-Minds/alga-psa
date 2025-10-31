@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -15,7 +15,7 @@ import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.i
 import { IStatus } from 'server/src/interfaces/status.interface';
 import { TicketDetails } from './TicketDetails';
 import { Button } from 'server/src/components/ui/Button';
-import { SearchInput } from 'server/src/components/ui/SearchInput';
+import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { ChevronDown, XCircle } from 'lucide-react';
@@ -23,6 +23,19 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
 import { useTranslation } from 'server/src/lib/i18n/client';
+
+const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+};
 
 export function TicketList() {
   const { t } = useTranslation('clientPortal');
@@ -49,6 +62,9 @@ export function TicketList() {
     currentStatus: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Debounce search query to avoid triggering loadTickets on every keystroke
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   // Load statuses, priorities, and categories
   useEffect(() => {
@@ -122,9 +138,9 @@ export function TicketList() {
         );
       }
 
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filteredTickets = filteredTickets.filter(ticket => 
+      if (debouncedSearchQuery) {
+        const query = debouncedSearchQuery.toLowerCase();
+        filteredTickets = filteredTickets.filter(ticket =>
           ticket.title?.toLowerCase().includes(query) ||
           ticket.ticket_number?.toLowerCase().includes(query) ||
           ticket.status_name?.toLowerCase().includes(query) ||
@@ -163,7 +179,7 @@ export function TicketList() {
       setError(t('tickets.messages.loadingError', 'Failed to load tickets. Please try again.'));
     }
     setLoading(false);
-  }, [selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, sortField, sortDirection]);
+  }, [selectedStatus, selectedPriority, selectedCategories, excludedCategories, debouncedSearchQuery, sortField, sortDirection, t]);
 
   // Load tickets on initial mount and when filters/sorting change
   useEffect(() => {
@@ -415,11 +431,13 @@ export function TicketList() {
             className="text-sm min-w-[200px]"
           />
 
-          <SearchInput
+          <Input
+            id="client-portal-search-tickets-input"
+            placeholder={t('tickets.filters.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('tickets.filters.search')}
-            className="min-w-[200px]"
+            className="h-[38px] min-w-[200px] text-sm"
+            containerClassName=""
           />
 
           <Button

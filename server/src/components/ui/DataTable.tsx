@@ -459,11 +459,26 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     }
   };
 
-  // Notify parent component of page changes
+  // Notify parent component of page changes only when the page actually changes
+  const lastEmittedPageRef = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (onPageChange) {
-      onPageChange(pageIndex + 1);
+    if (!onPageChange) {
+      return;
     }
+
+    const nextPage = pageIndex + 1;
+    if (lastEmittedPageRef.current === nextPage) {
+      return;
+    }
+
+    // Skip emitting on first run; parent already has the initial page data
+    if (lastEmittedPageRef.current === null) {
+      lastEmittedPageRef.current = nextPage;
+      return;
+    }
+
+    lastEmittedPageRef.current = nextPage;
+    onPageChange(nextPage);
   }, [pageIndex, onPageChange]);
 
   // Update reflection metadata with debouncing to prevent loops

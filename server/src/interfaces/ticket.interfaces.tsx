@@ -60,6 +60,8 @@ export interface ITicketListFilters {
   boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
   tags?: string[];
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
 }
 
 export interface IPriority extends TenantEntity {
