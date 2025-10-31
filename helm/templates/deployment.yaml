@@ -299,9 +299,9 @@ spec:
           - name: LOG_EXTERNAL_HTTP_TOKEN
             value: "{{ .Values.logging.external.token }}"
 
-          # ----------- HOCUPOCUS ----------------
+          # ----------- HOCUSPOCUS ----------------
           - name: HOCUSPOCUS_URL
-            value: "ws://houcspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
+            value: "ws://hocuspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
 
           # ----------- EMAIL ----------------
           - name: EMAIL_ENABLE
