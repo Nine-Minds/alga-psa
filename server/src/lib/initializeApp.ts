@@ -16,6 +16,7 @@ import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHan
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
 import { getConnection } from 'server/src/lib/db/db';
+import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from './actions/timePeriodsActions';
 import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
@@ -26,6 +27,7 @@ import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider'
 import type { ISecretProvider } from '@alga-psa/shared/core/ISecretProvider';
 import { EnvSecretProvider } from '@alga-psa/shared/core/EnvSecretProvider';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
+import { JobStatus } from 'server/src/types/job';
 
 let isFunctionExecuted = false;
 
@@ -322,45 +324,88 @@ async function initializeJobScheduler(storageService: StorageService) {
     );
   }
 
-  // Register time period creation job if it doesn't exist
-  const existingTimePeriodJobs = await jobScheduler.getJobs({ jobName: 'createNextTimePeriods' });
-  if (existingTimePeriodJobs.length === 0) {
-    // Register the nightly time period creation job
-    jobScheduler.registerJobHandler('createNextTimePeriods', async () => {
-      // Get all tenants
-      const rootKnex = await getConnection(null);
-      const tenants = await rootKnex('tenants').select('tenant');
+  // Register the nightly time period creation job per tenant
+  jobScheduler.registerJobHandler<{ tenantId: string }>('createNextTimePeriods', async (job) => {
+    const tenantId = job.data?.tenantId;
+    if (!tenantId || tenantId === 'system') {
+      logger.warn('createNextTimePeriods job received unsupported tenantId', {
+        jobId: job.id,
+        tenantId
+      });
+      return;
+    }
 
-      // Process each tenant
-      for (const { tenant } of tenants) {
-        try {
-          // Get tenant-specific connection
-          const tenantKnex = await getConnection(tenant);
+    let jobRecordId: string | null = null;
 
-          // Get active time period settings for this tenant
-          const settings = await TimePeriodSettings.getActiveSettings(tenantKnex);
+    try {
+      jobRecordId = await jobService.createJob('createNextTimePeriods', {
+        tenantId,
+        metadata: {
+          triggeredBy: 'scheduler',
+          scheduleInterval: '24 hours',
+          pgBossJobId: job.id
+        },
+        scheduledJobId: job.id
+      });
 
-          // Create next time period using all active settings
-          try {
-            const result = await createNextTimePeriod(tenantKnex, settings);
-            if (result) {
-              logger.info(`Created new time period for tenant ${tenant}: ${result.start_date} to ${result.end_date}`);
-            }
-          } catch (error) {
-            logger.error(`Error creating next time period in tenant ${tenant}:`, error);
-          }
-        } catch (error) {
-          logger.error(`Error processing tenant ${tenant} for time periods:`, error);
-        }
+      await runWithTenant(tenantId, async () =>
+        jobService.updateJobStatus(jobRecordId!, JobStatus.Processing, {
+          tenantId,
+          pgBossJobId: job.id,
+          details: 'Starting time period creation run'
+        })
+      );
+
+      const tenantKnex = await getConnection(tenantId);
+      const settings = await TimePeriodSettings.getActiveSettings(tenantKnex);
+
+      const result = await createNextTimePeriod(tenantKnex, settings);
+      const details =
+        result
+          ? `Created new time period ${result.start_date} to ${result.end_date}`
+          : 'No new time period needed';
+
+      await runWithTenant(tenantId, async () =>
+        jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
+          tenantId,
+          pgBossJobId: job.id,
+          details
+        })
+      );
+
+      logger.info(`Time period creation job completed for tenant ${tenantId}: ${details}`);
+    } catch (error) {
+      logger.error(`Error creating next time period in tenant ${tenantId}:`, error);
+
+      if (jobRecordId) {
+        await runWithTenant(tenantId, async () =>
+          jobService.updateJobStatus(jobRecordId!, JobStatus.Failed, {
+            tenantId,
+            pgBossJobId: job.id,
+            error,
+            details: 'Failed to create next time period'
+          })
+        );
       }
-    });
 
-    // Schedule the time periods job
-    await jobScheduler.scheduleRecurringJob(
-      'createNextTimePeriods',
-      '24 hours',
-      { tenantId: 'system' }
-    );
+      throw error;
+    }
+  });
+
+  // Schedule the time periods job for each tenant
+  const rootKnex = await getConnection(null);
+  const tenants = await rootKnex('tenants').select('tenant');
+
+  for (const { tenant } of tenants) {
+    try {
+      await jobScheduler.scheduleRecurringJob(
+        'createNextTimePeriods',
+        '24 hours',
+        { tenantId: tenant }
+      );
+    } catch (error) {
+      logger.error(`Failed to schedule createNextTimePeriods job for tenant ${tenant}:`, error);
+    }
   }
 }
 
