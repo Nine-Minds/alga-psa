@@ -267,6 +267,71 @@ export type PreviewInvoiceResponse = {
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';
 
+export interface InvoiceStatusMetadata {
+  label: string;
+  description: string;
+  /**
+   * Indicates whether this status should be included in the default set of invoices
+   * when generating accounting exports or similar downstream processes.
+   */
+  isDefaultForAccountingExport?: boolean;
+}
+
+export const INVOICE_STATUS_METADATA: Record<InvoiceStatus, InvoiceStatusMetadata> = {
+  draft: {
+    label: 'Draft',
+    description: 'Work-in-progress invoices that have not been sent to the customer'
+  },
+  sent: {
+    label: 'Sent',
+    description: 'Invoices that have been finalized and sent to the customer',
+    isDefaultForAccountingExport: true
+  },
+  paid: {
+    label: 'Paid',
+    description: 'Fully paid invoices ready for reconciliation',
+    isDefaultForAccountingExport: true
+  },
+  overdue: {
+    label: 'Overdue',
+    description: 'Finalized invoices that are past their due date',
+    isDefaultForAccountingExport: true
+  },
+  cancelled: {
+    label: 'Cancelled',
+    description: 'Invoices that have been voided or cancelled'
+  },
+  pending: {
+    label: 'Pending',
+    description: 'Invoices awaiting approval or additional processing'
+  },
+  prepayment: {
+    label: 'Prepayment',
+    description: 'Advance payment or deposit invoices',
+    isDefaultForAccountingExport: true
+  },
+  partially_applied: {
+    label: 'Partially Applied',
+    description: 'Invoices with partial payments applied',
+    isDefaultForAccountingExport: true
+  }
+};
+
+export const INVOICE_STATUS_DISPLAY_ORDER: InvoiceStatus[] = [
+  'sent',
+  'paid',
+  'partially_applied',
+  'overdue',
+  'prepayment',
+  'pending',
+  'draft',
+  'cancelled'
+];
+
+export const DEFAULT_ACCOUNTING_EXPORT_STATUSES: InvoiceStatus[] = INVOICE_STATUS_DISPLAY_ORDER.filter(
+  (status) => INVOICE_STATUS_METADATA[status]?.isDefaultForAccountingExport
+);
+
 export interface ICreditAllocation extends TenantEntity {
     allocation_id: string;
     transaction_id: string;

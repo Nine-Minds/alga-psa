@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { XERO_CLIENT_ID_SECRET_NAME } from 'server/src/lib/xero/xeroClientService';
+import { getXeroClientId } from 'server/src/lib/xero/xeroClientService';
 
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';
@@ -38,7 +38,7 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
-  const clientId = await secretProvider.getAppSecret(XERO_CLIENT_ID_SECRET_NAME);
+  const clientId = await getXeroClientId(secretProvider);
   if (!clientId) {
     return NextResponse.json({ error: 'Xero integration not configured.' }, { status: 500 });
   }

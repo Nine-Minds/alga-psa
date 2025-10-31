@@ -105,11 +105,16 @@ export async function createAccountingExportBatch(
 ): Promise<AccountingExportBatch> {
   const { currentUser, tenant } = await requireAccountingExportPermission('create', override);
   return runWithTenant(tenant, async () => {
-    const service = await AccountingExportService.create();
-    return service.createBatch({
-      ...input,
-      created_by: input.created_by ?? currentUser.user_id
+    const selector = await AccountingExportInvoiceSelector.create();
+    const filters = normalizeCreateBatchFilters(input.filters);
+    const { batch } = await selector.createBatchFromFilters({
+      adapterType: input.adapter_type,
+      targetRealm: input.target_realm ?? null,
+      notes: input.notes ?? null,
+      createdBy: input.created_by ?? currentUser.user_id,
+      filters
     });
+    return batch;
   });
 }
 
@@ -267,6 +272,79 @@ function toStringArray(value: string[] | string | undefined | null): string[] | 
       .map((segment) => segment.trim())
       .filter(Boolean);
     return segments.length > 0 ? segments : undefined;
+  }
+
+  return undefined;
+}
+
+function normalizeCreateBatchFilters(
+  filters: Record<string, unknown> | null | undefined
+): InvoiceSelectionFilters {
+  const result: InvoiceSelectionFilters = {};
+  if (!filters) {
+    return result;
+  }
+
+  const startDate = toFilterString(filters.start_date ?? filters.startDate);
+  if (startDate) {
+    result.startDate = startDate;
+  }
+
+  const endDate = toFilterString(filters.end_date ?? filters.endDate);
+  if (endDate) {
+    result.endDate = endDate;
+  }
+
+  const invoiceStatuses =
+    toFilterStringArray(
+      filters.invoice_statuses ??
+        filters.invoiceStatuses ??
+        filters.statuses ??
+        filters.status
+    );
+  if (invoiceStatuses && invoiceStatuses.length > 0) {
+    result.invoiceStatuses = invoiceStatuses;
+  }
+
+  const clientIds = toFilterStringArray(filters.client_ids ?? filters.clientIds);
+  if (clientIds && clientIds.length > 0) {
+    result.clientIds = clientIds;
+  }
+
+  const clientSearch = toFilterString(filters.client_search ?? filters.clientSearch);
+  if (clientSearch) {
+    result.clientSearch = clientSearch;
+  }
+
+  return result;
+}
+
+function toFilterString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function toFilterStringArray(value: unknown): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((entry) => (typeof entry === 'string' ? entry.trim() : String(entry ?? '').trim()))
+      .filter((entry) => entry.length > 0);
+    return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
+  }
+
+  if (typeof value === 'string') {
+    const segments = value
+      .split(',')
+      .map((segment) => segment.trim())
+      .filter((segment) => segment.length > 0);
+    return segments.length > 0 ? Array.from(new Set(segments)) : undefined;
   }
 
   return undefined;

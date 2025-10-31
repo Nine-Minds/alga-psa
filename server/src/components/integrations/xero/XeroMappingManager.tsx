@@ -8,15 +8,18 @@ import { createXeroMappingModules } from './xeroMappingModules';
 
 interface XeroMappingManagerProps {
   connectionId?: string | null;
+  xeroTenantId?: string | null;
 }
 
-export function XeroMappingManager({ connectionId }: XeroMappingManagerProps) {
+export function XeroMappingManager({ connectionId, xeroTenantId }: XeroMappingManagerProps) {
   const modules = useMemo(() => createXeroMappingModules(), []);
   const context = useMemo<AccountingMappingContext>(
     () => ({
-      realmId: connectionId ?? null
+      realmId: connectionId ?? null,
+      connectionId: connectionId ?? null,
+      realmDisplayValue: xeroTenantId ?? null
     }),
-    [connectionId]
+    [connectionId, xeroTenantId]
   );
 
   const tabStyles = {
@@ -28,7 +31,7 @@ export function XeroMappingManager({ connectionId }: XeroMappingManagerProps) {
     <AccountingMappingManager
       modules={modules}
       context={context}
-      realmLabel="Xero Connection ID"
+      realmLabel="Xero Tenant ID"
       tabStyles={tabStyles}
     />
   );

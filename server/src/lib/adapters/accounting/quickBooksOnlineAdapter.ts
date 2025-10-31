@@ -9,9 +9,15 @@ import {
   AccountingExportDocument
 } from './accountingExportAdapter';
 import { createTenantKnex } from '../../db';
-import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
+import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { QboClientService } from '../../qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '../../actions/qbo/types';
+import {
+  CompanyAccountingSyncService,
+  KnexCompanyMappingRepository,
+  buildNormalizedCompanyPayload
+} from '../../services/companySync';
+import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
 
 type DbInvoice = {
   invoice_id: string;
@@ -86,6 +92,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   }
 
   readonly type = QuickBooksOnlineAdapter.TYPE;
+  private readonly companyAdapter = new QuickBooksOnlineCompanyAdapter();
 
   capabilities(): AccountingExportAdapterCapabilities {
     return {
@@ -102,10 +109,16 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       throw new Error('QuickBooks adapter requires batch tenant identifier');
     }
 
+    const companySyncService = CompanyAccountingSyncService.create({
+      mappingRepository: new KnexCompanyMappingRepository(knex),
+      adapterFactory: (adapterType) =>
+        adapterType === QuickBooksOnlineAdapter.TYPE ? this.companyAdapter : null
+    });
+
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
-    const resolver = await AccountingMappingResolver.create();
+    const resolver = await AccountingMappingResolver.create({ companySyncService });
 
     const linesByInvoice = groupBy(context.lines, (line) => line.invoice_id);
     const documents: AccountingExportDocument[] = [];
@@ -129,7 +142,43 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       }
 
       const clientRow = clientData.clients.get(clientId);
-      const clientMapping = clientData.mappings.get(clientId);
+      if (!clientRow) {
+        throw new Error(`QuickBooks adapter: client ${clientId} not found for invoice ${invoiceId}`);
+      }
+
+      let clientMapping = clientData.mappings.get(clientId);
+      if (!clientMapping) {
+        if (!context.batch.target_realm) {
+          throw new Error('QuickBooks adapter requires batch target realm to sync customers');
+        }
+
+        const companyPayload = buildNormalizedCompanyPayload({
+          companyId: clientId,
+          name: clientRow.client_name ?? clientId,
+          primaryEmail: clientRow.billing_email ?? null
+        });
+
+        const mappingResolution = await resolver.ensureCompanyMapping({
+          tenantId,
+          adapterType: this.type,
+          companyId: clientId,
+          payload: companyPayload,
+          targetRealm: context.batch.target_realm
+        });
+
+        if (!mappingResolution) {
+          throw new Error(`QuickBooks adapter: unable to resolve customer for client ${clientId}`);
+        }
+
+        clientMapping = mappingFromResolution(
+          clientId,
+          mappingResolution,
+          this.type,
+          context.batch.target_realm
+        );
+        clientData.mappings.set(clientId, clientMapping);
+      }
+
       if (!clientMapping) {
         throw new Error(`QuickBooks adapter: no QuickBooks customer mapping for client ${clientId}`);
       }
@@ -461,7 +510,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .select('*')
       .where('tenant', tenantId)
       .andWhere('integration_type', this.type)
-      .andWhere('alga_entity_type', 'client')
+      .whereIn('alga_entity_type', ['client', 'company'])
       .whereIn('alga_entity_id', Array.from(clientIds))
       .modify((qb) => {
         if (context.batch.target_realm) {
@@ -476,7 +525,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const mappingMap = new Map<string, MappingRow>();
     mappingRows.forEach((row) => {
       const normalized = normalizeMapping(row);
-      mappingMap.set(normalized.alga_entity_id, normalized);
+      const existing = mappingMap.get(normalized.alga_entity_id);
+      if (!existing || existing.alga_entity_type !== 'company') {
+        mappingMap.set(normalized.alga_entity_id, normalized);
+      }
     });
 
     return { clients: clientMap, mappings: mappingMap };
@@ -580,6 +632,23 @@ function normalizeMapping(mapping: MappingRowRaw): MappingRow {
   return {
     ...mapping,
     metadata: parsed ?? null
+  };
+}
+
+function mappingFromResolution(
+  clientId: string,
+  resolution: MappingResolution,
+  adapterType: string,
+  targetRealm: string | null
+): MappingRow {
+  return {
+    id: `runtime-${clientId}`,
+    integration_type: adapterType,
+    alga_entity_type: 'company',
+    alga_entity_id: clientId,
+    external_entity_id: resolution.external_entity_id,
+    external_realm_id: targetRealm,
+    metadata: resolution.metadata ?? null
   };
 }
 

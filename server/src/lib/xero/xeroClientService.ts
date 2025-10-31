@@ -1,7 +1,11 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@shared/core/logger';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/shared/core';
 import { AppError } from '../errors';
+import {
+  ExternalCompanyRecord,
+  NormalizedCompanyPayload
+} from '../services/companySync/companySync.types';
 
 const XERO_TOKEN_ENDPOINT = 'https://identity.xero.com/connect/token';
 const XERO_API_BASE_URL = 'https://api.xero.com/api.xro/2.0';
@@ -14,6 +18,51 @@ export const XERO_TOKEN_URL = XERO_TOKEN_ENDPOINT;
 export const XERO_CREDENTIALS_SECRET_NAME = XERO_CREDENTIALS_SECRET;
 export const XERO_CLIENT_ID_SECRET_NAME = XERO_CLIENT_ID_SECRET;
 export const XERO_CLIENT_SECRET_SECRET_NAME = XERO_CLIENT_SECRET_SECRET;
+
+const XERO_CLIENT_ID_ENV_FALLBACKS = [
+  XERO_CLIENT_ID_SECRET,
+  'XERO_CLIENT_ID',
+  'XERO_OAUTH_CLIENT_ID',
+  'NEXT_PUBLIC_XERO_CLIENT_ID'
+];
+
+const XERO_CLIENT_SECRET_ENV_FALLBACKS = [
+  XERO_CLIENT_SECRET_SECRET,
+  'XERO_CLIENT_SECRET',
+  'XERO_OAUTH_CLIENT_SECRET'
+];
+
+function resolveEnvSecret(candidateKeys: string[]): string | undefined {
+  for (const key of candidateKeys) {
+    const value = typeof process !== 'undefined' ? process.env?.[key] : undefined;
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+async function resolveAppSecret(
+  secretProvider: ISecretProvider,
+  secretName: string,
+  envKeys: string[]
+): Promise<string | undefined> {
+  const secretValue = await secretProvider.getAppSecret(secretName);
+  if (typeof secretValue === 'string' && secretValue.trim().length > 0) {
+    return secretValue.trim();
+  }
+  return resolveEnvSecret(envKeys);
+}
+
+export async function getXeroClientId(secretProvider?: ISecretProvider): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return resolveAppSecret(provider, XERO_CLIENT_ID_SECRET, XERO_CLIENT_ID_ENV_FALLBACKS);
+}
+
+export async function getXeroClientSecret(secretProvider?: ISecretProvider): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return resolveAppSecret(provider, XERO_CLIENT_SECRET_SECRET, XERO_CLIENT_SECRET_ENV_FALLBACKS);
+}
 
 export interface XeroTrackingCategoryOption {
   name: string;
@@ -282,6 +331,123 @@ export class XeroClientService {
     }));
   }
 
+  async findContactByName(name: string): Promise<ExternalCompanyRecord | null> {
+    const safeName = name.replace(/"/g, '\\"');
+    try {
+      const response = await this.request<{ Contacts: Array<Record<string, any>> }>({
+        method: 'GET',
+        url: '/Contacts',
+        params: {
+          where: `Name=="${safeName}"`
+        }
+      });
+      const contact = Array.isArray(response?.Contacts) ? response.Contacts[0] : undefined;
+      return contact ? this.mapContactRecord(contact) : null;
+    } catch (error) {
+      const normalized = this.normalizeError(error);
+      if (normalized.code === 'XERO_API_ERROR') {
+        return null;
+      }
+      throw normalized;
+    }
+  }
+
+  async createOrUpdateContact(payload: NormalizedCompanyPayload): Promise<ExternalCompanyRecord> {
+    const contactPayload = this.buildContactPayload(payload);
+
+    try {
+      const response = await this.request<{ Contacts: Array<Record<string, any>> }>({
+        method: 'POST',
+        url: '/Contacts',
+        data: {
+          Contacts: [contactPayload]
+        }
+      });
+
+      const contact = Array.isArray(response?.Contacts) ? response.Contacts[0] : undefined;
+      if (!contact) {
+        throw new AppError('XERO_CONTACT_CREATION_FAILED', 'Xero returned no contact data');
+      }
+      return this.mapContactRecord(contact);
+    } catch (error) {
+      const normalized = this.normalizeError(error);
+      const existing = await this.safeFindContactByName(payload.name);
+      if (existing) {
+        return existing;
+      }
+      throw normalized;
+    }
+  }
+
+  private buildContactPayload(payload: NormalizedCompanyPayload): Record<string, any> {
+    const contact: Record<string, any> = {
+      Name: payload.name
+    };
+
+    if (payload.primaryEmail) {
+      contact.EmailAddress = payload.primaryEmail;
+    }
+
+    const primaryPhone =
+      payload.primaryPhone ??
+      payload.contacts?.find((contactItem) => contactItem.phone)?.phone ??
+      null;
+    if (primaryPhone) {
+      contact.Phones = [
+        {
+          PhoneType: 'DEFAULT',
+          PhoneNumber: primaryPhone
+        }
+      ];
+    }
+
+    if (payload.billingAddress) {
+      contact.Addresses = [
+        {
+          AddressType: 'STREET',
+          AddressLine1: payload.billingAddress.line1 ?? undefined,
+          AddressLine2: payload.billingAddress.line2 ?? undefined,
+          City: payload.billingAddress.city ?? undefined,
+          Region: payload.billingAddress.region ?? undefined,
+          PostalCode: payload.billingAddress.postalCode ?? undefined,
+          Country: payload.billingAddress.country ?? undefined
+        }
+      ];
+    }
+
+    if (payload.taxNumber) {
+      contact.TaxNumber = payload.taxNumber;
+    }
+
+    if (payload.notes) {
+      contact.Notes = payload.notes;
+    }
+
+    return contact;
+  }
+
+  private mapContactRecord(contact: Record<string, any>): ExternalCompanyRecord {
+    return {
+      externalId: contact.ContactID ?? contact.ContactNumber ?? '',
+      displayName: contact.Name ?? '',
+      syncToken: contact.ContactNumber ?? undefined,
+      raw: contact
+    };
+  }
+
+  private async safeFindContactByName(name: string): Promise<ExternalCompanyRecord | null> {
+    try {
+      return await this.findContactByName(name);
+    } catch (error) {
+      logger.warn('[XeroClientService] failed to lookup contact after create', {
+        tenantId: this.tenantId,
+        connectionId: this.connection.connectionId,
+        error
+      });
+      return null;
+    }
+  }
+
   private async request<T>(config: AxiosRequestConfig, retry = true): Promise<T> {
     await this.ensureAccessToken();
     const headers = {
@@ -520,11 +686,11 @@ export async function upsertStoredXeroConnections(
   return merged;
 }
 
-async function getAppSecrets(): Promise<XeroAppSecrets> {
-  const secretProvider = await getSecretProviderInstance();
+async function getAppSecrets(secretProvider?: ISecretProvider): Promise<XeroAppSecrets> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
   const [clientId, clientSecret] = await Promise.all([
-    secretProvider.getAppSecret(XERO_CLIENT_ID_SECRET),
-    secretProvider.getAppSecret(XERO_CLIENT_SECRET_SECRET)
+    getXeroClientId(provider),
+    getXeroClientSecret(provider)
   ]);
 
   if (!clientId || !clientSecret) {
@@ -532,8 +698,8 @@ async function getAppSecrets(): Promise<XeroAppSecrets> {
   }
 
   return {
-    clientId: String(clientId),
-    clientSecret: String(clientSecret)
+    clientId,
+    clientSecret
   };
 }
 
