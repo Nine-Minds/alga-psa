@@ -70,12 +70,22 @@ export class ServerEventPublisher implements IEventPublisher {
 
   private async safePublishEvent(eventType: string, payload: any): Promise<void> {
     try {
+      // Publish to email channel
       await getEventBus().publish(
         {
           eventType,
           payload
         },
         { channel: getEmailEventChannel() }
+      );
+
+      // Also publish to internal notifications channel
+      await getEventBus().publish(
+        {
+          eventType,
+          payload
+        },
+        { channel: 'internal-notifications' }
       );
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
