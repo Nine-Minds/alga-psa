@@ -29,26 +29,37 @@ const ensureDistributed = async (knex, tableName, distributionColumn) => {
 
 exports.up = async function up(knex) {
   // Add new columns to contract_lines
-  await knex.schema.alterTable(TABLE_NAME, (table) => {
-    table.boolean('enable_proration').notNullable().defaultTo(false);
-    table.string('billing_cycle_alignment', 16).notNullable().defaultTo('start');
-  });
+  const hasEnableProration = await knex.schema.hasColumn(TABLE_NAME, 'enable_proration');
+  const hasBillingAlignment = await knex.schema.hasColumn(TABLE_NAME, 'billing_cycle_alignment');
+
+  if (!hasEnableProration || !hasBillingAlignment) {
+    await knex.schema.alterTable(TABLE_NAME, (table) => {
+      if (!hasEnableProration) {
+        table.boolean('enable_proration').notNullable().defaultTo(false);
+      }
+      if (!hasBillingAlignment) {
+        table.string('billing_cycle_alignment', 16).notNullable().defaultTo('start');
+      }
+    });
+  }
 
   // Copy data from contract_line_fixed_config into contract_lines
-  await knex.raw(`
-    UPDATE contract_lines AS cl
-    SET
-      custom_rate = COALESCE(cl.custom_rate, cfg.base_rate),
-      enable_proration = COALESCE(cfg.enable_proration, cl.enable_proration),
-      billing_cycle_alignment = COALESCE(cfg.billing_cycle_alignment, cl.billing_cycle_alignment)
-    FROM contract_line_fixed_config AS cfg
-    WHERE cl.contract_line_id = cfg.contract_line_id
-      AND cl.tenant = cfg.tenant;
-  `);
+  const fixedConfigExists = await knex.schema.hasTable(FIXED_CONFIG_TABLE);
+  if (fixedConfigExists) {
+    await knex.raw(`
+      UPDATE contract_lines AS cl
+      SET
+        custom_rate = COALESCE(cl.custom_rate, cfg.base_rate),
+        enable_proration = COALESCE(cfg.enable_proration, cl.enable_proration),
+        billing_cycle_alignment = COALESCE(cfg.billing_cycle_alignment, cl.billing_cycle_alignment)
+      FROM contract_line_fixed_config AS cfg
+      WHERE cl.contract_line_id = cfg.contract_line_id
+        AND cl.tenant = cfg.tenant;
+    `);
+  }
 
   // Drop the legacy table now that data lives on contract_lines
-  const exists = await knex.schema.hasTable(FIXED_CONFIG_TABLE);
-  if (exists) {
+  if (fixedConfigExists) {
     await knex.schema.dropTable(FIXED_CONFIG_TABLE);
   }
 
@@ -85,10 +96,19 @@ exports.down = async function down(knex) {
         updated_at = NOW();
   `);
 
-  await knex.schema.alterTable(TABLE_NAME, (table) => {
-    table.dropColumn('enable_proration');
-    table.dropColumn('billing_cycle_alignment');
-  });
+  const hasEnableProration = await knex.schema.hasColumn(TABLE_NAME, 'enable_proration');
+  const hasBillingAlignment = await knex.schema.hasColumn(TABLE_NAME, 'billing_cycle_alignment');
+
+  if (hasEnableProration || hasBillingAlignment) {
+    await knex.schema.alterTable(TABLE_NAME, (table) => {
+      if (hasEnableProration) {
+        table.dropColumn('enable_proration');
+      }
+      if (hasBillingAlignment) {
+        table.dropColumn('billing_cycle_alignment');
+      }
+    });
+  }
 
   if (await knex.schema.hasColumn(TABLE_NAME, 'tenant')) {
     await ensureDistributed(knex, TABLE_NAME, 'tenant');

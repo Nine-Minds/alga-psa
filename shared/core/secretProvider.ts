@@ -166,12 +166,24 @@ export async function getSecretProviderInstance(): Promise<ISecretProvider> {
       logger.info('Initializing composite secret provider system');
       secretProviderInstance = await buildSecretProviders();
     } else {
-      // Legacy mode: always default to sensible composite behavior (env,filesystem)
-      logger.info('Initializing secret provider (legacy mode with composite fallback). Using env-only chain for Edge safety');
-      const readProviders = await Promise.all([
-        getProviderInstance('env')
-      ]);
-      const writeProvider = await getProviderInstance('env');
+      // Legacy mode: prefer filesystem for Node runtimes while retaining env-only support for Edge.
+      const isNodeRuntime =
+        typeof process !== 'undefined' && Boolean(process.versions?.node);
+      const readChain: ProviderType[] = isNodeRuntime
+        ? ['env', 'filesystem']
+        : ['env'];
+      const writeProviderType: ProviderType = isNodeRuntime ? 'filesystem' : 'env';
+
+      logger.info(
+        `Initializing secret provider (legacy mode with composite fallback). Using read chain [${readChain.join(
+          ', '
+        )}] with write provider ${writeProviderType}`
+      );
+
+      const readProviders = await Promise.all(
+        readChain.map((provider) => getProviderInstance(provider))
+      );
+      const writeProvider = await getProviderInstance(writeProviderType);
       secretProviderInstance = new CompositeSecretProvider(readProviders, writeProvider);
     }
 

@@ -1,10 +1,15 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from '../db';
+import {
+  AccountingAdapterType,
+  CompanyAccountingSyncService,
+  NormalizedCompanyPayload
+} from './companySync';
 
 export interface MappingResolution {
   external_entity_id: string;
   metadata?: Record<string, any> | null;
-  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term';
+  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term' | 'company';
 }
 
 interface ResolveParams {
@@ -24,12 +29,16 @@ interface GenericResolveParams {
 export class AccountingMappingResolver {
   private cache = new Map<string, MappingResolution | null>();
   private genericCache = new Map<string, MappingResolution | null>();
+  private companyCache = new Map<string, MappingResolution | null>();
 
-  constructor(private readonly knex: Knex) {}
+  constructor(
+    private readonly knex: Knex,
+    private readonly companySyncService?: CompanyAccountingSyncService
+  ) {}
 
-  static async create(): Promise<AccountingMappingResolver> {
+  static async create(deps: { companySyncService?: CompanyAccountingSyncService } = {}): Promise<AccountingMappingResolver> {
     const { knex } = await createTenantKnex();
-    return new AccountingMappingResolver(knex);
+    return new AccountingMappingResolver(knex, deps.companySyncService);
   }
 
   async resolveServiceMapping(params: ResolveParams): Promise<MappingResolution | null> {
@@ -97,6 +106,44 @@ export class AccountingMappingResolver {
     });
   }
 
+  async ensureCompanyMapping(params: {
+    tenantId: string;
+    adapterType: string;
+    companyId: string;
+    payload: NormalizedCompanyPayload;
+    targetRealm?: string | null;
+  }): Promise<MappingResolution | null> {
+    if (!this.companySyncService) {
+      return null;
+    }
+    const cacheKey = this.buildCompanyCacheKey(params);
+    if (this.companyCache.has(cacheKey)) {
+      return this.companyCache.get(cacheKey) ?? null;
+    }
+
+    const adapterType = this.normalizeAdapterType(params.adapterType);
+    if (!adapterType) {
+      this.companyCache.set(cacheKey, null);
+      return null;
+    }
+
+    const result = await this.companySyncService.ensureCompanyMapping({
+      tenantId: params.tenantId,
+      adapterType,
+      companyId: params.companyId,
+      payload: params.payload,
+      targetRealm: params.targetRealm ?? null
+    });
+
+    const mapping: MappingResolution = {
+      external_entity_id: result.externalCompanyId,
+      metadata: result.metadata ?? null,
+      source: 'company'
+    };
+    this.companyCache.set(cacheKey, mapping);
+    return mapping;
+  }
+
   private async resolveGenericMapping(params: GenericResolveParams): Promise<MappingResolution | null> {
     const cacheKey = this.buildGenericCacheKey(params);
     if (this.genericCache.has(cacheKey)) {
@@ -122,6 +169,20 @@ export class AccountingMappingResolver {
     return `${params.adapterType}:${params.targetRealm ?? 'default'}:${params.entityType}:${params.entityId}`;
   }
 
+  private buildCompanyCacheKey(params: {
+    tenantId: string;
+    adapterType: string;
+    companyId: string;
+    targetRealm?: string | null;
+  }): string {
+    return [
+      params.tenantId,
+      params.adapterType,
+      params.targetRealm ?? 'default',
+      params.companyId
+    ].join(':');
+  }
+
   private async lookupMapping(
     adapterType: string,
     entityType: string,
@@ -145,5 +206,12 @@ export class AccountingMappingResolver {
     }
 
     return query.first();
+  }
+
+  private normalizeAdapterType(adapterType: string): AccountingAdapterType | null {
+    if (adapterType === 'xero' || adapterType === 'quickbooks_online' || adapterType === 'quickbooks_desktop') {
+      return adapterType;
+    }
+    return null;
   }
 }

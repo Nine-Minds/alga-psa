@@ -517,15 +517,15 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
 }
 
 /**
- * Get tickets for list with cursor-based pagination
- * This is more efficient than offset-based pagination for large datasets
+ * Get tickets for list with page-based pagination
+ * This replaces cursor-based pagination with traditional page-based approach
  */
-export async function getTicketsForListWithCursor(
-  user: IUser, 
+export async function getTicketsForList(
+  user: IUser,
   filters: ITicketListFilters,
-  cursor?: string,
-  limit: number = 50
-): Promise<{ tickets: ITicketListItem[], nextCursor: string | null }> {
+  page: number = 1,
+  pageSize: number = 10
+): Promise<{ tickets: ITicketListItem[], totalCount: number }> {
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -554,18 +554,8 @@ export async function getTicketsForListWithCursor(
         validatedFilters.contactId = undefined;
       }
 
-    let query = trx('tickets as t')
-      .select(
-        't.*',
-        's.name as status_name',
-        'p.priority_name',
-        'p.color as priority_color',
-        'c.board_name',
-        'cat.category_name',
-        'comp.client_name',
-        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
-      )
+    // Build base query for filtering
+    let baseQuery = trx('tickets as t')
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', 's.status_id')
            .andOn('t.tenant', 's.tenant')
@@ -599,38 +589,20 @@ export async function getTicketsForListWithCursor(
         't.tenant': tenant
       });
 
-    // Apply cursor-based pagination
-    if (cursor) {
-      try {
-        const [timestamp, id] = cursor.split('_');
-        
-        // Use a raw query to avoid timezone issues
-        // This uses the timestamp directly without timezone conversion
-        query = query.whereRaw(`
-          (t.entered_at < ? OR 
-           (t.entered_at = ? AND t.ticket_id < ?))
-        `, [timestamp, timestamp, id]);
-        
-      } catch (error) {
-        console.error('Error parsing cursor:', error);
-        // If there's an error parsing the cursor, just ignore it and return results from the beginning
-      }
-    }
-
-    // Apply filters
+    // Apply filters to base query
     if (validatedFilters.boardId) {
-      query = query.where('t.board_id', validatedFilters.boardId);
+      baseQuery = baseQuery.where('t.board_id', validatedFilters.boardId);
     } else if (validatedFilters.boardFilterState !== 'all') {
       const boardSubquery = trx('boards')
         .select('board_id')
         .where('tenant', tenant)
         .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
-      query = query.whereIn('t.board_id', boardSubquery);
+      baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
     }
 
     if (validatedFilters.showOpenOnly) {
-      query = query.whereExists(function() {
+      baseQuery = baseQuery.whereExists(function() {
         this.select('*')
             .from('statuses')
             .whereRaw('statuses.status_id = t.status_id')
@@ -638,71 +610,103 @@ export async function getTicketsForListWithCursor(
             .andWhere('statuses.tenant', tenant);
       });
     } else if (validatedFilters.statusId && validatedFilters.statusId !== 'all') {
-      query = query.where('t.status_id', validatedFilters.statusId);
+      baseQuery = baseQuery.where('t.status_id', validatedFilters.statusId);
     }
 
     if (validatedFilters.priorityId && validatedFilters.priorityId !== 'all') {
-      query = query.where('t.priority_id', validatedFilters.priorityId);
+      baseQuery = baseQuery.where('t.priority_id', validatedFilters.priorityId);
     }
 
-    if (validatedFilters.categoryId && validatedFilters.categoryId !== 'all') {
-      query = query.where('t.category_id', validatedFilters.categoryId);
+    if (validatedFilters.categoryId) {
+      if (validatedFilters.categoryId === 'no-category') {
+        baseQuery = baseQuery.whereNull('t.category_id');
+      } else if (validatedFilters.categoryId !== 'all') {
+        baseQuery = baseQuery.where('t.category_id', validatedFilters.categoryId);
+      }
     }
 
     if (validatedFilters.clientId) {
-      query = query.where('t.client_id', validatedFilters.clientId);
+      baseQuery = baseQuery.where('t.client_id', validatedFilters.clientId);
     }
 
     if (validatedFilters.contactId) {
-      query = query.where('t.contact_name_id', validatedFilters.contactId);
+      baseQuery = baseQuery.where('t.contact_name_id', validatedFilters.contactId);
     }
 
     if (validatedFilters.searchQuery) {
       const searchTerm = `%${validatedFilters.searchQuery}%`;
-      query = query.where(function(this: any) {
+      baseQuery = baseQuery.where(function(this: any) {
         this.where('t.title', 'ilike', searchTerm)
             .orWhere('t.ticket_number', 'ilike', searchTerm);
       });
     }
 
-    // Order by entered_at desc and ticket_id desc for cursor pagination
-    query = query.orderBy('t.entered_at', 'desc')
-                 .orderBy('t.ticket_id', 'desc')
-                 .limit(limit + 1); // Get one extra to determine if there's a next page
+    // Apply tag filter if provided
+    if (validatedFilters.tags && validatedFilters.tags.length > 0) {
+      baseQuery = baseQuery.whereIn('t.ticket_id', function() {
+        this.select('tm.tagged_id')
+          .from('tag_mappings as tm')
+          .join('tag_definitions as td', function() {
+            this.on('tm.tenant', '=', 'td.tenant')
+                .andOn('tm.tag_id', '=', 'td.tag_id');
+          })
+          .where('tm.tagged_type', 'ticket')
+          .andWhere('tm.tenant', tenant)
+          .whereIn('td.tag_text', validatedFilters.tags as string[]);
+      });
+    }
+
+    const sortBy = validatedFilters.sortBy ?? 'entered_at';
+    const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
+    const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
+      ticket_number: { column: 't.ticket_number' },
+      title: { column: 't.title' },
+      status_name: { column: 's.name' },
+      priority_name: { column: 'p.priority_name' },
+      board_name: { column: 'c.board_name' },
+      category_name: { column: 'cat.category_name' },
+      client_name: { column: 'comp.client_name' },
+      entered_at: { column: 't.entered_at' },
+      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" }
+    };
+    const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
+
+    // Get total count
+    const countQuery = baseQuery.clone().clearSelect().clearOrder().count('t.ticket_id as count');
+    const [{ count }] = await countQuery;
+    const totalCount = parseInt(String(count), 10);
+
+    // Build query for paginated results
+    const query = baseQuery
+      .clone()
+      .select(
+        't.*',
+        's.name as status_name',
+        'p.priority_name',
+        'p.color as priority_color',
+        'c.board_name',
+        'cat.category_name',
+        'comp.client_name',
+        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
+      )
+      .modify(queryBuilder => {
+        if (selectedSort.rawExpression) {
+          queryBuilder.orderByRaw(`${selectedSort.rawExpression} ${sortDirection}`);
+        } else if (selectedSort.column) {
+          queryBuilder.orderBy(selectedSort.column, sortDirection);
+        } else {
+          queryBuilder.orderBy('t.entered_at', sortDirection);
+        }
+      })
+      .orderBy('t.ticket_id', 'desc')
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
 
     const tickets = await query;
 
-    // Check if we have more results
-    const hasNextPage = tickets.length > limit;
-    const results = hasNextPage ? tickets.slice(0, limit) : tickets;
-    
-    // Create the next cursor if we have more results
-    let nextCursor: string | null = null;
-    if (hasNextPage && results.length > 0) {
-      const lastTicket = results[results.length - 1];
-      
-      // Convert the timestamp to UTC/GMT format
-      let timestampStr;
-      if (lastTicket.entered_at instanceof Date) {
-        timestampStr = lastTicket.entered_at.toISOString();
-      } else if (typeof lastTicket.entered_at === 'string') {
-        // Ensure the string is parsed as UTC. If it doesn't have 'Z', append it.
-        const dateString = lastTicket.entered_at.endsWith('Z') 
-          ? lastTicket.entered_at 
-          : `${lastTicket.entered_at}Z`;
-        const date = new Date(dateString);
-        timestampStr = date.toISOString();
-      } else {
-        // Fallback to current time if entered_at is null or invalid
-        console.warn(`Ticket ${lastTicket.ticket_id} has invalid entered_at: ${lastTicket.entered_at}. Falling back to current time for cursor.`);
-        timestampStr = new Date().toISOString();
-      }
-      
-      nextCursor = `${timestampStr}_${lastTicket.ticket_id}`;
-    }
-
     // Transform and validate the data
-    const ticketListItems = results.map((ticket: any): ITicketListItem => {
+    const ticketListItems = tickets.map((ticket: any): ITicketListItem => {
       const {
         status_id,
         priority_id,
@@ -752,7 +756,7 @@ export async function getTicketsForListWithCursor(
 
     return {
       tickets: ticketListItems as ITicketListItem[],
-      nextCursor
+      totalCount
     };
     } catch (error) {
       console.error('Failed to fetch tickets:', error);
@@ -1205,8 +1209,8 @@ export async function addTicketCommentWithCache(
 export async function getConsolidatedTicketListData(
   user: IUser,
   filters: ITicketListFilters,
-  cursor?: string,
-  limit: number = 50
+  page: number = 1,
+  pageSize: number = 10
 ) {
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
@@ -1222,14 +1226,14 @@ export async function getConsolidatedTicketListData(
       // Fetch filter options and tickets in parallel
       const [formOptions, ticketsData] = await Promise.all([
         getTicketFormOptions(user),
-        getTicketsForListWithCursor(user, filters, cursor, limit)
+        getTicketsForList(user, filters, page, pageSize)
       ]);
 
       // Return consolidated data
       return {
         options: formOptions,
         tickets: ticketsData.tickets,
-        nextCursor: ticketsData.nextCursor
+        totalCount: ticketsData.totalCount
       };
     } catch (error) {
       console.error('Failed to fetch consolidated ticket list data:', error);
@@ -1239,14 +1243,14 @@ export async function getConsolidatedTicketListData(
 }
 
 /**
- * Load more tickets using cursor-based pagination
- * This is used for the "Load More" button in the ticket list
+ * Fetch tickets with pagination
+ * This is used when changing pages or page size
  */
-export async function loadMoreTickets(
+export async function fetchTicketsWithPagination(
   user: IUser,
   filters: ITicketListFilters,
-  cursor?: string,
-  limit: number = 50
+  page: number = 1,
+  pageSize: number = 10
 ) {
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
@@ -1259,10 +1263,30 @@ export async function loadMoreTickets(
     }
 
     try {
-      return await getTicketsForListWithCursor(user, filters, cursor, limit);
+      return await getTicketsForList(user, filters, page, pageSize);
     } catch (error) {
-      console.error('Failed to load more tickets:', error);
-      throw new Error('Failed to load more tickets');
+      console.error('Failed to fetch tickets:', error);
+      throw new Error('Failed to fetch tickets');
     }
   });
+}
+
+/**
+ * Legacy wrapper for cursor-based pagination - kept for backward compatibility
+ * @deprecated Use getTicketsForList with page-based pagination instead
+ */
+export async function getTicketsForListWithCursor(
+  user: IUser,
+  filters: ITicketListFilters,
+  cursor?: string,
+  limit: number = 50
+): Promise<{ tickets: ITicketListItem[], nextCursor: string | null }> {
+  // For backward compatibility, we'll use page 1 with the specified limit
+  // This doesn't support cursor pagination anymore, but prevents breaking existing code
+  const result = await getTicketsForList(user, filters, 1, limit);
+
+  return {
+    tickets: result.tickets,
+    nextCursor: null // No more cursor-based pagination
+  };
 }

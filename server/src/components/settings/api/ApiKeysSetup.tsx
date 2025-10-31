@@ -29,6 +29,16 @@ export default function ApiKeysSetup() {
   const [newKeyValue, setNewKeyValue] = useState('');
   const router = useRouter();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     loadApiKeys();
   }, []);
@@ -169,7 +179,10 @@ export default function ApiKeysSetup() {
           data={apiKeys}
           columns={columns}
           pagination={true}
-          pageSize={10}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
         />
       </Card>
 

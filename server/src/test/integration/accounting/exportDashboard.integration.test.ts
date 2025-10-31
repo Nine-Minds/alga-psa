@@ -286,7 +286,7 @@ describe('Accounting export dashboard integration', () => {
         id: uuidv4(),
         tenant: ctx.tenantId,
         integration_type: 'quickbooks_online',
-        alga_entity_type: 'client',
+        alga_entity_type: 'company',
         alga_entity_id: ctx.clientId,
         external_entity_id: 'QB-CUSTOMER-1',
         sync_status: 'synced',

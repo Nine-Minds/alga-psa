@@ -1,14 +1,39 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccountingExportBatch, AccountingExportLine, AccountingExportError, AccountingExportStatus } from 'server/src/interfaces/accountingExport.interfaces';
+import {
+  AccountingExportBatch,
+  AccountingExportLine,
+  AccountingExportError,
+  AccountingExportStatus
+} from 'server/src/interfaces/accountingExport.interfaces';
+import {
+  InvoiceStatus,
+  INVOICE_STATUS_METADATA,
+  INVOICE_STATUS_DISPLAY_ORDER,
+  DEFAULT_ACCOUNTING_EXPORT_STATUSES
+} from 'server/src/interfaces/invoice.interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import Drawer from 'server/src/components/ui/Drawer';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge, BadgeVariant } from 'server/src/components/ui/Badge';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
+import {
+  listAccountingExportBatches,
+  getAccountingExportBatch,
+  createAccountingExportBatch,
+  updateAccountingExportBatchStatus,
+  executeAccountingExportBatch,
+  previewAccountingExport
+} from 'server/src/lib/actions/accountingExportActions';
+import type { AccountingExportPreviewResult } from 'server/src/lib/actions/accountingExportActions';
+import {
+  getXeroConnectionStatus,
+  type XeroConnectionStatus
+} from 'server/src/lib/actions/integrations/xeroActions';
 
 type BatchDetail = {
   batch: AccountingExportBatch | null;
@@ -28,28 +53,16 @@ interface AccountingExportRow {
   raw: AccountingExportBatch;
 }
 
-type ExportPreviewLine = {
-  invoiceId: string;
-  invoiceNumber: string;
-  invoiceDate: string;
-  invoiceStatus: string;
-  clientName: string | null;
-  chargeId: string;
-  amountCents: number;
-  currencyCode: string;
-  servicePeriodStart: string | null;
-  servicePeriodEnd: string | null;
-};
+type AdapterType = 'quickbooks_online' | 'quickbooks_desktop' | 'xero';
 
-type ExportPreviewResponse = {
-  invoiceCount: number;
-  lineCount: number;
-  totalsByCurrency: Record<string, number>;
-  lines: ExportPreviewLine[];
-  truncated: boolean;
-};
-
-type CreateFormState = typeof DEFAULT_CREATE_FORM;
+interface CreateFormState {
+  adapterType: AdapterType;
+  targetRealm: string;
+  startDate: string;
+  endDate: string;
+  invoiceStatuses: InvoiceStatus[];
+  notes: string;
+}
 
 const STATUS_OPTIONS: Array<{ label: string; value: AccountingExportStatus | 'all' }> = [
   { label: 'All', value: 'all' },
@@ -81,14 +94,24 @@ const STATUS_VARIANT: Record<AccountingExportStatus, BadgeVariant> = {
   needs_attention: 'warning'
 };
 
-const DEFAULT_CREATE_FORM = {
+const INVOICE_STATUS_OPTIONS = INVOICE_STATUS_DISPLAY_ORDER.map((status) => {
+  const metadata = INVOICE_STATUS_METADATA[status];
+  return {
+    label: metadata.label,
+    value: status,
+    description: metadata.description,
+    recommended: Boolean(metadata.isDefaultForAccountingExport)
+  };
+});
+
+const createDefaultCreateForm = (): CreateFormState => ({
   adapterType: 'quickbooks_online',
   targetRealm: '',
   startDate: '',
   endDate: '',
-  invoiceStatuses: 'finalized',
+  invoiceStatuses: [...DEFAULT_ACCOUNTING_EXPORT_STATUSES],
   notes: ''
-};
+});
 
 function truncateId(batchId: string): string {
   if (batchId.length <= 8) return batchId;
@@ -149,11 +172,8 @@ const formatTotalsSummary = (totals: Record<string, number>) => {
     .join(', ');
 };
 
-const parseInvoiceStatuses = (value: string) =>
-  value
-    .split(',')
-    .map((status) => status.trim())
-    .filter((status) => status.length > 0);
+const normalizeInvoiceStatuses = (statuses: InvoiceStatus[]): InvoiceStatus[] =>
+  Array.from(new Set(statuses));
 
 const AccountingExportsTab: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -172,49 +192,76 @@ const AccountingExportsTab: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState<boolean>(false);
-  const [createForm, setCreateForm] = useState(DEFAULT_CREATE_FORM);
+  const [createForm, setCreateForm] = useState<CreateFormState>(() => createDefaultCreateForm());
   const [creating, setCreating] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [detailActionError, setDetailActionError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [previewData, setPreviewData] = useState<ExportPreviewResponse | null>(null);
+  const [previewData, setPreviewData] = useState<AccountingExportPreviewResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [xeroStatus, setXeroStatus] = useState<XeroConnectionStatus | null>(null);
+  const [xeroStatusError, setXeroStatusError] = useState<string | null>(null);
+  const [xeroStatusLoading, setXeroStatusLoading] = useState<boolean>(false);
 
-  const updateCreateFormField = (field: keyof CreateFormState, value: string) => {
-    setCreateForm((prev) => ({ ...prev, [field]: value }));
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
+  const resetPreviewState = () => {
     setPreviewData(null);
     setPreviewError(null);
+  };
+
+  const updateCreateFormField = (field: Exclude<keyof CreateFormState, 'invoiceStatuses'>, value: string) => {
+    setCreateForm((prev) => ({ ...prev, [field]: value }));
+    resetPreviewState();
+  };
+
+  const applyInvoiceStatuses = (statuses: InvoiceStatus[]) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      invoiceStatuses: normalizeInvoiceStatuses(statuses)
+    }));
+    resetPreviewState();
+  };
+
+  const handleInvoiceStatusChange = (status: InvoiceStatus, checked: boolean) => {
+    setCreateForm((prev) => {
+      const nextStatuses = checked
+        ? normalizeInvoiceStatuses([...prev.invoiceStatuses, status])
+        : prev.invoiceStatuses.filter((current) => current !== status);
+      return { ...prev, invoiceStatuses: nextStatuses };
+    });
+    resetPreviewState();
   };
 
   const resetCreateDialog = (force = false) => {
     if (!force && creating) return;
     setCreateDialogOpen(false);
-    setCreateForm(DEFAULT_CREATE_FORM);
+    setCreateForm(createDefaultCreateForm());
     setCreateError(null);
-    setPreviewData(null);
-    setPreviewError(null);
+    resetPreviewState();
   };
 
   const fetchBatches = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
+      const params: { status?: AccountingExportStatus; adapter_type?: string } = {};
       if (filters.status !== 'all') {
-        params.set('status', filters.status);
+        params.status = filters.status;
       }
       if (filters.adapter !== 'all') {
-        params.set('adapter_type', filters.adapter);
+        params.adapter_type = filters.adapter;
       }
-      const query = params.toString();
-      const response = await fetch(`/api/accounting/exports${query ? `?${query}` : ''}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to load export batches (${response.status})`);
-      }
-      const data: AccountingExportBatch[] = await response.json();
+      const data: AccountingExportBatch[] = await listAccountingExportBatches(params);
       setBatches(data);
       setSelectedRow((prev) => {
         if (!prev) return prev;
@@ -243,13 +290,7 @@ const AccountingExportsTab: React.FC = () => {
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const response = await fetch(`/api/accounting/exports/${batchId}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to load batch details (${response.status})`);
-      }
-      const data: BatchDetail = await response.json();
+      const data = await getAccountingExportBatch(batchId);
       setBatchDetail(data);
     } catch (err: any) {
       console.error('Error fetching batch detail:', err);
@@ -382,28 +423,12 @@ const AccountingExportsTab: React.FC = () => {
     setPreviewLoading(true);
     setPreviewError(null);
     try {
-      const invoiceStatuses = parseInvoiceStatuses(createForm.invoiceStatuses);
-      const response = await fetch('/api/accounting/exports/preview', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          filters: {
-            startDate: createForm.startDate || undefined,
-            endDate: createForm.endDate || undefined,
-            invoiceStatuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined
-          }
-        })
+      const invoiceStatuses = normalizeInvoiceStatuses(createForm.invoiceStatuses);
+      const data = await previewAccountingExport({
+        startDate: createForm.startDate || undefined,
+        endDate: createForm.endDate || undefined,
+        invoiceStatuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined
       });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Failed to generate preview (${response.status})`);
-      }
-
-      const data: ExportPreviewResponse = await response.json();
       setPreviewData(data);
     } catch (err: any) {
       console.error('Error generating export preview:', err);
@@ -418,7 +443,10 @@ const AccountingExportsTab: React.FC = () => {
     setCreating(true);
     setCreateError(null);
     try {
-      const invoiceStatuses = parseInvoiceStatuses(createForm.invoiceStatuses);
+      const invoiceStatuses = normalizeInvoiceStatuses(createForm.invoiceStatuses);
+      if (createForm.adapterType === 'xero' && !createForm.targetRealm.trim()) {
+        throw new Error('Select a Xero connection before creating an export batch.');
+      }
       const body = {
         adapter_type: createForm.adapterType,
         export_type: 'invoice',
@@ -431,20 +459,7 @@ const AccountingExportsTab: React.FC = () => {
         notes: createForm.notes || undefined
       };
 
-      const response = await fetch('/api/accounting/exports', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create export batch (${response.status})`);
-      }
-
-      const createdBatch: AccountingExportBatch = await response.json();
+      const createdBatch = await createAccountingExportBatch(body);
       resetCreateDialog(true);
       await fetchBatches();
       await handleRowClick({
@@ -471,15 +486,7 @@ const AccountingExportsTab: React.FC = () => {
     setActionLoading(true);
     setDetailActionError(null);
     try {
-      const response = await fetch(`/api/accounting/exports/${selectedRow.batch_id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status })
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to update batch status (${response.status})`);
-      }
+      await updateAccountingExportBatchStatus(selectedRow.batch_id, { status });
       await refreshDetail();
       await fetchBatches();
     } catch (err: any) {
@@ -495,14 +502,7 @@ const AccountingExportsTab: React.FC = () => {
     setActionLoading(true);
     setDetailActionError(null);
     try {
-      const response = await fetch(`/api/accounting/exports/${selectedRow.batch_id}/execute`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Failed to execute batch (${response.status})`);
-      }
+      await executeAccountingExportBatch(selectedRow.batch_id);
       await refreshDetail();
       await fetchBatches();
     } catch (err: any) {
@@ -520,6 +520,43 @@ const AccountingExportsTab: React.FC = () => {
   }, [batchDetail]);
 
   const currencyFromLines = batchDetail?.lines?.[0]?.currency_code ?? 'USD';
+
+  useEffect(() => {
+    if (!createDialogOpen || createForm.adapterType !== 'xero') {
+      return;
+    }
+
+    if (!xeroStatus && !xeroStatusLoading) {
+      setXeroStatusLoading(true);
+      void getXeroConnectionStatus()
+        .then((status) => {
+          setXeroStatus(status);
+          setXeroStatusError(status.error ?? null);
+        })
+        .catch((err: any) => {
+          console.error('Error loading Xero connection status:', err);
+          setXeroStatusError(err?.message ?? 'Unable to load Xero connections.');
+        })
+        .finally(() => {
+          setXeroStatusLoading(false);
+        });
+      return;
+    }
+
+    if (!createForm.targetRealm && xeroStatus && xeroStatus.connections?.length) {
+      const defaultRealm =
+        xeroStatus.defaultConnectionId ?? xeroStatus.connections[0]?.connectionId ?? '';
+      if (defaultRealm) {
+        setCreateForm((prev) => (prev.targetRealm ? prev : { ...prev, targetRealm: defaultRealm }));
+      }
+    }
+  }, [
+    createDialogOpen,
+    createForm.adapterType,
+    createForm.targetRealm,
+    xeroStatus,
+    xeroStatusLoading
+  ]);
 
   return (
     <div className="space-y-4">
@@ -591,9 +628,8 @@ const AccountingExportsTab: React.FC = () => {
             id="accounting-export-new"
             onClick={() => {
               setCreateError(null);
-              setCreateForm(DEFAULT_CREATE_FORM);
-              setPreviewData(null);
-              setPreviewError(null);
+              setCreateForm(createDefaultCreateForm());
+              resetPreviewState();
               setCreateDialogOpen(true);
             }}
           >
@@ -616,7 +652,11 @@ const AccountingExportsTab: React.FC = () => {
         id="accounting-export-table"
         data={tableData}
         columns={columns}
-        pagination
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
         onRowClick={handleRowClick}
       />
 
@@ -828,6 +868,17 @@ const AccountingExportsTab: React.FC = () => {
                 className="border rounded-md w-full px-3 py-2 text-sm"
                 placeholder="Optional target identifier"
               />
+              {createForm.adapterType === 'xero' ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  {xeroStatusLoading
+                    ? 'Loading Xero connections…'
+                    : xeroStatusError
+                      ? xeroStatusError
+                      : xeroStatus?.connections?.length
+                        ? `Using Xero connection ${createForm.targetRealm || xeroStatus.defaultConnectionId || xeroStatus.connections[0]?.connectionId}.`
+                        : 'No Xero connections detected. Connect in Xero integration settings first.'}
+                </p>
+              ) : null}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
@@ -849,13 +900,61 @@ const AccountingExportsTab: React.FC = () => {
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Statuses</label>
-              <input
-                type="text"
-                value={createForm.invoiceStatuses}
-                onChange={(e) => updateCreateFormField('invoiceStatuses', e.target.value)}
-                className="border rounded-md w-full px-3 py-2 text-sm"
-                placeholder="Comma-separated invoice statuses (e.g. finalized, ready)"
-              />
+              <div className="border rounded-md divide-y divide-gray-200">
+                {INVOICE_STATUS_OPTIONS.map((option) => {
+                  const checked = createForm.invoiceStatuses.includes(option.value);
+                  const description = option.recommended
+                    ? `${option.description} (recommended)`
+                    : option.description;
+                  return (
+                    <Checkbox
+                      key={option.value}
+                      id={`invoice-status-${option.value}`}
+                      checked={checked}
+                      onChange={(e) => handleInvoiceStatusChange(option.value, e.target.checked)}
+                      containerClassName="flex items-start gap-3 px-3 py-3 mb-0"
+                      className="mt-1"
+                      label={
+                        <div>
+                          <span className="text-sm font-medium text-gray-900">{option.label}</span>
+                          <p className="text-xs text-gray-500">{description}</p>
+                        </div>
+                      }
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Button
+                  id="invoice-statuses-recommended"
+                  variant="soft"
+                  size="xs"
+                  onClick={() => applyInvoiceStatuses([...DEFAULT_ACCOUNTING_EXPORT_STATUSES])}
+                >
+                  Use recommended set
+                </Button>
+                <Button
+                  id="invoice-statuses-select-all"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => applyInvoiceStatuses(INVOICE_STATUS_OPTIONS.map((option) => option.value))}
+                >
+                  Select all
+                </Button>
+                <Button
+                  id="invoice-statuses-clear"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => applyInvoiceStatuses([])}
+                >
+                  Clear
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Choose which invoice statuses to include in this export. Recommended statuses cover finalized invoices
+                (sent, paid, partially applied, overdue, prepayment). Only include drafts, pending, or cancelled invoices if
+                you intentionally need them.
+              </p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>

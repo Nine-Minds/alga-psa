@@ -39,37 +39,29 @@ export function useUserPreference<T>(
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedValueRef = useRef<T | null>(null);
 
-  // Initialize with default value to avoid hydration mismatch
-  const [value, setValueState] = useState<T>(defaultValue);
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
-
-  // Load from localStorage immediately after mount
-  useEffect(() => {
-    setIsHydrated(true);
-
-    // Load from localStorage if available
-    if (localStorageKey && typeof window !== 'undefined') {
+  // Initialize with localStorage value if available to avoid visual flash
+  const [value, setValueState] = useState<T>(() => {
+    // On client-side, try to read from localStorage immediately
+    if (typeof window !== 'undefined' && localStorageKey) {
       try {
         const stored = localStorage.getItem(localStorageKey);
         if (stored !== null) {
-          const parsedValue = JSON.parse(stored);
-          // Use requestAnimationFrame to ensure the update happens after paint
-          // This prevents the visual jump
-          requestAnimationFrame(() => {
-            setValueState(parsedValue);
-            setHasLoadedInitial(true);
-          });
-        } else {
-          setHasLoadedInitial(true);
+          return JSON.parse(stored);
         }
       } catch (e) {
         console.error('Failed to parse localStorage value:', e);
-        setHasLoadedInitial(true);
       }
-    } else {
-      setHasLoadedInitial(true);
     }
+    return defaultValue;
+  });
+
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
+
+  // Mark as hydrated and loaded after mount
+  useEffect(() => {
+    setIsHydrated(true);
+    setHasLoadedInitial(true);
   }, []); // Run once on mount
 
   // Load preference from server

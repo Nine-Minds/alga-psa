@@ -6,16 +6,15 @@ import axios from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 import {
-  XERO_CLIENT_ID_SECRET_NAME,
-  XERO_CLIENT_SECRET_SECRET_NAME,
+  getXeroClientId,
+  getXeroClientSecret,
   XeroConnectionsStore,
   upsertStoredXeroConnections,
   XERO_TOKEN_URL
 } from 'server/src/lib/xero/xeroClientService';
 
-const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
-const XERO_REDIRECT_URI =
-  process.env.XERO_REDIRECT_URI ?? 'http://localhost:3000/api/integrations/xero/callback';
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+const XERO_REDIRECT_URI = `${NEXTAUTH_URL}/api/integrations/xero/callback`;
 const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
 
 const SUCCESS_PATH = '/msp/settings?tab=integrations&xero_status=success';
@@ -28,7 +27,7 @@ type XeroStatePayload = {
 };
 
 function createRedirect(path: string, params?: Record<string, string | undefined>) {
-  const url = new URL(path, APP_BASE_URL);
+  const url = new URL(path, NEXTAUTH_URL);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
@@ -66,8 +65,10 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const tenantId = statePayload.tenantId;
   const secretProvider = await getSecretProviderInstance();
-  const clientId = await secretProvider.getAppSecret(XERO_CLIENT_ID_SECRET_NAME);
-  const clientSecret = await secretProvider.getAppSecret(XERO_CLIENT_SECRET_SECRET_NAME);
+  const [clientId, clientSecret] = await Promise.all([
+    getXeroClientId(secretProvider),
+    getXeroClientSecret(secretProvider)
+  ]);
 
   if (!clientId || !clientSecret) {
     return createRedirect(FAILURE_PATH, { xero_error: 'config_missing' });

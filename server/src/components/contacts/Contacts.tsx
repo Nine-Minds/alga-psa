@@ -441,13 +441,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     setCurrentPage(1); // Reset to first page when page size changes
   };
 
-  // Page size options for contacts table
-  const pageSizeOptions = [
-    { value: '10', label: '10 per page' },
-    { value: '25', label: '25 per page' },
-    { value: '50', label: '50 per page' },
-    { value: '100', label: '100 per page' }
-  ];
 
   const columns: ColumnDefinition<IContact>[] = [
     {
@@ -752,7 +745,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             onPageChange={handlePageChange}
             pageSize={pageSize}
             onItemsPerPageChange={handlePageSizeChange}
-            itemsPerPageOptions={pageSizeOptions}
             sortBy={sortBy}
             sortDirection={sortDirection}
             onSortChange={handleSortChange}

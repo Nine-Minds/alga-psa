@@ -33,6 +33,16 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
   const [userClients, setUserClients] = useState<Record<string, { client_id: string; client_name: string } | null>>({});
   const { openDrawer } = useDrawer();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     // Fetch avatar URLs for all users
     const fetchAvatarUrls = async () => {
@@ -288,7 +298,16 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
 
   return (
     <div>
-      <DataTable id="users-table" data={visibleUsers} columns={columns} />
+      <DataTable
+        id="users-table"
+        data={visibleUsers}
+        columns={columns}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
+      />
 
       {userToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">

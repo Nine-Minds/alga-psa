@@ -38,38 +38,7 @@ exports.up = async function(knex) {
   // Insert French templates
   await knex('system_email_templates').insert([
     // Authentication templates
-    {
-      name: 'email-verification',
-      language_code: 'fr',
-      subject: 'Vérifiez votre email{{#if registrationClientName}} pour {{registrationClientName}}{{/if}}',
-      notification_subtype_id: getSubtypeId('email-verification'),
-      html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Vérification d'email</h2>
-          <p>Bonjour,</p>
-          <p>Veuillez vérifier votre adresse email en cliquant sur le lien ci-dessous :</p>
-          <p><a href="{{verificationUrl}}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Vérifier l'email</a></p>
-          <p>Ou copiez et collez ce lien dans votre navigateur :</p>
-          <p>{{verificationUrl}}</p>
-          {{#if expirationTime}}
-          <p><small>Ce lien expirera dans {{expirationTime}}.</small></p>
-          {{/if}}
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Si vous n'avez pas demandé cet email, veuillez l'ignorer.</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantClientName}}</p>
-        </div>
-      `,
-      text_content: `Vérification d'email
-
-Veuillez vérifier votre adresse email en visitant :
-{{verificationUrl}}
-
-{{#if expirationTime}}Ce lien expirera dans {{expirationTime}}.{{/if}}
-
-Si vous n'avez pas demandé cet email, veuillez l'ignorer.
-
-© {{currentYear}} {{tenantClientName}}`
-    },
+    // NOTE: email-verification template is managed in migration 20251029100000
     {
       name: 'password-reset',
       language_code: 'fr',
@@ -358,42 +327,7 @@ Contacter l'Assistance : {{supportEmail}}
 Ceci est un e-mail de sécurité automatisé envoyé à {{email}}.
 © {{currentYear}} {{clientName}}. Tous droits réservés.`
     },
-    {
-      name: 'portal-invitation',
-      language_code: 'fr',
-      subject: 'Invitation au portail client - {{clientName}}',
-      notification_subtype_id: getSubtypeId('portal-invitation'),
-      html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Bienvenue sur votre portail client</h2>
-          <p>Bonjour {{contactName}},</p>
-          <p>Vous êtes invité à rejoindre le portail client de {{clientName}}.</p>
-          <p><a href="{{portalLink}}" style="display: inline-block; padding: 10px 20px; background-color: #8A4DEA; color: white; text-decoration: none; border-radius: 5px;">Activer mon accès</a></p>
-          <p>Ou copiez et collez ce lien dans votre navigateur :</p>
-          <p>{{portalLink}}</p>
-          <p><small>Le lien expirera dans {{expirationTime}}.</small></p>
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Besoin d'assistance ?</p>
-          <p style="color: #666; font-size: 12px;">Email : {{clientLocationEmail}}<br>Téléphone : {{clientLocationPhone}}</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{clientName}}</p>
-        </div>
-      `,
-      text_content: `Bienvenue sur votre portail client
-
-Bonjour {{contactName}},
-
-Vous êtes invité à rejoindre le portail client de {{clientName}}.
-
-Activer mon accès : {{portalLink}}
-
-Le lien expirera dans {{expirationTime}}.
-
-Besoin d'assistance ?
-Email : {{clientLocationEmail}}
-Téléphone : {{clientLocationPhone}}
-
-© {{currentYear}} {{clientName}}`
-    },
+    // NOTE: portal-invitation template is managed in migration 20251029100000
     {
       name: 'tenant-recovery',
       language_code: 'fr',
@@ -1129,12 +1063,11 @@ Voir la facture : {{invoice.url}}
 
 exports.down = async function(knex) {
   // Remove French email templates
+  // NOTE: email-verification and portal-invitation are NOT removed as they're managed by migration 20251029100000
   await knex('system_email_templates')
     .where({ language_code: 'fr' })
     .whereIn('name', [
-      'email-verification',
       'password-reset',
-      'portal-invitation',
       'tenant-recovery',
       'no-account-found',
       'ticket-assigned',

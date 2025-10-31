@@ -71,6 +71,16 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   const [bucketData, setBucketData] = useState<BucketUsageData[]>([]);
   const [loadingBuckets, setLoadingBuckets] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
     type: 'container',
     id: 'usage-tracking',
@@ -466,6 +476,10 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 data={usageRecords}
                 columns={columns}
                 pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
                 onRowClick={(record) => {
                   setEditingUsage(record);
                   setNewUsage({

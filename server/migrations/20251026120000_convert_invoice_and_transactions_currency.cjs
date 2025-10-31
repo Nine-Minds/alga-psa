@@ -18,48 +18,58 @@ exports.up = async function up(knex) {
   // 1. Rename invoice item tables to charge terminology.
   // -----------------------------------------------------------------------
   for (const { from, to } of tablesToRename) {
-    const exists = await knex.schema.hasTable(from);
-    if (exists) {
-      await knex.schema.renameTable(from, to);
+    const fromExists = await knex.schema.hasTable(from);
+    const toExists = await knex.schema.hasTable(to);
+    if (!fromExists || toExists) {
+      continue;
     }
+    await knex.schema.renameTable(from, to);
   }
 
   // Backward compatibility view for legacy queries referencing invoice_items.
-  const viewExists = await knex
-    .select(knex.raw("1"))
+  const invoiceChargesExists = await knex.schema.hasTable('invoice_charges');
+  const legacyViewExists = await knex
+    .select(knex.raw('1'))
     .from('pg_views')
     .where({ viewname: 'invoice_items' })
     .first();
 
-  if (!viewExists) {
-    await knex.raw(`
-      CREATE VIEW invoice_items AS
-      SELECT * FROM invoice_charges;
-    `);
-  } else {
-    await knex.raw('CREATE OR REPLACE VIEW invoice_items AS SELECT * FROM invoice_charges;');
+  if (invoiceChargesExists) {
+    if (!legacyViewExists) {
+      await knex.raw(`
+        CREATE VIEW invoice_items AS
+        SELECT * FROM invoice_charges;
+      `);
+    } else {
+      await knex.raw('CREATE OR REPLACE VIEW invoice_items AS SELECT * FROM invoice_charges;');
+    }
   }
 
   // Ensure multi-tenant uniqueness remains explicit after the rename.
-  await knex.raw(`
-    CREATE UNIQUE INDEX IF NOT EXISTS invoice_charges_tenant_invoice_item_uidx
-    ON invoice_charges (tenant, invoice_id, item_id)
-  `);
+  if (invoiceChargesExists) {
+    await knex.raw(`
+      CREATE UNIQUE INDEX IF NOT EXISTS invoice_charges_tenant_invoice_item_uidx
+      ON invoice_charges (tenant, invoice_id, item_id)
+    `);
 
-  await knex.raw(`
-    CREATE UNIQUE INDEX IF NOT EXISTS invoice_charge_details_tenant_item_uidx
-    ON invoice_charge_details (tenant, item_id, item_detail_id)
-  `);
+    await knex.raw(`
+      CREATE UNIQUE INDEX IF NOT EXISTS invoice_charges_tenant_item_uidx
+      ON invoice_charges (tenant, item_id)
+    `);
+  }
 
-  await knex.raw(`
-    CREATE UNIQUE INDEX IF NOT EXISTS invoice_charges_tenant_item_uidx
-    ON invoice_charges (tenant, item_id)
-  `);
+  const invoiceChargeDetailsExists = await knex.schema.hasTable('invoice_charge_details');
+  if (invoiceChargeDetailsExists) {
+    await knex.raw(`
+      CREATE UNIQUE INDEX IF NOT EXISTS invoice_charge_details_tenant_item_uidx
+      ON invoice_charge_details (tenant, item_id, item_detail_id)
+    `);
 
-  await knex.raw(`
-    CREATE UNIQUE INDEX IF NOT EXISTS invoice_charge_details_tenant_detail_uidx
-    ON invoice_charge_details (tenant, item_detail_id)
-  `);
+    await knex.raw(`
+      CREATE UNIQUE INDEX IF NOT EXISTS invoice_charge_details_tenant_detail_uidx
+      ON invoice_charge_details (tenant, item_detail_id)
+    `);
+  }
 
   // -----------------------------------------------------------------------
   // 2. Add currency metadata to invoices.

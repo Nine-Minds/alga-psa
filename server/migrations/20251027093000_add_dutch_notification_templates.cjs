@@ -38,38 +38,7 @@ exports.up = async function(knex) {
   // Insert Dutch templates
   await knex('system_email_templates').insert([
     // Authentication templates
-    {
-      name: 'email-verification',
-      language_code: 'nl',
-      subject: 'Verifieer uw e-mailadres{{#if registrationClientName}} voor {{registrationClientName}}{{/if}}',
-      notification_subtype_id: getSubtypeId('email-verification'),
-      html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>E-mailverificatie</h2>
-          <p>Hallo,</p>
-          <p>Verifieer uw e-mailadres door op onderstaande link te klikken:</p>
-          <p><a href="{{verificationUrl}}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">E-mail verifiëren</a></p>
-          <p>Of kopieer deze link naar uw browser:</p>
-          <p>{{verificationUrl}}</p>
-          {{#if expirationTime}}
-          <p><small>Deze link verloopt over {{expirationTime}}.</small></p>
-          {{/if}}
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Als u deze e-mail niet heeft aangevraagd, kunt u deze negeren.</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantClientName}}</p>
-        </div>
-      `,
-      text_content: `E-mailverificatie
-
-Verifieer uw e-mailadres door naar deze link te gaan:
-{{verificationUrl}}
-
-{{#if expirationTime}}Deze link verloopt over {{expirationTime}}.{{/if}}
-
-Als u deze e-mail niet heeft aangevraagd, kunt u deze negeren.
-
-© {{currentYear}} {{tenantClientName}}`
-    },
+    // NOTE: email-verification template is managed in migration 20251029100000
     {
       name: 'password-reset',
       language_code: 'nl',
@@ -358,42 +327,7 @@ Contact Ondersteuning: {{supportEmail}}
 Dit is een geautomatiseerde beveiligingse-mail verzonden naar {{email}}.
 © {{currentYear}} {{clientName}}. Alle rechten voorbehouden.`
     },
-    {
-      name: 'portal-invitation',
-      language_code: 'nl',
-      subject: 'Uitnodiging voor klantenportaal - {{clientName}}',
-      notification_subtype_id: getSubtypeId('portal-invitation'),
-      html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Welkom bij uw klantenportaal</h2>
-          <p>Hallo {{contactName}},</p>
-          <p>U bent uitgenodigd om lid te worden van het klantenportaal van {{clientName}}.</p>
-          <p><a href="{{portalLink}}" style="display: inline-block; padding: 10px 20px; background-color: #8A4DEA; color: white; text-decoration: none; border-radius: 5px;">Toegang activeren</a></p>
-          <p>Of kopieer deze link naar uw browser:</p>
-          <p>{{portalLink}}</p>
-          <p><small>De link verloopt over {{expirationTime}}.</small></p>
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Hulp nodig?</p>
-          <p style="color: #666; font-size: 12px;">E-mail: {{clientLocationEmail}}<br>Telefoon: {{clientLocationPhone}}</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{clientName}}</p>
-        </div>
-      `,
-      text_content: `Welkom bij uw klantenportaal
-
-Hallo {{contactName}},
-
-U bent uitgenodigd om lid te worden van het klantenportaal van {{clientName}}.
-
-Toegang activeren: {{portalLink}}
-
-De link verloopt over {{expirationTime}}.
-
-Hulp nodig?
-E-mail: {{clientLocationEmail}}
-Telefoon: {{clientLocationPhone}}
-
-© {{currentYear}} {{clientName}}`
-    },
+    // NOTE: portal-invitation template is managed in migration 20251029100000
     {
       name: 'tenant-recovery',
       language_code: 'nl',
@@ -1129,12 +1063,11 @@ Factuur bekijken: {{invoice.url}}
 
 exports.down = async function(knex) {
   // Remove Dutch email templates
+  // NOTE: email-verification and portal-invitation are NOT removed as they're managed by migration 20251029100000
   await knex('system_email_templates')
     .where({ language_code: 'nl' })
     .whereIn('name', [
-      'email-verification',
       'password-reset',
-      'portal-invitation',
       'tenant-recovery',
       'no-account-found',
       'ticket-assigned',

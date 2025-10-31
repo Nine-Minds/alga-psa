@@ -281,23 +281,13 @@ const Documents = ({
     setCurrentPage(1); // Reset to first page when page size changes
   };
 
-  // Page size options based on view mode
+  // Page size options for grid view (list view uses DataTable defaults)
   const gridPageSizeOptions = useMemo(
     () => [
       { value: '9', label: t('documents.pagination.perPage', { count: 9, defaultValue: '9 per page' }) },
       { value: '18', label: t('documents.pagination.perPage', { count: 18, defaultValue: '18 per page' }) },
       { value: '27', label: t('documents.pagination.perPage', { count: 27, defaultValue: '27 per page' }) },
       { value: '36', label: t('documents.pagination.perPage', { count: 36, defaultValue: '36 per page' }) }
-    ],
-    [t]
-  );
-
-  const listPageSizeOptions = useMemo(
-    () => [
-      { value: '10', label: t('documents.pagination.perPage', { count: 10, defaultValue: '10 per page' }) },
-      { value: '25', label: t('documents.pagination.perPage', { count: 25, defaultValue: '25 per page' }) },
-      { value: '50', label: t('documents.pagination.perPage', { count: 50, defaultValue: '50 per page' }) },
-      { value: '100', label: t('documents.pagination.perPage', { count: 100, defaultValue: '100 per page' }) }
     ],
     [t]
   );
@@ -953,7 +943,7 @@ const Documents = ({
                   itemsPerPage={pageSize}
                   onPageChange={handlePageChange}
                   onItemsPerPageChange={handlePageSizeChange}
-                  itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : listPageSizeOptions}
+                  itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : undefined}
                 />
               </div>
             )}
@@ -1318,7 +1308,7 @@ const Documents = ({
               itemsPerPage={pageSize}
               onPageChange={handlePageChange}
               onItemsPerPageChange={handlePageSizeChange}
-              itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : listPageSizeOptions}
+              itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : undefined}
             />
           </div>
         )}

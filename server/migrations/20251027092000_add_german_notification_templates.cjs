@@ -38,38 +38,7 @@ exports.up = async function(knex) {
   // Insert German templates
   await knex('system_email_templates').insert([
     // Authentication templates
-    {
-      name: 'email-verification',
-      language_code: 'de',
-      subject: 'Verifizieren Sie Ihre E-Mail{{#if registrationClientName}} für {{registrationClientName}}{{/if}}',
-      notification_subtype_id: getSubtypeId('email-verification'),
-      html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>E-Mail-Verifizierung</h2>
-          <p>Hallo,</p>
-          <p>Bitte verifizieren Sie Ihre E-Mail-Adresse, indem Sie auf den untenstehenden Link klicken:</p>
-          <p><a href="{{verificationUrl}}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">E-Mail verifizieren</a></p>
-          <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
-          <p>{{verificationUrl}}</p>
-          {{#if expirationTime}}
-          <p><small>Dieser Link läuft in {{expirationTime}} ab.</small></p>
-          {{/if}}
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Wenn Sie diese E-Mail nicht angefordert haben, ignorieren Sie sie bitte.</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{tenantClientName}}</p>
-        </div>
-      `,
-      text_content: `E-Mail-Verifizierung
-
-Bitte verifizieren Sie Ihre E-Mail-Adresse unter:
-{{verificationUrl}}
-
-{{#if expirationTime}}Dieser Link läuft in {{expirationTime}} ab.{{/if}}
-
-Wenn Sie diese E-Mail nicht angefordert haben, ignorieren Sie sie bitte.
-
-© {{currentYear}} {{tenantClientName}}`
-    },
+    // NOTE: email-verification template is managed in base migration (20251027080000)
     {
       name: 'password-reset',
       language_code: 'de',
@@ -358,42 +327,7 @@ Support kontaktieren: {{supportEmail}}
 Dies ist eine automatische Sicherheits-E-Mail, die an {{email}} gesendet wurde.
 © {{currentYear}} {{clientName}}. Alle Rechte vorbehalten.`
     },
-    {
-      name: 'portal-invitation',
-      language_code: 'de',
-      subject: 'Kundenportal-Einladung - {{clientName}}',
-      notification_subtype_id: getSubtypeId('portal-invitation'),
-      html_content: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Willkommen in Ihrem Kundenportal</h2>
-          <p>Hallo {{contactName}},</p>
-          <p>Sie wurden eingeladen, dem Kundenportal von {{clientName}} beizutreten.</p>
-          <p><a href="{{portalLink}}" style="display: inline-block; padding: 10px 20px; background-color: #8A4DEA; color: white; text-decoration: none; border-radius: 5px;">Zugang aktivieren</a></p>
-          <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
-          <p>{{portalLink}}</p>
-          <p><small>Der Link läuft in {{expirationTime}} ab.</small></p>
-          <hr style="margin-top: 30px;">
-          <p style="color: #666; font-size: 12px;">Benötigen Sie Unterstützung?</p>
-          <p style="color: #666; font-size: 12px;">E-Mail: {{clientLocationEmail}}<br>Telefon: {{clientLocationPhone}}</p>
-          <p style="color: #999; font-size: 11px;">© {{currentYear}} {{clientName}}</p>
-        </div>
-      `,
-      text_content: `Willkommen in Ihrem Kundenportal
-
-Hallo {{contactName}},
-
-Sie wurden eingeladen, dem Kundenportal von {{clientName}} beizutreten.
-
-Zugang aktivieren: {{portalLink}}
-
-Der Link läuft in {{expirationTime}} ab.
-
-Benötigen Sie Unterstützung?
-E-Mail: {{clientLocationEmail}}
-Telefon: {{clientLocationPhone}}
-
-© {{currentYear}} {{clientName}}`
-    },
+    // NOTE: portal-invitation template is managed in migration 20251029100000
     {
       name: 'tenant-recovery',
       language_code: 'de',
@@ -1129,12 +1063,11 @@ Rechnung anzeigen: {{invoice.url}}
 
 exports.down = async function(knex) {
   // Remove German email templates
+  // NOTE: email-verification and portal-invitation are NOT removed as they're managed by other migrations
   await knex('system_email_templates')
     .where({ language_code: 'de' })
     .whereIn('name', [
-      'email-verification',
       'password-reset',
-      'portal-invitation',
       'tenant-recovery',
       'no-account-found',
       'ticket-assigned',
