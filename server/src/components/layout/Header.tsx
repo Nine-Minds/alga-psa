@@ -14,6 +14,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { useRouter } from 'next/navigation';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
+import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -150,7 +151,8 @@ const Header: React.FC<HeaderProps> = ({
           ))}
         </ol>
       </nav>
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        <NotificationBell />
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button id="user-menu-header" className="relative" aria-label="User menu">
