@@ -228,6 +228,7 @@ services:
       DB_HOST: postgres
       DB_PORT: ${DB_PORT:-5432}
     secrets:
+      - postgres_password
       - db_password_hocuspocus
       - redis_password
     networks:

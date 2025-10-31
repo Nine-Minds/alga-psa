@@ -285,7 +285,7 @@ spec:
 
             # ----------- HOCUPOCUS ----------------
             - name: HOCUSPOCUS_URL
-              value: "ws://houcspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
+              value: "ws://hocuspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
 
             # ----------- EMAIL ----------------
             - name: EMAIL_ENABLE
