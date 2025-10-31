@@ -25,6 +25,13 @@ export const EventTypeEnum = z.enum([
   'INBOUND_EMAIL_RECEIVED', // Inbound email processing
   'ACCOUNTING_EXPORT_COMPLETED',
   'ACCOUNTING_EXPORT_FAILED',
+  'SCHEDULE_ENTRY_CREATED',
+  'SCHEDULE_ENTRY_UPDATED',
+  'SCHEDULE_ENTRY_DELETED',
+  'CALENDAR_SYNC_STARTED',
+  'CALENDAR_SYNC_COMPLETED',
+  'CALENDAR_SYNC_FAILED',
+  'CALENDAR_CONFLICT_DETECTED',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -157,6 +164,37 @@ export const AccountingExportEventPayloadSchema = BasePayloadSchema.extend({
     .optional(),
 });
 
+// Schedule entry event payload schema
+export const ScheduleEntryEventPayloadSchema = BasePayloadSchema.extend({
+  entryId: z.string().uuid(),
+  userId: z.string().uuid(),
+  changes: z.record(z.unknown()).optional(),
+});
+
+// Calendar sync event payload schema
+export const CalendarSyncEventPayloadSchema = BasePayloadSchema.extend({
+  calendarProviderId: z.string().uuid(),
+  scheduleEntryId: z.string().uuid().optional(),
+  externalEventId: z.string().optional(),
+  syncDirection: z.enum(['to_external', 'from_external', 'bidirectional']),
+  error: z
+    .object({
+      message: z.string(),
+      code: z.string().optional(),
+    })
+    .optional(),
+});
+
+// Calendar conflict event payload schema
+export const CalendarConflictEventPayloadSchema = BasePayloadSchema.extend({
+  mappingId: z.string().uuid(),
+  calendarProviderId: z.string().uuid(),
+  scheduleEntryId: z.string().uuid(),
+  externalEventId: z.string(),
+  algaLastModified: z.string().datetime(),
+  externalLastModified: z.string().datetime(),
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -182,6 +220,13 @@ export const EventPayloadSchemas = {
   INBOUND_EMAIL_RECEIVED: InboundEmailEventPayloadSchema, // Inbound email processing
   ACCOUNTING_EXPORT_COMPLETED: AccountingExportEventPayloadSchema,
   ACCOUNTING_EXPORT_FAILED: AccountingExportEventPayloadSchema,
+  SCHEDULE_ENTRY_CREATED: ScheduleEntryEventPayloadSchema,
+  SCHEDULE_ENTRY_UPDATED: ScheduleEntryEventPayloadSchema,
+  SCHEDULE_ENTRY_DELETED: ScheduleEntryEventPayloadSchema,
+  CALENDAR_SYNC_STARTED: CalendarSyncEventPayloadSchema,
+  CALENDAR_SYNC_COMPLETED: CalendarSyncEventPayloadSchema,
+  CALENDAR_SYNC_FAILED: CalendarSyncEventPayloadSchema,
+  CALENDAR_CONFLICT_DETECTED: CalendarConflictEventPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -217,6 +262,13 @@ export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;
 export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_FAILED>;
+export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;
+export type ScheduleEntryUpdatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_UPDATED>;
+export type ScheduleEntryDeletedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_DELETED>;
+export type CalendarSyncStartedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_STARTED>;
+export type CalendarSyncCompletedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_COMPLETED>;
+export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_FAILED>;
+export type CalendarConflictDetectedEvent = z.infer<typeof EventSchemas.CALENDAR_CONFLICT_DETECTED>;
 
 export type Event =
   | TicketCreatedEvent
@@ -241,7 +293,14 @@ export type Event =
   | z.infer<typeof EventSchemas.INVOICE_CREATED> // QBO Invoice Created
   | z.infer<typeof EventSchemas.INVOICE_UPDATED> // QBO Invoice Updated
   | z.infer<typeof EventSchemas.CLIENT_CREATED> // QBO Client Created
-  | z.infer<typeof EventSchemas.CLIENT_UPDATED>; // QBO Client Updated
+  | z.infer<typeof EventSchemas.CLIENT_UPDATED> // QBO Client Updated
+  | ScheduleEntryCreatedEvent
+  | ScheduleEntryUpdatedEvent
+  | ScheduleEntryDeletedEvent
+  | CalendarSyncStartedEvent
+  | CalendarSyncCompletedEvent
+  | CalendarSyncFailedEvent
+  | CalendarConflictDetectedEvent;
 
 /**
  * Convert an event bus event to a workflow event
