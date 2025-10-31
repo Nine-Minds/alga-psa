@@ -56,15 +56,17 @@ wait_for_postgres() {
     # Get hocuspocus credentials, falling back to postgres password if needed
     local db_password=$(get_secret "db_password_hocuspocus" "DB_PASSWORD_HOCUSPOCUS" "$postgres_password")
     local db_user=$(get_secret "db_user_hocuspocus" "DB_USER_HOCUSPOCUS" "hocuspocus_user")
-    
+    local db_name=$(get_secret "db_name_hocuspocus" "DB_NAME_HOCUSPOCUS" "hocuspocus")
+
     # Store credentials before logging
     export PGPASSWORD="$db_password"
-    
+
     # Debug logging after storing credentials
     log "Using database user: $db_user"
+    log "Using database name: $db_name"
     log "Using database password: ${db_password:0:3}..." # Only show first 3 chars for security
-    
-    until psql -h postgres -U "$db_user" -c '\q' 2>&1; do
+
+    until psql -h postgres -U "$db_user" -d "$db_name" -c '\q' 2>&1; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
@@ -101,13 +103,8 @@ main() {
     wait_for_postgres
     wait_for_redis
 
-    if [ "$NODE_ENV" = "development" ]; then
-        log "Starting Hocuspocus in development mode..."
-        npm run dev
-    else
-        log "Starting Hocuspocus in production mode..."
-        npm start
-    fi
+    log "Starting Hocuspocus..."
+    npm start
 }
 
 # Execute main function

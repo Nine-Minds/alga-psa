@@ -44,6 +44,8 @@ spec:
               value: "6379"
             - name: REDIS_DB
               value: "1"
+            - name: REDIS_USERNAME
+              value: "default"
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -56,6 +58,8 @@ spec:
               value: "{{ .Values.config.redis.port }}"
             - name: REDIS_DB
               value: "{{ .Values.config.redis.db }}"
+            - name: REDIS_USERNAME
+              value: "default"
             - name: REDIS_PASSWORD
               value: "{{ .Values.config.redis.password }}"
             {{- end }}
@@ -73,6 +77,8 @@ spec:
             value: "6379"
           - name: REDIS_DB
             value: "1"
+          - name: REDIS_USERNAME
+            value: "default"
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -85,6 +91,8 @@ spec:
             value: "{{ .Values.config.redis.port }}"
           - name: REDIS_DB
             value: "{{ .Values.config.redis.db }}"
+          - name: REDIS_USERNAME
+            value: "default"
           - name: REDIS_PASSWORD
             value: "{{ .Values.config.redis.password }}"
           {{- end }}
