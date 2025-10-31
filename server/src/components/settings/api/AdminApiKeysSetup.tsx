@@ -21,6 +21,16 @@ export default function AdminApiKeysSetup() {
   const [apiKeys, setApiKeys] = useState<AdminApiKey[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     loadApiKeys();
   }, []);
@@ -126,7 +136,10 @@ export default function AdminApiKeysSetup() {
           data={apiKeys}
           columns={columns}
           pagination={true}
-          pageSize={10}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
         />
       </Card>
     </div>

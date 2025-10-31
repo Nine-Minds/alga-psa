@@ -89,28 +89,35 @@ const Pagination = ({
     // Generate page number buttons with ellipsis for many pages
     const renderPageButtons = () => {
         const buttons: ReactNode[] = [];
-        
-        for (let i = 1; i <= totalPages; i++) {
-            if ((i >= 1 && i <= 3) || (i === totalPages)) {
-                // Show first 3 pages and last page
+        const maxVisiblePages = 5; // Show up to 5 page numbers (current page centered)
+        const sidePages = Math.floor(maxVisiblePages / 2); // Pages to show on each side of current
+
+        // Calculate the range of pages to display
+        let startPage = Math.max(1, currentPage - sidePages);
+        let endPage = Math.min(totalPages, currentPage + sidePages);
+
+        // Adjust if we're near the beginning or end
+        if (currentPage <= sidePages) {
+            endPage = Math.min(totalPages, maxVisiblePages);
+        } else if (currentPage >= totalPages - sidePages) {
+            startPage = Math.max(1, totalPages - maxVisiblePages + 1);
+        }
+
+        // Add first page and ellipsis if needed
+        if (startPage > 1) {
+            buttons.push(
+                <button
+                    key={1}
+                    onClick={() => handleChange(1)}
+                    className="border-gray-300 text-gray-500 hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] px-2 py-1 border text-sm font-medium rounded"
+                >
+                    1
+                </button>
+            );
+            if (startPage > 2) {
                 buttons.push(
-                    <button
-                        key={i}
-                        onClick={() => handleChange(i)}
-                        className={`${
-                            currentPage === i 
-                                ? "border-blue-600 text-blue-600" 
-                                : "border-gray-300 text-gray-500 hover:bg-gray-50"
-                        } px-2 py-1 border text-sm font-medium rounded`}
-                    >
-                        {i}
-                    </button>
-                );
-            } else if (i === 4 && i < totalPages) {
-                // Show ellipsis for pages 4+
-                buttons.push(
-                    <span 
-                        key={i} 
+                    <span
+                        key="ellipsis-start"
                         className="border border-gray-300 px-2 py-1 text-sm font-medium text-gray-700 rounded"
                     >
                         ...
@@ -118,7 +125,47 @@ const Pagination = ({
                 );
             }
         }
-        
+
+        // Add the range of pages around current page
+        for (let i = startPage; i <= endPage; i++) {
+            buttons.push(
+                <button
+                    key={i}
+                    onClick={() => handleChange(i)}
+                    className={`${
+                        currentPage === i
+                            ? "border-[rgb(var(--color-primary-500))] text-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))]"
+                            : "border-gray-300 text-gray-500 hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]"
+                    } px-2 py-1 border text-sm font-medium rounded`}
+                >
+                    {i}
+                </button>
+            );
+        }
+
+        // Add ellipsis and last page if needed
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                buttons.push(
+                    <span
+                        key="ellipsis-end"
+                        className="border border-gray-300 px-2 py-1 text-sm font-medium text-gray-700 rounded"
+                    >
+                        ...
+                    </span>
+                );
+            }
+            buttons.push(
+                <button
+                    key={totalPages}
+                    onClick={() => handleChange(totalPages)}
+                    className="border-gray-300 text-gray-500 hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] px-2 py-1 border text-sm font-medium rounded"
+                >
+                    {totalPages}
+                </button>
+            );
+        }
+
         return buttons;
     };
 

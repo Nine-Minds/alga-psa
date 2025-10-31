@@ -59,6 +59,16 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
   const [editingContract, setEditingContract] = useState<DetailedClientContract | null>(null); // Keep state for editing dialog
   // Remove state for separate details dialog
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     if (clientId) {
       fetchData();
@@ -327,7 +337,11 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
                   id="client-contract-assignment-table"
                   data={clientContracts}
                   columns={contractColumns}
-                  pagination={false}
+                  pagination={true}
+                  currentPage={currentPage}
+                  onPageChange={setCurrentPage}
+                  pageSize={pageSize}
+                  onItemsPerPageChange={handlePageSizeChange}
                   onRowClick={handleEditContract} // Keep row click handler
                   rowClassName={() => 'cursor-pointer'} // Use function for type compatibility
                 />

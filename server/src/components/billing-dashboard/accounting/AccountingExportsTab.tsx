@@ -169,6 +169,16 @@ const AccountingExportsTab: React.FC = () => {
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const updateCreateFormField = (field: keyof CreateFormState, value: string) => {
     setCreateForm((prev) => ({ ...prev, [field]: value }));
     setPreviewData(null);
@@ -547,7 +557,11 @@ const AccountingExportsTab: React.FC = () => {
         id="accounting-export-table"
         data={tableData}
         columns={columns}
-        pagination
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
         onRowClick={handleRowClick}
       />
 

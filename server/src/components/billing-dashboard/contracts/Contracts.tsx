@@ -42,6 +42,26 @@ const Contracts: React.FC = () => {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const pendingViewRef = useRef<'Templates' | 'Client Contracts' | null>(null);
 
+  // Pagination state for templates
+  const [templateCurrentPage, setTemplateCurrentPage] = useState(1);
+  const [templatePageSize, setTemplatePageSize] = useState(10);
+
+  // Pagination state for client contracts
+  const [clientCurrentPage, setClientCurrentPage] = useState(1);
+  const [clientPageSize, setClientPageSize] = useState(10);
+
+  // Handle page size change for templates - reset to page 1
+  const handleTemplatePageSizeChange = (newPageSize: number) => {
+    setTemplatePageSize(newPageSize);
+    setTemplateCurrentPage(1);
+  };
+
+  // Handle page size change for client contracts - reset to page 1
+  const handleClientPageSizeChange = (newPageSize: number) => {
+    setClientPageSize(newPageSize);
+    setClientCurrentPage(1);
+  };
+
   useEffect(() => {
     void fetchContracts();
   }, []);
@@ -344,7 +364,11 @@ const renderStatusBadge = (status: string) => {
         id="contracts-table"
         data={filteredTemplateContracts}
         columns={templateColumns}
-        pagination
+        pagination={true}
+        currentPage={templateCurrentPage}
+        onPageChange={setTemplateCurrentPage}
+        pageSize={templatePageSize}
+        onItemsPerPageChange={handleTemplatePageSizeChange}
         onRowClick={(record) => navigateToContract(record.contract_id)}
         rowClassName={() => 'cursor-pointer'}
       />
@@ -384,7 +408,11 @@ const renderStatusBadge = (status: string) => {
         id="client-contracts-table"
         data={filteredClientContracts}
         columns={clientContractColumns}
-        pagination
+        pagination={true}
+        currentPage={clientCurrentPage}
+        onPageChange={setClientCurrentPage}
+        pageSize={clientPageSize}
+        onItemsPerPageChange={handleClientPageSizeChange}
         onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
         rowClassName={() => 'cursor-pointer'}
       />
