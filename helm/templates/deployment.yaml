@@ -466,15 +466,12 @@ spec:
           - name: XERO_CLIENT_ID
             value: "{{ .Values.xero_integration.client_id }}"
           {{- end }}
-          {{- if .Values.xero_integration.redirect_uri }}
-          - name: XERO_REDIRECT_URI
-            value: "{{ .Values.xero_integration.redirect_uri }}"
-          {{- end }}
           # XERO_CLIENT_SECRET is resolved via the secret provider chain:
           # 1. Vault (if configured in secrets_provider.readChain)
           # 2. Filesystem secrets (Docker secrets at /run/secrets/xero_client_secret)
           # 3. Environment variable XERO_CLIENT_SECRET
           # The application's secret provider will automatically resolve it.
+          # Note: XERO_REDIRECT_URI is now derived from APP_BASE_URL in the application code
           {{- end }}
 
           # ----------- STRIPE INTEGRATION ----------------

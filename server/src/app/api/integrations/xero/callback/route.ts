@@ -13,9 +13,8 @@ import {
   XERO_TOKEN_URL
 } from 'server/src/lib/xero/xeroClientService';
 
-const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
-const XERO_REDIRECT_URI =
-  process.env.XERO_REDIRECT_URI ?? 'http://localhost:3000/api/integrations/xero/callback';
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+const XERO_REDIRECT_URI = `${NEXTAUTH_URL}/api/integrations/xero/callback`;
 const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
 
 const SUCCESS_PATH = '/msp/settings?tab=integrations&xero_status=success';
@@ -28,7 +27,7 @@ type XeroStatePayload = {
 };
 
 function createRedirect(path: string, params?: Record<string, string | undefined>) {
-  const url = new URL(path, APP_BASE_URL);
+  const url = new URL(path, NEXTAUTH_URL);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {
