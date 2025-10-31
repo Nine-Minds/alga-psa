@@ -3,6 +3,7 @@
  */
 
 import { IScheduleEntry, IRecurrencePattern } from '../../interfaces/schedule.interfaces';
+import { WorkItemType } from '../../interfaces/workItem.interfaces';
 import { ExternalCalendarEvent } from '../../interfaces/calendar.interfaces';
 import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
 import { createTenantKnex } from '../../lib/db';
@@ -132,13 +133,19 @@ export async function mapExternalEventToScheduleEntry(
 
   // Map assigned user IDs from attendees
   const assignedUserIds = event.attendees
-    ?.map(attendee => userEmails?.get(attendee.email))
+    ?.map(attendee => {
+      const normalizedEmail = attendee.email?.toLowerCase?.() ?? attendee.email;
+      return normalizedEmail ? userEmails?.get(normalizedEmail) : undefined;
+    })
     .filter((id): id is string => id !== undefined) || [];
 
   // Extract Alga entry ID from extended properties if present
   const algaEntryId = event.extendedProperties?.private?.['alga-entry-id'];
   const workItemId = event.extendedProperties?.private?.['alga-work-item-id'];
-  const workItemType = event.extendedProperties?.private?.['alga-work-item-type'] as any;
+  let workItemType = event.extendedProperties?.private?.['alga-work-item-type'] as WorkItemType | undefined;
+  if (typeof workItemType === 'string') {
+    workItemType = workItemType.toLowerCase() as WorkItemType;
+  }
 
   // Map status
   const status = event.status === 'cancelled' ? 'cancelled' :
@@ -169,7 +176,7 @@ export async function mapExternalEventToScheduleEntry(
     is_recurring: !!recurrencePattern,
     is_private: event.visibility === 'private',
     ...(workItemId ? { work_item_id: workItemId } : {}),
-    ...(workItemType ? { work_item_type: workItemType } : {})
+    work_item_type: (workItemType ?? 'ad_hoc') as WorkItemType
   };
 
   return entry;
@@ -244,9 +251,17 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
 
   try {
     const { knex } = await createTenantKnex();
+    const normalizedEmails = emails
+      .filter((email): email is string => typeof email === 'string' && email.trim().length > 0)
+      .map(email => email.toLowerCase());
+
+    if (normalizedEmails.length === 0) {
+      return idMap;
+    }
+
     const users = await knex('users')
       .where('tenant', tenant)
-      .whereIn('email', emails)
+      .whereIn(knex.raw('LOWER(email)'), normalizedEmails)
       .select('user_id', 'email');
 
     for (const user of users) {
@@ -260,4 +275,3 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
 
   return idMap;
 }
-

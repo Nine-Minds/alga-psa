@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import { CalendarProviderConfig, ExternalCalendarEvent } from '../../../interfaces/calendar.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { CalendarProviderService } from '../CalendarProviderService';
 
 /**
  * Microsoft Graph API adapter for calendar synchronization
@@ -187,20 +187,15 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         this.config.provider_config.tokenExpiresAt = this.tokenExpiresAt?.toISOString();
       }
       
-      // Persist to database
-      const db = await getAdminConnection();
-      
-      if (this.config.provider_type === 'microsoft') {
-        await db('microsoft_calendar_provider_config')
-          .where('calendar_provider_id', this.config.id)
-          .andWhere('tenant', this.config.tenant)
-          .update({
-            access_token: this.accessToken,
-            refresh_token: this.refreshToken,
-            token_expires_at: this.tokenExpiresAt,
-            updated_at: db.fn.now()
-          });
-      }
+      // Persist to database via provider service to ensure encryption rules apply
+      const providerService = new CalendarProviderService();
+      await providerService.updateProvider(this.config.id, this.config.tenant, {
+        vendorConfig: {
+          accessToken: this.accessToken,
+          refreshToken: this.refreshToken,
+          tokenExpiresAt: this.tokenExpiresAt?.toISOString() || null
+        }
+      });
     } catch (error) {
       this.log('warn', 'Failed to update stored credentials', error);
     }
@@ -524,6 +519,54 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
   }
 
   /**
+   * Fetch incremental event changes via Microsoft Graph delta queries.
+   */
+  async fetchDeltaChanges(deltaLink?: string | null): Promise<{
+    changes: Array<{ id: string; changeType: 'updated' | 'deleted' }>;
+    deltaLink?: string;
+    resetRequired?: boolean;
+  }> {
+    await this.ensureValidToken();
+
+    const changes: Array<{ id: string; changeType: 'updated' | 'deleted' }> = [];
+    const initialUrl = deltaLink ?? `${this.getCalendarBasePath()}/events/delta`;
+    let requestUrl: string | undefined = initialUrl;
+    let nextDeltaLink: string | undefined;
+
+    try {
+      while (requestUrl) {
+        const response = await this.httpClient.get(requestUrl, {
+          headers: deltaLink ? {} : { Prefer: 'odata.track-changes' }
+        });
+
+        const items = response.data?.value || [];
+        for (const item of items) {
+          if (!item?.id) {
+            continue;
+          }
+          const changeType: 'updated' | 'deleted' = item['@removed'] ? 'deleted' : 'updated';
+          changes.push({ id: item.id, changeType });
+        }
+
+        requestUrl = response.data?.['@odata.nextLink'] || undefined;
+        if (response.data?.['@odata.deltaLink']) {
+          nextDeltaLink = response.data['@odata.deltaLink'];
+        }
+      }
+
+      return {
+        changes,
+        deltaLink: nextDeltaLink ?? deltaLink ?? undefined
+      };
+    } catch (error) {
+      if (this.isDeltaLinkInvalidError(error)) {
+        return { changes, resetRequired: true };
+      }
+      throw this.handleError(error, 'fetchDeltaChanges');
+    }
+  }
+
+  /**
    * Process webhook notification and return changed event IDs
    */
   async processWebhookNotification(payload: any): Promise<string[]> {
@@ -549,6 +592,21 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     } catch (error) {
       throw this.handleError(error, 'processWebhookNotification');
     }
+  }
+
+  private isDeltaLinkInvalidError(error: any): boolean {
+    const status = error?.response?.status || error?.code;
+    if (status === 410) {
+      return true;
+    }
+
+    const graphError = error?.response?.data?.error;
+    const code = graphError?.code || graphError?.innerError?.code;
+    if (typeof code === 'string' && code.toLowerCase().includes('syncstatenotfound')) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -650,4 +708,3 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     };
   }
 }
-

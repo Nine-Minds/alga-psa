@@ -3,8 +3,10 @@
 import { getCurrentUser } from '../user-actions/userActions';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { hasPermission } from '../../auth/rbac';
-import { createTenantKnex } from '../../db';
+import { createTenantKnex, runWithTenant } from '../../db';
 import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce } from '@/utils/calendar/oauthHelpers';
+import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
+import { storeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
 import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
 import { CalendarSyncService } from '@/services/calendar/CalendarSyncService';
 import { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@/interfaces/calendar.interfaces';
@@ -42,23 +44,30 @@ export async function initiateCalendarOAuth(params: {
       }
     }
 
-    const { provider, calendarProviderId, redirectUri } = params;
+    const { provider, calendarProviderId, redirectUri: requestedRedirectUri } = params;
     const secretProvider = await getSecretProviderInstance();
 
     // Hosted detection
     const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
     const isHosted = nextauthUrl.startsWith('https://algapsa.com');
 
+    let existingRedirectUri: string | undefined;
+    if (calendarProviderId) {
+      const providerService = new CalendarProviderService();
+      const providerRecord = await providerService.getProvider(calendarProviderId, user.tenant, { includeSecrets: true });
+      if (!providerRecord) {
+        return { success: false, error: 'Invalid calendarProviderId for tenant' };
+      }
+      existingRedirectUri = providerRecord.provider_config?.redirectUri;
+    }
+
     let clientId: string | null = null;
-    let effectiveRedirectUri = redirectUri || '';
 
     if (isHosted) {
       if (provider === 'google') {
         clientId = (await secretProvider.getAppSecret('GOOGLE_CLIENT_ID')) || null;
-        effectiveRedirectUri = effectiveRedirectUri || (await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI')) || 'https://api.algapsa.com/api/auth/google/calendar/callback';
       } else {
         clientId = (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID')) || null;
-        effectiveRedirectUri = effectiveRedirectUri || (await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI')) || 'https://api.algapsa.com/api/auth/microsoft/calendar/callback';
       }
     } else {
       if (provider === 'google') {
@@ -66,22 +75,29 @@ export async function initiateCalendarOAuth(params: {
       } else {
         clientId = process.env.MICROSOFT_CLIENT_ID || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id')) || null;
       }
-      if (!effectiveRedirectUri) {
-        const base = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
-        effectiveRedirectUri = `${base}/api/auth/${provider}/calendar/callback`;
-      }
     }
 
     if (!clientId) {
       return { success: false, error: `${provider} OAuth client ID not configured` };
     }
 
+    const redirectUri = await resolveCalendarRedirectUri({
+      tenant: user.tenant,
+      provider,
+      secretProvider,
+      hosted: isHosted,
+      requestedRedirectUri,
+      existingRedirectUri
+    });
+
     const state = {
       tenant: user.tenant,
       provider,
       calendarProviderId,
       nonce: generateCalendarNonce(),
-      redirectUri: effectiveRedirectUri
+      redirectUri,
+      timestamp: Date.now(),
+      hosted: isHosted
     };
 
     // Determine Microsoft tenant authority
@@ -96,6 +112,8 @@ export async function initiateCalendarOAuth(params: {
     const authUrl = provider === 'microsoft'
       ? generateMicrosoftCalendarAuthUrl(clientId, state.redirectUri, state, undefined as any, msTenantAuthority)
       : generateGoogleCalendarAuthUrl(clientId, state.redirectUri, state);
+
+    await storeCalendarOAuthState(state.nonce, state, 10 * 60);
 
     return { 
       success: true, 
@@ -203,7 +221,7 @@ export async function updateCalendarProvider(
     }
 
     const providerService = new CalendarProviderService();
-    const provider = await providerService.updateProvider(calendarProviderId, params);
+    const provider = await providerService.updateProvider(calendarProviderId, user.tenant, params);
 
     return { success: true, provider };
   } catch (error: any) {
@@ -232,7 +250,7 @@ export async function deleteCalendarProvider(
     }
 
     const providerService = new CalendarProviderService();
-    await providerService.deleteProvider(calendarProviderId);
+    await providerService.deleteProvider(calendarProviderId, user.tenant);
 
     return { success: true };
   } catch (error: any) {
@@ -335,6 +353,9 @@ export async function getScheduleEntrySyncStatus(
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      return { success: false, error: 'Tenant context unavailable' };
+    }
     
     // Get all mappings for this entry
     const mappings = await knex('calendar_event_mappings')
@@ -347,7 +368,11 @@ export async function getScheduleEntrySyncStatus(
     const statuses: CalendarSyncStatus[] = [];
 
     for (const mapping of mappings) {
-      const provider = await providerService.getProvider(mapping.calendar_provider_id);
+      const provider = await providerService.getProvider(
+        mapping.calendar_provider_id,
+        tenant,
+        { includeSecrets: false }
+      );
       if (provider) {
         statuses.push({
           providerId: provider.id,
@@ -393,18 +418,105 @@ export async function syncCalendarProvider(
     }
 
     const providerService = new CalendarProviderService();
-    const provider = await providerService.getProvider(calendarProviderId);
-    
+    const provider = await providerService.getProvider(calendarProviderId, user.tenant);
+
     if (!provider) {
       return { success: false, error: 'Calendar provider not found' };
     }
 
-    // TODO: Implement full sync logic
-    // This would sync all schedule entries to/from the external calendar
-    // For now, just return success
-    return { success: true };
+    const syncService = new CalendarSyncService();
+    const failures: string[] = [];
+    let pushed = 0;
+    let pulled = 0;
+
+    const allowPush = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'to_external';
+    const allowPull = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'from_external';
+
+    await runWithTenant(user.tenant, async () => {
+      const { knex } = await createTenantKnex();
+
+      const mappings = await knex('calendar_event_mappings')
+        .where('tenant', user.tenant)
+        .andWhere('calendar_provider_id', calendarProviderId)
+        .select('schedule_entry_id', 'external_event_id');
+
+      for (const mapping of mappings) {
+        if (allowPush) {
+          const result = await syncService.syncScheduleEntryToExternal(mapping.schedule_entry_id, calendarProviderId, true);
+          if (result.success) {
+            pushed += 1;
+          } else {
+            failures.push(`Push ${mapping.schedule_entry_id}: ${result.error || 'unknown error'}`);
+          }
+        }
+
+        if (allowPull) {
+          const result = await syncService.syncExternalEventToSchedule(mapping.external_event_id, calendarProviderId, true);
+          if (result.success) {
+            pulled += 1;
+          } else {
+            failures.push(`Pull ${mapping.external_event_id}: ${result.error || 'unknown error'}`);
+          }
+        }
+      }
+
+      if (allowPush) {
+        const recentEntriesQuery = knex('schedule_entries')
+          .where('schedule_entries.tenant', user.tenant)
+          .modify((builder) => {
+            if (provider.last_sync_at) {
+              builder.andWhere('schedule_entries.updated_at', '>', provider.last_sync_at);
+            }
+          })
+          .leftJoin('calendar_event_mappings as cem', function () {
+            this.on('cem.schedule_entry_id', '=', 'schedule_entries.entry_id')
+              .andOn('cem.tenant', '=', 'schedule_entries.tenant')
+              .andOn('cem.calendar_provider_id', '=', knex.raw('?', [calendarProviderId]));
+          })
+          .whereNull('cem.id')
+          .limit(50)
+          .select('schedule_entries.entry_id as entry_id');
+
+        const recentEntries = await recentEntriesQuery;
+
+        for (const entry of recentEntries) {
+          const result = await syncService.syncScheduleEntryToExternal(entry.entry_id, calendarProviderId, true);
+          if (result.success) {
+            pushed += 1;
+          } else {
+            failures.push(`Push ${entry.entry_id}: ${result.error || 'unknown error'}`);
+          }
+        }
+      }
+    });
+
+    if (failures.length === 0) {
+      await providerService.updateProviderStatus(calendarProviderId, {
+        status: 'connected',
+        lastSyncAt: new Date().toISOString(),
+        errorMessage: null
+      });
+      return { success: true };
+    }
+
+    const summary = `Manual sync completed with ${failures.length} issue(s). Pushed=${pushed}, Pulled=${pulled}.`;
+    await providerService.updateProviderStatus(calendarProviderId, {
+      status: 'error',
+      errorMessage: `${summary} Details: ${failures.join('; ').slice(0, 500)}`
+    });
+
+    return { success: false, error: summary };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to sync calendar provider' };
+    const message = error?.message || 'Failed to sync calendar provider';
+    try {
+      const providerService = new CalendarProviderService();
+      await providerService.updateProviderStatus(calendarProviderId, {
+        status: 'error',
+        errorMessage: message
+      });
+    } catch (statusError) {
+      console.warn('[calendarActions] Failed to update provider status after sync error', statusError);
+    }
+    return { success: false, error: message };
   }
 }
-

@@ -13,6 +13,7 @@ import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
 import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from '../../utils/calendar/eventMapping';
 import ScheduleEntry from '../../lib/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
+import { publishEvent } from '@/lib/eventBus/publishers';
 
 export class CalendarSyncService {
   private providerService: CalendarProviderService;
@@ -31,6 +32,9 @@ export class CalendarSyncService {
   ): Promise<CalendarSyncResult> {
     try {
       const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for calendar synchronization');
+      }
       
       // Get the schedule entry
       const entry = await ScheduleEntry.get(knex, entryId);
@@ -42,7 +46,7 @@ export class CalendarSyncService {
       }
 
       // Get the calendar provider
-      const provider = await this.providerService.getProvider(calendarProviderId);
+      const provider = await this.providerService.getProvider(calendarProviderId, tenant);
       if (!provider) {
         return {
           success: false,
@@ -65,7 +69,7 @@ export class CalendarSyncService {
       // Check for existing mapping
       const existingMapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
 
-      return await withTransaction(knex, async (trx) => {
+      const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
           // Update existing event
           const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type);
@@ -86,7 +90,7 @@ export class CalendarSyncService {
               updated_at: new Date().toISOString()
             });
 
-          return {
+          const syncResult = {
             success: true,
             mapping: {
               ...existingMapping,
@@ -97,6 +101,9 @@ export class CalendarSyncService {
             },
             externalEventId: updatedEvent.id
           };
+
+          await this.markProviderConnected(provider.id);
+          return syncResult;
         } else {
           // Create new event
           const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type);
@@ -122,13 +129,17 @@ export class CalendarSyncService {
             })
             .returning('*');
 
-          return {
+          const syncResult = {
             success: true,
             mapping: this.mapDbRowToMapping(mapping),
             externalEventId: createdEvent.id
           };
+
+          await this.markProviderConnected(provider.id);
+          return syncResult;
         }
       });
+      return result;
     } catch (error: any) {
       console.error(`Failed to sync schedule entry ${entryId} to external calendar:`, error);
       
@@ -150,6 +161,8 @@ export class CalendarSyncService {
         console.error('Failed to update mapping error status:', updateError);
       }
 
+      await this.markProviderError(calendarProviderId, error.message);
+
       return {
         success: false,
         error: error.message || 'Failed to sync schedule entry'
@@ -167,9 +180,12 @@ export class CalendarSyncService {
   ): Promise<CalendarSyncResult> {
     try {
       const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for calendar synchronization');
+      }
       
       // Get the calendar provider
-      const provider = await this.providerService.getProvider(calendarProviderId);
+      const provider = await this.providerService.getProvider(calendarProviderId, tenant);
       if (!provider) {
         return {
           success: false,
@@ -195,7 +211,7 @@ export class CalendarSyncService {
       // Check for existing mapping
       const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
 
-      return await withTransaction(knex, async (trx) => {
+      const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
           // Update existing schedule entry
           const existingEntry = await ScheduleEntry.get(trx, existingMapping.schedule_entry_id);
@@ -218,6 +234,20 @@ export class CalendarSyncService {
                 sync_error_message: 'Both Alga and external calendar have been modified',
                 updated_at: new Date().toISOString()
               });
+
+            const algaModified = existingEntry.updated_at instanceof Date
+              ? existingEntry.updated_at.toISOString()
+              : new Date(existingEntry.updated_at).toISOString();
+            const externalModified = externalEvent.updated || '';
+            await this.publishConflictEvent({
+              tenant,
+              providerId: provider.id,
+              mappingId: existingMapping.id,
+              scheduleEntryId: existingMapping.schedule_entry_id,
+              externalEventId: existingMapping.external_event_id,
+              algaLastModified: algaModified,
+              externalLastModified: externalModified
+            });
 
             return {
               success: false,
@@ -271,7 +301,7 @@ export class CalendarSyncService {
               updated_at: new Date().toISOString()
             });
 
-          return {
+          const syncResult = {
             success: true,
             mapping: {
               ...existingMapping,
@@ -284,6 +314,9 @@ export class CalendarSyncService {
             },
             externalEventId: externalEvent.id
           };
+
+          await this.markProviderConnected(provider.id);
+          return syncResult;
         } else {
           // Create new schedule entry
           const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
@@ -320,16 +353,22 @@ export class CalendarSyncService {
             })
             .returning('*');
 
-          return {
+          const syncResult = {
             success: true,
             mapping: this.mapDbRowToMapping(mapping),
             externalEventId: externalEvent.id
           };
+
+          await this.markProviderConnected(provider.id);
+          return syncResult;
         }
       });
+      return result;
     } catch (error: any) {
       console.error(`Failed to sync external event ${externalEventId} to schedule entry:`, error);
-      
+
+      await this.markProviderError(calendarProviderId, error.message);
+
       return {
         success: false,
         error: error.message || 'Failed to sync external event'
@@ -347,6 +386,9 @@ export class CalendarSyncService {
   ): Promise<CalendarSyncResult> {
     try {
       const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for calendar synchronization');
+      }
       
       // Get mapping
       const mapping = await this.getMappingById(mappingId, tenant);
@@ -365,7 +407,7 @@ export class CalendarSyncService {
       }
 
       // Get provider and entry
-      const provider = await this.providerService.getProvider(mapping.calendar_provider_id);
+      const provider = await this.providerService.getProvider(mapping.calendar_provider_id, tenant);
       if (!provider) {
         return {
           success: false,
@@ -384,7 +426,7 @@ export class CalendarSyncService {
       const adapter = await this.createAdapter(provider);
       await adapter.connect();
 
-      return await withTransaction(knex, async (trx) => {
+      const result = await withTransaction(knex, async (trx) => {
         if (resolution === 'alga') {
           // Use Alga's version - sync to external
           return await this.syncScheduleEntryToExternal(entry.entry_id, mapping.calendar_provider_id, true);
@@ -419,6 +461,10 @@ export class CalendarSyncService {
           return syncResult;
         }
       });
+      if (result.success) {
+        await this.markProviderConnected(provider.id);
+      }
+      return result;
     } catch (error: any) {
       console.error(`Failed to resolve conflict for mapping ${mappingId}:`, error);
       return {
@@ -438,6 +484,9 @@ export class CalendarSyncService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for calendar synchronization');
+      }
       
       // Get mapping
       const mapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
@@ -448,7 +497,7 @@ export class CalendarSyncService {
       }
 
       // Get provider
-      const provider = await this.providerService.getProvider(calendarProviderId);
+      const provider = await this.providerService.getProvider(calendarProviderId, tenant);
       if (!provider) {
         return {
           success: false,
@@ -459,7 +508,7 @@ export class CalendarSyncService {
       const adapter = await this.createAdapter(provider);
       await adapter.connect();
 
-      return await withTransaction(knex, async (trx) => {
+      const result = await withTransaction(knex, async (trx) => {
         // Delete from external calendar
         try {
           await adapter.deleteEvent(mapping.external_event_id);
@@ -479,6 +528,10 @@ export class CalendarSyncService {
 
         return { success: true };
       });
+      if (result.success) {
+        await this.markProviderConnected(provider.id);
+      }
+      return result;
     } catch (error: any) {
       console.error(`Failed to delete schedule entry ${entryId}:`, error);
       return {
@@ -596,5 +649,64 @@ export class CalendarSyncService {
       updated_at: row.updated_at
     };
   }
-}
 
+  private async markProviderConnected(providerId: string): Promise<void> {
+    try {
+      await this.providerService.updateProviderStatus(providerId, {
+        status: 'connected',
+        lastSyncAt: new Date().toISOString(),
+        errorMessage: null
+      });
+    } catch (statusError) {
+      console.warn('[CalendarSyncService] Failed to update provider status to connected', {
+        providerId,
+        error: statusError instanceof Error ? statusError.message : statusError
+      });
+    }
+  }
+
+  private async markProviderError(providerId: string, errorMessage?: string): Promise<void> {
+    try {
+      await this.providerService.updateProviderStatus(providerId, {
+        status: 'error',
+        errorMessage: errorMessage || 'Calendar synchronization error'
+      });
+    } catch (statusError) {
+      console.warn('[CalendarSyncService] Failed to update provider status to error', {
+        providerId,
+        error: statusError instanceof Error ? statusError.message : statusError
+      });
+    }
+  }
+
+  private async publishConflictEvent(params: {
+    tenant: string;
+    providerId: string;
+    mappingId: string;
+    scheduleEntryId: string;
+    externalEventId: string;
+    algaLastModified: string;
+    externalLastModified: string;
+  }): Promise<void> {
+    try {
+      await publishEvent({
+        eventType: 'CALENDAR_CONFLICT_DETECTED',
+        payload: {
+          tenantId: params.tenant,
+          calendarProviderId: params.providerId,
+          mappingId: params.mappingId,
+          scheduleEntryId: params.scheduleEntryId,
+          externalEventId: params.externalEventId,
+          algaLastModified: params.algaLastModified,
+          externalLastModified: params.externalLastModified,
+        }
+      });
+    } catch (error) {
+      console.warn('[CalendarSyncService] Failed to publish conflict event', {
+        providerId: params.providerId,
+        mappingId: params.mappingId,
+        error: error instanceof Error ? error.message : error
+      });
+    }
+  }
+}

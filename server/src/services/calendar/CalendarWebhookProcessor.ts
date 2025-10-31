@@ -9,6 +9,7 @@ import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
+import { runWithTenant, createTenantKnex } from '../../lib/db';
 
 export class CalendarWebhookProcessor {
   private syncService: CalendarSyncService;
@@ -26,79 +27,128 @@ export class CalendarWebhookProcessor {
     pubsubMessage: any,
     subscriptionName?: string
   ): Promise<{ success: number; failed: number }> {
+    console.log('📅 Processing Google Calendar webhook notification');
+
+    if (!subscriptionName) {
+      console.warn('⚠️ Missing subscription name on Google webhook payload');
+      return { success: 0, failed: 1 };
+    }
+
+    const provider = await this.getProviderByGoogleSubscription(subscriptionName);
+    if (!provider) {
+      console.error(`❌ Provider not found for subscription: ${subscriptionName}`);
+      return { success: 0, failed: 1 };
+    }
+
+    if (provider.sync_direction === 'to_external') {
+      console.log('⚠️ Provider configured for one-way sync to external only, skipping webhook');
+      return { success: 0, failed: 0 };
+    }
+
     try {
-      console.log('📅 Processing Google Calendar webhook notification');
+      return await runWithTenant(provider.tenant, async () => {
+        const adapter = (await this.createAdapter(provider)) as GoogleCalendarAdapter;
+        await adapter.connect();
 
-      // Decode Pub/Sub message
-      const messageData = pubsubMessage.data ? 
-        JSON.parse(Buffer.from(pubsubMessage.data, 'base64').toString()) : 
-        {};
+        const { knex } = await createTenantKnex();
 
-      if (!messageData || !subscriptionName) {
-        console.warn('⚠️ Invalid Google Calendar notification format');
-        return { success: 0, failed: 1 };
-      }
+        const fallbackStart = provider.last_sync_at ? new Date(provider.last_sync_at) : undefined;
+        let syncToken = provider.provider_config?.syncToken || undefined;
 
-      // Get provider by subscription name
-      const provider = await this.getProviderByGoogleSubscription(subscriptionName);
-      if (!provider) {
-        console.error(`❌ Provider not found for subscription: ${subscriptionName}`);
-        return { success: 0, failed: 1 };
-      }
+        let changesResult = await adapter.fetchEventChanges({
+          syncToken,
+          timeMin: fallbackStart
+        });
 
-      // Check sync direction
-      if (provider.sync_direction === 'to_external') {
-        console.log('⚠️ Provider configured for one-way sync to external only, skipping webhook');
-        return { success: 0, failed: 0 };
-      }
+        if (changesResult.resetRequired) {
+          console.warn('[CalendarWebhookProcessor] Google sync token invalid, resetting window', {
+            providerId: provider.id
+          });
 
-      // Get adapter and process webhook
-      const adapter = await this.createAdapter(provider);
-      await adapter.connect();
+          await this.providerService.updateProvider(provider.id, provider.tenant, {
+            vendorConfig: { syncToken: null }
+          });
 
-      // Process webhook notification to get changed event IDs
-      const eventIds = await adapter.processWebhookNotification({
-        message: pubsubMessage,
-        subscription: subscriptionName
-      });
+          const resetStart =
+            fallbackStart ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-      // If no specific event IDs, we need to sync based on resource state
-      // For Google Calendar, we may need to query for changes
-      if (eventIds.length === 0 && messageData.resourceState) {
-        // Query calendar for changes since last sync
-        const now = new Date();
-        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        const events = await adapter.listEvents(yesterday, now);
-        eventIds.push(...events.map(e => e.id));
-      }
-
-      let successCount = 0;
-      let failedCount = 0;
-
-      // Sync each changed event
-      for (const eventId of eventIds) {
-        try {
-          const result = await this.syncService.syncExternalEventToSchedule(
-            eventId,
-            provider.id
-          );
-
-          if (result.success) {
-            successCount++;
-            console.log(`✅ Synced Google Calendar event ${eventId} to schedule entry`);
-          } else {
-            failedCount++;
-            console.error(`❌ Failed to sync Google Calendar event ${eventId}:`, result.error);
-          }
-        } catch (error: any) {
-          failedCount++;
-          console.error(`❌ Error syncing Google Calendar event ${eventId}:`, error.message);
+          changesResult = await adapter.fetchEventChanges({
+            timeMin: resetStart
+          });
         }
-      }
 
-      return { success: successCount, failed: failedCount };
+        if (changesResult.nextSyncToken && changesResult.nextSyncToken !== syncToken) {
+          await this.providerService.updateProvider(provider.id, provider.tenant, {
+            vendorConfig: { syncToken: changesResult.nextSyncToken }
+          });
+        }
+
+        let successCount = 0;
+        let failedCount = 0;
+
+        for (const change of changesResult.changes) {
+          if (!change?.id) {
+            continue;
+          }
+
+          if (change.changeType === 'deleted') {
+            try {
+              const mapping = await knex('calendar_event_mappings')
+                .where('external_event_id', change.id)
+                .andWhere('calendar_provider_id', provider.id)
+                .andWhere('tenant', provider.tenant)
+                .first();
+
+              if (!mapping) {
+                console.warn('[CalendarWebhookProcessor] No mapping found for deleted Google event', {
+                  eventId: change.id,
+                  providerId: provider.id
+                });
+                continue;
+              }
+
+              await this.executeWithRetry(async () => {
+                const result = await this.syncService.deleteScheduleEntry(
+                  mapping.schedule_entry_id,
+                  provider.id,
+                  'all'
+                );
+                if (!result.success) {
+                  throw new Error(result.error || 'Failed to delete schedule entry');
+                }
+                return result;
+              }, `google-delete-${change.id}`);
+
+              successCount++;
+            } catch (error: any) {
+              failedCount++;
+              console.error(`❌ Failed to process Google deletion for event ${change.id}:`, error?.message || error);
+            }
+          } else {
+            try {
+              await this.executeWithRetry(async () => {
+                const result = await this.syncService.syncExternalEventToSchedule(
+                  change.id,
+                  provider.id
+                );
+                if (!result.success) {
+                  throw new Error(result.error || 'Failed to sync schedule entry');
+                }
+                return result;
+              }, `google-sync-${change.id}`);
+
+              successCount++;
+            } catch (error: any) {
+              failedCount++;
+              console.error(`❌ Failed to sync Google event ${change.id}:`, error?.message || error);
+            }
+          }
+        }
+
+        return { success: successCount, failed: failedCount };
+      });
     } catch (error: any) {
-      console.error('❌ Error processing Google Calendar webhook:', error);
+      console.error('❌ Error processing Google Calendar webhook:', error?.message || error);
       return { success: 0, failed: 1 };
     }
   }
@@ -109,97 +159,184 @@ export class CalendarWebhookProcessor {
   async processMicrosoftWebhook(
     notifications: any[]
   ): Promise<{ success: number; failed: number }> {
+    const subscriptionCache = new Map<string, CalendarProviderConfig>();
+    const providerNotifications = new Map<string, { provider: CalendarProviderConfig; notifications: any[] }>();
     let successCount = 0;
     let failedCount = 0;
 
     for (const notification of notifications) {
+      if (!this.isValidMicrosoftNotification(notification)) {
+        console.warn('⚠️ Invalid Microsoft Calendar notification format:', notification);
+        failedCount++;
+        continue;
+      }
+
+      const subscriptionId = notification.subscriptionId;
+      let provider = subscriptionCache.get(subscriptionId);
+      if (!provider) {
+        provider = await this.getProviderByMicrosoftSubscription(subscriptionId);
+        if (provider) {
+          subscriptionCache.set(subscriptionId, provider);
+        }
+      }
+
+      if (!provider) {
+        console.error(`❌ Provider not found for subscription: ${subscriptionId}`);
+        failedCount++;
+        continue;
+      }
+
+      if (provider.sync_direction === 'to_external') {
+        console.log('⚠️ Provider configured for one-way sync to external only, skipping webhook');
+        continue;
+      }
+
+      const vendorConfig = provider.provider_config || {};
+      if (
+        vendorConfig.webhookVerificationToken &&
+        notification.clientState !== vendorConfig.webhookVerificationToken
+      ) {
+        console.error(`❌ Invalid client state for provider ${provider.id}`);
+        failedCount++;
+        continue;
+      }
+
+      let existing = providerNotifications.get(provider.id);
+      if (!existing) {
+        existing = { provider, notifications: [] };
+        providerNotifications.set(provider.id, existing);
+      }
+      existing.notifications.push(notification);
+    }
+
+    for (const [providerId, entry] of providerNotifications.entries()) {
+      const { provider, notifications: notificationsForProvider } = entry;
+
       try {
-        if (!this.isValidMicrosoftNotification(notification)) {
-          console.warn('⚠️ Invalid Microsoft Calendar notification format:', notification);
-          failedCount++;
-          continue;
-        }
+        const result = await runWithTenant(provider.tenant, async () => {
+          const adapter = (await this.createAdapter(provider)) as MicrosoftCalendarAdapter;
+          await adapter.connect();
 
-        // Get provider by subscription ID
-        const provider = await this.getProviderByMicrosoftSubscription(notification.subscriptionId);
-        if (!provider) {
-          console.error(`❌ Provider not found for subscription: ${notification.subscriptionId}`);
-          failedCount++;
-          continue;
-        }
+          const { knex } = await createTenantKnex();
 
-        // Check sync direction
-        if (provider.sync_direction === 'to_external') {
-          console.log('⚠️ Provider configured for one-way sync to external only, skipping webhook');
-          continue;
-        }
+          let deltaLink = provider.provider_config?.deltaLink || undefined;
+          let deltaResult = await adapter.fetchDeltaChanges(deltaLink);
 
-        // Validate client state
-        const vendorConfig = provider.provider_config || {};
-        if (vendorConfig.webhookVerificationToken) {
-          if (notification.clientState !== vendorConfig.webhookVerificationToken) {
-            console.error(`❌ Invalid client state for provider ${provider.id}`);
-            failedCount++;
-            continue;
+          if (deltaResult.resetRequired) {
+            console.warn('[CalendarWebhookProcessor] Microsoft delta link invalid, resetting', {
+              providerId
+            });
+
+            await this.providerService.updateProvider(provider.id, provider.tenant, {
+              vendorConfig: { deltaLink: null }
+            });
+            deltaResult = await adapter.fetchDeltaChanges(undefined);
           }
-        }
 
-        // Extract event ID from notification
-        const eventId = notification.resourceData?.id || 
-          this.extractEventIdFromResource(notification.resource);
+          if (deltaResult.deltaLink && deltaResult.deltaLink !== deltaLink) {
+            await this.providerService.updateProvider(provider.id, provider.tenant, {
+              vendorConfig: { deltaLink: deltaResult.deltaLink }
+            });
+          }
 
-        if (!eventId) {
-          console.error('❌ Could not extract event ID from notification');
-          failedCount++;
-          continue;
-        }
+          const queuedChanges: Array<{ id: string; changeType: 'updated' | 'deleted' }> = [];
+          const seen = new Set<string>();
 
-        // Determine change type
-        const changeType = notification.changeType.toLowerCase();
-
-        // Handle deletion
-        if (changeType === 'deleted') {
-          // Find mapping and delete schedule entry
-          const { knex, tenant } = await import('../../lib/db').then(m => m.createTenantKnex());
-          const mapping = await knex('calendar_event_mappings')
-            .where('external_event_id', eventId)
-            .andWhere('calendar_provider_id', provider.id)
-            .andWhere('tenant', tenant)
-            .first();
-
-          if (mapping) {
-            try {
-              await this.syncService.deleteScheduleEntry(
-                mapping.schedule_entry_id,
-                provider.id,
-                'all'
-              );
-              successCount++;
-              console.log(`✅ Deleted schedule entry for external event ${eventId}`);
-            } catch (error: any) {
-              failedCount++;
-              console.error(`❌ Failed to delete schedule entry:`, error.message);
+          for (const change of deltaResult.changes) {
+            const key = `${change.id}:${change.changeType}`;
+            if (!seen.has(key)) {
+              queuedChanges.push(change);
+              seen.add(key);
             }
           }
-          continue;
-        }
 
-        // Handle created/updated
-        const result = await this.syncService.syncExternalEventToSchedule(
-          eventId,
-          provider.id
-        );
+          for (const notification of notificationsForProvider) {
+            const eventId =
+              notification.resourceData?.id ||
+              this.extractEventIdFromResource(notification.resource);
+            if (!eventId) {
+              continue;
+            }
 
-        if (result.success) {
-          successCount++;
-          console.log(`✅ Synced Microsoft Calendar event ${eventId} to schedule entry`);
-        } else {
-          failedCount++;
-          console.error(`❌ Failed to sync Microsoft Calendar event ${eventId}:`, result.error);
-        }
+            const type =
+              typeof notification.changeType === 'string' &&
+              notification.changeType.toLowerCase() === 'deleted'
+                ? 'deleted'
+                : 'updated';
+
+            const key = `${eventId}:${type}`;
+            if (!seen.has(key)) {
+              queuedChanges.push({ id: eventId, changeType: type });
+              seen.add(key);
+            }
+          }
+
+          let localSuccess = 0;
+          let localFailed = 0;
+
+          for (const change of queuedChanges) {
+            if (change.changeType === 'deleted') {
+              try {
+                const mapping = await knex('calendar_event_mappings')
+                  .where('external_event_id', change.id)
+                  .andWhere('calendar_provider_id', provider.id)
+                  .andWhere('tenant', provider.tenant)
+                  .first();
+
+                if (!mapping) {
+                  console.warn('[CalendarWebhookProcessor] No mapping found for deleted Microsoft event', {
+                    eventId: change.id,
+                    providerId
+                  });
+                  continue;
+                }
+
+                await this.executeWithRetry(async () => {
+                  const result = await this.syncService.deleteScheduleEntry(
+                    mapping.schedule_entry_id,
+                    provider.id,
+                    'all'
+                  );
+                  if (!result.success) {
+                    throw new Error(result.error || 'Failed to delete schedule entry');
+                  }
+                  return result;
+                }, `microsoft-delete-${change.id}`);
+
+                localSuccess++;
+              } catch (error: any) {
+                localFailed++;
+                console.error(`❌ Failed to process Microsoft deletion for event ${change.id}:`, error?.message || error);
+              }
+            } else {
+              try {
+                await this.executeWithRetry(async () => {
+                  const result = await this.syncService.syncExternalEventToSchedule(
+                    change.id,
+                    provider.id
+                  );
+                  if (!result.success) {
+                    throw new Error(result.error || 'Failed to sync schedule entry');
+                  }
+                  return result;
+                }, `microsoft-sync-${change.id}`);
+
+                localSuccess++;
+              } catch (error: any) {
+                localFailed++;
+                console.error(`❌ Failed to sync Microsoft event ${change.id}:`, error?.message || error);
+              }
+            }
+          }
+
+          return { success: localSuccess, failed: localFailed };
+        });
+
+        successCount += result.success;
+        failedCount += result.failed;
       } catch (error: any) {
-        console.error('❌ Error processing Microsoft Calendar notification:', error);
         failedCount++;
+        console.error('❌ Error processing Microsoft Calendar notification batch:', error?.message || error);
       }
     }
 
@@ -220,13 +357,16 @@ export class CalendarWebhookProcessor {
         })
         .where('gc.pubsub_subscription_name', subscriptionName)
         .andWhere('cp.is_active', true)
-        .first('cp.*', 'gc.*');
+        .first({
+          provider_id: 'cp.id',
+          provider_tenant: 'cp.tenant',
+        });
 
       if (!row) {
         return null;
       }
 
-      return this.providerService.getProvider(row.id);
+      return this.providerService.getProvider(row.provider_id, row.provider_tenant);
     } catch (error: any) {
       console.error('Failed to get provider by Google subscription:', error);
       return null;
@@ -247,13 +387,16 @@ export class CalendarWebhookProcessor {
         })
         .where('mc.webhook_subscription_id', subscriptionId)
         .andWhere('cp.is_active', true)
-        .first('cp.*', 'mc.*');
+        .first({
+          provider_id: 'cp.id',
+          provider_tenant: 'cp.tenant',
+        });
 
       if (!row) {
         return null;
       }
 
-      return this.providerService.getProvider(row.id);
+      return this.providerService.getProvider(row.provider_id, row.provider_tenant);
     } catch (error: any) {
       console.error('Failed to get provider by Microsoft subscription:', error);
       return null;
@@ -296,5 +439,28 @@ export class CalendarWebhookProcessor {
     const match = resource.match(/\/events\/([^\/]+)/);
     return match ? match[1] : null;
   }
-}
 
+  private async executeWithRetry<T>(fn: () => Promise<T>, label: string, attempts: number = 3): Promise<T> {
+    let lastError: any;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        console.warn(`[CalendarWebhookProcessor] ${label} failed`, {
+          attempt,
+          attempts,
+          error: error instanceof Error ? error.message : error
+        });
+        if (attempt < attempts) {
+          await this.sleep(attempt * 250);
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}

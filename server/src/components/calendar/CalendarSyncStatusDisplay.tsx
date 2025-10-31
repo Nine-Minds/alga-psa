@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { Badge } from '../ui/Badge';
 import { Alert, AlertDescription } from '../ui/Alert';
 import { CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
@@ -22,6 +22,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
   const [syncStatuses, setSyncStatuses] = useState<CalendarSyncStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const componentId = useId();
 
   useEffect(() => {
     if (entryId) {
@@ -111,11 +112,15 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
     // Show compact badges for each provider
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        {syncStatuses.map((status) => (
+        {syncStatuses.map((status, index) => (
           <TooltipProvider key={status.providerId}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant={getStatusVariant(status)} className="flex items-center gap-1 cursor-help">
+                <Badge
+                  id={`${componentId}-compact-provider-${index}-badge`}
+                  variant={getStatusVariant(status)}
+                  className="flex items-center gap-1 cursor-help"
+                >
                   {getStatusIcon(status)}
                   <span className="text-xs">
                     {status.providerType === 'google' ? 'Google' : 'Outlook'}
@@ -147,6 +152,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">Calendar Sync Status</h4>
         <button
+          id={`${componentId}-refresh-button`}
           onClick={loadSyncStatus}
           className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
@@ -159,7 +165,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
         <p className="text-sm text-muted-foreground">No calendar integrations configured</p>
       ) : (
         <div className="space-y-2">
-          {syncStatuses.map((status) => (
+          {syncStatuses.map((status, index) => (
             <div
               key={status.providerId}
               className="p-3 border rounded-lg space-y-1"
@@ -168,12 +174,22 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
                 <div className="flex items-center gap-2">
                   {getStatusIcon(status)}
                   <span className="text-sm font-medium">{status.providerName}</span>
-                  <Badge variant={getStatusVariant(status)} className="text-xs">
+                  <Badge
+                    id={`${componentId}-detail-provider-${index}-badge`}
+                    variant={getStatusVariant(status)}
+                    className="text-xs"
+                  >
                     {getStatusLabel(status)}
                   </Badge>
                 </div>
                 {!status.isActive && (
-                  <Badge variant="secondary" className="text-xs">Inactive</Badge>
+                  <Badge
+                    id={`${componentId}-detail-provider-${index}-inactive-badge`}
+                    variant="secondary"
+                    className="text-xs"
+                  >
+                    Inactive
+                  </Badge>
                 )}
               </div>
               
@@ -188,13 +204,21 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
               </div>
 
               {status.errorMessage && (
-                <Alert variant="destructive" className="mt-2">
+                <Alert
+                  id={`${componentId}-detail-provider-${index}-error-alert`}
+                  variant="destructive"
+                  className="mt-2"
+                >
                   <AlertDescription className="text-xs">{status.errorMessage}</AlertDescription>
                 </Alert>
               )}
 
               {status.entrySyncStatus?.syncStatus === 'conflict' && (
-                <Alert variant="outline" className="mt-2 border-orange-200 bg-orange-50">
+                <Alert
+                  id={`${componentId}-detail-provider-${index}-conflict-alert`}
+                  variant="outline"
+                  className="mt-2 border-orange-200 bg-orange-50"
+                >
                   <AlertDescription className="text-xs">
                     Conflict detected: Both calendars have been modified. Please resolve in Calendar Settings.
                   </AlertDescription>
@@ -207,5 +231,4 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
     </div>
   );
 }
-
 

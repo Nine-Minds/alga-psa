@@ -15,10 +15,11 @@ import { Label } from '../ui/Label';
 import { Switch } from '../ui/Switch';
 import { Alert, AlertDescription } from '../ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
-import { CheckCircle, Clock, ExternalLink } from 'lucide-react';
+import { CheckCircle, Clock, ExternalLink, XCircle } from 'lucide-react';
 import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from '../../lib/actions/calendarActions';
 import CustomSelect from '../ui/CustomSelect';
 import { CalendarProviderConfig } from '../../interfaces/calendar.interfaces';
+import { Badge } from '../ui/Badge';
 
 const googleCalendarProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -205,6 +206,20 @@ export function GoogleCalendarProviderForm({
     }
   };
 
+  const getOAuthBadgeVariant = () => {
+    if (oauthStatus === 'success') return 'success';
+    if (oauthStatus === 'error') return 'error';
+    if (oauthStatus === 'authorizing') return 'secondary';
+    return 'secondary';
+  };
+
+  const getOAuthBadgeLabel = () => {
+    if (oauthStatus === 'success') return 'Authorized';
+    if (oauthStatus === 'authorizing') return 'Authorizing';
+    if (oauthStatus === 'error') return 'Authorization Error';
+    return 'Not Authorized';
+  };
+
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       {/* Basic Configuration */}
@@ -218,9 +233,9 @@ export function GoogleCalendarProviderForm({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="providerName">Provider Name *</Label>
+              <Label htmlFor="google-provider-name-input">Provider Name *</Label>
               <Input
-                id="providerName"
+                id="google-provider-name-input"
                 {...form.register('providerName')}
                 placeholder="e.g., My Google Calendar"
                 className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
@@ -231,9 +246,9 @@ export function GoogleCalendarProviderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="calendarId">Calendar ID *</Label>
+              <Label htmlFor="google-calendar-id-input">Calendar ID *</Label>
               <Input
-                id="calendarId"
+                id="google-calendar-id-input"
                 {...form.register('calendarId')}
                 placeholder="primary"
                 className={hasAttemptedSubmit && form.formState.errors.calendarId ? 'border-red-500' : ''}
@@ -246,8 +261,9 @@ export function GoogleCalendarProviderForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="syncDirection">Sync Direction *</Label>
+            <Label htmlFor="google-sync-direction-select">Sync Direction *</Label>
             <CustomSelect
+              id="google-sync-direction-select"
               value={form.watch('syncDirection')}
               onValueChange={(value) => form.setValue('syncDirection', value as any)}
               options={[
@@ -263,11 +279,11 @@ export function GoogleCalendarProviderForm({
 
           <div className="flex items-center space-x-2">
             <Switch
-              id="isActive"
+              id="google-provider-active-switch"
               checked={form.watch('isActive')}
               onCheckedChange={(checked: boolean) => form.setValue('isActive', checked)}
             />
-            <Label htmlFor="isActive">Enable this provider</Label>
+            <Label htmlFor="google-provider-active-switch">Enable this provider</Label>
           </div>
         </CardContent>
       </Card>
@@ -286,8 +302,20 @@ export function GoogleCalendarProviderForm({
               oauthStatus === 'success' ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50'
             }`}>
               <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium">Google Calendar Access</h4>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-medium">Google Calendar Access</h4>
+                    <Badge
+                      id="google-oauth-status-badge"
+                      variant={getOAuthBadgeVariant()}
+                      className="flex items-center gap-1"
+                    >
+                      {oauthStatus === 'success' && <CheckCircle className="h-3 w-3" />}
+                      {oauthStatus === 'authorizing' && <Clock className="h-3 w-3" />}
+                      {oauthStatus === 'error' && <XCircle className="h-3 w-3" />}
+                      {getOAuthBadgeLabel()}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     {oauthStatus === 'success' 
                       ? 'Successfully connected to Google Calendar' 
@@ -295,6 +323,7 @@ export function GoogleCalendarProviderForm({
                   </p>
                 </div>
                 <Button
+                  id="google-authorize-button"
                   type="button"
                   variant="outline"
                   onClick={handleAuthorize}
@@ -341,16 +370,18 @@ export function GoogleCalendarProviderForm({
       {/* Form Actions */}
       <div className="flex justify-end space-x-2">
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button id="google-provider-cancel-button" type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={isSubmitting || oauthStatus === 'authorizing'}>
+        <Button
+          id="google-provider-submit-button"
+          type="submit"
+          disabled={isSubmitting || oauthStatus === 'authorizing'}
+        >
           {isSubmitting ? 'Saving...' : isEditing ? 'Update Provider' : 'Create Provider'}
         </Button>
       </div>
     </form>
   );
 }
-
-

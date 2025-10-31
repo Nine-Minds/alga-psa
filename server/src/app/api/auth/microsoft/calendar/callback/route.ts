@@ -3,8 +3,11 @@ import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { CalendarProviderService } from '../../../../../services/calendar/CalendarProviderService';
 import { MicrosoftCalendarAdapter } from '../../../../../services/calendar/providers/MicrosoftCalendarAdapter';
+import { consumeCalendarOAuthState } from '../../../../../utils/calendar/oauthStateStore';
+import { decodeCalendarState } from '../../../../../utils/calendar/oauthHelpers';
 import axios from 'axios';
 import { randomBytes } from 'crypto';
+import { resolveCalendarRedirectUri } from '../../../../../utils/calendar/redirectUri';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,11 +104,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse state to get tenant and other info
-    let stateData;
-    try {
-      stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-    } catch (e) {
-      console.error('Failed to parse state:', e);
+    const decodedState = decodeCalendarState(state);
+    if (!decodedState) {
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
@@ -115,6 +115,60 @@ export async function GET(request: NextRequest) {
         errorDescription: 'Invalid state parameter'
       });
     }
+
+    if (!decodedState.timestamp || Date.now() - decodedState.timestamp > 10 * 60 * 1000) {
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        resource: 'calendar',
+        success: false,
+        error: 'invalid_state',
+        errorDescription: 'OAuth state expired'
+      });
+    }
+
+    const storedState = await consumeCalendarOAuthState(decodedState.nonce);
+    if (!storedState) {
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        resource: 'calendar',
+        success: false,
+        error: 'invalid_state',
+        errorDescription: 'OAuth state invalid or already used'
+      });
+    }
+
+    if (
+      storedState.tenant !== decodedState.tenant ||
+      storedState.provider !== decodedState.provider ||
+      storedState.provider !== 'microsoft'
+    ) {
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        resource: 'calendar',
+        success: false,
+        error: 'invalid_state',
+        errorDescription: 'OAuth state mismatch'
+      });
+    }
+
+    if (
+      (storedState.calendarProviderId || decodedState.calendarProviderId) &&
+      storedState.calendarProviderId !== decodedState.calendarProviderId
+    ) {
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        resource: 'calendar',
+        success: false,
+        error: 'invalid_state',
+        errorDescription: 'OAuth state provider mismatch'
+      });
+    }
+
+    const stateData = storedState;
 
     // Get OAuth client credentials
     const secretProvider = await getSecretProviderInstance();
@@ -141,8 +195,13 @@ export async function GET(request: NextRequest) {
       tenantId = envTenantId || tenantTenantId || null;
     }
     
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
-    const redirectUri = stateData.redirectUri || `${baseUrl}/api/auth/microsoft/calendar/callback`;
+    const redirectUri = await resolveCalendarRedirectUri({
+      tenant: stateData.tenant,
+      provider: 'microsoft',
+      secretProvider,
+      hosted: isHostedFlow,
+      requestedRedirectUri: stateData.redirectUri
+    });
 
     if (!clientId || !clientSecret) {
       return respondWithPostMessage({
@@ -221,7 +280,7 @@ export async function GET(request: NextRequest) {
             const webhookUrl = `${baseUrl}/api/calendar/webhooks/microsoft`;
 
             // Update provider with tokens and calendar ID
-            await providerService.updateProvider(stateData.calendarProviderId, {
+            await providerService.updateProvider(stateData.calendarProviderId, stateData.tenant, {
               vendorConfig: {
                 client_id: clientId,
                 client_secret: clientSecret,
@@ -299,4 +358,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

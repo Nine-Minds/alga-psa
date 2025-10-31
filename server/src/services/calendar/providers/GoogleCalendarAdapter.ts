@@ -4,7 +4,6 @@ import { CalendarProviderConfig, ExternalCalendarEvent } from '../../../interfac
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { CalendarProviderService } from '../CalendarProviderService';
 
 /**
@@ -152,21 +151,15 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
         this.config.provider_config.tokenExpiresAt = this.tokenExpiresAt?.toISOString();
       }
       
-      // Persist to database
-      const db = await getAdminConnection();
-      const vendorConfig = this.config.provider_config || {};
-      
-      if (this.config.provider_type === 'google') {
-        await db('google_calendar_provider_config')
-          .where('calendar_provider_id', this.config.id)
-          .andWhere('tenant', this.config.tenant)
-          .update({
-            access_token: this.accessToken,
-            refresh_token: this.refreshToken,
-            token_expires_at: this.tokenExpiresAt,
-            updated_at: db.fn.now()
-          });
-      }
+      // Persist to database using provider service to ensure encryption rules apply
+      const providerService = new CalendarProviderService();
+      await providerService.updateProvider(this.config.id, this.config.tenant, {
+        vendorConfig: {
+          accessToken: this.accessToken,
+          refreshToken: this.refreshToken,
+          tokenExpiresAt: this.tokenExpiresAt?.toISOString() || null
+        }
+      });
     } catch (error) {
       this.log('warn', 'Failed to update stored credentials', error);
       // Don't throw - credential refresh was successful, DB update failure is not critical
@@ -356,6 +349,73 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
   }
 
   /**
+   * Fetch incremental event changes using Google sync tokens.
+   */
+  async fetchEventChanges(params: {
+    syncToken?: string | null;
+    timeMin?: Date;
+  }): Promise<{
+    changes: Array<{ id: string; changeType: 'updated' | 'deleted' }>;
+    nextSyncToken?: string;
+    resetRequired?: boolean;
+  }> {
+    await this.ensureValidToken();
+
+    const changes: Array<{ id: string; changeType: 'updated' | 'deleted' }> = [];
+    let nextSyncToken: string | undefined;
+    let pageToken: string | undefined;
+
+    const request: any = {
+      calendarId: this.calendarId,
+      singleEvents: true,
+      showDeleted: true,
+      maxResults: 2500
+    };
+
+    if (params.syncToken) {
+      request.syncToken = params.syncToken;
+    } else {
+      const start = params.timeMin ?? new Date(Date.now() - 24 * 60 * 60 * 1000);
+      request.timeMin = start.toISOString();
+      request.timeMax = new Date().toISOString();
+    }
+
+    do {
+      if (pageToken) {
+        request.pageToken = pageToken;
+      }
+
+      let response;
+      try {
+        response = await this.calendar.events.list(request);
+      } catch (error) {
+        if (this.isSyncTokenInvalidError(error)) {
+          return { changes, resetRequired: true };
+        }
+        throw this.handleError(error, 'fetchEventChanges');
+      }
+
+      const items = response.data.items || [];
+      for (const item of items) {
+        if (!item?.id) {
+          continue;
+        }
+
+        const status = typeof item.status === 'string' ? item.status.toLowerCase() : '';
+        const changeType: 'updated' | 'deleted' = status === 'cancelled' ? 'deleted' : 'updated';
+        changes.push({ id: item.id, changeType });
+      }
+
+      pageToken = response.data.nextPageToken || undefined;
+      if (response.data.nextSyncToken) {
+        nextSyncToken = response.data.nextSyncToken;
+      }
+    } while (pageToken);
+
+    return { changes, nextSyncToken };
+  }
+
+  /**
    * Register webhook subscription for calendar change notifications
    */
   async registerWebhookSubscription(): Promise<void> {
@@ -461,6 +521,16 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
     }
   }
 
+  private isSyncTokenInvalidError(error: any): boolean {
+    const code = error?.code || error?.response?.status;
+    if (code === 410) {
+      return true;
+    }
+
+    const status = error?.response?.data?.error?.status;
+    return typeof status === 'string' && status.toUpperCase() === 'GONE';
+  }
+
   /**
    * Map Google Calendar event to ExternalCalendarEvent format
    */
@@ -494,4 +564,3 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
     };
   }
 }
-

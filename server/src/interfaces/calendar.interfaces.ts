@@ -28,6 +28,8 @@ export interface CalendarProviderVendorConfig {
   refreshToken?: string;
   tokenExpiresAt?: string;
   redirectUri?: string;
+  syncToken?: string;
+  deltaLink?: string;
   
   // Google-specific
   projectId?: string;
@@ -61,6 +63,7 @@ export interface GoogleCalendarProviderConfig extends CalendarProviderConfig {
     webhookNotificationUrl?: string;
     webhookVerificationToken?: string;
     calendarId: string;
+    syncToken?: string;
   };
 }
 
@@ -79,6 +82,7 @@ export interface MicrosoftCalendarProviderConfig extends CalendarProviderConfig 
     webhookNotificationUrl?: string;
     webhookVerificationToken?: string;
     calendarId: string;
+    deltaLink?: string;
   };
 }
 
@@ -193,6 +197,8 @@ export interface CalendarOAuthState {
   calendarProviderId?: string; // For updates
   nonce: string;
   redirectUri?: string;
+  timestamp: number;
+  hosted?: boolean;
 }
 
 export interface CalendarEventCreateRequest {
@@ -211,4 +217,3 @@ export interface CalendarEventDeleteRequest {
   mappingId: string;
   deleteType?: 'single' | 'future' | 'all';
 }
-
