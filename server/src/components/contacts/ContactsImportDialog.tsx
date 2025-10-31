@@ -482,7 +482,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
             ),
           },
         ] as ColumnDefinition<ImportContactResult>[]}
-        pagination={true}
       />
       <DialogFooter>
         <Button id='close-import-dialog' onClick={onClose}>Close</Button>
@@ -728,7 +727,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                       },
                     }
                   ] as ColumnDefinition<any>[]}
-                  pagination={true}
                 />
               </div>
               <DialogFooter>

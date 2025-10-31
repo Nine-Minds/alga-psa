@@ -62,7 +62,7 @@ export default function JobHistoryTable({ initialData = [] }: JobHistoryTablePro
     setCurrentPage(1);
   };
 
-  const hasActiveJobs = (jobs: JobData[]) => {
+  const hasActiveJobs = (jobs: any[]) => {
     console.log('Checking for active jobs:', jobs);
 
     return jobs.some(job => job.status === 'processing');
@@ -70,9 +70,9 @@ export default function JobHistoryTable({ initialData = [] }: JobHistoryTablePro
 
   const fetchData = async () => {
     try {
-      const newData = await getJobDetailsWithHistory({}) as JobData[];
-      setData(newData);
-      
+      const newData = await getJobDetailsWithHistory({});
+      setData(newData as unknown as JobData[]);
+
       // Stop polling if there are no active jobs
       if (!hasActiveJobs(newData)) {
         clearInterval(intervalRef.current);

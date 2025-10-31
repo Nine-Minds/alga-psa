@@ -638,7 +638,6 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                       },
                     }
                   ] as ColumnDefinition<any>[]}
-                  pagination={true}
                 />
               </div>
               <div className="mt-4">
