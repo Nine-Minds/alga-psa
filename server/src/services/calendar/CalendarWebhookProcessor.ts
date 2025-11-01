@@ -159,7 +159,7 @@ export class CalendarWebhookProcessor {
   async processMicrosoftWebhook(
     notifications: any[]
   ): Promise<{ success: number; failed: number }> {
-    const subscriptionCache = new Map<string, CalendarProviderConfig>();
+    const subscriptionCache = new Map<string, CalendarProviderConfig | null>();
     const providerNotifications = new Map<string, { provider: CalendarProviderConfig; notifications: any[] }>();
     let successCount = 0;
     let failedCount = 0;
@@ -173,11 +173,9 @@ export class CalendarWebhookProcessor {
 
       const subscriptionId = notification.subscriptionId;
       let provider = subscriptionCache.get(subscriptionId);
-      if (!provider) {
+      if (provider === undefined) {
         provider = await this.getProviderByMicrosoftSubscription(subscriptionId);
-        if (provider) {
-          subscriptionCache.set(subscriptionId, provider);
-        }
+        subscriptionCache.set(subscriptionId, provider);
       }
 
       if (!provider) {

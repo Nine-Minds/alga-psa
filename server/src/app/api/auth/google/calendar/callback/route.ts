@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
-import { CalendarProviderService } from '../../../../../services/calendar/CalendarProviderService';
-import { GoogleCalendarAdapter } from '../../../../../services/calendar/providers/GoogleCalendarAdapter';
-import { consumeCalendarOAuthState } from '../../../../../utils/calendar/oauthStateStore';
-import { decodeCalendarState } from '../../../../../utils/calendar/oauthHelpers';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
+import { GoogleCalendarAdapter } from '@/services/calendar/providers/GoogleCalendarAdapter';
+import { consumeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
+import { decodeCalendarState } from '@/utils/calendar/oauthHelpers';
+import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
 import axios from 'axios';
-import { resolveCalendarRedirectUri } from '../../../../../utils/calendar/redirectUri';
+import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
 
 export const dynamic = 'force-dynamic';
 
@@ -237,11 +238,11 @@ export async function GET(request: NextRequest) {
           await runWithTenant(stateData.tenant, async () => {
             const { knex } = await createTenantKnex();
             const providerService = new CalendarProviderService();
-            
+
             // Get user's calendars
-            const tempConfig = {
-              id: stateData.calendarProviderId,
-              tenant: stateData.tenant,
+            const tempConfig: CalendarProviderConfig = {
+              id: stateData.calendarProviderId!,
+              tenant: stateData.tenant!,
               name: 'Temp',
               provider_type: 'google' as const,
               calendar_id: 'primary',
@@ -271,7 +272,7 @@ export async function GET(request: NextRequest) {
             }
 
             // Update provider with tokens and calendar ID
-            await providerService.updateProvider(stateData.calendarProviderId, stateData.tenant, {
+            await providerService.updateProvider(stateData.calendarProviderId!, stateData.tenant, {
               vendorConfig: {
                 client_id: clientId,
                 client_secret: clientSecret,
@@ -285,7 +286,7 @@ export async function GET(request: NextRequest) {
             });
 
             // Update provider status
-            await providerService.updateProviderStatus(stateData.calendarProviderId, {
+            await providerService.updateProviderStatus(stateData.calendarProviderId!, {
               status: 'connected',
               errorMessage: null
             });

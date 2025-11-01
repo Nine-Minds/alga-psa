@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '../ui/Alert';
 import { CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { getScheduleEntrySyncStatus } from '../../lib/actions/calendarActions';
 import { CalendarSyncStatus } from '../../interfaces/calendar.interfaces';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/Tooltip';
+import { Tooltip } from '../ui/Tooltip';
 
 interface CalendarSyncStatusDisplayProps {
   entryId: string;
@@ -92,7 +92,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
     }
   };
 
-  const getStatusVariant = (status: CalendarSyncStatus): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  const getStatusVariant = (status: CalendarSyncStatus): 'default' | 'secondary' | 'error' | 'outline' => {
     const syncStatus = status.entrySyncStatus?.syncStatus;
     switch (syncStatus) {
       case 'synced':
@@ -102,7 +102,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
       case 'conflict':
         return 'outline';
       case 'error':
-        return 'destructive';
+        return 'error';
       default:
         return 'secondary';
     }
@@ -113,34 +113,32 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
     return (
       <div className="flex items-center gap-2 flex-wrap">
         {syncStatuses.map((status, index) => (
-          <TooltipProvider key={status.providerId}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  id={`${componentId}-compact-provider-${index}-badge`}
-                  variant={getStatusVariant(status)}
-                  className="flex items-center gap-1 cursor-help"
-                >
-                  {getStatusIcon(status)}
-                  <span className="text-xs">
-                    {status.providerType === 'google' ? 'Google' : 'Outlook'}
-                  </span>
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="space-y-1">
-                  <p className="font-semibold">{status.providerName}</p>
-                  <p>Status: {getStatusLabel(status)}</p>
-                  {status.lastSyncAt && (
-                    <p className="text-xs">Last sync: {new Date(status.lastSyncAt).toLocaleString()}</p>
-                  )}
-                  {status.errorMessage && (
-                    <p className="text-xs text-red-600">Error: {status.errorMessage}</p>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip
+            key={status.providerId}
+            content={
+              <div className="space-y-1">
+                <p className="font-semibold">{status.providerName}</p>
+                <p>Status: {getStatusLabel(status)}</p>
+                {status.lastSyncAt && (
+                  <p className="text-xs">Last sync: {new Date(status.lastSyncAt).toLocaleString()}</p>
+                )}
+                {status.errorMessage && (
+                  <p className="text-xs text-red-600">Error: {status.errorMessage}</p>
+                )}
+              </div>
+            }
+          >
+            <Badge
+              id={`${componentId}-compact-provider-${index}-badge`}
+              variant={getStatusVariant(status)}
+              className="flex items-center gap-1 cursor-help"
+            >
+              {getStatusIcon(status)}
+              <span className="text-xs">
+                {status.providerType === 'google' ? 'Google' : 'Outlook'}
+              </span>
+            </Badge>
+          </Tooltip>
         ))}
       </div>
     );
@@ -216,7 +214,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
               {status.entrySyncStatus?.syncStatus === 'conflict' && (
                 <Alert
                   id={`${componentId}-detail-provider-${index}-conflict-alert`}
-                  variant="outline"
+                  variant="info"
                   className="mt-2 border-orange-200 bg-orange-50"
                 >
                   <AlertDescription className="text-xs">

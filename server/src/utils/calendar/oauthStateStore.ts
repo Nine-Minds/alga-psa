@@ -9,39 +9,44 @@ const DEFAULT_TTL_SECONDS = 10 * 60; // 10 minutes
 
 type StoredCalendarOAuthState = CalendarOAuthState;
 
-let redisClientPromise: Promise<RedisClientType> | null = null;
+let redisClientPromise: Promise<RedisClientType | null> | null = null;
 const memoryStore = new Map<string, { state: StoredCalendarOAuthState; expiresAt: number }>();
 
-async function getRedisClient(): Promise<RedisClientType> {
+async function getRedisClient(): Promise<RedisClientType | null> {
   if (!redisClientPromise) {
     redisClientPromise = (async () => {
-      const config = getRedisConfig();
-      const password =
-        (await getSecret('redis_password', 'REDIS_PASSWORD')) || config.password || undefined;
+      try {
+        const config = getRedisConfig();
+        const password =
+          (await getSecret('redis_password', 'REDIS_PASSWORD')) || undefined;
 
-      const client = createClient({
-        url: config.url,
-        password,
-        socket: {
-          reconnectStrategy: (retries) => {
-            if (retries > config.eventBus.reconnectStrategy.retries) {
-              return new Error('Max reconnection attempts reached');
+        const client = createClient({
+          url: config.url,
+          password,
+          socket: {
+            reconnectStrategy: (retries) => {
+              if (retries > config.eventBus.reconnectStrategy.retries) {
+                return new Error('Max reconnection attempts reached');
+              }
+              return Math.min(
+                config.eventBus.reconnectStrategy.initialDelay,
+                config.eventBus.reconnectStrategy.maxDelay
+              );
             }
-            return Math.min(
-              config.eventBus.reconnectStrategy.initialDelay,
-              config.eventBus.reconnectStrategy.maxDelay
-            );
           }
-        }
-      });
+        });
 
-      client.on('error', (err) => {
-        logger.error('[CalendarOAuthStateStore] Redis client error', err);
-      });
+        client.on('error', (err) => {
+          logger.error('[CalendarOAuthStateStore] Redis client error', err);
+        });
 
-      await client.connect();
-      logger.info('[CalendarOAuthStateStore] Redis client connected');
-      return client;
+        await client.connect();
+        logger.info('[CalendarOAuthStateStore] Redis client connected');
+        return client as RedisClientType;
+      } catch (error) {
+        logger.error('[CalendarOAuthStateStore] Failed to create Redis client', error);
+        return null;
+      }
     })();
   }
 
@@ -61,10 +66,12 @@ export async function storeCalendarOAuthState(
 
   try {
     const client = await getRedisClient();
-    await client.set(key, JSON.stringify(state), {
-      EX: ttlSeconds
-    });
-    return;
+    if (client) {
+      await client.set(key, JSON.stringify(state), {
+        EX: ttlSeconds
+      });
+      return;
+    }
   } catch (error) {
     logger.warn(
       '[CalendarOAuthStateStore] Falling back to in-memory store for OAuth state',
@@ -85,14 +92,16 @@ export async function consumeCalendarOAuthState(
 
   try {
     const client = await getRedisClient();
-    const raw = await client.get(key);
-    if (raw) {
-      await client.del(key).catch(() => {});
-      try {
-        return JSON.parse(raw) as StoredCalendarOAuthState;
-      } catch (error) {
-        logger.error('[CalendarOAuthStateStore] Failed to parse stored OAuth state', error);
-        return null;
+    if (client) {
+      const raw = await client.get(key);
+      if (raw) {
+        await client.del(key).catch(() => {});
+        try {
+          return JSON.parse(raw) as StoredCalendarOAuthState;
+        } catch (error) {
+          logger.error('[CalendarOAuthStateStore] Failed to parse stored OAuth state', error);
+          return null;
+        }
       }
     }
   } catch (error) {

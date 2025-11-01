@@ -530,15 +530,19 @@ function escapeHtml(value: string): string {
 export async function registerCalendarSyncSubscriber(): Promise<void> {
   try {
     logger.info('[CalendarSyncSubscriber] Starting registration');
-    
+
     const eventBus = getEventBus();
-    
+
     // Subscribe to schedule entry events
+    // @ts-ignore - Calendar events are extensions to the core EventType
     await eventBus.subscribe('SCHEDULE_ENTRY_CREATED', handleScheduleEntryCreated);
+    // @ts-ignore - Calendar events are extensions to the core EventType
     await eventBus.subscribe('SCHEDULE_ENTRY_UPDATED', handleScheduleEntryUpdated);
+    // @ts-ignore - Calendar events are extensions to the core EventType
     await eventBus.subscribe('SCHEDULE_ENTRY_DELETED', handleScheduleEntryDeleted);
+    // @ts-ignore - Calendar events are extensions to the core EventType
     await eventBus.subscribe('CALENDAR_CONFLICT_DETECTED', handleCalendarConflictDetected);
-    
+
     logger.info('[CalendarSyncSubscriber] Successfully registered all calendar sync event handlers');
   } catch (error: any) {
     logger.error('[CalendarSyncSubscriber] Failed to register calendar sync subscriber', {

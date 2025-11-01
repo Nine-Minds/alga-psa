@@ -17,7 +17,7 @@ export async function mapScheduleEntryToExternalEvent(
   userEmails?: Map<string, string> // Map of user_id -> email
 ): Promise<ExternalCalendarEvent> {
   // Fetch user emails if not provided
-  if (!userEmails && entry.assigned_user_ids.length > 0) {
+  if (!userEmails && entry.assigned_user_ids.length > 0 && entry.tenant) {
     userEmails = await fetchUserEmails(entry.assigned_user_ids, entry.tenant);
   }
 
@@ -62,10 +62,10 @@ export async function mapScheduleEntryToExternalEvent(
   const extendedProperties = {
     private: {
       'alga-entry-id': entry.entry_id,
-      'alga-tenant': entry.tenant,
+      ...(entry.tenant ? { 'alga-tenant': entry.tenant } : {}),
       ...(entry.work_item_id ? { 'alga-work-item-id': entry.work_item_id } : {}),
-      ...(entry.work_item_type ? { 'alga-work-item-type': entry.work_item_type } : {})
-    }
+      ...(entry.work_item_type ? { 'alga-work-item-type': String(entry.work_item_type) } : {})
+    } as Record<string, string>
   };
 
   // Map status
@@ -261,7 +261,7 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
 
     const users = await knex('users')
       .where('tenant', tenant)
-      .whereIn(knex.raw('LOWER(email)'), normalizedEmails)
+      .whereRaw('LOWER(email) IN (?)', [normalizedEmails])
       .select('user_id', 'email');
 
     for (const user of users) {

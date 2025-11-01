@@ -4,12 +4,12 @@ import { CalendarProviderService } from 'server/src/services/calendar/CalendarPr
 import { MicrosoftCalendarAdapter } from 'server/src/services/calendar/providers/MicrosoftCalendarAdapter';
 import { GoogleCalendarAdapter } from 'server/src/services/calendar/providers/GoogleCalendarAdapter';
 
-export interface MicrosoftWebhookRenewalJobData {
+export interface MicrosoftWebhookRenewalJobData extends Record<string, unknown> {
   tenantId: string;
   lookAheadMinutes?: number;
 }
 
-export interface GooglePubSubVerificationJobData {
+export interface GooglePubSubVerificationJobData extends Record<string, unknown> {
   tenantId: string;
 }
 

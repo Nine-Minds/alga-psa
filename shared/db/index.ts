@@ -1,6 +1,9 @@
 import { Knex } from 'knex';
 import { getAdminConnection } from './admin';
 
+// Export admin connection getter for use in other services
+export { getAdminConnection };
+
 /**
  * Execute a function within a transaction
  */

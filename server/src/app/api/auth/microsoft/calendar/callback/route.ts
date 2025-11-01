@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
-import { CalendarProviderService } from '../../../../../services/calendar/CalendarProviderService';
-import { MicrosoftCalendarAdapter } from '../../../../../services/calendar/providers/MicrosoftCalendarAdapter';
-import { consumeCalendarOAuthState } from '../../../../../utils/calendar/oauthStateStore';
-import { decodeCalendarState } from '../../../../../utils/calendar/oauthHelpers';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
+import { MicrosoftCalendarAdapter } from '@/services/calendar/providers/MicrosoftCalendarAdapter';
+import { consumeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
+import { decodeCalendarState } from '@/utils/calendar/oauthHelpers';
+import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
 import axios from 'axios';
 import { randomBytes } from 'crypto';
-import { resolveCalendarRedirectUri } from '../../../../../utils/calendar/redirectUri';
+import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
 
 export const dynamic = 'force-dynamic';
 
@@ -242,11 +243,11 @@ export async function GET(request: NextRequest) {
           await runWithTenant(stateData.tenant, async () => {
             const { knex } = await createTenantKnex();
             const providerService = new CalendarProviderService();
-            
+
             // Get user's calendars
-            const tempConfig = {
-              id: stateData.calendarProviderId,
-              tenant: stateData.tenant,
+            const tempConfig: CalendarProviderConfig = {
+              id: stateData.calendarProviderId!,
+              tenant: stateData.tenant!,
               name: 'Temp',
               provider_type: 'microsoft' as const,
               calendar_id: 'calendar',
@@ -275,12 +276,13 @@ export async function GET(request: NextRequest) {
               throw new Error('No calendars found for user');
             }
 
-            // Generate webhook verification token
+            // Generate webhook verification token and URL
             const webhookVerificationToken = randomBytes(32).toString('hex');
+            const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
             const webhookUrl = `${baseUrl}/api/calendar/webhooks/microsoft`;
 
             // Update provider with tokens and calendar ID
-            await providerService.updateProvider(stateData.calendarProviderId, stateData.tenant, {
+            await providerService.updateProvider(stateData.calendarProviderId!, stateData.tenant, {
               vendorConfig: {
                 client_id: clientId,
                 client_secret: clientSecret,
@@ -296,7 +298,7 @@ export async function GET(request: NextRequest) {
             });
 
             // Update provider status
-            await providerService.updateProviderStatus(stateData.calendarProviderId, {
+            await providerService.updateProviderStatus(stateData.calendarProviderId!, {
               status: 'connected',
               errorMessage: null
             });

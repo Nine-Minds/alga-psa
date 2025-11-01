@@ -31,7 +31,7 @@ const microsoftCalendarProviderSchema = z.object({
 type MicrosoftCalendarProviderFormData = z.infer<typeof microsoftCalendarProviderSchema>;
 
 interface MicrosoftCalendarProviderFormProps {
-  tenant: string;
+  tenant: string | null | undefined;
   provider?: CalendarProviderConfig;
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -302,9 +302,9 @@ export function MicrosoftCalendarProviderForm({
               oauthStatus === 'success' ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50'
             }`}>
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
+                <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-medium">Microsoft Outlook Calendar Access</h4>
+                    <h4 className="font-medium">Connection Status</h4>
                     <Badge
                       id="microsoft-oauth-status-badge"
                       variant={getOAuthBadgeVariant()}
@@ -316,11 +316,6 @@ export function MicrosoftCalendarProviderForm({
                       {getOAuthBadgeLabel()}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {oauthStatus === 'success' 
-                      ? 'Successfully connected to Outlook Calendar' 
-                      : 'Click the button below to authorize access to your Outlook Calendar'}
-                  </p>
                 </div>
                 <Button
                   id="microsoft-authorize-button"
@@ -332,19 +327,19 @@ export function MicrosoftCalendarProviderForm({
                   {oauthStatus === 'authorizing' && (
                     <>
                       <Clock className="h-4 w-4 mr-2 animate-spin" />
-                      Authorizing...
+                      Connecting...
                     </>
                   )}
                   {oauthStatus === 'success' && (
                     <>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Authorized
+                      Connected
                     </>
                   )}
                   {(oauthStatus === 'idle' || oauthStatus === 'error') && (
                     <>
                       <ExternalLink className="h-4 w-4 mr-2" />
-                      Authorize Outlook Calendar
+                      Connect
                     </>
                   )}
                 </Button>

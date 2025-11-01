@@ -1,5 +1,5 @@
-import { CalendarProviderConfig, ExternalCalendarEvent } from '../../../interfaces/calendar.interfaces';
-import { IScheduleEntry } from '../../../interfaces/schedule.interfaces';
+import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
+import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
 
 /**
  * Base abstract class for calendar provider adapters

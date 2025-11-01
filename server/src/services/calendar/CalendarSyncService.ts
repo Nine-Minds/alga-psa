@@ -3,7 +3,8 @@
  * Handles bidirectional synchronization between Alga schedule entries and external calendars
  */
 
-import { createTenantKnex, withTransaction } from '@shared/db';
+import { createTenantKnex } from '../../lib/db';
+import { withTransaction } from '@shared/db';
 import { CalendarProviderConfig, CalendarEventMapping, CalendarSyncResult } from '../../interfaces/calendar.interfaces';
 import { IScheduleEntry } from '../../interfaces/schedule.interfaces';
 import { CalendarProviderService } from '../CalendarProviderService';
@@ -94,7 +95,7 @@ export class CalendarSyncService {
             success: true,
             mapping: {
               ...existingMapping,
-              sync_status: 'synced',
+              sync_status: 'synced' as const,
               last_synced_at: new Date().toISOString(),
               alga_last_modified: entry.updated_at instanceof Date ? entry.updated_at.toISOString() : new Date(entry.updated_at).toISOString(),
               external_last_modified: updatedEvent.updated
@@ -146,16 +147,18 @@ export class CalendarSyncService {
       // Update mapping status to error if it exists
       try {
         const { knex, tenant } = await createTenantKnex();
-        const mapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
-        if (mapping) {
-          await knex('calendar_event_mappings')
-            .where('id', mapping.id)
-            .andWhere('tenant', tenant)
-            .update({
-              sync_status: 'error',
-              sync_error_message: error.message,
-              updated_at: new Date().toISOString()
-            });
+        if (tenant) {
+          const mapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
+          if (mapping) {
+            await knex('calendar_event_mappings')
+              .where('id', mapping.id)
+              .andWhere('tenant', tenant)
+              .update({
+                sync_status: 'error',
+                sync_error_message: error.message,
+                updated_at: new Date().toISOString()
+              });
+          }
         }
       } catch (updateError) {
         console.error('Failed to update mapping error status:', updateError);
@@ -305,10 +308,10 @@ export class CalendarSyncService {
             success: true,
             mapping: {
               ...existingMapping,
-              sync_status: 'synced',
+              sync_status: 'synced' as const,
               last_synced_at: new Date().toISOString(),
-              alga_last_modified: updatedEntry.updated_at instanceof Date 
-                ? updatedEntry.updated_at.toISOString() 
+              alga_last_modified: updatedEntry.updated_at instanceof Date
+                ? updatedEntry.updated_at.toISOString()
                 : new Date(updatedEntry.updated_at).toISOString(),
               external_last_modified: externalEvent.updated
             },
