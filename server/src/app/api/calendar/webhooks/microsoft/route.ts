@@ -3,25 +3,61 @@ import { CalendarWebhookProcessor } from '@/services/calendar/CalendarWebhookPro
 
 const processor = new CalendarWebhookProcessor();
 
-function extractValidationToken(request: NextRequest): string | null {
-  const url = request.nextUrl;
-  return (
+interface ValidationToken {
+  raw: string;
+  decoded: string;
+}
+
+function extractValidationToken(request: NextRequest): ValidationToken | null {
+  const headerToken =
     request.headers.get('validationtoken') ||
-    request.headers.get('ValidationToken') ||
-    url.searchParams.get('validationtoken') ||
-    url.searchParams.get('validationToken') ||
-    null
-  );
+    request.headers.get('ValidationToken');
+  if (headerToken) {
+    return { raw: headerToken, decoded: headerToken };
+  }
+
+  const search = request.nextUrl.search;
+  if (!search) {
+    return null;
+  }
+
+  const match = search.match(/[?&]validationtoken=([^&]+)/i);
+  if (!match) {
+    return null;
+  }
+
+  const rawToken = match[1];
+  try {
+    return {
+      raw: rawToken,
+      decoded: decodeURIComponent(rawToken.replace(/\+/g, ' '))
+    };
+  } catch {
+    return {
+      raw: rawToken,
+      decoded: rawToken
+    };
+  }
 }
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('[Microsoft Calendar Webhook] GET received', {
+      url: request.nextUrl.toString()
+    });
     const validationToken = extractValidationToken(request);
     if (validationToken) {
-      console.log('[Microsoft Calendar Webhook] Validation (GET) token received');
-      return new NextResponse(validationToken, {
+      console.log('[Microsoft Calendar Webhook] Validation (GET) token received', {
+        rawLength: validationToken.raw.length,
+        decodedLength: validationToken.decoded.length
+      });
+      const body = validationToken.decoded;
+      return new NextResponse(body, {
         status: 200,
-        headers: { 'Content-Type': 'text/plain' }
+        headers: {
+          'Content-Type': 'text/plain',
+          'Content-Length': Buffer.byteLength(body, 'utf8').toString()
+        }
       });
     }
     return new NextResponse('OK', { status: 200 });
@@ -33,12 +69,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Microsoft Calendar Webhook] POST received', {
+      url: request.nextUrl.toString()
+    });
     const validationToken = extractValidationToken(request);
     if (validationToken) {
-      console.log('[Microsoft Calendar Webhook] Validation (POST) token received');
-      return new NextResponse(validationToken, {
+      console.log('[Microsoft Calendar Webhook] Validation (POST) token received', {
+        rawLength: validationToken.raw.length,
+        decodedLength: validationToken.decoded.length
+      });
+      const body = validationToken.decoded;
+      return new NextResponse(body, {
         status: 200,
-        headers: { 'Content-Type': 'text/plain' }
+        headers: {
+          'Content-Type': 'text/plain',
+          'Content-Length': Buffer.byteLength(body, 'utf8').toString()
+        }
       });
     }
 

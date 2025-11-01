@@ -191,9 +191,12 @@ export async function GET(request: NextRequest) {
       const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id');
       const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
       const tenantTenantId = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_tenant_id');
-      clientId = envClientId || tenantClientId || null;
-      clientSecret = envClientSecret || tenantClientSecret || null;
-      tenantId = envTenantId || tenantTenantId || null;
+      const appClientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID');
+      const appClientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET');
+      const appTenantId = await secretProvider.getAppSecret('MICROSOFT_TENANT_ID');
+      clientId = envClientId || tenantClientId || appClientId || null;
+      clientSecret = envClientSecret || tenantClientSecret || appClientSecret || null;
+      tenantId = envTenantId || tenantTenantId || appTenantId || null;
     }
     
     const redirectUri = await resolveCalendarRedirectUri({
@@ -278,11 +281,43 @@ export async function GET(request: NextRequest) {
 
             // Generate webhook verification token and URL
             const webhookVerificationToken = randomBytes(32).toString('hex');
-            const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
-            const webhookUrl = `${baseUrl}/api/calendar/webhooks/microsoft`;
+            const envWebhookBase =
+              process.env.CALENDAR_WEBHOOK_BASE_URL ||
+              process.env.CALENDAR_MICROSOFT_WEBHOOK_BASE_URL ||
+              process.env.MICROSOFT_CALENDAR_WEBHOOK_URL ||
+              process.env.NGROK_URL ||
+              process.env.PUBLIC_WEBHOOK_BASE_URL ||
+              process.env.NEXT_PUBLIC_BASE_URL ||
+              process.env.NEXTAUTH_URL;
+
+            const requestBase = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+            let webhookBase = (envWebhookBase || requestBase || 'http://localhost:3000').trim();
+            if (webhookBase.endsWith('/')) {
+              webhookBase = webhookBase.slice(0, -1);
+            }
+
+            const webhookUrl = webhookBase.includes('/api/calendar/webhooks/')
+              ? webhookBase
+              : `${webhookBase}/api/calendar/webhooks/microsoft`;
+
+            if (!webhookUrl.startsWith('https://')) {
+              console.warn('[MICROSOFT Calendar] Webhook URL is not HTTPS. Microsoft Graph will reject subscription attempts.', {
+                webhookUrl
+              });
+            }
+
+            tempConfig.calendar_id = primaryCalendar.id;
+            tempConfig.provider_config = {
+              ...(tempConfig.provider_config || {}),
+              calendarId: primaryCalendar.id,
+              webhookNotificationUrl: webhookUrl,
+              webhookVerificationToken: webhookVerificationToken
+            };
+            Reflect.set(adapter as any, 'calendarId', primaryCalendar.id);
 
             // Update provider with tokens and calendar ID
             await providerService.updateProvider(stateData.calendarProviderId!, stateData.tenant, {
+              calendarId: primaryCalendar.id,
               vendorConfig: {
                 client_id: clientId,
                 client_secret: clientSecret,

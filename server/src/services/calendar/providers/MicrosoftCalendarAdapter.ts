@@ -422,8 +422,41 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const vendorConfig = this.config.provider_config || {};
-      const webhookUrl = vendorConfig.webhookNotificationUrl || 
-        `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar/webhooks/microsoft`;
+      const envWebhookBase =
+        process.env.CALENDAR_WEBHOOK_BASE_URL ||
+        process.env.CALENDAR_MICROSOFT_WEBHOOK_BASE_URL ||
+        process.env.MICROSOFT_CALENDAR_WEBHOOK_URL ||
+        process.env.NGROK_URL ||
+        process.env.PUBLIC_WEBHOOK_BASE_URL ||
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        process.env.NEXTAUTH_URL;
+
+      let webhookUrl = vendorConfig.webhookNotificationUrl?.trim();
+      if (webhookUrl && !/^https:\/\//i.test(webhookUrl) && envWebhookBase) {
+        this.log('warn', 'Overriding non-HTTPS webhook URL from provider config using environment override.', {
+          previousUrl: webhookUrl
+        });
+        webhookUrl = undefined;
+      }
+
+      if (!webhookUrl && envWebhookBase) {
+        const cleanBase = envWebhookBase.trim().replace(/\/$/, '');
+        webhookUrl = cleanBase.includes('/api/calendar/webhooks/')
+          ? cleanBase
+          : `${cleanBase}/api/calendar/webhooks/microsoft`;
+      }
+
+      if (!webhookUrl) {
+        throw new Error(
+          'No Microsoft calendar webhook URL configured. Set CALENDAR_WEBHOOK_BASE_URL (or similar) or persist webhookNotificationUrl in provider configuration.'
+        );
+      }
+
+      if (!/^https:\/\//i.test(webhookUrl)) {
+        throw new Error(
+          `Invalid Microsoft calendar webhook URL "${webhookUrl}". Microsoft Graph requires an HTTPS endpoint that is externally accessible.`
+        );
+      }
 
       // Microsoft Graph limit for calendar subscriptions is 4230 minutes (~70.5 hours)
       // Use a safe window (e.g., 60 hours) to avoid 400 due to out-of-range expiration
@@ -473,8 +506,17 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         expiresAt
       });
     } catch (error) {
-      if ((error as any)?.response?.data) {
-        console.error('[MICROSOFT Calendar] Webhook registration error details:', (error as any).response.data);
+      const response = (error as any)?.response;
+      if (response?.data) {
+        console.error(
+          '[MICROSOFT Calendar] Webhook registration error details:',
+          JSON.stringify(response.data, null, 2)
+        );
+      } else if (response) {
+        console.error('[MICROSOFT Calendar] Webhook registration error', {
+          status: response.status,
+          headers: response.headers,
+        });
       }
       throw this.handleError(error, 'registerWebhookSubscription');
     }
