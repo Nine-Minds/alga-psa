@@ -14,8 +14,15 @@ pub enum IntegrityError {
 impl fmt::Display for IntegrityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IntegrityError::ArchiveHashMismatch { expected_hex, computed_hex } => {
-                write!(f, "archive hash mismatch: expected {}, got {}", expected_hex, computed_hex)
+            IntegrityError::ArchiveHashMismatch {
+                expected_hex,
+                computed_hex,
+            } => {
+                write!(
+                    f,
+                    "archive hash mismatch: expected {}, got {}",
+                    expected_hex, computed_hex
+                )
             }
         }
     }

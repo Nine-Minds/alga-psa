@@ -36,7 +36,9 @@
       "@shared/lib": ["shared/lib"],
       "@shared/lib/*": ["shared/lib/*"],
       "@ee": ["ee/server/src"],
-      "@ee/*": ["ee/server/src/*"]
+      "@ee/*": ["ee/server/src/*"],
+      "@alga/extension-runtime": ["sdk/extension-runtime/src"],
+      "@alga/extension-runtime/*": ["sdk/extension-runtime/src/*"]
     }
   }
 }

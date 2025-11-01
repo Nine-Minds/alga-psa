@@ -1,22 +1,22 @@
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::{
     extract::{FromRef, State},
     http::{HeaderMap, HeaderValue, StatusCode},
     routing::{get, post},
     Json, Router,
 };
-use base64::Engine;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
 use tower_http::{set_header::SetResponseHeaderLayer, trace::TraceLayer};
 use url::Url;
-use axum::response::{IntoResponse, Redirect, Response};
 
 use crate::cache::fs as cache_fs;
 use crate::engine::loader::{HostExecutionContext, ModuleLoader};
 use crate::models::{ExecuteRequest, ExecuteResponse};
+use crate::providers;
 use crate::registry::client::HttpRegistryClient;
 
 // Idempotency cache
@@ -72,13 +72,13 @@ pub async fn run() -> anyhow::Result<()> {
     // Validate required registry base URL exists and parses
     let reg_base = std::env::var("REGISTRY_BASE_URL")
         .map_err(|_| anyhow::anyhow!("REGISTRY_BASE_URL not set"))?;
-    Url::parse(&reg_base)
-        .map_err(|e| anyhow::anyhow!("Invalid REGISTRY_BASE_URL: {}", e))?;
+    Url::parse(&reg_base).map_err(|e| anyhow::anyhow!("Invalid REGISTRY_BASE_URL: {}", e))?;
 
     let registry = Arc::new(HttpRegistryClient::new(api_key.clone())?);
     let cache_root = cache_fs::ext_cache_root_from_env();
     let bundle_store_base = Url::parse(
-        &std::env::var("BUNDLE_STORE_BASE").unwrap_or_else(|_| "http://localhost:9000/alga-ext/".into()),
+        &std::env::var("BUNDLE_STORE_BASE")
+            .unwrap_or_else(|_| "http://localhost:9000/alga-ext/".into()),
     )?;
     let max_file_bytes = crate::util::limits::max_file_bytes_from_env();
 
@@ -108,7 +108,10 @@ pub async fn run() -> anyhow::Result<()> {
             HeaderValue::from_static("public, max-age=31536000, immutable"),
         ));
 
-    let port: u16 = std::env::var("PORT").ok().and_then(|s| s.parse().ok()).unwrap_or(8080);
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(8080);
     let addr: SocketAddr = ([0, 0, 0, 0], port).into();
     tracing::info!("listening on {}", addr);
     axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
@@ -121,10 +124,23 @@ async fn execute(
     Json(req): Json<ExecuteRequest>,
 ) -> Json<ExecuteResponse> {
     let started = Instant::now();
-    let req_id = headers.get("x-request-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-    let idem = headers.get("x-idempotency-key").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
-    let tenant = headers.get("x-alga-tenant").and_then(|v| v.to_str().ok()).unwrap_or("");
-    let ext = headers.get("x-alga-extension").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let req_id = headers
+        .get("x-request-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let idem = headers
+        .get("x-idempotency-key")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    let tenant = headers
+        .get("x-alga-tenant")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let ext = headers
+        .get("x-alga-extension")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
     tracing::info!(request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext, "execute start");
 
     if !idem.is_empty() {
@@ -136,90 +152,125 @@ async fn execute(
 
     // Fetch wasm by content hash (scaffold)
     let content_hash = req.context.content_hash.clone();
-    let hash = content_hash.strip_prefix("sha256:").unwrap_or(&content_hash);
+    let hash = content_hash
+        .strip_prefix("sha256:")
+        .unwrap_or(&content_hash);
     let key = format!("sha256/{}/dist/main.wasm", hash);
     let loader = match ModuleLoader::new() {
         Ok(l) => l,
         Err(e) => {
-            let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("engine_init_failed: {}", e)) };
+            let resp = ExecuteResponse {
+                status: 500,
+                headers: Default::default(),
+                body_b64: None,
+                error: Some(format!("engine_init_failed: {}", e)),
+            };
             return Json(resp);
         }
     };
     let wasm = match loader.fetch_object(&key).await {
         Ok(b) => b,
         Err(e) => {
-            let resp = ExecuteResponse { status: 502, headers: Default::default(), body_b64: None, error: Some(format!("bundle_fetch_failed: {}", e)) };
+            let resp = ExecuteResponse {
+                status: 502,
+                headers: Default::default(),
+                body_b64: None,
+                error: Some(format!("bundle_fetch_failed: {}", e)),
+            };
             return Json(resp);
         }
     };
 
     // Build normalized request JSON for guest handler
-    let input = serde_json::json!({
-        "context": {
-            "request_id": req.context.request_id,
-            "tenant_id": req.context.tenant_id,
-            "extension_id": req.context.extension_id,
-            "version_id": req.context.version_id,
+    let mut provider_set: HashSet<String> = req
+        .providers
+        .iter()
+        .map(|p| providers::normalize(p))
+        .filter(|p| !p.is_empty())
+        .collect();
+    for cap in providers::default_capabilities() {
+        provider_set.insert(cap.to_string());
+    }
+    if let Err(unknown) = providers::validate(provider_set.iter()) {
+        let joined = unknown.join(", ");
+        tracing::warn!(tenant=%tenant, extension=%ext, %joined, "unknown capability providers");
+        let resp = ExecuteResponse {
+            status: 400,
+            headers: Default::default(),
+            body_b64: None,
+            error: Some(format!("unknown_capabilities: {}", joined)),
+        };
+        return Json(resp);
+    }
+
+    let secret_material = match req.secret_envelope.as_ref() {
+        Some(env) => match crate::secrets::resolve_secret_material(
+            &req.context.tenant_id,
+            &req.context.extension_id,
+            req.context.install_id.as_deref(),
+            env,
+        )
+        .await
+        {
+            Ok(material) => Some(material),
+            Err(err) => {
+                tracing::error!(tenant=%tenant, extension=%ext, err=%err.to_string(), "secret envelope decryption failed");
+                let resp = ExecuteResponse {
+                    status: 500,
+                    headers: Default::default(),
+                    body_b64: None,
+                    error: Some("secret_decrypt_failed".to_string()),
+                };
+                return Json(resp);
+            }
         },
-        "http": {
-            "method": req.http.method,
-            "path": req.http.path,
-            "query": req.http.query,
-            "headers": req.http.headers,
-            "body_b64": req.http.body_b64,
-        }
-    });
-    let input_bytes = match serde_json::to_vec(&input) {
-        Ok(b) => b,
-        Err(e) => {
-            let resp = ExecuteResponse { status: 400, headers: Default::default(), body_b64: None, error: Some(format!("bad_input: {}", e)) };
-            return Json(resp);
-        }
+        None => None,
     };
 
     let host_ctx = HostExecutionContext {
+        request_id: req.context.request_id.clone(),
         tenant_id: Some(req.context.tenant_id.clone()),
         extension_id: Some(req.context.extension_id.clone()),
         install_id: req.context.install_id.clone(),
+        version_id: req.context.version_id.clone(),
+        config: req.context.config.clone(),
+        providers: provider_set.clone(),
+        secrets: secret_material,
     };
 
-    let out_bytes = match loader.execute_handler(
-        &wasm,
-        req.limits.timeout_ms,
-        req.limits.memory_mb,
-        &input_bytes,
-        host_ctx,
-    ) {
+    let exec_resp = match loader
+        .execute_handler(
+            &wasm,
+            req.limits.timeout_ms,
+            req.limits.memory_mb,
+            &req,
+            host_ctx,
+        )
+        .await
+    {
         Ok(v) => v,
         Err(e) => {
             let dur_ms = started.elapsed().as_millis() as u64;
             tracing::error!(request_id=%req_id, tenant=%tenant, extension=%ext, duration_ms=%dur_ms, err=%e.to_string(), "execute failed");
-            let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("execute_failed: {}", e)) };
+            let resp = ExecuteResponse {
+                status: 500,
+                headers: Default::default(),
+                body_b64: None,
+                error: Some(format!("execute_failed: {}", e)),
+            };
             return Json(resp);
         }
     };
 
-    // Expect guest to return normalized response JSON: { status, headers, body_b64 }
-    let mut status: u16 = 200;
-    let mut headers_map: HashMap<String, String> = HashMap::new();
-    let mut body_b64: Option<String> = None;
-    match serde_json::from_slice::<serde_json::Value>(&out_bytes) {
-        Ok(v) => {
-            status = v.get("status").and_then(|x| x.as_u64()).unwrap_or(200) as u16;
-            if let Some(h) = v.get("headers").and_then(|x| x.as_object()) {
-                headers_map = h.iter().map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string())).collect();
-            }
-            body_b64 = v.get("body_b64").and_then(|x| x.as_str()).map(|s| s.to_string());
-        }
-        Err(_) => {
-            body_b64 = Some(base64::engine::general_purpose::STANDARD.encode(out_bytes));
-        }
-    }
-
     let dur_ms = started.elapsed().as_millis() as u64;
-    let body_len = body_b64.as_ref().map(|s| s.len()).unwrap_or(0);
-    tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, duration_ms=%dur_ms, status=%status, resp_b64_len=%body_len, timeout_ms=?req.limits.timeout_ms, mem_mb=?req.limits.memory_mb, "execute done");
-    let resp = ExecuteResponse { status, headers: headers_map, body_b64, error: None };
+    let body_len = exec_resp.body_b64.as_ref().map(|s| s.len()).unwrap_or(0);
+    tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, duration_ms=%dur_ms, status=%exec_resp.status, resp_b64_len=%body_len, timeout_ms=?req.limits.timeout_ms, mem_mb=?req.limits.memory_mb, "execute done");
+    let resp = ExecuteResponse {
+        status: exec_resp.status,
+        headers: exec_resp.headers,
+        body_b64: exec_resp.body_b64,
+        error: exec_resp.error,
+    };
 
     if !idem.is_empty() {
         let mut map = state.idempotency.lock().await;
@@ -265,7 +316,10 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
         }
     };
     url.set_path("api/installs/lookup-by-host");
-    let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
     url.query_pairs_mut()
         .append_pair("host", host.split(':').next().unwrap_or(""))
         .append_pair("ts", &now_ms.to_string());
@@ -345,15 +399,13 @@ async fn healthz() -> impl axum::response::IntoResponse {
     let tmp = cache_root.join("healthz.tmp");
 
     let cache_writable = match tokio::fs::create_dir_all(&cache_root).await {
-        Ok(_) => {
-            match tokio::fs::write(&tmp, b"ok").await {
-                Ok(_) => {
-                    let _ = tokio::fs::remove_file(&tmp).await;
-                    true
-                }
-                Err(_) => false,
+        Ok(_) => match tokio::fs::write(&tmp, b"ok").await {
+            Ok(_) => {
+                let _ = tokio::fs::remove_file(&tmp).await;
+                true
             }
-        }
+            Err(_) => false,
+        },
         Err(_) => false,
     };
 
@@ -383,7 +435,11 @@ async fn healthz() -> impl axum::response::IntoResponse {
             tracing::warn!(bundle_base=%bundle_base, reason=%reason, "bundle store health degraded");
         }
     }
-    let status_code = if cache_writable { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
+    let status_code = if cache_writable {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
     let body = json!({
         "cache_writable": cache_writable,
         "bundle_store": degraded_reason.as_deref().unwrap_or("ok"),

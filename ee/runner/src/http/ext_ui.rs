@@ -9,20 +9,22 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use zstd::stream::read::Decoder as ZstdDecoder;
 use serde::Deserialize;
+use std::io::ErrorKind;
+use std::io::Read;
 use tar::Archive;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tracing::info;
 use url::Url;
-use std::io::Read;
-use std::io::ErrorKind;
+use zstd::stream::read::Decoder as ZstdDecoder;
 
 use crate::cache::fs as cache_fs;
-use crate::registry::client::RegistryClient;
-use crate::util::{etag::etag_for_file, mime::content_type_for, path_sanitize, errors::IntegrityError};
 use crate::engine::loader::{bundle_url_for_key, verify_archive_sha256};
+use crate::registry::client::RegistryClient;
+use crate::util::{
+    errors::IntegrityError, etag::etag_for_file, mime::content_type_for, path_sanitize,
+};
 use reqwest::Client as HttpClient;
 
 #[derive(Clone)]
@@ -99,22 +101,35 @@ pub async fn handle_get(
         if let Ok(base) = std::env::var("REGISTRY_BASE_URL") {
             if let Ok(mut u) = Url::parse(&base) {
                 u.set_path("api/installs/lookup-by-host");
-                let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+                let now_ms = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis())
+                    .unwrap_or(0);
                 u.query_pairs_mut()
-                  .append_pair("host", host.split(':').next().unwrap_or(""))
-                  .append_pair("ts", &now_ms.to_string());
+                    .append_pair("host", host.split(':').next().unwrap_or(""))
+                    .append_pair("ts", &now_ms.to_string());
                 if let Ok(http) = HttpClient::builder().build() {
                     let mut rb = http.get(u.clone());
                     rb = rb.header("x-canary", "robert");
-                    if let Ok(k) = std::env::var("ALGA_AUTH_KEY") { if !k.is_empty() { rb = rb.header("x-api-key", k); } }
+                    if let Ok(k) = std::env::var("ALGA_AUTH_KEY") {
+                        if !k.is_empty() {
+                            rb = rb.header("x-api-key", k);
+                        }
+                    }
                     if let Ok(resp) = rb.send().await {
                         let code = resp.status().as_u16();
                         if code >= 200 && code < 300 {
                             match resp.text().await {
                                 Ok(txt) => {
                                     tracing::info!(host=%host, status=%code, body_len=%txt.len(), body_sample=%txt.chars().take(200).collect::<String>(), "fallback lookup body");
-                                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&txt) {
-                                        if let Some(t) = json.get("tenant_id").and_then(|v| v.as_str()) { tenant = t.to_string(); }
+                                    if let Ok(json) =
+                                        serde_json::from_str::<serde_json::Value>(&txt)
+                                    {
+                                        if let Some(t) =
+                                            json.get("tenant_id").and_then(|v| v.as_str())
+                                        {
+                                            tenant = t.to_string();
+                                        }
                                     }
                                 }
                                 Err(e) => {
@@ -161,9 +176,16 @@ pub async fn handle_get(
     if !exists {
         tracing::info!(request_id=%req_id, hash=%hash_hex, "ui cache ensure start");
         // Build tenant-local key for this bundle
-        let obj_key = format!("tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst", tenant, extension_id, hash_hex);
+        let obj_key = format!(
+            "tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst",
+            tenant, extension_id, hash_hex
+        );
         if let Err(e) = ensure_ui_cache(&state, &hash_hex, &obj_key).await {
-            if let Some(IntegrityError::ArchiveHashMismatch { expected_hex, computed_hex }) = e.downcast_ref::<IntegrityError>() {
+            if let Some(IntegrityError::ArchiveHashMismatch {
+                expected_hex,
+                computed_hex,
+            }) = e.downcast_ref::<IntegrityError>()
+            {
                 tracing::error!(
                     request_id=%req_id,
                     tenant=%tenant_id,
@@ -241,11 +263,17 @@ pub async fn handle_get(
         Ok(s) => s,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    if let Some(inm) = headers.get(header::IF_NONE_MATCH).and_then(|v| v.to_str().ok()) {
+    if let Some(inm) = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok())
+    {
         if etag_match(inm, &etag) {
             // 304 with caching headers and ETag
             let mut h = HeaderMap::new();
-            h.insert(header::ETAG, HeaderValue::from_str(&etag).unwrap_or(HeaderValue::from_static("")));
+            h.insert(
+                header::ETAG,
+                HeaderValue::from_str(&etag).unwrap_or(HeaderValue::from_static("")),
+            );
             h.insert(
                 header::CACHE_CONTROL,
                 HeaderValue::from_static("public, max-age=31536000, immutable"),
@@ -266,7 +294,10 @@ pub async fn handle_get(
     if let Ok(len) = HeaderValue::from_str(&data.len().to_string()) {
         h.insert(header::CONTENT_LENGTH, len);
     }
-    h.insert(header::ETAG, HeaderValue::from_str(&etag).unwrap_or(HeaderValue::from_static("")));
+    h.insert(
+        header::ETAG,
+        HeaderValue::from_str(&etag).unwrap_or(HeaderValue::from_static("")),
+    );
     h.insert(
         header::CACHE_CONTROL,
         HeaderValue::from_static("public, max-age=31536000, immutable"),
@@ -294,12 +325,13 @@ pub async fn handle_get(
 /// POST /warmup { content_hash }
 /// Ensures the UI cache for this bundle is extracted.
 #[axum::debug_handler]
-pub async fn warmup(
-    _state: State<AppState>,
-    Json(_req): Json<WarmupReq>,
-) -> impl IntoResponse {
+pub async fn warmup(_state: State<AppState>, Json(_req): Json<WarmupReq>) -> impl IntoResponse {
     // Warmup requires tenant + extension context for tenant-scoped bundles.
-    (StatusCode::BAD_REQUEST, "warmup unsupported without tenant + extension context").into_response()
+    (
+        StatusCode::BAD_REQUEST,
+        "warmup unsupported without tenant + extension context",
+    )
+        .into_response()
 }
 
 fn normalize_hash(content_hash: &str) -> anyhow::Result<String> {
@@ -330,12 +362,12 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str, key: &str) -> anyhow:
     let tmp_dir = state.cache_root.join("tmp");
     cache_fs::ensure_dir(&tmp_dir).await?;
     cache_fs::ensure_dir(&ui_root).await?;
- 
+
     // Build tenant-local URL from provided key and fetch+verify archive sha256 to temp file
     let url = bundle_url_for_key(&state.bundle_store_base, key)?;
     tracing::info!(hash=%hash_hex, url=%url.to_string(), "bundle fetch start");
     let tmp_tgz = verify_archive_sha256(&url, hash_hex).await?;
- 
+
     // Extract ui/ subtree
     if let Err(e) = extract_ui_from_tar_gz(&tmp_tgz, &ui_root).await {
         // Best-effort cleanup of partial subtree
@@ -345,24 +377,28 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str, key: &str) -> anyhow:
         return Err(e);
     }
     tracing::info!(hash=%hash_hex, ui_root=%ui_root.to_string_lossy(), "bundle extract ok");
- 
+
     // Optional quick sanity check: compute sha256 ETag for index.html
     let index_path = ui_root.join("index.html");
     if let Ok(etag) = etag_for_file(&index_path).await {
         // Log the computed hash for traceability
         tracing::info!(index_etag=%etag, hash=%hash_hex, "ui index etag computed after extraction");
     }
- 
+
     // Cleanup verified temp archive
     let _ = fs::remove_file(&tmp_tgz).await;
     tracing::info!(hash=%hash_hex, "bundle fetch+extract done");
- 
+
     Ok(())
 }
 
 fn rand_suffix() -> String {
     use rand::{distributions::Alphanumeric, Rng};
-    let s: String = rand::thread_rng().sample_iter(&Alphanumeric).take(6).map(char::from).collect();
+    let s: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(6)
+        .map(char::from)
+        .collect();
     s
 }
 
@@ -422,7 +458,10 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
             // Read entry contents fully (sync) and stage write
             let mut contents = Vec::with_capacity(16 * 1024);
             entry.read_to_end(&mut contents).context("read entry")?;
-            ops.push(Op::Write { path: out_path, contents });
+            ops.push(Op::Write {
+                path: out_path,
+                contents,
+            });
             files += 1;
         } else {
             // Skip symlinks or other types for safety
