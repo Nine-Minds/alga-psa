@@ -105,34 +105,46 @@
 
 ### Phase 0 — Design & Toolchain Alignment
 
-- [ ] Finalize WIT interface set and capability annotations.
-- [ ] Pin toolchain versions (`componentize-js` ≥ 0.19.3, Wasmtime ≥ component-ready release) and capture upgrade strategy.
-- [ ] Define secret envelope format (Vault transit ciphertext) and required Vault roles/tokens to mount into Runner containers.
-- [ ] Design the capability provider catalog (IDs, manifests, lifecycle) and document how providers map to WIT imports.
+- [x] Finalize WIT interface set and capability annotations.
+- [x] Pin toolchain versions (`componentize-js` ≥ 0.19.3, Wasmtime ≥ component-ready release) and capture upgrade strategy.
+- [x] Define secret envelope format (Vault transit ciphertext) and required Vault roles/tokens to mount into Runner containers. *(Implemented base64 fallback plus Vault transit support with token file + mount configuration.)*
+- [x] Design the capability provider catalog (IDs, manifests, lifecycle) and document how providers map to WIT imports. *(Initial catalog lives in `ee/runner/src/providers` with normalization + validation helpers.)*
 
 ### Phase 1 — Control Plane & Gateway
 
-- [ ] Implement schema migrations and persistence for config + secrets (ciphertext via `secretProvider`).
-- [ ] Build the install-config service endpoint returning config + envelopes + version metadata.
-- [ ] Update Gateway to call the endpoint, enrich execute payloads, and emit version headers.
-- [ ] Implement host-side proxy routes (UI → gateway → runner handler) so iframe code can trigger backend actions without receiving secrets directly.
-- [ ] Validate manifest/provider declarations during publish and record provider enablement per install.
+- [x] Implement schema migrations and persistence for config + secrets (ciphertext via `secretProvider`).
+  - Added `tenant_extension_install_config` and `tenant_extension_install_secrets` via `20251031130000_create_install_config_tables.cjs`, including UUID PKs, tenant/ install indexes, and Vault-friendly metadata (`algorithm`, `transit_key`, `version`, `expires_at`).
+  - Introduced writer APIs in `ee/server/src/lib/extensions/installConfig.ts` (`upsertInstallConfigRecord`, `upsertInstallSecretsRecord`, `deleteInstallSecretsRecord`) that normalize capability sets, emit deterministic versions, and attempt Vault transit encryption with inline/base64 fallback.
+  - Install flows (`ExtensionRegistryServiceV2.install`, `installExtensionForCurrentTenantV2`) now upsert config/secrets metadata and persist granted provider scopes alongside install records.
+- [x] Build the install-config service endpoint returning config + envelopes + version metadata.
+  - `/api/internal/ext-runner/install-config` returns merged config/providers plus Vault envelope data, secured by `x-runner-auth`; re-used by runner and internal tooling.
+  - Service hydrates bundle hash, manifest capabilities, install overrides, and exposes `configVersion` / `secretsVersion` with ISO timestamps for cache auditing.
+- [x] Update Gateway to call the endpoint, enrich execute payloads, and emit version headers.
+  - Gateway routes obtain install state through `loadInstallConfigCached` (new helper under `ee/server/src/lib/extensions/lib/install-config-cache.ts`) before dispatching to `/v1/execute`.
+  - Execute payload now carries `{ context.config, providers[], secret_envelope }` plus headers `x-ext-config-version` / `x-ext-secrets-version`; runner errors are surfaced as 502 with request-id tagged logs.
+  - Added a configurable (default 5s) per-install in-memory cache that keys on tenant+extension and refreshes on expiry or missing rows.
+- [x] Implement host-side proxy routes (UI → gateway → runner handler) so iframe code can trigger backend actions without receiving secrets directly.
+  - `/api/ext-proxy/[extensionId]/[...path]` mirrors gateway auth, invokes runner `ui-proxy:*` handlers, and streams responses after header filtering; shares install-config cache to avoid duplicate lookups.
+  - Maintains tenant RBAC checks and logs missing bundle/config scenarios for audit.
+- [x] Validate manifest/provider declarations during publish and record provider enablement per install.
+  - Version publish continues to reject unknown capabilities; install paths normalize requested scopes against the known provider catalog before persisting.
+  - Default provider set (`cap:context.read`, `cap:log.emit`) is enforced server-side so installs inherit baseline capabilities even if manifests omit them.
 
 ### Phase 2 — Runner Component Host
 
-- [ ] Upgrade Runner to Wasmtime component APIs and instantiate components for `/v1/execute`.
-- [ ] Implement host functions per WIT (context, secrets, http, storage, logging) with capability checks.
-- [ ] Add secret envelope redemption via Vault transit decryption (token mounted as Docker secret) plus short-lived cache; ensure no secret leakage in logs/traces.
-- [ ] Wire provider registry inside the runner so each capability (secrets, ui_proxy, etc.) can be swapped/extended without touching core execute logic.
+- [x] Upgrade Runner to Wasmtime component APIs and instantiate components for `/v1/execute`.
+- [x] Implement host functions per WIT (context, secrets, http, storage, logging) with capability checks.
+- [x] Add secret envelope redemption via Vault transit decryption (token mounted as Docker secret) plus short-lived cache; ensure no secret leakage in logs/traces.
+- [x] Wire provider registry inside the runner so each capability (secrets, ui_proxy, etc.) can be swapped/extended without touching core execute logic.
 
 ### Phase 3 — SDK & Tooling (Componentize-JS Pipeline)
 
-- [ ] Build the `componentize-js` project template and integrate it into `alga-cli`.
-- [ ] Generate JS/TS bindings from WIT, publish `@alga/extension-runtime`, and document usage.
-- [ ] Provide sample extension + automated test to validate secrets retrieval through the new host interface.
-- [ ] Enforce component artifact validation in the publishing pipeline (reject raw Wasm uploads).
-- [ ] Add UI SDK helpers demonstrating the proxy pattern (UI calling gateway endpoints backed by runner handlers).
-- [ ] Deliver local dev commands (`alga-cli dev`) that spin up mocked capability providers to mirror wasmCloud’s `wash` workflow.
+- [x] Build the `componentize-js` project template and integrate it into `alga-cli`.
+- [x] Generate JS/TS bindings from WIT, publish `@alga/extension-runtime`, and document usage. *(Manual first-pass bindings plus proxy helpers shipped under `sdk/extension-runtime`.)*
+- [x] Provide sample extension + automated test to validate secrets retrieval through the new host interface. *(See `sdk/samples/component/secrets-demo` with Vitest example.)*
+- [x] Enforce component artifact validation in the publishing pipeline (reject raw Wasm uploads). *(Pack step now requires `dist/component.wasm` + metadata before producing bundles.)*
+- [x] Add UI SDK helpers demonstrating the proxy pattern (UI calling gateway endpoints backed by runner handlers). *(Available via `callProxyJson` in `@alga/extension-runtime`.)*
+- [x] Deliver local dev commands (`alga-cli dev`) that spin up mocked capability providers to mirror wasmCloud’s `wash` workflow. *(New `alga component dev` task rebuilds components on file changes.)*
 
 ### Phase 4 — Rollout
 

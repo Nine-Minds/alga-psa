@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { matchEndpoint, pathnameFromParts, filterRequestHeaders, filterResponseHeaders, getTimeoutMs } from '../../../../../lib/extensions/lib/gateway-utils';
 import { getRegistryFacade } from '../../../../../lib/extensions/lib/gateway-registry';
+import { loadInstallConfigCached } from '../../../../../lib/extensions/lib/install-config-cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 export const dynamic = 'force-dynamic';
@@ -68,22 +69,6 @@ async function assertAccess(tenantId: string, method: Method): Promise<void> {
   }
 }
 
-// Resolve tenant install via the Registry V2 facade seam
-// Returns active version_id and content_hash
-async function resolveInstall(
-  tenantId: string,
-  extensionId: string
-): Promise<{ install_id: string; version_id: string; content_hash: string } | null> {
-  const facade = getRegistryFacade();
-  const install = await facade.getTenantInstall(tenantId, extensionId);
-  if (!install) return null;
-  return {
-    install_id: install.install_id,
-    version_id: install.version_id,
-    content_hash: install.content_hash,
-  };
-}
-
 // Load manifest v2 for version_id and match endpoint (method + path)
 async function resolveEndpoint(
   versionId: string,
@@ -112,10 +97,14 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
 
     await assertAccess(tenantId, method);
 
-    const install = await resolveInstall(tenantId, extensionId);
-    if (!install) return json(404, { error: 'Extension not installed' });
+    const installConfig = await loadInstallConfigCached(tenantId, extensionId);
+    if (!installConfig) return json(404, { error: 'Extension not installed' });
+    if (!installConfig.contentHash) {
+      console.error('[ext-gateway] Missing content hash for install', { tenantId, extensionId });
+      return json(502, { error: 'Extension bundle unavailable' });
+    }
 
-    const endpoint = await resolveEndpoint(install.version_id, method, pathname);
+    const endpoint = await resolveEndpoint(installConfig.versionId, method, pathname);
     if (!endpoint) return json(404, { error: 'Endpoint not found' });
 
     const timeoutMs = getTimeoutMs();
@@ -127,9 +116,10 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
         request_id: requestId,
         tenant_id: tenantId,
         extension_id: extensionId,
-        install_id: install.install_id,
-        version_id: install.version_id,
-        content_hash: install.content_hash,
+        install_id: installConfig.installId,
+        version_id: installConfig.versionId,
+        content_hash: installConfig.contentHash,
+        config: installConfig.config,
       },
       http: {
         method,
@@ -140,6 +130,8 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
       },
       limits: { timeout_ms: timeoutMs },
       endpoint: endpoint.handler, // handler id/path inside the bundle
+      providers: installConfig.providers,
+      secret_envelope: installConfig.secretEnvelope ?? undefined,
     };
 
     const runnerBase = process.env.RUNNER_BASE_URL;
@@ -148,17 +140,24 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
       return json(500, { error: 'Runner not configured' });
     }
 
+    const runnerHeaders: Record<string, string> = {
+      'content-type': 'application/json',
+      'x-request-id': requestId,
+      // TODO: add short-lived service token for Runner auth
+    };
+    if (installConfig.configVersion) {
+      runnerHeaders['x-ext-config-version'] = installConfig.configVersion;
+    }
+    if (installConfig.secretsVersion) {
+      runnerHeaders['x-ext-secrets-version'] = installConfig.secretsVersion;
+    }
+
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
 
     const resp = await fetch(`${runnerBase.replace(/\/$/, '')}/v1/execute`, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-request-id': requestId,
-        // TODO: add short-lived service token for Runner auth
-        // 'authorization': `Bearer ${await getRunnerServiceToken()}`
-      },
+      headers: runnerHeaders,
       body: JSON.stringify(execReq),
       signal: controller.signal,
     }).catch((err) => {
