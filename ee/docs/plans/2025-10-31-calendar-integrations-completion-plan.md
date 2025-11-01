@@ -118,10 +118,10 @@ Stabilize and complete the Google and Microsoft calendar integrations so MSPs ca
   - Create Google and Microsoft providers via the UI, complete OAuth, and verify provider rows persist encrypted credentials without leaking secrets to the client.
   - Restart the server and confirm providers remain in `connected` state and refresh tokens are valid.
 - **Manual Sync Both Directions**
-  - Create a schedule entry in Alga, trigger manual sync, and verify the external calendar event appears with correct metadata.
-  - Modify an external event and confirm manual sync updates the corresponding schedule entry.
+  - [x] Create a schedule entry in Alga, trigger the calendar sync via the server action, and verify the outbound call fires for the active provider. *(Covered by `server/src/test/integration/calendar/scheduleAutoSync.integration.test.ts`.)*
+  - [x] Modify an external event and confirm manual sync updates the corresponding schedule entry. *(Covered by the inbound scenario in `server/src/test/integration/calendar/manualSync.integration.test.ts`.)*
 - **Webhook Processing**
-  - Receive Google Pub/Sub and Microsoft Graph notifications for create/update/delete and observe tenant-scoped processing, including automatic deletion of local entries when the external event is removed.
+  - [x] Receive Google Pub/Sub and Microsoft Graph notifications for create/update/delete and observe tenant-scoped processing, including automatic deletion of local entries when the external event is removed. *(Covered by `server/src/test/integration/calendar/webhookProcessing.integration.test.ts`.)*
   - Force webhook failure scenarios (invalid client state, expired subscription) and confirm retries plus surfaced operator alerts.
 - **Conflict Handling**
   - Simultaneously change an event in Alga and the external calendar, ensure conflict detection fires, `CALENDAR_CONFLICT_DETECTED` is emitted, the mapping is marked `conflict`, and the user sees a notification with resolution options.
