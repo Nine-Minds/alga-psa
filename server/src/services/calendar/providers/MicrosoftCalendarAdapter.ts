@@ -473,6 +473,9 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         expiresAt
       });
     } catch (error) {
+      if ((error as any)?.response?.data) {
+        console.error('[MICROSOFT Calendar] Webhook registration error details:', (error as any).response.data);
+      }
       throw this.handleError(error, 'registerWebhookSubscription');
     }
   }

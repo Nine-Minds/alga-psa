@@ -8,6 +8,8 @@ import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, genera
 import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
 import { storeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
 import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
+import { GoogleCalendarAdapter } from '@/services/calendar/providers/GoogleCalendarAdapter';
+import { MicrosoftCalendarAdapter } from '@/services/calendar/providers/MicrosoftCalendarAdapter';
 import { CalendarSyncService } from '@/services/calendar/CalendarSyncService';
 import { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@/interfaces/calendar.interfaces';
 import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
@@ -53,6 +55,7 @@ export async function initiateCalendarOAuth(params: {
     const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
 
     let existingRedirectUri: string | undefined;
+    let existingProviderConfig: CalendarProviderConfig['provider_config'] | undefined;
     if (calendarProviderId) {
       const providerService = new CalendarProviderService();
       const providerRecord = await providerService.getProvider(calendarProviderId, tenant, { includeSecrets: true });
@@ -60,6 +63,7 @@ export async function initiateCalendarOAuth(params: {
         return { success: false, error: 'Invalid calendarProviderId for tenant' };
       }
       existingRedirectUri = providerRecord.provider_config?.redirectUri;
+      existingProviderConfig = providerRecord.provider_config;
     }
 
     let clientId: string | null = null;
@@ -74,12 +78,18 @@ export async function initiateCalendarOAuth(params: {
       if (provider === 'google') {
         clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID
           || (await secretProvider.getTenantSecret(tenant, 'google_calendar_client_id'))
+          || (await secretProvider.getAppSecret('GOOGLE_CALENDAR_CLIENT_ID'))
           || null;
       } else {
         clientId = process.env.MICROSOFT_CLIENT_ID
           || (await secretProvider.getTenantSecret(tenant, 'microsoft_client_id'))
+          || (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'))
           || null;
       }
+    }
+
+    if (!clientId && existingProviderConfig && provider === 'microsoft') {
+      clientId = existingProviderConfig.clientId || existingProviderConfig.client_id || null;
     }
 
     if (!clientId) {
@@ -179,18 +189,47 @@ export async function createCalendarProvider(params: {
   provider?: CalendarProviderConfig;
   error?: string;
 }> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  const permitted = await hasPermission(user as any, 'system_settings', 'create');
+  if (!permitted) {
+    return { success: false, error: 'Forbidden: insufficient permissions' };
+  }
+
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-
-    const permitted = await hasPermission(user as any, 'system_settings', 'create');
-    if (!permitted) {
-      return { success: false, error: 'Forbidden: insufficient permissions' };
-    }
-
     const providerService = new CalendarProviderService();
+
+    // Reuse existing provider when unique constraint would be violated
+    const existingProviders = await providerService.getProviders({
+      tenant: user.tenant,
+      providerType: params.providerType,
+      calendarId: params.calendarId
+    });
+
+    if (existingProviders.length > 0) {
+      const existing = existingProviders[0];
+      const needsUpdate =
+        existing.name !== params.providerName ||
+        existing.sync_direction !== params.syncDirection ||
+        !existing.active;
+
+      if (needsUpdate) {
+        await providerService.updateProvider(existing.id, user.tenant, {
+          providerName: params.providerName,
+          calendarId: params.calendarId,
+          syncDirection: params.syncDirection,
+          isActive: true
+        });
+        const updated = await providerService.getProvider(existing.id, user.tenant, { includeSecrets: false });
+        return { success: true, provider: updated ?? existing };
+      }
+
+      return { success: true, provider: existing };
+    }
+
     const provider = await providerService.createProvider({
       tenant: user.tenant,
       providerType: params.providerType,
@@ -203,7 +242,24 @@ export async function createCalendarProvider(params: {
 
     return { success: true, provider };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to create calendar provider' };
+    // Handle race where provider created concurrently
+    if (typeof error?.message === 'string' && error.message.includes('calendar_providers_tenant_calendar_id_provider_type_unique')) {
+      try {
+        const providerService = new CalendarProviderService();
+        const existingProviders = await providerService.getProviders({
+          tenant: user.tenant,
+          providerType: params.providerType,
+          calendarId: params.calendarId
+        });
+        const existing = existingProviders[0];
+        if (existing) {
+          return { success: true, provider: existing };
+        }
+      } catch (secondaryError) {
+        // fall through to default error handling
+      }
+    }
+    return { success: false, error: error?.message || 'Failed to create calendar provider' };
   }
 }
 
@@ -455,11 +511,20 @@ export async function syncCalendarProvider(
         .andWhere('calendar_provider_id', calendarProviderId)
         .select('schedule_entry_id', 'external_event_id');
 
+      const knownExternalIds = new Set<string>(
+        mappings
+          .map((mapping) => mapping.external_event_id)
+          .filter((id): id is string => Boolean(id))
+      );
+
       for (const mapping of mappings) {
         if (allowPush) {
           const result = await syncService.syncScheduleEntryToExternal(mapping.schedule_entry_id, calendarProviderId, true);
           if (result.success) {
             pushed += 1;
+            if (result.externalEventId) {
+              knownExternalIds.add(result.externalEventId);
+            }
           } else {
             failures.push(`Push ${mapping.schedule_entry_id}: ${result.error || 'unknown error'}`);
           }
@@ -469,6 +534,9 @@ export async function syncCalendarProvider(
           const result = await syncService.syncExternalEventToSchedule(mapping.external_event_id, calendarProviderId, true);
           if (result.success) {
             pulled += 1;
+            if (mapping.external_event_id) {
+              knownExternalIds.add(mapping.external_event_id);
+            }
           } else {
             failures.push(`Pull ${mapping.external_event_id}: ${result.error || 'unknown error'}`);
           }
@@ -498,9 +566,65 @@ export async function syncCalendarProvider(
           const result = await syncService.syncScheduleEntryToExternal(entry.entry_id, calendarProviderId, true);
           if (result.success) {
             pushed += 1;
+            if (result.externalEventId) {
+              knownExternalIds.add(result.externalEventId);
+            }
           } else {
             failures.push(`Push ${entry.entry_id}: ${result.error || 'unknown error'}`);
           }
+        }
+      }
+
+      if (allowPull) {
+        const hasProviderSecrets = provider.provider_config && provider.provider_config.clientId;
+        if (!hasProviderSecrets) {
+          failures.push('Pull: Provider credentials are missing, cannot list external events.');
+          return;
+        }
+
+        const adapter =
+          provider.provider_type === 'google'
+            ? new GoogleCalendarAdapter(provider)
+            : new MicrosoftCalendarAdapter(provider);
+
+        await adapter.connect();
+
+        const now = Date.now();
+        const lookbackMs = 1000 * 60 * 60 * 24 * 30; // 30 days
+        const lookaheadMs = 1000 * 60 * 60 * 24 * 30; // 30 days
+        const lastSyncAt = provider.last_sync_at ? new Date(provider.last_sync_at) : null;
+        const startWindow = lastSyncAt
+          ? new Date(Math.min(lastSyncAt.getTime(), now - lookbackMs))
+          : new Date(now - lookbackMs);
+        const endWindow = new Date(now + lookaheadMs);
+
+        try {
+          try {
+            await adapter.registerWebhookSubscription();
+          } catch (subscriptionError: any) {
+            failures.push(`Webhook registration failed: ${subscriptionError?.message || 'unknown error'}`);
+          }
+
+          const externalEvents = await adapter.listEvents(startWindow, endWindow);
+          for (const event of externalEvents) {
+            const externalId = event.id;
+            if (!externalId) {
+              continue;
+            }
+            if (knownExternalIds.has(externalId)) {
+              continue;
+            }
+
+            const result = await syncService.syncExternalEventToSchedule(externalId, calendarProviderId, true);
+            if (result.success) {
+              pulled += 1;
+              knownExternalIds.add(externalId);
+            } else {
+              failures.push(`Pull ${externalId}: ${result.error || 'unknown error'}`);
+            }
+          }
+        } catch (error: any) {
+          failures.push(`Pull listing failed: ${error?.message || 'unable to list external events'}`);
         }
       }
     });

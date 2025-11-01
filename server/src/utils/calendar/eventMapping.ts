@@ -139,6 +139,29 @@ export async function mapExternalEventToScheduleEntry(
     })
     .filter((id): id is string => id !== undefined) || [];
 
+  // If no assignees detected, fallback to organizer
+  if (assignedUserIds.length === 0 && event.organizer?.email) {
+    const organizerEmail = event.organizer.email.toLowerCase?.() ?? event.organizer.email;
+    if (organizerEmail) {
+      if (!userEmails || !userEmails.has(organizerEmail)) {
+        const organizerMap = await fetchUserIdsByEmail([organizerEmail], tenant);
+        userEmails = userEmails ? new Map([...userEmails, ...organizerMap]) : organizerMap;
+      }
+      const organizerUserId = userEmails?.get(organizerEmail);
+      if (organizerUserId) {
+        assignedUserIds.push(organizerUserId);
+      }
+    }
+  }
+
+  // If still no assignees, fallback to the first tenant user
+  if (assignedUserIds.length === 0) {
+    const fallbackUserId = await fetchFallbackUserId(tenant);
+    if (fallbackUserId) {
+      assignedUserIds.push(fallbackUserId);
+    }
+  }
+
   // Extract Alga entry ID from extended properties if present
   const algaEntryId = event.extendedProperties?.private?.['alga-entry-id'];
   const workItemId = event.extendedProperties?.private?.['alga-work-item-id'];
@@ -274,4 +297,18 @@ async function fetchUserIdsByEmail(emails: string[], tenant: string): Promise<Ma
   }
 
   return idMap;
+}
+
+async function fetchFallbackUserId(tenant: string): Promise<string | null> {
+  try {
+    const { knex } = await createTenantKnex();
+    const fallbackUser = await knex('users')
+      .where('tenant', tenant)
+      .orderBy('created_at', 'asc')
+      .first('user_id');
+    return fallbackUser?.user_id ?? null;
+  } catch (error) {
+    console.error('Failed to fetch fallback user for calendar entry:', error);
+    return null;
+  }
 }
