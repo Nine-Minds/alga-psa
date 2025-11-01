@@ -178,16 +178,16 @@ export async function GET(request: NextRequest) {
     let projectId: string | null = null;
     
     if (isHostedFlow) {
-      clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || null;
-      projectId = await secretProvider.getAppSecret('GOOGLE_PROJECT_ID') || null;
+      clientId = await secretProvider.getAppSecret('GOOGLE_CALENDAR_CLIENT_ID') || null;
+      clientSecret = await secretProvider.getAppSecret('GOOGLE_CALENDAR_CLIENT_SECRET') || null;
+      projectId = await secretProvider.getAppSecret('GOOGLE_CALENDAR_PROJECT_ID') || null;
     } else {
-      const envClientId = process.env.GOOGLE_CLIENT_ID || null;
-      const envClientSecret = process.env.GOOGLE_CLIENT_SECRET || null;
-      const envProjectId = process.env.GOOGLE_PROJECT_ID || null;
-      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id');
-      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret');
-      const tenantProjectId = await secretProvider.getTenantSecret(stateData.tenant, 'google_project_id');
+      const envClientId = process.env.GOOGLE_CALENDAR_CLIENT_ID || null;
+      const envClientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET || null;
+      const envProjectId = process.env.GOOGLE_CALENDAR_PROJECT_ID || null;
+      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_client_id');
+      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_client_secret');
+      const tenantProjectId = await secretProvider.getTenantSecret(stateData.tenant, 'google_calendar_project_id');
       clientId = envClientId || tenantClientId || null;
       clientSecret = envClientSecret || tenantClientSecret || null;
       projectId = envProjectId || tenantProjectId || null;

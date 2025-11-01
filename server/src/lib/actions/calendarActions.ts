@@ -4,7 +4,7 @@ import { getCurrentUser } from '../user-actions/userActions';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { hasPermission } from '../../auth/rbac';
 import { createTenantKnex, runWithTenant } from '../../db';
-import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce } from '@/utils/calendar/oauthHelpers';
+import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce, encodeCalendarState } from '@/utils/calendar/oauthHelpers';
 import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
 import { storeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
 import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
@@ -46,15 +46,16 @@ export async function initiateCalendarOAuth(params: {
 
     const { provider, calendarProviderId, redirectUri: requestedRedirectUri } = params;
     const secretProvider = await getSecretProviderInstance();
+    const tenant = user.tenant;
 
     // Hosted detection
     const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
-    const isHosted = nextauthUrl.startsWith('https://algapsa.com');
+    const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
 
     let existingRedirectUri: string | undefined;
     if (calendarProviderId) {
       const providerService = new CalendarProviderService();
-      const providerRecord = await providerService.getProvider(calendarProviderId, user.tenant, { includeSecrets: true });
+      const providerRecord = await providerService.getProvider(calendarProviderId, tenant, { includeSecrets: true });
       if (!providerRecord) {
         return { success: false, error: 'Invalid calendarProviderId for tenant' };
       }
@@ -63,17 +64,21 @@ export async function initiateCalendarOAuth(params: {
 
     let clientId: string | null = null;
 
-    if (isHosted) {
+    if (isHostedFlow) {
       if (provider === 'google') {
-        clientId = (await secretProvider.getAppSecret('GOOGLE_CLIENT_ID')) || null;
+        clientId = (await secretProvider.getAppSecret('GOOGLE_CALENDAR_CLIENT_ID')) || null;
       } else {
         clientId = (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID')) || null;
       }
     } else {
       if (provider === 'google') {
-        clientId = process.env.GOOGLE_CLIENT_ID || (await secretProvider.getTenantSecret(user.tenant, 'google_client_id')) || null;
+        clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID
+          || (await secretProvider.getTenantSecret(tenant, 'google_calendar_client_id'))
+          || null;
       } else {
-        clientId = process.env.MICROSOFT_CLIENT_ID || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id')) || null;
+        clientId = process.env.MICROSOFT_CLIENT_ID
+          || (await secretProvider.getTenantSecret(tenant, 'microsoft_client_id'))
+          || null;
       }
     }
 
@@ -82,23 +87,24 @@ export async function initiateCalendarOAuth(params: {
     }
 
     const redirectUri = await resolveCalendarRedirectUri({
-      tenant: user.tenant,
+      tenant,
       provider,
       secretProvider,
-      hosted: isHosted,
+      hosted: isHostedFlow,
       requestedRedirectUri,
       existingRedirectUri
     });
 
     const state = {
-      tenant: user.tenant,
+      tenant,
       provider,
       calendarProviderId,
       nonce: generateCalendarNonce(),
       redirectUri,
       timestamp: Date.now(),
-      hosted: isHosted
+      hosted: isHostedFlow
     };
+    const encodedState = encodeCalendarState(state);
 
     // Determine Microsoft tenant authority
     let msTenantAuthority: string | undefined;
@@ -110,15 +116,24 @@ export async function initiateCalendarOAuth(params: {
     }
 
     const authUrl = provider === 'microsoft'
-      ? generateMicrosoftCalendarAuthUrl(clientId, state.redirectUri, state, undefined as any, msTenantAuthority)
-      : generateGoogleCalendarAuthUrl(clientId, state.redirectUri, state);
+      ? await generateMicrosoftCalendarAuthUrl({
+          clientId,
+          redirectUri: state.redirectUri,
+          state: encodedState,
+          tenantId: msTenantAuthority
+        })
+      : await generateGoogleCalendarAuthUrl({
+          clientId,
+          redirectUri: state.redirectUri,
+          state: encodedState
+        });
 
     await storeCalendarOAuthState(state.nonce, state, 10 * 60);
 
     return { 
       success: true, 
       authUrl, 
-      state: Buffer.from(JSON.stringify(state)).toString('base64') 
+      state: encodedState 
     };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to initiate OAuth' };

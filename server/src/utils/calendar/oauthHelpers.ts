@@ -8,57 +8,51 @@ import { CalendarOAuthState } from '../../interfaces/calendar.interfaces';
 /**
  * Generate OAuth authorization URL for Google Calendar
  */
-export function generateGoogleCalendarAuthUrl(
-  clientId: string,
-  redirectUri: string,
-  state: CalendarOAuthState,
-  scopes: string[] = [
-    'https://www.googleapis.com/auth/calendar',
-    'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/pubsub'
-  ]
-): string {
-  const baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
-  
-  const params = new URLSearchParams({
-    client_id: clientId,
+export async function generateGoogleCalendarAuthUrl(params: {
+  clientId: string;
+  redirectUri: string;
+  state: string;
+  projectId?: string;
+}): Promise<string> {
+  const queryParams = new URLSearchParams({
+    client_id: params.clientId,
     response_type: 'code',
-    redirect_uri: redirectUri,
-    scope: scopes.join(' '),
-    state: encodeCalendarState(state),
-    access_type: 'offline', // Request refresh token
-    prompt: 'consent' // Force consent to ensure we get refresh token
+    scope: 'https://www.googleapis.com/auth/calendar',
+    redirect_uri: params.redirectUri,
+    state: params.state,
+    access_type: 'offline',
+    prompt: 'select_account'
   });
 
-  return `${baseUrl}?${params.toString()}`;
+  return `https://accounts.google.com/o/oauth2/v2/auth?${queryParams.toString()}`;
 }
 
 /**
  * Generate OAuth authorization URL for Microsoft Calendar
  */
-export function generateMicrosoftCalendarAuthUrl(
-  clientId: string,
-  redirectUri: string,
-  state: CalendarOAuthState,
-  scopes: string[] = [
+export async function generateMicrosoftCalendarAuthUrl(params: {
+  clientId: string;
+  redirectUri: string;
+  state: string;
+  tenantId?: string;
+}): Promise<string> {
+  const scopes = [
     'https://graph.microsoft.com/Calendars.ReadWrite',
+    'https://graph.microsoft.com/Mail.Read',
     'offline_access'
-  ],
-  tenantAuthority: string = 'common'
-): string {
-  const baseUrl = `https://login.microsoftonline.com/${tenantAuthority}/oauth2/v2.0/authorize`;
-  
-  const params = new URLSearchParams({
-    client_id: clientId,
+  ].join(' ');
+
+  const queryParams = new URLSearchParams({
+    client_id: params.clientId,
     response_type: 'code',
-    redirect_uri: redirectUri,
-    response_mode: 'query',
-    scope: scopes.join(' '),
-    state: encodeCalendarState(state),
-    prompt: 'consent' // Force consent to ensure we get refresh token
+    scope: scopes,
+    redirect_uri: params.redirectUri,
+    state: params.state,
+    prompt: 'select_account'
   });
 
-  return `${baseUrl}?${params.toString()}`;
+  const tenant = params.tenantId || 'common';
+  return `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${queryParams.toString()}`;
 }
 
 /**
@@ -87,4 +81,3 @@ export function decodeCalendarState(encodedState: string): CalendarOAuthState | 
 export function generateCalendarNonce(): string {
   return randomBytes(16).toString('hex');
 }
-

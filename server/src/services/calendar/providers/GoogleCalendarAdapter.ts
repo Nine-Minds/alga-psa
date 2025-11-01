@@ -88,14 +88,14 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
       const vendorConfig = this.config.provider_config || {};
       
       // Get client credentials from provider config, environment, or tenant secrets
-      let clientId = vendorConfig.clientId || process.env.GOOGLE_CLIENT_ID;
-      let clientSecret = vendorConfig.clientSecret || process.env.GOOGLE_CLIENT_SECRET;
+      let clientId = vendorConfig.clientId || process.env.GOOGLE_CALENDAR_CLIENT_ID;
+      let clientSecret = vendorConfig.clientSecret || process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
       
       // Fall back to tenant secrets if not found in config or environment
       if (!clientId || !clientSecret) {
         const secretProvider = await getSecretProviderInstance();
-        clientId = clientId || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_id');
-        clientSecret = clientSecret || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_secret');
+        clientId = clientId || await secretProvider.getTenantSecret(this.config.tenant, 'google_calendar_client_id');
+        clientSecret = clientSecret || await secretProvider.getTenantSecret(this.config.tenant, 'google_calendar_client_secret');
       }
 
       if (!clientId || !clientSecret) {
