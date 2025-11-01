@@ -13,6 +13,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
+  // Configuration for migration files - enforce naming conventions
+  // IMPORTANT: This must come first before other configs that might ignore these files
+  {
+    files: ["**/migrations/**/*.cjs"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      },
+      ecmaVersion: 2020,
+      sourceType: "commonjs"
+    },
+    plugins: {
+      "custom-rules": customRules,
+    },
+    rules: {
+      "custom-rules/migration-filename": "error",
+      "no-unused-vars": "warn",
+    }
+  },
+
   // Configuration for JavaScript files (no TypeScript)
   {
     files: ["**/*.{js,mjs,cjs}"],
