@@ -1,10 +1,21 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { Card } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Badge } from 'server/src/components/ui/Badge';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from 'server/src/components/ui/DropdownMenu';
 import { Asset, AssetListResponse, ClientMaintenanceSummary } from 'server/src/interfaces/asset.interfaces';
 import { getClientMaintenanceSummary, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -22,42 +33,80 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
-  TrendingUp
+  TrendingUp,
+  Filter,
+  Search,
+  MoreVertical,
+  ChevronDown,
+  RefreshCw
 } from 'lucide-react';
 
 interface AssetDashboardProps {
   initialAssets: AssetListResponse;
 }
 
+type ColumnKey =
+  | 'select'
+  | 'name'
+  | 'asset_tag'
+  | 'asset_type'
+  | 'details'
+  | 'status'
+  | 'client_name'
+  | 'location'
+  | 'actions';
+
+const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
+const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
+
 export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
-  const updateDashboard = useRegisterUIComponent({
+  useRegisterUIComponent({
     id: 'asset-dashboard',
     type: 'container',
     label: 'Asset Dashboard'
   });
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [assets, setAssets] = useState<Asset[]>(initialAssets.assets);
   const [maintenanceSummaries, setMaintenanceSummaries] = useState<Record<string, ClientMaintenanceSummary>>({});
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const searchParams = useSearchParams();
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [typeFilters, setTypeFilters] = useState<string[]>([]);
+  const [clientFilters, setClientFilters] = useState<string[]>([]);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>([
+    'select',
+    'name',
+    'asset_tag',
+    'asset_type',
+    'status',
+    'client_name',
+    'location',
+    'actions'
+  ]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+
   const shouldAutoOpenQuickAdd = useMemo(() => searchParams?.get('intent') === 'new-asset', [searchParams]);
 
-  // Group assets by client
-  const assetsByClient = assets.reduce((acc, asset) => {
-    if (!asset.client_id) return acc;
-    if (!acc[asset.client_id]) {
-      acc[asset.client_id] = [];
-    }
-    acc[asset.client_id].push(asset);
-    return acc;
-  }, {} as Record<string, Asset[]>);
+  const assetsByClient = useMemo(() => {
+    return assets.reduce((acc, asset) => {
+      if (!asset.client_id) return acc;
+      if (!acc[asset.client_id]) acc[asset.client_id] = [];
+      acc[asset.client_id].push(asset);
+      return acc;
+    }, {} as Record<string, Asset[]>);
+  }, [assets]);
 
-  // Calculate overall statistics
   const totalAssets = assets.length;
-  const assetsByStatus = assets.reduce((acc, asset) => {
-    acc[asset.status] = (acc[asset.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const assetsByStatus = useMemo(() => {
+    return assets.reduce((acc, asset) => {
+      acc[asset.status] = (acc[asset.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [assets]);
 
   useEffect(() => {
     async function loadMaintenanceSummaries() {
@@ -76,21 +125,90 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     }
 
     loadMaintenanceSummaries();
-  }, []);
+  }, [assetsByClient]);
 
-  // Calculate maintenance statistics
-  const maintenanceStats = Object.values(maintenanceSummaries).reduce(
-    (acc, summary) => {
-      acc.totalSchedules += summary.total_schedules;
-      acc.overdueMaintenances += summary.overdue_maintenances;
-      acc.upcomingMaintenances += summary.upcoming_maintenances;
-      return acc;
-    },
-    { totalSchedules: 0, overdueMaintenances: 0, upcomingMaintenances: 0 }
-  );
+  useEffect(() => {
+    if (shouldAutoOpenQuickAdd) {
+      router.replace('/msp/assets');
+    }
+  }, [shouldAutoOpenQuickAdd, router]);
 
-  const getAssetTypeIcon = (type: string) => {
-    const iconProps = { className: "h-4 w-4 text-gray-600" };
+  const maintenanceStats = useMemo(() => {
+    return Object.values(maintenanceSummaries).reduce(
+      (acc, summary) => {
+        acc.totalSchedules += summary.total_schedules;
+        acc.overdueMaintenances += summary.overdue_maintenances;
+        acc.upcomingMaintenances += summary.upcoming_maintenances;
+        return acc;
+      },
+      { totalSchedules: 0, overdueMaintenances: 0, upcomingMaintenances: 0 }
+    );
+  }, [maintenanceSummaries]);
+
+  const clientOptions = useMemo(() => {
+    const unique = new Map<string, string>();
+    assets.forEach(asset => {
+      if (asset.client_id && asset.client?.client_name) {
+        unique.set(asset.client_id, asset.client.client_name);
+      }
+    });
+    return Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
+  }, [assets]);
+
+  const filteredAssets = useMemo(() => {
+    return assets.filter(asset => {
+      const matchesSearch = !searchTerm
+        || asset.name.toLowerCase().includes(searchTerm.toLowerCase())
+        || asset.asset_tag?.toLowerCase().includes(searchTerm.toLowerCase())
+        || asset.client?.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus = statusFilters.length === 0 || statusFilters.includes(asset.status);
+      const matchesType = typeFilters.length === 0 || typeFilters.includes(asset.asset_type);
+      const matchesClient = clientFilters.length === 0 || (asset.client_id && clientFilters.includes(asset.client_id));
+
+      return matchesSearch && matchesStatus && matchesType && matchesClient;
+    });
+  }, [assets, searchTerm, statusFilters, typeFilters, clientFilters]);
+
+  const filteredCount = filteredAssets.length;
+
+  const isAllSelected = filteredCount > 0 && filteredAssets.every(asset => selectedAssetIds.includes(asset.asset_id));
+  const isIndeterminate = selectedAssetIds.length > 0 && !isAllSelected;
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedAssetIds(prev => {
+      if (isAllSelected) {
+        return [];
+      }
+      const ids = new Set(prev);
+      filteredAssets.forEach(asset => ids.add(asset.asset_id));
+      return Array.from(ids);
+    });
+  }, [filteredAssets, isAllSelected]);
+
+  const handleAssetAdded = async () => {
+    try {
+      const response = await listAssets({});
+      setAssets(response.assets);
+    } catch (error) {
+      console.error('Error reloading assets:', error);
+    }
+    router.refresh();
+  };
+
+  const toggleFilterValue = (values: string[], value: string, setter: (next: string[]) => void) => {
+    setter(values.includes(value) ? values.filter(v => v !== value) : [...values, value]);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilters([]);
+    setTypeFilters([]);
+    setClientFilters([]);
+  };
+
+  const getAssetTypeIcon = useCallback((type: string) => {
+    const iconProps = { className: 'h-4 w-4 text-gray-600' };
     switch (type.toLowerCase()) {
       case 'workstation':
         return <Monitor {...iconProps} />;
@@ -105,9 +223,9 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       default:
         return <Boxes {...iconProps} />;
     }
-  };
+  }, []);
 
-  const renderAssetDetails = (asset: Asset): string => {
+  const renderAssetDetails = useCallback((asset: Asset): string => {
     if (asset.workstation) {
       return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb}GB RAM`;
     }
@@ -124,23 +242,54 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       return `${asset.printer.model} - ${asset.printer.is_network_printer ? 'Network' : 'Local'}`;
     }
     return 'No details available';
-  };
+  }, []);
 
-  const handleAssetAdded = async () => {
-    try {
-      const response = await listAssets({});
-      setAssets(response.assets);
-    } catch (error) {
-      console.error('Error reloading assets:', error);
-    }
-    router.refresh();
-  };
+  const toggleColumn = useCallback((key: ColumnKey) => {
+    setVisibleColumnIds(prev => {
+      if (prev.includes(key)) {
+        if (prev.length === 3) {
+          return prev; // keep minimum columns visible
+        }
+        return prev.filter(id => id !== key);
+      }
+      return [...prev, key];
+    });
+  }, []);
 
-  const columns: ColumnDefinition<Asset>[] = [
-    {
+  const toggleAssetSelection = useCallback((assetId: string) => {
+    setSelectedAssetIds(prev =>
+      prev.includes(assetId) ? prev.filter(id => id !== assetId) : [...prev, assetId]
+    );
+  }, []);
+
+  const columnLibrary: Record<ColumnKey, ColumnDefinition<Asset>> = useMemo(() => ({
+    select: {
+      dataIndex: 'select',
+      title: (
+        <Checkbox
+          id="asset-select-all"
+          checked={isAllSelected}
+          onChange={toggleSelectAll}
+          aria-label="Select all visible assets"
+          className="translate-y-0.5"
+          indeterminate={isIndeterminate}
+        />
+      ),
+      render: (_: unknown, record: Asset) => (
+        <Checkbox
+          id={`asset-select-${record.asset_id}`}
+          checked={selectedAssetIds.includes(record.asset_id)}
+          onChange={() => toggleAssetSelection(record.asset_id)}
+          aria-label={`Select asset ${record.name}`}
+          className="translate-y-0.5"
+          onClick={(event) => event.stopPropagation()}
+        />
+      )
+    },
+    name: {
       dataIndex: 'name',
       title: 'Name',
-      render: (value: unknown, record: Asset) => (
+      render: (_value: unknown, record: Asset) => (
         <Link
           href={`/msp/assets/${record.asset_id}`}
           className="font-medium text-primary-600 hover:text-primary-700 hover:underline transition-colors"
@@ -149,14 +298,14 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
         </Link>
       )
     },
-    {
+    asset_tag: {
       dataIndex: 'asset_tag',
       title: 'Tag',
       render: (value: unknown) => (
         <span className="font-mono text-sm text-gray-600">{value as string}</span>
       )
     },
-    {
+    asset_type: {
       dataIndex: 'asset_type',
       title: 'Type',
       render: (value: string) => (
@@ -165,38 +314,44 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
             {getAssetTypeIcon(value)}
           </div>
           <span className="text-sm font-medium text-gray-700">
-            {value.split('_').map((word): string => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+            {value.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
           </span>
         </div>
       )
     },
-    {
+    details: {
       dataIndex: 'details',
       title: 'Details',
       render: (_: unknown, record: Asset) => (
         <span className="text-sm text-gray-600">{renderAssetDetails(record)}</span>
       )
     },
-    {
+    status: {
       dataIndex: 'status',
       title: 'Status',
       render: (value: unknown) => {
         const status = value as string;
         return (
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${status === 'active'
-              ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-600/20'
-              : status === 'inactive'
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+              status === 'active'
+                ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-600/20'
+                : status === 'inactive'
                 ? 'bg-gray-100 text-gray-700 ring-1 ring-gray-600/20'
                 : 'bg-amber-100 text-amber-700 ring-1 ring-amber-600/20'
-            }`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${status === 'active' ? 'bg-emerald-500' : status === 'inactive' ? 'bg-gray-500' : 'bg-amber-500'
-              }`}></span>
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                status === 'active' ? 'bg-emerald-500' : status === 'inactive' ? 'bg-gray-500' : 'bg-amber-500'
+              }`}
+            ></span>
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </span>
         );
       }
     },
-    {
+    client_name: {
       dataIndex: 'client_name',
       title: 'Client',
       render: (_: unknown, record: Asset) => (
@@ -205,264 +360,394 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
         </span>
       )
     },
-    {
+    location: {
       dataIndex: 'location',
       title: 'Location',
-      render: (value: unknown) => (
-        <span className="text-sm text-gray-600">{(value as string) || '—'}</span>
+      render: (value: unknown, record: Asset) => (
+        <span className="text-sm text-gray-600">{(value as string) || record?.workstation?.location || '—'}</span>
+      )
+    },
+    actions: {
+      dataIndex: 'actions',
+      title: 'Actions',
+      render: (_: unknown, record: Asset) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id={`asset-${record.asset_id}-actions-menu`}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={`Open actions for asset ${record.name}`}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              id={`view-asset-${record.asset_id}`}
+              onSelect={() => router.push(`/msp/assets/${record.asset_id}`)}
+            >
+              View details
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`edit-asset-${record.asset_id}`}
+              onSelect={() => router.push(`/msp/assets/${record.asset_id}/edit`)}
+            >
+              Edit asset
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              id={`create-ticket-${record.asset_id}`}
+              onSelect={() => router.push(`/msp/tickets/new?assetId=${record.asset_id}`)}
+            >
+              Create ticket
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )
     }
-  ];
+  }), [
+    router,
+    isAllSelected,
+    isIndeterminate,
+    selectedAssetIds,
+    toggleSelectAll,
+    toggleAssetSelection,
+    getAssetTypeIcon,
+    renderAssetDetails
+  ]);
+
+  const columns: ColumnDefinition<Asset>[] = useMemo(() => {
+    return visibleColumnIds.map((key) => columnLibrary[key]);
+  }, [visibleColumnIds, columnLibrary]);
 
   return (
     <div className="relative p-6">
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="lg:w-64 flex-shrink-0">
+      <div className="flex flex-col xl:flex-row gap-6">
+        <div className="xl:w-60 flex-shrink-0">
           <AssetActionRail />
         </div>
-        <div className="flex-1 space-y-8">
-          {/* Header with Add Asset Button */}
-          <div {...withDataAutomationId({ id: 'asset-dashboard-header' })} className="flex justify-between items-center">
+        <div className="flex-1 space-y-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Asset Management</h1>
-              <p className="text-sm text-gray-500 mt-1">Track and manage all client assets</p>
+              <h1 className="text-3xl font-bold text-gray-900">Asset Workspace</h1>
+              <p className="text-sm text-gray-500">Operate at scale with filters, saved views, and bulk actions.</p>
             </div>
-            <div {...withDataAutomationId({ id: 'quick-add-asset-wrapper' })}>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                id="refresh-assets-button"
+                variant="ghost"
+                size="sm"
+                className="gap-2"
+                onClick={() => handleAssetAdded()}
+              >
+                <RefreshCw className="h-4 w-4" /> Refresh data
+              </Button>
               <QuickAddAsset onAssetAdded={handleAssetAdded} defaultOpen={shouldAutoOpenQuickAdd} />
             </div>
           </div>
 
-          {/* Overview Section - Redesigned with gradients */}
-          <div {...withDataAutomationId({ id: 'asset-overview-section' })} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Total Assets Card */}
-            <div {...withDataAutomationId({ id: 'total-assets-card' })} className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-blue-100/50">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500"></div>
-              <div className="relative p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="p-3 bg-blue-500/10 rounded-lg ring-1 ring-blue-500/20">
-                    <Boxes className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2.5 py-1 rounded-full">Total</span>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-blue-900/60">Total Assets</p>
-                  <p className="text-3xl font-bold text-blue-900">{totalAssets}</p>
-                </div>
-              </div>
-            </div>
-            {/* Header with Add Asset Button */}
-            <div {...withDataAutomationId({ id: 'asset-dashboard-header' })} className="flex justify-between items-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total assets</p>
+              <p className="text-3xl font-semibold text-gray-900 mt-2">{totalAssets}</p>
+              <p className="text-xs text-gray-500 mt-1">Across all clients</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filtered view</p>
+              <p className="text-3xl font-semibold text-gray-900 mt-2">{filteredCount}</p>
+              <p className="text-xs text-gray-500 mt-1">Matching active filters</p>
+            </Card>
+            <Card className="p-4 flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Asset Management</h1>
-                <p className="text-sm text-gray-500 mt-1">Track and manage all client assets</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Automation ready</p>
+                <p className="text-3xl font-semibold text-gray-900 mt-2">{maintenanceStats.totalSchedules}</p>
+                <p className="text-xs text-gray-500 mt-1">Active maintenance schedules</p>
               </div>
-              <div {...withDataAutomationId({ id: 'quick-add-asset-wrapper' })}>
-                <QuickAddAsset onAssetAdded={handleAssetAdded} />
+              <div className="flex flex-col gap-1 text-right text-xs text-gray-500">
+                <span className="font-medium text-emerald-600">Upcoming: {maintenanceStats.upcomingMaintenances}</span>
+                <span className="font-medium text-amber-600">Overdue: {maintenanceStats.overdueMaintenances}</span>
+              </div>
+            </Card>
+          </div>
+
+          <Card className="p-4 space-y-4" {...withDataAutomationId({ id: 'asset-toolbar-card' })}>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-1 items-center gap-3">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="asset-search-input"
+                    placeholder="Search by name, tag, or client"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Button
+                  id="asset-filters-clear-button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0}
+                >
+                  Clear filters
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button id="status-filter-button" variant="ghost" size="sm" className="gap-1">
+                      <Filter className="h-4 w-4" /> Status
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {STATUS_OPTIONS.map((status) => (
+                      <DropdownMenuItem key={status} id={`filter-status-${status}`} onSelect={(event) => event.preventDefault()}>
+                        <Checkbox
+                          id={`status-checkbox-${status}`}
+                          checked={statusFilters.includes(status)}
+                          onChange={() => toggleFilterValue(statusFilters, status, setStatusFilters)}
+                          className="mr-2"
+                        />
+                        <span className="capitalize">{status.replace('_', ' ')}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button id="type-filter-button" variant="ghost" size="sm" className="gap-1">
+                      <Filter className="h-4 w-4" /> Type
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-52">
+                    {TYPE_OPTIONS.map((type) => (
+                      <DropdownMenuItem key={type} id={`filter-type-${type}`} onSelect={(event) => event.preventDefault()}>
+                        <Checkbox
+                          id={`type-checkbox-${type}`}
+                          checked={typeFilters.includes(type)}
+                          onChange={() => toggleFilterValue(typeFilters, type, setTypeFilters)}
+                          className="mr-2"
+                        />
+                        <span className="capitalize">{type.replace('_', ' ')}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button id="client-filter-button" variant="ghost" size="sm" className="gap-1">
+                      <Filter className="h-4 w-4" /> Client
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-60 max-h-72 overflow-y-auto">
+                    {clientOptions.map(({ value, label }) => (
+                      <DropdownMenuItem key={value} id={`filter-client-${value}`} onSelect={(event) => event.preventDefault()}>
+                        <Checkbox
+                          id={`client-checkbox-${value}`}
+                          checked={clientFilters.includes(value)}
+                          onChange={() => toggleFilterValue(clientFilters, value, setClientFilters)}
+                          className="mr-2"
+                        />
+                        <span>{label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button id="column-chooser-button" variant="ghost" size="sm" className="gap-1">
+                      Columns
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {(Object.keys(columnLibrary) as ColumnKey[]).map((key) => (
+                      <DropdownMenuItem key={key} id={`column-toggle-${key}`} onSelect={(event) => event.preventDefault()}>
+                        <Checkbox
+                          id={`column-checkbox-${key}`}
+                          checked={visibleColumnIds.includes(key)}
+                          onChange={() => toggleColumn(key)}
+                          className="mr-2"
+                        />
+                        <span className="capitalize">{key.replace('_', ' ')}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
-            {/* Overview Section - Redesigned with gradients */}
-            <div {...withDataAutomationId({ id: 'asset-overview-section' })} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Total Assets Card */}
-              <div {...withDataAutomationId({ id: 'total-assets-card' })} className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-blue-100/50">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500"></div>
-                <div className="relative p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-3 bg-blue-500/10 rounded-lg ring-1 ring-blue-500/20">
-                      <Boxes className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2.5 py-1 rounded-full">Total</span>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-blue-900/60">Total Assets</p>
-                    <p className="text-3xl font-bold text-blue-900">{totalAssets}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Maintenance Schedules Card */}
-              <div {...withDataAutomationId({ id: 'maintenance-schedules-card' })} className="group relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-emerald-100/50">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500"></div>
-                <div className="relative p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-3 bg-emerald-500/10 rounded-lg ring-1 ring-emerald-500/20">
-                      <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                    </div>
-                    <TrendingUp className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-emerald-900/60">Active Schedules</p>
-                    <p className="text-3xl font-bold text-emerald-900">{maintenanceStats.totalSchedules}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Overdue Maintenance Card */}
-              <div {...withDataAutomationId({ id: 'overdue-maintenance-card' })} className="group relative overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-amber-100/50">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500"></div>
-                <div className="relative p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-3 bg-amber-500/10 rounded-lg ring-1 ring-amber-500/20">
-                      <AlertTriangle className="h-6 w-6 text-amber-600" />
-                    </div>
-                    {maintenanceStats.overdueMaintenances > 0 && (
-                      <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">Action needed</span>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-amber-900/60">Overdue Maintenance</p>
-                    <p className="text-3xl font-bold text-amber-900">{maintenanceStats.overdueMaintenances}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Upcoming Maintenance Card */}
-              <div {...withDataAutomationId({ id: 'upcoming-maintenance-card' })} className="group relative overflow-hidden bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-violet-100/50">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-400/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500"></div>
-                <div className="relative p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-3 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
-                      <Clock className="h-6 w-6 text-violet-600" />
-                    </div>
-                    <span className="text-xs font-medium text-violet-600 bg-violet-100 px-2.5 py-1 rounded-full">Scheduled</span>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-violet-900/60">Upcoming Maintenance</p>
-                    <p className="text-3xl font-bold text-violet-900">{maintenanceStats.upcomingMaintenances}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Status Distribution */}
-            <div {...withDataAutomationId({ id: 'asset-status-distribution' })} className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                  <Boxes className="h-5 w-5 text-slate-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Asset Status Distribution</h3>
-                  <p className="text-sm text-gray-500">Overview by status</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(assetsByStatus).map(([status, count]): JSX.Element => (
-                  <div
-                    {...withDataAutomationId({ id: `status-count-${status}` })}
-                    key={status}
-                    className="bg-white rounded-lg p-5 border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all"
-                  >
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 capitalize">{status}</p>
-                    <p className="text-3xl font-bold text-gray-900">{count}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Client Assets Overview */}
-            <div {...withDataAutomationId({ id: 'client-assets-overview' })} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Boxes className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Assets by Client</h3>
-                  <p className="text-sm text-gray-500">Client asset breakdown with maintenance status</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {Object.entries(assetsByClient).map(([clientId, clientAssets]): JSX.Element => {
-                  const summary = maintenanceSummaries[clientId];
-                  const clientName = clientAssets[0]?.client?.client_name || 'Unassigned';
-                  return (
-                    <div
-                      {...withDataAutomationId({ id: `client-assets-${clientId}` })}
-                      key={clientId}
-                      className="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all"
+            {(statusFilters.length > 0 || typeFilters.length > 0 || clientFilters.length > 0) && (
+              <div className="flex flex-wrap gap-2" {...withDataAutomationId({ id: 'active-filters-bar' })}>
+                {statusFilters.map((status) => (
+                  <Badge key={`status-pill-${status}`} variant="outline" className="flex items-center gap-2">
+                    Status: {status}
+                    <Button
+                      id={`remove-status-${status}`}
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => toggleFilterValue(statusFilters, status, setStatusFilters)}
                     >
-                      <div {...withDataAutomationId({ id: `client-header-${clientId}` })} className="flex justify-between items-center mb-4">
-                        <h4 className="text-lg font-semibold text-gray-900">
-                          {clientName}
-                        </h4>
-                        <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                          {clientAssets.length} {clientAssets.length === 1 ? 'asset' : 'assets'}
-                        </span>
-                      </div>
-                      {summary && (
-                        <div {...withDataAutomationId({ id: `client-maintenance-stats-${clientId}` })} className="grid grid-cols-3 gap-4">
-                          <div {...withDataAutomationId({ id: `client-compliance-${clientId}` })} className="bg-white rounded-lg p-3 border border-gray-100">
-                            <p className="text-xs text-gray-500 font-medium mb-1">Compliance</p>
-                            <p className="text-xl font-bold text-emerald-600">
-                              {summary.compliance_rate.toFixed(1)}%
-                            </p>
-                          </div>
-                          <div {...withDataAutomationId({ id: `client-overdue-${clientId}` })} className="bg-white rounded-lg p-3 border border-gray-100">
-                            <p className="text-xs text-gray-500 font-medium mb-1">Overdue</p>
-                            <p className="text-xl font-bold text-amber-600">
-                              {summary.overdue_maintenances}
-                            </p>
-                          </div>
-                          <div {...withDataAutomationId({ id: `client-upcoming-${clientId}` })} className="bg-white rounded-lg p-3 border border-gray-100">
-                            <p className="text-xs text-gray-500 font-medium mb-1">Upcoming</p>
-                            <p className="text-xl font-bold text-violet-600">
-                              {summary.upcoming_maintenances}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      ×
+                    </Button>
+                  </Badge>
+                ))}
+                {typeFilters.map((type) => (
+                  <Badge key={`type-pill-${type}`} variant="outline" className="flex items-center gap-2">
+                    Type: {type.replace('_', ' ')}
+                    <Button
+                      id={`remove-type-${type}`}
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => toggleFilterValue(typeFilters, type, setTypeFilters)}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                ))}
+                {clientFilters.map((clientId) => {
+                  const label = clientOptions.find(option => option.value === clientId)?.label || 'Client';
+                  return (
+                    <Badge key={`client-pill-${clientId}`} variant="outline" className="flex items-center gap-2">
+                      Client: {label}
+                      <Button
+                        id={`remove-client-${clientId}`}
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => toggleFilterValue(clientFilters, clientId, setClientFilters)}
+                      >
+                        ×
+                      </Button>
+                    </Badge>
                   );
                 })}
               </div>
-            </div>
-
-            {/* Recent Assets Table */}
-            <div {...withDataAutomationId({ id: 'recent-assets-table-card' })} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-xl font-semibold text-gray-900">Recent Assets</h3>
-                <p className="text-sm text-gray-500 mt-1">Latest asset additions and updates</p>
-              </div>
-              <div className="p-6">
-                <DataTable
-                  {...withDataAutomationId({ id: 'recent-assets-table' })}
-                  columns={columns.map((col): ColumnDefinition<Asset> => ({
-                    ...col,
-                    render: col.render ?
-                      (value: unknown, record: Asset, index: number) => (
-                        <div {...withDataAutomationId({ id: `asset-${record.asset_id}-${col.dataIndex}` })}>
-                          {col.render(value, record, index)}
-                        </div>
-                      ) : undefined
-                  }))}
-                  data={assets.slice(0, 5).map((asset): Asset => ({
-                    ...asset,
-                    asset_id: asset.asset_id // Add id property for unique keys
-                  }))}
-                  pagination={false}
-                  onRowClick={(asset) => router.push(`/msp/assets/${asset.asset_id}`)}
-                />
-              </div>
-            </div>
-
-            {loading && (
-              <div {...withDataAutomationId({ id: 'loading-overlay' })} className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm mx-4">
-                  <div className="text-center space-y-4">
-                    <div className="relative w-16 h-16 mx-auto">
-                      <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
-                      <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-lg font-semibold text-gray-900">Loading maintenance data...</p>
-                      <p className="text-sm text-gray-500">Please wait while we fetch the information</p>
-                    </div>
-                  </div>
+            )}
+            {selectedAssetIds.length > 0 && (
+              <div
+                className="flex flex-col gap-2 rounded-lg border border-primary-200 bg-primary-50 p-3 text-sm text-primary-900 md:flex-row md:items-center md:justify-between"
+                {...withDataAutomationId({ id: 'bulk-selection-banner' })}
+              >
+                <span className="font-medium">{selectedAssetIds.length} asset{selectedAssetIds.length === 1 ? '' : 's'} selected</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    id="bulk-selection-clear-button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedAssetIds([])}
+                  >
+                    Clear selection
+                  </Button>
+                  <Button
+                    id="bulk-selection-placeholder-button"
+                    variant="secondary"
+                    size="sm"
+                    className="gap-2"
+                    disabled
+                  >
+                    Bulk actions coming soon
+                  </Button>
                 </div>
               </div>
             )}
-          </div>
+          </Card>
+
+          <Card className="p-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4" {...withDataAutomationId({ id: 'asset-metrics-strip' })}>
+              <SummaryTile
+                id="metric-total-assets"
+                title="Total Assets"
+                helper="Across all tenants"
+                icon={<Boxes className="h-4 w-4 text-blue-500" />}
+                value={totalAssets}
+              />
+              <SummaryTile
+                id="metric-active-schedules"
+                title="Active Schedules"
+                helper="Lifecycle automation"
+                icon={<TrendingUp className="h-4 w-4 text-emerald-500" />}
+                value={maintenanceStats.totalSchedules}
+              />
+              <SummaryTile
+                id="metric-overdue-maintenance"
+                title="Maintenance Overdue"
+                helper="Needs attention"
+                icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
+                value={maintenanceStats.overdueMaintenances}
+              />
+              <SummaryTile
+                id="metric-upcoming-maintenance"
+                title="Upcoming Maintenance"
+                helper="Next 30 days"
+                icon={<Clock className="h-4 w-4 text-violet-500" />}
+                value={maintenanceStats.upcomingMaintenances}
+              />
+            </div>
+
+            <DataTable
+              id="asset-table"
+              data={filteredAssets}
+              columns={columns}
+              pagination
+              onRowClick={(asset) => router.push(`/msp/assets/${asset.asset_id}`)}
+            />
+          </Card>
         </div>
       </div>
-      );
-    </div>);
+
+      {loading && (
+        <div {...withDataAutomationId({ id: 'loading-overlay' })} className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm mx-4">
+            <div className="text-center space-y-4">
+              <div className="relative w-16 h-16 mx-auto">
+                <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-gray-900">Loading maintenance data...</p>
+                <p className="text-sm text-gray-500">Please wait while we fetch the information</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type SummaryTileProps = {
+  id: string;
+  title: string;
+  helper: string;
+  value: number;
+  icon: React.ReactNode;
+};
+
+function SummaryTile({ id, title, helper, value, icon }: SummaryTileProps) {
+  return (
+    <Card className="p-4" {...withDataAutomationId({ id })}>
+      <div className="flex items-center gap-3">
+        <div className="rounded-lg bg-gray-100 p-2 text-gray-700">
+          {icon}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-600">{title}</p>
+          <p className="text-2xl font-semibold text-gray-900">{value}</p>
+          <p className="text-xs text-gray-500">{helper}</p>
+        </div>
+      </div>
+    </Card>
+  );
 }

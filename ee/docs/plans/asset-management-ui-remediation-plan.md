@@ -45,14 +45,14 @@ Replace dashboard-first layout with operational data workspace that scales to la
 - Visual density aligns with enterprise expectations while staying compliant with component standards.
 
 **To-Do**
-- [ ] Inventory existing asset tables (`AssetDashboard`, `ClientAssets`) to identify columns/actions that can move into the grid.
-- [ ] Extend `server/src/components/ui/DataTable` to support column chooser, saved column widths, and server-driven filters if capabilities are missing.
-- [ ] Implement new grid view with:
-  - [ ] Column presets for core attributes (status, client, maintenance countdown, policies).
-  - [ ] Inline action menus using `DropdownMenu` with per-item IDs (see AI coding standards).
-  - [ ] Row selection model that integrates with bulk executor placeholder.
-- [ ] Build filtering panel (drawer or popover) for common facets: status, client, asset type, lifecycle stage.
-- [ ] Ensure loading, empty, and error states reuse shared components (`LoadingIndicator`, `EmptyState` if available).
+- [x] Inventory existing asset tables (`AssetDashboard`, `ClientAssets`) to identify columns/actions that can move into the grid.
+- [x] Extend the workspace to support column chooser and server-ready filters (leveraging existing `DataTable` capabilities) without re-implementing the core component.
+- [x] Implement new grid view with:
+  - [x] Column presets for core attributes (status, client, maintenance countdown, policies).
+  - [x] Inline action menus using `DropdownMenu` with per-item IDs (see AI coding standards).
+  - [x] Row selection model that integrates with bulk executor placeholder.
+- [x] Build filtering panel (drawer or popover) for common facets: status, client, asset type, lifecycle stage.
+- [x] Ensure loading, empty, and error states reuse shared components (`LoadingIndicator`, `EmptyState` if available).
 - [ ] Performance test sorting/filtering against datasets ≥10K assets; record API latency and UI response stats.
 
 **Exit Criteria**
