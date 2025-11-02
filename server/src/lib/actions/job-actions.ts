@@ -16,6 +16,19 @@ export interface JobMetrics {
   queued: number;
 }
 
+export interface JobRecord {
+  job_id: string;
+  tenant: string;
+  type: string;
+  status: string;
+  metadata?: any;
+  created_at: Date;
+  updated_at?: Date;
+  processed_at?: Date;
+  user_id?: string;
+  details?: any[];
+}
+
 export async function getQueueMetricsAction(): Promise<JobMetrics> {
   const { tenant } = await createTenantKnex();
   
@@ -53,7 +66,7 @@ export async function getJobDetailsWithHistory(filter: {
   tenantId?: string;
   limit?: number;
   offset?: number;
-}) {
+}): Promise<JobRecord[]> {
   const { tenant } = await createTenantKnex();
   
   if (!tenant) {

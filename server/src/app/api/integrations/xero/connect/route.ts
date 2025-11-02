@@ -10,8 +10,7 @@ import { getXeroClientId } from 'server/src/lib/xero/xeroClientService';
 
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';
-const XERO_REDIRECT_URI =
-  process.env.XERO_REDIRECT_URI ?? 'http://localhost:3000/api/integrations/xero/callback';
+const XERO_REDIRECT_URI = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/integrations/xero/callback`;
 const XERO_SCOPES =
   process.env.XERO_OAUTH_SCOPES ??
   'offline_access accounting.settings accounting.transactions accounting.contacts';

@@ -312,7 +312,10 @@ const XeroIntegrationSettings: React.FC = () => {
             </div>
 
             {canShowMappings ? (
-              <XeroMappingManager connectionId={selectedConnectionId} />
+              <XeroMappingManager
+                connectionId={selectedConnectionId}
+                xeroTenantId={selectedConnection?.xeroTenantId ?? null}
+              />
             ) : (
               <div className="rounded border border-dashed border-border/50 p-4 text-sm text-muted-foreground">
                 Select a connection to manage mappings.

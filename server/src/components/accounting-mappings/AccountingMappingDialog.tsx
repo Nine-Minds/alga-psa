@@ -201,14 +201,14 @@ export function AccountingMappingDialog({
             )}
           </div>
 
-          {context.realmId ? (
+          {context.realmId || context.realmDisplayValue ? (
             <div className="space-y-2">
               <Label htmlFor={`${module.id}-realm-id`} className="text-sm font-medium text-foreground">
                 {realmLabel}
               </Label>
               <Input
                 id={`${module.id}-realm-id`}
-                value={context.realmId}
+                value={context.realmDisplayValue ?? context.realmId ?? ''}
                 readOnly
                 disabled
                 className="w-full bg-muted text-sm"

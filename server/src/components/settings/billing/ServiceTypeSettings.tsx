@@ -55,7 +55,11 @@ const ServiceTypeSettings: React.FC = () => {
   const [typeToDelete, setTypeToDelete] = useState<IServiceType | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [availableReferenceTypes, setAvailableReferenceTypes] = useState<IStandardServiceType[]>([]);
@@ -84,6 +88,12 @@ const ServiceTypeSettings: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
 
   useEffect(() => {
@@ -380,6 +390,10 @@ const ServiceTypeSettings: React.FC = () => {
             columns={tenantColumns}
             data={tenantTypes}
             pagination={true}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
             onRowClick={handleOpenEditDialog}
             id="service-types-table"
           />

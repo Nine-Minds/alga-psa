@@ -21,6 +21,14 @@ import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTabl
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import Pagination from 'server/src/components/ui/Pagination';
 
+// Default pagination options for list/table views
+const DEFAULT_LIST_ITEMS_PER_PAGE_OPTIONS = [
+  { value: '10', label: '10 per page' },
+  { value: '25', label: '25 per page' },
+  { value: '50', label: '50 per page' },
+  { value: '100', label: '100 per page' }
+];
+
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
   if (typeof obj !== 'object' || obj === null) {
@@ -344,22 +352,23 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     [columns, visibleColumnIds]
   );
 
-  // Keep internal pagination state synced with props
-  React.useEffect(() => {
-    setPagination(prev => ({
-      ...prev,
-      pageIndex: currentPage - 1
-    }));
-  }, [currentPage]);
-
   const [{ pageIndex, pageSize: currentPageSize }, setPagination] = React.useState({
     pageIndex: currentPage - 1,
     pageSize,
   });
 
+  // Keep internal pagination state synced with props
+  React.useEffect(() => {
+    setPagination(prev => ({
+      ...prev,
+      pageIndex: currentPage - 1,
+      pageSize: pageSize
+    }));
+  }, [currentPage, pageSize]);
+
   // Calculate total pages based on totalItems if provided, otherwise use data length
   const total = totalItems ?? data.length;
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = Math.ceil(total / currentPageSize);
 
   // Manage sorting state
   const [sorting, setSorting] = React.useState<SortingState>(() => {
@@ -450,11 +459,26 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     }
   };
 
-  // Notify parent component of page changes
+  // Notify parent component of page changes only when the page actually changes
+  const lastEmittedPageRef = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (onPageChange) {
-      onPageChange(pageIndex + 1);
+    if (!onPageChange) {
+      return;
     }
+
+    const nextPage = pageIndex + 1;
+    if (lastEmittedPageRef.current === nextPage) {
+      return;
+    }
+
+    // Skip emitting on first run; parent already has the initial page data
+    if (lastEmittedPageRef.current === null) {
+      lastEmittedPageRef.current = nextPage;
+      return;
+    }
+
+    lastEmittedPageRef.current = nextPage;
+    onPageChange(nextPage);
   }, [pageIndex, onPageChange]);
 
   // Update reflection metadata with debouncing to prevent loops
@@ -603,7 +627,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 }
               }}
               onItemsPerPageChange={onItemsPerPageChange}
-              itemsPerPageOptions={itemsPerPageOptions}
+              itemsPerPageOptions={itemsPerPageOptions || DEFAULT_LIST_ITEMS_PER_PAGE_OPTIONS}
               variant={onItemsPerPageChange ? "clients" : "compact"}
             />
           </div>

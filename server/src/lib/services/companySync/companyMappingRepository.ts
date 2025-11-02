@@ -31,38 +31,53 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
   }
 
   async upsertCompanyMapping(record: CompanyMappingRecord): Promise<void> {
-    const payload = {
-      id: this.knex.raw('gen_random_uuid()'),
-      tenant: record.tenantId,
-      integration_type: record.adapterType,
-      alga_entity_type: 'company',
-      alga_entity_id: record.algaCompanyId,
-      external_entity_id: record.externalCompanyId,
-      external_realm_id: record.targetRealm ?? null,
-      metadata: record.metadata ?? null
-    };
+    await this.knex.transaction(async (trx) => {
+      const lockKey = [
+        record.tenantId,
+        record.adapterType,
+        record.targetRealm ?? 'default',
+        record.algaCompanyId
+      ].join(':');
 
-    try {
-      await this.knex(TABLE_NAME)
-        .insert(payload)
-        .onConflict([
-          'tenant',
-          'integration_type',
-          'alga_entity_type',
-          'alga_entity_id',
-          'external_realm_id'
-        ])
-        .merge({
-          external_entity_id: payload.external_entity_id,
-          metadata: payload.metadata
-        });
-    } catch (error: any) {
-      if (error?.code === '23505') {
-        // Unique violation: another process inserted the row; treat as success.
+      await trx.raw(
+        'SELECT pg_advisory_xact_lock(pg_catalog.hashtextextended(?::text, 0))',
+        [lockKey]
+      );
+
+      const lookupParams = {
+        tenantId: record.tenantId,
+        adapterType: record.adapterType,
+        companyId: record.algaCompanyId,
+        targetRealm: record.targetRealm ?? null
+      };
+
+      const existing =
+        (await this.lookupMapping(lookupParams, 'company', trx)) ??
+        (await this.lookupMapping(lookupParams, 'client', trx));
+
+      if (existing) {
         return;
       }
-      throw error;
-    }
+
+      const payload = {
+        id: trx.raw('gen_random_uuid()'),
+        tenant: record.tenantId,
+        integration_type: record.adapterType,
+        alga_entity_type: 'company',
+        alga_entity_id: record.algaCompanyId,
+        external_entity_id: record.externalCompanyId,
+        external_realm_id: record.targetRealm ?? null,
+        metadata: record.metadata ?? null
+      };
+
+      try {
+        await trx(TABLE_NAME).insert(payload);
+      } catch (error: any) {
+        if (error?.code !== '23505') {
+          throw error;
+        }
+      }
+    });
   }
 
   private lookupMapping(
@@ -72,9 +87,10 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
       companyId: string;
       targetRealm?: string | null;
     },
-    entityType: 'company' | 'client'
+    entityType: 'company' | 'client',
+    executor: Knex | Knex.Transaction = this.knex
   ) {
-    const query = this.knex(TABLE_NAME)
+    const query = executor(TABLE_NAME)
       .where({
         tenant: params.tenantId,
         integration_type: params.adapterType,

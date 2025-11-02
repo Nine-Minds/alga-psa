@@ -28,16 +28,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         } as MenuItem & { underConstruction?: boolean };
       }
 
-      // For System menu item, check advanced features flag
-      if (item.name === 'System' && !isAdvancedFeaturesEnabled) {
-        return {
-          ...item,
-          href: '/msp/jobs',
-          subItems: undefined,
-          underConstruction: true
-        } as MenuItem & { underConstruction?: boolean };
-      }
-
       return item;
     });
   }, [isAdvancedFeaturesEnabled]);

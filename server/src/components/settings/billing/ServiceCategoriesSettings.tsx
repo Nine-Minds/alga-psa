@@ -56,6 +56,16 @@ const ServiceCategoriesSettings: React.FC = () => {
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -223,6 +233,11 @@ const ServiceCategoriesSettings: React.FC = () => {
           id="service-categories-table"
           data={categories}
           columns={columns}
+          pagination={true}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
         />
         <div className="mt-4 flex gap-2">
           <Button 

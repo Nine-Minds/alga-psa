@@ -58,11 +58,11 @@ export const menuItems: MenuItem[] = [
     icon: Layers,
     href: '/msp/projects'
   },
-  // {
-  //   name: 'Assets',
-  //   icon: Monitor,
-  //   href: '/msp/assets'
-  // },
+  {
+    name: 'Assets',
+    icon: Monitor,
+    href: '/msp/assets'
+  },
   {
     name: 'Clients',
     icon: Building2,

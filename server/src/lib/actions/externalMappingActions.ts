@@ -49,6 +49,7 @@ export interface UpdateMappingData {
   external_entity_id?: string;
   sync_status?: 'synced' | 'pending' | 'error' | 'manual_link' | null;
   metadata?: object | null;
+  external_realm_id?: string | null;
   // Add other updatable fields as needed, ensuring they are safe to update
   // Avoid updating alga_entity_id, integration_type etc. directly, prefer delete/create
 }

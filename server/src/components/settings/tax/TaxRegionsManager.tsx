@@ -52,6 +52,16 @@ export function TaxRegionsManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRegion, setEditingRegion] = useState<ITaxRegion | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const form = useForm<TaxRegionFormData>({
     resolver: zodResolver(taxRegionSchema),
     defaultValues: {
@@ -250,6 +260,11 @@ export function TaxRegionsManager() {
             columns={columns}
             data={regions}
             onRowClick={(row) => handleOpenDialog(row)}
+            pagination={true}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
           />
         )}
       </CardContent>

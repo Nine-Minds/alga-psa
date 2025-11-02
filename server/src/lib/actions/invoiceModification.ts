@@ -930,7 +930,15 @@ export async function hardDeleteInvoice(invoiceId: string) {
       })
       .delete();
 
-    // 9. Delete invoice record
+    // 9. Delete invoice annotations (internal/external notes)
+    await trx('invoice_annotations')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .delete();
+
+    // 10. Delete invoice record
     await trx('invoices')
       .where({
         invoice_id: invoiceId,

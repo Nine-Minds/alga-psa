@@ -1,7 +1,7 @@
 // server/src/components/layout/RightSidebar.tsx
 'use client';
 
-import React, { useId, Suspense, lazy } from 'react';
+import React, { useEffect, useId, Suspense, lazy, useState } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 
 interface RightSidebarProps {
@@ -21,16 +21,11 @@ interface RightSidebarProps {
 
 const resolvedEdition =
   (process.env.NEXT_PUBLIC_EDITION ?? process.env.EDITION ?? '').toLowerCase();
-const isBrowser = typeof window !== 'undefined';
-const isLocalhost =
-  isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const isEnterpriseEdition =
-  resolvedEdition === 'enterprise' ||
-  resolvedEdition === 'ee' ||
-  isLocalhost;
-const EnterpriseRightSidebar = isEnterpriseEdition
-  ? lazy(() => import('../../../../ee/server/src/components/layout/RightSidebar'))
-  : null;
+const isEnterpriseEditionEnv =
+  resolvedEdition === 'enterprise' || resolvedEdition === 'ee';
+const EnterpriseRightSidebar = lazy(
+  () => import('../../../../ee/server/src/components/layout/RightSidebar')
+);
 
 const RightSidebar: React.FC<RightSidebarProps> = ({
   isOpen,
@@ -38,8 +33,23 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   ...props
 }) => {
   const collapsibleId = useId();
+  const [shouldUseEnterpriseSidebar, setShouldUseEnterpriseSidebar] = useState(
+    isEnterpriseEditionEnv
+  );
 
-  if (isEnterpriseEdition && EnterpriseRightSidebar) {
+  useEffect(() => {
+    if (isEnterpriseEditionEnv) {
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (host === 'localhost' || host === '127.0.0.1') {
+        setShouldUseEnterpriseSidebar(true);
+      }
+    }
+  }, [isEnterpriseEditionEnv]);
+
+  if (shouldUseEnterpriseSidebar) {
     return (
       <Suspense
         fallback={
@@ -54,7 +64,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       </Suspense>
     );
   }
-  
+
   return (
     <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
       <Collapsible.Content
