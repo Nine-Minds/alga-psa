@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { Card } from 'server/src/components/ui/Card';
@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetActionRail } from './AssetActionRail';
+import { AssetDetailDrawer, ASSET_DRAWER_TABS, AssetDrawerTab } from './AssetDetailDrawer';
 import {
   Monitor,
   Server,
@@ -32,7 +33,6 @@ import {
   Boxes,
   Clock,
   AlertTriangle,
-  CheckCircle2,
   TrendingUp,
   Filter,
   Search,
@@ -88,8 +88,130 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     'actions'
   ]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [drawerAssetId, setDrawerAssetId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activeDrawerTab, setActiveDrawerTab] = useState<AssetDrawerTab>(ASSET_DRAWER_TABS.OVERVIEW);
+  const drawerClosePendingRef = useRef(false);
 
   const shouldAutoOpenQuickAdd = useMemo(() => searchParams?.get('intent') === 'new-asset', [searchParams]);
+  const searchParamsString = useMemo(() => searchParams?.toString() ?? '', [searchParams]);
+
+  const panelParamToTab = useCallback((panel: string | null): AssetDrawerTab => {
+    switch ((panel || '').toLowerCase()) {
+      case 'maintenance':
+        return ASSET_DRAWER_TABS.MAINTENANCE;
+      case 'tickets':
+        return ASSET_DRAWER_TABS.TICKETS;
+      case 'configuration':
+        return ASSET_DRAWER_TABS.CONFIGURATION;
+      case 'documents':
+        return ASSET_DRAWER_TABS.DOCUMENTS;
+      default:
+        return ASSET_DRAWER_TABS.OVERVIEW;
+    }
+  }, []);
+
+  const tabToPanelParam = useCallback((tab: AssetDrawerTab): string => {
+    switch (tab) {
+      case ASSET_DRAWER_TABS.MAINTENANCE:
+        return 'maintenance';
+      case ASSET_DRAWER_TABS.TICKETS:
+        return 'tickets';
+      case ASSET_DRAWER_TABS.CONFIGURATION:
+        return 'configuration';
+      case ASSET_DRAWER_TABS.DOCUMENTS:
+        return 'documents';
+      default:
+        return 'overview';
+    }
+  }, []);
+
+  const buildDrawerUrl = useCallback((assetId: string, tab: AssetDrawerTab) => {
+    const params = new URLSearchParams(searchParamsString);
+    params.set('assetId', assetId);
+    params.set('panel', tabToPanelParam(tab));
+    const query = params.toString();
+    return query ? `/msp/assets?${query}` : '/msp/assets';
+  }, [searchParamsString, tabToPanelParam]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParamsString);
+    const assetParam = params.get('assetId');
+    const panelParam = params.get('panel');
+
+    if (drawerClosePendingRef.current) {
+      if (!assetParam) {
+        drawerClosePendingRef.current = false;
+      } else {
+        return;
+      }
+    }
+
+    if (assetParam) {
+      if (assetParam !== drawerAssetId) {
+        setDrawerAssetId(assetParam);
+      }
+      if (!isDrawerOpen) {
+        setIsDrawerOpen(true);
+      }
+      const resolvedTab = panelParamToTab(panelParam);
+      if (resolvedTab !== activeDrawerTab) {
+        setActiveDrawerTab(resolvedTab);
+      }
+    } else {
+      if (drawerAssetId !== null) {
+        setDrawerAssetId(null);
+      }
+      if (isDrawerOpen) {
+        setIsDrawerOpen(false);
+      }
+      if (activeDrawerTab !== ASSET_DRAWER_TABS.OVERVIEW) {
+        setActiveDrawerTab(ASSET_DRAWER_TABS.OVERVIEW);
+      }
+    }
+  }, [searchParamsString, panelParamToTab, drawerAssetId, isDrawerOpen, activeDrawerTab]);
+
+  const openDrawerForAsset = useCallback((asset: Asset, tab?: AssetDrawerTab) => {
+    const nextTab = tab ?? ASSET_DRAWER_TABS.OVERVIEW;
+    drawerClosePendingRef.current = false;
+    if (drawerAssetId !== asset.asset_id) {
+      setDrawerAssetId(asset.asset_id);
+    }
+    if (!isDrawerOpen) {
+      setIsDrawerOpen(true);
+    }
+    if (activeDrawerTab !== nextTab) {
+      setActiveDrawerTab(nextTab);
+    }
+    router.replace(buildDrawerUrl(asset.asset_id, nextTab), { scroll: false });
+  }, [activeDrawerTab, buildDrawerUrl, drawerAssetId, isDrawerOpen, router]);
+
+  const handleDrawerClose = useCallback(() => {
+    const params = new URLSearchParams(searchParamsString);
+    const hadAssetId = params.has('assetId');
+    params.delete('assetId');
+    params.delete('panel');
+
+    drawerClosePendingRef.current = true;
+    setIsDrawerOpen(false);
+    setDrawerAssetId(null);
+    setActiveDrawerTab(ASSET_DRAWER_TABS.OVERVIEW);
+
+    if (hadAssetId) {
+      const query = params.toString();
+      router.replace(query ? `/msp/assets?${query}` : '/msp/assets', { scroll: false });
+    }
+  }, [router, searchParamsString]);
+
+  const handleDrawerTabChange = useCallback((tab: AssetDrawerTab) => {
+    if (activeDrawerTab !== tab) {
+      setActiveDrawerTab(tab);
+    }
+    if (!drawerAssetId) {
+      return;
+    }
+    router.replace(buildDrawerUrl(drawerAssetId, tab), { scroll: false });
+  }, [activeDrawerTab, buildDrawerUrl, drawerAssetId, router]);
 
   const assetsByClient = useMemo(() => {
     return assets.reduce((acc, asset) => {
@@ -101,12 +223,6 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
   }, [assets]);
 
   const totalAssets = assets.length;
-  const assetsByStatus = useMemo(() => {
-    return assets.reduce((acc, asset) => {
-      acc[asset.status] = (acc[asset.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-  }, [assets]);
 
   useEffect(() => {
     async function loadMaintenanceSummaries() {
@@ -124,7 +240,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       setLoading(false);
     }
 
-    loadMaintenanceSummaries();
+    void loadMaintenanceSummaries();
   }, [assetsByClient]);
 
   useEffect(() => {
@@ -379,6 +495,8 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
               size="icon"
               className="h-8 w-8"
               aria-label={`Open actions for asset ${record.name}`}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
@@ -437,14 +555,14 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
             <div className="flex flex-wrap gap-2">
               <Button
                 id="refresh-assets-button"
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-                onClick={() => handleAssetAdded()}
-              >
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={() => { void handleAssetAdded(); }}
+            >
                 <RefreshCw className="h-4 w-4" /> Refresh data
               </Button>
-              <QuickAddAsset onAssetAdded={handleAssetAdded} defaultOpen={shouldAutoOpenQuickAdd} />
+              <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} defaultOpen={shouldAutoOpenQuickAdd} />
             </div>
           </div>
 
@@ -701,11 +819,19 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
               data={filteredAssets}
               columns={columns}
               pagination
-              onRowClick={(asset) => router.push(`/msp/assets/${asset.asset_id}`)}
+              onRowClick={(asset) => openDrawerForAsset(asset)}
             />
           </Card>
         </div>
       </div>
+
+      <AssetDetailDrawer
+        assetId={drawerAssetId}
+        isOpen={isDrawerOpen}
+        activeTab={activeDrawerTab}
+        onTabChange={handleDrawerTabChange}
+        onClose={handleDrawerClose}
+      />
 
       {loading && (
         <div {...withDataAutomationId({ id: 'loading-overlay' })} className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">

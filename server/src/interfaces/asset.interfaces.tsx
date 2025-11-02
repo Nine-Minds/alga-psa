@@ -133,6 +133,20 @@ export interface AssetAssociation {
   asset?: Asset;
 }
 
+export interface AssetTicketSummary {
+  ticket_id: string;
+  title: string;
+  status_id: string;
+  status_name: string;
+  priority_id?: string;
+  priority_name?: string;
+  linked_at: string;
+  updated_at?: string;
+  client_name?: string;
+  assigned_to_name?: string;
+  relationship_type?: string;
+}
+
 export interface AssetDocument {
   tenant: string;
   association_id: string;
