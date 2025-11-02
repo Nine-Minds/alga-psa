@@ -12,7 +12,7 @@ use once_cell::sync::Lazy;
 use reqwest::{Client, Method, StatusCode};
 use serde_json::{Map, Value};
 use std::collections::{HashMap, HashSet};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tracing::{self};
 use url::{form_urlencoded, Url};
 use wasmtime::component::{Accessor, HasSelf, Linker};
@@ -188,6 +188,26 @@ fn clone_context_for_host(state: &HostState) -> HostExecutionContext {
     state.context.clone()
 }
 
+fn redact_identifier(value: &str) -> String {
+    if value.is_empty() {
+        return "<empty>".to_string();
+    }
+    if value.len() <= 4 {
+        return "***".to_string();
+    }
+    let mut chars = value.chars();
+    let prefix: String = chars.by_ref().take(2).collect();
+    let suffix: String = value
+        .chars()
+        .rev()
+        .take(2)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect();
+    format!("{}…{}", prefix, suffix)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn make_storage_entry(
     namespace: String,
@@ -235,11 +255,12 @@ impl secrets::HostWithStore for HasSelf<HostState> {
         accessor: &Accessor<T, Self>,
         key: String,
     ) -> impl std::future::Future<Output = Result<String, SecretError>> + Send {
-        let (providers, material) = accessor.with(|mut access| {
+        let (providers, material, ctx) = accessor.with(|mut access| {
             let state = access.get();
             (
                 state.context.providers.clone(),
                 state.context.secrets.clone(),
+                state.context.clone(),
             )
         });
 
@@ -250,6 +271,14 @@ impl secrets::HostWithStore for HasSelf<HostState> {
             let Some(secrets) = material else {
                 return Err(SecretError::Missing);
             };
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                key_redacted=%redact_identifier(&key),
+                "secrets capability get attempt"
+            );
             match secrets.values.get(&key) {
                 Some(value) => Ok(value.clone()),
                 None => Err(SecretError::Missing),
@@ -260,11 +289,12 @@ impl secrets::HostWithStore for HasSelf<HostState> {
     fn list_keys<T>(
         accessor: &Accessor<T, Self>,
     ) -> impl std::future::Future<Output = Vec<String>> + Send {
-        let (providers, material) = accessor.with(|mut access| {
+        let (providers, material, ctx) = accessor.with(|mut access| {
             let state = access.get();
             (
                 state.context.providers.clone(),
                 state.context.secrets.clone(),
+                state.context.clone(),
             )
         });
 
@@ -272,9 +302,18 @@ impl secrets::HostWithStore for HasSelf<HostState> {
             if !has_capability(&providers, CAP_SECRETS_GET) {
                 return Vec::new();
             }
-            material
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            let keys: Vec<String> = material
                 .map(|s| s.values.keys().cloned().collect())
-                .unwrap_or_default()
+                .unwrap_or_default();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                key_count=keys.len(),
+                "secrets capability list_keys"
+            );
+            keys
         }
     }
 }
@@ -284,9 +323,13 @@ impl http::HostWithStore for HasSelf<HostState> {
         accessor: &Accessor<T, Self>,
         request: HttpRequest,
     ) -> impl std::future::Future<Output = Result<HttpResponse, HttpError>> + Send {
-        let (providers, config) = accessor.with(|mut access| {
+        let (providers, config, ctx) = accessor.with(|mut access| {
             let state = access.get();
-            (state.context.providers.clone(), state.runtime.clone())
+            (
+                state.context.providers.clone(),
+                state.runtime.clone(),
+                state.context.clone(),
+            )
         });
 
         async move {
@@ -294,12 +337,33 @@ impl http::HostWithStore for HasSelf<HostState> {
                 return Err(HttpError::NotAllowed);
             }
 
-            let url = Url::parse(&request.url).map_err(|_| HttpError::InvalidUrl)?;
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            let route = request.url.clone();
+            let method = request.method.clone();
+
+            let url = Url::parse(&route).map_err(|_| HttpError::InvalidUrl)?;
             if !is_host_allowed(&config.egress_allowlist, &url) {
+                tracing::warn!(
+                    tenant=%tenant,
+                    extension=%extension,
+                    method=%method,
+                    url=%route,
+                    "http capability denied by allowlist"
+                );
                 return Err(HttpError::NotAllowed);
             }
 
-            let method: Method = request.method.parse().map_err(|_| HttpError::InvalidUrl)?;
+            let method: Method = method.parse().map_err(|_| HttpError::InvalidUrl)?;
+            let started = Instant::now();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                method=%method,
+                url=%route,
+                "http capability fetch start"
+            );
+
             let mut builder = HTTP_CLIENT.request(method, url);
             for header in request.headers {
                 builder = builder.header(&header.name, &header.value);
@@ -314,6 +378,15 @@ impl http::HostWithStore for HasSelf<HostState> {
             })?;
 
             let status = response.status().as_u16();
+            let elapsed_ms = started.elapsed().as_millis();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                status,
+                elapsed_ms,
+                url=%route,
+                "http capability fetch completed"
+            );
             let mut headers = Vec::new();
             for (name, value) in response.headers().iter() {
                 headers.push(HttpHeader {
@@ -379,11 +452,12 @@ impl storage::HostWithStore for HasSelf<HostState> {
         namespace: String,
         key: String,
     ) -> impl std::future::Future<Output = Result<StorageEntry, StorageError>> + Send {
-        let (providers, install_id) = accessor.with(|mut access| {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
             let state = access.get();
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
+                state.context.clone(),
             )
         });
 
@@ -392,6 +466,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 return Err(StorageError::Denied);
             }
             let install_id = install_id.ok_or(StorageError::Denied)?;
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            let namespace_log = namespace.clone();
+            let key_log = key.clone();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                namespace=%namespace_log,
+                key_redacted=%redact_identifier(&key_log),
+                "storage capability get start"
+            );
             let mut payload = Map::new();
             payload.insert("namespace".into(), Value::String(namespace.clone()));
             payload.insert("key".into(), Value::String(key.clone()));
@@ -405,11 +490,12 @@ impl storage::HostWithStore for HasSelf<HostState> {
         accessor: &Accessor<T, Self>,
         entry: StorageEntry,
     ) -> impl std::future::Future<Output = Result<StorageEntry, StorageError>> + Send {
-        let (providers, install_id) = accessor.with(|mut access| {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
             let state = access.get();
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
+                state.context.clone(),
             )
         });
 
@@ -418,6 +504,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 return Err(StorageError::Denied);
             }
             let install_id = install_id.ok_or(StorageError::Denied)?;
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            let namespace_log = entry.namespace.clone();
+            let key_log = entry.key.clone();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                namespace=%namespace_log,
+                key_redacted=%redact_identifier(&key_log),
+                "storage capability put start"
+            );
 
             let mut payload = Map::new();
             payload.insert("namespace".into(), Value::String(entry.namespace.clone()));
@@ -451,11 +548,12 @@ impl storage::HostWithStore for HasSelf<HostState> {
         namespace: String,
         key: String,
     ) -> impl std::future::Future<Output = Result<(), StorageError>> + Send {
-        let (providers, install_id) = accessor.with(|mut access| {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
             let state = access.get();
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
+                state.context.clone(),
             )
         });
 
@@ -464,6 +562,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 return Err(StorageError::Denied);
             }
             let install_id = install_id.ok_or(StorageError::Denied)?;
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            let namespace_log = namespace.clone();
+            let key_log = key.clone();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                namespace=%namespace_log,
+                key_redacted=%redact_identifier(&key_log),
+                "storage capability delete start"
+            );
             let mut payload = Map::new();
             payload.insert("namespace".into(), Value::String(namespace));
             payload.insert("key".into(), Value::String(key));
@@ -481,11 +590,12 @@ impl storage::HostWithStore for HasSelf<HostState> {
         namespace: String,
         cursor: Option<String>,
     ) -> impl std::future::Future<Output = Result<Vec<StorageEntry>, StorageError>> + Send {
-        let (providers, install_id) = accessor.with(|mut access| {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
             let state = access.get();
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
+                state.context.clone(),
             )
         });
 
@@ -494,6 +604,17 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 return Err(StorageError::Denied);
             }
             let install_id = install_id.ok_or(StorageError::Denied)?;
+            let tenant = ctx.tenant_id.unwrap_or_default();
+            let extension = ctx.extension_id.unwrap_or_default();
+            let namespace_log = namespace.clone();
+            let cursor_log = cursor.clone();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                namespace=%namespace_log,
+                cursor=?cursor_log,
+                "storage capability list start"
+            );
             let mut payload = Map::new();
             payload.insert("namespace".into(), Value::String(namespace.clone()));
             payload.insert("includeValues".into(), Value::Bool(true));
@@ -631,6 +752,23 @@ async fn storage_request(
         base.trim_end_matches('/'),
         install_id
     );
+    let namespace_log = payload
+        .get("namespace")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let key_log = payload
+        .get("key")
+        .and_then(|v| v.as_str())
+        .map(|v| redact_identifier(v))
+        .unwrap_or_else(|| "<none>".to_string());
+    tracing::debug!(
+        install_id=%install_id,
+        operation=%operation,
+        namespace=%namespace_log,
+        key_redacted=%key_log,
+        "storage request dispatch"
+    );
 
     let response = HTTP_CLIENT
         .post(url)
@@ -679,3 +817,28 @@ impl http::Host for HostState {}
 impl storage::Host for HostState {}
 impl logging::Host for HostState {}
 impl ui_proxy::Host for HostState {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use url::Url;
+
+    #[test]
+    fn allowlist_checks_exact_and_subdomain() {
+        let allow = vec!["example.com".to_string()];
+        let exact = Url::parse("https://example.com/path").unwrap();
+        let sub = Url::parse("https://api.example.com/path").unwrap();
+        let other = Url::parse("https://example.org/path").unwrap();
+
+        assert!(is_host_allowed(&allow, &exact));
+        assert!(is_host_allowed(&allow, &sub));
+        assert!(!is_host_allowed(&allow, &other));
+    }
+
+    #[test]
+    fn redact_identifier_masks_sensitive_values() {
+        assert_eq!(redact_identifier(""), "<empty>");
+        assert_eq!(redact_identifier("id"), "***");
+        assert_eq!(redact_identifier("secret"), "se…et");
+    }
+}
