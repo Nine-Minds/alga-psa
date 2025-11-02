@@ -18,6 +18,7 @@ import {
   buildNormalizedCompanyPayload
 } from '../../services/companySync';
 import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 
 type DbInvoice = {
   invoice_id: string;
@@ -26,7 +27,6 @@ type DbInvoice = {
   due_date?: string | Date | null;
   total_amount: number;
   client_id?: string | null;
-  company_id?: string | null;
   currency_code?: string | null;
   exchange_rate_basis_points?: number | null;
 };
@@ -133,7 +133,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       const clientId =
         invoice.client_id ??
-        invoice.company_id ??
         exportLines.find((line) => line.client_id)?.client_id ??
         null;
 
@@ -347,22 +346,28 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       throw new Error('QuickBooks adapter requires batch tenant identifier for delivery');
     }
     const qboClient = await QboClientService.create(tenantId, realmId);
+    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
 
     for (const document of transformResult.documents) {
       const payload = document.payload as unknown as InvoiceDocumentPayload;
-      const mapping = await fetchInvoiceMapping(knex, tenantId, document.documentId, realmId);
+      const mapping = await invoiceMappingRepository.findInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId: document.documentId,
+        targetRealm: realmId
+      });
       const mappingMetadata = mapping?.metadata ?? null;
       const existingMetadata = mappingMetadata ?? undefined;
       let response: QboInvoice;
 
-      if (mapping?.external_entity_id) {
+      if (mapping?.externalInvoiceId) {
         let syncToken =
           existingMetadata?.sync_token ??
           existingMetadata?.syncToken;
         if (!syncToken) {
-          const remoteInvoice = await qboClient.read<QboInvoice>('Invoice', mapping.external_entity_id);
+          const remoteInvoice = await qboClient.read<QboInvoice>('Invoice', mapping.externalInvoiceId);
           syncToken = remoteInvoice?.SyncToken ?? undefined;
         }
 
@@ -372,7 +377,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
         const updatePayload = {
           ...payload.invoice,
-          Id: mapping.external_entity_id,
+          Id: mapping.externalInvoiceId,
           SyncToken: syncToken,
           sparse: true
         };
@@ -393,7 +398,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         throw new Error('QuickBooks adapter: QBO response missing Invoice Id');
       }
 
-      await upsertInvoiceMapping(knex, tenantId, document.documentId, realmId, externalRef, metadata);
+      await invoiceMappingRepository.upsertInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId: document.documentId,
+        externalInvoiceId: externalRef,
+        targetRealm: realmId,
+        metadata
+      });
 
       deliveredLines.push(
         ...document.lineIds.map((lineId) => ({
@@ -430,7 +442,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'due_date',
         'total_amount',
         'client_id',
-        'company_id',
         'currency_code',
         'exchange_rate_basis_points'
       )
@@ -484,8 +495,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     for (const invoice of invoices.values()) {
       if (invoice.client_id) {
         clientIds.add(invoice.client_id);
-      } else if (invoice.company_id) {
-        clientIds.add(invoice.company_id);
       }
     }
 
@@ -533,63 +542,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
     return { clients: clientMap, mappings: mappingMap };
   }
-}
-
-async function fetchInvoiceMapping(
-  knex: Knex,
-  tenantId: string,
-  invoiceId: string,
-  realmId: string
-): Promise<MappingRow | undefined> {
-  const row = await knex<MappingRowRaw>('tenant_external_entity_mappings')
-    .where('tenant', tenantId)
-    .andWhere('integration_type', QuickBooksOnlineAdapter.TYPE)
-    .andWhere('alga_entity_type', 'invoice')
-    .andWhere('alga_entity_id', invoiceId)
-    .andWhere((builder) => {
-      builder.where('external_realm_id', realmId).orWhereNull('external_realm_id');
-    })
-    .first();
-
-  return row ? normalizeMapping(row) : undefined;
-}
-
-async function upsertInvoiceMapping(
-  knex: Knex,
-  tenantId: string,
-  invoiceId: string,
-  realmId: string,
-  externalId: string,
-  metadata: Record<string, unknown> | null
-): Promise<void> {
-  const now = new Date().toISOString();
-  let cleanedMetadata: Record<string, unknown> | null = null;
-  if (metadata && Object.keys(metadata).length > 0) {
-    cleanedMetadata = metadata;
-  }
-
-  await knex('tenant_external_entity_mappings')
-    .insert({
-      id: knex.raw('gen_random_uuid()'),
-      tenant: tenantId,
-      integration_type: QuickBooksOnlineAdapter.TYPE,
-      alga_entity_type: 'invoice',
-      alga_entity_id: invoiceId,
-      external_entity_id: externalId,
-      external_realm_id: realmId,
-      sync_status: 'synced',
-      metadata: cleanedMetadata,
-      created_at: now,
-      updated_at: now
-    })
-    .onConflict(['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
-    .merge({
-      external_entity_id: externalId,
-      external_realm_id: realmId,
-      sync_status: 'synced',
-      metadata: cleanedMetadata,
-      updated_at: now
-    });
 }
 
 function centsToAmount(value: number): number {

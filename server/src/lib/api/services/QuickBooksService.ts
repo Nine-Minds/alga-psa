@@ -140,13 +140,20 @@ export class QuickBooksService {
     const clientInfo = await this.getClientInfo(credentials);
 
     // Update connection status
+    const nowIso = new Date().toISOString();
     const connectionStatus: QboConnectionStatusResponse = {
       connected: true,
-      status: 'Connected',
-      clientName: clientInfo.Name,
-      realmId: data.realmId,
-      connectionDate: new Date().toISOString(),
-      lastSyncDate: undefined
+      connections: [
+        {
+          realmId: data.realmId,
+          displayName: clientInfo.Name ?? data.realmId,
+          status: 'active',
+          lastValidatedAt: nowIso,
+          error: null
+        }
+      ],
+      defaultRealmId: data.realmId,
+      error: undefined
     };
 
     await this.db.upsert('qbo_connections',
@@ -155,8 +162,8 @@ export class QuickBooksService {
         tenant: tenantId,
         realm_id: data.realmId,
         client_name: clientInfo.Name,
-        status: 'Connected',
-        connected_at: new Date().toISOString(),
+        status: 'active',
+        connected_at: nowIso,
         last_sync_at: null,
         sync_settings: {}
       }
@@ -192,30 +199,69 @@ export class QuickBooksService {
   ): Promise<SuccessResponse<QboConnectionStatusResponse>> {
     await validateTenantAccess(tenantId);
 
-    const connection = await this.db.findOne('qbo_connections', { tenant: tenantId });
+    const connections = await this.db.find('qbo_connections', { tenant: tenantId });
 
-    if (!connection) {
+    if (!connections || connections.length === 0) {
       return {
         success: true,
         data: {
           connected: false,
-          status: 'Not Connected'
+          connections: [],
+          defaultRealmId: null,
+          error: 'No QuickBooks connections configured.'
         }
       };
     }
 
-    const credentials = await this.getStoredCredentials(tenantId);
-    const isExpired = credentials && new Date(credentials.accessTokenExpiresAt) < new Date();
+    type ConnectionSummary = QboConnectionStatusResponse['connections'][number];
+
+    const summaries: ConnectionSummary[] = connections.map((connection: any) => {
+      const rawStatus = String(connection.status ?? '').toLowerCase();
+      let status: ConnectionSummary['status'] = 'error';
+      if (rawStatus === 'connected' || rawStatus === 'active') {
+        status = 'active';
+      } else if (rawStatus === 'expired' || rawStatus === 'reauthorization_required') {
+        status = 'expired';
+      }
+
+      const displayName =
+        typeof connection.client_name === 'string' && connection.client_name.trim().length > 0
+          ? connection.client_name
+          : connection.realm_id;
+
+      const lastValidatedAtRaw =
+        connection.last_sync_at ?? connection.connected_at ?? null;
+      const lastValidatedAt =
+        typeof lastValidatedAtRaw === 'string'
+          ? lastValidatedAtRaw
+          : lastValidatedAtRaw instanceof Date
+            ? lastValidatedAtRaw.toISOString()
+            : null;
+
+      return {
+        realmId: connection.realm_id,
+        displayName,
+        status,
+        lastValidatedAt,
+        error: status === 'active' ? null : null
+      };
+    });
+
+    const hasActive = summaries.some((summary) => summary.status === 'active');
+    const defaultRealmId = summaries[0]?.realmId ?? null;
+    const aggregatedError =
+      hasActive || summaries.length === 0
+        ? undefined
+        : summaries.find((summary) => summary.error)?.error ??
+          'QuickBooks connections require attention. Please reconnect.';
 
     return {
       success: true,
       data: {
-        connected: !isExpired,
-        status: isExpired ? 'Expired' : connection.status,
-        clientName: connection.client_name,
-        realmId: connection.realm_id,
-        connectionDate: connection.connected_at,
-        lastSyncDate: connection.last_sync_at
+        connected: hasActive,
+        connections: summaries,
+        defaultRealmId,
+        error: aggregatedError
       }
     };
   }
@@ -732,7 +778,7 @@ export class QuickBooksService {
     const health: IntegrationHealthResponse = {
       overall_status: overallStatus,
       last_health_check: new Date().toISOString(),
-      connection_status: connectionStatus.data.status,
+      connection_status: connectionStatus.data,
       sync_statistics: await this.getSyncStatistics(tenantId),
       health_checks: healthChecks
     };

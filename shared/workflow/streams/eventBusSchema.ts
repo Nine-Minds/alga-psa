@@ -18,10 +18,6 @@ export const EventTypeEnum = z.enum([
   'INVOICE_GENERATED',
   'INVOICE_FINALIZED',
   'CUSTOM_EVENT', // Added for test events
-  'INVOICE_CREATED', // QBO Invoice Created
-  'INVOICE_UPDATED', // QBO Invoice Updated
-  'CLIENT_CREATED', // QBO Client Created
-  'CLIENT_UPDATED', // QBO Client Updated
   'INBOUND_EMAIL_RECEIVED', // Inbound email processing
   'ACCOUNTING_EXPORT_COMPLETED',
   'ACCOUNTING_EXPORT_FAILED',
@@ -213,10 +209,6 @@ export const EventPayloadSchemas = {
   INVOICE_GENERATED: InvoiceEventPayloadSchema,
   INVOICE_FINALIZED: InvoiceEventPayloadSchema,
   CUSTOM_EVENT: CustomEventPayloadSchema,
-  INVOICE_CREATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
-  INVOICE_UPDATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
-  CLIENT_CREATED: ClientEventPayloadSchema, // Client creation event
-  CLIENT_UPDATED: ClientEventPayloadSchema, // Client update event
   INBOUND_EMAIL_RECEIVED: InboundEmailEventPayloadSchema, // Inbound email processing
   ACCOUNTING_EXPORT_COMPLETED: AccountingExportEventPayloadSchema,
   ACCOUNTING_EXPORT_FAILED: AccountingExportEventPayloadSchema,
@@ -290,10 +282,6 @@ export type Event =
   | InboundEmailReceivedEvent
   | AccountingExportCompletedEvent
   | AccountingExportFailedEvent
-  | z.infer<typeof EventSchemas.INVOICE_CREATED> // QBO Invoice Created
-  | z.infer<typeof EventSchemas.INVOICE_UPDATED> // QBO Invoice Updated
-  | z.infer<typeof EventSchemas.CLIENT_CREATED> // QBO Client Created
-  | z.infer<typeof EventSchemas.CLIENT_UPDATED> // QBO Client Updated
   | ScheduleEntryCreatedEvent
   | ScheduleEntryUpdatedEvent
   | ScheduleEntryDeletedEvent
