@@ -43,19 +43,15 @@ export class AccountingExportValidation {
 
     const invoices = invoiceIds.size > 0
       ? await knex('invoices')
-          .select('invoice_id', 'client_id', 'company_id')
+          .select('invoice_id', 'client_id')
           .whereIn('invoice_id', Array.from(invoiceIds))
           .andWhere({ tenant: batch.tenant })
       : [];
-    const invoicesById = new Map(invoices.map((row) => [row.invoice_id, row]));
-
     const clientIds = new Set<string>();
     if (isQuickBooks) {
       for (const invoice of invoices) {
         if (invoice.client_id) {
           clientIds.add(invoice.client_id);
-        } else if (invoice.company_id) {
-          clientIds.add(invoice.company_id);
         }
       }
     }
@@ -144,7 +140,7 @@ export class AccountingExportValidation {
       }
 
       for (const invoice of invoices) {
-        const clientRef = invoice.client_id ?? invoice.company_id ?? null;
+        const clientRef = invoice.client_id ?? null;
         if (!clientRef) {
           const lineId = firstLineByInvoice.get(invoice.invoice_id);
           if (lineId && !missingClientRefs.has(invoice.invoice_id)) {
