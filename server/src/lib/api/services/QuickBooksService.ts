@@ -199,7 +199,7 @@ export class QuickBooksService {
   ): Promise<SuccessResponse<QboConnectionStatusResponse>> {
     await validateTenantAccess(tenantId);
 
-    const connections = await this.db.find('qbo_connections', { tenant: tenantId });
+    const connections = await this.db.findMany('qbo_connections', { tenant: tenantId });
 
     if (!connections || connections.length === 0) {
       return {
