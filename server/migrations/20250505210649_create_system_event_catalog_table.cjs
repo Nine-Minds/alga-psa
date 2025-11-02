@@ -72,9 +72,6 @@ exports.up = async function(knex) {
         },
         required: ['companyId', 'updatedFields', 'updatedByUserId']
       })
-    },
-        required: ['invoiceId', 'updatedFields']
-      })
     }
   ];
 
