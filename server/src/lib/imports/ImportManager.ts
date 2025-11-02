@@ -20,6 +20,7 @@ import { AbstractImporter } from './AbstractImporter';
 import type { FieldMappingTemplate } from '@/types/imports.types';
 import { ImportPreviewManager } from './ImportPreviewManager';
 import { FieldMapper } from './FieldMapper';
+import { ExternalEntityMappingRepository, ExternalMappingPayload } from './ExternalEntityMappingRepository';
 
 type ImportJobQuery = KnexType.QueryBuilder<ImportJobRecord, ImportJobRecord[]>;
 
@@ -51,6 +52,7 @@ const normaliseStatusFilter = (status?: ImportJobStatus | ImportJobStatus[]): Im
  */
 export class ImportManager {
   private readonly registry: ImportRegistry;
+  private readonly externalMappings = new ExternalEntityMappingRepository();
 
   constructor(registry: ImportRegistry = ImportRegistry.getInstance()) {
     this.registry = registry;
@@ -72,22 +74,91 @@ export class ImportManager {
       .select('source_type')
       .where({ tenant: tenantId });
 
-    const existing = new Set(existingSources.map((row) => row.source_type.toLowerCase()));
+    const existing = new Map(
+      existingSources.map((row) => [row.source_type.toLowerCase(), row.source_type])
+    );
 
     for (const importer of this.registry.list()) {
-      if (existing.has(importer.sourceType.toLowerCase())) {
+      const existingKey = importer.sourceType.toLowerCase();
+      if (existing.has(existingKey)) {
+        const strategy = importer.getDuplicateDetectionStrategy();
+        const metadataDefaults = importer.getMetadata();
+
+        if (strategy || metadataDefaults) {
+          const current = await knex<ImportSourceRecord>('import_sources')
+            .select('metadata', 'duplicate_detection_fields')
+            .where({
+              tenant: tenantId,
+              source_type: existing.get(existingKey)!
+            })
+            .first();
+
+          let fieldsChanged = false;
+          let metadataChanged = false;
+
+          const nextMetadata: Record<string, unknown> = {
+            ...(current?.metadata ?? {})
+          };
+
+          if (metadataDefaults) {
+            for (const [key, value] of Object.entries(metadataDefaults)) {
+              if (!(key in nextMetadata)) {
+                nextMetadata[key] = value;
+                metadataChanged = true;
+              }
+            }
+          }
+
+          if (
+            strategy &&
+            (!current?.duplicate_detection_fields ||
+              current.duplicate_detection_fields.length === 0)
+          ) {
+            fieldsChanged = true;
+          }
+
+          if (strategy && !('duplicateDetectionStrategy' in nextMetadata)) {
+            nextMetadata.duplicateDetectionStrategy = strategy;
+            metadataChanged = true;
+          }
+
+          if (fieldsChanged || metadataChanged) {
+            await knex<ImportSourceRecord>('import_sources')
+              .where({
+                tenant: tenantId,
+                source_type: existing.get(existingKey)!
+              })
+              .update({
+                duplicate_detection_fields: fieldsChanged ? strategy?.exactFields ?? null : current?.duplicate_detection_fields ?? null,
+                metadata: metadataChanged ? nextMetadata : current?.metadata ?? null,
+                updated_at: knex.fn.now()
+              });
+          }
+        }
+
         continue;
       }
+
+      const defaultFieldMapping = importer.getDefaultFieldMapping();
+      const duplicateStrategy = importer.getDuplicateDetectionStrategy();
+      const baseMetadata = importer.getMetadata() ?? undefined;
+      const combinedMetadata =
+        duplicateStrategy !== undefined
+          ? {
+              ...(baseMetadata ?? {}),
+              duplicateDetectionStrategy: duplicateStrategy
+            }
+          : baseMetadata;
 
       await knex('import_sources').insert({
         tenant: tenantId,
         source_type: importer.sourceType,
         name: importer.name,
         description: importer.description,
-        field_mapping: toTemplate(importer.getDefaultFieldMapping()),
-        duplicate_detection_fields: null,
+        field_mapping: toTemplate(defaultFieldMapping),
+        duplicate_detection_fields: duplicateStrategy?.exactFields ?? null,
         is_active: true,
-        metadata: importer.getMetadata() ?? null
+        metadata: combinedMetadata ?? null
       });
     }
   }
@@ -410,5 +481,15 @@ export class ImportManager {
     });
     await previewManager.persist(options.importJobId, result);
     return result;
+  }
+
+  async saveExternalMapping(
+    tenantId: string,
+    payload: Omit<ExternalMappingPayload, 'tenantId'>
+  ): Promise<void> {
+    await this.externalMappings.upsertMapping({
+      ...payload,
+      tenantId
+    });
   }
 }

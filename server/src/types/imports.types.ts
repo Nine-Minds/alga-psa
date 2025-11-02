@@ -189,6 +189,8 @@ export interface PreviewRow {
   values: Record<string, unknown>;
   validationErrors?: ImportValidationError[];
   duplicate?: DuplicateCheckResult | null;
+  externalId?: string;
+  externalHash?: string;
 }
 
 export interface ImportPreviewSummary {

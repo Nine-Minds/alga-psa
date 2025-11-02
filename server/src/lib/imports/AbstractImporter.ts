@@ -68,6 +68,13 @@ export abstract class AbstractImporter<TRecord extends ParsedRecord = ParsedReco
   }
 
   /**
+   * Provide a default duplicate detection configuration for this importer.
+   */
+  getDuplicateDetectionStrategy(): DuplicateDetectionStrategy | undefined {
+    return undefined;
+  }
+
+  /**
    * Expose additional metadata (icons, descriptions, etc.) for UI consumption.
    */
   getMetadata(): Record<string, unknown> | undefined {

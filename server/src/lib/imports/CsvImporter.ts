@@ -84,6 +84,10 @@ export class CsvImporter extends AbstractImporter {
     return records.slice(0, limit);
   }
 
+  getDuplicateDetectionStrategy(): DuplicateDetectionStrategy | undefined {
+    return this.duplicateStrategy;
+  }
+
   private async parseCsv(text: string): Promise<ParsedRecord[]> {
     return new Promise<ParsedRecord[]>((resolve, reject) => {
       const rows: ParsedRecord[] = [];

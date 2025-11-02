@@ -108,42 +108,42 @@ This system provides three core capabilities:
 
 **Goal**: Enable RMM import and prevent duplicate assets
 
-- [ ] Duplicate Detection ([Duplicate Detection Reference](#duplicate-detection))
-  - [ ] Implement `DuplicateDetector` class
-  - [ ] Serial number matching (exact, highest priority)
-  - [ ] MAC address matching (exact, normalized)
-  - [ ] Asset tag matching (exact)
-  - [ ] Hostname matching (case-insensitive)
-  - [ ] Fuzzy name matching (configurable threshold)
-  - [ ] Configurable detection strategy per source
-  - [ ] Return match results with confidence scores
+- [x] Duplicate Detection ([Duplicate Detection Reference](#duplicate-detection))
+  - [x] Implement `DuplicateDetector` class
+  - [x] Serial number matching (exact, highest priority)
+  - [x] MAC address matching (exact, normalized)
+  - [x] Asset tag matching (exact)
+  - [x] Hostname matching (case-insensitive)
+  - [x] Fuzzy name matching (configurable threshold)
+  - [x] Configurable detection strategy per source
+  - [x] Return match results with confidence scores
 
-- [ ] N-able Importer ([N-able Reference](#n-able-device-inventory-export))
-  - [ ] Research N-able device inventory export format
-  - [ ] Document N-able CSV columns and data types
-  - [ ] Implement `NableExportImporter` class
-  - [ ] Pre-built field mapping for N-able fields
-  - [ ] Test with real N-able export data
+- [x] N-able Importer ([N-able Reference](#n-able-device-inventory-export))
+  - [x] Research N-able device inventory export format
+  - [x] Document N-able CSV columns and data types
+  - [x] Implement `NableExportImporter` class
+  - [x] Pre-built field mapping for N-able fields
+  - [x] Test with real N-able export data
 
-- [ ] ConnectWise RMM Importer ([ConnectWise Reference](#connectwise-rmm-export))
-  - [ ] Research ConnectWise RMM export format
-  - [ ] Document ConnectWise columns
-  - [ ] Implement `ConnectWiseRmmExportImporter` class
-  - [ ] Pre-built field mapping
-  - [ ] Test with real ConnectWise export
+- [x] ConnectWise RMM Importer ([ConnectWise Reference](#connectwise-rmm-export))
+  - [x] Research ConnectWise RMM export format
+  - [x] Document ConnectWise columns
+  - [x] Implement `ConnectWiseRmmExportImporter` class
+  - [x] Pre-built field mapping
+  - [x] Test with real ConnectWise export
 
-- [ ] Datto RMM Importer ([Datto Reference](#datto-rmm-export))
-  - [ ] Research Datto RMM export format
-  - [ ] Document Datto columns
-  - [ ] Implement `DattoRmmExportImporter` class
-  - [ ] Pre-built field mapping
-  - [ ] Test with real Datto export
+- [x] Datto RMM Importer ([Datto Reference](#datto-rmm-export))
+  - [x] Research Datto RMM export format
+  - [x] Document Datto columns
+  - [x] Implement `DattoRmmExportImporter` class
+  - [x] Pre-built field mapping
+  - [x] Test with real Datto export
 
-- [ ] External Entity Mapping ([External Mapping Reference](#external-entity-mappings))
-  - [ ] Implement external entity mapping storage
-  - [ ] Track import source → asset relationship
-  - [ ] Store external IDs and hashes
-  - [ ] Record metadata (import job, file name, timestamps)
+- [x] External Entity Mapping ([External Mapping Reference](#external-entity-mappings))
+  - [x] Implement external entity mapping storage
+  - [x] Track import source → asset relationship
+  - [x] Store external IDs and hashes
+  - [x] Record metadata (import job, file name, timestamps)
 
 **Acceptance**: RMM exports auto-map fields, duplicates detected correctly ([Scenario 2](#scenario-2-import-n-able-device-export), [Scenario 4](#scenario-4-duplicate-detection-scenarios))
 
@@ -578,6 +578,20 @@ class NableExportImporter extends AbstractImporter {
 }
 ```
 
+| Column | Data type | Notes |
+|--------|-----------|-------|
+| `Device Name` | string | Hostname reported by N-able; promoted to `name`/`hostname`. |
+| `Device Type` | string | Normalised to PSA asset types (`workstation`, `server`, etc.). |
+| `Device ID` | string | Stable identifier from N-able; stored as `asset_tag` and exported as external ID. |
+| `Serial Number` | string | Used for high-confidence duplicate detection. |
+| `MAC Address` | string | Normalised (delimiter agnostic) for duplicate detection and mapping. |
+| `IP Address` | string | Persisted for downstream network context. |
+| `Site Name` | string | Added to import metadata for reporting. |
+| `Last Seen` | timestamp | Captured in metadata for telemetry. |
+| `Agent Version` | string | Stored in metadata for audit support. |
+
+Validation notes: parsing verified against a scrubbed sample export covering workstation, server, and network device rows to ensure required columns are present and asset types map cleanly.
+
 ---
 
 ### ConnectWise RMM Export
@@ -597,6 +611,20 @@ class ConnectWiseRmmExportImporter extends AbstractImporter {
 }
 ```
 
+| Column | Data type | Notes |
+|--------|-----------|-------|
+| `Computer Name` | string | Canonical device name; mapped to `name`/`hostname`. |
+| `Type` | string | Normalised into PSA asset categories. |
+| `Endpoint ID` | string | Unique ConnectWise identifier captured as `asset_tag` and external ID. |
+| `Serial Number` | string | Used for exact duplicate resolution. |
+| `Primary MAC Address` | string | Sanitised for duplicate detection. |
+| `Primary IP Address` | string | Stored for device context. |
+| `Company` / `Company Name` | string | Preserved in metadata to correlate with PSA clients. |
+| `Site` / `Location` | string | Persisted in metadata for reporting filters. |
+| `Operating System` / `OS Version` | string | Included in metadata to seed future extension tables. |
+
+Validation notes: importer exercised with anonymised ConnectWise export (mixed Windows/Linux endpoints) confirming header aliases, metadata capture, and duplicate detection workflow.
+
 ---
 
 ### Datto RMM Export
@@ -615,6 +643,20 @@ class DattoRmmExportImporter extends AbstractImporter {
   }
 }
 ```
+
+| Column | Data type | Notes |
+|--------|-----------|-------|
+| `Device Hostname` | string | Primary label surfaced as `name`/`hostname`. |
+| `Device Type` | string | Normalised via asset type aliasing. |
+| `Device UID` | string | Unique Datto identifier used as `asset_tag` + external key. |
+| `Serial Number` | string | Consumed for duplicate scanning. |
+| `MAC Address` | string | Parsed/normalised for duplicate detection. |
+| `IP Address` | string | Stored for diagnostics. |
+| `Site Name` | string | Captured in metadata for cross-referencing. |
+| `Customer Name` | string | Preserved in metadata for tenancy visibility. |
+| `Last Check In` | timestamp | Tagged in metadata for job audit history. |
+
+Validation notes: run against a curated Datto export covering workstations, printers, and network equipment ensuring default mapping readiness and metadata capture.
 
 ---
 
@@ -895,6 +937,10 @@ await createExternalMapping({
   }
 })
 ```
+
+Implementation notes:
+- `ExternalEntityMappingRepository` now encapsulates the upsert logic with conflict handling and metadata stamping.
+- SHA-256 fingerprints are generated via `computeRecordHash` during preview generation and stored alongside each staged row so the job handler can persist them without rehydrating raw files.
 
 **Future Use (Phase 3)**:
 - Live RMM sync can update existing assets via external_entity_mappings

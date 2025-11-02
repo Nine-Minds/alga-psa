@@ -2,24 +2,32 @@
 
 import { createTenantKnex } from '@/lib/db';
 import { ImportManager } from '@/lib/imports/ImportManager';
-import { ImportPreviewManager } from '@/lib/imports/ImportPreviewManager';
 import { ImportRegistry } from '@/lib/imports/ImportRegistry';
 import { CsvImporter } from '@/lib/imports/CsvImporter';
+import { NableExportImporter } from '@/lib/imports/NableExportImporter';
+import { ConnectWiseRmmExportImporter } from '@/lib/imports/ConnectWiseRmmExportImporter';
+import { DattoRmmExportImporter } from '@/lib/imports/DattoRmmExportImporter';
 import { getAssetFieldDefinitions } from '@/lib/imports/assetFieldDefinitions';
 import { DuplicateDetector } from '@/lib/imports/DuplicateDetector';
+import { Buffer } from 'node:buffer';
 import type {
   FieldMapping,
   FieldMappingTemplate,
   ImportFilters,
   PreviewComputationResult,
   PreviewGenerationOptions,
-  ParsedRecord
+  DuplicateDetectionStrategy
 } from '@/types/imports.types';
 import { getCurrentUser } from '../user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
 const importRegistry = ImportRegistry.getInstance();
-importRegistry.register(new CsvImporter());
+importRegistry.registerMany([
+  new CsvImporter(),
+  new NableExportImporter(),
+  new ConnectWiseRmmExportImporter(),
+  new DattoRmmExportImporter()
+]);
 
 const importManager = new ImportManager(importRegistry);
 
@@ -76,17 +84,26 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
 }> {
   const { tenant, userId } = await requirePermission('manage');
 
-  const importSourceId = formData.get('importSourceId') as string;
-  const fieldMapping = JSON.parse(String(formData.get('fieldMapping') ?? '[]')) as FieldMapping[];
-  const file = formData.get('file') as File;
+  const importSourceId = formData.get('importSourceId');
+  const mappingRaw = formData.get('fieldMapping');
+  const fileEntry = formData.get('file');
+  const persistTemplateEntry = formData.get('persistTemplate');
 
-  if (!importSourceId) {
+  if (typeof importSourceId !== 'string' || importSourceId.trim().length === 0) {
     throw new Error('Missing importSourceId');
   }
 
-  if (!file) {
+  const fieldMapping = JSON.parse(
+    typeof mappingRaw === 'string' && mappingRaw.trim().length > 0 ? mappingRaw : '[]'
+  ) as FieldMapping[];
+
+  if (!(fileEntry instanceof File)) {
     throw new Error('No file provided');
   }
+
+  const file = fileEntry;
+  const shouldPersistTemplate =
+    typeof persistTemplateEntry === 'string' ? persistTemplateEntry === 'true' : false;
 
   const source = await importManager.getSourceById(tenant, importSourceId);
   if (!source) {
@@ -121,14 +138,22 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
     totalRows: parsedRecords.length,
   });
 
-  const duplicateDetector = new DuplicateDetector(tenant, {
-    exactFields: ['serial_number', 'asset_tag', 'mac_address'],
-  });
+  const defaultStrategy = importer.getDuplicateDetectionStrategy();
+  const metadataStrategy = source.metadata?.duplicateDetectionStrategy as
+    | DuplicateDetectionStrategy
+    | undefined;
+  const duplicateStrategy: DuplicateDetectionStrategy = defaultStrategy ?? metadataStrategy ?? {
+    exactFields: ['serial_number', 'asset_tag', 'mac_address', 'hostname'],
+    fuzzyFields: ['name'],
+    fuzzyThreshold: 0.82
+  };
+
+  const duplicateDetector = new DuplicateDetector(tenant, duplicateStrategy);
 
   const options: PreviewGenerationOptions = {
     tenantId: tenant,
     importJobId: job.import_job_id,
-    records: parsedRecords as ParsedRecord[],
+    records: parsedRecords,
     fieldDefinitions: getAssetFieldDefinitions(),
     fieldMapping,
     duplicateDetector,
@@ -136,16 +161,15 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
 
   const result = await importManager.preparePreview(options);
 
-  const persistTemplate = String(formData.get('persistTemplate') ?? 'false') === 'true';
-  if (persistTemplate) {
-    const template: FieldMappingTemplate = fieldMapping.reduce((acc, mapping) => {
+  if (shouldPersistTemplate) {
+    const template = fieldMapping.reduce<FieldMappingTemplate>((acc, mapping) => {
       acc[mapping.sourceField] = {
         target: mapping.targetField,
         required: mapping.required,
         transformer: mapping.transformer,
       };
       return acc;
-    }, {} as FieldMappingTemplate);
+    }, {});
 
     await importManager.saveFieldMappingTemplate(tenant, importSourceId, template);
   }

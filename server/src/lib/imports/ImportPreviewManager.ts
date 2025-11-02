@@ -1,10 +1,10 @@
 import { getConnection } from '@/lib/db/db';
 import { ImportValidationError, logImportError } from '@/lib/imports/errors';
 import { createImportErrorCollector } from '@/lib/imports/ErrorCollector';
+import { computeRecordHash } from '@/lib/imports/ExternalEntityMappingRepository';
 import type {
   ImportErrorSummary,
   ImportJobMetrics,
-  ImportPreviewSummary,
   PreviewComputationResult,
   PreviewData,
   PreviewGenerationOptions,
@@ -31,7 +31,7 @@ export class ImportPreviewManager {
     try {
       const knex = await getConnection(this.tenantId);
       await knex.raw("SELECT set_config('app.current_tenant', ?, false)", [this.tenantId]);
-    } catch (error) {
+    } catch {
       // ignore if parameter not required (e.g., during unit tests)
     }
   }
@@ -70,6 +70,12 @@ export class ImportPreviewManager {
         }
       }
 
+      const externalHash = computeRecordHash(record.raw ?? {});
+      record.metadata = {
+        ...(record.metadata ?? {}),
+        externalHash
+      };
+
       if (validationErrors.length === 0 && !(duplicateResult?.isDuplicate)) {
         validRows += 1;
       }
@@ -80,6 +86,8 @@ export class ImportPreviewManager {
           values: record.raw,
           validationErrors: validationErrors.length ? validationErrors : undefined,
           duplicate: duplicateResult ?? null,
+          externalId: record.externalId,
+          externalHash
         });
       }
     }
