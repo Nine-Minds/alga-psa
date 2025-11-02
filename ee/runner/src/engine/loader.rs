@@ -10,9 +10,11 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use wasmtime::{
-    component::{Component, Linker},
+    component::{Component, Linker, ResourceTable},
     Config, Engine, InstanceAllocationStrategy, PoolingAllocationConfig, ResourceLimiter, Store,
 };
+use wasmtime_wasi::{WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
+use wasmtime_wasi_http::{WasiHttpCtx, WasiHttpView};
 
 use super::component;
 use super::host_api::{
@@ -22,6 +24,15 @@ use crate::cache::fs as cache_fs;
 use aws_credential_types::Credentials as AwsCredentials;
 use aws_sdk_s3::{config as s3config, Client as S3Client};
 use url::Url;
+
+const DEFAULT_MAX_MEMORY_MB: u64 = 256;
+const DEFAULT_POOL_TOTAL_COMPONENTS: u32 = 256;
+const DEFAULT_POOL_TOTAL_MEMORIES: u32 = 256;
+const DEFAULT_POOL_TOTAL_TABLES: u32 = 256;
+const DEFAULT_POOL_TOTAL_STACKS: u32 = 512;
+const DEFAULT_MAX_CORE_INSTANCE_SIZE: usize = 1 << 20;
+const DEFAULT_MAX_COMPONENT_INSTANCE_SIZE: usize = 1 << 20;
+const EPOCH_TICK_MS: u64 = 10;
 
 pub struct ModuleLoader {
     pub engine: Engine,
@@ -52,6 +63,9 @@ pub(crate) struct HostState {
     max_memory: usize,
     pub runtime: HostRuntimeConfig,
     pub context: HostExecutionContext,
+    wasi: WasiCtx,
+    table: ResourceTable,
+    http: WasiHttpCtx,
 }
 
 impl ResourceLimiter for HostState {
@@ -73,6 +87,25 @@ impl ResourceLimiter for HostState {
     }
 }
 
+impl WasiView for HostState {
+    fn ctx(&mut self) -> WasiCtxView<'_> {
+        WasiCtxView {
+            ctx: &mut self.wasi,
+            table: &mut self.table,
+        }
+    }
+}
+
+impl WasiHttpView for HostState {
+    fn ctx(&mut self) -> &mut WasiHttpCtx {
+        &mut self.http
+    }
+
+    fn table(&mut self) -> &mut ResourceTable {
+        &mut self.table
+    }
+}
+
 impl ModuleLoader {
     pub fn new() -> anyhow::Result<Self> {
         let mut cfg = Config::default();
@@ -86,12 +119,12 @@ impl ModuleLoader {
 
         // Configure pooling allocator with conservative defaults
         let mut pool = PoolingAllocationConfig::default();
-        pool.total_core_instances(256)
-            .total_memories(256)
-            .total_tables(256)
-            .total_stacks(512)
-            .max_core_instance_size(1 << 20)
-            .max_component_instance_size(1 << 20)
+        pool.total_core_instances(DEFAULT_POOL_TOTAL_COMPONENTS)
+            .total_memories(DEFAULT_POOL_TOTAL_MEMORIES)
+            .total_tables(DEFAULT_POOL_TOTAL_TABLES)
+            .total_stacks(DEFAULT_POOL_TOTAL_STACKS)
+            .max_core_instance_size(DEFAULT_MAX_CORE_INSTANCE_SIZE)
+            .max_component_instance_size(DEFAULT_MAX_COMPONENT_INSTANCE_SIZE)
             // Keep small resident regions to avoid page thrash without bloating RSS
             .linear_memory_keep_resident(0)
             .table_keep_resident(0);
@@ -115,10 +148,16 @@ impl ModuleLoader {
         memory_mb: Option<u64>,
     ) -> anyhow::Result<(Store<HostState>, Component, Linker<HostState>)> {
         let component = Component::from_binary(&self.engine, wasm)?;
+        let table = ResourceTable::new();
+        let wasi = WasiCtxBuilder::new().build();
+        let http = WasiHttpCtx::new();
         let host_state = HostState {
-            max_memory: (memory_mb.unwrap_or(256) as usize) * 1024 * 1024,
+            max_memory: (memory_mb.unwrap_or(DEFAULT_MAX_MEMORY_MB) as usize) * 1024 * 1024,
             runtime: self.runtime_cfg.clone(),
             context: HostExecutionContext::default(),
+            wasi,
+            table,
+            http,
         };
         let mut store = Store::new(&self.engine, host_state);
 
@@ -129,14 +168,15 @@ impl ModuleLoader {
             self.apply_timeout(&mut store, ms);
         }
         let mut linker: Linker<HostState> = Linker::new(&self.engine);
+        wasmtime_wasi::p2::add_to_linker_async(&mut linker)?;
+        wasmtime_wasi_http::add_only_http_to_linker_async(&mut linker)?;
         add_component_host(&mut linker)?;
         Ok((store, component, linker))
     }
 
     fn apply_timeout(&self, store: &mut Store<HostState>, ms: u64) {
         // Use epoch-based interruption. Map ms to ticks by incrementing the engine epoch every 10ms.
-        let tick_ms: u64 = 10;
-        let ticks = (ms / tick_ms).max(1);
+        let ticks = deadline_ticks_for_timeout(ms);
         store.set_epoch_deadline(ticks);
         // For async configs, yield and update to continue if host wants to resume (not used yet)
         let _ = store.epoch_deadline_trap();
@@ -146,7 +186,7 @@ impl ModuleLoader {
         tokio::spawn(async move {
             let steps = ticks + 2;
             for _ in 0..steps {
-                tokio::time::sleep(Duration::from_millis(tick_ms)).await;
+                tokio::time::sleep(Duration::from_millis(EPOCH_TICK_MS)).await;
                 engine.increment_epoch();
             }
         });
@@ -194,13 +234,31 @@ impl ModuleLoader {
         timeout_ms: Option<u64>,
         memory_mb: Option<u64>,
         request: &ModelExecuteRequest,
-        context: HostExecutionContext,
+        mut context: HostExecutionContext,
     ) -> anyhow::Result<ModelExecuteResponse> {
+        // Ensure baseline capabilities are always present for the guest runtime. Some callers
+        // (especially external tooling) may omit them, but the component contract expects the
+        // context/read + log emit capabilities to be available at minimum.
+        if context.providers.is_empty() {
+            context.providers = crate::providers::default_capabilities()
+                .into_iter()
+                .map(|cap| cap.to_ascii_lowercase())
+                .collect();
+        } else {
+            for cap in crate::providers::default_capabilities() {
+                context.providers.insert(cap.to_ascii_lowercase());
+            }
+        }
         let (mut store, component, linker) = self.instantiate(wasm, timeout_ms, memory_mb)?;
         store.data_mut().context = context;
-        let runner = component::Runner::instantiate_async(&mut store, &component, &linker).await?;
+        let instance_pre = linker.instantiate_pre(&component)?;
+        let instance = instance_pre.instantiate_async(&mut store).await?;
+        let handler = instance.get_typed_func::<
+            (&component::alga::extension::types::ExecuteRequest,),
+            (component::alga::extension::types::ExecuteResponse,),
+        >(&mut store, "handler")?;
         let input = to_component_execute_request(request)?;
-        let output = runner.call_handler(&mut store, &input)?;
+        let (output,) = handler.call_async(&mut store, (&input,)).await?;
         Ok(to_model_execute_response(output))
     }
 }
@@ -216,6 +274,10 @@ pub async fn fetch_to_file(url: &str, dest_tmp: &Path) -> anyhow::Result<()> {
     let bytes = resp.bytes().await?;
     cache_fs::write_atomic(dest_tmp, &bytes).await?;
     Ok(())
+}
+
+fn deadline_ticks_for_timeout(timeout_ms: u64) -> u64 {
+    (timeout_ms / EPOCH_TICK_MS).max(1)
 }
 
 /// Build the bundle URL from BUNDLE_STORE_BASE and a content hash "sha256:<hex>" or "<hex>".
@@ -369,4 +431,45 @@ pub async fn verify_archive_sha256(
     }
     tracing::info!(hash=%expected_lower, bytes=total, path=%tmp_path.to_string_lossy(), "verify archive ok");
     Ok(tmp_path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasmtime_wasi::WasiCtxBuilder;
+    use wasmtime_wasi_http::WasiHttpCtx;
+
+    fn make_host_state(max_memory_mb: u64, runtime: HostRuntimeConfig) -> HostState {
+        let table = ResourceTable::new();
+        let wasi = WasiCtxBuilder::new().build();
+        let http = WasiHttpCtx::new();
+        HostState {
+            max_memory: (max_memory_mb as usize) * 1024 * 1024,
+            runtime,
+            context: HostExecutionContext::default(),
+            wasi,
+            table,
+            http,
+        }
+    }
+
+    #[test]
+    fn memory_growing_enforces_limits() {
+        let runtime = HostRuntimeConfig::default();
+        let mut state = make_host_state(8, runtime);
+
+        // Allow growth when within the limit.
+        assert!(state.memory_growing(0, 2 * 1024 * 1024, None).unwrap());
+
+        // Deny growth above the configured limit.
+        assert!(!state.memory_growing(0, 16 * 1024 * 1024, None).unwrap());
+    }
+
+    #[test]
+    fn timeout_ms_maps_to_deadline_ticks() {
+        assert_eq!(deadline_ticks_for_timeout(1), 1);
+        assert_eq!(deadline_ticks_for_timeout(EPOCH_TICK_MS), 1);
+        assert_eq!(deadline_ticks_for_timeout(EPOCH_TICK_MS + 1), 1);
+        assert_eq!(deadline_ticks_for_timeout(25), 2);
+    }
 }

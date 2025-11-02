@@ -132,6 +132,7 @@
 
 ### Phase 2 — Runner Component Host
 
+- Detailed execution steps live in [extension-runtime-wasmtime-plan.md](extension-runtime-wasmtime-plan.md); keep both documents aligned as milestones land.
 - [x] Upgrade Runner to Wasmtime component APIs and instantiate components for `/v1/execute`.
 - [x] Implement host functions per WIT (context, secrets, http, storage, logging) with capability checks.
 - [x] Add secret envelope redemption via Vault transit decryption (token mounted as Docker secret) plus short-lived cache; ensure no secret leakage in logs/traces.

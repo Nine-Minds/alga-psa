@@ -56,6 +56,7 @@ Design goals:
 - RUNNER_PUBLIC_BASE — public base used to construct ext-ui iframe src
 - EXT_GATEWAY_TIMEOUT_MS — gateway → runner request timeout
 - SIGNING_TRUST_BUNDLE — trust anchors for signature verification
+- EXT_EGRESS_ALLOWLIST — optional comma-separated host list used by the Wasmtime HTTP capability guardrail
 
 ## Configuration Summary
 
