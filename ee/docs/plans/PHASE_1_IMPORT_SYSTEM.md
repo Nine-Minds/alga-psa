@@ -34,31 +34,31 @@ This system provides three core capabilities:
 
 **Goal**: Establish database schema and core framework classes
 
-- [ ] Create database migrations ([Schema Reference](#database-schema))
-  - [ ] `import_sources` table (registry of import types)
-  - [ ] `import_jobs` table (job tracking + audit trail)
-  - [ ] `import_job_items` table (row-level tracking)
-  - [ ] `external_entity_mappings` table (deduplication + future sync)
-  - [ ] Add indexes for performance
-  - [ ] Test migrations (up/down, rollback)
+- [x] Create database migrations ([Schema Reference](#database-schema))
+  - [x] `import_sources` table (registry of import types)
+  - [x] `import_jobs` table (job tracking + audit trail)
+  - [x] `import_job_items` table (row-level tracking)
+  - [x] `external_entity_mappings` table (deduplication + future sync)
+  - [x] Add indexes for performance
+  - [x] Test migrations (up/down, rollback)
 
-- [ ] Implement core framework classes ([Framework Reference](#core-framework))
-  - [ ] `ImportManager` class (orchestration)
-  - [ ] `AbstractImporter<T>` base class (extensibility)
-  - [ ] `ImportRegistry` singleton (source registration)
-  - [ ] `ImportSource` domain model
-  - [ ] TypeScript types for all data structures
+- [x] Implement core framework classes ([Framework Reference](#core-framework))
+  - [x] `ImportManager` class (orchestration)
+  - [x] `AbstractImporter<T>` base class (extensibility)
+  - [x] `ImportRegistry` singleton (source registration)
+  - [x] `ImportSource` domain model
+  - [x] TypeScript types for all data structures
 
-- [ ] Security & Permissions ([Security Reference](#security--permissions))
-  - [ ] Add `settings.import_export.read` permission
-  - [ ] Add `settings.import_export.manage` permission
-  - [ ] Configure RBAC assignments (admin, dispatcher, technician)
-  - [ ] Implement tenant isolation checks
+- [x] Security & Permissions ([Security Reference](#security--permissions))
+  - [x] Add `settings.import_export.read` permission
+  - [x] Add `settings.import_export.manage` permission
+  - [x] Configure RBAC assignments (admin, dispatcher, technician)
+  - [x] Implement tenant isolation checks
 
-- [ ] Error handling infrastructure ([Error Handling Reference](#error-handling))
-  - [ ] Custom error types (`ImportValidationError`, `DuplicateDetectionError`)
-  - [ ] Structured error logging with context
-  - [ ] Error collection patterns (collect all, don't fail fast)
+- [x] Error handling infrastructure ([Error Handling Reference](#error-handling))
+  - [x] Custom error types (`ImportValidationError`, `DuplicateDetectionError`)
+  - [x] Structured error logging with context
+  - [x] Error collection patterns (collect all, don't fail fast)
 
 **Acceptance**: Migrations run cleanly, framework classes compile, permissions enforce correctly
 
