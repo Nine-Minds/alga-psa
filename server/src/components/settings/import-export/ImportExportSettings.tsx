@@ -14,6 +14,7 @@ const ImportExportSettings = (): JSX.Element => {
 
   const {
     isLoading,
+    isApproving,
     error,
     sources,
     history,
@@ -24,6 +25,7 @@ const ImportExportSettings = (): JSX.Element => {
     fieldMapping,
     setFieldMapping,
     createPreview,
+    approveImport,
   } = useImportActions();
 
   const [file, setFile] = useState<File | null>(null);
@@ -253,6 +255,17 @@ const ImportExportSettings = (): JSX.Element => {
                     )}
                   </TableBody>
                 </Table>
+
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    id="approve-import-button"
+                    variant="primary"
+                    onClick={() => approveImport(preview.importJobId)}
+                    disabled={isApproving || isLoading}
+                  >
+                    {isApproving ? 'Starting Import…' : 'Proceed with Import'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}

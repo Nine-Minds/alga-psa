@@ -46,6 +46,7 @@ const UI_FIELD_DEFINITIONS = [
 
 export const useImportActions = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const [sources, setSources] = useState<ImportSourceDTO[]>([]);
   const [history, setHistory] = useState<ImportJobRecord[]>([]);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -139,8 +140,40 @@ export const useImportActions = () => {
     [fetchData]
   );
 
+  const handleApproveImport = useCallback(
+    async (importJobId: string) => {
+      if (!importJobId) {
+        setError('Select a preview to approve before importing.');
+        return;
+      }
+
+      setIsApproving(true);
+      setError(null);
+      try {
+        await parseJson<{ status: string }>(
+          await fetch('/api/import/approve', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ importJobId })
+          })
+        );
+        setPreview(null);
+        await fetchData();
+      } catch (error) {
+        console.error('[ImportActions] approveImport error', error);
+        setError(error instanceof Error ? error.message : 'Failed to start import job');
+      } finally {
+        setIsApproving(false);
+      }
+    },
+    [fetchData]
+  );
+
   return {
     isLoading,
+    isApproving,
     error,
     sources,
     history,
@@ -151,6 +184,7 @@ export const useImportActions = () => {
     fieldMapping,
     setFieldMapping,
     createPreview: handleCreatePreview,
+    approveImport: handleApproveImport,
     refresh: fetchData,
   };
 };

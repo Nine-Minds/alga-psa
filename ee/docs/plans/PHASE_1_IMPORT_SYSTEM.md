@@ -153,28 +153,28 @@ This system provides three core capabilities:
 
 **Goal**: Connect import execution to job system for async processing
 
-- [ ] Job Handler ([Job Integration Reference](#job-system-integration))
-  - [ ] Register `asset_import` job type
-  - [ ] Implement `ImportJobHandler` class
-  - [ ] Process parsed records in job context
-  - [ ] Run duplicate detection per record
-  - [ ] Map records to assets using field mapping
-  - [ ] Batch upsert assets to database
-  - [ ] Track external entity mappings
+- [x] Job Handler ([Job Integration Reference](#job-system-integration))
+  - [x] Register `asset_import` job type
+  - [x] Implement `ImportJobHandler` class
+  - [x] Process parsed records in job context
+  - [x] Run duplicate detection per record
+  - [x] Map records to assets using field mapping
+  - [x] Batch upsert assets to database
+  - [x] Track external entity mappings
 
-- [ ] Progress & Error Tracking ([Progress Reference](#job-system-integration))
-  - [ ] Report progress via `updateJobProgress()`
-  - [ ] Update progress percentage in real-time
-  - [ ] Display progress message: "Processed X/Y records"
-  - [ ] Capture errors per row (don't fail job on single error)
-  - [ ] Store row-level status in `import_job_items`
-  - [ ] Generate summary on completion
+- [x] Progress & Error Tracking ([Progress Reference](#job-system-integration))
+  - [x] Report progress via `updateJobProgress()`
+  - [x] Update progress percentage in real-time
+  - [x] Display progress message: "Processed X/Y records"
+  - [x] Capture errors per row (don't fail job on single error)
+  - [x] Store row-level status in `import_job_items`
+  - [x] Generate summary on completion
 
-- [ ] Job Lifecycle
-  - [ ] Create job when user approves preview
-  - [ ] Link `import_jobs.job_id` to job system
-  - [ ] Update `import_jobs` status as job progresses
-  - [ ] Store results (created, updated, duplicates, errors)
+- [x] Job Lifecycle
+  - [x] Create job when user approves preview
+  - [x] Link `import_jobs.job_id` to job system
+  - [x] Update `import_jobs` status as job progresses
+  - [x] Store results (created, updated, duplicates, errors)
   - [ ] Enable job cancellation mid-execution
   - [ ] Support job retry on failure (skip already-processed)
 
@@ -187,14 +187,14 @@ This system provides three core capabilities:
 **Goal**: Expose import functionality via server actions and REST API
 
 - [x] Server Actions ([API Reference](#technical-implementation-notes))
-  - [ ] Create `importActions.ts` server action file
-  - [ ] `getImportSources(tenantId)` - List available import types
-  - [ ] `createImportJob(tenantId, sourceId, file)` - Upload & preview
-  - [ ] `approveImport(importJobId)` - Execute job
-  - [ ] `getImportJobs(tenantId, filters)` - List job history
+  - [x] Create `importActions.ts` server action file
+  - [x] `getImportSources(tenantId)` - List available import types
+  - [x] `createImportJob(tenantId, sourceId, file)` - Upload & preview
+  - [x] `approveImport(importJobId)` - Execute job
+  - [x] `getImportJobs(tenantId, filters)` - List job history
   - [ ] `getImportJobDetails(importJobId)` - Get full job details
-  - [ ] Permission checks on all actions
-  - [ ] Tenant isolation enforcement
+  - [x] Permission checks on all actions
+  - [x] Tenant isolation enforcement
 
 - [ ] File Upload Handling ([File Upload Reference](#file-upload--storage))
   - [ ] File size validation (max 100MB)

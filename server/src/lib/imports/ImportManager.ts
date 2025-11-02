@@ -8,13 +8,15 @@ import type {
   ImportFilters,
   ImportJobDetails,
   ImportJobItemRecord,
+  ImportJobItemStatus,
   ImportJobRecord,
   ImportJobStatus,
   ImportSourceRecord,
   InitiateImportOptions,
   ParsedRecord,
   PreviewComputationResult,
-  PreviewGenerationOptions
+  PreviewGenerationOptions,
+  ImportErrorSummary
 } from '@/types/imports.types';
 import { AbstractImporter } from './AbstractImporter';
 import type { FieldMappingTemplate } from '@/types/imports.types';
@@ -458,6 +460,105 @@ export class ImportManager {
     }
 
     return importer.detectDuplicate(record, context);
+  }
+
+  async attachBackgroundJob(
+    tenantId: string,
+    importJobId: string,
+    jobId: string,
+    status: ImportJobStatus = 'processing'
+  ): Promise<void> {
+    const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
+
+    await knex<ImportJobRecord>('import_jobs')
+      .where({ tenant: tenantId, import_job_id: importJobId })
+      .update({
+        job_id: jobId,
+        status,
+        updated_at: knex.fn.now()
+      });
+  }
+
+  async updateJobStats(
+    tenantId: string,
+    importJobId: string,
+    updates: {
+      processedRows?: number;
+      createdRows?: number;
+      updatedRows?: number;
+      duplicateRows?: number;
+      errorRows?: number;
+      status?: ImportJobStatus;
+      errorSummary?: ImportErrorSummary | null;
+      completedAt?: Date | string | null;
+    }
+  ): Promise<void> {
+    const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
+
+    const payload: Record<string, unknown> = {
+      updated_at: knex.fn.now()
+    };
+
+    if (updates.processedRows !== undefined) {
+      payload.processed_rows = updates.processedRows;
+    }
+    if (updates.createdRows !== undefined) {
+      payload.created_rows = updates.createdRows;
+    }
+    if (updates.updatedRows !== undefined) {
+      payload.updated_rows = updates.updatedRows;
+    }
+    if (updates.duplicateRows !== undefined) {
+      payload.duplicate_rows = updates.duplicateRows;
+    }
+    if (updates.errorRows !== undefined) {
+      payload.error_rows = updates.errorRows;
+    }
+    if (updates.status) {
+      payload.status = updates.status;
+    }
+    if (updates.errorSummary !== undefined) {
+      payload.error_summary = updates.errorSummary;
+    }
+    if (updates.completedAt !== undefined) {
+      payload.completed_at = updates.completedAt;
+    }
+
+    await knex<ImportJobRecord>('import_jobs')
+      .where({ tenant: tenantId, import_job_id: importJobId })
+      .update(payload);
+  }
+
+  async addJobItem(
+    tenantId: string,
+    importJobId: string,
+    item: {
+      externalId?: string | null;
+      assetId?: string | null;
+      sourceData: Record<string, unknown>;
+      mappedData?: Record<string, unknown> | null;
+      duplicateDetails?: DuplicateCheckResult | null;
+      status: ImportJobItemStatus;
+      errorMessage?: string | null;
+    }
+  ): Promise<void> {
+    const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
+
+    await knex('import_job_items').insert({
+      tenant: tenantId,
+      import_job_id: importJobId,
+      external_id: item.externalId ?? null,
+      asset_id: item.assetId ?? null,
+      source_data: item.sourceData,
+      mapped_data: item.mappedData ?? null,
+      duplicate_details: item.duplicateDetails ?? null,
+      status: item.status,
+      error_message: item.errorMessage ?? null,
+      updated_at: knex.fn.now()
+    });
   }
 
   async preparePreview(options: PreviewGenerationOptions): Promise<PreviewComputationResult> {

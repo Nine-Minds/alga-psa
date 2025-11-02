@@ -9,6 +9,7 @@ import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData 
 import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
+import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
 import { JobService } from '../../services/job.service';
@@ -36,6 +37,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<GenerateInvoiceData>('generate-invoice', async (job: Job<GenerateInvoiceData>) => {
       await generateInvoiceHandler(job.data);
     });
+    jobScheduler.registerJobHandler<AssetImportJobData>('asset_import', handleAssetImportJob);
     
     // Register expired credits handler
     jobScheduler.registerJobHandler<ExpiredCreditsJobData>('expired-credits', async (job: Job<ExpiredCreditsJobData>) => {
@@ -95,7 +97,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
 
 
 // Export types
-export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData, ReconcileBucketUsageJobData, CleanupAiSessionKeysJobData };
+export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData, ReconcileBucketUsageJobData, CleanupAiSessionKeysJobData, AssetImportJobData };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
   clientId: string,
