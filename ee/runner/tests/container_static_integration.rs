@@ -20,19 +20,46 @@ const TENANT_ID: &str = "tenant-a";
 const EXTENSION_ID: &str = "demo-ext";
 const DYNAMIC_COMPONENT_WASM: &[u8] = include_bytes!("fixtures/dynamic_component/component.wasm");
 
+fn verbose_enabled() -> bool {
+    std::env::var("VERBOSE_TESTS").is_ok()
+}
+
 fn log(msg: impl AsRef<str>) {
-    // Only log if VERBOSE_TESTS env var is set
-    if std::env::var("VERBOSE_TESTS").is_ok() {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default();
-        eprintln!(
-            "[container-static {:>6}.{:03}] {}",
-            now.as_secs(),
-            now.subsec_millis(),
-            msg.as_ref()
-        );
+    if verbose_enabled() {
+        log_always(msg);
     }
+}
+
+fn log_always(msg: impl AsRef<str>) {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    eprintln!(
+        "[container-static {:>6}.{:03}] {}",
+        now.as_secs(),
+        now.subsec_millis(),
+        msg.as_ref()
+    );
+}
+
+fn render_bytes(label: &str, data: &[u8], limit: usize) -> String {
+    let text = String::from_utf8_lossy(data);
+    if data.is_empty() {
+        return format!("{label}: <empty>");
+    }
+    if verbose_enabled() || text.len() <= limit {
+        return format!("{label} ({} bytes):\n{}", data.len(), text);
+    }
+    let head = &text[..limit.min(text.len())];
+    let tail_start = text.len().saturating_sub(limit);
+    let tail = &text[tail_start..];
+    format!(
+        "{label} ({} bytes, showing first/last {} chars):\n{}...\n[truncated]\n...{}",
+        data.len(),
+        limit,
+        head,
+        tail
+    )
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -156,10 +183,11 @@ async fn runner_container_executes_dynamic_component() -> anyhow::Result<()> {
 
     log("verifying dynamic component execution");
     if let Err(err) = verify_dynamic_execution(host_port, &wasm_hash).await {
-        log(&format!(
+        log_always(&format!(
             "dynamic component execution failed: {err:?}; dumping container logs"
         ));
         dump_container_logs(&container_name).await?;
+        dump_docker_state().await?;
         return Err(err);
     }
     log("dynamic component execution verified");
@@ -257,7 +285,12 @@ async fn docker_run(
         .arg("-e")
         .arg("REGISTRY_BASE_URL=http://localhost:9001")
         .arg("-e")
-        .arg("RUST_LOG=info")
+        .arg(format!(
+            "RUST_LOG={}",
+            std::env::var("RUNNER_CONTAINER_RUST_LOG").unwrap_or_else(|_| "info".to_string())
+        ))
+        .arg("-e")
+        .arg("WASMTIME_BACKTRACE_DETAILS=1")
         .arg("-e")
         .arg(format!("BUNDLE_STORE_BASE={bundle_base}"))
         .arg(image_tag)
@@ -388,6 +421,9 @@ async fn verify_dynamic_execution(port: u16, wasm_hash: &str) -> anyhow::Result<
             },
             "body_b64": body_b64
         },
+        "limits": {
+            "timeout_ms": 5000
+        },
         "providers": [
             "cap:context.read",
             "cap:log.emit"
@@ -485,22 +521,25 @@ async fn verify_dynamic_execution(port: u16, wasm_hash: &str) -> anyhow::Result<
 }
 
 async fn dump_container_logs(container_name: &str) -> anyhow::Result<()> {
-    log(&format!("fetching logs for container {container_name}"));
+    log_always(&format!("fetching logs for container {container_name}"));
     let output = Command::new("docker")
         .arg("logs")
         .arg(container_name)
         .output()
         .await?;
-    log(&format!(
-        "docker logs stdout ({} bytes):\n{}",
-        output.stdout.len(),
-        String::from_utf8_lossy(&output.stdout)
-    ));
-    log(&format!(
-        "docker logs stderr ({} bytes):\n{}",
-        output.stderr.len(),
-        String::from_utf8_lossy(&output.stderr)
-    ));
+    log_always(render_bytes("docker logs stdout", &output.stdout, 4000));
+    if !output.stderr.is_empty() {
+        log_always(render_bytes("docker logs stderr", &output.stderr, 1000));
+    }
+    Ok(())
+}
+
+async fn dump_docker_state() -> anyhow::Result<()> {
+    let ps = Command::new("docker").arg("ps").arg("-a").output().await?;
+    log_always(render_bytes("docker ps -a", &ps.stdout, 1000));
+    if !ps.stderr.is_empty() {
+        log_always(render_bytes("docker ps -a stderr", &ps.stderr, 500));
+    }
     Ok(())
 }
 

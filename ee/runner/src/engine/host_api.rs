@@ -237,15 +237,29 @@ impl context::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_CONTEXT_READ) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    providers = ?providers,
+                    "context capability missing; guest will panic"
+                );
                 panic!("capability_not_granted: {CAP_CONTEXT_READ}");
             }
-            ContextData {
+            let data = ContextData {
                 request_id: ctx.request_id,
                 tenant_id: ctx.tenant_id.unwrap_or_default(),
                 extension_id: ctx.extension_id.unwrap_or_default(),
                 install_id: ctx.install_id,
                 version_id: ctx.version_id,
-            }
+            };
+            tracing::debug!(
+                tenant = ?data.tenant_id,
+                extension = ?data.extension_id,
+                request_id = ?data.request_id,
+                "context capability granted; returning context"
+            );
+            data
         }
     }
 }

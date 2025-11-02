@@ -165,6 +165,7 @@ impl ModuleLoader {
         store.limiter(|s| s);
 
         if let Some(ms) = timeout_ms {
+            tracing::debug!(timeout_ms=%ms, "applying execute timeout");
             self.apply_timeout(&mut store, ms);
         }
         let mut linker: Linker<HostState> = Linker::new(&self.engine);
@@ -199,6 +200,7 @@ impl ModuleLoader {
         }
         // Build from BUNDLE_STORE_BASE like http://minio:9000/alga-extensions
         let base = env::var("BUNDLE_STORE_BASE")?;
+        tracing::debug!(%key, %base, "fetch_object starting http fetch");
         let url = format!(
             "{}/{}",
             base.trim_end_matches('/'),
@@ -206,9 +208,11 @@ impl ModuleLoader {
         );
         let resp = self.http.get(url).send().await?;
         if !resp.status().is_success() {
+            tracing::warn!(status=%resp.status(), %key, "fetch_object received non-success status");
             anyhow::bail!("fetch failed: {}", resp.status());
         }
         let bytes = resp.bytes().await?.to_vec();
+        tracing::debug!(%key, size=bytes.len(), "fetch_object downloaded bytes");
         // Hash verification: expect key under sha256/<hash>/...
         if let Some((_prefix, rest)) = key.split_once("sha256/") {
             if let Some((hash, _tail)) = rest.split_once('/') {
@@ -249,7 +253,15 @@ impl ModuleLoader {
                 context.providers.insert(cap.to_ascii_lowercase());
             }
         }
+        tracing::info!(
+            request_id = ?request.context.request_id,
+            tenant = ?request.context.tenant_id,
+            extension = ?request.context.extension_id,
+            providers = ?context.providers,
+            "execute_handler normalized providers"
+        );
         let (mut store, component, linker) = self.instantiate(wasm, timeout_ms, memory_mb)?;
+        tracing::debug!(timeout_ms=?timeout_ms, memory_mb=?memory_mb, "instantiate complete");
         store.data_mut().context = context;
         let instance_pre = linker.instantiate_pre(&component)?;
         let instance = instance_pre.instantiate_async(&mut store).await?;
@@ -258,7 +270,14 @@ impl ModuleLoader {
             (component::alga::extension::types::ExecuteResponse,),
         >(&mut store, "handler")?;
         let input = to_component_execute_request(request)?;
-        let (output,) = handler.call_async(&mut store, (&input,)).await?;
+        let result = handler.call_async(&mut store, (&input,)).await;
+        let (output,) = match result {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!(error_debug=?e, "component call failed");
+                return Err(e.into());
+            }
+        };
         Ok(to_model_execute_response(output))
     }
 }
