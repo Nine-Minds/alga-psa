@@ -36,6 +36,7 @@ import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegions
 import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
 import XeroIntegrationSettings from '../integrations/XeroIntegrationSettings';
 import { useSearchParams } from 'next/navigation';
+import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
@@ -81,6 +82,7 @@ const SettingsPage = (): JSX.Element =>  {
     notifications: 'Notifications',
     'time-entry': 'Time Entry',
     billing: 'Billing',
+    'import-export': 'Import/Export',
     tax: 'Tax',
     email: 'Email',
     integrations: 'Integrations',
@@ -216,6 +218,10 @@ const SettingsPage = (): JSX.Element =>  {
           </CardContent>
         </Card>
       ),
+    },
+    {
+      label: "Import/Export",
+      content: <ImportExportSettings />,
     },
     {
       label: "Tax",
