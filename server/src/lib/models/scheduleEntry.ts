@@ -237,10 +237,6 @@ class ScheduleEntry {
     entry: Omit<IScheduleEntry, 'entry_id' | 'created_at' | 'updated_at' | 'tenant'>,
     options: CreateScheduleEntryOptions
   ): Promise<IScheduleEntry> {
-    if (options.assignedUserIds.length === 0) {
-      throw new Error('At least one assigned user is required');
-    }
-
     const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant is required');
