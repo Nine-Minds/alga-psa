@@ -71,11 +71,11 @@ Deliver in-context asset insights without forcing page transitions.
 - URL state that deep-links into specific tabs/panels for collaboration.
 
 **To-Do**
-- [ ] Review existing drawer implementation (`server/src/components/ui/Drawer`) and reuse styles/behaviour.
+- [x] Review existing drawer implementation (`server/src/components/ui/Drawer`) and reuse styles/behaviour.
 - [ ] Map data requirements: lifecycle events (from audit logs), maintenance schedules (`getClientMaintenanceSummary`), related tickets/projects/documents.
-- [ ] Define tab structure (Overview, Maintenance, Tickets, Configuration, Documents) with future placeholders for integrations.
-- [ ] Implement drawer invocation from grid row click (without breaking keyboard navigation); ensure `preventDefault` handling for inline action menus.
-- [ ] Sync URL state with drawer (e.g., `/msp/assets?assetId=123&panel=maintenance`) using Next.js router.
+- [x] Define tab structure (Overview, Maintenance, Tickets, Configuration, Documents) with future placeholders for integrations.
+- [x] Implement drawer invocation from grid row click (without breaking keyboard navigation); ensure `preventDefault` handling for inline action menus.
+- [x] Sync URL state with drawer (e.g., `/msp/assets?assetId=123&panel=maintenance`) using Next.js router.
 - [ ] Add contextual quick actions (assign policy, create ticket) with optimistic UI and rollback hooks.
 - [ ] Record observability events (drawer open, tab viewed) for telemetry.
 
