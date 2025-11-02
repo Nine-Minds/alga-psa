@@ -13,17 +13,44 @@
 - **Standards:** Adhere to `docs/AI_coding_standards.md`, email templating conventions, and Citus multi-tenant rules.
 
 ### Phase Checklist
-1. **Phase 1 – Core Infrastructure** (see Details §Implementation Phases > Phase 1)
-   - Deliver migrations + RLS policies (Details §Database Schema).
-   - Implement triggers, token handling, and server actions (Details §Server Actions, §Token Service).
-   - Wire ticket-closure subscriber and invitation email via `TenantEmailService` (Details §Event Bus Integration, §Email Integration).
-   - Ship EE settings UI and CE fallback surfaces (Details §UI Components, §Community Edition).
-2. **Phase 2 – Reporting & Analytics** (see Details §Implementation Phases > Phase 2)
-   - Expose stats/responses APIs (Details §API Implementation).
-   - Build dashboard widgets and contextual embeds (Details §UI Components > Dashboard & Integrations).
-3. **Phase 3 – Enhancements** (see Details §Implementation Phases > Phase 3)
-   - Add negative feedback alerts, exports, and advanced analytics (Details §Implementation Phases).
-   - Polish UX (preview, mobile, performance) per the detailed sections.
+1. **Phase 1 – Core Infrastructure** (Details §Implementation Phases > Phase 1)
+   - Database & Token Foundations  
+     - Create EE migrations for templates/triggers/invitations/responses with tenant composite PKs and RLS (Details §Database Schema, §Migration Files).  
+     - Add seed migration for default CSAT template with JSONB labels stored as strings (Details §Migration Files).  
+     - Implement hashing + issuance helpers in `surveyTokenService` and validate against stored digests (Details §Token Service).
+   - Backend Actions & Entry Points  
+     - Build `surveyActions.ts` CRUD using `createTenantKnex`/`withTransaction` patterns (Details §Server Actions).  
+     - Add public submission + validation actions that run under `runWithTenant` and update invitations atomically (Details §Server Actions).  
+     - Register event subscriber that listens to ticket closure events and invokes `sendSurveyInvitation` (Details §Event Bus Integration).
+   - Email Delivery & Workflow  
+     - Register `SURVEY_TICKET_CLOSED` template variants (EN/FR/ES/DE/NL/IT) and document merge fields (Details §Email Integration).  
+     - Implement invitation send pipeline that persists invites, queues Temporal workflow, and delegates to `TenantEmailService` (Details §Email Integration).  
+     - Verify provider fallback + localization via unit tests under `server/src/lib/email/__tests__` (Details §Email Integration).
+   - UI & Edition Split  
+     - Build EE settings tabs (templates/triggers) using shared UI kit + translated copy (Details §UI Components > SurveySettings).  
+     - Ship public response page with i18n + accessibility IDs (Details §UI Components > SurveyResponsePage).  
+     - Provide CE upsell stub and action guards (Details §Community Edition).
+
+2. **Phase 2 – Reporting & Analytics** (Details §Implementation Phases > Phase 2)
+   - API Layer  
+     - Implement stats + response listing endpoints with tenant-scoped filters and pagination (Details §API Implementation).  
+     - Extend server actions to serve dashboard data and cache expensive aggregates where needed (Details §Server Actions > Response queries).
+   - UI Surfaces  
+     - Build dashboard cards/charts leveraging existing components and formatters (Details §UI Components > SurveyDashboard).  
+     - Embed response summaries on ticket + company detail views (Details §Integration with Existing Modules).  
+     - Ensure filters persist via query params for shareable links (Details §UI Components > ResponseList).
+   - Observability & QA  
+     - Add unit tests for CSAT calculations and trigger condition evaluation (Details §Testing Strategy).  
+     - Extend manual checklist for analytics validation (Details §Testing Strategy > Manual).
+
+3. **Phase 3 – Enhancements** (Details §Implementation Phases > Phase 3)
+   - Alerting & Automation  
+     - Emit `SURVEY_NEGATIVE_RESPONSE` events and hook into notification workflows (Details §Event Bus Integration > Negative Feedback).  
+     - Optionally open follow-up tickets using existing automation patterns (Details §Implementation Phases > Phase 3).
+   - Advanced Features  
+     - Implement CSV export + bulk trigger management (Details §Implementation Phases > Phase 3).  
+     - Add survey preview, response time analytics, and mobile/responsive polish (Details §UI Components).  
+     - Harden duplicate suppression + token expiry monitoring (Details §Server Actions, §Token Service).
 
 ### Critical Dependencies & Risks
 - Multi-tenant schema requirements and RLS enforcement (Details §Database Schema).
