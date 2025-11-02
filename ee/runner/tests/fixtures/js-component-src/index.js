@@ -1,3 +1,6 @@
+import { get as secretGet, listKeys as secretListKeys } from 'alga:extension/secrets';
+import { callRoute as uiProxyCallRoute } from 'alga:extension/ui-proxy';
+
 if (typeof globalThis.TextEncoder === 'undefined') {
   globalThis.TextEncoder = class {
     encode(value) {
@@ -126,6 +129,75 @@ export async function handler(request, host) {
     console.log('js component handler invoked');
     await flushLogs();
     const ctx = request.context;
+    const httpUrl = request?.http?.url || request?.http?.path || '';
+
+    if (httpUrl.startsWith('/dynamic/secrets')) {
+      let secretValue = null;
+      let keys = [];
+      let secretError = null;
+      try {
+        keys = (await secretListKeys()) ?? [];
+      } catch (err) {
+        secretError = err instanceof Error ? err.message : String(err);
+      }
+      if (!secretError) {
+        try {
+          secretValue = await secretGet('ALGA_API_KEY');
+        } catch (err) {
+          secretError = err instanceof Error ? err.message : String(err);
+        }
+      }
+      return {
+        status: 200,
+        headers: [
+          { name: 'content-type', value: 'application/json' },
+          { name: 'x-generated-by', value: 'js-component' }
+        ],
+        body: encodeJson({
+          ok: secretError === null,
+          method: request.http.method,
+          path: request.http.url,
+          tenantId: ctx?.tenantId ?? null,
+          extensionId: ctx?.extensionId ?? null,
+          secrets: {
+            value: secretValue,
+            keys,
+            error: secretError
+          }
+        })
+      };
+    }
+
+    if (httpUrl.startsWith('/dynamic/ui-proxy')) {
+      let proxyResponse = null;
+      let proxyError = null;
+      try {
+        const payload = request.http.body ? new Uint8Array(request.http.body) : new Uint8Array();
+        const bytes = await uiProxyCallRoute('/proxy/ping', payload.length ? payload : null);
+        proxyResponse = bytes ? Array.from(bytes) : null;
+      } catch (err) {
+        proxyError = err instanceof Error ? err.message : String(err);
+      }
+      return {
+        status: 200,
+        headers: [
+          { name: 'content-type', value: 'application/json' },
+          { name: 'x-generated-by', value: 'js-component' }
+        ],
+        body: encodeJson({
+          ok: proxyError === null,
+          method: request.http.method,
+          path: request.http.url,
+          tenantId: ctx?.tenantId ?? null,
+          extensionId: ctx?.extensionId ?? null,
+          proxy: {
+            response: proxyResponse,
+            error: proxyError
+          }
+        })
+      };
+    }
+
     return {
       status: 200,
       headers: [

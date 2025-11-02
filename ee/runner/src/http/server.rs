@@ -251,7 +251,17 @@ async fn execute(
         Ok(v) => v,
         Err(e) => {
             let dur_ms = started.elapsed().as_millis() as u64;
-            tracing::error!(request_id=%req_id, tenant=%tenant, extension=%ext, duration_ms=%dur_ms, err=%e.to_string(), "execute failed");
+            tracing::error!(
+                request_id=%req_id,
+                tenant=%tenant,
+                extension=%ext,
+                duration_ms=%dur_ms,
+                timeout_ms=?req.limits.timeout_ms,
+                mem_mb=?req.limits.memory_mb,
+                err_display=%e.to_string(),
+                err_debug=?e,
+                "execute failed"
+            );
             let resp = ExecuteResponse {
                 status: 500,
                 headers: Default::default(),
