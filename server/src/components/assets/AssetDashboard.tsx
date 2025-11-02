@@ -24,6 +24,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetActionRail } from './AssetActionRail';
 import { AssetDetailDrawer, ASSET_DRAWER_TABS, AssetDrawerTab } from './AssetDetailDrawer';
+import { AssetCommandPalette } from './AssetCommandPalette';
+import Spinner from 'server/src/components/ui/Spinner';
 import {
   Monitor,
   Server,
@@ -91,6 +93,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
   const [drawerAssetId, setDrawerAssetId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<AssetDrawerTab>(ASSET_DRAWER_TABS.OVERVIEW);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const drawerClosePendingRef = useRef(false);
 
   const shouldAutoOpenQuickAdd = useMemo(() => searchParams?.get('intent') === 'new-asset', [searchParams]);
@@ -213,6 +216,28 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     router.replace(buildDrawerUrl(drawerAssetId, tab), { scroll: false });
   }, [activeDrawerTab, buildDrawerUrl, drawerAssetId, router]);
 
+  const triggerQuickAdd = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('intent', 'new-asset');
+    router.replace(`/msp/assets?${params.toString()}`, { scroll: false });
+  }, [router]);
+
+  const handleCommandSelectAsset = useCallback((asset: Asset) => {
+    openDrawerForAsset(asset);
+  }, [openDrawerForAsset]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const assetsByClient = useMemo(() => {
     return assets.reduce((acc, asset) => {
       if (!asset.client_id) return acc;
@@ -287,6 +312,12 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
   }, [assets, searchTerm, statusFilters, typeFilters, clientFilters]);
 
   const filteredCount = filteredAssets.length;
+  const hasActiveFilters = Boolean(
+    searchTerm ||
+    statusFilters.length > 0 ||
+    typeFilters.length > 0 ||
+    clientFilters.length > 0
+  );
 
   const isAllSelected = filteredCount > 0 && filteredAssets.every(asset => selectedAssetIds.includes(asset.asset_id));
   const isIndeterminate = selectedAssetIds.length > 0 && !isAllSelected;
@@ -833,14 +864,26 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
         onClose={handleDrawerClose}
       />
 
+      <AssetCommandPalette
+        isOpen={isCommandPaletteOpen}
+        assets={assets}
+        filteredAssets={filteredAssets}
+        hasActiveFilters={hasActiveFilters}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onSelectAsset={handleCommandSelectAsset}
+        onCreateAsset={triggerQuickAdd}
+        onRefreshData={() => { void handleAssetAdded(); }}
+        onClearFilters={clearFilters}
+      />
+
       {loading && (
-        <div {...withDataAutomationId({ id: 'loading-overlay' })} className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm mx-4">
-            <div className="text-center space-y-4">
-              <div className="relative w-16 h-16 mx-auto">
-                <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-              </div>
+        <div
+          {...withDataAutomationId({ id: 'loading-overlay' })}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        >
+          <div className="mx-4 max-w-sm rounded-xl bg-white p-8 shadow-2xl">
+            <div className="space-y-4 text-center">
+              <Spinner size="lg" className="mx-auto text-primary-500" />
               <div className="space-y-1">
                 <p className="text-lg font-semibold text-gray-900">Loading maintenance data...</p>
                 <p className="text-sm text-gray-500">Please wait while we fetch the information</p>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Drawer from 'server/src/components/ui/Drawer';
-import { CustomTabs } from 'server/src/components/ui/CustomTabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from 'server/src/components/ui/Tabs';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
 import { Card } from 'server/src/components/ui/Card';
@@ -458,7 +458,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
 
         {isLoading && (
           <div className="flex items-center gap-3 rounded-lg border border-dashed border-gray-200 p-4 text-sm text-gray-500">
-            <Spinner className="h-4 w-4 text-primary-500" />
+            <Spinner size="sm" className="text-primary-500" />
             Loading asset details…
           </div>
         )}
@@ -470,11 +470,28 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
         )}
 
         {!error && (
-          <CustomTabs
-            tabs={tabContent}
-            defaultTab={activeTab}
-            onTabChange={handleTabChange}
-          />
+          <Tabs
+            value={activeTab}
+            onValueChange={handleTabChange}
+            className="space-y-4"
+          >
+            <TabsList className="w-full gap-2 border-b border-gray-200 text-sm font-medium text-gray-500">
+              {TAB_ORDER.map((tab) => (
+                <TabsTrigger
+                  key={tab}
+                  value={tab}
+                  className="text-sm"
+                >
+                  {tab}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {tabContent.map(({ label, content }) => (
+              <TabsContent key={label} value={label} className="focus:outline-none">
+                {content}
+              </TabsContent>
+            ))}
+          </Tabs>
         )}
       </div>
     </Drawer>
