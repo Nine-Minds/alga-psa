@@ -30,18 +30,19 @@ export interface CalendarProviderVendorConfig {
   redirectUri?: string;
   syncToken?: string;
   deltaLink?: string;
-  
+  calendarId?: string; // External calendar ID
+
   // Google-specific
   projectId?: string;
   pubsubTopicName?: string;
   pubsubSubscriptionName?: string;
   pubsubInitialisedAt?: string;
-  
+
   // Microsoft-specific
   tenantId?: string;
   webhookSubscriptionId?: string;
   webhookExpiresAt?: string;
-  
+
   // Webhook configuration
   webhookNotificationUrl?: string;
   webhookVerificationToken?: string;
