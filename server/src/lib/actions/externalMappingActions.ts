@@ -455,7 +455,7 @@ async function lookupExternalEntityIdAction(
   context: ActionExecutionContext
 ): Promise<{ external_entity_id: string | null }> {
   const { integration_type, alga_entity_type, alga_entity_id, external_realm_id } =
-    params as LookupExternalEntityIdParams;
+    params as unknown as LookupExternalEntityIdParams;
   const { tenant } = context;
 
   if (!tenant) {

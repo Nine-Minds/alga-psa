@@ -368,7 +368,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           existingMetadata?.syncToken;
         if (!syncToken) {
           const remoteInvoice = await qboClient.read<QboInvoice>('Invoice', mapping.externalInvoiceId);
-          syncToken = remoteInvoice?.SyncToken ?? undefined;
+          syncToken = remoteInvoice?.SyncToken ? String(remoteInvoice.SyncToken) : undefined;
         }
 
         if (!syncToken) {
@@ -378,9 +378,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         const updatePayload = {
           ...payload.invoice,
           Id: mapping.externalInvoiceId,
-          SyncToken: syncToken,
+          SyncToken: syncToken as string,
           sparse: true
-        };
+        } as { [key: string]: any; Id: string; SyncToken: string };
 
         response = await qboClient.update<QboInvoice>('Invoice', updatePayload);
       } else {
