@@ -136,7 +136,9 @@ Cumulative timeline remains 18–24 months, with Phase 0 executing immediately t
 - **Asset Import System**
   - CSV/XLSX ingestion with mapping UI, preview, error reporting, duplicate detection (serial, asset tag, MAC, hostname, fuzzy options).
   - Streaming processor handling 10K+ rows with transaction safety and rollback.
+  - Pre-built field mappings for RMM exports (N-able device inventory, ConnectWise RMM, Datto RMM) to support one-time bootstrap from existing deployments.
   - Import templates for key asset categories with example data files.
+  - Provides foundation for Phase 3 connector framework by establishing standardized asset field pipelines.
 - **Code Quality Improvements**
   - Refactor monolithic files (`assetActions.ts`, `ApiAssetController.ts`) into modular services.
   - Enable TypeScript strict mode; reduce `any` usage; add return types.
@@ -190,8 +192,10 @@ Cumulative timeline remains 18–24 months, with Phase 0 executing immediately t
 - **Connector Framework Foundations**
   - Shared mapping layer, credential management, job orchestration, error handling.
   - Tenant configuration UI integrated into workspace.
+  - Leverage Phase 1 field mapping infrastructure to enable bi-directional sync with RMM platforms.
 - **N-able Integration**
-  - Asset discovery sync (hardware, software, telemetry) with delta updates.
+  - API-driven asset discovery sync (hardware, software, telemetry) with delta updates and scheduled reconciliation.
+  - Replaces Phase 1 manual CSV exports with real-time data pipelines while maintaining fallback import capability.
   - Alert forwarding into lifecycle policies and ticket workflows.
   - Device health surfacing in detail drawer.
 - **Workflow Automation**
