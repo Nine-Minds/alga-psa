@@ -19,6 +19,7 @@ import type {
 import { AbstractImporter } from './AbstractImporter';
 import type { FieldMappingTemplate } from '@/types/imports.types';
 import { ImportPreviewManager } from './ImportPreviewManager';
+import { FieldMapper } from './FieldMapper';
 
 type ImportJobQuery = KnexType.QueryBuilder<ImportJobRecord, ImportJobRecord[]>;
 
@@ -170,6 +171,33 @@ export class ImportManager {
    */
   registerImporter(importer: AbstractImporter): void {
     this.registry.register(importer);
+  }
+
+  async saveFieldMappingTemplate(
+    tenantId: string,
+    importSourceId: string,
+    template: FieldMappingTemplate
+  ): Promise<FieldMappingTemplate | null> {
+    const knex = await getConnection(tenantId);
+    const [updated] = await knex<ImportSourceRecord>('import_sources')
+      .where({ tenant: tenantId, import_source_id: importSourceId })
+      .update({ field_mapping: template, updated_at: knex.fn.now() })
+      .returning('*');
+
+    return updated?.field_mapping ?? null;
+  }
+
+  async getFieldMappingTemplate(
+    tenantId: string,
+    importSourceId: string
+  ): Promise<FieldMappingTemplate | null> {
+    const knex = await getConnection(tenantId);
+    const record = await knex<ImportSourceRecord>('import_sources')
+      .select('field_mapping')
+      .where({ tenant: tenantId, import_source_id: importSourceId })
+      .first();
+
+    return record?.field_mapping ?? null;
   }
 
   /**
@@ -343,8 +371,22 @@ export class ImportManager {
   }
 
   async preparePreview(options: PreviewGenerationOptions): Promise<PreviewComputationResult> {
+    const mapper = !options.validator && options.fieldDefinitions && options.fieldMapping
+      ? new FieldMapper(options.fieldDefinitions)
+      : null;
+
+    const validator = options.validator ?? (mapper
+      ? async (record: ParsedRecord) => {
+          const { errors } = await mapper.mapRecord(record, options.fieldMapping!);
+          return errors;
+        }
+      : undefined);
+
     const previewManager = new ImportPreviewManager(options.tenantId);
-    const result = await previewManager.generate(options);
+    const result = await previewManager.generate({
+      ...options,
+      validator,
+    });
     await previewManager.persist(options.importJobId, result);
     return result;
   }

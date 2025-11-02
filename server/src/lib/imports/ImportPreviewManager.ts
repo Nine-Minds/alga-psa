@@ -74,6 +74,8 @@ export class ImportPreviewManager {
       }
     }
 
+    const columnExamples = this.collectColumnExamples(records);
+
     const preview: PreviewData = {
       rows: previewRows,
       summary: {
@@ -82,6 +84,7 @@ export class ImportPreviewManager {
         duplicateRows,
         errorRows,
       },
+      columnExamples: Object.keys(columnExamples).length ? columnExamples : undefined,
     };
 
     const errorSummary = this.buildErrorSummary(collector.getErrors(), errorRows);
@@ -179,5 +182,41 @@ export class ImportPreviewManager {
       rowsWithErrors,
       topErrors,
     };
+  }
+
+  private collectColumnExamples(
+    records: ParsedRecord[],
+    limit = 3
+  ): Record<string, unknown[]> {
+    const examples = new Map<string, unknown[]>();
+
+    for (const record of records) {
+      for (const [key, value] of Object.entries(record.raw)) {
+        if (value === undefined || value === null) {
+          continue;
+        }
+
+        const trimmed = typeof value === 'string' ? value.trim() : value;
+        if (trimmed === '') {
+          continue;
+        }
+
+        const current = examples.get(key) ?? [];
+        if (current.length >= limit) {
+          continue;
+        }
+
+        if (!current.some((existing) => existing === trimmed)) {
+          current.push(trimmed);
+          examples.set(key, current);
+        }
+      }
+    }
+
+    const result: Record<string, unknown[]> = {};
+    examples.forEach((values, key) => {
+      result[key] = values;
+    });
+    return result;
   }
 }

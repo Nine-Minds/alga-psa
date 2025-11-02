@@ -181,6 +181,7 @@ export interface ImportJobRecord {
 export interface PreviewData {
   rows: PreviewRow[];
   summary: ImportPreviewSummary;
+  columnExamples?: Record<string, unknown[]>;
 }
 
 export interface PreviewRow {
@@ -313,4 +314,6 @@ export interface PreviewGenerationOptions {
     check(record: ParsedRecord): Promise<DuplicateCheckResult>;
   };
   maxPreviewRows?: number;
+  fieldDefinitions?: FieldDefinition[];
+  fieldMapping?: FieldMapping[];
 }

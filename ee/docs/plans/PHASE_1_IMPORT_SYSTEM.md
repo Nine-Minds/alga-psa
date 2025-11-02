@@ -75,22 +75,22 @@ This system provides three core capabilities:
   - [x] Auto-detect delimiters (comma, semicolon, tab)
   - [x] Handle quoted fields and escape characters
   - [x] Streaming parser for large files
-  - [ ] Test with various CSV formats and edge cases
+  - [x] Test with various CSV formats and edge cases
 
 - [ ] Field Mapping ([Field Mapping Reference](#csvxlsx-import))
   - [x] `FieldMapper` base class
-  - [ ] Column selection UI logic
-  - [ ] Map CSV columns → asset fields
-  - [ ] Track required vs optional fields
-  - [ ] Save/load mapping templates
-  - [ ] Show example data per column
+  - [x] Column selection UI logic
+  - [x] Map CSV columns → asset fields
+  - [x] Track required vs optional fields
+  - [x] Save/load mapping templates
+  - [x] Show example data per column
 
 - [ ] Validation Layer ([Validation Reference](#csvxlsx-import))
-  - [ ] Required field validation
-  - [ ] Data type validation (MAC address, IP address, etc.)
-  - [ ] Asset type validation (must match allowed types)
-  - [ ] Collect all errors (don't fail on first)
-  - [ ] Generate actionable error messages with suggestions
+  - [x] Required field validation
+  - [x] Data type validation (MAC address, IP address, etc.)
+  - [x] Asset type validation (must match allowed types)
+  - [x] Collect all errors (don't fail on first)
+  - [x] Generate actionable error messages with suggestions
 
 - [ ] Import Preview ([Preview Reference](#preview--validation))
   - [x] `ImportPreviewManager` class
