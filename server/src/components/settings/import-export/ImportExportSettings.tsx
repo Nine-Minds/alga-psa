@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'server/src/components/ui/Table';
@@ -6,9 +6,12 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { useImportActions } from './hooks/useImportActions';
 
 const ImportExportSettings = (): JSX.Element => {
+
   const {
     isLoading,
     error,
@@ -25,6 +28,15 @@ const ImportExportSettings = (): JSX.Element => {
 
   const [file, setFile] = useState<File | null>(null);
   const [persistTemplate, setPersistTemplate] = useState(true);
+
+  const sourceOptions = useMemo(
+    () =>
+      sources.map((source) => ({
+        value: source.import_source_id,
+        label: source.name,
+      })),
+    [sources]
+  );
 
   const handleMappingChange = (field: string, value: string) => {
     setFieldMapping((prev) => {
@@ -69,16 +81,11 @@ const ImportExportSettings = (): JSX.Element => {
     });
   };
 
-  return (
-    <div className="space-y-6" data-testid="import-export-settings">
-      <Card>
-        <CardHeader>
-          <CardTitle>New Asset Import</CardTitle>
-          <CardDescription>
-            Upload asset data from CSV or XLSX files, review validation results, and push records into your environment.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+  const tabs: TabContent[] = useMemo(() => [
+    {
+      label: 'Asset Import',
+      content: (
+        <div className="space-y-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -88,23 +95,18 @@ const ImportExportSettings = (): JSX.Element => {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="import-source">Import source</Label>
-              <select
+              <CustomSelect
                 id="import-source"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                disabled={isLoading || sources.length === 0}
+                options={sourceOptions}
                 value={selectedSourceId ?? ''}
-                onChange={(event) => setSelectedSourceId(event.target.value)}
-              >
-                {sources.length === 0 ? (
-                  <option value="">No import sources available</option>
-                ) : (
-                  sources.map((source) => (
-                    <option key={source.import_source_id} value={source.import_source_id}>
-                      {source.name}
-                    </option>
-                  ))
-                )}
-              </select>
+                onValueChange={(value) => setSelectedSourceId(value || null)}
+                placeholder={sources.length === 0 ? 'No import sources available' : 'Select an import source'}
+                disabled={isLoading || sourceOptions.length === 0}
+                className="h-10 !border-border/60 text-sm"
+                customStyles={{
+                  trigger: '!border-border/60 hover:bg-primary-500/5',
+                }}
+              />
             </div>
 
             <div className="space-y-2">
@@ -112,6 +114,7 @@ const ImportExportSettings = (): JSX.Element => {
               <Input
                 id="import-file"
                 type="file"
+                className="h-13 !border-border/60 !focus:ring-primary-400 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary-500/10 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700"
                 accept=".csv,.tsv,.txt,.xls,.xlsx"
                 onChange={(event) => {
                   const nextFile = event.target.files?.[0] ?? null;
@@ -121,48 +124,46 @@ const ImportExportSettings = (): JSX.Element => {
             </div>
           </div>
 
-          <div className="grid gap-4">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="persist-template"
-                checked={persistTemplate}
-                onCheckedChange={(value) => setPersistTemplate(Boolean(value))}
-              />
-              <Label htmlFor="persist-template" className="text-sm font-normal">
-                Remember this mapping for future imports
-              </Label>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="persist-template"
+              checked={persistTemplate}
+              onChange={(event) => setPersistTemplate(event.currentTarget.checked)}
+            />
+            <Label htmlFor="persist-template" className="text-sm font-normal">
+              Remember this mapping for future imports
+            </Label>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-medium text-foreground">Field mapping</h3>
+              <p className="text-sm text-muted-foreground">
+                Enter the column names from your file that correspond to each required asset field. Leave optional fields blank to skip them.
+              </p>
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-sm font-medium text-foreground">Field mapping</h3>
-                <p className="text-sm text-muted-foreground">
-                  Enter the column names from your file that correspond to each required asset field. Leave optional fields blank to skip them.
-                </p>
-              </div>
-
-              <div className="grid gap-3">
-                {fieldDefinitions.map((definition) => (
-                  <div key={definition.field} className="grid gap-1">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor={`field-${definition.field}`}>
-                        {definition.label}
-                        {definition.required && <span className="text-destructive"> *</span>}
-                      </Label>
-                      {definition.example && (
-                        <span className="text-xs text-muted-foreground">e.g. {definition.example}</span>
-                      )}
-                    </div>
-                    <Input
-                      id={`field-${definition.field}`}
-                      placeholder="Source column name"
-                      value={getSourceValueForField(definition.field)}
-                      onChange={(event) => handleMappingChange(definition.field, event.target.value)}
-                      disabled={isLoading}
-                    />
+            <div className="grid gap-3">
+              {fieldDefinitions.map((definition) => (
+                <div key={definition.field} className="grid gap-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={`field-${definition.field}`}>
+                      {definition.label}
+                      {definition.required && <span className="text-destructive"> *</span>}
+                    </Label>
+                    {definition.example && (
+                      <span className="text-xs text-muted-foreground">e.g. {definition.example}</span>
+                    )}
                   </div>
-                ))}
-              </div>
+                  <Input
+                    id={`field-${definition.field}`}
+                    placeholder="Source column name"
+                    value={getSourceValueForField(definition.field)}
+                    onChange={(event) => handleMappingChange(definition.field, event.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -255,13 +256,61 @@ const ImportExportSettings = (): JSX.Element => {
               </CardContent>
             </Card>
           )}
+        </div>
+      ),
+    },
+    {
+      label: 'Asset Export',
+      content: (
+        <div className="space-y-4">
+          <Alert>
+            <AlertDescription>
+              Asset export tooling is coming soon. Planned capabilities include exporting filtered asset lists, audit data, and mapping templates directly to CSV/XLSX.
+            </AlertDescription>
+          </Alert>
+        </div>
+      ),
+    },
+    {
+      label: 'Templates & Automation',
+      content: (
+        <div className="space-y-4">
+          <Alert>
+            <AlertDescription>
+              Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs.
+            </AlertDescription>
+          </Alert>
+        </div>
+      ),
+    },
+  ], [createPreview, error, fieldDefinitions, fieldMapping, handleMappingChange, handleSubmit, isLoading, persistTemplate, preview, selectedSourceId, setPersistTemplate, setSelectedSourceId, setFile, sources, getSourceValueForField]);
+
+  return (
+    <div className="space-y-6" data-testid="import-export-settings">
+      <Card>
+        <CardHeader>
+          <CardTitle>Import &amp; Export Workspace</CardTitle>
+          <CardDescription>
+            Configure imports, exports, and automated data flows from a single control centre.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CustomTabs
+            tabs={tabs}
+            orientation="vertical"
+            tabStyles={{
+              list: 'border-border/40 dark:border-border/50',
+              trigger: 'text-sm font-medium data-[state=active]:bg-primary-500/10 rounded-md transition-colors',
+              content: 'min-h-[260px]'
+            }}
+          />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Import History</CardTitle>
-          <CardDescription>Review previous imports, their progress, and results.</CardDescription>
+          <CardTitle>Import &amp; Export History</CardTitle>
+          <CardDescription>Review every import or export job in one place.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -277,15 +326,15 @@ const ImportExportSettings = (): JSX.Element => {
               {history.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">
-                    No import jobs found. Generate a preview to create the first job.
+                    No import or export jobs found. Generate a preview to create the first job.
                   </TableCell>
                 </TableRow>
               ) : (
                 history.map((job) => (
                   <TableRow key={job.import_job_id}>
                     <TableCell>{new Date(job.created_at).toLocaleString()}</TableCell>
-                    <TableCell>{job.file_name ?? '—'}</TableCell>
-                    <TableCell>{job.status}</TableCell>
+                    <TableCell>{job.file_name ?? job.import_source_id}</TableCell>
+                    <TableCell className="capitalize">{job.status}</TableCell>
                     <TableCell className="text-right">
                       {job.total_rows} total / {job.processed_rows} processed
                     </TableCell>

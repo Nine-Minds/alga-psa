@@ -204,6 +204,7 @@ export class ImportManager {
     importSourceId: string
   ): Promise<FieldMappingTemplate | null> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     const record = await knex<ImportSourceRecord>('import_sources')
       .select('field_mapping')
       .where({ tenant: tenantId, import_source_id: importSourceId })
@@ -221,6 +222,7 @@ export class ImportManager {
     options: InitiateImportOptions
   ): Promise<ImportJobRecord> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
 
     const [job] = await knex<ImportJobRecord>('import_jobs')
       .insert({
