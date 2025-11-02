@@ -22,11 +22,11 @@ Establish predictable wayfinding and shared shell utilities before expanding dat
 - Accessibility-first structure consistent with `docs/AI_coding_standards.md`.
 
 **To-Do**
-- [ ] Audit existing nav components under `server/src/components/layout` (or equivalent) and document reusable patterns.
-- [ ] Design grouped navigation for MSP modules with an asset-specific action rail (imports, automations, policies).
-- [ ] Implement nav updates using existing UI primitives (`Button`, `DropdownMenu`, `NavLink` variants) ensuring unique `id` attributes on interactive elements.
-- [ ] Build global utility header shell (tenant selector, quick create, notification badge, job status container) leveraging existing `TopBar` infrastructure if present.
-- [ ] Wire feature flag + telemetry events (ex: `ui.nav.v2.enabled`) to measure adoption and fallbacks.
+- [x] Audit existing nav components under `server/src/components/layout` (or equivalent) and document reusable patterns.
+- [x] Design grouped navigation for MSP modules with an asset-specific action rail (imports, automations, policies).
+- [x] Implement nav updates using existing UI primitives (`Button`, `DropdownMenu`, `NavLink` variants) ensuring unique `id` attributes on interactive elements.
+- [x] Build global utility header shell (tenant selector, quick create, notification badge, job status container) leveraging existing `TopBar` infrastructure if present.
+- [x] Wire feature flag + telemetry events (ex: `ui.nav.v2.enabled`) to measure adoption and fallbacks.
 - [ ] Run keyboard-only and screen reader smoke tests; record findings and remediation tasks.
 
 **Exit Criteria**

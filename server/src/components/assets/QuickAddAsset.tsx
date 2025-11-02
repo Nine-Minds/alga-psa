@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 interface QuickAddAssetProps {
   clientId?: string;
   onAssetAdded: () => void;
+  defaultOpen?: boolean;
 }
 
 type NetworkDeviceType = 'switch' | 'router' | 'firewall' | 'access_point' | 'load_balancer';
@@ -64,8 +65,8 @@ interface FormData {
   };
 }
 
-export function QuickAddAsset({ clientId, onAssetAdded }: QuickAddAssetProps) {
-  const [open, setOpen] = useState(false);
+export function QuickAddAsset({ clientId, onAssetAdded, defaultOpen = false }: QuickAddAssetProps) {
+  const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,6 +102,12 @@ export function QuickAddAsset({ clientId, onAssetAdded }: QuickAddAssetProps) {
       model: ''
     }
   });
+
+  useEffect(() => {
+    if (defaultOpen) {
+      setOpen(true);
+    }
+  }, [defaultOpen]);
 
   useEffect(() => {
     const fetchClients = async () => {
