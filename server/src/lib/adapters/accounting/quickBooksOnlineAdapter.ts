@@ -27,7 +27,6 @@ type DbInvoice = {
   due_date?: string | Date | null;
   total_amount: number;
   client_id?: string | null;
-  company_id?: string | null;
   currency_code?: string | null;
   exchange_rate_basis_points?: number | null;
 };
@@ -134,7 +133,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       const clientId =
         invoice.client_id ??
-        invoice.company_id ??
         exportLines.find((line) => line.client_id)?.client_id ??
         null;
 
@@ -444,7 +442,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'due_date',
         'total_amount',
         'client_id',
-        'company_id',
         'currency_code',
         'exchange_rate_basis_points'
       )
@@ -498,8 +495,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     for (const invoice of invoices.values()) {
       if (invoice.client_id) {
         clientIds.add(invoice.client_id);
-      } else if (invoice.company_id) {
-        clientIds.add(invoice.company_id);
       }
     }
 

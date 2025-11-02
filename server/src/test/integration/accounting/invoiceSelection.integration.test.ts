@@ -321,4 +321,44 @@ describe('Accounting export invoice selection integration', () => {
       }
     }
   }, HOOK_TIMEOUT);
+
+  it('omits invoices already synced for the selected adapter and realm', async () => {
+    const seeded = await seedInvoices();
+
+    const now = new Date().toISOString();
+    await ctx.db('tenant_external_entity_mappings').insert({
+      id: uuidv4(),
+      tenant: ctx.tenantId,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: seeded.manual.invoiceId,
+      external_entity_id: 'QB-INV-123',
+      external_realm_id: 'realm-100',
+      sync_status: 'synced',
+      created_at: now,
+      updated_at: now
+    });
+
+    const preview = await selector.previewInvoiceLines({
+      ...seeded.filters,
+      adapterType: 'quickbooks_online',
+      targetRealm: 'realm-100'
+    });
+
+    expect(preview).toHaveLength(3);
+    expect(preview.map((line) => line.invoiceId)).not.toContain(seeded.manual.invoiceId);
+
+    const { batch, lines } = await selector.createBatchFromFilters({
+      adapterType: 'quickbooks_online',
+      targetRealm: 'realm-100',
+      filters: seeded.filters
+    });
+
+    expect(lines).toHaveLength(3);
+    expect(lines.map((line) => line.invoiceId)).not.toContain(seeded.manual.invoiceId);
+
+    const storedLines = await repository.listLines(batch.batch_id);
+    expect(storedLines).toHaveLength(3);
+    expect(storedLines.map((line) => line.invoice_id)).not.toContain(seeded.manual.invoiceId);
+  }, HOOK_TIMEOUT);
 });
