@@ -65,7 +65,7 @@ export class PreviewCacheProvider implements IPreviewCache {
     try {
       const filePath = this.getCachePath(fileId);
       await this.ensureDirectory(filePath);
-      await fs.writeFile(filePath, data);
+      await fs.writeFile(filePath, new Uint8Array(data));
     } catch (error) {
       this.metrics.errors++;
       throw error;

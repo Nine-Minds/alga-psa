@@ -164,8 +164,9 @@ export class QboClientService {
     const environment = process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'; // Example logic
 
     logger.debug({ tenantId: this.tenantId, realmId: this.realmId, environment }, 'Initializing QBO client');
-    
+
     // Dynamically import node-quickbooks to handle ES module compatibility
+    // @ts-ignore - node-quickbooks lacks type definitions
     const QuickBooks = (await import('node-quickbooks')).default;
     
     this.qbo = new QuickBooks(
@@ -181,7 +182,7 @@ export class QboClientService {
       this.credentials.refreshToken
     );
     
-    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, hasQueryMethod: typeof this.qbo.query, qboInstance: this.qbo }, 'QBO client initialized');
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, hasQueryMethod: typeof this.qbo?.query, qboInstance: this.qbo }, 'QBO client initialized');
   }
 
   private isTokenExpired(): boolean {

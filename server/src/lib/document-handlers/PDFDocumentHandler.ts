@@ -54,7 +54,7 @@ export class PDFDocumentHandler extends BaseDocumentHandler {
 
       try {
         // Load PDF document to get page count
-        const pdfDoc = await PDFDocument.load(buffer);
+        const pdfDoc = await PDFDocument.load(new Uint8Array(buffer));
         const pageCount = pdfDoc.getPages().length;
 
         // Set up temporary directory for PDF conversion
@@ -68,7 +68,7 @@ export class PDFDocumentHandler extends BaseDocumentHandler {
 
         try {
           // Write PDF to temporary file
-          await writeFile(tempPdfPath, buffer);
+          await writeFile(tempPdfPath, new Uint8Array(buffer));
           
           // Convert first page to image
           const options = { 
@@ -150,7 +150,7 @@ export class PDFDocumentHandler extends BaseDocumentHandler {
       }
 
       // Load PDF document to get page count
-      const pdfDoc = await PDFDocument.load(downloadResult.buffer);
+      const pdfDoc = await PDFDocument.load(new Uint8Array(downloadResult.buffer));
       const pageCount = pdfDoc.getPages().length;
 
       return `
