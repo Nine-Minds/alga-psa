@@ -61,7 +61,8 @@ export interface LoggingHost {
 }
 
 export interface UiProxyHost {
-  call(route: string, payload?: Uint8Array | null): Promise<Uint8Array>;
+  callRoute(route: string, payload?: Uint8Array | null): Promise<Uint8Array>;
+  call?(route: string, payload?: Uint8Array | null): Promise<Uint8Array>;
 }
 
 export interface HostBindings {
@@ -127,11 +128,25 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
       error: async (msg: string) => { console.error('[mock logging]', msg); },
     },
     uiProxy: {
+      async callRoute() {
+        throw new Error('mock uiProxy.callRoute not implemented');
+      },
       async call() {
         throw new Error('mock uiProxy.call not implemented');
       },
     },
   };
+
+  const mergedUiProxy: UiProxyHost = {
+    ...defaultBindings.uiProxy,
+    ...overrides.uiProxy,
+  };
+  if (!mergedUiProxy.callRoute && mergedUiProxy.call) {
+    mergedUiProxy.callRoute = mergedUiProxy.call.bind(mergedUiProxy);
+  }
+  if (!mergedUiProxy.call && mergedUiProxy.callRoute) {
+    mergedUiProxy.call = mergedUiProxy.callRoute.bind(mergedUiProxy);
+  }
 
   return {
     ...defaultBindings,
@@ -156,10 +171,7 @@ export function createMockHostBindings(overrides: Partial<HostBindings> = {}): H
       ...defaultBindings.logging,
       ...overrides.logging,
     },
-    uiProxy: {
-      ...defaultBindings.uiProxy,
-      ...overrides.uiProxy,
-    },
+    uiProxy: mergedUiProxy,
   };
 }
 
