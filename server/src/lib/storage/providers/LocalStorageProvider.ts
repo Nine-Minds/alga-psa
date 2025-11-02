@@ -28,7 +28,7 @@ export class LocalStorageProvider extends BaseStorageProvider {
             await fs.mkdir(path.dirname(fullPath), { recursive: true });
 
             if (file instanceof Buffer) {
-                await fs.writeFile(fullPath, file);
+                await fs.writeFile(fullPath, new Uint8Array(file));
             } else {
                 const writeStream = createWriteStream(fullPath);
                 await pipeline(
