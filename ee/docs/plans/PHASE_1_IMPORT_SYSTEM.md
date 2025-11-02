@@ -68,7 +68,7 @@ This system provides three core capabilities:
 
 **Goal**: Build generic CSV/XLSX importer with preview capability
 
-- [ ] CSV Parser ([CSV Import Reference](#csvxlsx-import))
+- [x] CSV Parser ([CSV Import Reference](#csvxlsx-import))
   - [x] Add CSV parsing library (papaparse or similar)
   - [x] Implement `CsvImporter` class extending `AbstractImporter`
   - [x] Support CSV and XLSX formats
@@ -77,7 +77,7 @@ This system provides three core capabilities:
   - [x] Streaming parser for large files
   - [x] Test with various CSV formats and edge cases
 
-- [ ] Field Mapping ([Field Mapping Reference](#csvxlsx-import))
+- [x] Field Mapping ([Field Mapping Reference](#csvxlsx-import))
   - [x] `FieldMapper` base class
   - [x] Column selection UI logic
   - [x] Map CSV columns → asset fields
@@ -85,14 +85,14 @@ This system provides three core capabilities:
   - [x] Save/load mapping templates
   - [x] Show example data per column
 
-- [ ] Validation Layer ([Validation Reference](#csvxlsx-import))
+- [x] Validation Layer ([Validation Reference](#csvxlsx-import))
   - [x] Required field validation
   - [x] Data type validation (MAC address, IP address, etc.)
   - [x] Asset type validation (must match allowed types)
   - [x] Collect all errors (don't fail on first)
   - [x] Generate actionable error messages with suggestions
 
-- [ ] Import Preview ([Preview Reference](#preview--validation))
+- [x] Import Preview ([Preview Reference](#preview--validation))
   - [x] `ImportPreviewManager` class
   - [x] Stage import without executing
   - [x] Store preview data in `import_jobs.preview_data`
@@ -186,7 +186,7 @@ This system provides three core capabilities:
 
 **Goal**: Expose import functionality via server actions and REST API
 
-- [ ] Server Actions ([API Reference](#technical-implementation-notes))
+- [x] Server Actions ([API Reference](#technical-implementation-notes))
   - [ ] Create `importActions.ts` server action file
   - [ ] `getImportSources(tenantId)` - List available import types
   - [ ] `createImportJob(tenantId, sourceId, file)` - Upload & preview
