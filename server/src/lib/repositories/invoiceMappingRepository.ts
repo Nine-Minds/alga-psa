@@ -55,11 +55,12 @@ export class KnexInvoiceMappingRepository {
         'external_realm_id',
         'metadata'
       )
-      .where({
-        tenant: params.tenantId,
-        integration_type: params.adapterType,
-        alga_entity_type: 'invoice',
-        alga_entity_id: params.invoiceId
+      .where((builder) => {
+        builder
+          .where('tenant', params.tenantId)
+          .where('integration_type', params.adapterType)
+          .where('alga_entity_type', 'invoice')
+          .where('alga_entity_id', params.invoiceId);
       });
 
     if (params.targetRealm) {
