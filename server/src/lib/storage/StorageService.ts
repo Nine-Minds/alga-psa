@@ -19,10 +19,10 @@ import { createTenantKnex } from '../db';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    stream.on('data', (chunk) => chunks.push(chunk));
+    const chunks: Uint8Array[] = [];
+    stream.on('data', (chunk) => chunks.push(new Uint8Array(chunk as Buffer)));
     stream.on('error', reject);
-    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('end', () => resolve(Buffer.concat(chunks as any)));
   });
 }
 
@@ -103,7 +103,7 @@ export class StorageService {
          ['user_avatar', 'contact_avatar', 'client_logo'].includes(options.metadata.context));
 
       if (isEntityImage) {
-        const detectedType = await fileTypeFromBuffer(fileBuffer);
+        const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
         if (!detectedType || !allowedMimeTypes.includes(detectedType.mime)) {
