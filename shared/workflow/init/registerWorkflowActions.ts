@@ -5,7 +5,7 @@
  */
 
 import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index';
-import { logger } from '@alga-psa/shared/core';
+import { logger, getSecretProviderInstance } from '@alga-psa/shared/core';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 
 // --- Mock Secret Retrieval ---
