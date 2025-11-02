@@ -2,9 +2,51 @@
 
 ## Overview
 
+### Goals
+- Automate post-ticket CSAT feedback loops for MSP tenants inside Alga PSA.
+- Centralize survey configuration, delivery, and analytics while maintaining tenant isolation.
+- Reuse existing UI, email, and workflow foundations to minimize net-new surface area.
+
+### Scope Snapshot
+- **Touchpoints:** Database, server actions, event bus, email templates, UI surfaces (see Details for specs).
+- **Edition Split:** Enterprise feature set with CE placeholders (Details §Community Edition).
+- **Standards:** Adhere to `docs/AI_coding_standards.md`, email templating conventions, and Citus multi-tenant rules.
+
+### Phase Checklist
+1. **Phase 1 – Core Infrastructure** (see Details §Implementation Phases > Phase 1)
+   - Deliver migrations + RLS policies (Details §Database Schema).
+   - Implement triggers, token handling, and server actions (Details §Server Actions, §Token Service).
+   - Wire ticket-closure subscriber and invitation email via `TenantEmailService` (Details §Event Bus Integration, §Email Integration).
+   - Ship EE settings UI and CE fallback surfaces (Details §UI Components, §Community Edition).
+2. **Phase 2 – Reporting & Analytics** (see Details §Implementation Phases > Phase 2)
+   - Expose stats/responses APIs (Details §API Implementation).
+   - Build dashboard widgets and contextual embeds (Details §UI Components > Dashboard & Integrations).
+3. **Phase 3 – Enhancements** (see Details §Implementation Phases > Phase 3)
+   - Add negative feedback alerts, exports, and advanced analytics (Details §Implementation Phases).
+   - Polish UX (preview, mobile, performance) per the detailed sections.
+
+### Critical Dependencies & Risks
+- Multi-tenant schema requirements and RLS enforcement (Details §Database Schema).
+- Email localization, provider routing, and template fallbacks (Details §Email Integration; `server/src/lib/email/README.md`).
+- Event bus + Temporal workflow coordination (Details §Event Bus Integration).
+- Secure token issuance/storage practices (Details §Token Service).
+
+### Reference Documents
+- `docs/AI_coding_standards.md`
+- `server/src/lib/email/README.md`
+- `docs/email-i18n-implementation-summary.md`
+- `docs/inbound-email/README.md`
+- This plan’s Details section for implementation specifics.
+
+---
+
+## Details
+
+### System Overview
+
 This plan outlines the technical implementation of a customer satisfaction (CSAT) survey system for Alga PSA, targeting MSPs with 5-10 employees and 50-100 customers. The system will automatically send surveys after ticket closure, collect responses, and provide reporting capabilities.
 
-## Technical Architecture
+### Technical Architecture
 
 ### Core Components
 
@@ -23,7 +65,7 @@ Email Service (with survey link) → Customer clicks rating →
 API validates token → Store response → Display in UI/Reports
 ```
 
-## Database Schema
+### Database Schema
 
 ### New Tables
 
@@ -170,7 +212,7 @@ CREATE INDEX idx_survey_invitations_token ON survey_invitations(tenant, survey_t
 CREATE INDEX idx_survey_invitations_sent ON survey_invitations(tenant, sent_at DESC);
 ```
 
-## API Implementation
+### API Implementation
 
 ### New API Routes
 
@@ -317,7 +359,7 @@ Get aggregate statistics for dashboard.
 }
 ```
 
-## Server Actions
+### Server Actions
 
 ### New Action Files
 
@@ -517,7 +559,7 @@ export function hashSurveyToken(token: string) {
 }
 ```
 
-## Event Bus Integration
+### Event Bus Integration
 
 ### New Event Types
 
@@ -620,7 +662,7 @@ import { registerSurveySubscriber } from './subscribers/surveySubscriber';
 registerSurveySubscriber();
 ```
 
-## Email Integration
+### Email Integration
 
 ### New Email Template
 
@@ -665,7 +707,7 @@ Implementation notes:
 - Document the merge fields and translation keys in Confluence so future tenant-specific overrides stay aligned with the system templates.
 - Keep this plan at the integration level—actual email/provider plumbing continues to live inside `/server/src/lib/email/services`, and we reuse that infrastructure rather than reinventing it here.
 
-## UI Components
+### UI Components
 
 ### Directory Structure
 
@@ -1100,7 +1142,7 @@ Add to main navigation (optional - could just be in Reports):
 }
 ```
 
-## Integration with Existing Modules
+### Integration with Existing Modules
 
 ### Ticket Detail Page
 
@@ -1127,7 +1169,7 @@ import { CompanyCSATSummary } from '@/components/surveys/CompanyCSATSummary';
 <CompanyCSATSummary company_id={company.company_id} />
 ```
 
-## Migration Files
+### Migration Files
 
 ### Phase 1 Migrations
 
@@ -1359,7 +1401,7 @@ exports.up = function(knex) {
 };
 ```
 
-## TypeScript Types & Interfaces
+### TypeScript Types & Interfaces
 
 ### `ee/server/src/types/survey.ts`
 
@@ -1467,7 +1509,7 @@ export interface StatsFilters {
 }
 ```
 
-## Implementation Phases
+### Implementation Phases
 
 ### Phase 1: Core Infrastructure (MVP)
 **Estimated: 3-5 days**
@@ -1559,7 +1601,7 @@ export interface StatsFilters {
 - Export capabilities
 - Enhanced reporting features
 
-## Testing Strategy
+### Testing Strategy
 
 ### Unit Tests
 - Token generation and validation
@@ -1586,7 +1628,7 @@ export interface StatsFilters {
 - [ ] Test duplicate response prevention
 - [ ] Verify tenant isolation
 
-## Community Edition (CE) Fallback
+### Community Edition (CE) Fallback
 
 Since this is an EE feature, create empty implementations:
 
@@ -1631,7 +1673,7 @@ export async function getSurveyTemplates() {
 // Similar stubs for other actions
 ```
 
-## Configuration
+### Configuration
 
 ### Environment Variables
 
@@ -1650,7 +1692,7 @@ ALTER TABLE tenant_settings ADD COLUMN surveys_enabled BOOLEAN DEFAULT true;
 
 This allows disabling surveys per tenant if needed.
 
-## Summary
+### Summary
 
 This plan provides a complete technical implementation roadmap for a customer satisfaction survey system tailored to small MSPs. The phased approach allows for iterative development and testing, with Phase 1 delivering core functionality and subsequent phases adding reporting and enhancements.
 
