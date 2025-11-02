@@ -69,16 +69,16 @@ This system provides three core capabilities:
 **Goal**: Build generic CSV/XLSX importer with preview capability
 
 - [ ] CSV Parser ([CSV Import Reference](#csvxlsx-import))
-  - [ ] Add CSV parsing library (papaparse or similar)
-  - [ ] Implement `CsvImporter` class extending `AbstractImporter`
-  - [ ] Support CSV and XLSX formats
-  - [ ] Auto-detect delimiters (comma, semicolon, tab)
-  - [ ] Handle quoted fields and escape characters
-  - [ ] Streaming parser for large files
+  - [x] Add CSV parsing library (papaparse or similar)
+  - [x] Implement `CsvImporter` class extending `AbstractImporter`
+  - [x] Support CSV and XLSX formats
+  - [x] Auto-detect delimiters (comma, semicolon, tab)
+  - [x] Handle quoted fields and escape characters
+  - [x] Streaming parser for large files
   - [ ] Test with various CSV formats and edge cases
 
 - [ ] Field Mapping ([Field Mapping Reference](#csvxlsx-import))
-  - [ ] `FieldMapper` base class
+  - [x] `FieldMapper` base class
   - [ ] Column selection UI logic
   - [ ] Map CSV columns → asset fields
   - [ ] Track required vs optional fields
@@ -93,12 +93,12 @@ This system provides three core capabilities:
   - [ ] Generate actionable error messages with suggestions
 
 - [ ] Import Preview ([Preview Reference](#preview--validation))
-  - [ ] `ImportPreviewManager` class
-  - [ ] Stage import without executing
-  - [ ] Store preview data in `import_jobs.preview_data`
-  - [ ] Show first 10 rows in preview UI
-  - [ ] Display validation errors per row
-  - [ ] Calculate summary stats (valid, errors, duplicates)
+  - [x] `ImportPreviewManager` class
+  - [x] Stage import without executing
+  - [x] Store preview data in `import_jobs.preview_data`
+  - [x] Show first 10 rows in preview UI
+  - [x] Display validation errors per row
+  - [x] Calculate summary stats (valid, errors, duplicates)
 
 **Acceptance**: Can upload CSV, map columns, see validation errors in preview ([Scenario 1](#scenario-1-import-csv-with-custom-mapping))
 

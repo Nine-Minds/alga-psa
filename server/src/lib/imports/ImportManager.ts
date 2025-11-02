@@ -12,10 +12,13 @@ import type {
   ImportJobStatus,
   ImportSourceRecord,
   InitiateImportOptions,
-  ParsedRecord
+  ParsedRecord,
+  PreviewComputationResult,
+  PreviewGenerationOptions
 } from '@/types/imports.types';
 import { AbstractImporter } from './AbstractImporter';
 import type { FieldMappingTemplate } from '@/types/imports.types';
+import { ImportPreviewManager } from './ImportPreviewManager';
 
 type ImportJobQuery = KnexType.QueryBuilder<ImportJobRecord, ImportJobRecord[]>;
 
@@ -337,5 +340,12 @@ export class ImportManager {
     }
 
     return importer.detectDuplicate(record, context);
+  }
+
+  async preparePreview(options: PreviewGenerationOptions): Promise<PreviewComputationResult> {
+    const previewManager = new ImportPreviewManager(options.tenantId);
+    const result = await previewManager.generate(options);
+    await previewManager.persist(options.importJobId, result);
+    return result;
   }
 }

@@ -59,6 +59,31 @@ export interface ParsedRecord {
   metadata?: Record<string, unknown>;
 }
 
+export interface FieldDefinition {
+  field: string;
+  label: string;
+  description?: string;
+  required?: boolean;
+  example?: string;
+  parser?: FieldValueParser;
+  validators?: FieldValidator[];
+}
+
+export type FieldValueParser = (
+  value: unknown,
+  record: ParsedRecord
+) => unknown | Promise<unknown>;
+
+export type FieldValidator = (
+  value: unknown,
+  record: ParsedRecord
+) => ImportValidationError | null | Promise<ImportValidationError | null>;
+
+export interface FieldMappingResult {
+  mapped: Record<string, unknown>;
+  errors: ImportValidationError[];
+}
+
 /**
  * Result of importer-level validation prior to preview or execution.
  */
@@ -270,4 +295,22 @@ export interface InitiateImportOptions {
 export interface ImportJobDetails extends ImportJobRecord {
   items: ImportJobItemRecord[];
   metrics: ImportJobMetrics;
+}
+
+export interface PreviewComputationResult {
+  preview: PreviewData;
+  summary: ImportPreviewSummary;
+  errorSummary: ImportErrorSummary | null;
+  metrics: ImportJobMetrics;
+}
+
+export interface PreviewGenerationOptions {
+  tenantId: string;
+  importJobId: string;
+  records: ParsedRecord[];
+  validator?: (record: ParsedRecord) => Promise<ImportValidationError[]>;
+  duplicateDetector?: {
+    check(record: ParsedRecord): Promise<DuplicateCheckResult>;
+  };
+  maxPreviewRows?: number;
 }
