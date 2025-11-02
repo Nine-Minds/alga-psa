@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FieldMappingTemplate, ImportJobRecord } from '@/types/imports.types';
-import { getAssetFieldDefinitions } from '@/lib/imports/assetFieldDefinitions';
 
 interface ImportSourceDTO {
   import_source_id: string;
@@ -34,6 +33,17 @@ const parseJson = async <T>(response: Response): Promise<T> => {
   return response.json();
 };
 
+const UI_FIELD_DEFINITIONS = [
+  { field: 'name', label: 'Asset Name', required: true, example: 'NYC-WS-001' },
+  { field: 'asset_type', label: 'Asset Type', required: true, example: 'workstation' },
+  { field: 'serial_number', label: 'Serial Number', required: false, example: 'SN-123456' },
+  { field: 'asset_tag', label: 'Asset Tag', required: false, example: 'TAG-001' },
+  { field: 'mac_address', label: 'MAC Address', required: false, example: '00:11:22:33:44:55' },
+  { field: 'ip_address', label: 'IP Address', required: false, example: '10.0.0.5' },
+  { field: 'purchase_date', label: 'Purchase Date', required: false, example: '2025-01-15' },
+  { field: 'warranty_end_date', label: 'Warranty End Date', required: false, example: '2027-01-15' },
+] as const;
+
 export const useImportActions = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sources, setSources] = useState<ImportSourceDTO[]>([]);
@@ -42,7 +52,7 @@ export const useImportActions = () => {
   const [fieldMapping, setFieldMapping] = useState<FieldMappingTemplate>({});
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const fieldDefinitions = useMemo(() => getAssetFieldDefinitions(), []);
+  const fieldDefinitions = useMemo(() => UI_FIELD_DEFINITIONS, []);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);

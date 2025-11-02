@@ -27,7 +27,17 @@ export class ImportPreviewManager {
     this.tenantId = tenantId;
   }
 
+  private async ensureTenantContext(): Promise<void> {
+    try {
+      const knex = await getConnection(this.tenantId);
+      await knex.raw("SELECT set_config('app.current_tenant', ?, false)", [this.tenantId]);
+    } catch (error) {
+      // ignore if parameter not required (e.g., during unit tests)
+    }
+  }
+
   async generate(options: PreviewGenerationOptions): Promise<PreviewComputationResult> {
+    await this.ensureTenantContext();
     const { records, validator, duplicateDetector, maxPreviewRows } = options;
     const previewLimit = maxPreviewRows ?? PREVIEW_DEFAULT_LIMIT;
 
@@ -106,6 +116,7 @@ export class ImportPreviewManager {
   }
 
   async persist(importJobId: string, result: PreviewComputationResult): Promise<void> {
+    await this.ensureTenantContext();
     const knex = await getConnection(this.tenantId);
     await knex('import_jobs')
       .where({ tenant: this.tenantId, import_job_id: importJobId })

@@ -1,7 +1,8 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@/lib/db';
 import { ImportManager } from '@/lib/imports/ImportManager';
+import { ImportPreviewManager } from '@/lib/imports/ImportPreviewManager';
 import { ImportRegistry } from '@/lib/imports/ImportRegistry';
 import { CsvImporter } from '@/lib/imports/CsvImporter';
 import { getAssetFieldDefinitions } from '@/lib/imports/assetFieldDefinitions';
@@ -97,8 +98,6 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  const parsedRecords = await importer.parse(buffer);
-
   fieldMapping.forEach((mapping) => {
     if (!mapping.sourceField || !mapping.targetField) {
       throw new Error('Invalid field mapping entry. Each mapping requires sourceField and targetField.');
@@ -108,6 +107,8 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
   if (!fieldMapping.length) {
     throw new Error('Field mapping is required to prepare a preview');
   }
+
+  const parsedRecords = await importer.parse(buffer);
 
   const job = await importManager.initiateImport(tenant, source.id, {
     createdBy: userId,

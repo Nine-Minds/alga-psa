@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getImportSources } from '@/lib/actions/import-actions/importActions';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const sources = await getImportSources();

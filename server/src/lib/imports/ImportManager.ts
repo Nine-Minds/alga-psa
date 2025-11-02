@@ -56,6 +56,14 @@ export class ImportManager {
     this.registry = registry;
   }
 
+  private async ensureTenantContext(knex: KnexType, tenantId: string) {
+    try {
+      await knex.raw("SELECT set_config('app.current_tenant', ?, false)", [tenantId]);
+    } catch (error) {
+      // Ignore if configuration parameter is not available (e.g., during tests)
+    }
+  }
+
   /**
    * Ensure all registered importer plugins have a persisted representation for the tenant.
    */
@@ -86,6 +94,7 @@ export class ImportManager {
 
   async getAvailableSources(tenantId: string, includeInactive = false): Promise<ImportSource[]> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     await this.ensureImportersRegistered(tenantId, knex);
 
     const query = knex<ImportSourceRecord>('import_sources')
@@ -102,6 +111,7 @@ export class ImportManager {
 
   async getSourceById(tenantId: string, sourceId: string): Promise<ImportSource | null> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     const record = await knex<ImportSourceRecord>('import_sources')
       .where({
         tenant: tenantId,
@@ -117,6 +127,7 @@ export class ImportManager {
    */
   async registerSource(source: ImportSource): Promise<ImportSource> {
     const knex = await getConnection(source.tenant);
+    await this.ensureTenantContext(knex, source.tenant);
     const payload = source.toRecord();
 
     const existing = await knex<ImportSourceRecord>('import_sources')
@@ -179,6 +190,7 @@ export class ImportManager {
     template: FieldMappingTemplate
   ): Promise<FieldMappingTemplate | null> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     const [updated] = await knex<ImportSourceRecord>('import_sources')
       .where({ tenant: tenantId, import_source_id: importSourceId })
       .update({ field_mapping: template, updated_at: knex.fn.now() })
@@ -234,6 +246,7 @@ export class ImportManager {
 
   async getPreview(tenantId: string, importJobId: string): Promise<ImportJobRecord['preview_data']> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     const job = await knex<ImportJobRecord>('import_jobs')
       .select('preview_data')
       .where({ tenant: tenantId, import_job_id: importJobId })
@@ -246,6 +259,7 @@ export class ImportManager {
    */
   async executeImport(tenantId: string, importJobId: string): Promise<ImportJobRecord | null> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     const [job] = await knex<ImportJobRecord>('import_jobs')
       .where({ tenant: tenantId, import_job_id: importJobId })
       .update({
@@ -259,6 +273,7 @@ export class ImportManager {
 
   async getImportStatus(tenantId: string, importJobId: string): Promise<ImportJobRecord | null> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     const job = await knex<ImportJobRecord>('import_jobs')
       .where({ tenant: tenantId, import_job_id: importJobId })
       .first();
@@ -267,6 +282,7 @@ export class ImportManager {
 
   async getImportHistory(tenantId: string, filters: ImportFilters = {}): Promise<ImportJobRecord[]> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     let query: ImportJobQuery = knex<ImportJobRecord>('import_jobs')
       .where({ tenant: tenantId })
       .orderBy('created_at', 'desc');
@@ -313,6 +329,7 @@ export class ImportManager {
 
   async getImportDetails(tenantId: string, importJobId: string): Promise<ImportJobDetails | null> {
     const knex = await getConnection(tenantId);
+    await this.ensureTenantContext(knex, tenantId);
     const job = await knex<ImportJobRecord>('import_jobs')
       .where({ tenant: tenantId, import_job_id: importJobId })
       .first();
@@ -371,6 +388,8 @@ export class ImportManager {
   }
 
   async preparePreview(options: PreviewGenerationOptions): Promise<PreviewComputationResult> {
+    const knex = await getConnection(options.tenantId);
+    await this.ensureTenantContext(knex, options.tenantId);
     const mapper = !options.validator && options.fieldDefinitions && options.fieldMapping
       ? new FieldMapper(options.fieldDefinitions)
       : null;
