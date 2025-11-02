@@ -5,6 +5,7 @@ import { ImportManager } from '@/lib/imports/ImportManager';
 import { ImportRegistry } from '@/lib/imports/ImportRegistry';
 import { CsvImporter } from '@/lib/imports/CsvImporter';
 import { getAssetFieldDefinitions } from '@/lib/imports/assetFieldDefinitions';
+import { DuplicateDetector } from '@/lib/imports/DuplicateDetector';
 import type {
   FieldMapping,
   FieldMappingTemplate,
@@ -119,12 +120,17 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
     totalRows: parsedRecords.length,
   });
 
+  const duplicateDetector = new DuplicateDetector(tenant, {
+    exactFields: ['serial_number', 'asset_tag', 'mac_address'],
+  });
+
   const options: PreviewGenerationOptions = {
     tenantId: tenant,
     importJobId: job.import_job_id,
     records: parsedRecords as ParsedRecord[],
     fieldDefinitions: getAssetFieldDefinitions(),
     fieldMapping,
+    duplicateDetector,
   };
 
   const result = await importManager.preparePreview(options);
