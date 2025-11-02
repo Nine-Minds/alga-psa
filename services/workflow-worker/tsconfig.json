@@ -12,7 +12,9 @@
       "@shared/*": ["shared/*"],
       "@shared": ["shared"],
       "@alga-psa/shared": ["shared"],
-      "@alga-psa/shared/*": ["shared/*"]
+      "@alga-psa/shared/*": ["shared/*"],
+      "@/*": ["server/src/*"],
+      "@": ["server/src"]
     },
     "rootDir": "../..",
     "skipLibCheck": true

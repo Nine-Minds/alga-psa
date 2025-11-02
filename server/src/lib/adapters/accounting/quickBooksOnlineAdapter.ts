@@ -532,7 +532,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       });
 
     const mappingMap = new Map<string, MappingRow>();
-    mappingRows.forEach((row) => {
+    mappingRows.forEach((row: MappingRowRaw) => {
       const normalized = normalizeMapping(row);
       const existing = mappingMap.get(normalized.alga_entity_id);
       if (!existing || existing.alga_entity_type !== 'company') {
