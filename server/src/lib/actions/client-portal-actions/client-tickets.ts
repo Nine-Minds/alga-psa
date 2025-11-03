@@ -14,12 +14,40 @@ import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { getEventBus } from '../../eventBus';
+import { getEmailEventChannel } from '../../notifications/emailChannel';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   priority_id: z.string(),
 });
+
+// Helper function to safely publish events
+async function safePublishEvent(eventType: string, payload: any) {
+  try {
+    // Publish to email channel
+    await getEventBus().publish(
+      {
+        eventType,
+        payload
+      },
+      { channel: getEmailEventChannel() }
+    );
+
+    // Also publish to internal notifications channel
+    await getEventBus().publish(
+      {
+        eventType,
+        payload
+      },
+      { channel: 'internal-notifications' }
+    );
+  } catch (error) {
+    console.error(`Failed to publish ${eventType} event:`, error);
+    // Don't throw - we don't want event publishing failures to break the main flow
+  }
+}
 
 export async function getClientTickets(status: string): Promise<ITicketListItem[]> {
   try {
@@ -450,7 +478,7 @@ export async function addClientTicketComment(ticketId: string, content: string, 
         markdownContent = "[Error converting content to markdown]";
       }
 
-      await trx('comments').insert({
+      const [newComment] = await trx('comments').insert({
       tenant,
       ticket_id: ticketId,
       author_type: 'client',
@@ -460,9 +488,22 @@ export async function addClientTicketComment(ticketId: string, content: string, 
         created_at: new Date().toISOString(),
         user_id: session.user.id,
         markdown_content: markdownContent
+      }).returning('*');
+
+      // Publish comment added event
+      await safePublishEvent('TICKET_COMMENT_ADDED', {
+        tenantId: tenant,
+        ticketId: ticketId,
+        userId: session.user.id,
+        comment: {
+          id: newComment.comment_id,
+          content: content,
+          author: `${user.first_name} ${user.last_name}`,
+          isInternal
+        }
       });
     });
-    
+
     return true; // Return true to indicate success
   } catch (error) {
     console.error('Failed to add comment:', error);
@@ -624,6 +665,9 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
         throw new Error('Ticket not found');
       }
 
+      // Get old status for change tracking
+      const oldStatusId = ticket.status_id;
+
       // Update the ticket status
       await trx('tickets')
         .where({
@@ -635,6 +679,19 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
           updated_at: new Date().toISOString(),
           updated_by: session.user.id
         });
+
+      // Publish ticket updated event
+      await safePublishEvent('TICKET_UPDATED', {
+        tenantId: tenant,
+        ticketId: ticketId,
+        userId: session.user.id,
+        changes: {
+          status_id: {
+            old: oldStatusId,
+            new: newStatusId
+          }
+        }
+      });
     });
 
   } catch (error) {
