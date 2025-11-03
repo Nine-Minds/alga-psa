@@ -45,6 +45,11 @@ interface FormState {
 
 const TRIGGER_TYPE_OPTIONS: TriggerType[] = ['ticket_closed', 'project_completed'];
 
+const TRIGGER_TYPE_FALLBACK_LABELS: Record<TriggerType, string> = {
+  ticket_closed: 'Ticket closed',
+  project_completed: 'Project completed',
+};
+
 interface SelectionChipsProps {
   items: string[];
   getLabel: (id: string) => string;
@@ -104,7 +109,8 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
   } = useTriggerReferenceData();
 
   const boards = referenceData?.boards ?? [];
-  const statuses = referenceData?.statuses ?? [];
+  const ticketStatuses = referenceData?.ticketStatuses ?? [];
+  const projectStatuses = referenceData?.projectStatuses ?? [];
   const priorities = referenceData?.priorities ?? [];
 
   const [formState, setFormState] = useState<FormState>({
@@ -154,6 +160,29 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     });
   }, [selectedBoardIds]);
 
+  useEffect(() => {
+    if (formState.triggerType === 'project_completed') {
+      setSelectedBoardIds([]);
+      setBoardPickerValue(null);
+      setSelectedPriorityIds([]);
+      setPrioritySelectValue(null);
+    }
+  }, [formState.triggerType]);
+
+  useEffect(() => {
+    const source =
+      formState.triggerType === 'project_completed' ? projectStatuses : ticketStatuses;
+    if (source.length === 0) {
+      return;
+    }
+    const allowed = new Set(
+      source
+        .map((status) => status.status_id)
+        .filter((statusId): statusId is string => Boolean(statusId))
+    );
+    setSelectedStatusIds((prev) => prev.filter((statusId) => allowed.has(statusId)));
+  }, [formState.triggerType, projectStatuses, ticketStatuses]);
+
   const boardMap = useMemo(() => {
     const map = new Map<string, IBoard>();
     boards.forEach((board) => {
@@ -166,13 +195,18 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
 
   const statusMap = useMemo(() => {
     const map = new Map<string, IStatus>();
-    statuses.forEach((status) => {
+    ticketStatuses.forEach((status) => {
+      if (status.status_id) {
+        map.set(status.status_id, status);
+      }
+    });
+    projectStatuses.forEach((status) => {
       if (status.status_id) {
         map.set(status.status_id, status);
       }
     });
     return map;
-  }, [statuses]);
+  }, [ticketStatuses, projectStatuses]);
 
   const priorityMap = useMemo(() => {
     const map = new Map<string, IPriority>();
@@ -184,16 +218,20 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     return map;
   }, [priorities]);
 
-  const statusOptions = useMemo<SelectOption[]>(
-    () =>
-      statuses
-        .filter((status): status is IStatus & { status_id: string } => Boolean(status.status_id))
-        .map((status) => ({
-          value: status.status_id!,
-          label: `${status.name}${status.is_default ? ` (${t('surveys.settings.templateList.defaultBadge', 'Default')})` : ''}`,
-        })),
-    [statuses, t]
-  );
+  const statusOptions = useMemo<SelectOption[]>(() => {
+    const source =
+      formState.triggerType === 'project_completed' ? projectStatuses : ticketStatuses;
+    return source
+      .filter((status): status is IStatus & { status_id: string } => Boolean(status.status_id))
+      .map((status) => ({
+        value: status.status_id!,
+        label: `${status.name}${
+          status.is_default
+            ? ` (${t('surveys.settings.templateList.defaultBadge', 'Default')})`
+            : ''
+        }`,
+      }));
+  }, [formState.triggerType, projectStatuses, ticketStatuses, t]);
 
   interface PriorityOption {
     value: string;
@@ -218,7 +256,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
   );
 
   const selectedPriorityType = useMemo<'custom' | 'itil' | 'mixed' | null>(() => {
-    if (selectedBoardIds.length === 0) {
+    if (formState.triggerType !== 'ticket_closed' || selectedBoardIds.length === 0) {
       return null;
     }
 
@@ -237,9 +275,12 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       return types.values().next().value as 'custom' | 'itil';
     }
     return 'mixed';
-  }, [boardMap, selectedBoardIds]);
+  }, [boardMap, formState.triggerType, selectedBoardIds]);
 
   const filteredPriorityOptions = useMemo<PriorityOption[]>(() => {
+    if (formState.triggerType !== 'ticket_closed') {
+      return [];
+    }
     if (selectedPriorityType === 'itil') {
       return priorityOptions.filter((option) => option.is_from_itil_standard);
     }
@@ -247,7 +288,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       return priorityOptions.filter((option) => !option.is_from_itil_standard);
     }
     return priorityOptions;
-  }, [priorityOptions, selectedPriorityType]);
+  }, [formState.triggerType, priorityOptions, selectedPriorityType]);
 
   const removeLabel = t('actions.remove', 'Remove');
   const anyLabel = t('surveys.settings.triggerList.conditions.any', 'Any');
@@ -275,6 +316,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
   };
 
   const handleBoardSelect = (boardId: string) => {
+    if (formState.triggerType !== 'ticket_closed') {
+      return;
+    }
     if (!boardId) {
       return;
     }
@@ -299,6 +343,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
   };
 
   const handlePrioritySelect = (priorityId: string) => {
+    if (formState.triggerType !== 'ticket_closed') {
+      return;
+    }
     if (!priorityId || priorityId === 'placeholder') {
       return;
     }
@@ -462,7 +509,10 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           id={`${formInstanceId}-trigger-type`}
           options={TRIGGER_TYPE_OPTIONS.map((type) => ({
             value: type,
-            label: t(`surveys.settings.triggerForm.triggerTypes.${type}`, type),
+            label: t(
+              `surveys.settings.triggerForm.triggerTypes.${type}`,
+              TRIGGER_TYPE_FALLBACK_LABELS[type]
+            ),
           }))}
           value={formState.triggerType}
           onValueChange={(value) => handleChange('triggerType', (value as TriggerType) || 'ticket_closed')}
@@ -471,28 +521,30 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       </div>
 
       <div className="space-y-6">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-board-picker`}>
-            {t('surveys.settings.triggerForm.labels.boardIds', 'Boards')}
-          </label>
-          <BoardPicker
-            id={`${formInstanceId}-board-picker`}
-            boards={boards}
-            selectedBoardId={boardPickerValue}
-            onSelect={handleBoardSelect}
-            filterState={boardFilterState}
-            onFilterStateChange={setBoardFilterState}
-            placeholder={t('surveys.settings.triggerForm.placeholders.boardIds', 'Select board')}
-          />
-          <SelectionChips
-            items={selectedBoardIds}
-            getLabel={getBoardLabel}
-            onRemove={handleRemoveBoard}
-            removeLabel={removeLabel}
-            emptyLabel={anyLabel}
-          />
-          <p className="text-xs text-gray-500">{fieldHelpText}</p>
-        </div>
+        {formState.triggerType === 'ticket_closed' && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-board-picker`}>
+              {t('surveys.settings.triggerForm.labels.boardIds', 'Boards')}
+            </label>
+            <BoardPicker
+              id={`${formInstanceId}-board-picker`}
+              boards={boards}
+              selectedBoardId={boardPickerValue}
+              onSelect={handleBoardSelect}
+              filterState={boardFilterState}
+              onFilterStateChange={setBoardFilterState}
+              placeholder={t('surveys.settings.triggerForm.placeholders.boardIds', 'Select board')}
+            />
+            <SelectionChips
+              items={selectedBoardIds}
+              getLabel={getBoardLabel}
+              onRemove={handleRemoveBoard}
+              removeLabel={removeLabel}
+              emptyLabel={anyLabel}
+            />
+            <p className="text-xs text-gray-500">{fieldHelpText}</p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-status`}>
@@ -516,30 +568,32 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           <p className="text-xs text-gray-500">{fieldHelpText}</p>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-priority`}>
-            {t('surveys.settings.triggerForm.labels.priorities', 'Priorities')}
-          </label>
-          <PrioritySelect
-            id={`${formInstanceId}-priority`}
-            value={prioritySelectValue}
-            onValueChange={handlePrioritySelect}
-            options={filteredPriorityOptions}
-            placeholder={t('surveys.settings.triggerForm.placeholders.priorities', 'Add priority')}
-            isItilBoard={selectedPriorityType === 'itil'}
-          />
-          {selectedPriorityType === 'mixed' && (
-            <p className="text-xs text-gray-500">{mixedPriorityNotice}</p>
-          )}
-          <SelectionChips
-            items={selectedPriorityIds}
-            getLabel={getPriorityLabel}
-            onRemove={handleRemovePriority}
-            removeLabel={removeLabel}
-            emptyLabel={anyLabel}
-          />
-          <p className="text-xs text-gray-500">{fieldHelpText}</p>
-        </div>
+        {formState.triggerType === 'ticket_closed' && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-priority`}>
+              {t('surveys.settings.triggerForm.labels.priorities', 'Priorities')}
+            </label>
+            <PrioritySelect
+              id={`${formInstanceId}-priority`}
+              value={prioritySelectValue}
+              onValueChange={handlePrioritySelect}
+              options={filteredPriorityOptions}
+              placeholder={t('surveys.settings.triggerForm.placeholders.priorities', 'Add priority')}
+              isItilBoard={selectedPriorityType === 'itil'}
+            />
+            {selectedPriorityType === 'mixed' && (
+              <p className="text-xs text-gray-500">{mixedPriorityNotice}</p>
+            )}
+            <SelectionChips
+              items={selectedPriorityIds}
+              getLabel={getPriorityLabel}
+              onRemove={handleRemovePriority}
+              removeLabel={removeLabel}
+              emptyLabel={anyLabel}
+            />
+            <p className="text-xs text-gray-500">{fieldHelpText}</p>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -555,8 +609,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
             <Button
               id={`${formInstanceId}-delete`}
               type="button"
-              variant="ghost"
-              className="text-red-600 hover:text-red-700"
+              variant="accent"
               onClick={handleDelete}
               disabled={isDeleting || isSubmitting}
             >

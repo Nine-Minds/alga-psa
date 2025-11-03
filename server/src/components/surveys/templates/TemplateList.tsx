@@ -17,7 +17,14 @@ import { useToast } from 'server/src/hooks/use-toast';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import TemplateForm from './TemplateForm';
 import { Dialog } from 'server/src/components/ui/Dialog';
-import { PlusIcon, RefreshCw } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from 'server/src/components/ui/DropdownMenu';
+import { MoreVertical, PlusIcon, RefreshCw } from 'lucide-react';
 
 interface TemplateListProps {
   templates: SurveyTemplate[];
@@ -279,36 +286,44 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                   </TableCell>
                   <TableCell>{renderUpdatedAt(template.updatedAt)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        id={`survey-template-edit-${template.templateId}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(template)}
-                      >
-                        {t('actions.edit', 'Edit')}
-                      </Button>
-                      {!template.isDefault && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
-                          id={`survey-template-set-default-${template.templateId}`}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSetDefault(template)}
-                          disabled={isToggling === template.templateId}
+                          id={`survey-template-actions-${template.templateId}`}
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Open actions for ${template.templateName}`}
                         >
-                          {t('surveys.settings.templateList.defaultBadge', 'Default')}
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
-                      )}
-                      <Button
-                        id={`survey-template-delete-${template.templateId}`}
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleDelete(template)}
-                      >
-                        {t('actions.delete', 'Delete')}
-                      </Button>
-                    </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          id={`survey-template-edit-${template.templateId}`}
+                          onSelect={() => handleEdit(template)}
+                        >
+                          {t('actions.edit', 'Edit')}
+                        </DropdownMenuItem>
+                        {!template.isDefault && (
+                          <DropdownMenuItem
+                            id={`survey-template-set-default-${template.templateId}`}
+                            disabled={isToggling === template.templateId}
+                            onSelect={() => handleSetDefault(template)}
+                          >
+                            {t('surveys.settings.templateList.actions.setDefault', 'Set as default')}
+                          </DropdownMenuItem>
+                        )}
+                        {!template.isDefault && <DropdownMenuSeparator />}
+                        <DropdownMenuItem
+                          id={`survey-template-delete-${template.templateId}`}
+                          className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                          onSelect={() => handleDelete(template)}
+                        >
+                          {t('actions.delete', 'Delete')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

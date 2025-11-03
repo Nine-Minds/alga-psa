@@ -339,8 +339,7 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
             <Button
               id={`${formInstanceId}-delete`}
               type="button"
-              variant="ghost"
-              className="text-red-600 hover:text-red-700"
+              variant="accent"
               onClick={handleDelete}
               disabled={isDeleting || isSubmitting}
             >

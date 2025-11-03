@@ -12,6 +12,7 @@ import type { IStatus } from 'server/src/interfaces/status.interface';
 import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_TRIGGER_TABLE = 'survey_triggers';
@@ -111,11 +112,17 @@ export type SurveyTemplate = {
   updatedAt: Date;
 };
 
-export type SurveyTriggerConditions = {
+export type TicketTriggerConditions = {
   board_id?: string[];
   status_id?: string[];
   priority?: string[];
 };
+
+export type ProjectTriggerConditions = {
+  status_id?: string[];
+};
+
+export type SurveyTriggerConditions = TicketTriggerConditions | ProjectTriggerConditions;
 
 export type SurveyTrigger = {
   triggerId: string;
@@ -262,6 +269,7 @@ export async function createSurveyTrigger(input: CreateTriggerInput): Promise<Su
   const parsed = baseTriggerSchema.parse(input);
   const { knex, tenant } = await createTenantKnex();
   const tenantId = ensureTenant(tenant);
+  const sanitisedConditions = sanitiseTriggerConditions(parsed.triggerType, parsed.triggerConditions);
 
   const row = await withTransaction(knex, async (trx) => {
     await assertTemplateBelongsToTenant(trx, tenantId, parsed.templateId);
@@ -271,7 +279,7 @@ export async function createSurveyTrigger(input: CreateTriggerInput): Promise<Su
         tenant: tenantId,
         template_id: parsed.templateId,
         trigger_type: parsed.triggerType,
-        trigger_conditions: parsed.triggerConditions ?? {},
+        trigger_conditions: sanitisedConditions,
         enabled: parsed.enabled ?? true,
       })
       .returning('*');
@@ -302,6 +310,8 @@ export async function updateSurveyTrigger(triggerId: string, input: UpdateTrigge
       throw new Error('Survey trigger not found');
     }
 
+    const currentConditions = normaliseTriggerConditions(current.trigger_conditions);
+
     if (parsed.templateId) {
       await assertTemplateBelongsToTenant(trx, tenantId, parsed.templateId);
     }
@@ -310,6 +320,9 @@ export async function updateSurveyTrigger(triggerId: string, input: UpdateTrigge
       updated_at: trx.fn.now(),
     };
 
+    const targetTriggerType =
+      parsed.triggerType ?? (current.trigger_type as SurveyTrigger['triggerType']);
+
     if (parsed.templateId) {
       updatePayload.template_id = parsed.templateId;
     }
@@ -317,7 +330,15 @@ export async function updateSurveyTrigger(triggerId: string, input: UpdateTrigge
       updatePayload.trigger_type = parsed.triggerType;
     }
     if (parsed.triggerConditions) {
-      updatePayload.trigger_conditions = parsed.triggerConditions;
+      updatePayload.trigger_conditions = sanitiseTriggerConditions(
+        targetTriggerType,
+        parsed.triggerConditions
+      );
+    } else if (parsed.triggerType && parsed.triggerType !== current.trigger_type) {
+      updatePayload.trigger_conditions = sanitiseTriggerConditions(
+        parsed.triggerType,
+        currentConditions
+      );
     }
     if (typeof parsed.enabled === 'boolean') {
       updatePayload.enabled = parsed.enabled;
@@ -449,6 +470,42 @@ function normaliseTriggerConditions(
   return conditions;
 }
 
+function filterIds(values: unknown): string[] | undefined {
+  if (!Array.isArray(values)) {
+    return undefined;
+  }
+  const filtered = values.filter(isNonEmptyString);
+  return filtered.length > 0 ? filtered : undefined;
+}
+
+function sanitiseTriggerConditions(
+  triggerType: SurveyTrigger['triggerType'],
+  conditions?: SurveyTriggerConditions | null
+): Record<string, unknown> {
+  if (!conditions) {
+    return {};
+  }
+
+  if (triggerType === 'ticket_closed') {
+    const boardIds = filterIds((conditions as TicketTriggerConditions).board_id);
+    const statusIds = filterIds(conditions.status_id);
+    const priorities = filterIds((conditions as TicketTriggerConditions).priority);
+
+    return {
+      ...(boardIds ? { board_id: boardIds } : {}),
+      ...(statusIds ? { status_id: statusIds } : {}),
+      ...(priorities ? { priority: priorities } : {}),
+    };
+  }
+
+  if (triggerType === 'project_completed') {
+    const statusIds = filterIds(conditions.status_id);
+    return statusIds ? { status_id: statusIds } : {};
+  }
+
+  return {};
+}
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -459,12 +516,13 @@ function toDate(input: Date | string): Date {
 
 export interface SurveyTriggerReferenceData {
   boards: IBoard[];
-  statuses: IStatus[];
+  ticketStatuses: IStatus[];
+  projectStatuses: IStatus[];
   priorities: IPriority[];
 }
 
 export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerReferenceData> {
-  const [boards, statuses, priorities] = await Promise.all([
+  const [boards, ticketStatuses, projectStatuses, priorities] = await Promise.all([
     getAllBoards(true).catch((error: unknown) => {
       console.error('[surveyActions] Failed to load boards for trigger reference data', error);
       throw new Error('Unable to load boards.');
@@ -472,6 +530,10 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
     getTicketStatuses().catch((error: unknown) => {
       console.error('[surveyActions] Failed to load statuses for trigger reference data', error);
       throw new Error('Unable to load statuses.');
+    }),
+    getProjectStatuses().catch((error: unknown) => {
+      console.error('[surveyActions] Failed to load project statuses for trigger reference data', error);
+      throw new Error('Unable to load project statuses.');
     }),
     getAllPriorities('ticket').catch((error: unknown) => {
       console.error('[surveyActions] Failed to load priorities for trigger reference data', error);
@@ -481,7 +543,8 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
 
   return {
     boards,
-    statuses,
+    ticketStatuses,
+    projectStatuses,
     priorities,
   };
 }
