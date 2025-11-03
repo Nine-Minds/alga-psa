@@ -382,6 +382,7 @@ const ImportExportSettings = (): JSX.Element => {
             <CardDescription>Review every import or export job in one place.</CardDescription>
           </div>
           <Button
+            id="refresh-import-export-history-button"
             variant="outline"
             onClick={refreshHistory}
             disabled={isLoading || isRefreshingHistory}

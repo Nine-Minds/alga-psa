@@ -28,6 +28,7 @@ import {
 } from 'server/src/lib/actions/asset-actions/assetActions';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+import type { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Clock3, Copy, FileText, Layers, Link as LinkIcon, ListChecks, Settings2, ShieldCheck } from 'lucide-react';
 import AssetDocuments from './AssetDocuments';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
@@ -86,7 +87,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
     tickets: []
   });
 
-  const registerDrawer = useRegisterUIComponent({
+  const registerDrawer = useRegisterUIComponent<ContainerComponent>({
     id: 'asset-detail-drawer',
     type: 'container',
     label: 'Asset Detail Drawer'

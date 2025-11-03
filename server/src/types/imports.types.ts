@@ -97,8 +97,8 @@ export interface ValidationResult {
  * Duplicate detection strategy configuration.
  */
 export interface DuplicateDetectionStrategy {
-  exactFields: string[];
-  fuzzyFields?: string[];
+  exactFields: readonly string[];
+  fuzzyFields?: readonly string[];
   fuzzyThreshold?: number;
   allowMultipleMatches?: boolean;
 }

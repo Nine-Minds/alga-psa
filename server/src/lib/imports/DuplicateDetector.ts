@@ -19,7 +19,7 @@ const exactResolvers: Record<string, ExactMatchResolver> = {
   serial_number: async (knex, tenantId, value) => {
     const match = await knex<{ asset_id: string }>('assets')
       .select('asset_id')
-      .where({ tenant: tenantId })
+      .where('tenant', tenantId)
       .whereRaw('serial_number IS NOT NULL')
       .andWhere('serial_number', value)
       .first();
@@ -28,7 +28,7 @@ const exactResolvers: Record<string, ExactMatchResolver> = {
   asset_tag: async (knex, tenantId, value) => {
     const match = await knex<{ asset_id: string }>('assets')
       .select('asset_id')
-      .where({ tenant: tenantId })
+      .where('tenant', tenantId)
       .whereRaw('asset_tag IS NOT NULL')
       .andWhere('asset_tag', value)
       .first();
@@ -37,7 +37,7 @@ const exactResolvers: Record<string, ExactMatchResolver> = {
   hostname: async (knex, tenantId, value) => {
     const match = await knex<{ asset_id: string }>('assets')
       .select('asset_id')
-      .where({ tenant: tenantId })
+      .where('tenant', tenantId)
       .whereRaw('name IS NOT NULL')
       .andWhereRaw('LOWER(name) = LOWER(?)', [value])
       .first();
@@ -46,7 +46,7 @@ const exactResolvers: Record<string, ExactMatchResolver> = {
   name: async (knex, tenantId, value) => {
     const match = await knex<{ asset_id: string }>('assets')
       .select('asset_id')
-      .where({ tenant: tenantId })
+      .where('tenant', tenantId)
       .whereRaw('name IS NOT NULL')
       .andWhereRaw('LOWER(name) = LOWER(?)', [value])
       .first();
@@ -55,7 +55,7 @@ const exactResolvers: Record<string, ExactMatchResolver> = {
   mac_address: async (knex, tenantId, value) => {
     const match = await knex<{ asset_id: string }>('assets')
       .select('asset_id')
-      .where({ tenant: tenantId })
+      .where('tenant', tenantId)
       .andWhere((builder) => {
         builder.whereRaw(
           `
@@ -274,7 +274,7 @@ export class DuplicateDetector {
 
     const query = knex<{ asset_id: string; name: string | null }>('assets')
       .select('asset_id', 'name')
-      .where({ tenant: this.tenantId })
+      .where('tenant', this.tenantId)
       .whereNotNull(column)
       .limit(MAX_FUZZY_CANDIDATES);
 

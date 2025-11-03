@@ -80,7 +80,6 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
         {...withDataAutomationId({ id })}
         onChange={(event) => {
           props.onChange?.(event);
-          props.onClick?.(event);
         }}
         {...props}
       />

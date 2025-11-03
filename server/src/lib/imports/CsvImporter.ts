@@ -6,7 +6,7 @@ import type {
   ValidationResult
 } from '@/types/imports.types';
 import { ImportValidationError } from '@/lib/imports/errors';
-import Papa, { ParseResult } from 'papaparse';
+import Papa, { ParseResult, ParseMeta, ParseError } from 'papaparse';
 import * as XLSX from 'xlsx';
 
 export interface CsvImporterOptions {

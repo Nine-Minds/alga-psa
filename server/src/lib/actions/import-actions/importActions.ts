@@ -292,7 +292,7 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
       mimeType: file.type,
     },
     totalRows: parsedRecords.length,
-    context: jobContext
+    context: jobContext as unknown as Record<string, unknown>
   });
 
   try {
@@ -382,6 +382,10 @@ export async function approveImport(importJobId: string) {
         userId
       }
     );
+
+    if (!jobRecord.id) {
+      throw new Error('Failed to create job record');
+    }
 
     await importManager.attachBackgroundJob(tenant, importJobId, jobRecord.id, 'validating');
 

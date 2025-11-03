@@ -131,7 +131,7 @@ export class ImportManager {
                 source_type: existing.get(existingKey)!
               })
               .update({
-                duplicate_detection_fields: fieldsChanged ? strategy?.exactFields ?? null : current?.duplicate_detection_fields ?? null,
+                duplicate_detection_fields: fieldsChanged ? (strategy?.exactFields ? [...strategy.exactFields] : null) : current?.duplicate_detection_fields ?? null,
                 metadata: metadataChanged ? nextMetadata : current?.metadata ?? null,
                 updated_at: knex.fn.now()
               });

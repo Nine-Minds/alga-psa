@@ -77,7 +77,12 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
         throw new Error(`Import job ${importJobId} not found`);
       }
 
-      const context = (jobRecord.context ?? {}) as AssetImportJobContext;
+      const source = await importManager.getSourceById(tenantId, jobRecord.import_source_id);
+      if (!source) {
+        throw new Error('Import source definition missing');
+      }
+
+      const context = (jobRecord.context ?? {}) as unknown as AssetImportJobContext;
       let fieldMapping = (context.fieldMapping ?? []) as FieldMapping[];
       if ((!fieldMapping || fieldMapping.length === 0) && source.fieldMapping) {
         fieldMapping = Object.entries(source.fieldMapping).map(([sourceField, definition]) => ({
@@ -90,11 +95,6 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
       const duplicateStrategy =
         (context.duplicateStrategy as DuplicateDetectionStrategy | undefined) ??
         DEFAULT_STRATEGY;
-
-      const source = await importManager.getSourceById(tenantId, jobRecord.import_source_id);
-      if (!source) {
-        throw new Error('Import source definition missing');
-      }
 
       const importer = registry.get(source.sourceType) ?? new CsvImporter();
 

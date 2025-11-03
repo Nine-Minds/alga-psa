@@ -510,8 +510,8 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     location: {
       dataIndex: 'location',
       title: 'Location',
-      render: (value: unknown, record: Asset) => (
-        <span className="text-sm text-gray-600">{(value as string) || record?.workstation?.location || '—'}</span>
+      render: (value: unknown) => (
+        <span className="text-sm text-gray-600">{(value as string) || '—'}</span>
       )
     },
     actions: {

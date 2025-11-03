@@ -49,6 +49,7 @@ export function AssetCommandPalette({
     id: 'asset-command-palette',
     type: 'dialog',
     label: 'Asset Command Palette',
+    title: 'Asset Command Palette',
     open: isOpen
   });
 
