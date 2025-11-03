@@ -113,6 +113,7 @@
     "node-vault": "^0.10.2",
     "nodemailer": "^6.9.16",
     "null-loader": "^4.0.1",
+    "openai": "^6.7.0",
     "parsimmon": "^1.18.1",
     "pdf-lib": "^1.17.1",
     "pdf2pic": "^3.1.3",

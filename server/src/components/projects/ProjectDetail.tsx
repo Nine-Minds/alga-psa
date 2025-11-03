@@ -755,14 +755,9 @@ export default function ProjectDetail({
   }, []);
 
   const handleAddCard = useCallback((status: ProjectStatus) => {
-    if (!selectedPhase) {
-      toast.error('Please select a phase before adding a card.');
-      return;
-    }
-    
     setIsAddingTask(true);
     setDefaultStatus(status);
-    setCurrentPhase(selectedPhase);
+    setCurrentPhase(selectedPhase); // This can be null, TaskForm will handle phase selection
     setSelectedTask(null);
     setShowQuickAdd(true);
   }, [selectedPhase]);
@@ -1210,7 +1205,7 @@ export default function ProjectDetail({
         </div>
       </div>
 
-      {(showQuickAdd && (currentPhase || selectedPhase)) && (
+      {showQuickAdd && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-3xl">
             <button
@@ -1233,7 +1228,7 @@ export default function ProjectDetail({
               />
             ) : (
               <TaskQuickAdd
-                phase={currentPhase || selectedPhase!}
+                phase={currentPhase || selectedPhase || undefined}
                 onClose={handleCloseQuickAdd}
                 onTaskAdded={handleAddTask}
                 onTaskUpdated={handleEmptyTaskUpdate}

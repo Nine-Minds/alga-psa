@@ -291,7 +291,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
             variant="default"
             size="sm"
             onClick={() => onAddCard(status)}
-            disabled={isAddingTask || !selectedPhase}
+            disabled={isAddingTask}
             tooltipText="Add Task"
             tooltip={true}
             className="!w-6 !h-6 !p-0 !min-w-0"

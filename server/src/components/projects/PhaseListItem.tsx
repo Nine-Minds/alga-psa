@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
+import { IComment } from 'server/src/interfaces';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { TextArea } from '../ui/TextArea';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import styles from './ProjectDetail.module.css';
+import PhaseComments from './PhaseComments';
+import { getPhaseComments, addPhaseComment, updateProjectComment, deleteProjectComment, getCommentUserMap } from 'server/src/lib/actions/project-actions/projectCommentActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { toast } from 'react-hot-toast';
 
 interface PhaseListItemProps {
   phase: IProjectPhase;
@@ -63,6 +68,37 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
+  const [phaseComments, setPhaseComments] = useState<IComment[]>([]);
+  const [commentUserMap, setCommentUserMap] = useState<Record<string, any>>({});
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+
+  // Load comments when phase editing starts
+  useEffect(() => {
+    const loadComments = async () => {
+      if (isEditing && phase.phase_id) {
+        setIsLoadingComments(true);
+        try {
+          const [comments, user] = await Promise.all([
+            getPhaseComments(phase.phase_id),
+            getCurrentUser()
+          ]);
+          setPhaseComments(comments);
+          const userMap = await getCommentUserMap(comments);
+          setCommentUserMap(userMap);
+          if (user) {
+            setCurrentUserId(user.user_id);
+          }
+        } catch (error) {
+          console.error('Error loading phase comments:', error);
+        } finally {
+          setIsLoadingComments(false);
+        }
+      }
+    };
+
+    loadComments();
+  }, [isEditing, phase.phase_id]);
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -277,6 +313,54 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               />
             </div>
           </div>
+
+          {/* Comments section - only show in edit mode */}
+          {isEditing && (
+            <div className="mt-6">
+              <PhaseComments
+                phaseId={phase.phase_id}
+                comments={phaseComments}
+                userMap={commentUserMap}
+                currentUser={{ id: currentUserId, name: null, email: null, avatarUrl: null }}
+                onAddComment={async (content, isInternal, isResolution) => {
+                  try {
+                    const newComment = await addPhaseComment(phase.phase_id, content, isInternal, isResolution);
+                    setPhaseComments([newComment, ...phaseComments]);
+                    const updatedUserMap = await getCommentUserMap([newComment, ...phaseComments]);
+                    setCommentUserMap(updatedUserMap);
+                    return true;
+                  } catch (error) {
+                    console.error('Error adding comment:', error);
+                    toast.error('Failed to add comment');
+                    return false;
+                  }
+                }}
+                onEditComment={async (commentId, updates) => {
+                  try {
+                    const updatedComment = await updateProjectComment(commentId, updates);
+                    setPhaseComments(phaseComments.map(c =>
+                      c.comment_id === commentId ? updatedComment : c
+                    ));
+                  } catch (error) {
+                    console.error('Error updating comment:', error);
+                    toast.error('Failed to update comment');
+                  }
+                }}
+                onDeleteComment={async (commentId) => {
+                  try {
+                    await deleteProjectComment(commentId);
+                    setPhaseComments(phaseComments.filter(c => c.comment_id !== commentId));
+                  } catch (error) {
+                    console.error('Error deleting comment:', error);
+                    toast.error('Failed to delete comment');
+                  }
+                }}
+                isSubmitting={false}
+                className="mb-6"
+              />
+            </div>
+          )}
+
           {/* Action Buttons  */}
           <div className="flex justify-end gap-2 mt-3">
             <Button
