@@ -26,6 +26,9 @@ export const EventTypeEnum = z.enum([
   'CALENDAR_SYNC_COMPLETED',
   'CALENDAR_SYNC_FAILED',
   'CALENDAR_CONFLICT_DETECTED',
+  'SURVEY_INVITATION_SENT',
+  'SURVEY_RESPONSE_SUBMITTED',
+  'SURVEY_NEGATIVE_RESPONSE',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -141,6 +144,34 @@ export const CalendarConflictEventPayloadSchema = BasePayloadSchema.extend({
   externalLastModified: z.string().datetime(),
 });
 
+export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({
+  invitationId: z.string().uuid(),
+  ticketId: z.string().uuid(),
+  companyId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  surveyTokenHash: z.string(),
+});
+
+export const SurveyResponseSubmittedPayloadSchema = BasePayloadSchema.extend({
+  responseId: z.string().uuid(),
+  ticketId: z.string().uuid(),
+  companyId: z.string().uuid().optional(),
+  rating: z.number(),
+  hasComment: z.boolean(),
+});
+
+export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
+  responseId: z.string().uuid(),
+  ticketId: z.string().uuid(),
+  ticketNumber: z.string(),
+  companyId: z.string().uuid().optional(),
+  companyName: z.string().optional(),
+  contactName: z.string().optional(),
+  rating: z.number(),
+  comment: z.string().optional(),
+  assignedTo: z.string().uuid().optional(),
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -167,6 +198,9 @@ export const EventPayloadSchemas = {
   CALENDAR_SYNC_COMPLETED: CalendarSyncEventPayloadSchema,
   CALENDAR_SYNC_FAILED: CalendarSyncEventPayloadSchema,
   CALENDAR_CONFLICT_DETECTED: CalendarConflictEventPayloadSchema,
+  SURVEY_INVITATION_SENT: SurveyInvitationSentPayloadSchema,
+  SURVEY_RESPONSE_SUBMITTED: SurveyResponseSubmittedPayloadSchema,
+  SURVEY_NEGATIVE_RESPONSE: SurveyNegativeResponsePayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -198,6 +232,9 @@ export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
 export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
 export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>;
 export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
+export type SurveyInvitationSentEvent = z.infer<typeof EventSchemas.SURVEY_INVITATION_SENT>;
+export type SurveyResponseSubmittedEvent = z.infer<typeof EventSchemas.SURVEY_RESPONSE_SUBMITTED>;
+export type SurveyNegativeResponseEvent = z.infer<typeof EventSchemas.SURVEY_NEGATIVE_RESPONSE>;
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;
 export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_FAILED>;
 export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;
