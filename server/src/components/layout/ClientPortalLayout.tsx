@@ -15,6 +15,7 @@ import { checkClientPortalPermissions } from 'server/src/lib/actions/client-port
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
 import { getTenantSlugForTenant } from 'server/src/lib/actions/tenant-actions/tenantSlugActions';
+import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -174,8 +175,9 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
               </div>
             </div>
 
-            {/* Right side - Profile */}
-            <div className="flex items-center">
+            {/* Right side - Notifications and Profile */}
+            <div className="flex items-center gap-2">
+              <NotificationBell />
               <div className="flex items-center">
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>

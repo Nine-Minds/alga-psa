@@ -32,6 +32,7 @@ export const EventTypeEnum = z.enum([
   'CALENDAR_SYNC_COMPLETED',
   'CALENDAR_SYNC_FAILED',
   'CALENDAR_CONFLICT_DETECTED',
+  'MESSAGE_SENT',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;

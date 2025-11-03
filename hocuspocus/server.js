@@ -2,6 +2,7 @@ import { Server } from '@hocuspocus/server'
 import { Redis } from '@hocuspocus/extension-redis'
 import { Database } from '@hocuspocus/extension-database'
 import { Logger } from '@hocuspocus/extension-logger'
+import { NotificationExtension } from './NotificationExtension.js'
 
 
 const server = Server.configure({
@@ -23,6 +24,13 @@ const server = Server.configure({
             database: process.env.DB_NAME_HOCUSPOCUS || 'hocuspocus',
             username: process.env.DB_USER_HOCUSPOCUS || 'hocuspocus_user',
             password: process.env.DB_PASSWORD_HOCUSPOCUS || 'sebastian123',
+        }),
+        new NotificationExtension({
+            redisHost: process.env.REDIS_HOST || 'localhost',
+            redisPort: process.env.REDIS_PORT || 6379,
+            redisUsername: process.env.REDIS_USERNAME || 'default',
+            redisPassword: process.env.REDIS_PASSWORD || 'sebastian123',
+            redisPrefix: process.env.REDIS_PREFIX || 'alga-psa:'
         }),
         new Logger({
             level: 'debug', // Set to 'debug' for maximum verbosity

@@ -109,7 +109,7 @@ export function TicketList() {
     setLoading(true);
     try {
       const result = await getClientTickets(selectedStatus);
-      
+
       let filteredTickets = [...result];
 
       if (selectedCategories.length > 0) {
@@ -117,7 +117,7 @@ export function TicketList() {
           if (selectedCategories.includes('no-category')) {
             return !ticket.category_id && !ticket.subcategory_id;
           }
-          return selectedCategories.includes(ticket.category_id || '') || 
+          return selectedCategories.includes(ticket.category_id || '') ||
                  selectedCategories.includes(ticket.subcategory_id || '');
         });
       }
@@ -127,13 +127,13 @@ export function TicketList() {
           if (excludedCategories.includes('no-category')) {
             return ticket.category_id || ticket.subcategory_id;
           }
-          return !excludedCategories.includes(ticket.category_id || '') && 
+          return !excludedCategories.includes(ticket.category_id || '') &&
                  !excludedCategories.includes(ticket.subcategory_id || '');
         });
       }
 
       if (selectedPriority !== 'all') {
-        filteredTickets = filteredTickets.filter(ticket => 
+        filteredTickets = filteredTickets.filter(ticket =>
           ticket.priority_id === selectedPriority
         );
       }
@@ -157,7 +157,7 @@ export function TicketList() {
         if (!bValue) return -1;
 
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortDirection === 'asc' 
+          return sortDirection === 'asc'
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         }
@@ -165,7 +165,7 @@ export function TicketList() {
         if (sortField === 'entered_at' || sortField === 'updated_at') {
           const aDate = new Date(aValue as string);
           const bDate = new Date(bValue as string);
-          return sortDirection === 'asc' 
+          return sortDirection === 'asc'
             ? aDate.getTime() - bDate.getTime()
             : bDate.getTime() - aDate.getTime();
         }
@@ -179,7 +179,7 @@ export function TicketList() {
       setError(t('tickets.messages.loadingError', 'Failed to load tickets. Please try again.'));
     }
     setLoading(false);
-  }, [selectedStatus, selectedPriority, selectedCategories, excludedCategories, debouncedSearchQuery, sortField, sortDirection, t]);
+  }, [selectedStatus, selectedPriority, selectedCategories, excludedCategories, debouncedSearchQuery, sortField, sortDirection]);
 
   // Load tickets on initial mount and when filters/sorting change
   useEffect(() => {
