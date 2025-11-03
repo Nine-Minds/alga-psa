@@ -15,8 +15,14 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { useToast } from 'server/src/hooks/use-toast';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Dialog } from 'server/src/components/ui/Dialog';
-import TriggerForm from './TriggerForm';
-import { PlusIcon, RefreshCw } from 'lucide-react';
+import { TriggerForm } from './TriggerForm';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from 'server/src/components/ui/DropdownMenu';
+import { MoreVertical, PlusIcon, RefreshCw } from 'lucide-react';
 import { useTriggerReferenceData } from 'server/src/components/surveys/hooks/useTriggerReferenceData';
 
 interface TriggerListProps {
@@ -31,6 +37,14 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
   const { t } = useTranslation('common');
   const { toast } = useToast();
   const { data: referenceData } = useTriggerReferenceData();
+
+  const triggerTypeFallbackLabels: Record<SurveyTrigger['triggerType'], string> = useMemo(
+    () => ({
+      ticket_closed: 'Ticket closed',
+      project_completed: 'Project completed',
+    }),
+    []
+  );
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTrigger, setEditingTrigger] = useState<SurveyTrigger | null>(null);
@@ -162,13 +176,18 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
 
   const statusMap = useMemo(() => {
     const map = new Map<string, string>();
-    referenceData?.statuses?.forEach((status) => {
+    referenceData?.ticketStatuses?.forEach((status) => {
+      if (status.status_id) {
+        map.set(status.status_id, status.name);
+      }
+    });
+    referenceData?.projectStatuses?.forEach((status) => {
       if (status.status_id) {
         map.set(status.status_id, status.name);
       }
     });
     return map;
-  }, [referenceData?.statuses]);
+  }, [referenceData?.ticketStatuses, referenceData?.projectStatuses]);
 
   const priorityMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -286,7 +305,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
                     <TableCell>
                       {t(
                         `surveys.settings.triggerForm.triggerTypes.${trigger.triggerType}`,
-                        trigger.triggerType
+                        triggerTypeFallbackLabels[trigger.triggerType]
                       )}
                     </TableCell>
                     <TableCell>{renderConditions(trigger)}</TableCell>
@@ -305,29 +324,38 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
                     </TableCell>
                     <TableCell>{renderUpdatedAt(trigger.updatedAt)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          id={`survey-trigger-edit-${trigger.triggerId}`}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(trigger)}
-                        >
-                          {t('actions.edit', 'Edit')}
-                        </Button>
-                        <Button
-                          id={`survey-trigger-delete-${trigger.triggerId}`}
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDelete(trigger)}
-                        >
-                          {t('actions.delete', 'Delete')}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            id={`survey-trigger-actions-${trigger.triggerId}`}
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label={`Open actions for trigger targeting ${template?.templateName ?? trigger.triggerType}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            id={`survey-trigger-edit-${trigger.triggerId}`}
+                            onSelect={() => handleEdit(trigger)}
+                          >
+                            {t('actions.edit', 'Edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            id={`survey-trigger-delete-${trigger.triggerId}`}
+                            className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                            onSelect={() => handleDelete(trigger)}
+                          >
+                            {t('actions.delete', 'Delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             </TableBody>
           </Table>
         )}
