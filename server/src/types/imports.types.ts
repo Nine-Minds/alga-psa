@@ -160,6 +160,9 @@ export interface ImportJobRecord {
   job_id: string | null;
   status: ImportJobStatus;
   file_name: string | null;
+  source_file_id: string | null;
+  source_document_id: string | null;
+  source_document_association_id: string | null;
   total_rows: number;
   processed_rows: number;
   created_rows: number;
@@ -290,6 +293,9 @@ export interface InitiateImportOptions {
   totalRows?: number;
   previewData?: PreviewData | null;
   context?: Record<string, unknown>;
+  fileId?: string | null;
+  documentId?: string | null;
+  documentAssociationId?: string | null;
 }
 
 /**

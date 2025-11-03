@@ -12,6 +12,7 @@ import { StorageService } from 'server/src/lib/storage/StorageService';
 import { AssetImportJobContext } from '@/lib/imports/importJobContext';
 import { JobService } from 'server/src/services/job.service';
 import { initializeScheduler } from 'server/src/lib/jobs';
+import { addDocument, associateDocumentWithClient, deleteDocument } from 'server/src/lib/actions/document-actions/documentActions';
 import type {
   FieldMapping,
   FieldMappingTemplate,
@@ -22,6 +23,14 @@ import type {
 } from '@/types/imports.types';
 import { getCurrentUser } from '../user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+
+const MAX_IMPORT_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
+const SUPPORTED_IMPORT_EXTENSIONS = ['.csv', '.xlsx'];
+const SUPPORTED_IMPORT_MIME_TYPES = new Set([
+  'text/csv',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+]);
 
 const importRegistry = ImportRegistry.getInstance();
 registerDefaultImporters(importRegistry);
@@ -76,6 +85,21 @@ export async function listImportJobs(filters: ImportFilters = {}) {
   return importManager.getImportHistory(tenant, filters);
 }
 
+export async function getImportJobDetails(importJobId: string) {
+  const { tenant } = await requirePermission('read');
+
+  if (typeof importJobId !== 'string' || importJobId.trim().length === 0) {
+    throw new Error('importJobId is required');
+  }
+
+  const details = await importManager.getImportDetails(tenant, importJobId);
+  if (!details) {
+    throw new Error('Import job not found');
+  }
+
+  return details;
+}
+
 export async function createImportPreview(formData: FormData): Promise<PreviewComputationResult & {
   importJobId: string;
 }> {
@@ -107,6 +131,20 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
       ? defaultClientParam.trim()
       : null;
 
+  if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) {
+    throw new Error('Import files must be 100 MB or smaller.');
+  }
+
+  const normalizedName = file.name?.toLowerCase() ?? '';
+  const extension = normalizedName.includes('.') ? normalizedName.slice(normalizedName.lastIndexOf('.')) : '';
+  if (!SUPPORTED_IMPORT_EXTENSIONS.includes(extension)) {
+    throw new Error('Unsupported file format. Upload a CSV or XLSX file.');
+  }
+
+  if (file.type && file.type.length > 0 && !SUPPORTED_IMPORT_MIME_TYPES.has(file.type)) {
+    throw new Error(`Unsupported MIME type "${file.type}". Upload a CSV or XLSX file.`);
+  }
+
   let tenantClientId: string | null = null;
   try {
     const { knex } = await createTenantKnex();
@@ -118,6 +156,7 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
   } catch (error) {
     console.warn('[ImportActions] Failed to resolve default tenant client', error);
   }
+  const associatedClientId = requestedDefaultClientId ?? tenantClientId ?? null;
 
   const source = await importManager.getSourceById(tenant, importSourceId);
   if (!source) {
@@ -126,6 +165,12 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
 
   const importer = importRegistry.get(source.sourceType) ?? new CsvImporter();
   registerDefaultImporters(importRegistry);
+
+  await StorageService.validateFileUpload(
+    tenant,
+    file.type && file.type.length > 0 ? file.type : 'application/octet-stream',
+    file.size
+  );
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -160,6 +205,55 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
     }
   });
 
+  let documentId: string | null = null;
+  let documentAssociationId: string | null = null;
+
+  try {
+    const documentResult = await addDocument({
+      tenant,
+      document_name: file.name,
+      type_id: null,
+      user_id: userId,
+      order_number: 0,
+      created_by: userId,
+      file_id: fileRecord.file_id,
+      storage_path: fileRecord.storage_path,
+      mime_type: fileRecord.mime_type,
+      file_size: fileRecord.file_size ?? file.size
+    });
+
+    documentId = documentResult._id;
+
+    if (associatedClientId) {
+      const association = await associateDocumentWithClient({
+        document_id: documentResult._id,
+        entity_id: associatedClientId,
+        entity_type: 'client',
+        tenant
+      });
+      documentAssociationId = association.association_id;
+    }
+  } catch (error) {
+    console.error('[ImportActions] Failed to persist import document', error);
+    let documentRemoved = false;
+    if (documentId) {
+      try {
+        await deleteDocument(documentId, userId);
+        documentRemoved = true;
+      } catch (docCleanupError) {
+        console.warn('[ImportActions] Failed to cleanup document after error', docCleanupError);
+      }
+    }
+    if (!documentRemoved) {
+      try {
+        await StorageService.deleteFile(fileRecord.file_id, userId);
+      } catch (cleanupError) {
+        console.warn('[ImportActions] Failed to cleanup uploaded file after document error', cleanupError);
+      }
+    }
+    throw error instanceof Error ? error : new Error('Failed to persist import document');
+  }
+
   const jobContext: AssetImportJobContext = {
     storageFileId: fileRecord.file_id,
     storageFileName: fileRecord.original_name ?? file.name,
@@ -167,13 +261,19 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
     storageMimeType: fileRecord.mime_type ?? file.type,
     fieldMapping,
     duplicateStrategy,
-    defaultClientId: requestedDefaultClientId ?? tenantClientId,
+    defaultClientId: associatedClientId,
     tenantClientId,
-    uploadedById: userId
+    uploadedById: userId,
+    documentId,
+    documentAssociationId,
+    associatedClientId
   };
 
   const job = await importManager.initiateImport(tenant, source.id, {
     createdBy: userId,
+    fileId: fileRecord.file_id,
+    documentId,
+    documentAssociationId,
     file: {
       fileName: file.name,
       originalName: file.name,
@@ -191,7 +291,10 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
       import_source_id: source.id,
       default_client_id: jobContext.defaultClientId,
       tenant_client_id: jobContext.tenantClientId,
-      uploaded_by_id: userId
+      uploaded_by_id: userId,
+      document_id: documentId,
+      document_association_id: documentAssociationId,
+      associated_client_id: associatedClientId
     });
     await StorageService.createDocumentSystemEntry({
       fileId: fileRecord.file_id,
@@ -199,7 +302,10 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
       metadata: {
         import_job_id: job.import_job_id,
         import_source_id: source.id,
-        original_name: fileRecord.original_name ?? file.name
+        original_name: fileRecord.original_name ?? file.name,
+        document_id: documentId,
+        document_association_id: documentAssociationId,
+        associated_client_id: associatedClientId
       }
     });
   } catch (error) {

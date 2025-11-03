@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FieldMappingTemplate, ImportJobRecord } from '@/types/imports.types';
+import type { FieldMappingTemplate, ImportJobDetails, ImportJobRecord } from '@/types/imports.types';
 
 interface ImportSourceDTO {
   import_source_id: string;
@@ -53,6 +53,9 @@ export const useImportActions = () => {
   const [fieldMapping, setFieldMapping] = useState<FieldMappingTemplate>({});
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [selectedJobDetails, setSelectedJobDetails] = useState<ImportJobDetails | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const fieldDefinitions = useMemo(() => UI_FIELD_DEFINITIONS, []);
 
   const fetchData = useCallback(async () => {
@@ -171,13 +174,41 @@ export const useImportActions = () => {
     [fetchData]
   );
 
+  const loadJobDetails = useCallback(
+    async (importJobId: string) => {
+      setIsLoadingDetails(true);
+      setDetailsError(null);
+      try {
+        const details = await parseJson<ImportJobDetails>(
+          await fetch(`/api/import/details?importJobId=${encodeURIComponent(importJobId)}`)
+        );
+        setSelectedJobDetails(details);
+      } catch (error) {
+        console.error('[ImportActions] getImportJobDetails error', error);
+        setDetailsError(error instanceof Error ? error.message : 'Failed to load job details');
+        setSelectedJobDetails(null);
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    },
+    []
+  );
+
+  const clearSelectedJobDetails = useCallback(() => {
+    setSelectedJobDetails(null);
+    setDetailsError(null);
+  }, []);
+
   return {
     isLoading,
     isApproving,
     error,
+    detailsError,
+    isLoadingDetails,
     sources,
     history,
     preview,
+    selectedJobDetails,
     fieldDefinitions,
     selectedSourceId,
     setSelectedSourceId,
@@ -185,6 +216,8 @@ export const useImportActions = () => {
     setFieldMapping,
     createPreview: handleCreatePreview,
     approveImport: handleApproveImport,
+    loadJobDetails,
+    clearSelectedJobDetails,
     refresh: fetchData,
   };
 };

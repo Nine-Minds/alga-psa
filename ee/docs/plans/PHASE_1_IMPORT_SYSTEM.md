@@ -192,18 +192,18 @@ This system provides three core capabilities:
   - [x] `createImportJob(tenantId, sourceId, file)` - Upload & preview
   - [x] `approveImport(importJobId)` - Execute job
   - [x] `getImportJobs(tenantId, filters)` - List job history
-  - [ ] `getImportJobDetails(importJobId)` - Get full job details
+  - [x] `getImportJobDetails(importJobId)` - Get full job details
   - [x] Permission checks on all actions
   - [x] Tenant isolation enforcement
 
 - [ ] File Upload Handling ([File Upload Reference](#file-upload--storage))
-  - [ ] File size validation (max 100MB)
-  - [ ] Supported format validation (.csv, .xlsx)
-  - [ ] Persist uploads through Document Management System
-    - [ ] `uploadFile()` to selected storage provider
-    - [ ] `addDocument()` to create metadata entry
-    - [ ] `associateDocumentWithClient()` (or equivalent) using the tenant’s primary client
-  - [ ] Store `document_id`/`file_id` on `import_jobs` for retrieval
+  - [x] File size validation (max 100MB)
+  - [x] Supported format validation (.csv, .xlsx)
+  - [x] Persist uploads through Document Management System
+    - [x] `uploadFile()` to selected storage provider
+    - [x] `addDocument()` to create metadata entry
+    - [x] `associateDocumentWithClient()` (or equivalent) using the tenant’s primary client
+  - [x] Store `document_id`/`file_id` on `import_jobs` for retrieval
   - [ ] Soft-delete or retain documents per retention policy after job completion
 
 - [ ] Error Responses
@@ -221,8 +221,8 @@ This system provides three core capabilities:
 **Goal**: Build user-facing import interface in Settings
 
 - [ ] Settings Integration ([UI Reference](#ui-components))
-  - [ ] Add "Import/Export" tab to Settings page
-  - [ ] Navigation structure (Import | Export tabs)
+  - [x] Add "Import/Export" tab to Settings page
+  - [x] Navigation structure (Import | Export tabs)
   - [ ] Permission-based rendering (show/hide based on role)
 
 - [ ] Import Source Selection
@@ -254,13 +254,13 @@ This system provides three core capabilities:
   - [ ] "Cancel" and "Proceed with Import" buttons
 
 - [ ] Job History & Details
-  - [ ] `JobHistoryTable` component
-  - [ ] Columns: Date, Source, File, Status, Created, Duplicates, Errors
+  - [x] `JobHistoryTable` component
+  - [x] Columns: Date, Source, File, Status, Created, Duplicates, Errors
   - [ ] Filterable by status, source type, date range
   - [ ] Sortable by date, status
-  - [ ] Click row to open details drawer
-  - [ ] `JobDetailsDrawer` component (right-side drawer)
-  - [ ] Tabs: Summary, Records, Errors, Duplicates
+  - [x] Click row to open details drawer
+  - [x] `JobDetailsDrawer` component (right-side drawer)
+  - [x] Tabs: Summary, Records, Errors, Duplicates
   - [ ] Real-time progress bar (2-second polling)
   - [ ] Live log of recent actions
   - [ ] "Download Report" button
@@ -271,7 +271,7 @@ This system provides three core capabilities:
   - [ ] Keyboard navigation support
   - [ ] Screen reader friendly labels
   - [ ] Responsive design (mobile, tablet, desktop)
-  - [ ] Loading states and spinners
+  - [x] Loading states and spinners
   - [ ] Toast notifications for success/error
 
 **Acceptance**: Complete import flow works end-to-end in UI ([All Scenarios](#acceptance-scenarios))

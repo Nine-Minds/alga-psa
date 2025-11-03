@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'server/src/components/ui/Table';
@@ -8,6 +8,9 @@ import { Label } from 'server/src/components/ui/Label';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import Drawer from 'server/src/components/ui/Drawer';
+import Spinner from 'server/src/components/ui/Spinner';
+import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from '@/types/imports.types';
 import { useImportActions } from './hooks/useImportActions';
 
 const ImportExportSettings = (): JSX.Element => {
@@ -16,9 +19,12 @@ const ImportExportSettings = (): JSX.Element => {
     isLoading,
     isApproving,
     error,
+    detailsError,
+    isLoadingDetails,
     sources,
     history,
     preview,
+    selectedJobDetails,
     fieldDefinitions,
     selectedSourceId,
     setSelectedSourceId,
@@ -26,10 +32,13 @@ const ImportExportSettings = (): JSX.Element => {
     setFieldMapping,
     createPreview,
     approveImport,
+    loadJobDetails,
+    clearSelectedJobDetails,
   } = useImportActions();
 
   const [file, setFile] = useState<File | null>(null);
   const [persistTemplate, setPersistTemplate] = useState(true);
+  const [isDetailsOpen, setDetailsOpen] = useState(false);
 
   const sourceOptions = useMemo(
     () =>
@@ -39,6 +48,14 @@ const ImportExportSettings = (): JSX.Element => {
       })),
     [sources]
   );
+
+  const sourceNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    sources.forEach((source) => {
+      map.set(source.import_source_id, source.name);
+    });
+    return map;
+  }, [sources]);
 
   const handleMappingChange = (field: string, value: string) => {
     setFieldMapping((prev) => {
@@ -83,6 +100,20 @@ const ImportExportSettings = (): JSX.Element => {
     });
   };
 
+  const handleHistoryRowClick = useCallback(
+    (job: ImportJobRecord) => {
+      clearSelectedJobDetails();
+      setDetailsOpen(true);
+      loadJobDetails(job.import_job_id);
+    },
+    [clearSelectedJobDetails, loadJobDetails]
+  );
+
+  const handleCloseDetails = useCallback(() => {
+    setDetailsOpen(false);
+    clearSelectedJobDetails();
+  }, [clearSelectedJobDetails]);
+
   const tabs: TabContent[] = useMemo(() => [
     {
       label: 'Asset Import',
@@ -117,7 +148,7 @@ const ImportExportSettings = (): JSX.Element => {
                 id="import-file"
                 type="file"
                 className="h-13 !border-border/60 !focus:ring-primary-400 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary-500/10 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700"
-                accept=".csv,.tsv,.txt,.xls,.xlsx"
+                accept=".csv,.xlsx"
                 onChange={(event) => {
                   const nextFile = event.target.files?.[0] ?? null;
                   setFile(nextFile);
@@ -331,35 +362,419 @@ const ImportExportSettings = (): JSX.Element => {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Source</TableHead>
+                <TableHead>File</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Rows</TableHead>
+                <TableHead className="text-right">Created</TableHead>
+                <TableHead className="text-right">Duplicates</TableHead>
+                <TableHead className="text-right">Errors</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {history.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">
+                  <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
                     No import or export jobs found. Generate a preview to create the first job.
                   </TableCell>
                 </TableRow>
               ) : (
                 history.map((job) => (
-                  <TableRow key={job.import_job_id}>
+                  <TableRow
+                    key={job.import_job_id}
+                    onClick={() => handleHistoryRowClick(job)}
+                    className="cursor-pointer transition-colors hover:bg-muted/60"
+                  >
                     <TableCell>{new Date(job.created_at).toLocaleString()}</TableCell>
-                    <TableCell>{job.file_name ?? job.import_source_id}</TableCell>
+                    <TableCell>{sourceNameById.get(job.import_source_id) ?? job.import_source_id}</TableCell>
+                    <TableCell>{job.file_name ?? '—'}</TableCell>
                     <TableCell className="capitalize">{job.status}</TableCell>
-                    <TableCell className="text-right">
-                      {job.total_rows} total / {job.processed_rows} processed
-                    </TableCell>
+                    <TableCell className="text-right">{job.created_rows}</TableCell>
+                    <TableCell className="text-right text-amber-700">{job.duplicate_rows}</TableCell>
+                    <TableCell className="text-right text-destructive">{job.error_rows}</TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+      </CardContent>
+    </Card>
+
+    <Drawer isOpen={isDetailsOpen} onClose={handleCloseDetails}>
+      <JobDetailsDrawerContent
+        details={selectedJobDetails}
+        isLoading={isLoadingDetails}
+        error={detailsError}
+      />
+    </Drawer>
+  </div>
+);
+};
+
+const JobDetailsDrawerContent = ({
+  details,
+  isLoading,
+  error,
+}: {
+  details: ImportJobDetails | null;
+  isLoading: boolean;
+  error: string | null;
+}) => {
+  if (isLoading) {
+    return (
+      <div className="flex h-48 items-center justify-center">
+        <Spinner size="md" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!details) {
+    return <p className="text-sm text-muted-foreground">Select an import job to inspect its results.</p>;
+  }
+
+  return <ImportJobDetailsView details={details} />;
+};
+
+const ImportJobDetailsView = ({ details }: { details: ImportJobDetails }) => {
+  const allItems = details.items ?? [];
+  const records = useMemo(() => allItems.slice(0, 50), [allItems]);
+  const errorItems = useMemo(
+    () => allItems.filter((item) => item.status === 'error'),
+    [allItems]
+  );
+  const duplicateItems = useMemo(
+    () => allItems.filter((item) => item.status === 'duplicate'),
+    [allItems]
+  );
+
+  const context = (details.context ?? {}) as Record<string, unknown>;
+  const associatedClientId =
+    typeof context.associatedClientId === 'string'
+      ? context.associatedClientId
+      : typeof context.associated_client_id === 'string'
+        ? context.associated_client_id
+        : null;
+  const defaultClientId =
+    typeof context.defaultClientId === 'string'
+      ? context.defaultClientId
+      : typeof context.default_client_id === 'string'
+        ? context.default_client_id
+        : null;
+  const tenantClientId =
+    typeof context.tenantClientId === 'string'
+      ? context.tenantClientId
+      : typeof context.tenant_client_id === 'string'
+        ? context.tenant_client_id
+        : null;
+
+  const metrics = details.metrics ?? {
+    totalRows: details.total_rows,
+    processedRows: details.processed_rows,
+    created: details.created_rows,
+    updated: details.updated_rows,
+    duplicates: details.duplicate_rows,
+    errors: details.error_rows
+  };
+
+  const hasMoreRecords = allItems.length > records.length;
+
+  const detailTabs: TabContent[] = useMemo(
+    () => [
+      {
+        label: 'Summary',
+        content: (
+          <div className="space-y-4">
+            <InfoSection
+              title="Source"
+              rows={[
+                { label: 'Original file name', value: details.file_name ?? '—' },
+                { label: 'Stored file ID', value: details.source_file_id ?? '—' },
+                { label: 'Document ID', value: details.source_document_id ?? '—' },
+                { label: 'Document association', value: details.source_document_association_id ?? '—' }
+              ]}
+            />
+            <InfoSection
+              title="Client Association"
+              rows={[
+                { label: 'Associated client', value: associatedClientId ?? tenantClientId ?? '—' },
+                { label: 'Default client context', value: defaultClientId ?? '—' },
+                { label: 'Tenant client fallback', value: tenantClientId ?? '—' }
+              ]}
+            />
+          </div>
+        )
+      },
+      {
+        label: `Records (${allItems.length})`,
+        content: (
+          <JobRecordsTable items={records} hasMore={hasMoreRecords} />
+        )
+      },
+      {
+        label: `Errors (${errorItems.length})`,
+        content: <JobErrorsTable items={errorItems} />
+      },
+      {
+        label: `Duplicates (${duplicateItems.length})`,
+        content: <JobDuplicatesTable items={duplicateItems} />
+      }
+    ],
+    [allItems.length, associatedClientId, details.file_name, details.source_document_association_id, details.source_document_id, details.source_file_id, duplicateItems, errorItems, hasMoreRecords, defaultClientId, tenantClientId]
+  );
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-foreground">Import Job Details</h2>
+        <p className="text-sm text-muted-foreground">
+          Created {new Date(details.created_at).toLocaleString()} &middot; Status{' '}
+          <span className="capitalize">{details.status}</span>
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <PreviewStat label="Total Rows" value={metrics.totalRows ?? details.total_rows} />
+        <PreviewStat label="Processed" value={metrics.processedRows ?? details.processed_rows} />
+        <PreviewStat label="Created" value={metrics.created ?? details.created_rows} />
+        <PreviewStat label="Updated" value={metrics.updated ?? details.updated_rows} />
+        <PreviewStat label="Duplicates" value={metrics.duplicates ?? details.duplicate_rows} />
+        <PreviewStat label="Errors" value={metrics.errors ?? details.error_rows} variant="destructive" />
+      </div>
+
+      <CustomTabs
+        tabs={detailTabs}
+        tabStyles={{
+          list: 'border-border/40',
+          trigger: 'text-sm font-medium data-[state=active]:bg-primary-500/10 rounded-md transition-colors',
+          content: 'min-h-[220px]'
+        }}
+      />
     </div>
   );
+};
+
+const InfoSection = ({
+  title,
+  rows
+}: {
+  title: string;
+  rows: { label: string; value: ReactNode }[];
+}) => (
+  <div className="space-y-2">
+    <h4 className="text-sm font-semibold text-foreground">{title}</h4>
+    <div className="grid gap-2 rounded-md border border-border/60 bg-muted/40 p-3">
+      {rows.map(({ label, value }) => (
+        <InfoRow key={label} label={label} value={value ?? '—'} />
+      ))}
+    </div>
+  </div>
+);
+
+const JobRecordsTable = ({
+  items,
+  hasMore
+}: {
+  items: ImportJobItemRecord[];
+  hasMore?: boolean;
+}) => {
+  if (!items.length) {
+    return <p className="text-sm text-muted-foreground">No processed records yet.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto rounded-md border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>External ID</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Sample Values</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item, index) => (
+              <TableRow key={item.import_job_item_id}>
+                <TableCell className="font-medium text-foreground">
+                  {item.external_id ?? `Row ${index + 1}`}
+                </TableCell>
+                <TableCell className={`capitalize ${statusColor(item.status)}`}>{item.status}</TableCell>
+                <TableCell>
+                  <KeyValuePreview data={item.source_data} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      {hasMore && (
+        <p className="text-xs text-muted-foreground">
+          Showing the first {items.length} records. Download the job results for full history.
+        </p>
+      )}
+    </div>
+  );
+};
+
+const JobErrorsTable = ({ items }: { items: ImportJobItemRecord[] }) => {
+  if (!items.length) {
+    return <p className="text-sm text-muted-foreground">No validation errors were recorded.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>External ID</TableHead>
+            <TableHead>Error</TableHead>
+            <TableHead>Sample Values</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item, index) => (
+            <TableRow key={item.import_job_item_id}>
+              <TableCell className="font-medium text-foreground">
+                {item.external_id ?? `Row ${index + 1}`}
+              </TableCell>
+              <TableCell className="text-destructive">{item.error_message ?? 'Unknown error'}</TableCell>
+              <TableCell>
+                <KeyValuePreview data={item.source_data} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+const JobDuplicatesTable = ({ items }: { items: ImportJobItemRecord[] }) => {
+  if (!items.length) {
+    return <p className="text-sm text-muted-foreground">No duplicates were detected for this job.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>External ID</TableHead>
+            <TableHead>Duplicate Match</TableHead>
+            <TableHead>Sample Values</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item, index) => (
+            <TableRow key={item.import_job_item_id}>
+              <TableCell className="font-medium text-foreground">
+                {item.external_id ?? `Row ${index + 1}`}
+              </TableCell>
+              <TableCell className="text-amber-700">{renderDuplicateSummary(item)}</TableCell>
+              <TableCell>
+                <KeyValuePreview data={item.source_data} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+const KeyValuePreview = ({
+  data,
+  maxEntries = 3
+}: {
+  data: Record<string, unknown>;
+  maxEntries?: number;
+}) => {
+  const entries = Object.entries(data ?? {}).slice(0, maxEntries);
+
+  if (!entries.length) {
+    return <span className="text-sm text-muted-foreground">No values</span>;
+  }
+
+  return (
+    <div className="space-y-1 text-sm">
+      {entries.map(([key, value]) => (
+        <div key={key} className="flex items-start gap-2">
+          <span className="min-w-[90px] text-muted-foreground">{key}</span>
+          <span className="flex-1 break-all text-foreground">{formatValue(value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const InfoRow = ({ label, value }: { label: string; value: ReactNode }) => (
+  <div className="flex items-start justify-between gap-3 text-sm text-foreground">
+    <span className="text-muted-foreground">{label}</span>
+    <span className="max-w-[65%] break-all text-right">{value ?? '—'}</span>
+  </div>
+);
+
+const statusColor = (status: ImportJobItemRecord['status']) => {
+  switch (status) {
+    case 'error':
+      return 'text-destructive';
+    case 'duplicate':
+      return 'text-amber-600';
+    case 'created':
+      return 'text-emerald-600';
+    case 'updated':
+      return 'text-blue-600';
+    default:
+      return 'text-foreground';
+  }
+};
+
+const formatValue = (value: unknown) => {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+};
+
+const renderDuplicateSummary = (item: ImportJobItemRecord) => {
+  const details = (item.duplicate_details ?? {}) as Record<string, unknown>;
+  const matchType =
+    typeof details.matchType === 'string'
+      ? details.matchType
+      : typeof details.match_type === 'string'
+        ? details.match_type
+        : null;
+  const matchedAssetId =
+    typeof details.matchedAssetId === 'string'
+      ? details.matchedAssetId
+      : typeof details.matched_asset_id === 'string'
+        ? details.matched_asset_id
+        : null;
+  const confidence =
+    typeof details.confidence === 'number'
+      ? `${(details.confidence * 100).toFixed(1)}%`
+      : null;
+
+  const parts = [
+    matchType ? `Match: ${matchType}` : null,
+    matchedAssetId ? `Asset: ${matchedAssetId}` : null,
+    confidence ? `Confidence: ${confidence}` : null
+  ].filter(Boolean);
+
+  return parts.length ? parts.join(' • ') : 'Duplicate flagged';
 };
 
 const PreviewStat = ({

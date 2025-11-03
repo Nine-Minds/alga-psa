@@ -10,4 +10,7 @@ export interface AssetImportJobContext {
   defaultClientId: string | null;
   tenantClientId: string | null;
   uploadedById: string;
+  documentId?: string | null;
+  documentAssociationId?: string | null;
+  associatedClientId?: string | null;
 }
