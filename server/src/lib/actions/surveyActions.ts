@@ -6,6 +6,12 @@ import { z } from 'zod';
 
 import { createTenantKnex, runWithTenant } from '../db';
 import { getCurrentUser } from './user-actions/userActions';
+import type { IBoard } from 'server/src/interfaces/board.interface';
+import type { IPriority } from 'server/src/interfaces/ticket.interfaces';
+import type { IStatus } from 'server/src/interfaces/status.interface';
+import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
+import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_TRIGGER_TABLE = 'survey_triggers';
@@ -449,6 +455,35 @@ function isNonEmptyString(value: unknown): value is string {
 
 function toDate(input: Date | string): Date {
   return input instanceof Date ? input : new Date(input);
+}
+
+export interface SurveyTriggerReferenceData {
+  boards: IBoard[];
+  statuses: IStatus[];
+  priorities: IPriority[];
+}
+
+export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerReferenceData> {
+  const [boards, statuses, priorities] = await Promise.all([
+    getAllBoards(true).catch((error: unknown) => {
+      console.error('[surveyActions] Failed to load boards for trigger reference data', error);
+      throw new Error('Unable to load boards.');
+    }),
+    getTicketStatuses().catch((error: unknown) => {
+      console.error('[surveyActions] Failed to load statuses for trigger reference data', error);
+      throw new Error('Unable to load statuses.');
+    }),
+    getAllPriorities('ticket').catch((error: unknown) => {
+      console.error('[surveyActions] Failed to load priorities for trigger reference data', error);
+      throw new Error('Unable to load priorities.');
+    }),
+  ]);
+
+  return {
+    boards,
+    statuses,
+    priorities,
+  };
 }
 
 function buildTemplateInsertPayload(

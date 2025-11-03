@@ -1,20 +1,33 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { useToast } from 'server/src/hooks/use-toast';
-import { TextArea } from 'server/src/components/ui/TextArea';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Badge } from 'server/src/components/ui/Badge';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { X } from 'lucide-react';
+import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
+import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import type { SurveyTemplate, SurveyTrigger } from 'server/src/lib/actions/surveyActions';
 import {
   createSurveyTrigger,
   updateSurveyTrigger,
   deleteSurveyTrigger,
 } from 'server/src/lib/actions/surveyActions';
+import type { IBoard } from 'server/src/interfaces/board.interface';
+import type { IPriority } from 'server/src/interfaces/ticket.interfaces';
+import type { IStatus } from 'server/src/interfaces/status.interface';
+import { useTriggerReferenceData } from 'server/src/components/surveys/hooks/useTriggerReferenceData';
+
+import type { SurveyTriggerConditions } from 'server/src/lib/actions/surveyActions';
 
 type TriggerType = 'ticket_closed' | 'project_completed';
+
+type TriggerBoardFilterState = 'active' | 'inactive' | 'all';
 
 interface TriggerFormProps {
   templates: SurveyTemplate[];
@@ -27,33 +40,52 @@ interface TriggerFormProps {
 interface FormState {
   templateId: string | null;
   triggerType: TriggerType;
-  boardIds: string;
-  statusIds: string;
-  priorities: string;
   enabled: boolean;
 }
 
 const TRIGGER_TYPE_OPTIONS: TriggerType[] = ['ticket_closed', 'project_completed'];
 
-function parseList(value: string): string[] | undefined {
-  const items = value
-    .split(/[\n,]+/)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  return items.length > 0 ? items : undefined;
+interface SelectionChipsProps {
+  items: string[];
+  getLabel: (id: string) => string;
+  onRemove: (id: string) => void;
+  removeLabel: string;
+  emptyLabel: string;
 }
 
-function formatList(values?: string[]): string {
-  return values?.join('\n') ?? '';
-}
+const SelectionChips = ({ items, getLabel, onRemove, removeLabel, emptyLabel }: SelectionChipsProps) => {
+  if (items.length === 0) {
+    return <span className="text-xs text-gray-500">{emptyLabel}</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((id) => {
+        const label = getLabel(id);
+        return (
+          <Badge key={id} variant="secondary" className="flex items-center gap-1">
+            <span>{label}</span>
+            <button
+              type="button"
+              onClick={() => onRemove(id)}
+              aria-label={`${removeLabel} ${label}`}
+              className="rounded focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        );
+      })}
+    </div>
+  );
+};
 
 export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, onCancel }: TriggerFormProps) {
   const { t } = useTranslation('common');
   const { toast } = useToast();
   const formInstanceId = useId();
 
-  const templateOptions: SelectOption[] = useMemo(
+  const templateOptions = useMemo<SelectOption[]>(
     () =>
       templates.map((template) => ({
         value: template.templateId,
@@ -62,34 +94,225 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     [templates]
   );
 
-  const initialState: FormState = {
+  const templateMissing = templateOptions.length === 0;
+
+  const {
+    data: referenceData,
+    error: referenceDataError,
+    loading: isReferenceLoading,
+    reload: reloadReferenceData,
+  } = useTriggerReferenceData();
+
+  const boards = referenceData?.boards ?? [];
+  const statuses = referenceData?.statuses ?? [];
+  const priorities = referenceData?.priorities ?? [];
+
+  const [formState, setFormState] = useState<FormState>({
     templateId: trigger?.templateId ?? (templateOptions[0]?.value ?? null),
     triggerType: trigger?.triggerType ?? 'ticket_closed',
-    boardIds: formatList(trigger?.triggerConditions.board_id),
-    statusIds: formatList(trigger?.triggerConditions.status_id),
-    priorities: formatList(trigger?.triggerConditions.priority),
     enabled: trigger?.enabled ?? true,
-  };
-
-  const [formState, setFormState] = useState<FormState>(initialState);
+  });
+  const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>(
+    trigger?.triggerConditions.board_id ?? []
+  );
+  const [selectedStatusIds, setSelectedStatusIds] = useState<string[]>(
+    trigger?.triggerConditions.status_id ?? []
+  );
+  const [selectedPriorityIds, setSelectedPriorityIds] = useState<string[]>(
+    trigger?.triggerConditions.priority ?? []
+  );
+  const [boardFilterState, setBoardFilterState] = useState<TriggerBoardFilterState>('active');
+  const [boardPickerValue, setBoardPickerValue] = useState<string | null>(null);
+  const [statusSelectValue, setStatusSelectValue] = useState<string | null>(null);
+  const [prioritySelectValue, setPrioritySelectValue] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const triggerTypeOptions: SelectOption[] = useMemo(
+  useEffect(() => {
+    setFormState({
+      templateId: trigger?.templateId ?? (templateOptions[0]?.value ?? null),
+      triggerType: trigger?.triggerType ?? 'ticket_closed',
+      enabled: trigger?.enabled ?? true,
+    });
+    setSelectedBoardIds(trigger?.triggerConditions.board_id ?? []);
+    setSelectedStatusIds(trigger?.triggerConditions.status_id ?? []);
+    setSelectedPriorityIds(trigger?.triggerConditions.priority ?? []);
+    setBoardPickerValue(trigger?.triggerConditions.board_id?.[0] ?? null);
+  }, [trigger, templateOptions]);
+
+  useEffect(() => {
+    if (selectedBoardIds.length === 0) {
+      setBoardPickerValue(null);
+      return;
+    }
+
+    setBoardPickerValue((prev) => {
+      if (prev && selectedBoardIds.includes(prev)) {
+        return prev;
+      }
+      return selectedBoardIds[selectedBoardIds.length - 1] ?? null;
+    });
+  }, [selectedBoardIds]);
+
+  const boardMap = useMemo(() => {
+    const map = new Map<string, IBoard>();
+    boards.forEach((board) => {
+      if (board.board_id) {
+        map.set(board.board_id, board);
+      }
+    });
+    return map;
+  }, [boards]);
+
+  const statusMap = useMemo(() => {
+    const map = new Map<string, IStatus>();
+    statuses.forEach((status) => {
+      if (status.status_id) {
+        map.set(status.status_id, status);
+      }
+    });
+    return map;
+  }, [statuses]);
+
+  const priorityMap = useMemo(() => {
+    const map = new Map<string, IPriority>();
+    priorities.forEach((priority) => {
+      if (priority.priority_id) {
+        map.set(priority.priority_id, priority);
+      }
+    });
+    return map;
+  }, [priorities]);
+
+  const statusOptions = useMemo<SelectOption[]>(
     () =>
-      TRIGGER_TYPE_OPTIONS.map((type) => ({
-        value: type,
-        label: t(`surveys.settings.triggerForm.triggerTypes.${type}`, type),
-      })),
-    [t]
+      statuses
+        .filter((status): status is IStatus & { status_id: string } => Boolean(status.status_id))
+        .map((status) => ({
+          value: status.status_id!,
+          label: `${status.name}${status.is_default ? ` (${t('surveys.settings.templateList.defaultBadge', 'Default')})` : ''}`,
+        })),
+    [statuses, t]
   );
+
+  interface PriorityOption {
+    value: string;
+    label: string;
+    color?: string;
+    is_from_itil_standard?: boolean;
+    itil_priority_level?: number;
+  }
+
+  const priorityOptions = useMemo<PriorityOption[]>(
+    () =>
+      priorities
+        .filter((priority): priority is IPriority & { priority_id: string } => Boolean(priority.priority_id))
+        .map((priority) => ({
+          value: priority.priority_id!,
+          label: priority.priority_name,
+          color: priority.color,
+          is_from_itil_standard: priority.is_from_itil_standard,
+          itil_priority_level: priority.itil_priority_level,
+        })),
+    [priorities]
+  );
+
+  const selectedPriorityType = useMemo<'custom' | 'itil' | 'mixed' | null>(() => {
+    if (selectedBoardIds.length === 0) {
+      return null;
+    }
+
+    const types = new Set<string>();
+    selectedBoardIds.forEach((boardId) => {
+      const board = boardMap.get(boardId);
+      if (board?.priority_type) {
+        types.add(board.priority_type);
+      }
+    });
+
+    if (types.size === 0) {
+      return null;
+    }
+    if (types.size === 1) {
+      return types.values().next().value as 'custom' | 'itil';
+    }
+    return 'mixed';
+  }, [boardMap, selectedBoardIds]);
+
+  const filteredPriorityOptions = useMemo<PriorityOption[]>(() => {
+    if (selectedPriorityType === 'itil') {
+      return priorityOptions.filter((option) => option.is_from_itil_standard);
+    }
+    if (selectedPriorityType === 'custom') {
+      return priorityOptions.filter((option) => !option.is_from_itil_standard);
+    }
+    return priorityOptions;
+  }, [priorityOptions, selectedPriorityType]);
+
+  const removeLabel = t('actions.remove', 'Remove');
+  const anyLabel = t('surveys.settings.triggerList.conditions.any', 'Any');
+  const loadingText = t('surveys.common.loading', 'Loading...');
+  const fieldHelpText = t('surveys.settings.triggerForm.help.conditions', 'Leave a field blank to match any value.');
+  const referenceErrorFallback = t(
+    'surveys.settings.triggerForm.errors.reference',
+    'Unable to load trigger options. Please try again.'
+  );
+  const noTemplatesMessage = t(
+    'surveys.settings.triggerForm.noTemplates',
+    'Create a survey template before adding triggers.'
+  );
+  const mixedPriorityNotice = t(
+    'surveys.settings.triggerForm.prioritiesMixed',
+    'Selected boards use different priority types. Showing all priorities.'
+  );
+
+  const referenceErrorMessage = referenceDataError
+    ? referenceDataError.message || referenceErrorFallback
+    : null;
 
   const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setFormState((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleBoardSelect = (boardId: string) => {
+    if (!boardId) {
+      return;
+    }
+    setSelectedBoardIds((prev) => (prev.includes(boardId) ? prev : [...prev, boardId]));
+    setBoardPickerValue(boardId);
+  };
+
+  const handleRemoveBoard = (boardId: string) => {
+    setSelectedBoardIds((prev) => prev.filter((value) => value !== boardId));
+  };
+
+  const handleStatusSelect = (statusId: string) => {
+    if (!statusId || statusId === 'placeholder') {
+      return;
+    }
+    setSelectedStatusIds((prev) => (prev.includes(statusId) ? prev : [...prev, statusId]));
+    setStatusSelectValue(null);
+  };
+
+  const handleRemoveStatus = (statusId: string) => {
+    setSelectedStatusIds((prev) => prev.filter((value) => value !== statusId));
+  };
+
+  const handlePrioritySelect = (priorityId: string) => {
+    if (!priorityId || priorityId === 'placeholder') {
+      return;
+    }
+    setSelectedPriorityIds((prev) => (prev.includes(priorityId) ? prev : [...prev, priorityId]));
+    setPrioritySelectValue(null);
+  };
+
+  const handleRemovePriority = (priorityId: string) => {
+    setSelectedPriorityIds((prev) => prev.filter((value) => value !== priorityId));
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (!formState.templateId) {
       toast({
         title: t('errors.required', 'This field is required'),
@@ -99,25 +322,28 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       return;
     }
 
+    const triggerConditions: SurveyTriggerConditions = {};
+    if (selectedBoardIds.length > 0) {
+      triggerConditions.board_id = selectedBoardIds;
+    }
+    if (selectedStatusIds.length > 0) {
+      triggerConditions.status_id = selectedStatusIds;
+    }
+    if (selectedPriorityIds.length > 0) {
+      triggerConditions.priority = selectedPriorityIds;
+    }
+
+    const payloadConditions = Object.keys(triggerConditions).length > 0 ? triggerConditions : undefined;
+
     setIsSubmitting(true);
     try {
-      const conditions = {
-        board_id: parseList(formState.boardIds),
-        status_id: parseList(formState.statusIds),
-        priority: parseList(formState.priorities),
-      };
-
-      // Remove undefined keys to avoid overwriting with null
-      const sanitizedConditions = Object.fromEntries(
-        Object.entries(conditions).filter(([, value]) => value && value.length > 0)
-      );
-
       let result: SurveyTrigger;
+
       if (trigger) {
         result = await updateSurveyTrigger(trigger.triggerId, {
           templateId: formState.templateId,
           triggerType: formState.triggerType,
-          triggerConditions: sanitizedConditions,
+          triggerConditions: payloadConditions,
           enabled: formState.enabled,
         });
         toast({
@@ -127,7 +353,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
         result = await createSurveyTrigger({
           templateId: formState.templateId,
           triggerType: formState.triggerType,
-          triggerConditions: sanitizedConditions,
+          triggerConditions: payloadConditions,
           enabled: formState.enabled,
         });
         toast({
@@ -183,97 +409,138 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     }
   };
 
-  const title = trigger
-    ? t('surveys.settings.triggerForm.titleEdit', 'Edit survey trigger')
-    : t('surveys.settings.triggerForm.titleCreate', 'Create survey trigger');
+  const getBoardLabel = (boardId: string) => boardMap.get(boardId)?.board_name ?? boardId;
+  const getStatusLabel = (statusId: string) => statusMap.get(statusId)?.name ?? statusId;
+  const getPriorityLabel = (priorityId: string) => priorityMap.get(priorityId)?.priority_name ?? priorityId;
 
-  const submitLabel = trigger
-    ? t('surveys.settings.triggerForm.actions.save', 'Save changes')
-    : t('surveys.settings.triggerForm.actions.create', 'Create trigger');
+  if (isReferenceLoading && !referenceData) {
+    return (
+      <div className="flex justify-center py-12">
+        <LoadingIndicator layout="stacked" text={loadingText} />
+      </div>
+    );
+  }
+
+  const isSubmitDisabled =
+    isSubmitting || templateMissing || !formState.templateId || (!referenceData && !referenceDataError);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-semibold" id={`${formInstanceId}-title`}>
-        {title}
-      </h2>
+      {referenceErrorMessage && (
+        <Alert variant="destructive">
+          <AlertDescription>{referenceErrorMessage}</AlertDescription>
+          <div className="mt-3 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={reloadReferenceData}
+              disabled={isReferenceLoading}
+            >
+              {t('actions.refresh', 'Refresh')}
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {templateMissing && (
+        <Alert variant="destructive">
+          <AlertDescription>{noTemplatesMessage}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-template`}>
-            {t('surveys.settings.triggerForm.labels.template', 'Survey template')}
-          </label>
-          <CustomSelect
-            id={`${formInstanceId}-template`}
-            options={templateOptions}
-            value={formState.templateId ?? ''}
-            onValueChange={(value) => handleChange('templateId', value)}
-          />
-        </div>
+        <CustomSelect
+          id={`${formInstanceId}-template`}
+          options={templateOptions}
+          value={formState.templateId}
+          onValueChange={(value) => handleChange('templateId', value || null)}
+          placeholder={t('surveys.settings.triggerForm.labels.template', 'Survey template')}
+          disabled={templateOptions.length === 0}
+        />
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-trigger-type`}>
-            {t('surveys.settings.triggerForm.labels.triggerType', 'Trigger type')}
-          </label>
-          <CustomSelect
-            id={`${formInstanceId}-trigger-type`}
-            options={triggerTypeOptions}
-            value={formState.triggerType}
-            onValueChange={(value) => handleChange('triggerType', value as TriggerType)}
-          />
-        </div>
+        <CustomSelect
+          id={`${formInstanceId}-trigger-type`}
+          options={TRIGGER_TYPE_OPTIONS.map((type) => ({
+            value: type,
+            label: t(`surveys.settings.triggerForm.triggerTypes.${type}`, type),
+          }))}
+          value={formState.triggerType}
+          onValueChange={(value) => handleChange('triggerType', (value as TriggerType) || 'ticket_closed')}
+          placeholder={t('surveys.settings.triggerForm.labels.triggerType', 'Trigger type')}
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="space-y-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-boards`}>
-            {t('surveys.settings.triggerForm.labels.boardIds', 'Board IDs')}
+          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-board-picker`}>
+            {t('surveys.settings.triggerForm.labels.boardIds', 'Boards')}
           </label>
-          <TextArea
-            id={`${formInstanceId}-boards`}
-            value={formState.boardIds}
-            onChange={(event) => handleChange('boardIds', event.target.value)}
-            placeholder={t(
-              'surveys.settings.triggerForm.placeholders.boardIds',
-              'Enter board IDs separated by commas or new lines'
-            )}
-            className="min-h-[96px]"
+          <BoardPicker
+            id={`${formInstanceId}-board-picker`}
+            boards={boards}
+            selectedBoardId={boardPickerValue}
+            onSelect={handleBoardSelect}
+            filterState={boardFilterState}
+            onFilterStateChange={setBoardFilterState}
+            placeholder={t('surveys.settings.triggerForm.placeholders.boardIds', 'Select board')}
           />
+          <SelectionChips
+            items={selectedBoardIds}
+            getLabel={getBoardLabel}
+            onRemove={handleRemoveBoard}
+            removeLabel={removeLabel}
+            emptyLabel={anyLabel}
+          />
+          <p className="text-xs text-gray-500">{fieldHelpText}</p>
         </div>
+
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-statuses`}>
-            {t('surveys.settings.triggerForm.labels.statusIds', 'Status IDs')}
+          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-status`}>
+            {t('surveys.settings.triggerForm.labels.statusIds', 'Statuses')}
           </label>
-          <TextArea
-            id={`${formInstanceId}-statuses`}
-            value={formState.statusIds}
-            onChange={(event) => handleChange('statusIds', event.target.value)}
-            placeholder={t(
-              'surveys.settings.triggerForm.placeholders.statusIds',
-              'Enter status IDs separated by commas or new lines'
-            )}
-            className="min-h-[96px]"
+          <CustomSelect
+            id={`${formInstanceId}-status`}
+            options={statusOptions}
+            value={statusSelectValue}
+            onValueChange={handleStatusSelect}
+            placeholder={t('surveys.settings.triggerForm.placeholders.statusIds', 'Add status')}
+            allowClear
           />
+          <SelectionChips
+            items={selectedStatusIds}
+            getLabel={getStatusLabel}
+            onRemove={handleRemoveStatus}
+            removeLabel={removeLabel}
+            emptyLabel={anyLabel}
+          />
+          <p className="text-xs text-gray-500">{fieldHelpText}</p>
         </div>
+
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-priorities`}>
+          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-priority`}>
             {t('surveys.settings.triggerForm.labels.priorities', 'Priorities')}
           </label>
-          <TextArea
-            id={`${formInstanceId}-priorities`}
-            value={formState.priorities}
-            onChange={(event) => handleChange('priorities', event.target.value)}
-            placeholder={t(
-              'surveys.settings.triggerForm.placeholders.priorities',
-              'Enter priority IDs or names separated by commas or new lines'
-            )}
-            className="min-h-[96px]"
+          <PrioritySelect
+            id={`${formInstanceId}-priority`}
+            value={prioritySelectValue}
+            onValueChange={handlePrioritySelect}
+            options={filteredPriorityOptions}
+            placeholder={t('surveys.settings.triggerForm.placeholders.priorities', 'Add priority')}
+            isItilBoard={selectedPriorityType === 'itil'}
           />
+          {selectedPriorityType === 'mixed' && (
+            <p className="text-xs text-gray-500">{mixedPriorityNotice}</p>
+          )}
+          <SelectionChips
+            items={selectedPriorityIds}
+            getLabel={getPriorityLabel}
+            onRemove={handleRemovePriority}
+            removeLabel={removeLabel}
+            emptyLabel={anyLabel}
+          />
+          <p className="text-xs text-gray-500">{fieldHelpText}</p>
         </div>
       </div>
-
-      <p className="text-xs text-gray-500">
-        {t('surveys.settings.triggerForm.help.conditions', 'Leave a field blank to match any value.')}
-      </p>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <Switch
@@ -306,8 +573,16 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
             >
               {t('actions.cancel', 'Cancel')}
             </Button>
-            <Button id={`${formInstanceId}-submit`} type="submit" disabled={isSubmitting}>
-              {isSubmitting ? `${submitLabel}…` : submitLabel}
+            <Button
+              id={`${formInstanceId}-submit`}
+              type="submit"
+              disabled={isSubmitDisabled}
+            >
+              {isSubmitting
+                ? t('actions.saving', 'Saving...')
+                : trigger
+                ? t('surveys.settings.triggerForm.actions.save', 'Save changes')
+                : t('surveys.settings.triggerForm.actions.create', 'Create trigger')}
             </Button>
           </div>
         </div>
@@ -315,5 +590,3 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     </form>
   );
 }
-
-export default TriggerForm;

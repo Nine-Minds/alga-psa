@@ -39,7 +39,8 @@
     "copy": "Copier",
     "duplicate": "Dupliquer",
     "openMenu": "Ouvrir le menu",
-    "confirmDeletion": "Confirmer la suppression"
+    "confirmDeletion": "Confirmer la suppression",
+    "saving": "Enregistrement..."
   },
   "status": {
     "loading": "Chargement...",
@@ -569,9 +570,9 @@
           "enabled": "Déclencheur actif"
         },
         "placeholders": {
-          "boardIds": "Saisissez des identifiants séparés par des virgules ou des retours à la ligne",
-          "statusIds": "Saisissez des identifiants séparés par des virgules ou des retours à la ligne",
-          "priorities": "Saisissez des identifiants ou noms séparés par des virgules ou des retours à la ligne"
+          "boardIds": "Sélectionner un tableau",
+          "statusIds": "Ajouter un statut",
+          "priorities": "Ajouter une priorité"
         },
         "help": {
           "conditions": "Laissez un champ vide pour accepter toutes les valeurs."
@@ -584,7 +585,12 @@
         "triggerTypes": {
           "ticket_closed": "Ticket clôturé",
           "project_completed": "Projet terminé"
-        }
+        },
+        "errors": {
+          "reference": "Impossible de charger les options du déclencheur. Veuillez réessayer."
+        },
+        "noTemplates": "Créez un modèle d’enquête avant d’ajouter des déclencheurs.",
+        "prioritiesMixed": "Les tableaux sélectionnés utilisent différents types de priorité. Toutes les priorités sont affichées."
       },
       "response": {
         "invalidTitle": "Sondage indisponible",

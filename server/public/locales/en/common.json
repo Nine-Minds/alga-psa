@@ -39,7 +39,8 @@
     "copy": "Copy",
     "duplicate": "Duplicate",
     "openMenu": "Open menu",
-    "confirmDeletion": "Confirm Deletion"
+    "confirmDeletion": "Confirm Deletion",
+    "saving": "Saving..."
   },
   "status": {
     "loading": "Loading...",
@@ -569,9 +570,9 @@
           "enabled": "Trigger enabled"
         },
         "placeholders": {
-          "boardIds": "Enter board IDs separated by commas or new lines",
-          "statusIds": "Enter status IDs separated by commas or new lines",
-          "priorities": "Enter priority IDs or names separated by commas or new lines"
+          "boardIds": "Select board",
+          "statusIds": "Add status",
+          "priorities": "Add priority"
         },
         "help": {
           "conditions": "Leave a field blank to match any value."
@@ -584,7 +585,12 @@
         "triggerTypes": {
           "ticket_closed": "Ticket closed",
           "project_completed": "Project completed"
-        }
+        },
+        "errors": {
+          "reference": "Unable to load trigger options. Please try again."
+        },
+        "noTemplates": "Create a survey template before adding triggers.",
+        "prioritiesMixed": "Selected boards use different priority types. Showing all priorities."
       }
     },
     "response": {

@@ -39,7 +39,8 @@
     "copy": "Copiar",
     "duplicate": "Duplicar",
     "openMenu": "Abrir menú",
-    "confirmDeletion": "Confirmar eliminación"
+    "confirmDeletion": "Confirmar eliminación",
+    "saving": "Guardando..."
   },
   "status": {
     "loading": "Cargando...",
@@ -569,9 +570,9 @@
           "enabled": "Desencadenador activo"
         },
         "placeholders": {
-          "boardIds": "Ingresa los ID separados por comas o saltos de línea",
-          "statusIds": "Ingresa los ID separados por comas o saltos de línea",
-          "priorities": "Ingresa los ID o nombres separados por comas o saltos de línea"
+          "boardIds": "Seleccionar tablero",
+          "statusIds": "Agregar estado",
+          "priorities": "Agregar prioridad"
         },
         "help": {
           "conditions": "Deja un campo vacío para aceptar cualquier valor."
@@ -584,7 +585,12 @@
         "triggerTypes": {
           "ticket_closed": "Ticket cerrado",
           "project_completed": "Proyecto finalizado"
-        }
+        },
+        "errors": {
+          "reference": "No se pudieron cargar las opciones del desencadenador. Vuelve a intentarlo."
+        },
+        "noTemplates": "Crea una plantilla de encuesta antes de agregar desencadenadores.",
+        "prioritiesMixed": "Los tableros seleccionados usan diferentes tipos de prioridad. Se muestran todas las prioridades."
       },
       "response": {
         "invalidTitle": "Encuesta no disponible",
