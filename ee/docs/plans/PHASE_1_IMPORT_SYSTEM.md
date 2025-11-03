@@ -199,9 +199,12 @@ This system provides three core capabilities:
 - [ ] File Upload Handling ([File Upload Reference](#file-upload--storage))
   - [ ] File size validation (max 100MB)
   - [ ] Supported format validation (.csv, .xlsx)
-  - [ ] Temp file storage: `/tmp/imports/{tenant_id}/{job_id}/`
-  - [ ] File cleanup after job completion
-  - [ ] Optional file retention for retry/audit
+  - [ ] Persist uploads through Document Management System
+    - [ ] `uploadFile()` to selected storage provider
+    - [ ] `addDocument()` to create metadata entry
+    - [ ] `associateDocumentWithClient()` (or equivalent) using the tenant’s primary client
+  - [ ] Store `document_id`/`file_id` on `import_jobs` for retrieval
+  - [ ] Soft-delete or retain documents per retention policy after job completion
 
 - [ ] Error Responses
   - [ ] Proper HTTP status codes
@@ -868,15 +871,17 @@ Row Level Security (RLS) policies on all import tables enforce tenant boundaries
 **Constraints**:
 - Max file size: 100MB
 - Supported formats: .csv, .xlsx
-- Files stored temporarily during processing, deleted after job completes
-- Option to retain file for retry/audit (configurable per tenant)
+- Uploads must flow through Document Management System (DMS)
+- Documents associated with the tenant’s primary client for RBAC consistency
+- Document lifecycle configurable: retain for audit or soft-delete after job completes
 
 **Upload Flow**:
 1. File uploaded to `/api/tenants/:id/import-jobs` endpoint
-2. Stored in temp directory: `/tmp/imports/{tenant_id}/{job_id}/`
-3. File parsed and records extracted
-4. Preview data stored in `import_jobs.preview_data`
-5. After job execution, temp file deleted (or moved to archive)
+2. Server action calls `uploadFile()` (DMS) with tenant context
+3. Persist document via `addDocument()` and associate with client (`associateDocumentWithClient`)
+4. Store `document_id`, `file_id`, and `storage_path` on `import_jobs`
+5. Parse file contents by streaming via `downloadFile()` when generating preview or executing job
+6. Apply retention policy: keep document for audit/retry or trigger `deleteDocument()` after completion
 
 ---
 
