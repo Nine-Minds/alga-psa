@@ -8,6 +8,8 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
+import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
+import { InternalNotificationPreferences } from 'server/src/components/settings/notifications/InternalNotificationPreferences';
 import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   getCategoriesAction,
@@ -24,6 +26,8 @@ import { LanguagePreference } from 'server/src/components/ui/LanguagePreference'
 import { SupportedLocale } from '@/lib/i18n/config';
 import { updateUserLocaleAction, getUserLocaleAction } from 'server/src/lib/actions/user-actions/localeActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
+
+type NotificationView = 'email' | 'internal';
 
 export function ClientProfile() {
   const { t } = useTranslation('clientPortal');
@@ -43,6 +47,7 @@ export function ClientProfile() {
   const [language, setLanguage] = useState<SupportedLocale | null>(null);
   const [currentEffectiveLocale, setCurrentEffectiveLocale] = useState<SupportedLocale>('en');
   const [inheritedSource, setInheritedSource] = useState<'client' | 'tenant' | 'system'>('system');
+  const [notificationView, setNotificationView] = useState<NotificationView>('internal');
 
   useEffect(() => {
     const init = async () => {
@@ -305,34 +310,48 @@ export function ClientProfile() {
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>{t('profile.notifications.title')}</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>{t('profile.notifications.title')}</CardTitle>
+              <ViewSwitcher
+                currentView={notificationView}
+                onChange={setNotificationView}
+                options={[
+                  { value: 'email', label: t('profile.notifications.emailPreferences', 'Email') },
+                  { value: 'internal', label: t('profile.notifications.inAppPreferences', 'In-App') },
+                ] as ViewSwitcherOption<NotificationView>[]}
+              />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {categories.map((category: NotificationCategory): JSX.Element => (
-                <div key={category.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>{category.name}</Label>
-                    <Switch
-                      checked={category.is_enabled}
-                      onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
-                    />
+            {notificationView === 'email' ? (
+              <div className="space-y-6">
+                {categories.map((category: NotificationCategory): JSX.Element => (
+                  <div key={category.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>{category.name}</Label>
+                      <Switch
+                        checked={category.is_enabled}
+                        onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
+                      />
+                    </div>
+                    <div className="ml-6 space-y-2">
+                      {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
+                        <div key={subtype.id} className="flex items-center justify-between">
+                          <Label className="text-sm">{subtype.name}</Label>
+                          <Switch
+                            checked={subtype.is_enabled}
+                            disabled={!category.is_enabled}
+                            onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="ml-6 space-y-2">
-                    {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
-                      <div key={subtype.id} className="flex items-center justify-between">
-                        <Label className="text-sm">{subtype.name}</Label>
-                        <Switch
-                          checked={subtype.is_enabled}
-                          disabled={!category.is_enabled}
-                          onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <InternalNotificationPreferences />
+            )}
           </CardContent>
         </Card>
       ),

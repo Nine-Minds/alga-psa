@@ -31,6 +31,12 @@ exports.up = async function(knex) {
         description: 'System and administrative notifications',
         is_enabled: true,
         is_default_enabled: true
+      },
+      {
+        name: 'messages',
+        description: 'Direct messages and communication',
+        is_enabled: true,
+        is_default_enabled: true
       }
     ])
     .onConflict('name')
@@ -44,6 +50,7 @@ exports.up = async function(knex) {
   const projectsCat = categories.find(c => c.name === 'projects');
   const invoicesCat = categories.find(c => c.name === 'invoices');
   const systemCat = categories.find(c => c.name === 'system');
+  const messagesCat = categories.find(c => c.name === 'messages');
 
   // 2. Insert subtypes
   const subtypes = await knex('internal_notification_subtypes')
@@ -149,6 +156,14 @@ exports.up = async function(knex) {
         description: 'User mentioned in comment or note',
         is_enabled: true,
         is_default_enabled: true
+      },
+      // Message subtypes
+      {
+        internal_category_id: messagesCat.internal_notification_category_id,
+        name: 'message-sent',
+        description: 'Direct message received',
+        is_enabled: true,
+        is_default_enabled: true
       }
     ])
     .onConflict(['internal_category_id', 'name'])
@@ -184,10 +199,24 @@ exports.up = async function(knex) {
         subtype_id: getSubtypeId('ticket-created')
       },
       {
+        name: 'ticket-created-client',
+        language_code: 'en',
+        title: 'Your Support Ticket Has Been Created',
+        message: 'Your ticket #{{ticketId}} "{{ticketTitle}}" has been created and our team will respond shortly',
+        subtype_id: getSubtypeId('ticket-created')
+      },
+      {
         name: 'ticket-updated',
         language_code: 'en',
         title: 'Ticket Updated',
         message: 'Ticket #{{ticketId}} "{{ticketTitle}}" has been updated',
+        subtype_id: getSubtypeId('ticket-updated')
+      },
+      {
+        name: 'ticket-updated-client',
+        language_code: 'en',
+        title: 'Your Ticket Has Been Updated',
+        message: 'Your ticket #{{ticketId}} "{{ticketTitle}}" has been updated',
         subtype_id: getSubtypeId('ticket-updated')
       },
       {
@@ -198,10 +227,24 @@ exports.up = async function(knex) {
         subtype_id: getSubtypeId('ticket-closed')
       },
       {
+        name: 'ticket-closed-client',
+        language_code: 'en',
+        title: 'Your Ticket Has Been Closed',
+        message: 'Your ticket #{{ticketId}} "{{ticketTitle}}" has been closed',
+        subtype_id: getSubtypeId('ticket-closed')
+      },
+      {
         name: 'ticket-comment-added',
         language_code: 'en',
         title: 'New Comment',
         message: '{{authorName}} added a comment to ticket #{{ticketId}}',
+        subtype_id: getSubtypeId('ticket-comment-added')
+      },
+      {
+        name: 'ticket-comment-added-client',
+        language_code: 'en',
+        title: 'New Comment on Your Ticket',
+        message: '{{authorName}} added a comment to your ticket #{{ticketId}}',
         subtype_id: getSubtypeId('ticket-comment-added')
       },
       // Project templates
@@ -269,6 +312,14 @@ exports.up = async function(knex) {
         title: 'You were mentioned',
         message: '{{authorName}} mentioned you in {{entityType}} {{entityName}}',
         subtype_id: getSubtypeId('user-mentioned')
+      },
+      // Message templates
+      {
+        name: 'message-sent',
+        language_code: 'en',
+        title: 'New Message',
+        message: '{{senderName}}: {{messagePreview}}',
+        subtype_id: getSubtypeId('message-sent')
       }
     ])
     .onConflict(['name', 'language_code'])
@@ -293,13 +344,14 @@ exports.down = async function(knex) {
       'ticket-assigned', 'ticket-created', 'ticket-updated', 'ticket-closed', 'ticket-comment-added',
       'project-assigned', 'project-created', 'task-assigned', 'milestone-completed',
       'invoice-generated', 'payment-received', 'payment-overdue',
-      'system-announcement', 'user-mentioned'
+      'system-announcement', 'user-mentioned',
+      'message-sent'
     ])
     .del();
 
   // Remove categories
   await knex('internal_notification_categories')
-    .whereIn('name', ['tickets', 'projects', 'invoices', 'system'])
+    .whereIn('name', ['tickets', 'projects', 'invoices', 'system', 'messages'])
     .del();
 
   console.log('Internal notification seed data removed');

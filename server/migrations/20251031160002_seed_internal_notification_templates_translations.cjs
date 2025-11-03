@@ -18,295 +18,124 @@ exports.up = async function(knex) {
     return subtype.id;
   };
 
+  // Map template names to their corresponding subtype names
+  const templateToSubtype = {
+    'ticket-created-client': 'ticket-created',
+    'ticket-updated-client': 'ticket-updated',
+    'ticket-closed-client': 'ticket-closed',
+    'ticket-comment-added-client': 'ticket-comment-added',
+    'message-sent': 'message-sent'
+  };
+
   const translations = {
     fr: {
-      'ticket-assigned': {
-        title: 'Ticket attribué',
-        message: 'Le ticket #{{ticketId}} "{{ticketTitle}}" vous a été attribué'
+      'ticket-created-client': {
+        title: 'Votre ticket d\'assistance a été créé',
+        message: 'Votre ticket #{{ticketId}} "{{ticketTitle}}" a été créé et notre équipe vous répondra bientôt'
       },
-      'ticket-created': {
-        title: 'Nouveau ticket créé',
-        message: 'Le ticket #{{ticketId}} "{{ticketTitle}}" a été créé pour {{clientName}}'
+      'ticket-updated-client': {
+        title: 'Votre ticket a été mis à jour',
+        message: 'Votre ticket #{{ticketId}} "{{ticketTitle}}" a été mis à jour'
       },
-      'ticket-updated': {
-        title: 'Ticket mis à jour',
-        message: 'Le ticket #{{ticketId}} "{{ticketTitle}}" a été mis à jour'
+      'ticket-closed-client': {
+        title: 'Votre ticket a été fermé',
+        message: 'Votre ticket #{{ticketId}} "{{ticketTitle}}" a été fermé'
       },
-      'ticket-closed': {
-        title: 'Ticket fermé',
-        message: 'Le ticket #{{ticketId}} "{{ticketTitle}}" a été fermé'
+      'ticket-comment-added-client': {
+        title: 'Nouveau commentaire sur votre ticket',
+        message: '{{authorName}} a ajouté un commentaire à votre ticket #{{ticketId}}'
       },
-      'ticket-comment-added': {
-        title: 'Nouveau commentaire',
-        message: '{{authorName}} a ajouté un commentaire au ticket #{{ticketId}}'
-      },
-      'project-assigned': {
-        title: 'Projet attribué',
-        message: 'Le projet "{{projectName}}" vous a été attribué'
-      },
-      'project-created': {
-        title: 'Nouveau projet créé',
-        message: 'Le projet "{{projectName}}" a été créé pour {{clientName}}'
-      },
-      'task-assigned': {
-        title: 'Tâche attribuée',
-        message: 'La tâche "{{taskName}}" du projet "{{projectName}}" vous a été attribuée'
-      },
-      'milestone-completed': {
-        title: 'Jalon terminé',
-        message: 'Le jalon "{{milestoneName}}" du projet "{{projectName}}" est terminé'
-      },
-      'invoice-generated': {
-        title: 'Facture générée',
-        message: 'La facture #{{invoiceNumber}} pour {{clientName}} a été générée'
-      },
-      'payment-received': {
-        title: 'Paiement reçu',
-        message: 'Paiement de {{amount}} reçu pour la facture #{{invoiceNumber}}'
-      },
-      'payment-overdue': {
-        title: 'Paiement en retard',
-        message: 'La facture #{{invoiceNumber}} est en retard de {{daysOverdue}} jours'
-      },
-      'system-announcement': {
-        title: 'Annonce système',
-        message: '{{announcementTitle}}'
-      },
-      'user-mentioned': {
-        title: 'Vous avez été mentionné',
-        message: '{{authorName}} vous a mentionné dans {{entityType}} {{entityName}}'
+      'message-sent': {
+        title: 'Nouveau message',
+        message: '{{senderName}}: {{messagePreview}}'
       }
     },
     es: {
-      'ticket-assigned': {
-        title: 'Ticket asignado',
-        message: 'El ticket #{{ticketId}} "{{ticketTitle}}" se le ha asignado'
+      'ticket-created-client': {
+        title: 'Su ticket de soporte ha sido creado',
+        message: 'Su ticket #{{ticketId}} "{{ticketTitle}}" ha sido creado y nuestro equipo responderá pronto'
       },
-      'ticket-created': {
-        title: 'Nuevo ticket creado',
-        message: 'El ticket #{{ticketId}} "{{ticketTitle}}" se creó para {{clientName}}'
+      'ticket-updated-client': {
+        title: 'Su ticket ha sido actualizado',
+        message: 'Su ticket #{{ticketId}} "{{ticketTitle}}" ha sido actualizado'
       },
-      'ticket-updated': {
-        title: 'Ticket actualizado',
-        message: 'El ticket #{{ticketId}} "{{ticketTitle}}" se ha actualizado'
+      'ticket-closed-client': {
+        title: 'Su ticket ha sido cerrado',
+        message: 'Su ticket #{{ticketId}} "{{ticketTitle}}" ha sido cerrado'
       },
-      'ticket-closed': {
-        title: 'Ticket cerrado',
-        message: 'El ticket #{{ticketId}} "{{ticketTitle}}" se ha cerrado'
+      'ticket-comment-added-client': {
+        title: 'Nuevo comentario en su ticket',
+        message: '{{authorName}} agregó un comentario a su ticket #{{ticketId}}'
       },
-      'ticket-comment-added': {
-        title: 'Nuevo comentario',
-        message: '{{authorName}} agregó un comentario al ticket #{{ticketId}}'
-      },
-      'project-assigned': {
-        title: 'Proyecto asignado',
-        message: 'El proyecto "{{projectName}}" se le ha asignado'
-      },
-      'project-created': {
-        title: 'Nuevo proyecto creado',
-        message: 'El proyecto "{{projectName}}" se creó para {{clientName}}'
-      },
-      'task-assigned': {
-        title: 'Tarea asignada',
-        message: 'La tarea "{{taskName}}" del proyecto "{{projectName}}" se le ha asignado'
-      },
-      'milestone-completed': {
-        title: 'Hito completado',
-        message: 'El hito "{{milestoneName}}" del proyecto "{{projectName}}" se ha completado'
-      },
-      'invoice-generated': {
-        title: 'Factura generada',
-        message: 'La factura #{{invoiceNumber}} para {{clientName}} se ha generado'
-      },
-      'payment-received': {
-        title: 'Pago recibido',
-        message: 'Pago de {{amount}} recibido para la factura #{{invoiceNumber}}'
-      },
-      'payment-overdue': {
-        title: 'Pago vencido',
-        message: 'La factura #{{invoiceNumber}} tiene {{daysOverdue}} días de atraso'
-      },
-      'system-announcement': {
-        title: 'Anuncio del sistema',
-        message: '{{announcementTitle}}'
-      },
-      'user-mentioned': {
-        title: 'Ha sido mencionado',
-        message: '{{authorName}} le mencionó en {{entityType}} {{entityName}}'
+      'message-sent': {
+        title: 'Nuevo mensaje',
+        message: '{{senderName}}: {{messagePreview}}'
       }
     },
     de: {
-      'ticket-assigned': {
-        title: 'Ticket zugewiesen',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" wurde Ihnen zugewiesen'
+      'ticket-created-client': {
+        title: 'Ihr Support-Ticket wurde erstellt',
+        message: 'Ihr Ticket #{{ticketId}} "{{ticketTitle}}" wurde erstellt und unser Team wird sich in Kürze bei Ihnen melden'
       },
-      'ticket-created': {
-        title: 'Neues Ticket erstellt',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" wurde für {{clientName}} erstellt'
+      'ticket-updated-client': {
+        title: 'Ihr Ticket wurde aktualisiert',
+        message: 'Ihr Ticket #{{ticketId}} "{{ticketTitle}}" wurde aktualisiert'
       },
-      'ticket-updated': {
-        title: 'Ticket aktualisiert',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" wurde aktualisiert'
+      'ticket-closed-client': {
+        title: 'Ihr Ticket wurde geschlossen',
+        message: 'Ihr Ticket #{{ticketId}} "{{ticketTitle}}" wurde geschlossen'
       },
-      'ticket-closed': {
-        title: 'Ticket geschlossen',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" wurde geschlossen'
+      'ticket-comment-added-client': {
+        title: 'Neuer Kommentar zu Ihrem Ticket',
+        message: '{{authorName}} hat einen Kommentar zu Ihrem Ticket #{{ticketId}} hinzugefügt'
       },
-      'ticket-comment-added': {
-        title: 'Neuer Kommentar',
-        message: '{{authorName}} hat einen Kommentar zum Ticket #{{ticketId}} hinzugefügt'
-      },
-      'project-assigned': {
-        title: 'Projekt zugewiesen',
-        message: 'Projekt "{{projectName}}" wurde Ihnen zugewiesen'
-      },
-      'project-created': {
-        title: 'Neues Projekt erstellt',
-        message: 'Projekt "{{projectName}}" wurde für {{clientName}} erstellt'
-      },
-      'task-assigned': {
-        title: 'Aufgabe zugewiesen',
-        message: 'Die Aufgabe "{{taskName}}" im Projekt "{{projectName}}" wurde Ihnen zugewiesen'
-      },
-      'milestone-completed': {
-        title: 'Meilenstein abgeschlossen',
-        message: 'Der Meilenstein "{{milestoneName}}" im Projekt "{{projectName}}" wurde abgeschlossen'
-      },
-      'invoice-generated': {
-        title: 'Rechnung erstellt',
-        message: 'Rechnung #{{invoiceNumber}} für {{clientName}} wurde erstellt'
-      },
-      'payment-received': {
-        title: 'Zahlung eingegangen',
-        message: 'Zahlung über {{amount}} für Rechnung #{{invoiceNumber}} ist eingegangen'
-      },
-      'payment-overdue': {
-        title: 'Zahlung überfällig',
-        message: 'Rechnung #{{invoiceNumber}} ist seit {{daysOverdue}} Tagen überfällig'
-      },
-      'system-announcement': {
-        title: 'Systemankündigung',
-        message: '{{announcementTitle}}'
-      },
-      'user-mentioned': {
-        title: 'Sie wurden erwähnt',
-        message: '{{authorName}} hat Sie in {{entityType}} {{entityName}} erwähnt'
+      'message-sent': {
+        title: 'Neue Nachricht',
+        message: '{{senderName}}: {{messagePreview}}'
       }
     },
     nl: {
-      'ticket-assigned': {
-        title: 'Ticket toegewezen',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" is aan u toegewezen'
+      'ticket-created-client': {
+        title: 'Uw supportticket is aangemaakt',
+        message: 'Uw ticket #{{ticketId}} "{{ticketTitle}}" is aangemaakt en ons team reageert spoedig'
       },
-      'ticket-created': {
-        title: 'Nieuw ticket aangemaakt',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" is aangemaakt voor {{clientName}}'
+      'ticket-updated-client': {
+        title: 'Uw ticket is bijgewerkt',
+        message: 'Uw ticket #{{ticketId}} "{{ticketTitle}}" is bijgewerkt'
       },
-      'ticket-updated': {
-        title: 'Ticket bijgewerkt',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" is bijgewerkt'
+      'ticket-closed-client': {
+        title: 'Uw ticket is gesloten',
+        message: 'Uw ticket #{{ticketId}} "{{ticketTitle}}" is gesloten'
       },
-      'ticket-closed': {
-        title: 'Ticket gesloten',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" is gesloten'
+      'ticket-comment-added-client': {
+        title: 'Nieuwe opmerking bij uw ticket',
+        message: '{{authorName}} heeft een opmerking toegevoegd aan uw ticket #{{ticketId}}'
       },
-      'ticket-comment-added': {
-        title: 'Nieuwe opmerking',
-        message: '{{authorName}} heeft een opmerking toegevoegd aan ticket #{{ticketId}}'
-      },
-      'project-assigned': {
-        title: 'Project toegewezen',
-        message: 'Project "{{projectName}}" is aan u toegewezen'
-      },
-      'project-created': {
-        title: 'Nieuw project aangemaakt',
-        message: 'Project "{{projectName}}" is aangemaakt voor {{clientName}}'
-      },
-      'task-assigned': {
-        title: 'Taak toegewezen',
-        message: 'De taak "{{taskName}}" in project "{{projectName}}" is aan u toegewezen'
-      },
-      'milestone-completed': {
-        title: 'Mijlpaal voltooid',
-        message: 'De mijlpaal "{{milestoneName}}" in project "{{projectName}}" is voltooid'
-      },
-      'invoice-generated': {
-        title: 'Factuur aangemaakt',
-        message: 'Factuur #{{invoiceNumber}} voor {{clientName}} is aangemaakt'
-      },
-      'payment-received': {
-        title: 'Betaling ontvangen',
-        message: 'Betaling van {{amount}} voor factuur #{{invoiceNumber}} is ontvangen'
-      },
-      'payment-overdue': {
-        title: 'Betaling te laat',
-        message: 'Factuur #{{invoiceNumber}} is {{daysOverdue}} dagen te laat'
-      },
-      'system-announcement': {
-        title: 'Systeemmededeling',
-        message: '{{announcementTitle}}'
-      },
-      'user-mentioned': {
-        title: 'U bent genoemd',
-        message: '{{authorName}} heeft u genoemd in {{entityType}} {{entityName}}'
+      'message-sent': {
+        title: 'Nieuw bericht',
+        message: '{{senderName}}: {{messagePreview}}'
       }
     },
     it: {
-      'ticket-assigned': {
-        title: 'Ticket assegnato',
-        message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" le è stato assegnato'
+      'ticket-created-client': {
+        title: 'Il suo ticket di supporto è stato creato',
+        message: 'Il suo ticket #{{ticketId}} "{{ticketTitle}}" è stato creato e il nostro team risponderà a breve'
       },
-      'ticket-created': {
-        title: 'Nuovo ticket creato',
-        message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" è stato creato per {{clientName}}'
+      'ticket-updated-client': {
+        title: 'Il suo ticket è stato aggiornato',
+        message: 'Il suo ticket #{{ticketId}} "{{ticketTitle}}" è stato aggiornato'
       },
-      'ticket-updated': {
-        title: 'Ticket aggiornato',
-        message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" è stato aggiornato'
+      'ticket-closed-client': {
+        title: 'Il suo ticket è stato chiuso',
+        message: 'Il suo ticket #{{ticketId}} "{{ticketTitle}}" è stato chiuso'
       },
-      'ticket-closed': {
-        title: 'Ticket chiuso',
-        message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" è stato chiuso'
+      'ticket-comment-added-client': {
+        title: 'Nuovo commento sul suo ticket',
+        message: '{{authorName}} ha aggiunto un commento al suo ticket #{{ticketId}}'
       },
-      'ticket-comment-added': {
-        title: 'Nuovo commento',
-        message: '{{authorName}} ha aggiunto un commento al ticket #{{ticketId}}'
-      },
-      'project-assigned': {
-        title: 'Progetto assegnato',
-        message: 'Il progetto "{{projectName}}" le è stato assegnato'
-      },
-      'project-created': {
-        title: 'Nuovo progetto creato',
-        message: 'Il progetto "{{projectName}}" è stato creato per {{clientName}}'
-      },
-      'task-assigned': {
-        title: 'Attività assegnata',
-        message: 'L\'attività "{{taskName}}" del progetto "{{projectName}}" le è stata assegnata'
-      },
-      'milestone-completed': {
-        title: 'Traguardo completato',
-        message: 'La milestone "{{milestoneName}}" del progetto "{{projectName}}" è stata completata'
-      },
-      'invoice-generated': {
-        title: 'Fattura generata',
-        message: 'La fattura #{{invoiceNumber}} per {{clientName}} è stata generata'
-      },
-      'payment-received': {
-        title: 'Pagamento ricevuto',
-        message: 'Pagamento di {{amount}} ricevuto per la fattura #{{invoiceNumber}}'
-      },
-      'payment-overdue': {
-        title: 'Pagamento in ritardo',
-        message: 'La fattura #{{invoiceNumber}} è in ritardo di {{daysOverdue}} giorni'
-      },
-      'system-announcement': {
-        title: 'Annuncio di sistema',
-        message: '{{announcementTitle}}'
-      },
-      'user-mentioned': {
-        title: 'È stato menzionato',
-        message: '{{authorName}} l\'ha menzionato in {{entityType}} {{entityName}}'
+      'message-sent': {
+        title: 'Nuovo messaggio',
+        message: '{{senderName}}: {{messagePreview}}'
       }
     }
   };
@@ -315,12 +144,14 @@ exports.up = async function(knex) {
   for (const language of targetLanguages) {
     const languageTemplates = translations[language] || {};
     for (const [name, { title, message }] of Object.entries(languageTemplates)) {
+      // Map template name to subtype name (e.g., 'ticket-created-client' -> 'ticket-created')
+      const subtypeName = templateToSubtype[name] || name;
       rows.push({
         name,
         language_code: language,
         title,
         message,
-        subtype_id: getSubtypeId(name)
+        subtype_id: getSubtypeId(subtypeName)
       });
     }
   }

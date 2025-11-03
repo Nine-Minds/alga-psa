@@ -10,6 +10,7 @@ export interface InternalNotificationCategory {
   description: string | null;
   is_enabled: boolean;
   is_default_enabled: boolean;
+  available_for_client_portal: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +22,7 @@ export interface InternalNotificationSubtype {
   description: string | null;
   is_enabled: boolean;
   is_default_enabled: boolean;
+  available_for_client_portal: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -130,4 +132,26 @@ export interface RenderedTemplate {
   title: string;
   message: string;
   language_code: string;
+}
+
+/**
+ * User preferences for internal notifications
+ */
+export interface UserInternalNotificationPreference {
+  preference_id: number;
+  tenant: string;
+  user_id: string;
+  category_id: number | null;
+  subtype_id: number | null;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpdateUserInternalNotificationPreferenceRequest {
+  tenant: string;
+  user_id: string;
+  category_id?: number | null;
+  subtype_id?: number | null;
+  is_enabled: boolean;
 }

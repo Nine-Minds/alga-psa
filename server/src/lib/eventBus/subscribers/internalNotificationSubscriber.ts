@@ -11,7 +11,8 @@ import {
   ProjectCreatedEvent,
   ProjectAssignedEvent,
   ProjectTaskAssignedEvent,
-  InvoiceGeneratedEvent
+  InvoiceGeneratedEvent,
+  MessageSentEvent
 } from '../events';
 import { createNotificationFromTemplateAction } from '../../actions/internal-notification-actions/internalNotificationActions';
 import logger from '@alga-psa/shared/core/logger';
@@ -28,13 +29,14 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket details
+    // Get ticket details including contact
     const ticket = await db('tickets as t')
       .select(
         't.ticket_id',
         't.ticket_number',
         't.title',
         't.assigned_to',
+        't.contact_name_id',
         't.client_id',
         'c.client_name'
       )
@@ -53,7 +55,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       return;
     }
 
-    // Create notification for assigned user if ticket is assigned
+    // Create notification for assigned MSP user if ticket is assigned
     if (ticket.assigned_to) {
       await createNotificationFromTemplateAction({
         tenant: tenantId,
@@ -69,11 +71,45 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         }
       });
 
-      logger.info('[InternalNotificationSubscriber] Created notification for ticket created', {
+      logger.info('[InternalNotificationSubscriber] Created notification for ticket created (MSP user)', {
         ticketId,
         userId: ticket.assigned_to,
         tenantId
       });
+    }
+
+    // Create notification for client contact if they have portal access
+    if (ticket.contact_name_id) {
+      // Check if contact has a user account
+      const contactUser = await db('users')
+        .select('user_id', 'user_type')
+        .where({
+          contact_id: ticket.contact_name_id,
+          tenant: tenantId,
+          user_type: 'client'
+        })
+        .first();
+
+      if (contactUser) {
+        await createNotificationFromTemplateAction({
+          tenant: tenantId,
+          user_id: contactUser.user_id,
+          template_name: 'ticket-created-client',
+          type: 'info',
+          category: 'tickets',
+          link: `/client-portal/tickets/${ticketId}`,
+          data: {
+            ticketId: ticket.ticket_number || ticketId,
+            ticketTitle: ticket.title
+          }
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for ticket created (client portal)', {
+          ticketId,
+          userId: contactUser.user_id,
+          tenantId
+        });
+      }
     }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling ticket created', {
@@ -146,35 +182,70 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket details
+    // Get ticket details including contact
     const ticket = await db('tickets')
-      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'tenant')
+      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
       .where({ ticket_id: ticketId, tenant: tenantId })
       .first();
 
-    if (!ticket || !ticket.assigned_to) {
-      return; // No notification if not assigned
+    if (!ticket) {
+      return;
     }
 
-    // Create notification for assigned user
-    await createNotificationFromTemplateAction({
-      tenant: tenantId,
-      user_id: ticket.assigned_to,
-      template_name: 'ticket-updated',
-      type: 'info',
-      category: 'tickets',
-      link: `/msp/tickets/${ticketId}`,
-      data: {
-        ticketId: ticket.ticket_number || ticketId,
-        ticketTitle: ticket.title
-      }
-    });
+    // Create notification for assigned MSP user if ticket is assigned
+    if (ticket.assigned_to) {
+      await createNotificationFromTemplateAction({
+        tenant: tenantId,
+        user_id: ticket.assigned_to,
+        template_name: 'ticket-updated',
+        type: 'info',
+        category: 'tickets',
+        link: `/msp/tickets/${ticketId}`,
+        data: {
+          ticketId: ticket.ticket_number || ticketId,
+          ticketTitle: ticket.title
+        }
+      });
 
-    logger.info('[InternalNotificationSubscriber] Created notification for ticket updated', {
-      ticketId,
-      userId: ticket.assigned_to,
-      tenantId
-    });
+      logger.info('[InternalNotificationSubscriber] Created notification for ticket updated (MSP user)', {
+        ticketId,
+        userId: ticket.assigned_to,
+        tenantId
+      });
+    }
+
+    // Create notification for client contact if they have portal access
+    if (ticket.contact_name_id) {
+      const contactUser = await db('users')
+        .select('user_id', 'user_type')
+        .where({
+          contact_id: ticket.contact_name_id,
+          tenant: tenantId,
+          user_type: 'client'
+        })
+        .first();
+
+      if (contactUser) {
+        await createNotificationFromTemplateAction({
+          tenant: tenantId,
+          user_id: contactUser.user_id,
+          template_name: 'ticket-updated-client',
+          type: 'info',
+          category: 'tickets',
+          link: `/client-portal/tickets/${ticketId}`,
+          data: {
+            ticketId: ticket.ticket_number || ticketId,
+            ticketTitle: ticket.title
+          }
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for ticket updated (client portal)', {
+          ticketId,
+          userId: contactUser.user_id,
+          tenantId
+        });
+      }
+    }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling ticket updated', {
       error,
@@ -194,35 +265,70 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket details
+    // Get ticket details including contact
     const ticket = await db('tickets')
-      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'tenant')
+      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
       .where({ ticket_id: ticketId, tenant: tenantId })
       .first();
 
-    if (!ticket || !ticket.assigned_to) {
+    if (!ticket) {
       return;
     }
 
-    // Create notification for assigned user
-    await createNotificationFromTemplateAction({
-      tenant: tenantId,
-      user_id: ticket.assigned_to,
-      template_name: 'ticket-closed',
-      type: 'success',
-      category: 'tickets',
-      link: `/msp/tickets/${ticketId}`,
-      data: {
-        ticketId: ticket.ticket_number || ticketId,
-        ticketTitle: ticket.title
-      }
-    });
+    // Create notification for assigned MSP user if ticket is assigned
+    if (ticket.assigned_to) {
+      await createNotificationFromTemplateAction({
+        tenant: tenantId,
+        user_id: ticket.assigned_to,
+        template_name: 'ticket-closed',
+        type: 'success',
+        category: 'tickets',
+        link: `/msp/tickets/${ticketId}`,
+        data: {
+          ticketId: ticket.ticket_number || ticketId,
+          ticketTitle: ticket.title
+        }
+      });
 
-    logger.info('[InternalNotificationSubscriber] Created notification for ticket closed', {
-      ticketId,
-      userId: ticket.assigned_to,
-      tenantId
-    });
+      logger.info('[InternalNotificationSubscriber] Created notification for ticket closed (MSP user)', {
+        ticketId,
+        userId: ticket.assigned_to,
+        tenantId
+      });
+    }
+
+    // Create notification for client contact if they have portal access
+    if (ticket.contact_name_id) {
+      const contactUser = await db('users')
+        .select('user_id', 'user_type')
+        .where({
+          contact_id: ticket.contact_name_id,
+          tenant: tenantId,
+          user_type: 'client'
+        })
+        .first();
+
+      if (contactUser) {
+        await createNotificationFromTemplateAction({
+          tenant: tenantId,
+          user_id: contactUser.user_id,
+          template_name: 'ticket-closed-client',
+          type: 'success',
+          category: 'tickets',
+          link: `/client-portal/tickets/${ticketId}`,
+          data: {
+            ticketId: ticket.ticket_number || ticketId,
+            ticketTitle: ticket.title
+          }
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for ticket closed (client portal)', {
+          ticketId,
+          userId: contactUser.user_id,
+          tenantId
+        });
+      }
+    }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling ticket closed', {
       error,
@@ -242,18 +348,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket and author details
+    // Get ticket details including contact
     const ticket = await db('tickets')
-      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'tenant')
+      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
       .where({ ticket_id: ticketId, tenant: tenantId })
       .first();
 
-    if (!ticket || !ticket.assigned_to) {
-      return;
-    }
-
-    // Don't notify the comment author
-    if (ticket.assigned_to === userId) {
+    if (!ticket) {
       return;
     }
 
@@ -265,25 +366,61 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
 
-    // Create notification for assigned user
-    await createNotificationFromTemplateAction({
-      tenant: tenantId,
-      user_id: ticket.assigned_to,
-      template_name: 'ticket-comment-added',
-      type: 'info',
-      category: 'tickets',
-      link: `/msp/tickets/${ticketId}`,
-      data: {
-        authorName,
-        ticketId: ticket.ticket_number || ticketId
-      }
-    });
+    // Create notification for assigned MSP user (if not the comment author)
+    if (ticket.assigned_to && ticket.assigned_to !== userId) {
+      await createNotificationFromTemplateAction({
+        tenant: tenantId,
+        user_id: ticket.assigned_to,
+        template_name: 'ticket-comment-added',
+        type: 'info',
+        category: 'tickets',
+        link: `/msp/tickets/${ticketId}`,
+        data: {
+          authorName,
+          ticketId: ticket.ticket_number || ticketId
+        }
+      });
 
-    logger.info('[InternalNotificationSubscriber] Created notification for ticket comment', {
-      ticketId,
-      userId: ticket.assigned_to,
-      tenantId
-    });
+      logger.info('[InternalNotificationSubscriber] Created notification for ticket comment (MSP user)', {
+        ticketId,
+        userId: ticket.assigned_to,
+        tenantId
+      });
+    }
+
+    // Create notification for client contact if they have portal access (and are not the comment author)
+    // Skip if comment is internal - internal comments are not visible to client portal users
+    if (ticket.contact_name_id && !comment?.isInternal) {
+      const contactUser = await db('users')
+        .select('user_id', 'user_type')
+        .where({
+          contact_id: ticket.contact_name_id,
+          tenant: tenantId,
+          user_type: 'client'
+        })
+        .first();
+
+      if (contactUser && contactUser.user_id !== userId) {
+        await createNotificationFromTemplateAction({
+          tenant: tenantId,
+          user_id: contactUser.user_id,
+          template_name: 'ticket-comment-added-client',
+          type: 'info',
+          category: 'tickets',
+          link: `/client-portal/tickets/${ticketId}`,
+          data: {
+            authorName,
+            ticketId: ticket.ticket_number || ticketId
+          }
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for ticket comment (client portal)', {
+          ticketId,
+          userId: contactUser.user_id,
+          tenantId
+        });
+      }
+    }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling ticket comment added', {
       error,
@@ -544,6 +681,41 @@ async function handleInvoiceGenerated(event: InvoiceGeneratedEvent): Promise<voi
 }
 
 /**
+ * Handle message sent events
+ */
+async function handleMessageSent(event: MessageSentEvent): Promise<void> {
+  const { payload } = event;
+  const { tenantId, recipientId, senderName, messagePreview, conversationId } = payload;
+
+  try {
+    // Create notification for the recipient
+    await createNotificationFromTemplateAction({
+      tenant: tenantId,
+      user_id: recipientId,
+      template_name: 'message-sent',
+      type: 'info',
+      category: 'messages',
+      link: conversationId ? `/msp/messages/${conversationId}` : '/msp/messages',
+      data: {
+        senderName,
+        messagePreview
+      }
+    });
+
+    logger.info('[InternalNotificationSubscriber] Created notification for message sent', {
+      recipientId,
+      tenantId
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling message sent', {
+      error,
+      recipientId,
+      tenantId
+    });
+  }
+}
+
+/**
  * Handle all internal notification events
  */
 async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> {
@@ -586,6 +758,9 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
     case 'INVOICE_GENERATED':
       await handleInvoiceGenerated(validatedEvent as InvoiceGeneratedEvent);
       break;
+    case 'MESSAGE_SENT':
+      await handleMessageSent(validatedEvent as MessageSentEvent);
+      break;
     default:
       // Silently ignore other events
       break;
@@ -608,7 +783,8 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'PROJECT_CREATED',
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
-      'INVOICE_GENERATED'
+      'INVOICE_GENERATED',
+      'MESSAGE_SENT'
     ];
 
     // Use a dedicated channel for internal notifications
@@ -640,7 +816,8 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'PROJECT_CREATED',
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
-      'INVOICE_GENERATED'
+      'INVOICE_GENERATED',
+      'MESSAGE_SENT'
     ];
 
     const channel = 'internal-notifications';

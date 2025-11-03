@@ -1,12 +1,26 @@
+'use client';
+
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { CustomTabs } from "server/src/components/ui/CustomTabs";
+import ViewSwitcher, { ViewSwitcherOption } from "server/src/components/ui/ViewSwitcher";
 import { NotificationSettings } from "server/src/components/settings/notifications/NotificationSettings";
 import { EmailTemplates } from "server/src/components/settings/notifications/EmailTemplates";
 import { NotificationCategories } from "server/src/components/settings/notifications/NotificationCategories";
+import { InternalNotificationCategories } from "server/src/components/settings/notifications/InternalNotificationCategories";
 import { TelemetrySettings } from "server/src/components/settings/telemetry/TelemetrySettings";
 
+type NotificationView = 'email' | 'internal';
+
 export default function NotificationsTab() {
-  const tabContent = [
+  const [currentView, setCurrentView] = useState<NotificationView>('email');
+
+  const viewOptions: ViewSwitcherOption<NotificationView>[] = [
+    { value: 'email', label: 'Email Notifications' },
+    { value: 'internal', label: 'In-App Notifications' },
+  ];
+
+  const emailTabContent = [
     {
       label: "Settings",
       content: (
@@ -65,14 +79,47 @@ export default function NotificationsTab() {
     },
   ];
 
+  const internalTabContent = [
+    {
+      label: "Categories",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Internal Notification Categories</CardTitle>
+            <CardDescription>Manage in-app notification categories and types</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InternalNotificationCategories />
+          </CardContent>
+        </Card>
+      ),
+    },
+  ];
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notification Settings</CardTitle>
-        <CardDescription>Configure how you receive notifications</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Notification Settings</CardTitle>
+            <CardDescription>
+              {currentView === 'email'
+                ? 'Configure how your tenant sends email notifications'
+                : 'Configure how your tenant sends in-app notifications'}
+            </CardDescription>
+          </div>
+          <ViewSwitcher
+            currentView={currentView}
+            onChange={setCurrentView}
+            options={viewOptions}
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        <CustomTabs tabs={tabContent} />
+        <CustomTabs
+          key={currentView}
+          tabs={currentView === 'email' ? emailTabContent : internalTabContent}
+        />
       </CardContent>
     </Card>
   );

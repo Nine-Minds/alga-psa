@@ -10,6 +10,7 @@ import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
+import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
@@ -18,12 +19,15 @@ import {
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction
 } from 'server/src/lib/actions/notification-actions/notificationActions';
+import { InternalNotificationPreferences } from 'server/src/components/settings/notifications/InternalNotificationPreferences';
 import PasswordChangeForm from './PasswordChangeForm';
 import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
 import { toast } from 'react-hot-toast';
 import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';
+
+type NotificationView = 'email' | 'internal';
 
 interface UserProfileProps {
   userId?: string; // Optional - if not provided, uses current user
@@ -40,6 +44,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [countryCode, setCountryCode] = useState('US');
+  const [notificationView, setNotificationView] = useState<NotificationView>('internal');
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -396,34 +401,48 @@ export default function UserProfile({ userId }: UserProfileProps) {
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Notification Preferences</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Notification Preferences</CardTitle>
+              <ViewSwitcher
+                currentView={notificationView}
+                onChange={setNotificationView}
+                options={[
+                  { value: 'email', label: 'Email' },
+                  { value: 'internal', label: 'In-App' },
+                ] as ViewSwitcherOption<NotificationView>[]}
+              />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {categories.map((category: NotificationCategory): JSX.Element => (
-                <div key={category.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>{category.name}</Label>
-                    <Switch
-                      checked={category.is_enabled}
-                      onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
-                    />
+            {notificationView === 'email' ? (
+              <div className="space-y-6">
+                {categories.map((category: NotificationCategory): JSX.Element => (
+                  <div key={category.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>{category.name}</Label>
+                      <Switch
+                        checked={category.is_enabled}
+                        onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
+                      />
+                    </div>
+                    <div className="ml-6 space-y-2">
+                      {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
+                        <div key={subtype.id} className="flex items-center justify-between">
+                          <Label className="text-sm">{subtype.name}</Label>
+                          <Switch
+                            checked={subtype.is_enabled}
+                            disabled={!category.is_enabled}
+                            onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="ml-6 space-y-2">
-                    {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
-                      <div key={subtype.id} className="flex items-center justify-between">
-                        <Label className="text-sm">{subtype.name}</Label>
-                        <Switch
-                          checked={subtype.is_enabled}
-                          disabled={!category.is_enabled}
-                          onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <InternalNotificationPreferences />
+            )}
           </CardContent>
         </Card>
       ),

@@ -45,12 +45,22 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 // Helper function to safely publish events
 async function safePublishEvent(eventType: string, payload: any) {
   try {
+    // Publish to email channel
     await getEventBus().publish(
       {
         eventType,
         payload
       },
       { channel: getEmailEventChannel() }
+    );
+
+    // Also publish to internal notifications channel
+    await getEventBus().publish(
+      {
+        eventType,
+        payload
+      },
+      { channel: 'internal-notifications' }
     );
   } catch (error) {
     console.error(`Failed to publish ${eventType} event:`, error);

@@ -2,6 +2,7 @@
 
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import {
   InternalNotification,
   InternalNotificationTemplate,
@@ -12,7 +13,9 @@ import {
   GetInternalNotificationsRequest,
   InternalNotificationListResponse,
   UnreadCountResponse,
-  RenderedTemplate
+  RenderedTemplate,
+  UserInternalNotificationPreference,
+  UpdateUserInternalNotificationPreferenceRequest
 } from "../../models/internalNotification";
 import {
   broadcastNotification,
@@ -22,14 +25,19 @@ import {
 } from "../../realtime/internalNotificationBroadcaster";
 
 /**
- * Get user's locale preference from user_preferences table
+ * Get user's locale preference with fallback hierarchy:
+ * 1. User's language preference (user_preferences.locale)
+ * 2. Client company language (clients.properties.defaultLocale)
+ * 3. Tenant language (tenant_settings.settings.defaultLocale)
+ * 4. Default to 'en'
  */
 async function getUserLocale(
   trx: Knex.Transaction,
   tenant: string,
   userId: string
 ): Promise<string> {
-  const preference = await trx('user_preferences')
+  // 1. Try user's language preference
+  const userPreference = await trx('user_preferences')
     .where({
       tenant,
       user_id: userId,
@@ -37,12 +45,50 @@ async function getUserLocale(
     })
     .first();
 
-  return preference?.setting_value || 'en';
+  if (userPreference?.setting_value) {
+    return userPreference.setting_value;
+  }
+
+  // 2. Try client company language (for client portal users)
+  const user = await trx('users as u')
+    .select('u.user_type', 'u.contact_id', 'c.properties')
+    .leftJoin('contacts as con', function() {
+      this.on('u.contact_id', 'con.contact_name_id')
+          .andOn('u.tenant', 'con.tenant');
+    })
+    .leftJoin('clients as c', function() {
+      this.on('con.client_id', 'c.client_id')
+          .andOn('con.tenant', 'c.tenant');
+    })
+    .where('u.user_id', userId)
+    .andWhere('u.tenant', tenant)
+    .first();
+
+  if (user?.user_type === 'client' && user?.properties?.defaultLocale) {
+    return user.properties.defaultLocale;
+  }
+
+  // 3. Try tenant-wide default language
+  const tenantSettings = await trx('tenant_settings')
+    .select('settings')
+    .where({ tenant })
+    .first();
+
+  if (tenantSettings?.settings?.defaultLocale) {
+    return tenantSettings.settings.defaultLocale;
+  }
+
+  // 4. Default to English
+  return 'en';
 }
 
 /**
- * Get notification template in user's preferred language with fallback chain
- * Fallback order: user's locale → tenant default → English → generic
+ * Get notification template in the specified language with fallback to English
+ * Note: The locale parameter comes from getUserLocale() which already handles:
+ * 1. User's language preference
+ * 2. Client company language
+ * 3. Tenant language
+ * 4. English default
  */
 async function getNotificationTemplate(
   trx: Knex.Transaction,
@@ -50,14 +96,14 @@ async function getNotificationTemplate(
   templateName: string,
   locale: string
 ): Promise<InternalNotificationTemplate | null> {
-  // 1. Try user's preferred language
+  // 1. Try the requested language (from getUserLocale hierarchy)
   let template = await trx('internal_notification_templates')
     .where({ name: templateName, language_code: locale })
     .first();
 
   if (template) return template;
 
-  // 2. Try English as fallback
+  // 2. Try English as final fallback
   template = await trx('internal_notification_templates')
     .where({ name: templateName, language_code: 'en' })
     .first();
@@ -83,7 +129,7 @@ function renderTemplate(template: string, data: Record<string, any>): string {
  */
 export async function createNotificationFromTemplateAction(
   request: CreateInternalNotificationRequest
-): Promise<InternalNotification> {
+): Promise<InternalNotification | null> {
   const { knex } = await (await import("../../db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -100,6 +146,15 @@ export async function createNotificationFromTemplateAction(
 
     if (!template) {
       throw new Error(`Template '${request.template_name}' not found`);
+    }
+
+    // Check if user has this notification type enabled
+    const subtypeId = template.subtype_id;
+    const isEnabled = await checkInternalNotificationEnabled(trx, request.tenant, request.user_id, subtypeId);
+
+    if (!isEnabled) {
+      console.log(`Internal notification disabled for user ${request.user_id}, subtype ${subtypeId}`);
+      return null;
     }
 
     // Render template with data
@@ -132,6 +187,70 @@ export async function createNotificationFromTemplateAction(
 
     return notification;
   });
+}
+
+/**
+ * Internal helper to check if internal notifications are enabled (used within transaction)
+ */
+async function checkInternalNotificationEnabled(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+  subtypeId: number
+): Promise<boolean> {
+  // Get the subtype and category to check system-wide settings
+  const subtype = await trx('internal_notification_subtypes')
+    .where({ internal_notification_subtype_id: subtypeId })
+    .first();
+
+  if (!subtype) {
+    return false; // Subtype doesn't exist, don't send notification
+  }
+
+  // CRITICAL: Check if subtype is enabled system-wide
+  if (!subtype.is_enabled) {
+    return false; // Disabled system-wide by admin
+  }
+
+  // Get the category
+  const category = await trx('internal_notification_categories')
+    .where({ internal_notification_category_id: subtype.internal_category_id })
+    .first();
+
+  // CRITICAL: Check if category is enabled system-wide
+  if (!category || !category.is_enabled) {
+    return false; // Category disabled system-wide by admin
+  }
+
+  // Check for specific subtype preference
+  const subtypePreference = await trx('user_internal_notification_preferences')
+    .where({
+      tenant,
+      user_id: userId,
+      subtype_id: subtypeId
+    })
+    .first();
+
+  if (subtypePreference) {
+    return subtypePreference.is_enabled;
+  }
+
+  // Check for category-level preference
+  const categoryPreference = await trx('user_internal_notification_preferences')
+    .where({
+      tenant,
+      user_id: userId,
+      category_id: subtype.internal_category_id,
+      subtype_id: null
+    })
+    .first();
+
+  if (categoryPreference) {
+    return categoryPreference.is_enabled;
+  }
+
+  // Default to subtype's default setting (only if system-wide enabled)
+  return subtype.is_default_enabled;
 }
 
 /**
@@ -230,10 +349,10 @@ export async function getUnreadCountAction(
         .count('* as count')
         .groupBy('category');
 
-      response.by_category = categoryCounts.reduce((acc, row) => {
+      response.by_category = categoryCounts.reduce<Record<string, number>>((acc, row) => {
         acc[row.category] = Number(row.count);
         return acc;
-      }, {} as Record<string, number>);
+      }, {});
     }
 
     return response;
@@ -340,13 +459,20 @@ export async function deleteNotificationAction(
 /**
  * Get all categories
  */
-export async function getCategoriesAction(): Promise<InternalNotificationCategory[]> {
+export async function getCategoriesAction(
+  forClientPortal?: boolean
+): Promise<InternalNotificationCategory[]> {
   const { knex } = await (await import("../../db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('internal_notification_categories')
-      .where({ is_enabled: true })
-      .orderBy('name');
+    let query = trx('internal_notification_categories')
+      .where({ is_enabled: true });
+
+    if (forClientPortal === true) {
+      query = query.where({ available_for_client_portal: true });
+    }
+
+    return await query.orderBy('name');
   });
 }
 
@@ -354,17 +480,23 @@ export async function getCategoriesAction(): Promise<InternalNotificationCategor
  * Get subtypes for a category
  */
 export async function getSubtypesAction(
-  categoryId: number
+  categoryId: number,
+  forClientPortal?: boolean
 ): Promise<InternalNotificationSubtype[]> {
   const { knex } = await (await import("../../db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('internal_notification_subtypes')
+    let query = trx('internal_notification_subtypes')
       .where({
         internal_category_id: categoryId,
         is_enabled: true
-      })
-      .orderBy('name');
+      });
+
+    if (forClientPortal === true) {
+      query = query.where({ available_for_client_portal: true });
+    }
+
+    return await query.orderBy('name');
   });
 }
 
@@ -380,5 +512,205 @@ export async function getTemplatesForNameAction(
     return await trx('internal_notification_templates')
       .where({ name: templateName })
       .orderBy('language_code');
+  });
+}
+
+/**
+ * Get user's internal notification preferences
+ */
+export async function getUserInternalNotificationPreferencesAction(
+  tenant: string,
+  userId: string
+): Promise<UserInternalNotificationPreference[]> {
+  const { knex } = await (await import("../../db")).createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('user_internal_notification_preferences')
+      .where({
+        tenant,
+        user_id: userId
+      })
+      .orderBy('preference_id');
+  });
+}
+
+/**
+ * Update or create a user's internal notification preference
+ */
+export async function updateUserInternalNotificationPreferenceAction(
+  request: UpdateUserInternalNotificationPreferenceRequest
+): Promise<UserInternalNotificationPreference> {
+  const { knex } = await (await import("../../db")).createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Check if preference exists
+    const existing = await trx('user_internal_notification_preferences')
+      .where({
+        tenant: request.tenant,
+        user_id: request.user_id,
+        category_id: request.category_id || null,
+        subtype_id: request.subtype_id || null
+      })
+      .first();
+
+    if (existing) {
+      // Update existing preference
+      const [updated] = await trx('user_internal_notification_preferences')
+        .where({
+          preference_id: existing.preference_id
+        })
+        .update({
+          is_enabled: request.is_enabled,
+          updated_at: trx.fn.now()
+        })
+        .returning('*');
+      return updated;
+    } else {
+      // Create new preference
+      const [created] = await trx('user_internal_notification_preferences')
+        .insert({
+          tenant: request.tenant,
+          user_id: request.user_id,
+          category_id: request.category_id || null,
+          subtype_id: request.subtype_id || null,
+          is_enabled: request.is_enabled
+        })
+        .returning('*');
+      return created;
+    }
+  });
+}
+
+/**
+ * Check if a user has internal notifications enabled for a specific subtype
+ */
+export async function isInternalNotificationEnabledAction(
+  tenant: string,
+  userId: string,
+  subtypeId: number
+): Promise<boolean> {
+  const { knex } = await (await import("../../db")).createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Check for specific subtype preference
+    const subtypePreference = await trx('user_internal_notification_preferences')
+      .where({
+        tenant,
+        user_id: userId,
+        subtype_id: subtypeId
+      })
+      .first();
+
+    if (subtypePreference) {
+      return subtypePreference.is_enabled;
+    }
+
+    // Get the category for this subtype
+    const subtype = await trx('internal_notification_subtypes')
+      .where({ internal_notification_subtype_id: subtypeId })
+      .first();
+
+    if (!subtype) {
+      return true; // Default to enabled if subtype not found
+    }
+
+    // Check for category-level preference
+    const categoryPreference = await trx('user_internal_notification_preferences')
+      .where({
+        tenant,
+        user_id: userId,
+        category_id: subtype.internal_category_id,
+        subtype_id: null
+      })
+      .first();
+
+    if (categoryPreference) {
+      return categoryPreference.is_enabled;
+    }
+
+    // Default to subtype's default setting
+    return subtype.is_default_enabled;
+  });
+}
+
+/**
+ * Update internal notification category (system-wide)
+ * Requires 'settings' 'update' permission
+ */
+export async function updateInternalCategoryAction(
+  categoryId: number,
+  updates: Partial<Pick<InternalNotificationCategory, 'is_enabled' | 'is_default_enabled'>>
+): Promise<InternalNotificationCategory> {
+  // Check permissions - requires 'settings' 'update' permission
+  const { getCurrentUser } = await import('../user-actions/userActions');
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex } = await (await import("../../db")).createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Check permission within transaction context
+    const hasUpdatePermission = await hasPermission(currentUser, 'settings', 'update', trx);
+    if (!hasUpdatePermission) {
+      throw new Error('Permission denied: Cannot update settings');
+    }
+
+    const [updated] = await trx('internal_notification_categories')
+      .where({ internal_notification_category_id: categoryId })
+      .update({
+        ...updates,
+        updated_at: trx.fn.now()
+      })
+      .returning('*');
+
+    if (!updated) {
+      throw new Error('Category not found');
+    }
+
+    return updated;
+  });
+}
+
+/**
+ * Update internal notification subtype (system-wide)
+ * Requires 'settings' 'update' permission
+ */
+export async function updateInternalSubtypeAction(
+  subtypeId: number,
+  updates: Partial<Pick<InternalNotificationSubtype, 'is_enabled' | 'is_default_enabled'>>
+): Promise<InternalNotificationSubtype> {
+  // Check permissions - requires 'settings' 'update' permission
+  const { getCurrentUser } = await import('../user-actions/userActions');
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex } = await (await import("../../db")).createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Check permission within transaction context
+    const hasUpdatePermission = await hasPermission(currentUser, 'settings', 'update', trx);
+    if (!hasUpdatePermission) {
+      throw new Error('Permission denied: Cannot update settings');
+    }
+
+    const [updated] = await trx('internal_notification_subtypes')
+      .where({ internal_notification_subtype_id: subtypeId })
+      .update({
+        ...updates,
+        updated_at: trx.fn.now()
+      })
+      .returning('*');
+
+    if (!updated) {
+      throw new Error('Subtype not found');
+    }
+
+    return updated;
   });
 }
