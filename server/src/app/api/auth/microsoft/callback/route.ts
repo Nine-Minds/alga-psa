@@ -137,10 +137,19 @@ export async function GET(request: NextRequest) {
       const envClientSecret = process.env.MICROSOFT_CLIENT_SECRET || null;
       const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id');
       const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
-      clientId = envClientId || tenantClientId || null;
-      clientSecret = envClientSecret || tenantClientSecret || null;
-      tenantAuthority = process.env.MICROSOFT_TENANT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_tenant_id') || null;
-      credentialSource = envClientId && envClientSecret ? 'env' : 'tenant_secret';
+      const appClientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID');
+      const appClientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET');
+      const appTenantId = await secretProvider.getAppSecret('MICROSOFT_TENANT_ID');
+      clientId = envClientId || tenantClientId || appClientId || null;
+      clientSecret = envClientSecret || tenantClientSecret || appClientSecret || null;
+      tenantAuthority = process.env.MICROSOFT_TENANT_ID
+        || (await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_tenant_id'))
+        || appTenantId
+        || null;
+      credentialSource = envClientId && envClientSecret ? 'env'
+        : tenantClientId && tenantClientSecret ? 'tenant_secret'
+        : appClientId && appClientSecret ? 'app_secret'
+        : 'unknown';
     }
     // Normalize whitespace just in case the secret was copied with spaces/newlines
     clientId = clientId?.trim() || null;

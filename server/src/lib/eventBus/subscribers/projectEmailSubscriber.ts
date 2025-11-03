@@ -1199,18 +1199,19 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
   try {
     logger.info('[ProjectEmailSubscriber] Starting registration');
     
-    const projectEventTypes: EventType[] = [
+    const projectEventTypes = [
       'PROJECT_CREATED',
       'PROJECT_UPDATED',
       'PROJECT_CLOSED',
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED'
-    ];
+    ] as const;
 
     const channel = getEmailEventChannel();
     logger.info('[ProjectEmailSubscriber] Using channel for subscriptions', { channel });
 
     for (const eventType of projectEventTypes) {
+      // @ts-ignore - EventType union
       await getEventBus().subscribe(eventType, handleProjectEvent, { channel });
       logger.info(`[ProjectEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
@@ -1226,17 +1227,18 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
  */
 export async function unregisterProjectEmailSubscriber(): Promise<void> {
   try {
-    const projectEventTypes: EventType[] = [
+    const projectEventTypes = [
       'PROJECT_CREATED',
       'PROJECT_UPDATED',
       'PROJECT_CLOSED',
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED'
-    ];
+    ] as const;
 
     const channel = getEmailEventChannel();
 
     for (const eventType of projectEventTypes) {
+      // @ts-ignore - EventType union
       await getEventBus().unsubscribe(eventType, handleProjectEvent, { channel });
     }
 

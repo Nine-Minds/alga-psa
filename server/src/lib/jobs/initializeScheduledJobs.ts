@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob } from './index';
 import logger from '@shared/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -54,7 +54,7 @@ export async function initializeScheduledJobs(): Promise<void> {
       } catch (error) {
         logger.error(`Failed to schedule expiring credits notification job for tenant ${tenantId}`, error);
       }
-      
+
       // Schedule daily job to run credit reconciliation (runs at 2:00 AM)
       try {
         const cron = '0 2 * * *';
@@ -87,7 +87,41 @@ export async function initializeScheduledJobs(): Promise<void> {
        }
      } catch (error) {
        logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`, error);
-     }
+      }
+
+      // Schedule Microsoft webhook renewal (every 30 minutes)
+      try {
+        const cron = '*/30 * * * *';
+        const renewalJobId = await scheduleMicrosoftWebhookRenewalJob(tenantId, cron);
+        if (renewalJobId) {
+          logger.info(`Scheduled Microsoft webhook renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
+        } else {
+          logger.info('Microsoft webhook renewal job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: renewalJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule Microsoft webhook renewal job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule Google Pub/Sub subscription verification (hourly)
+      try {
+        const cron = '15 * * * *';
+        const verificationJobId = await scheduleGooglePubSubVerificationJob(tenantId, cron);
+        if (verificationJobId) {
+          logger.info(`Scheduled Google Pub/Sub verification job for tenant ${tenantId} with job ID ${verificationJobId}`);
+        } else {
+          logger.info('Google Pub/Sub verification job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: verificationJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule Google Pub/Sub verification job for tenant ${tenantId}`, error);
+      }
    }
    
    // Schedule temporary forms cleanup job (system-wide)
