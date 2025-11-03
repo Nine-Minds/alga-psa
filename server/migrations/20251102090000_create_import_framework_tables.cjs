@@ -50,35 +50,40 @@ exports.up = async function up(knex) {
   // ---------------------------------------------------------------------------
   // import_sources
   // ---------------------------------------------------------------------------
-  await knex.schema.createTable('import_sources', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('import_source_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-    table.text('source_type').notNullable();
-    table.text('name').notNullable();
-    table.text('description');
-    table.jsonb('field_mapping');
-    table.specificType('duplicate_detection_fields', 'text[]');
-    table.boolean('is_active').notNullable().defaultTo(true);
-    table.jsonb('metadata');
-    table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-    table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+  const hasImportSources = await knex.schema.hasTable('import_sources');
+  if (!hasImportSources) {
+    await knex.schema.createTable('import_sources', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('import_source_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
+      table.text('source_type').notNullable();
+      table.text('name').notNullable();
+      table.text('description');
+      table.jsonb('field_mapping');
+      table.specificType('duplicate_detection_fields', 'text[]');
+      table.boolean('is_active').notNullable().defaultTo(true);
+      table.jsonb('metadata');
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
 
-    table.primary(['tenant', 'import_source_id']);
-    table
-      .foreign('tenant')
-      .references('tenants.tenant');
-    table.unique(['tenant', 'source_type', 'name'], 'uq_import_sources_type_name');
-  });
+      table.primary(['tenant', 'import_source_id']);
+      table
+        .foreign('tenant')
+        .references('tenants.tenant');
+      table.unique(['tenant', 'source_type', 'name'], 'uq_import_sources_type_name');
+    });
+  }
 
   // ---------------------------------------------------------------------------
   // import_jobs
   // ---------------------------------------------------------------------------
-  await knex.schema.createTable('import_jobs', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('import_job_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-    table.uuid('import_source_id').notNullable();
-    table.uuid('job_id');
-    table.specificType('status', 'import_job_status').notNullable().defaultTo('preview');
+  const hasImportJobs = await knex.schema.hasTable('import_jobs');
+  if (!hasImportJobs) {
+    await knex.schema.createTable('import_jobs', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('import_job_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('import_source_id').notNullable();
+      table.uuid('job_id');
+      table.specificType('status', 'import_job_status').notNullable().defaultTo('preview');
     table.text('file_name');
     table.integer('total_rows').notNullable().defaultTo(0);
     table.integer('processed_rows').notNullable().defaultTo(0);
@@ -106,21 +111,24 @@ exports.up = async function up(knex) {
       .foreign(['tenant', 'job_id'])
       .references(['tenant', 'job_id'])
       .inTable('jobs');
-    table
-      .foreign(['tenant', 'created_by'])
-      .references(['tenant', 'user_id'])
-      .inTable('users');
-  });
+      table
+        .foreign(['tenant', 'created_by'])
+        .references(['tenant', 'user_id'])
+        .inTable('users');
+    });
+  }
 
   // ---------------------------------------------------------------------------
   // import_job_items
   // ---------------------------------------------------------------------------
-  await knex.schema.createTable('import_job_items', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('import_job_item_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-    table.uuid('import_job_id').notNullable();
-    table.text('external_id');
-    table.uuid('asset_id');
+  const hasImportJobItems = await knex.schema.hasTable('import_job_items');
+  if (!hasImportJobItems) {
+    await knex.schema.createTable('import_job_items', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('import_job_item_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('import_job_id').notNullable();
+      table.text('external_id');
+      table.uuid('asset_id');
     table.jsonb('source_data').notNullable();
     table.jsonb('mapped_data');
     table.jsonb('duplicate_details');
@@ -135,21 +143,24 @@ exports.up = async function up(knex) {
       .references(['tenant', 'import_job_id'])
       .inTable('import_jobs')
       .onDelete('CASCADE');
-    table
-      .foreign(['tenant', 'asset_id'])
-      .references(['tenant', 'asset_id'])
-      .inTable('assets');
-  });
+      table
+        .foreign(['tenant', 'asset_id'])
+        .references(['tenant', 'asset_id'])
+        .inTable('assets');
+    });
+  }
 
   // ---------------------------------------------------------------------------
   // external_entity_mappings
   // ---------------------------------------------------------------------------
-  await knex.schema.createTable('external_entity_mappings', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('external_entity_mapping_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-    table.uuid('asset_id').notNullable();
-    table.uuid('import_source_id').notNullable();
-    table.text('external_id').notNullable();
+  const hasExternalMappings = await knex.schema.hasTable('external_entity_mappings');
+  if (!hasExternalMappings) {
+    await knex.schema.createTable('external_entity_mappings', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('external_entity_mapping_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('asset_id').notNullable();
+      table.uuid('import_source_id').notNullable();
+      table.text('external_id').notNullable();
     table.text('external_hash');
     table.jsonb('metadata');
     table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
@@ -160,12 +171,13 @@ exports.up = async function up(knex) {
       .foreign(['tenant', 'asset_id'])
       .references(['tenant', 'asset_id'])
       .inTable('assets');
-    table
-      .foreign(['tenant', 'import_source_id'])
-      .references(['tenant', 'import_source_id'])
-      .inTable('import_sources');
-    table.unique(['tenant', 'import_source_id', 'external_id'], 'uq_external_entity_unique_source');
-  });
+      table
+        .foreign(['tenant', 'import_source_id'])
+        .references(['tenant', 'import_source_id'])
+        .inTable('import_sources');
+      table.unique(['tenant', 'import_source_id', 'external_id'], 'uq_external_entity_unique_source');
+    });
+  }
 
   // ---------------------------------------------------------------------------
   // Indexes
@@ -188,15 +200,44 @@ exports.up = async function up(knex) {
   ];
 
   for (const table of tablesWithRls) {
+    await knex.raw(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY;`);
+
     await knex.raw(`
-      ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY;
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_policies
+          WHERE schemaname = 'public'
+            AND tablename = '${table}'
+            AND policyname = '${table}_tenant_isolation_policy'
+        ) THEN
+          EXECUTE format(
+            'CREATE POLICY %I ON %I USING (tenant = current_setting(''app.current_tenant'')::uuid)',
+            '${table}_tenant_isolation_policy',
+            '${table}'
+          );
+        END IF;
+      END
+      $$;
+    `);
 
-      CREATE POLICY ${table}_tenant_isolation_policy ON ${table}
-        USING (tenant = current_setting('app.current_tenant')::uuid);
-
-      CREATE POLICY ${table}_tenant_insert_policy ON ${table}
-        FOR INSERT
-        WITH CHECK (tenant = current_setting('app.current_tenant')::uuid);
+    await knex.raw(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_policies
+          WHERE schemaname = 'public'
+            AND tablename = '${table}'
+            AND policyname = '${table}_tenant_insert_policy'
+        ) THEN
+          EXECUTE format(
+            'CREATE POLICY %I ON %I FOR INSERT WITH CHECK (tenant = current_setting(''app.current_tenant'')::uuid)',
+            '${table}_tenant_insert_policy',
+            '${table}'
+          );
+        END IF;
+      END
+      $$;
     `);
   }
 };
