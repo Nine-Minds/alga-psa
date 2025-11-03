@@ -232,12 +232,8 @@ const renderStatusBadge = (status: string) => {
     {
       title: 'Contract Template',
       dataIndex: 'template_contract_name',
-      render: (_value: string | null, record) =>
-        record.template_contract_name && record.template_contract_name.trim().length > 0
-          ? record.template_contract_name
-          : record.contract_name && record.contract_name.trim().length > 0
-            ? record.contract_name
-            : '—',
+      render: (value: string | null) =>
+        value && value.trim().length > 0 ? value : '—',
     },
     {
       title: 'Contract Name',
