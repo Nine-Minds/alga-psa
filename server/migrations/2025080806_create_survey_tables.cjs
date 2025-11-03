@@ -59,7 +59,7 @@ exports.up = async function up(knex) {
     table.uuid('invitation_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.uuid('ticket_id').notNullable();
-    table.uuid('company_id');
+    table.uuid('client_id');
     table.uuid('contact_id');
     table.uuid('template_id').notNullable();
     table.string('survey_token_hash', 255).notNullable();
@@ -83,12 +83,12 @@ exports.up = async function up(knex) {
       .inTable('tickets')
       .onDelete('CASCADE');
     table
-      .foreign(['company_id', 'tenant'])
-      .references(['company_id', 'tenant'])
-      .inTable('companies');
+      .foreign(['tenant', 'client_id'])
+      .references(['tenant', 'client_id'])
+      .inTable('clients');
     table
-      .foreign(['contact_id', 'tenant'])
-      .references(['contact_id', 'tenant'])
+      .foreign(['tenant', 'contact_id'])
+      .references(['tenant', 'contact_name_id'])
       .inTable('contacts');
     table
       .foreign('tenant')
@@ -100,7 +100,7 @@ exports.up = async function up(knex) {
     table.uuid('response_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.uuid('ticket_id').notNullable();
-    table.uuid('company_id');
+    table.uuid('client_id');
     table.uuid('contact_id');
     table.uuid('template_id').notNullable();
     table.integer('rating').notNullable();
@@ -124,12 +124,12 @@ exports.up = async function up(knex) {
       .inTable('tickets')
       .onDelete('CASCADE');
     table
-      .foreign(['company_id', 'tenant'])
-      .references(['company_id', 'tenant'])
-      .inTable('companies');
+      .foreign(['tenant', 'client_id'])
+      .references(['tenant', 'client_id'])
+      .inTable('clients');
     table
-      .foreign(['contact_id', 'tenant'])
-      .references(['contact_id', 'tenant'])
+      .foreign(['tenant', 'contact_id'])
+      .references(['tenant', 'contact_name_id'])
       .inTable('contacts');
     table
       .foreign('tenant')
@@ -183,8 +183,8 @@ exports.up = async function up(knex) {
       ON ${TABLES.responses} (tenant, ticket_id);
   `);
   await knex.raw(`
-    CREATE INDEX idx_survey_responses_tenant_company
-      ON ${TABLES.responses} (tenant, company_id);
+    CREATE INDEX idx_survey_responses_tenant_client
+      ON ${TABLES.responses} (tenant, client_id);
   `);
   await knex.raw(`
     CREATE INDEX idx_survey_responses_tenant_submitted

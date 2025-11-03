@@ -15,7 +15,7 @@
 ### Phase Checklist
 1. **Phase 1 – Core Infrastructure** (Details §Implementation Phases > Phase 1)
    - Database & Token Foundations  
-     - Create EE migrations for templates/triggers/invitations/responses with tenant composite PKs and RLS (Details §Database Schema, §Migration Files).  
+     - Create migrations for templates/triggers/invitations/responses with tenant composite PKs and RLS (Details §Database Schema, §Migration Files).  
      - Add seed migration for default CSAT template with JSONB labels stored as strings (Details §Migration Files).  
      - Implement hashing + issuance helpers in `surveyTokenService` and validate against stored digests (Details §Token Service).
    - Backend Actions & Entry Points  
@@ -161,12 +161,12 @@ CREATE TABLE survey_responses (
   response_id UUID NOT NULL DEFAULT gen_random_uuid(),
   tenant UUID NOT NULL,
   ticket_id UUID NOT NULL,
-  company_id UUID,
+  client_id UUID,
   contact_id UUID,
   template_id UUID NOT NULL,
   rating INTEGER NOT NULL, -- 1-5 (or based on scale)
   comment TEXT,
-  survey_token VARCHAR(255) NOT NULL,
+  survey_token_hash VARCHAR(255) NOT NULL,
   token_expires_at TIMESTAMPTZ NOT NULL,
   submitted_at TIMESTAMPTZ DEFAULT NOW(),
   response_time_seconds INTEGER, -- Time from email sent to response
@@ -178,11 +178,11 @@ CREATE TABLE survey_responses (
   CONSTRAINT survey_responses_ticket_fk FOREIGN KEY (ticket_id, tenant)
     REFERENCES tickets(ticket_id, tenant)
     ON DELETE CASCADE,
-  CONSTRAINT survey_responses_company_fk FOREIGN KEY (company_id, tenant)
-    REFERENCES companies(company_id, tenant),
-  CONSTRAINT survey_responses_contact_fk FOREIGN KEY (contact_id, tenant)
-    REFERENCES contacts(contact_id, tenant),
-  UNIQUE (tenant, survey_token)
+  CONSTRAINT survey_responses_client_fk FOREIGN KEY (tenant, client_id)
+    REFERENCES clients(tenant, client_id),
+  CONSTRAINT survey_responses_contact_fk FOREIGN KEY (tenant, contact_id)
+    REFERENCES contacts(tenant, contact_name_id),
+  UNIQUE (tenant, survey_token_hash)
 );
 
 -- RLS policies
@@ -191,9 +191,9 @@ CREATE POLICY tenant_isolation ON survey_responses USING (tenant = current_setti
 
 -- Indexes
 CREATE INDEX idx_survey_responses_tenant_ticket ON survey_responses(tenant, ticket_id);
-CREATE INDEX idx_survey_responses_tenant_company ON survey_responses(tenant, company_id);
+CREATE INDEX idx_survey_responses_tenant_client ON survey_responses(tenant, client_id);
 CREATE INDEX idx_survey_responses_tenant_submitted ON survey_responses(tenant, submitted_at DESC);
-CREATE INDEX idx_survey_responses_token ON survey_responses(tenant, survey_token) WHERE submitted_at IS NULL;
+CREATE INDEX idx_survey_responses_token ON survey_responses(tenant, survey_token_hash) WHERE submitted_at IS NULL;
 CREATE INDEX idx_survey_responses_rating ON survey_responses(tenant, rating);
 ```
 
@@ -205,10 +205,10 @@ CREATE TABLE survey_invitations (
   invitation_id UUID NOT NULL DEFAULT gen_random_uuid(),
   tenant UUID NOT NULL,
   ticket_id UUID NOT NULL,
-  company_id UUID,
+  client_id UUID,
   contact_id UUID,
   template_id UUID NOT NULL,
-  survey_token VARCHAR(255) NOT NULL,
+  survey_token_hash VARCHAR(255) NOT NULL,
   token_expires_at TIMESTAMPTZ NOT NULL,
   sent_at TIMESTAMPTZ DEFAULT NOW(),
   opened_at TIMESTAMPTZ, -- Track email opens via pixel
@@ -222,11 +222,11 @@ CREATE TABLE survey_invitations (
   CONSTRAINT survey_invitations_ticket_fk FOREIGN KEY (ticket_id, tenant)
     REFERENCES tickets(ticket_id, tenant)
     ON DELETE CASCADE,
-  CONSTRAINT survey_invitations_company_fk FOREIGN KEY (company_id, tenant)
-    REFERENCES companies(company_id, tenant),
-  CONSTRAINT survey_invitations_contact_fk FOREIGN KEY (contact_id, tenant)
-    REFERENCES contacts(contact_id, tenant),
-  UNIQUE (tenant, survey_token)
+  CONSTRAINT survey_invitations_client_fk FOREIGN KEY (tenant, client_id)
+    REFERENCES clients(tenant, client_id),
+  CONSTRAINT survey_invitations_contact_fk FOREIGN KEY (tenant, contact_id)
+    REFERENCES contacts(tenant, contact_name_id),
+  UNIQUE (tenant, survey_token_hash)
 );
 
 -- RLS policies
@@ -235,7 +235,7 @@ CREATE POLICY tenant_isolation ON survey_invitations USING (tenant = current_set
 
 -- Indexes
 CREATE INDEX idx_survey_invitations_tenant_ticket ON survey_invitations(tenant, ticket_id);
-CREATE INDEX idx_survey_invitations_token ON survey_invitations(tenant, survey_token);
+CREATE INDEX idx_survey_invitations_token ON survey_invitations(tenant, survey_token_hash);
 CREATE INDEX idx_survey_invitations_sent ON survey_invitations(tenant, sent_at DESC);
 ```
 
@@ -390,7 +390,7 @@ Get aggregate statistics for dashboard.
 
 ### New Action Files
 
-#### `ee/server/src/lib/actions/surveyActions.ts`
+#### `server/src/lib/actions/surveyActions.ts`
 
 ```typescript
 'use server';
@@ -488,12 +488,12 @@ async function generateSurveyToken(): Promise<string> {
 }
 ```
 
-#### `ee/server/src/lib/actions/surveyResponseActions.ts`
+#### `server/src/lib/actions/surveyResponseActions.ts`
 
 ```typescript
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { withTransaction } from '@shared/db';
-import { hashSurveyToken, resolveSurveyTenantFromToken } from './surveyTokenService';
+import { hashSurveyToken, resolveSurveyTenantFromToken } from '@/lib/actions/surveyTokenService';
 
 // Public action - no auth required
 export async function submitSurveyResponse(
@@ -510,19 +510,19 @@ export async function submitSurveyResponse(
       const [response] = await trx('survey_responses')
         .insert({
           tenant,
-          template_id: invitation.template_id,
-          ticket_id: invitation.ticket_id,
-          company_id: invitation.company_id,
-          contact_id: invitation.contact_id,
+          template_id: invitation.templateId,
+          ticket_id: invitation.ticketId,
+          client_id: invitation.clientId,
+          contact_id: invitation.contactId,
           rating,
           comment,
-          survey_token: hashSurveyToken(token),
-          token_expires_at: invitation.token_expires_at,
+          survey_token_hash: hashSurveyToken(token),
+          token_expires_at: invitation.tokenExpiresAt,
         })
         .returning('*');
 
       await trx('survey_invitations')
-        .where({ tenant, invitation_id: invitation.invitation_id })
+        .where({ tenant, invitation_id: invitation.invitationId })
         .update({
           responded: true,
           responded_at: trx.fn.now(),
@@ -563,7 +563,7 @@ export async function validateSurveyToken(token: string) {
 }
 ```
 
-#### `ee/server/src/lib/actions/surveyTokenService.ts`
+#### `server/src/lib/actions/surveyTokenService.ts`
 
 - `resolveSurveyTenantFromToken(token: string)` decodes the signed token payload, validates the HMAC, extracts the tenant identifier, and loads the invitation metadata in a single query (`survey_invitations` joined on `tenant`). Compare against the stored hashed token and fail fast with explicit `Error` messages when the token is missing, expired, or already used.
 - `issueSurveyToken()` synchronously returns `{ plainToken, hashedToken }` where `plainToken` is a base64url string generated with `crypto.randomBytes(32)` and `hashedToken` is the SHA-256 digest.
@@ -590,7 +590,7 @@ export function hashSurveyToken(token: string) {
 
 ### New Event Types
 
-Add to `ee/server/src/lib/eventBus/events.ts`:
+Add to `server/src/lib/eventBus/events.ts`:
 
 ```typescript
 // Survey invitation event
@@ -633,7 +633,7 @@ export const surveyNegativeResponseSchema = z.object({
 
 ### New Event Subscriber
 
-#### `ee/server/src/lib/eventBus/subscribers/surveySubscriber.ts`
+#### `server/src/lib/eventBus/subscribers/surveySubscriber.ts`
 
 ```typescript
 import { eventBus } from '../index';
@@ -680,7 +680,7 @@ export function registerSurveySubscriber() {
 }
 ```
 
-Register in `ee/server/src/lib/eventBus/index.ts`:
+Register in `server/src/lib/eventBus/index.ts`:
 
 ```typescript
 import { registerSurveySubscriber } from './subscribers/surveySubscriber';
@@ -709,11 +709,11 @@ Template recommendations:
 
 ### Survey Service
 
-#### `ee/server/src/services/surveyService.ts`
+#### `server/src/services/surveyService.ts`
 
 ```typescript
 import { TenantEmailService } from '@/lib/email/services/TenantEmailService';
-import { issueSurveyToken } from '../lib/actions/surveyTokenService';
+import { issueSurveyToken } from '@/lib/actions/surveyTokenService';
 
 export async function sendSurveyInvitation({...}) {
   // 1. Issue plain + hashed tokens (stored hashed)
@@ -739,7 +739,7 @@ Implementation notes:
 ### Directory Structure
 
 ```
-ee/server/src/components/
+server/src/components/
   surveys/
     SurveySettings.tsx          # Main settings page (templates + triggers)
     templates/
@@ -1200,7 +1200,7 @@ import { CompanyCSATSummary } from '@/components/surveys/CompanyCSATSummary';
 
 ### Phase 1 Migrations
 
-#### `ee/server/migrations/YYYYMMDDHHMMSS_create_survey_tables.cjs`
+#### `server/migrations/YYYYMMDDHHMMSS_create_survey_tables.cjs`
 
 ```javascript
 exports.up = async function up(knex) {
@@ -1247,10 +1247,10 @@ exports.up = async function up(knex) {
     table.uuid('invitation_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.uuid('ticket_id').notNullable();
-    table.uuid('company_id');
+    table.uuid('client_id');
     table.uuid('contact_id');
     table.uuid('template_id').notNullable();
-    table.string('survey_token', 255).notNullable();
+    table.string('survey_token_hash', 255).notNullable();
     table.timestamp('token_expires_at', { useTz: true }).notNullable();
     table.timestamp('sent_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.timestamp('opened_at', { useTz: true });
@@ -1258,7 +1258,7 @@ exports.up = async function up(knex) {
     table.timestamp('responded_at', { useTz: true });
     table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.primary(['invitation_id', 'tenant']);
-    table.unique(['tenant', 'survey_token']);
+    table.unique(['tenant', 'survey_token_hash']);
     table
       .foreign(['template_id', 'tenant'])
       .references(['template_id', 'tenant'])
@@ -1269,12 +1269,12 @@ exports.up = async function up(knex) {
       .inTable('tickets')
       .onDelete('CASCADE');
     table
-      .foreign(['company_id', 'tenant'])
-      .references(['company_id', 'tenant'])
-      .inTable('companies');
+      .foreign(['tenant', 'client_id'])
+      .references(['tenant', 'client_id'])
+      .inTable('clients');
     table
-      .foreign(['contact_id', 'tenant'])
-      .references(['contact_id', 'tenant'])
+      .foreign(['tenant', 'contact_id'])
+      .references(['tenant', 'contact_name_id'])
       .inTable('contacts');
   });
 
@@ -1282,18 +1282,18 @@ exports.up = async function up(knex) {
     table.uuid('response_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.uuid('ticket_id').notNullable();
-    table.uuid('company_id');
+    table.uuid('client_id');
     table.uuid('contact_id');
     table.uuid('template_id').notNullable();
     table.integer('rating').notNullable();
     table.text('comment');
-    table.string('survey_token', 255).notNullable();
+    table.string('survey_token_hash', 255).notNullable();
     table.timestamp('token_expires_at', { useTz: true }).notNullable();
     table.timestamp('submitted_at', { useTz: true }).defaultTo(knex.fn.now());
     table.integer('response_time_seconds');
     table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.primary(['response_id', 'tenant']);
-    table.unique(['tenant', 'survey_token']);
+    table.unique(['tenant', 'survey_token_hash']);
     table
       .foreign(['template_id', 'tenant'])
       .references(['template_id', 'tenant'])
@@ -1304,12 +1304,12 @@ exports.up = async function up(knex) {
       .inTable('tickets')
       .onDelete('CASCADE');
     table
-      .foreign(['company_id', 'tenant'])
-      .references(['company_id', 'tenant'])
-      .inTable('companies');
+      .foreign(['tenant', 'client_id'])
+      .references(['tenant', 'client_id'])
+      .inTable('clients');
     table
-      .foreign(['contact_id', 'tenant'])
-      .references(['contact_id', 'tenant'])
+      .foreign(['tenant', 'contact_id'])
+      .references(['tenant', 'contact_name_id'])
       .inTable('contacts');
   });
 
@@ -1343,7 +1343,7 @@ exports.up = async function up(knex) {
   `);
   await knex.raw(`
     CREATE INDEX idx_survey_invitations_token
-    ON survey_invitations (tenant, survey_token);
+    ON survey_invitations (tenant, survey_token_hash);
   `);
   await knex.raw(`
     CREATE INDEX idx_survey_invitations_sent
@@ -1355,8 +1355,8 @@ exports.up = async function up(knex) {
     ON survey_responses (tenant, ticket_id);
   `);
   await knex.raw(`
-    CREATE INDEX idx_survey_responses_tenant_company
-    ON survey_responses (tenant, company_id);
+    CREATE INDEX idx_survey_responses_tenant_client
+    ON survey_responses (tenant, client_id);
   `);
   await knex.raw(`
     CREATE INDEX idx_survey_responses_tenant_submitted
@@ -1364,7 +1364,7 @@ exports.up = async function up(knex) {
   `);
   await knex.raw(`
     CREATE INDEX idx_survey_responses_token
-    ON survey_responses (tenant, survey_token)
+    ON survey_responses (tenant, survey_token_hash)
     WHERE submitted_at IS NULL;
   `);
   await knex.raw(`
@@ -1381,7 +1381,7 @@ exports.down = async function down(knex) {
 };
 ```
 
-#### `ee/server/migrations/YYYYMMDDHHMMSS_add_default_survey_template.cjs`
+#### `server/migrations/YYYYMMDDHHMMSS_add_default_survey_template.cjs`
 
 ```javascript
 exports.up = async function(knex) {
@@ -1411,7 +1411,7 @@ exports.up = async function(knex) {
 };
 ```
 
-#### `ee/server/migrations/YYYYMMDDHHMMSS_add_survey_email_template.cjs`
+#### `server/migrations/YYYYMMDDHHMMSS_add_survey_email_template.cjs`
 
 ```javascript
 exports.up = function(knex) {
@@ -1430,7 +1430,7 @@ exports.up = function(knex) {
 
 ### TypeScript Types & Interfaces
 
-### `ee/server/src/types/survey.ts`
+### `server/src/types/survey.ts`
 
 ```typescript
 export type RatingType = 'stars' | 'numbers' | 'emojis';

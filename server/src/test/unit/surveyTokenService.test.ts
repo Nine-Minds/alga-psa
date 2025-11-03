@@ -4,7 +4,7 @@ import {
   hashSurveyToken,
   issueSurveyToken,
   resolveSurveyTenantFromToken,
-} from '../surveyTokenService';
+} from '../../lib/actions/surveyTokenService';
 
 type MockedBuilder = {
   select: ReturnType<typeof vi.fn>;
@@ -23,7 +23,7 @@ vi.mock('@shared/db/admin', () => ({
   getAdminConnection: () => getAdminConnectionMock(),
 }));
 
-vi.mock('../db', () => ({
+vi.mock('../../lib/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   runWithTenant: (tenant: string, fn: () => Promise<any>) => runWithTenantMock(tenant, fn),
 }));
@@ -63,7 +63,7 @@ describe('surveyTokenService', () => {
       tenant: '9f8c6b4d-7b2e-4b5d-9a28-37a1c7dbe0c1',
       template_id: '198de41a-a40c-44e3-a818-62fb6770c6ac',
       ticket_id: '3bcd5a66-0f5f-4a9b-8e41-2b7cebb0d5e4',
-      company_id: 'd661de94-8e87-4c02-95dd-8f7f231f9b73',
+      client_id: 'd661de94-8e87-4c02-95dd-8f7f231f9b73',
       contact_id: '2b87f95a-3c82-4c7a-9a64-2b229f8dbac7',
       token_expires_at: new Date(Date.now() + 60_000),
       responded: false,
@@ -105,7 +105,7 @@ describe('surveyTokenService', () => {
       tenant: 'e8e7dcd7-6d45-4c76-af65-3d719c849c7f',
       template_id: '198de41a-a40c-44e3-a818-62fb6770c6ac',
       ticket_id: '3bcd5a66-0f5f-4a9b-8e41-2b7cebb0d5e4',
-      company_id: null,
+      client_id: null,
       contact_id: null,
       token_expires_at: new Date(Date.now() - 1_000),
       responded: false,
