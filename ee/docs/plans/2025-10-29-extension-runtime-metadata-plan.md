@@ -92,6 +92,7 @@
   2. `alga-cli dev` builds via `componentize-js`, spins up a local runner shim, and exercises provider routes (including UI proxy).
   3. `alga-cli publish` bundles `.wasm`, `.wit`, provider manifest, and metadata.json for registry upload.
 - Validate toolchain versions (`componentize-js` ≥ 0.19.3, Wasmtime version) and fail fast if mismatched.
+- Expose extension install automation via `POST /api/v1/extensions/install` so CLI workflows can bypass the admin UI once API keys are provisioned.
 - Provide smoke tests that run components against mocked capability providers to catch ABI drift before upload.
 
 ### 6. SDK Distribution & Samples
