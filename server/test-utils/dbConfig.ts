@@ -1,8 +1,7 @@
 import { Knex, knex } from 'knex';
-import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getSecret } from '../src/lib/utils/getSecret';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -11,120 +10,117 @@ const __dirname = path.dirname(__filename);
 const serverRoot = path.resolve(__dirname, '..');
 
 const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod'];
+const TEST_DB_NAME = 'sebastian_integration';
+const DB_HOST = 'localhost';
+const DB_PORT = 5432;
+const ADMIN_USER = 'postgres';
+const ADMIN_PASSWORD = 'test_password';
+const APP_USER = 'app_user';
+const APP_PASSWORD = 'postpass123';
 
-/**
- * Verifies that the database name is safe for testing
- * @param dbName Database name to check
- * @throws Error if database name matches known production names
- */
 export function verifyTestDatabase(dbName: string): void {
   if (PRODUCTION_DB_NAMES.includes(dbName.toLowerCase())) {
-    throw new Error('Attempting to use production database for testing');
+    throw new Error(`Attempting to use production database (${dbName}) for testing`);
   }
 }
 
-/**
- * Creates a database connection for testing purposes
- * @returns Knex instance configured for testing
- */
 export async function createTestDbConnection(): Promise<Knex> {
-  const dbName = process.env.DB_NAME_SERVER || 'sebastian_test';
-  verifyTestDatabase(dbName);
+  verifyTestDatabase(TEST_DB_NAME);
 
-  const baseConnection = await buildBaseConnectionConfig();
-  await ensureTestDatabaseExists(dbName, baseConnection);
+  await recreateDatabase(TEST_DB_NAME);
 
-  return knex({
+  process.env.DB_HOST = DB_HOST;
+  process.env.DB_PORT = String(DB_PORT);
+  process.env.DB_NAME_SERVER = TEST_DB_NAME;
+  process.env.DB_USER_SERVER = APP_USER;
+  process.env.DB_PASSWORD_SERVER = APP_PASSWORD;
+  process.env.DB_USER_ADMIN = ADMIN_USER;
+  process.env.DB_PASSWORD_ADMIN = ADMIN_PASSWORD;
+
+  const adminKnex = knex({
     client: 'pg',
     connection: {
-      ...baseConnection,
-      database: dbName
+      host: DB_HOST,
+      port: DB_PORT,
+      user: ADMIN_USER,
+      password: ADMIN_PASSWORD,
+      database: TEST_DB_NAME,
+    },
+    migrations: {
+      directory: path.join(serverRoot, 'migrations'),
+    },
+    seeds: {
+      directory: path.join(serverRoot, 'seeds', 'dev'),
+    },
+  });
+
+  await adminKnex.migrate.latest();
+  await adminKnex.seed.run();
+  await adminKnex.destroy();
+
+  const db = knex({
+    client: 'pg',
+    connection: {
+      host: DB_HOST,
+      port: DB_PORT,
+      user: APP_USER,
+      password: APP_PASSWORD,
+      database: TEST_DB_NAME,
     },
     asyncStackTraces: true,
     pool: {
       min: 2,
-      max: 20
+      max: 20,
     },
-    migrations: {
-      directory: path.join(serverRoot, 'migrations')
-    },
-    seeds: {
-      directory: path.join(serverRoot, 'seeds', 'dev')
-    }
-  });
-}
-
-async function buildBaseConnectionConfig(): Promise<Knex.StaticConnectionConfig> {
-  const directHost = process.env.DB_DIRECT_HOST || process.env.DB_HOST || 'localhost';
-  const directPort = Number(process.env.DB_DIRECT_PORT || 5432);
-
-  const user = process.env.DB_USER_ADMIN || 'postgres';
-  const password = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password');
-
-  console.log('[buildBaseConnectionConfig] host:', directHost);
-  console.log('[buildBaseConnectionConfig] port:', directPort);
-  console.log('[buildBaseConnectionConfig] user:', user);
-  console.log('[buildBaseConnectionConfig] password:', password);
-
-  return {
-    host: directHost,
-    port: directPort,
-    user,
-    password
-  };
-}
-
-async function ensureTestDatabaseExists(
-  databaseName: string,
-  baseConnection: Knex.StaticConnectionConfig
-): Promise<void> {
-  const adminDb = knex({
-    client: 'pg',
-    connection: {
-      ...baseConnection,
-      database: 'postgres'
-    },
-    pool: {
-      min: 1,
-      max: 2
-    }
   });
 
-  try {
-    const { rows } = await adminDb.raw('SELECT 1 FROM pg_database WHERE datname = ?', [databaseName]);
-    if (!rows?.length) {
-      const safeDbName = databaseName.replace(/"/g, '""');
-      await adminDb.raw(`CREATE DATABASE "${safeDbName}"`);
-    }
-  } catch (error) {
-    if (!/already exists/i.test(String(error))) {
-      throw error;
-    }
-  } finally {
-    await adminDb.destroy().catch(() => undefined);
-  }
-}
-
-/**
- * Creates a database connection with tenant context for testing
- * @param tenant Tenant ID to set in session
- * @returns Knex instance configured with tenant context
- */
-export async function createTestDbConnectionWithTenant(tenant: string): Promise<Knex> {
-  const db = await createTestDbConnection();
-
-  // With CitusDB, tenant isolation is handled automatically at the shard level
-  // No need to set app.current_tenant session variable
-  // The tenant should be included in all WHERE clauses as per CitusDB requirements
-  
   return db;
 }
 
-/**
- * Validates UUID format of tenant ID
- * @param tenantId Tenant ID to validate
- * @returns boolean indicating if ID is valid
- */
+async function recreateDatabase(databaseName: string): Promise<void> {
+  const adminConnection = knex({
+    client: 'pg',
+    connection: {
+      host: DB_HOST,
+      port: DB_PORT,
+      user: ADMIN_USER,
+      password: ADMIN_PASSWORD,
+      database: 'postgres',
+    },
+    pool: {
+      min: 1,
+      max: 2,
+    },
+  });
+
+  try {
+    const safeDbName = databaseName.replace(/"/g, '""');
+    await adminConnection.raw(
+      'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()',
+      [databaseName]
+    );
+    await adminConnection.raw(`DROP DATABASE IF EXISTS "${safeDbName}"`);
+    await adminConnection.raw(`CREATE DATABASE "${safeDbName}"`);
+    await adminConnection.raw(`DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${APP_USER}') THEN
+          CREATE ROLE ${APP_USER} WITH LOGIN PASSWORD '${APP_PASSWORD}';
+        ELSE
+          ALTER ROLE ${APP_USER} WITH LOGIN PASSWORD '${APP_PASSWORD}';
+        END IF;
+      END;
+    $$;`);
+    await adminConnection.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${APP_USER}`);
+    await adminConnection.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${APP_USER}`);
+  } finally {
+    await adminConnection.destroy().catch(() => undefined);
+  }
+}
+
+export async function createTestDbConnectionWithTenant(tenant: string): Promise<Knex> {
+  return createTestDbConnection();
+}
+
 export function isValidTenantId(tenantId: string): boolean {
   if (!tenantId) return true;
   if (tenantId === 'default') return true;

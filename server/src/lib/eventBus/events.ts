@@ -362,6 +362,9 @@ export type Event =
   | CalendarSyncFailedEvent
   | UserMentionedInDocumentEvent
   | CalendarConflictDetectedEvent
+  | SurveyInvitationSentEvent
+  | SurveyResponseSubmittedEvent
+  | SurveyNegativeResponseEvent
   | MessageSentEvent
   | AppointmentRequestCreatedEvent
   | AppointmentRequestApprovedEvent

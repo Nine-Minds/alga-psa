@@ -10,6 +10,8 @@ function jsonbDefault(knex, fallback) {
 }
 
 exports.up = async function up(knex) {
+  const clientReference = await resolveClientReference(knex);
+
   await knex.schema.createTable(TABLES.templates, (table) => {
     table.uuid('template_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
@@ -84,8 +86,8 @@ exports.up = async function up(knex) {
       .onDelete('CASCADE');
     table
       .foreign(['tenant', 'client_id'])
-      .references(['tenant', 'client_id'])
-      .inTable('clients');
+      .references(['tenant', clientReference.idColumn])
+      .inTable(clientReference.table);
     table
       .foreign(['tenant', 'contact_id'])
       .references(['tenant', 'contact_name_id'])
@@ -125,8 +127,8 @@ exports.up = async function up(knex) {
       .onDelete('CASCADE');
     table
       .foreign(['tenant', 'client_id'])
-      .references(['tenant', 'client_id'])
-      .inTable('clients');
+      .references(['tenant', clientReference.idColumn])
+      .inTable(clientReference.table);
     table
       .foreign(['tenant', 'contact_id'])
       .references(['tenant', 'contact_name_id'])
@@ -200,6 +202,20 @@ exports.up = async function up(knex) {
       ON ${TABLES.responses} (tenant, rating);
   `);
 };
+
+async function resolveClientReference(knex) {
+  const hasClients = await knex.schema.hasTable('clients');
+  if (hasClients) {
+    return { table: 'clients', idColumn: 'client_id' };
+  }
+
+  const hasCompanies = await knex.schema.hasTable('companies');
+  if (hasCompanies) {
+    return { table: 'companies', idColumn: 'company_id' };
+  }
+
+  throw new Error('Neither clients nor companies table exists; cannot create survey tables.');
+}
 
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists(TABLES.responses);
