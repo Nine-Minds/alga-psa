@@ -4,6 +4,12 @@ const LEGACY_EVENT_TYPES = ['INVOICE_CREATED', 'INVOICE_UPDATED', 'CLIENT_CREATE
 const LEGACY_WORKFLOW_NAMES = ['QBO Customer Sync', 'qboInvoiceSyncWorkflow', 'qboCustomerSyncWorkflow'];
 
 exports.up = async function up(knex) {
+  // Citus needs sequential multi-shard modifications when mixing reference/distributed tables.
+  const { rows: citusExtension } = await knex.raw("SELECT 1 FROM pg_catalog.pg_extension WHERE extname = 'citus' LIMIT 1");
+  if (citusExtension.length > 0) {
+    await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
+  }
+
   // Remove tenant-scoped workflow attachments tied to legacy QBO events
   await knex('workflow_event_attachments')
     .whereIn('event_type', LEGACY_EVENT_TYPES)
