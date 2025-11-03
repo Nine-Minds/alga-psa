@@ -408,7 +408,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 onChange={setNotificationView}
                 options={[
                   { value: 'email', label: 'Email' },
-                  { value: 'internal', label: 'In-App' },
+                  { value: 'internal', label: 'Internal' },
                 ] as ViewSwitcherOption<NotificationView>[]}
               />
             </div>

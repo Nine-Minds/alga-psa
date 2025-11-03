@@ -445,6 +445,15 @@
       "nameLabel": "Folder Name",
       "namePlaceholder": "Enter folder name",
       "willCreateIn": "Will be created in: {{folder}}"
+    },
+    "notifications": {
+      "categories": {
+        "Authentication": "Authentication",
+        "Invoices": "Invoices",
+        "Projects": "Projects",
+        "Tickets": "Tickets",
+        "Time Entries": "Time Entries"
+      }
     }
   }
 }

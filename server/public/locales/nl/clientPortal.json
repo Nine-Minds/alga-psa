@@ -10,7 +10,8 @@
     "account": "Account",
     "signOut": "Afmelden",
     "clientPortal": "Klantenportaal",
-    "portal": "Portal"
+    "portal": "Portal",
+    "notifications": "Meldingen"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -394,7 +395,9 @@
       "ticketUpdates": "Ticketupdates",
       "projectUpdates": "Projectupdates",
       "invoices": "Factuurmeldingen",
-      "announcements": "Systeemmeldingen"
+      "announcements": "Systeemmeldingen",
+      "emailPreferences": "E-mail",
+      "internalPreferences": "Intern"
     },
     "actions": {
       "save": "Wijzigingen opslaan",
@@ -952,7 +955,24 @@
     "markAllAsRead": "Alles als gelezen markeren",
     "noNotifications": "Geen nieuwe notificaties",
     "settings": "Notificatie-instellingen",
-    "viewAll": "Alle notificaties bekijken"
+    "viewAll": "Alle notificaties bekijken",
+    "preferences": {
+      "title": "Notificatievoorkeuren",
+      "description": "Beheer welke interne meldingen je ontvangt",
+      "loading": "Voorkeuren worden geladen...",
+      "loadError": "Voorkeuren konden niet worden geladen",
+      "saveError": "Voorkeur kon niet worden opgeslagen",
+      "noCategories": "Geen notificatiecategorieën beschikbaar",
+      "emailPreferences": "E-mail",
+      "internalPreferences": "Intern"
+    },
+    "categories": {
+      "tickets": "Tickets",
+      "invoices": "Facturen",
+      "messages": "Berichten",
+      "projects": "Projecten",
+      "system": "Systeem"
+    }
   },
   "pagination": {
     "showing": "Resultaten {{from}} tot {{to}} van {{total}}",

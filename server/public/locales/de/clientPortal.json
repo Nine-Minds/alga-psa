@@ -10,7 +10,8 @@
     "account": "Konto",
     "signOut": "Abmelden",
     "clientPortal": "Kundenportal",
-    "portal": "Portal"
+    "portal": "Portal",
+    "notifications": "Benachrichtigungen"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -394,7 +395,9 @@
       "ticketUpdates": "Ticket-Updates",
       "projectUpdates": "Projekt-Updates",
       "invoices": "Rechnungsbenachrichtigungen",
-      "announcements": "Systemankündigungen"
+      "announcements": "Systemankündigungen",
+      "emailPreferences": "E-Mail",
+      "internalPreferences": "Intern"
     },
     "actions": {
       "save": "Änderungen speichern",
@@ -952,7 +955,24 @@
     "markAllAsRead": "Alle als gelesen markieren",
     "noNotifications": "Keine neuen Benachrichtigungen",
     "settings": "Benachrichtigungseinstellungen",
-    "viewAll": "Alle Benachrichtigungen anzeigen"
+    "viewAll": "Alle Benachrichtigungen anzeigen",
+    "preferences": {
+      "title": "Benachrichtigungseinstellungen",
+      "description": "Verwalte, welche internen Benachrichtigungen du erhältst",
+      "loading": "Einstellungen werden geladen...",
+      "loadError": "Einstellungen konnten nicht geladen werden",
+      "saveError": "Einstellung konnte nicht gespeichert werden",
+      "noCategories": "Keine Benachrichtigungskategorien verfügbar",
+      "emailPreferences": "E-Mail",
+      "internalPreferences": "Intern"
+    },
+    "categories": {
+      "tickets": "Tickets",
+      "invoices": "Rechnungen",
+      "messages": "Nachrichten",
+      "projects": "Projekte",
+      "system": "System"
+    }
   },
   "pagination": {
     "showing": "Zeige {{from}} bis {{to}} von {{total}} Ergebnissen",

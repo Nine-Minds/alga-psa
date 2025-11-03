@@ -16,7 +16,7 @@ export default function NotificationsSettingsPage() {
 
   const viewOptions: ViewSwitcherOption<NotificationView>[] = [
     { value: 'email', label: 'Email Notifications' },
-    { value: 'internal', label: 'In-App Notifications' },
+    { value: 'internal', label: 'Internal Notifications' },
   ];
 
   const emailTabs = [
@@ -65,7 +65,7 @@ export default function NotificationsSettingsPage() {
           <p className="text-gray-600 text-sm mt-1">
             {currentView === 'email'
               ? 'Configure tenant-wide email notification settings'
-              : 'Configure tenant-wide in-app notification settings'}
+              : 'Configure tenant-wide internal notification settings'}
           </p>
         </div>
         <ViewSwitcher

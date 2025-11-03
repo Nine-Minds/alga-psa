@@ -17,7 +17,7 @@ export default function NotificationsTab() {
 
   const viewOptions: ViewSwitcherOption<NotificationView>[] = [
     { value: 'email', label: 'Email Notifications' },
-    { value: 'internal', label: 'In-App Notifications' },
+    { value: 'internal', label: 'Internal Notifications' },
   ];
 
   const emailTabContent = [
@@ -86,7 +86,7 @@ export default function NotificationsTab() {
         <Card>
           <CardHeader>
             <CardTitle>Internal Notification Categories</CardTitle>
-            <CardDescription>Manage in-app notification categories and types</CardDescription>
+            <CardDescription>Manage internal notification categories and types</CardDescription>
           </CardHeader>
           <CardContent>
             <InternalNotificationCategories />
@@ -105,7 +105,7 @@ export default function NotificationsTab() {
             <CardDescription>
               {currentView === 'email'
                 ? 'Configure how your tenant sends email notifications'
-                : 'Configure how your tenant sends in-app notifications'}
+                : 'Configure how your tenant sends internal notifications'}
             </CardDescription>
           </div>
           <ViewSwitcher

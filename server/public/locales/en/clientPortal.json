@@ -393,7 +393,9 @@
       "ticketUpdates": "Ticket Updates",
       "projectUpdates": "Project Updates",
       "invoices": "Invoice Notifications",
-      "announcements": "System Announcements"
+      "announcements": "System Announcements",
+      "emailPreferences": "Email",
+      "internalPreferences": "Internal"
     },
     "actions": {
       "save": "Save Changes",
@@ -951,7 +953,22 @@
     "markAllAsRead": "Mark all as read",
     "noNotifications": "No new notifications",
     "settings": "Notification Settings",
-    "viewAll": "View all notifications"
+    "viewAll": "View all notifications",
+    "preferences": {
+      "title": "Notification Preferences",
+      "description": "Manage which internal notifications you receive",
+      "loading": "Loading preferences...",
+      "loadError": "Failed to load preferences",
+      "saveError": "Failed to save preference",
+      "noCategories": "No notification categories available"
+    },
+    "categories": {
+      "tickets": "Tickets",
+      "invoices": "Invoices",
+      "messages": "Messages",
+      "projects": "Projects",
+      "system": "System"
+    }
   },
   "pagination": {
     "showing": "Showing {{from}} to {{to}} of {{total}} results",

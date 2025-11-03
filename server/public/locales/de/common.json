@@ -446,5 +446,14 @@
   },
   "fields": {
     "notes": "Notizen"
+  },
+  "notifications": {
+    "categories": {
+      "Authentication": "Authentifizierung",
+      "Invoices": "Rechnungen",
+      "Projects": "Projekte",
+      "Tickets": "Tickets",
+      "Time Entries": "Zeiteinträge"
+    }
   }
 }
