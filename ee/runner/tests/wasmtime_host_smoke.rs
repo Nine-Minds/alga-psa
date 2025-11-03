@@ -1,12 +1,46 @@
 use std::collections::{HashMap, HashSet};
+use std::net::SocketAddr;
+use std::sync::Arc;
 
 use alga_ext_runner::engine::loader::{HostExecutionContext, ModuleLoader, SecretMaterial};
 use alga_ext_runner::models::{ExecuteContext, ExecuteRequest, HttpPayload, Limits};
 use alga_ext_runner::providers;
+use axum::{
+    body::Bytes,
+    extract::{Path, State},
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::post,
+    Json, Router,
+};
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine as _;
-
+use serial_test::serial;
+use tokio::sync::oneshot;
 const DYNAMIC_COMPONENT_WASM: &[u8] = include_bytes!("fixtures/dynamic_component/component.wasm");
+
+struct EnvGuard {
+    keys: Vec<String>,
+}
+
+impl EnvGuard {
+    fn set(pairs: &[(&str, &str)]) -> Self {
+        for (key, value) in pairs {
+            std::env::set_var(key, value);
+        }
+        Self {
+            keys: pairs.iter().map(|(key, _)| (*key).to_string()).collect(),
+        }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        for key in &self.keys {
+            std::env::remove_var(key);
+        }
+    }
+}
 
 #[tokio::test]
 async fn executes_dynamic_component_in_process() -> anyhow::Result<()> {
@@ -37,7 +71,7 @@ async fn executes_dynamic_component_in_process() -> anyhow::Result<()> {
             body_b64: Some(BASE64_STANDARD.encode(raw_payload)),
         },
         limits: Limits {
-            timeout_ms: Some(1_000),
+            timeout_ms: None,
             memory_mb: Some(64),
             fuel: None,
         },
@@ -292,6 +326,7 @@ async fn secrets_capability_denied() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+#[serial]
 async fn ui_proxy_capability_denied() -> anyhow::Result<()> {
     let loader = ModuleLoader::new()?;
 
@@ -367,8 +402,219 @@ async fn ui_proxy_capability_denied() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[derive(Clone)]
+struct ProxyServerState {
+    tenant: String,
+    extension: String,
+    auth: String,
+}
+
+async fn proxy_handler(
+    State(state): State<Arc<ProxyServerState>>,
+    Path((extension, route)): Path<(String, String)>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> impl IntoResponse {
+    assert_eq!(extension, state.extension);
+    assert_eq!(route, "proxy/ping");
+    assert_eq!(
+        headers
+            .get("x-alga-tenant")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default(),
+        state.tenant
+    );
+    assert_eq!(
+        headers
+            .get("x-alga-extension")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default(),
+        state.extension
+    );
+    assert_eq!(
+        headers
+            .get("x-runner-auth")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default(),
+        state.auth
+    );
+    assert_eq!(
+        headers
+            .get("x-request-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default(),
+        "ui-proxy-ok"
+    );
+    assert_eq!(
+        headers
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default(),
+        "application/json"
+    );
+    let body_text = String::from_utf8(body.to_vec()).expect("ui proxy body utf8");
+    let body_json: serde_json::Value =
+        serde_json::from_str(&body_text).expect("ui proxy body json parse");
+    assert_eq!(
+        body_json.get("limit").and_then(|v| v.as_u64()),
+        Some(5),
+        "expected limit from proxy payload"
+    );
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "ok": true,
+            "route": route,
+            "tenant": state.tenant,
+        })),
+    )
+}
+
 #[tokio::test]
+#[serial]
+async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+    let addr: SocketAddr = listener.local_addr()?;
+
+    let state = Arc::new(ProxyServerState {
+        tenant: "tenant-ok".to_string(),
+        extension: "ext-ok".to_string(),
+        auth: "proxy-secret".to_string(),
+    });
+
+    let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+    let router = Router::new()
+        .route("/api/ui-proxy/:extension/*route", post(proxy_handler))
+        .with_state(state.clone());
+
+    let server = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async {
+                let _ = shutdown_rx.await;
+            })
+            .await
+            .unwrap();
+    });
+
+    let base_url = format!("http://127.0.0.1:{}/api/ui-proxy", addr.port());
+    let _env = EnvGuard::set(&[
+        ("UI_PROXY_BASE_URL", base_url.as_str()),
+        ("UI_PROXY_AUTH_KEY", state.auth.as_str()),
+        ("UI_PROXY_TIMEOUT_MS", "2000"),
+    ]);
+
+    let loader = ModuleLoader::new()?;
+
+    let body_b64 = BASE64_STANDARD.encode(r#"{"limit":5}"#);
+    let request = ExecuteRequest {
+        context: ExecuteContext {
+            request_id: Some("ui-proxy-ok".to_string()),
+            tenant_id: state.tenant.clone(),
+            extension_id: state.extension.clone(),
+            install_id: Some("install-ok".to_string()),
+            content_hash: "sha256:fixture".to_string(),
+            version_id: Some("v1".to_string()),
+            config: HashMap::new(),
+        },
+        http: HttpPayload {
+            method: "POST".to_string(),
+            path: "/dynamic/ui-proxy".to_string(),
+            query: HashMap::new(),
+            headers: HashMap::new(),
+            body_b64: Some(body_b64),
+        },
+        limits: Limits {
+            timeout_ms: Some(1_000),
+            memory_mb: Some(64),
+            fuel: None,
+        },
+        secret_envelope: None,
+        providers: Vec::new(),
+    };
+
+    let mut providers: HashSet<String> = providers::default_capabilities()
+        .into_iter()
+        .map(|cap| cap.to_string())
+        .collect();
+    providers.insert("cap:ui.proxy".to_string());
+
+    let host_ctx = HostExecutionContext {
+        request_id: request.context.request_id.clone(),
+        tenant_id: Some(request.context.tenant_id.clone()),
+        extension_id: Some(request.context.extension_id.clone()),
+        install_id: request.context.install_id.clone(),
+        version_id: request.context.version_id.clone(),
+        config: request.context.config.clone(),
+        providers,
+        secrets: None,
+    };
+
+    let response = loader
+        .execute_handler(
+            DYNAMIC_COMPONENT_WASM,
+            request.limits.timeout_ms,
+            request.limits.memory_mb,
+            &request,
+            host_ctx,
+        )
+        .await?;
+
+    assert_eq!(response.status, 200);
+    let body_json = decode_body(response.body_b64.as_ref().expect("body_b64 present"))?;
+    assert_eq!(body_json.get("ok").and_then(|v| v.as_bool()), Some(false));
+    let proxy = body_json
+        .get("proxy")
+        .and_then(|v| v.as_object())
+        .expect("proxy object present");
+    assert!(proxy.get("error").and_then(|v| v.as_str()).is_none());
+    let response_bytes: Vec<u8> = proxy
+        .get("response")
+        .and_then(|v| v.as_array())
+        .expect("proxy response array")
+        .iter()
+        .map(|v| v.as_u64().unwrap_or_default() as u8)
+        .collect();
+    let response_text = String::from_utf8(response_bytes)?;
+    let response_json: serde_json::Value = serde_json::from_str(&response_text)?;
+    assert_eq!(
+        response_json.get("ok").and_then(|v| v.as_bool()),
+        Some(true)
+    );
+    assert_eq!(
+        response_json.get("route").and_then(|v| v.as_str()),
+        Some("proxy/ping")
+    );
+
+    shutdown_tx.send(()).ok();
+    server.await?;
+    Ok(())
+}
+
+#[tokio::test]
+#[serial]
 async fn ui_proxy_route_not_found_without_backend() -> anyhow::Result<()> {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+    let addr: SocketAddr = listener.local_addr()?;
+    let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+
+    let router = Router::new().route(
+        "/api/ui-proxy/:extension/*route",
+        post(|| async { StatusCode::NOT_FOUND }),
+    );
+
+    let server = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async {
+                let _ = shutdown_rx.await;
+            })
+            .await
+            .unwrap();
+    });
+
+    let base_url = format!("http://127.0.0.1:{}/api/ui-proxy", addr.port());
+    let _env = EnvGuard::set(&[("UI_PROXY_BASE_URL", base_url.as_str())]);
+
     let loader = ModuleLoader::new()?;
 
     let body_b64 = BASE64_STANDARD.encode(r#"{"ping":true}"#);
@@ -441,5 +687,7 @@ async fn ui_proxy_route_not_found_without_backend() -> anyhow::Result<()> {
         err.contains("route"),
         "expected proxy error to mention missing route, got {err:?}"
     );
+    shutdown_tx.send(()).ok();
+    server.await?;
     Ok(())
 }

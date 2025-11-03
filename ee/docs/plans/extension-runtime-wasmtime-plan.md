@@ -72,6 +72,45 @@ Keep both documents in sync: update the top-level plan as we complete milestones
 - Add Wasmtime host smoke tests to CI (no container) using the helper binary.
 - Document how to generate fixture components and run tests locally.
 
+## Phase 2 Execution Checklist (Secrets & Service Proxy)
+
+We can now execute `componentize-js` artifacts in-process and inside the runner container. Phase 2 focuses on delivering secure metadata/secrets handling and the service proxy surface from the [metadata plan](2025-10-29-extension-runtime-metadata-plan.md). Use this checklist to track remaining work:
+
+1. **Secret envelope flow**
+   - [x] Exercise inline envelopes via `resolve_secret_material` unit tests (`secret_material_tests.rs`).
+   - [x] Ensure component execution succeeds when `cap:secrets.get` is granted and returns `SecretError::Denied` otherwise (`wasmtime_host_smoke.rs`).
+   - [ ] Add a runner integration test where `/v1/execute` receives a secret envelope, decrypts it, and the component echoes the value (future work once Vault wiring is ready).
+
+2. **Service proxy capability**
+   - [x] Ship sample component/UI showing `cap:http.fetch`, `cap:ui.proxy`, and secrets interplay (`sdk/samples/component/service-proxy-demo`, `sdk/samples/extension-ui/service-proxy-demo`).
+   - [x] Teach the runtime bindings about `uiProxy.callRoute` so both `componentize-js` and custom hosts can invoke the proxy (`sdk/extension-runtime`).
+   - [x] Implement the runner-side UI proxy forwarding logic, including capability enforcement and HTTP forwarding tests (`ee/runner/tests/wasmtime_host_smoke.rs`).
+   - [ ] Add a container integration that exercises the proxy end-to-end against the gateway once the ext-proxy route is available.
+
+3. **Gateway alignment**
+   - [ ] Confirm `/api/ext-proxy/[extensionId]/...` emits the expected `endpoint: "ui-proxy:<route>"` shape and passes secret/config versions through headers.
+   - [ ] Document the install config requirements (`ALGA_API_KEY` secret name, optional `algaApiBase`) for partner teams.
+
+4. **Observability & redaction**
+   - [x] Log capability usage with redacted identifiers (already available in `engine::loader` / `http::server`).
+   - [ ] Capture proxy invocations (route, status) and extend structured logging so operators can audit service proxy usage without exposing payloads.
+
+5. **Developer experience**
+   - [x] Provide Vitest-friendly mock hosts in `@alga/extension-runtime` so SDK samples run without the runner.
+   - [ ] Update SDK docs/tutorials to reference the new service proxy sample and outline the end-to-end flow (component → runner → Alga API → UI proxy).
+
+Keep this checklist synchronized with the master metadata plan as we close the remaining gaps.
+
+### Runtime environment configuration
+
+The runner now expects explicit configuration when the UI proxy capability is enabled:
+
+- `UI_PROXY_BASE_URL` (required): Base URL for forwarding `ui_proxy.call_route` requests, e.g. `http://localhost:3000/api/ui-proxy`. The runner appends `/<extensionId>/<route>` to this base when dispatching.
+- `UI_PROXY_AUTH_KEY` (optional): Shared secret the runner includes as `x-runner-auth` when calling the gateway. Leave unset for unauthenticated proxies in development.
+- `UI_PROXY_TIMEOUT_MS` (optional, default `5000`): Per-request timeout for proxy calls. Useful for tightening SLAs in QA.
+
+Tests and docs should mention these vars so developers wire them before exercising the proxy path locally.
+
 ## Risks & Mitigations
 
 - **Async/task model mismatch:** rely on the ComponentizeJS example host to mirror expectations and add integration tests early.
@@ -96,3 +135,4 @@ Keep both documents in sync: update the top-level plan as we complete milestones
 - ✅ In-process Wasmtime smoke coverage via `ee/runner/tests/wasmtime_host_smoke.rs` ensures component handlers execute without Docker.
 - ✅ Guardrail unit tests live in `ee/runner/src/engine/loader.rs` covering epoch timeouts and linear-memory caps; allowlist validation tests reside in `ee/runner/src/engine/host_api.rs`.
 - ✅ Capability instrumentation now logs HTTP, storage, and secrets usage with redacted identifiers for observability.
+- ✅ UI proxy host routes requests through the runner using `UI_PROXY_BASE_URL` + optional auth key; smoke tests cover success/denied paths.

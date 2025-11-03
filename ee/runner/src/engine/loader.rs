@@ -184,10 +184,10 @@ impl ModuleLoader {
 
         // Spawn a background task to bump the engine epoch periodically until the deadline is likely reached.
         let engine = self.engine.clone();
-        tokio::spawn(async move {
+        std::thread::spawn(move || {
             let steps = ticks + 2;
             for _ in 0..steps {
-                tokio::time::sleep(Duration::from_millis(EPOCH_TICK_MS)).await;
+                std::thread::sleep(Duration::from_millis(EPOCH_TICK_MS));
                 engine.increment_epoch();
             }
         });
