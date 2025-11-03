@@ -11,7 +11,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative',
+  'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background relative',
   {
     variants: {
       variant: {
