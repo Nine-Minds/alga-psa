@@ -55,6 +55,7 @@ type TicketRow = {
   client_name?: string | null;
   technician_first_name?: string | null;
   technician_last_name?: string | null;
+  closed_at?: Date | string | null;
 };
 
 type ContactRow = {
@@ -149,6 +150,8 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     const surveyUrl = buildSurveyUrl(plainToken);
     const ratingLabels = normaliseLabels(template.rating_labels);
     const ratingLinks = buildRatingLinks(plainToken, template.rating_scale, ratingLabels);
+    const ratingButtonsHtml = buildRatingButtonsHtml(ratingLinks);
+    const ratingLinksText = buildRatingLinksText(ratingLinks);
     const technicianName = formatFullName(ticket.technician_first_name, ticket.technician_last_name);
     const tenantDisplayName = tenant?.client_name || tenant?.name || 'Your Team';
     const locale = params.locale ?? undefined;
@@ -159,16 +162,18 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       ticket_subject: ticket.title ?? '',
       technician_name: technicianName ?? '',
       survey_url: surveyUrl,
-      rating_links: ratingLinks,
       rating_scale: template.rating_scale,
       rating_type: template.rating_type,
       rating_labels: ratingLabels,
+      rating_buttons_html: ratingButtonsHtml,
+      rating_links_text: ratingLinksText,
       prompt_text: template.prompt_text,
       comment_prompt: template.comment_prompt,
       thank_you_text: template.thank_you_text,
       contact_name: contact.full_name ?? '',
       company_name: ticket.client_name ?? '',
       expires_at: expiresAt.toISOString(),
+      ticket_closed_at: ticket.closed_at ? toIsoString(ticket.closed_at) : '',
     };
 
     try {
@@ -268,6 +273,7 @@ async function loadTicket(
       't.client_id',
       't.contact_name_id',
       't.assigned_to',
+      't.closed_at',
       'c.client_name',
       'u.first_name as technician_first_name',
       'u.last_name as technician_last_name'
@@ -324,6 +330,39 @@ function buildRatingLinks(
   });
 }
 
+function buildRatingButtonsHtml(
+  links: Array<{ rating: number; label: string; url: string }>
+): string {
+  return links
+    .map(
+      ({ rating, label, url }) => `
+      <a
+        href="${url}"
+        title="${label}"
+        style="
+          display:inline-block;
+          margin:0 6px;
+          padding:12px 18px;
+          border-radius:9999px;
+          background:#fbbf24;
+          color:#1f2937;
+          text-decoration:none;
+          font-weight:600;
+          font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        "
+      >
+        ${rating}
+      </a>`
+    )
+    .join('');
+}
+
+function buildRatingLinksText(
+  links: Array<{ rating: number; label: string; url: string }>
+): string {
+  return links.map(({ rating, url }) => `${rating} ★: ${url}`).join('\n');
+}
+
 function normaliseLabels(input: TemplateRow['rating_labels']): Record<string, string> {
   if (!input) {
     return {};
@@ -350,6 +389,10 @@ function formatFullName(first?: string | null, last?: string | null): string | n
     return null;
   }
   return parts.join(' ');
+}
+
+function toIsoString(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
 function addHours(date: Date, hours: number): Date {
