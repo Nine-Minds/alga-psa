@@ -15,7 +15,7 @@ type InvitationDetailRow = {
   tenant: string;
   template_id: string;
   ticket_id: string;
-  company_id: string | null;
+  client_id: string | null;
   contact_id: string | null;
   token_expires_at: Date | string;
   responded: boolean;
@@ -34,7 +34,7 @@ export interface SurveyInvitationDetails {
   tenant: string;
   templateId: string;
   ticketId: string;
-  companyId: string | null;
+  clientId: string | null;
   contactId: string | null;
   tokenExpiresAt: Date;
   responded: boolean;
@@ -99,7 +99,7 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
         `${SURVEY_INVITATIONS_TABLE}.tenant`,
         `${SURVEY_INVITATIONS_TABLE}.template_id`,
         `${SURVEY_INVITATIONS_TABLE}.ticket_id`,
-        `${SURVEY_INVITATIONS_TABLE}.company_id`,
+        `${SURVEY_INVITATIONS_TABLE}.client_id`,
         `${SURVEY_INVITATIONS_TABLE}.contact_id`,
         `${SURVEY_INVITATIONS_TABLE}.token_expires_at`,
         `${SURVEY_INVITATIONS_TABLE}.responded`,
@@ -151,7 +151,7 @@ function mapInvitation(row: InvitationDetailRow): SurveyInvitationDetails {
     tenant: row.tenant,
     templateId: row.template_id,
     ticketId: row.ticket_id,
-    companyId: row.company_id ?? null,
+    clientId: row.client_id ?? null,
     contactId: row.contact_id ?? null,
     tokenExpiresAt,
     responded: row.responded,
