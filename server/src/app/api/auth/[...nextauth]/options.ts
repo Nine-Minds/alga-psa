@@ -2,6 +2,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
+import { cookies } from "next/headers";
 import type { NextAuthConfig } from "next-auth";
 import "server/src/types/next-auth";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
@@ -24,6 +25,7 @@ import {
 import {
     OAuthAccountLinkConflictError,
     upsertOAuthAccountLink,
+    findOAuthAccountLink,
 } from "@ee/lib/auth/oauthAccountLinks";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
 
@@ -247,6 +249,63 @@ function getSafeRecord(value: unknown): Record<string, unknown> | undefined {
     return undefined;
 }
 
+function parseStateValue(rawState: unknown, key: string): string | undefined {
+    const asString = toOptionalString(rawState);
+    if (!asString) {
+        return undefined;
+    }
+
+    try {
+        const parsed = JSON.parse(asString);
+        const candidate = (parsed as Record<string, unknown>)[key];
+        return toOptionalString(candidate);
+    } catch (error) {
+        // Ignore JSON parsing issues; fall back to query parsing below.
+    }
+
+    try {
+        const params = new URLSearchParams(asString);
+        const candidate = params.get(key);
+        return toOptionalString(candidate ?? undefined);
+    } catch (error) {
+        return undefined;
+    }
+}
+
+function consumeSsoLinkNonce(userId: string, nonce: string | undefined): boolean {
+    if (!nonce) {
+        return false;
+    }
+
+    try {
+        const store = cookies();
+        const cookie = store.get('sso-link-nonce');
+        if (!cookie?.value) {
+            return false;
+        }
+
+        const payload = JSON.parse(cookie.value) as {
+            nonce: string;
+            userId: string;
+            exp?: number;
+        };
+
+        const isMatch =
+            payload.nonce === nonce &&
+            payload.userId === userId &&
+            (typeof payload.exp !== 'number' || payload.exp > Date.now());
+
+        if (isMatch) {
+            store.delete('sso-link-nonce');
+        }
+
+        return isMatch;
+    } catch (error) {
+        console.warn('[oauth] Failed to consume link nonce', { error });
+        return false;
+    }
+}
+
 function extractOAuthAccountMetadata(
     account: Record<string, unknown> | null | undefined,
 ): Record<string, unknown> {
@@ -303,6 +362,16 @@ function extractOAuthAccountMetadata(
         }
     }
 
+    const linkMode = parseStateValue(account.state, 'mode');
+    if (linkMode) {
+        metadata.linkMode = linkMode;
+    }
+
+    const linkNonce = parseStateValue(account.state, 'nonce');
+    if (linkNonce) {
+        metadata.linkNonce = linkNonce;
+    }
+
     return metadata;
 }
 
@@ -352,6 +421,22 @@ async function ensureOAuthAccountLink(
         return;
     }
 
+    const linkNonce = toOptionalString(metadata.linkNonce);
+    const linkMode = toOptionalString(metadata.linkMode);
+    const linkingAuthorized = consumeSsoLinkNonce(user.id, linkNonce);
+
+    const existingLink = await findOAuthAccountLink(normalizedProvider, providerAccountId);
+    if (!linkingAuthorized && (!existingLink || existingLink.user_id !== user.id)) {
+        // Skip linking when not authorized and this is a brand new provider account.
+        return;
+    }
+
+    const finalMetadata = {
+        ...metadata,
+        linkMode: linkingAuthorized ? linkMode ?? 'link' : linkMode ?? 'login',
+        linkNonce: linkingAuthorized ? linkNonce : undefined,
+    };
+
     try {
         await upsertOAuthAccountLink({
             tenant: user.tenant,
@@ -359,7 +444,7 @@ async function ensureOAuthAccountLink(
             provider: normalizedProvider,
             providerAccountId,
             providerEmail: user.email,
-            metadata,
+            metadata: finalMetadata,
         });
     } catch (error) {
         if (error instanceof OAuthAccountLinkConflictError) {
