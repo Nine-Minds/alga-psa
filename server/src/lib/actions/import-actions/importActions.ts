@@ -146,6 +146,7 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
   }
 
   let tenantClientId: string | null = null;
+  let fallbackClientId: string | null = null;
   try {
     const { knex } = await createTenantKnex();
     const tenantClient = await knex('tenant_companies')
@@ -153,10 +154,19 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
       .where({ tenant, is_default: true })
       .first();
     tenantClientId = tenantClient?.client_id ?? null;
+
+    if (!tenantClientId) {
+      const fallbackClient = await knex('clients')
+        .select('client_id')
+        .where({ tenant, is_inactive: false })
+        .orderBy('created_at', 'asc')
+        .first();
+      fallbackClientId = fallbackClient?.client_id ?? null;
+    }
   } catch (error) {
     console.warn('[ImportActions] Failed to resolve default tenant client', error);
   }
-  const associatedClientId = requestedDefaultClientId ?? tenantClientId ?? null;
+  const associatedClientId = requestedDefaultClientId ?? tenantClientId ?? fallbackClientId ?? null;
 
   const source = await importManager.getSourceById(tenant, importSourceId);
   if (!source) {
@@ -263,6 +273,7 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
     duplicateStrategy,
     defaultClientId: associatedClientId,
     tenantClientId,
+    fallbackClientId,
     uploadedById: userId,
     documentId,
     documentAssociationId,
@@ -285,17 +296,6 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
   });
 
   try {
-    await StorageService.updateFileMetadata(fileRecord.file_id, {
-      context: 'asset_import',
-      import_job_id: job.import_job_id,
-      import_source_id: source.id,
-      default_client_id: jobContext.defaultClientId,
-      tenant_client_id: jobContext.tenantClientId,
-      uploaded_by_id: userId,
-      document_id: documentId,
-      document_association_id: documentAssociationId,
-      associated_client_id: associatedClientId
-    });
     await StorageService.createDocumentSystemEntry({
       fileId: fileRecord.file_id,
       category: 'asset-import-source',
@@ -305,7 +305,8 @@ export async function createImportPreview(formData: FormData): Promise<PreviewCo
         original_name: fileRecord.original_name ?? file.name,
         document_id: documentId,
         document_association_id: documentAssociationId,
-        associated_client_id: associatedClientId
+        associated_client_id: associatedClientId,
+        fallback_client_id: jobContext.fallbackClientId
       }
     });
   } catch (error) {

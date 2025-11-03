@@ -56,6 +56,7 @@ export const useImportActions = () => {
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [selectedJobDetails, setSelectedJobDetails] = useState<ImportJobDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isRefreshingHistory, setIsRefreshingHistory] = useState(false);
   const fieldDefinitions = useMemo(() => UI_FIELD_DEFINITIONS, []);
 
   const fetchData = useCallback(async () => {
@@ -199,12 +200,30 @@ export const useImportActions = () => {
     setDetailsError(null);
   }, []);
 
+  const refreshHistory = useCallback(async () => {
+    setIsRefreshingHistory(true);
+    try {
+      const historyData = await parseJson<ImportJobRecord[]>(await fetch('/api/import/history'));
+      setHistory(historyData);
+
+      if (selectedJobDetails?.import_job_id) {
+        await loadJobDetails(selectedJobDetails.import_job_id);
+      }
+    } catch (error) {
+      console.error('[ImportActions] refreshHistory error', error);
+      setError(error instanceof Error ? error.message : 'Failed to refresh import history');
+    } finally {
+      setIsRefreshingHistory(false);
+    }
+  }, [loadJobDetails, selectedJobDetails]);
+
   return {
     isLoading,
     isApproving,
     error,
     detailsError,
     isLoadingDetails,
+    isRefreshingHistory,
     sources,
     history,
     preview,
@@ -218,6 +237,8 @@ export const useImportActions = () => {
     approveImport: handleApproveImport,
     loadJobDetails,
     clearSelectedJobDetails,
+    refreshHistory,
+    refreshAll: fetchData,
     refresh: fetchData,
   };
 };

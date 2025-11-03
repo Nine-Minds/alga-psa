@@ -51,6 +51,11 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
   }
 
   const jobService = await JobService.create();
+  const importManager = new ImportManager(registry);
+  let processedRows = 0;
+  let createdRows = 0;
+  let duplicateRows = 0;
+  let errorRows = 0;
 
   const updateStatus = async (status: JobStatus, details?: Record<string, unknown>) => {
     await jobService.updateJobStatus(jobServiceId, status, {
@@ -67,7 +72,6 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
 
   try {
     await runWithTenant(tenantId, async () => {
-      const importManager = new ImportManager(registry);
       const jobRecord = await importManager.getImportStatus(tenantId, importJobId);
       if (!jobRecord) {
         throw new Error(`Import job ${importJobId} not found`);
@@ -101,6 +105,7 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
 
       const { buffer } = await StorageService.downloadFile(storageFileId);
       const parsedRecords = await importer.parse(buffer);
+      console.log('[AssetImportJob] Parsed records count:', parsedRecords.length, 'for job', importJobId);
 
       await importManager.executeImport(tenantId, importJobId);
 
@@ -108,15 +113,15 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
       const mapper = new FieldMapper(fieldDefinitions);
       const duplicateDetector = new DuplicateDetector(tenantId, duplicateStrategy);
 
-      const effectiveClientId = context.defaultClientId ?? context.tenantClientId;
+      const effectiveClientId =
+        context.associatedClientId ??
+        context.defaultClientId ??
+        context.tenantClientId ??
+        context.fallbackClientId ??
+        null;
       if (!effectiveClientId) {
         throw new Error('Unable to resolve client to attach imported assets to');
       }
-
-      let processedRows = 0;
-      let createdRows = 0;
-      let duplicateRows = 0;
-      let errorRows = 0;
 
       const errorMap = new Map<string, ErrorAccumulatorEntry>();
 
@@ -237,6 +242,7 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
         } catch (err) {
           errorRows += 1;
           const message = err instanceof Error ? err.message : 'Failed to create asset';
+          console.error('[AssetImportJob] Failed to create asset for job', importJobId, 'row', externalId, message, err);
           const key = `_asset::${message}`;
           const existing = errorMap.get(key);
           if (existing) {
@@ -307,6 +313,20 @@ export async function handleAssetImportJob(job: Job<AssetImportJobData>): Promis
       initiatedBy: userId
     });
   } catch (error) {
+    try {
+      await runWithTenant(tenantId, async () => {
+        await importManager.updateJobStats(tenantId, importJobId, {
+          status: 'failed',
+          processedRows,
+          createdRows,
+          duplicateRows,
+          errorRows,
+          completedAt: new Date().toISOString()
+        });
+      });
+    } catch (updateError) {
+      console.error('[AssetImportJob] Failed to update job stats after failure', updateError);
+    }
     await updateStatus(JobStatus.Failed, {
       error,
       details: 'Asset import failed',

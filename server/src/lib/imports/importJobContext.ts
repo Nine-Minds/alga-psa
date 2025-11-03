@@ -13,4 +13,5 @@ export interface AssetImportJobContext {
   documentId?: string | null;
   documentAssociationId?: string | null;
   associatedClientId?: string | null;
+  fallbackClientId?: string | null;
 }

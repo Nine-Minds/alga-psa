@@ -21,6 +21,7 @@ const ImportExportSettings = (): JSX.Element => {
     error,
     detailsError,
     isLoadingDetails,
+    isRefreshingHistory,
     sources,
     history,
     preview,
@@ -34,6 +35,7 @@ const ImportExportSettings = (): JSX.Element => {
     approveImport,
     loadJobDetails,
     clearSelectedJobDetails,
+    refreshHistory,
   } = useImportActions();
 
   const [file, setFile] = useState<File | null>(null);
@@ -56,6 +58,28 @@ const ImportExportSettings = (): JSX.Element => {
     });
     return map;
   }, [sources]);
+
+  const previewHasWarnings = useMemo(() => {
+    if (!preview) {
+      return false;
+    }
+
+    const summary = preview.preview?.summary;
+    const hasSummaryIssues =
+      !!summary && ((summary.errorRows ?? 0) > 0 || (summary.duplicateRows ?? 0) > 0);
+
+    const hasTopErrors = Boolean(preview.errorSummary && preview.errorSummary.topErrors?.length);
+
+    const hasRowIssues =
+      Array.isArray(preview.preview?.rows) &&
+      preview.preview.rows.some(
+        (row: any) =>
+          (row.validationErrors?.length ?? 0) > 0 ||
+          Boolean(row.duplicate?.isDuplicate)
+      );
+
+    return hasSummaryIssues || hasTopErrors || hasRowIssues;
+  }, [preview]);
 
   const handleMappingChange = (field: string, value: string) => {
     setFieldMapping((prev) => {
@@ -290,7 +314,7 @@ const ImportExportSettings = (): JSX.Element => {
                 <div className="flex gap-3 justify-end">
                   <Button
                     id="approve-import-button"
-                    variant="primary"
+                    variant={previewHasWarnings ? 'accent' : 'default'}
                     onClick={() => approveImport(preview.importJobId)}
                     disabled={isApproving || isLoading}
                   >
@@ -327,7 +351,7 @@ const ImportExportSettings = (): JSX.Element => {
         </div>
       ),
     },
-  ], [createPreview, error, fieldDefinitions, fieldMapping, handleMappingChange, handleSubmit, isLoading, persistTemplate, preview, selectedSourceId, setPersistTemplate, setSelectedSourceId, setFile, sources, getSourceValueForField]);
+  ], [createPreview, error, fieldDefinitions, fieldMapping, handleMappingChange, handleSubmit, isApproving, isLoading, persistTemplate, preview, previewHasWarnings, selectedSourceId, setPersistTemplate, setSelectedSourceId, setFile, sources, getSourceValueForField]);
 
   return (
     <div className="space-y-6" data-testid="import-export-settings">
@@ -352,9 +376,26 @@ const ImportExportSettings = (): JSX.Element => {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Import &amp; Export History</CardTitle>
-          <CardDescription>Review every import or export job in one place.</CardDescription>
+        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle>Import &amp; Export History</CardTitle>
+            <CardDescription>Review every import or export job in one place.</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            onClick={refreshHistory}
+            disabled={isLoading || isRefreshingHistory}
+            className="w-full md:w-auto"
+          >
+            {isRefreshingHistory ? (
+              <span className="flex items-center gap-2">
+                <Spinner size="sm" />
+                Refreshing…
+              </span>
+            ) : (
+              'Refresh'
+            )}
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>

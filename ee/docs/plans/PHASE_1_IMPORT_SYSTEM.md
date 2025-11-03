@@ -203,6 +203,7 @@ This system provides three core capabilities:
     - [x] `uploadFile()` to selected storage provider
     - [x] `addDocument()` to create metadata entry
     - [x] `associateDocumentWithClient()` (or equivalent) using the tenant’s primary client
+    - [x] Create `document_system_entries` table for document metadata tracking
   - [x] Store `document_id`/`file_id` on `import_jobs` for retrieval
   - [ ] Soft-delete or retain documents per retention policy after job completion
 
@@ -252,10 +253,12 @@ This system provides three core capabilities:
   - [ ] Expandable error list
   - [ ] "Download Error Report" button (CSV export)
   - [ ] "Cancel" and "Proceed with Import" buttons
+  - [x] Adaptive CTA styling (primary vs accent when warnings detected)
 
 - [ ] Job History & Details
   - [x] `JobHistoryTable` component
   - [x] Columns: Date, Source, File, Status, Created, Duplicates, Errors
+  - [x] Manual refresh control to pull latest jobs
   - [ ] Filterable by status, source type, date range
   - [ ] Sortable by date, status
   - [x] Click row to open details drawer
