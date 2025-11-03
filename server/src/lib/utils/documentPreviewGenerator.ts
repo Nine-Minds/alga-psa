@@ -229,7 +229,7 @@ async function generatePdfPreviews(
     // Create temporary file for PDF (pdf2pic requires a file path)
     const tempDir = os.tmpdir();
     tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
-    await fs.writeFile(tempPdfPath, fileBuffer);
+    await fs.writeFile(tempPdfPath, new Uint8Array(fileBuffer));
 
     // Configure pdf2pic to render first page
     const options = {
@@ -390,7 +390,7 @@ async function generateVideoPreviews(
     tempFramePath = path.join(tempDir, `${uuidv4()}.png`);
 
     // Write video buffer to temporary file
-    await fs.writeFile(tempVideoPath, fileBuffer);
+    await fs.writeFile(tempVideoPath, new Uint8Array(fileBuffer));
 
     // Extract frame at 1 second (with fallback to 0s)
     await new Promise<void>((resolve, reject) => {

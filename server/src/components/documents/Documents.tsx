@@ -724,7 +724,7 @@ const Documents = ({
       <ReflectionContainer id={id} label="Documents">
         <div className="flex flex-col h-[calc(100vh-200px)]">
           {/* Header with Actions */}
-          <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+          <div className="border-b border-gray-200 p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
 
               {/* New Document Button */}
@@ -773,10 +773,10 @@ const Documents = ({
           <div className="flex flex-1 overflow-hidden">
             {/* Collapsed Folders Button */}
             {isFoldersPaneCollapsed && (
-              <div className="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex items-start p-2">
+              <div className="flex-shrink-0 border-r border-gray-200 flex items-start p-2">
                 <button
                   onClick={() => setIsFoldersPaneCollapsed(false)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  className="p-1 hover:bg-gray-100 rounded"
                   title="Show folders"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -786,7 +786,7 @@ const Documents = ({
 
             {/* Folder Navigation Sidebar */}
             {!isFoldersPaneCollapsed && (
-              <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700">
+              <div className="w-64 flex-shrink-0 border-r border-gray-200">
                 <FolderTreeView
                   key={folderTreeKey}
                   selectedFolder={currentFolder}
@@ -832,9 +832,9 @@ const Documents = ({
                 <>
                   {/* Bulk Actions Toolbar */}
                   {selectedDocumentsForMove.size > 0 && viewMode === 'list' && (
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        <span className="text-sm font-medium text-blue-900">
                           {t('documents.bulkActions.selected', {
                             count: selectedDocumentsForMove.size,
                             defaultValue: `${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''} selected`
@@ -935,7 +935,7 @@ const Documents = ({
 
             {/* Pagination */}
             {documentsToDisplay.length > 0 && totalPages > 1 && (
-              <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+              <div className="border-t border-gray-200 p-4">
                 <DocumentsPagination
                   id={`${id}-pagination`}
                   currentPage={currentPage}

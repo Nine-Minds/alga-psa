@@ -43,9 +43,9 @@ export default function DocumentListView({
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
       <table className="w-full">
-        <thead className="bg-gray-50 dark:bg-gray-800">
+        <thead className="bg-gray-50">
           <tr>
             <th className="w-12 px-4 py-3">
               <Checkbox
@@ -75,7 +75,7 @@ export default function DocumentListView({
           {documents.map((doc) => (
             <tr
               key={doc.document_id}
-              className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+              className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
               onClick={() => onClick?.(doc)}
             >
               <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -91,7 +91,7 @@ export default function DocumentListView({
                     <img
                       src={`/api/documents/${doc.document_id}/thumbnail`}
                       alt={doc.document_name}
-                      className="w-8 h-8 object-cover rounded border border-gray-200 dark:border-gray-600"
+                      className="w-8 h-8 object-cover rounded border border-gray-200"
                       onError={(e) => {
                         // Fallback to icon if thumbnail fails to load
                         e.currentTarget.style.display = 'none';
@@ -116,7 +116,7 @@ export default function DocumentListView({
                 <div className="flex items-center gap-1">
                   <button
                     id={`document-download-${doc.document_id}`}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    className="p-1 hover:bg-gray-100 rounded"
                     title={t('documents.download', 'Download')}
                   >
                     <Download className="w-4 h-4" />
@@ -124,7 +124,7 @@ export default function DocumentListView({
                   {onDelete && (
                     <button
                       id={`document-delete-${doc.document_id}`}
-                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
+                      className="p-1 hover:bg-red-100 rounded"
                       onClick={() => onDelete(doc)}
                       title={t('documents.delete', 'Delete')}
                     >

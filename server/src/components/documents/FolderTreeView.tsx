@@ -123,8 +123,8 @@ export default function FolderTreeView({
           id={`folder-item-${node.path.replace(/\//g, '-')}`}
           className={`
             flex items-center gap-2 py-2 px-3 cursor-pointer group
-            hover:bg-gray-100 dark:hover:bg-gray-800
-            ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+            hover:bg-gray-100
+            ${isSelected ? 'bg-blue-50' : ''}
           `}
           style={{ paddingLeft: `${level * 20 + 12}px` }}
           onClick={() => onFolderSelect(node.path)}
@@ -136,7 +136,7 @@ export default function FolderTreeView({
                 e.stopPropagation();
                 toggleFolder(node.path);
               }}
-              className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+              className="p-0.5 hover:bg-gray-200 rounded"
             >
               {isExpanded ? (
                 <ChevronDown className="w-4 h-4" />
@@ -160,7 +160,7 @@ export default function FolderTreeView({
           <button
             id={`folder-delete-${node.path.replace(/\//g, '-')}`}
             onClick={(e) => handleDeleteFolder(node.path, e)}
-            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-opacity"
+            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity"
             title={t('documents.folders.deleteAction', 'Delete folder')}
           >
             <Trash2 className="w-3.5 h-3.5 text-red-600" />
@@ -186,14 +186,14 @@ export default function FolderTreeView({
 
   return (
     <div className="h-full overflow-y-auto flex flex-col">
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div className="p-3 border-b border-gray-200 flex items-center justify-between">
         <h3 className="text-sm font-semibold">
           {t('documents.folders.title', 'Folders')}
         </h3>
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className="p-1 hover:bg-gray-100 rounded"
             title={t('documents.folders.collapse', 'Collapse folders')}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -206,12 +206,12 @@ export default function FolderTreeView({
         id="folder-root"
         className={`
           flex items-center gap-2 py-2 px-3 cursor-pointer
-          hover:bg-gray-100 dark:hover:bg-gray-800
-          ${selectedFolder === null ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+          hover:bg-gray-100
+          ${selectedFolder === null ? 'bg-blue-50' : ''}
         `}
         onClick={() => onFolderSelect(null)}
       >
-        <span className="text-sm font-mono text-gray-700 dark:text-gray-300">&lt;root&gt;</span>
+        <span className="text-sm font-mono text-gray-700">&lt;root&gt;</span>
       </div>
 
       {folderTree.map(node => renderFolderNode(node, 0))}

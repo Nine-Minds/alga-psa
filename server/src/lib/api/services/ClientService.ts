@@ -21,7 +21,6 @@ import {
   UpdateClientLocationData
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { runWithTenant } from 'server/src/lib/db';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 
@@ -265,18 +264,6 @@ export class ClientService extends BaseService<IClient> {
       // Continue without tax settings - they can be added later
     }
 
-    // Publish event
-    await publishEvent({
-      eventType: 'CLIENT_CREATED',
-      payload: {
-        tenantId: context.tenant,
-        clientId: client.client_id,
-        clientName: data.client_name,
-        userId: context.userId,
-        timestamp: new Date().toISOString()
-      }
-    });
-
     return client;
   }
 
@@ -349,19 +336,6 @@ export class ClientService extends BaseService<IClient> {
           // Continue without tags - they can be added later
         }
       }
-
-      // Publish event
-      await publishEvent({
-        eventType: 'CLIENT_UPDATED',
-        payload: {
-          tenantId: context.tenant,
-          clientId: id,
-          clientName: client.client_name,
-          changes: data,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
-      });
 
       return client;
     });

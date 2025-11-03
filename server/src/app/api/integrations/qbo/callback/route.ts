@@ -6,13 +6,7 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { URLSearchParams } from 'url';
 // --- Import Actual Implementations ---
-import { createTenantKnex } from '../../../../../lib/db'; // Added DB import
-import { withTransaction } from '@alga-psa/shared/db';
-import { Knex } from 'knex';
-import { ISecretProvider } from '@alga-psa/shared/core';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider'; // Corrected import path
-import { createWorkflowEventAttachment } from '../../../../../lib/actions/workflow-event-attachment-actions'; // Added action import
-import { EventCatalogModel } from '../../../../../models/eventCatalog'; // Added model import
 // TODO: Import actual CSRF token validation logic
 // import { getAndVerifyCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path
 
@@ -175,105 +169,7 @@ export async function GET(request: Request) {
 
     console.log(`QBO Callback: Successfully stored/updated QBO credentials for tenant ${tenantId}, realm ${realmId} within the multi-scope secret.`);
 
-    // --- BEGIN: Add Workflow Event Attachments using Action ---
-    try {
-      console.log(`QBO Callback: Attempting to add workflow event attachments via action for tenant ${tenantId}...`);
-      const { knex, tenant: contextTenant } = await createTenantKnex(); // Corrected: No argument needed
-
-      // Ensure the tenant from context matches the state parameter tenantId for safety
-      if (!contextTenant || contextTenant !== tenantId) {
-        console.error(`QBO Callback: Tenant mismatch! State tenant: ${tenantId}, Context tenant: ${contextTenant}. Aborting attachment creation.`);
-        throw new Error('Tenant context mismatch during attachment creation.'); // Or handle more gracefully
-      }
-
-      // Define target workflows and events
-      const invoiceSyncWorkflowName = 'qboInvoiceSyncWorkflow';
-      const customerSyncWorkflowName = 'qboCustomerSyncWorkflow';
-      const eventWorkflowMap: Record<string, string> = {
-        'INVOICE_CREATED': invoiceSyncWorkflowName,
-        'INVOICE_UPDATED': invoiceSyncWorkflowName,
-        'CLIENT_CREATED': customerSyncWorkflowName,
-        'CLIENT_UPDATED': customerSyncWorkflowName,
-      };
-
-      // Fetch system workflow registration IDs based on the correct names
-      const { systemWorkflows, events } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const systemWorkflows = await trx('system_workflow_registrations')
-          .select('registration_id', 'name')
-          .whereIn('name', [invoiceSyncWorkflowName, customerSyncWorkflowName]); // Uses updated names
-
-        // Get event IDs (Assuming EventCatalogModel handles tenant context or we use knex directly)
-        const eventTypes = Object.keys(eventWorkflowMap);
-        // Use direct Knex query assuming event_catalog is tenant-specific as per model interactions
-        const events = await trx('system_event_catalog') // Changed table name
-          .select('event_id', 'event_type')
-          // Removed tenant filter
-          .whereIn('event_type', eventTypes);
-
-        return { systemWorkflows, events };
-      });
-
-      const systemWorkflowIdMap = systemWorkflows.reduce((acc, wf) => {
-        acc[wf.name] = wf.registration_id; // Map name to registration_id
-        return acc;
-      }, {} as Record<string, string>);
-
-      // Warn if expected system workflow registrations are not found
-      if (!systemWorkflowIdMap[invoiceSyncWorkflowName]) { // Checks for 'qboInvoiceSyncWorkflow' ID
-        console.warn(`QBO Callback: System workflow registration '${invoiceSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
-      }
-      if (!systemWorkflowIdMap[customerSyncWorkflowName]) { // Checks for 'qboCustomerSyncWorkflow' ID
-        console.warn(`QBO Callback: System workflow registration '${customerSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
-      }
-
-      const eventIdMap = events.reduce((acc, ev) => {
-        acc[ev.event_type] = ev.event_id;
-        return acc;
-      }, {} as Record<string, string>);
-
-      // Create attachments using the action
-      for (const eventType of eventIdMap) {
-        const workflowName = eventWorkflowMap[eventType];
-        const workflowId = systemWorkflowIdMap[workflowName]; // Use the map with registration_ids
-        const eventId = eventIdMap[eventType];
-
-        if (!workflowId) {
-          console.log(`QBO Callback: Skipping attachment for event type '${eventType}' due to missing workflow '${workflowName}' for tenant ${tenantId}.`);
-          continue;
-        }
-        if (!eventId) {
-          console.log(`QBO Callback: Skipping attachment for event type '${eventType}' as event was not found in catalog for tenant ${tenantId}.`);
-          // Consider if this should be an error or just a warning. If events are expected, it might be an error.
-          continue;
-        }
-
-        try {
-          console.log(`QBO Callback: Calling createWorkflowEventAttachment for tenant ${tenantId}, Event '${eventType}' (ID: ${eventId}) -> Workflow '${workflowName}' (ID: ${workflowId})`);
-          await createWorkflowEventAttachment({
-            tenant: tenantId,
-            event_type: eventType, // Use event_type instead of event_id
-            workflow_id: workflowId, // Pass the system workflow registration_id here
-            is_active: true, // Default to active
-            // 'name' and 'description' are optional in ICreateWorkflowEventAttachment
-          });
-          console.log(`QBO Callback: Successfully processed attachment request for tenant ${tenantId}: Event '${eventType}' -> Workflow '${workflowName}'. Action handles idempotency.`);
-        } catch (actionError: any) {
-          // Log specific error from the action, but continue processing others
-          console.error(`QBO Callback: Error creating attachment for tenant ${tenantId}, Event '${eventType}' -> Workflow '${workflowName}':`, actionError.message || actionError);
-        }
-      }
-
-      console.log(`QBO Callback: Finished processing workflow event attachments for tenant ${tenantId}.`);
-
-    } catch (attachmentError: any) {
-      // Log the error but don't fail the entire callback, as token storage succeeded.
-      console.error(`QBO Callback: General error during workflow event attachment processing for tenant ${tenantId}:`, attachmentError);
-      // Optionally: Send an alert or log to a monitoring system
-    }
-    // --- END: Add Workflow Event Attachments using Action ---
-
-
-    // 5. Redirect to Success Page (Task 83)
+    // 5. Redirect to Success Page
     return successRedirect();
 
   } catch (error: any) {

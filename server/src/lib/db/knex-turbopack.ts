@@ -6,6 +6,11 @@
 import type { Knex } from 'knex';
 import { createRequire } from 'module';
 
+// Extend globalThis type to support __knexDialectPatched
+declare global {
+  var __knexDialectPatched: boolean | undefined;
+}
+
 // Get the database client from environment or config
 function getActiveDialect(): string {
   // Check environment variables for database type
