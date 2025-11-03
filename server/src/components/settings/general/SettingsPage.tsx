@@ -41,6 +41,7 @@ import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import SurveySettings from 'server/src/components/surveys/SurveySettings';
 
 // Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {
@@ -79,6 +80,7 @@ const SettingsPage = (): JSX.Element =>  {
     ticketing: 'Ticketing',
     'interaction-types': 'Interaction Types',
     notifications: 'Notifications',
+    surveys: 'Surveys',
     'time-entry': 'Time Entry',
     billing: 'Billing',
     tax: 'Tax',
@@ -188,6 +190,10 @@ const SettingsPage = (): JSX.Element =>  {
     {
       label: "Notifications",
       content: <NotificationsTab />,
+    },
+    {
+      label: "Surveys",
+      content: <SurveySettings />,
     },
     {
       label: "Time Entry",

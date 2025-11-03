@@ -446,5 +446,163 @@
   },
   "fields": {
     "notes": "Notizen"
+  },
+  "surveys": {
+    "common": {
+      "loading": "Wird geladen..."
+    },
+    "settings": {
+      "tabLabel": "Umfragen",
+      "title": "Kundenzufriedenheitsumfragen",
+      "subtitle": "Konfigurieren Sie Vorlagen, Auslöser und Versand, um Feedback nach Ticketabschluss zu sammeln.",
+      "tabs": {
+        "templates": "Vorlagen",
+        "triggers": "Auslöser"
+      },
+      "templateList": {
+        "title": "Umfragevorlagen",
+        "description": "Verwalten Sie die Fragen und Bewertungsskalen für Ihre Kunden.",
+        "createButton": "Neue Vorlage",
+        "emptyTitle": "Noch keine Umfragevorlagen",
+        "emptyDescription": "Erstellen Sie Ihre erste Vorlage, um Text und Bewertungsskala der Umfrage festzulegen.",
+        "table": {
+          "name": "Vorlage",
+          "rating": "Skala",
+          "status": "Status",
+          "updated": "Aktualisiert",
+          "actions": "Aktionen"
+        },
+        "defaultBadge": "Standard",
+        "status": {
+          "enabled": "Aktiv",
+          "disabled": "Inaktiv"
+        },
+        "toasts": {
+          "created": "Vorlage erstellt",
+          "updated": "Vorlage aktualisiert",
+          "deleted": "Vorlage gelöscht",
+          "setDefault": "Standardvorlage aktualisiert",
+          "error": "Vorlage konnte nicht gespeichert werden",
+          "deleteError": "Vorlage konnte nicht gelöscht werden"
+        },
+        "errors": {
+          "load": "Umfragevorlagen konnten nicht geladen werden."
+        },
+        "deleteConfirm": "Diese Vorlage löschen? Bereits versandte Einladungen bleiben bestehen."
+      },
+      "templateForm": {
+        "titleCreate": "Umfragevorlage erstellen",
+        "titleEdit": "Umfragevorlage bearbeiten",
+        "labels": {
+          "name": "Name der Vorlage",
+          "ratingType": "Bewertungstyp",
+          "ratingScale": "Bewertungsskala",
+          "ratingLabels": "Beschriftungen",
+          "promptText": "Umfragefrage",
+          "commentPrompt": "Kommentarfrage",
+          "thankYouText": "Dankesnachricht",
+          "isDefault": "Als Standardvorlage festlegen",
+          "enabled": "Vorlage aktiv"
+        },
+        "placeholders": {
+          "ratingLabels": "Beispiel:\n1 = Sehr unzufrieden\n2 = Unzufrieden\n3 = Neutral\n4 = Zufrieden\n5 = Sehr zufrieden"
+        },
+        "help": {
+          "ratingLabels": "Geben Sie pro Zeile „Wert = Beschriftung“ an."
+        },
+        "ratingTypes": {
+          "stars": "Sterne",
+          "numbers": "Zahlen",
+          "emojis": "Emojis"
+        },
+        "actions": {
+          "create": "Vorlage erstellen",
+          "save": "Änderungen speichern",
+          "delete": "Vorlage löschen"
+        }
+      },
+      "triggerList": {
+        "title": "Umfrageauslöser",
+        "description": "Senden Sie automatisch Einladungen, wenn Tickets oder Projekte abgeschlossen werden.",
+        "createButton": "Neuer Auslöser",
+        "emptyTitle": "Keine Umfrageauslöser konfiguriert",
+        "emptyDescription": "Erstellen Sie einen Auslöser, um Umfragen nach Ticket- oder Projektabschluss zu versenden.",
+        "table": {
+          "template": "Vorlage",
+          "type": "Auslöser",
+          "conditions": "Bedingungen",
+          "status": "Status",
+          "updated": "Aktualisiert",
+          "actions": "Aktionen"
+        },
+        "conditions": {
+          "boards": "Boards",
+          "statuses": "Status",
+          "priorities": "Prioritäten",
+          "any": "Alle"
+        },
+        "status": {
+          "enabled": "Aktiv",
+          "disabled": "Inaktiv"
+        },
+        "toasts": {
+          "created": "Auslöser erstellt",
+          "updated": "Auslöser aktualisiert",
+          "deleted": "Auslöser gelöscht",
+          "error": "Auslöser konnte nicht gespeichert werden",
+          "deleteError": "Auslöser konnte nicht gelöscht werden"
+        },
+        "errors": {
+          "load": "Umfrageauslöser konnten nicht geladen werden."
+        },
+        "deleteConfirm": "Diesen Auslöser löschen? Bereits geplante Einladungen werden weiterhin gesendet."
+      },
+      "triggerForm": {
+        "titleCreate": "Umfrageauslöser erstellen",
+        "titleEdit": "Umfrageauslöser bearbeiten",
+        "labels": {
+          "template": "Umfragevorlage",
+          "triggerType": "Auslösertyp",
+          "boardIds": "Board-IDs",
+          "statusIds": "Status-IDs",
+          "priorities": "Prioritäten",
+          "enabled": "Auslöser aktiv"
+        },
+        "placeholders": {
+          "boardIds": "IDs durch Kommas oder Zeilenumbrüche trennen",
+          "statusIds": "IDs durch Kommas oder Zeilenumbrüche trennen",
+          "priorities": "IDs oder Namen durch Kommas oder Zeilenumbrüche trennen"
+        },
+        "help": {
+          "conditions": "Felder leer lassen, um alle Werte zuzulassen."
+        },
+        "actions": {
+          "create": "Auslöser erstellen",
+          "save": "Änderungen speichern",
+          "delete": "Auslöser löschen"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Ticket geschlossen",
+          "project_completed": "Projekt abgeschlossen"
+        }
+      }
+    },
+    "response": {
+      "pageTitle": "Kundenzufriedenheitsumfrage",
+      "invalidTitle": "Umfrage nicht verfügbar",
+      "invalidMessage": "Dieser Feedback-Link ist nicht mehr gültig oder wurde bereits verwendet.",
+      "ratingPrompt": "Wie war Ihre Erfahrung?",
+      "ratingAssistive": "Wählen Sie eine Bewertung von 1 bis {{scale}}",
+      "commentLabel": "Zusätzliche Kommentare (optional)",
+      "submitButton": "Feedback senden",
+      "submitting": "Feedback wird gesendet…",
+      "submittedTitle": "Vielen Dank für Ihre Rückmeldung!",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Erneut versuchen",
+      "ratingSubmitted": "Feedback gesendet",
+      "errorMessage": "Ihr Feedback konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "selectRatingError": "Wählen Sie vor dem Absenden eine Bewertung aus.",
+      "supportMessage": "Bei Fragen wenden Sie sich bitte an Ihren Techniker."
+    }
   }
 }
