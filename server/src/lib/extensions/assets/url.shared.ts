@@ -7,30 +7,36 @@
  *   <iframe src={src} sandbox="allow-scripts"></iframe>
  */
 export function buildExtUiSrc(extensionId: string, contentHash: string, clientPath: string): string {
-  // Enforce canonical content hash format: "sha256:<64-hex>"
   if (!/^sha256:[0-9a-f]{64}$/i.test(contentHash)) {
     throw new Error("Invalid content hash; expected format 'sha256:<hex64>'");
   }
 
-  const mode = (process.env.EXT_UI_HOST_MODE || "rust").toLowerCase();
-  const publicBase = process.env.RUNNER_PUBLIC_BASE || "";
+  const mode = (process.env.EXT_UI_HOST_MODE || 'rust').toLowerCase();
+  const publicBase = mode === 'rust' ? normalizePublicBase(process.env.RUNNER_PUBLIC_BASE) : null;
 
-  const base =
-    mode === "rust" && publicBase && isAbsoluteUrl(publicBase) ? publicBase : "";
+  const qs = new URLSearchParams({ path: clientPath || '/' }).toString();
+  const suffix = `/ext-ui/${encodeURIComponent(extensionId)}/${encodeURIComponent(contentHash)}/index.html?${qs}`;
 
-  const qs = new URLSearchParams({ path: clientPath || "/" }).toString();
-  const suffix = `/ext-ui/${encodeURIComponent(extensionId)}/${encodeURIComponent(
-    contentHash
-  )}/index.html?${qs}`;
+  if (!publicBase) {
+    return suffix;
+  }
 
-  return base ? `${base}${suffix}` : suffix;
+  return `${publicBase}${suffix}`;
 }
 
-function isAbsoluteUrl(maybe: string): boolean {
-  try {
-    const u = new URL(maybe);
-    return !!u.protocol && !!u.host;
-  } catch {
-    return false;
+function normalizePublicBase(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/\/+$/, '');
   }
+
+  if (trimmed.startsWith('/')) {
+    return trimmed.replace(/\/+$/, '');
+  }
+
+  // Treat other values (e.g., custom schemes) as provided but remove trailing slash.
+  return trimmed.replace(/\/+$/, '');
 }

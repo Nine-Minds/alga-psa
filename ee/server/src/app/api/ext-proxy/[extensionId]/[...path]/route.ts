@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import {
-  filterRequestHeaders,
-  filterResponseHeaders,
-  getTimeoutMs,
-  pathnameFromParts,
-} from '../../../../../lib/extensions/lib/gateway-utils';
+import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../../../../../lib/extensions/lib/gateway-utils';
 import { loadInstallConfigCached } from '../../../../../lib/extensions/lib/install-config-cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from '../../../../../lib/extensions/runner/backend';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,52 +110,36 @@ export async function handle(
       endpoint: `ui-proxy:${pathname}`,
     };
 
-    const runnerBase = process.env.RUNNER_BASE_URL;
-    if (!runnerBase) {
-      console.error('[ext-proxy] RUNNER_BASE_URL is not configured');
-      return json(500, { error: 'Runner not configured' });
-    }
+    const backend = getRunnerBackend();
 
-    const headers: Record<string, string> = {
-      'content-type': 'application/json',
-      'x-request-id': requestId,
-    };
+    const runnerHeaders: Record<string, string> = {};
     if (installConfig.configVersion) {
-      headers['x-ext-config-version'] = installConfig.configVersion;
+      runnerHeaders['x-ext-config-version'] = installConfig.configVersion;
     }
     if (installConfig.secretsVersion) {
-      headers['x-ext-secrets-version'] = installConfig.secretsVersion;
+      runnerHeaders['x-ext-secrets-version'] = installConfig.secretsVersion;
     }
-
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-
-    const resp = await fetch(`${runnerBase.replace(/\/$/, '')}/v1/execute`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(execReq),
-      signal: controller.signal,
-    }).catch((err) => {
-      console.error('[ext-proxy] Runner fetch error:', err);
-      throw err;
-    }).finally(() => {
-      clearTimeout(id);
+    const runnerResp = await backend.execute(execReq, {
+      requestId,
+      timeoutMs,
+      headers: runnerHeaders,
     });
 
-    if (!resp.ok) {
-      console.error('[ext-proxy] Runner non-ok status:', resp.status);
-      return json(502, { error: 'Runner error' });
-    }
-
-    const payload = await resp.json().catch(() => ({}));
-    const status = typeof payload.status === 'number' ? payload.status : 200;
-    const headersOut = filterResponseHeaders(payload.headers);
-    const body = payload.body_b64 ? Buffer.from(payload.body_b64, 'base64') : undefined;
-
-    return new NextResponse(body as any, { status, headers: headersOut });
+    return new NextResponse(runnerResp.body as any, {
+      status: runnerResp.status,
+      headers: runnerResp.headers,
+    });
   } catch (err: any) {
     if (err instanceof AccessError) {
       return json(err.status, { error: err.message });
+    }
+    if (err instanceof RunnerConfigError) {
+      console.error('[ext-proxy] Runner configuration error:', err.message);
+      return json(500, { error: 'Runner not configured' });
+    }
+    if (err instanceof RunnerRequestError) {
+      console.error('[ext-proxy] Runner request error:', err.message, { backend: err.backend, status: err.status });
+      return json(502, { error: 'Runner error' });
     }
     if (err?.name === 'AbortError') {
       return json(504, { error: 'Gateway timeout' });
