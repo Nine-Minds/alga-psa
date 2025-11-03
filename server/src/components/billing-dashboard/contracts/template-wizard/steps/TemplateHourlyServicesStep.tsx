@@ -225,11 +225,11 @@ export function TemplateHourlyServicesStep({
     updateData({ hourly_services: next });
   };
 
-  const getDefaultOverlay = (): TemplateBucketOverlayInput => ({
+  const getDefaultOverlay = (billingFrequency: string): TemplateBucketOverlayInput => ({
     total_minutes: undefined,
     overage_rate: undefined,
     allow_rollover: false,
-    billing_period: 'monthly',
+    billing_period: billingFrequency,
   });
 
   const toggleBucketOverlay = (index: number, enabled: boolean) => {
@@ -239,7 +239,7 @@ export function TemplateHourlyServicesStep({
         ...next[index],
         bucket_overlay: next[index].bucket_overlay
           ? { ...next[index].bucket_overlay }
-          : getDefaultOverlay(),
+          : getDefaultOverlay(data.billing_frequency),
       };
     } else {
       next[index] = { ...next[index], bucket_overlay: undefined };
@@ -672,9 +672,10 @@ export function TemplateHourlyServicesStep({
                   {service.bucket_overlay && (
                     <BucketOverlayFields
                       mode="hours"
-                      value={service.bucket_overlay ?? getDefaultOverlay()}
+                      value={service.bucket_overlay ?? getDefaultOverlay(data.billing_frequency)}
                       onChange={(overlay) => updateBucketOverlay(index, overlay)}
                       automationId={`template-hourly-bucket-${index}`}
+                      billingFrequency={data.billing_frequency}
                     />
                   )}
                 </div>

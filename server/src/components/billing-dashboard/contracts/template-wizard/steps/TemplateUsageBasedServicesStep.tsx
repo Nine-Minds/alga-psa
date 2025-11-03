@@ -197,11 +197,11 @@ export function TemplateUsageBasedServicesStep({
     updateData({ usage_services: next });
   };
 
-  const getDefaultOverlay = (): TemplateBucketOverlayInput => ({
+  const getDefaultOverlay = (billingFrequency: string): TemplateBucketOverlayInput => ({
     total_minutes: undefined,
     overage_rate: undefined,
     allow_rollover: false,
-    billing_period: 'monthly',
+    billing_period: billingFrequency,
   });
 
   const toggleBucketOverlay = (index: number, enabled: boolean) => {
@@ -211,7 +211,7 @@ export function TemplateUsageBasedServicesStep({
         ...next[index],
         bucket_overlay: next[index].bucket_overlay
           ? { ...next[index].bucket_overlay }
-          : getDefaultOverlay(),
+          : getDefaultOverlay(data.billing_frequency),
       };
     } else {
       next[index] = { ...next[index], bucket_overlay: undefined };
@@ -567,9 +567,10 @@ export function TemplateUsageBasedServicesStep({
                   {service.bucket_overlay && (
                     <BucketOverlayFields
                       mode="usage"
-                      value={service.bucket_overlay ?? getDefaultOverlay()}
+                      value={service.bucket_overlay ?? getDefaultOverlay(data.billing_frequency)}
                       onChange={(overlay) => updateBucketOverlay(index, overlay)}
                       automationId={`template-usage-bucket-${index}`}
+                      billingFrequency={data.billing_frequency}
                     />
                   )}
                 </div>

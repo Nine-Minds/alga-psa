@@ -37,6 +37,7 @@ interface ServiceConfigurationPanelProps {
   disabled?: boolean;
   error?: string | null;
   isSubmitting?: boolean;
+  contractLineBillingFrequency?: string;
 }
 
 export function ServiceConfigurationPanel({
@@ -56,7 +57,8 @@ export function ServiceConfigurationPanel({
   className = '',
   disabled = false,
   error = null,
-  isSubmitting = false
+  isSubmitting = false,
+  contractLineBillingFrequency
 }: ServiceConfigurationPanelProps) {
   const [configurationType, setConfigurationType] = useState<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>(
     configuration.configuration_type || 'Fixed'
@@ -197,6 +199,7 @@ export function ServiceConfigurationPanel({
           configuration={bucketConfig}
           onConfigurationChange={handleBucketConfigChange}
           disabled={disabled}
+          contractLineBillingFrequency={contractLineBillingFrequency}
         />
       )}
       

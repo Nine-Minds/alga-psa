@@ -6,7 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { IContractLineService, IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
-import { updateContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
+import { updateContractLineFixedConfig, getContractLineById } from 'server/src/lib/actions/contractLineAction';
 import {
   IContractLineServiceConfiguration,
   IContractLineServiceFixedConfig,
@@ -44,6 +44,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [contractLineBillingFrequency, setContractLineBillingFrequency] = useState<string | undefined>(undefined);
   const tenant = useTenant()!;
 
   const service = services.find(s => s.service_id === planService.service_id);
@@ -87,6 +88,12 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
       setIsLoading(true);
       try {
+        // Fetch contract line to get billing frequency
+        const contractLine = await getContractLineById(planService.contract_line_id);
+        if (contractLine) {
+          setContractLineBillingFrequency(contractLine.billing_frequency);
+        }
+
         // Check if configuration exists
         const config = await getConfigurationForService(planService.contract_line_id, planService.service_id);
 
@@ -248,6 +255,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
               onCancel={onClose}
               error={error}
               isSubmitting={isSubmitting}
+              contractLineBillingFrequency={contractLineBillingFrequency}
             />
           )}
       </DialogContent>

@@ -103,20 +103,21 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
     updateData({ usage_services: next });
   };
 
-  const defaultOverlay = (): BucketOverlayInput => ({
+  const defaultOverlay = (billingFrequency: string): BucketOverlayInput => ({
     total_minutes: undefined,
     overage_rate: undefined,
     allow_rollover: false,
-    billing_period: 'monthly',
+    billing_period: billingFrequency,
   });
 
   const toggleBucketOverlay = (index: number, enabled: boolean) => {
     const next = [...(data.usage_services ?? [])];
     if (enabled) {
       const existing = next[index]?.bucket_overlay;
+      const effectiveBillingFrequency = data.usage_billing_frequency ?? data.billing_frequency;
       next[index] = {
         ...next[index],
-        bucket_overlay: existing ? { ...existing } : defaultOverlay(),
+        bucket_overlay: existing ? { ...existing } : defaultOverlay(effectiveBillingFrequency),
       };
     } else {
       next[index] = { ...next[index], bucket_overlay: undefined };
@@ -244,9 +245,10 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   <BucketOverlayFields
                     mode="usage"
                     unitLabel={service.unit_of_measure}
-                    value={service.bucket_overlay ?? defaultOverlay()}
+                    value={service.bucket_overlay ?? defaultOverlay(data.usage_billing_frequency ?? data.billing_frequency)}
                     onChange={(next) => updateBucketOverlay(index, next)}
                     automationId={`usage-bucket-${index}`}
+                    billingFrequency={data.usage_billing_frequency ?? data.billing_frequency}
                   />
                 )}
               </div>
