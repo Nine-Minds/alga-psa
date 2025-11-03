@@ -24,6 +24,21 @@ const SurveySettings = (): JSX.Element => {
   const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [triggersError, setTriggersError] = useState<string | null>(null);
 
+  const templateLoadErrorFallback = useMemo(
+    () =>
+      t('surveys.settings.templateList.errors.load', 'Unable to load survey templates.'),
+    [t]
+  );
+  const triggerLoadErrorFallback = useMemo(
+    () =>
+      t('surveys.settings.triggerList.errors.load', 'Unable to load survey triggers.'),
+    [t]
+  );
+  const loadingText = useMemo(
+    () => t('surveys.common.loading', 'Loading...'),
+    [t]
+  );
+
   const loadTemplates = useCallback(async () => {
     setTemplatesLoading(true);
     try {
@@ -32,17 +47,13 @@ const SurveySettings = (): JSX.Element => {
       setTemplatesError(null);
     } catch (error) {
       console.error('[SurveySettings] Failed to load templates', error);
-      const fallbackError = t(
-        'surveys.settings.templateList.errors.load',
-        'Unable to load survey templates.'
-      );
       setTemplatesError(
-        error instanceof Error && error.message ? error.message : fallbackError
+        error instanceof Error && error.message ? error.message : templateLoadErrorFallback
       );
     } finally {
       setTemplatesLoading(false);
     }
-  }, [t]);
+  }, [templateLoadErrorFallback]);
 
   const loadTriggers = useCallback(async () => {
     setTriggersLoading(true);
@@ -52,17 +63,13 @@ const SurveySettings = (): JSX.Element => {
       setTriggersError(null);
     } catch (error) {
       console.error('[SurveySettings] Failed to load triggers', error);
-      const fallbackError = t(
-        'surveys.settings.triggerList.errors.load',
-        'Unable to load survey triggers.'
-      );
       setTriggersError(
-        error instanceof Error && error.message ? error.message : fallbackError
+        error instanceof Error && error.message ? error.message : triggerLoadErrorFallback
       );
     } finally {
       setTriggersLoading(false);
     }
-  }, [t]);
+  }, [triggerLoadErrorFallback]);
 
   useEffect(() => {
     void loadTemplates();
@@ -97,10 +104,7 @@ const SurveySettings = (): JSX.Element => {
           </Alert>
         ) : templates.length === 0 && isTemplatesLoading ? (
           <div className="flex justify-center py-12">
-            <LoadingIndicator
-              layout="stacked"
-              text={t('surveys.common.loading', 'Loading...')}
-            />
+            <LoadingIndicator layout="stacked" text={loadingText} />
           </div>
         ) : (
           <TriggerList
@@ -124,7 +128,7 @@ const SurveySettings = (): JSX.Element => {
       triggers,
       isTriggersLoading,
       loadTriggers,
-      t,
+      loadingText,
     ]
   );
 
