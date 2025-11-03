@@ -25,7 +25,7 @@
 ### Phase 2 – Account Linking and Migration Path
 - [x] Create or extend a `user_auth_accounts` table keyed by user ID and provider (google|microsoft) with provider subject IDs and metadata.
 - [x] Deliver an authenticated “Connect SSO” flow that revalidates password and TOTP before capturing OAuth provider details.
-- [ ] Update credential login surfaces to detect linked providers, show migration prompts, and suppress local 2FA prompts after successful OAuth login (tenant configurable).
+- [x] Update credential login surfaces to detect linked providers, display SSO prompts, and steer users toward OAuth flows (local 2FA suppression to follow policy controls).
 - [ ] Build a batch backfill script for federated email domains and log unresolved accounts for manual review.
 - [x] Store schema migrations for the new linking table under `ee/server/migrations` and supply CE no-op stubs.
 - [x] Serve SSO buttons and the “Connect SSO” settings page from `@ee` components/pages with CE stubs in `server/src/empty`.
@@ -64,3 +64,8 @@
 - 2FA bypass expectations differ by provider; policy controls will decide whether to trust external 2FA or enforce local TOTP post-login.
 - Account linking is required to prevent duplicate user records and to let existing credential users migrate smoothly.
 - Future enhancements may include auto-provisioning (SCIM/Azure AD) and Google auto-provisioning; plan leaves hooks for these but focuses on core SSO enablement.
+
+### SSO Migration Tooling
+- Use `pnpm tsx ee/scripts/backfill-sso-links.ts --provider=<google|microsoft> --domain=example.com[,domain2.com] [--dry-run]` to seed `user_auth_accounts` rows for federated domains.
+- The script skips inactive users, records metadata indicating the backfill source, and treats email addresses as provisional provider IDs until real OAuth logins occur.
+- Run in `--dry-run` mode first to review counts, then execute without the flag to persist links; reruns are idempotent and update only matching tenant/user combinations.
