@@ -373,6 +373,13 @@ export async function copyPresetToContractLine(
             if (!preset) {
                 throw new Error(`Contract line preset ${presetId} not found`);
             }
+            console.log(`[copyPresetToContractLine] Preset data:`, {
+                preset_id: preset.preset_id,
+                preset_name: preset.preset_name,
+                minimum_billable_time: preset.minimum_billable_time,
+                round_up_to_nearest: preset.round_up_to_nearest,
+                overrides: overrides
+            });
 
             // 2. Create the contract line
             const contractLineData: Omit<IContractLine, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'> = {
@@ -452,10 +459,23 @@ export async function copyPresetToContractLine(
                     let typeConfig: any = {};
 
                     if (configurationType === 'Hourly') {
+                        // Use override if provided, otherwise use preset value, otherwise use default of 15
+                        const minBillableTime = overrides?.minimum_billable_time !== undefined
+                            ? overrides.minimum_billable_time
+                            : preset.minimum_billable_time !== undefined && preset.minimum_billable_time !== null
+                                ? preset.minimum_billable_time
+                                : 15;
+
+                        const roundUpToNearest = overrides?.round_up_to_nearest !== undefined
+                            ? overrides.round_up_to_nearest
+                            : preset.round_up_to_nearest !== undefined && preset.round_up_to_nearest !== null
+                                ? preset.round_up_to_nearest
+                                : 15;
+
                         typeConfig = {
                             hourly_rate: baseConfig.custom_rate,
-                            minimum_billable_time: overrides?.minimum_billable_time ?? preset.minimum_billable_time ?? 15,
-                            round_up_to_nearest: overrides?.round_up_to_nearest ?? preset.round_up_to_nearest ?? 15
+                            minimum_billable_time: minBillableTime,
+                            round_up_to_nearest: roundUpToNearest
                         };
                     } else if (configurationType === 'Usage') {
                         typeConfig = {

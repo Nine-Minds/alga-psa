@@ -429,8 +429,18 @@ export async function createContractTemplateFromWizard(
         let typeConfig: any = {};
         if (preset.contract_line_type === 'Hourly') {
           // Use per-preset configuration if provided, otherwise use preset defaults
-          const minBillableTime = presetInput.minimum_billable_time ?? preset.minimum_billable_time ?? 15;
-          const roundUpToNearest = presetInput.round_up_to_nearest ?? preset.round_up_to_nearest ?? 15;
+          // Treat 0, null, or undefined as "not set" and use default of 15
+          const minBillableTime = (presetInput.minimum_billable_time && presetInput.minimum_billable_time > 0)
+            ? presetInput.minimum_billable_time
+            : (preset.minimum_billable_time && preset.minimum_billable_time > 0)
+              ? preset.minimum_billable_time
+              : 15;
+
+          const roundUpToNearest = (presetInput.round_up_to_nearest && presetInput.round_up_to_nearest > 0)
+            ? presetInput.round_up_to_nearest
+            : (preset.round_up_to_nearest && preset.round_up_to_nearest > 0)
+              ? preset.round_up_to_nearest
+              : 15;
 
           typeConfig = {
             hourly_rate: undefined, // No rate from preset

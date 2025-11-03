@@ -191,7 +191,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
       dataIndex: 'service_name',
     },
     {
-      title: 'Category',
+      title: 'Service Type',
       dataIndex: 'service_type_name',
     },
     {

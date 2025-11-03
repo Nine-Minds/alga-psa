@@ -217,7 +217,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       dataIndex: 'service_name',
     },
     {
-      title: 'Category',
+      title: 'Service Type',
       dataIndex: 'service_type_name',
     },
     {

@@ -132,14 +132,22 @@ export function TemplateHourlyServicesStep({
       return;
     }
 
+    // Treat 0, null, or undefined as "not set" and use default of 15
+    const minBillable = (preset.minimum_billable_time && preset.minimum_billable_time > 0)
+      ? preset.minimum_billable_time
+      : 15;
+    const roundUp = (preset.round_up_to_nearest && preset.round_up_to_nearest > 0)
+      ? preset.round_up_to_nearest
+      : 15;
+
     updateData({
       hourly_presets: [
         ...existingPresets,
         {
           preset_id: presetId,
           preset_name: preset.preset_name,
-          minimum_billable_time: preset.minimum_billable_time ?? undefined,
-          round_up_to_nearest: preset.round_up_to_nearest ?? undefined,
+          minimum_billable_time: minBillable,
+          round_up_to_nearest: roundUp,
         },
       ],
     });

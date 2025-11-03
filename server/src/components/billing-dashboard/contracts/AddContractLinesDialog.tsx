@@ -139,6 +139,37 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
       newSet.delete(presetId);
     } else {
       newSet.add(presetId);
+
+      // Initialize hourly preset configuration when preset is selected
+      const preset = availablePresets.find(p => p.preset_id === presetId);
+      if (preset && preset.contract_line_type === 'Hourly') {
+        // Only initialize if not already set
+        if (!hourlyPresetOverrides[presetId]) {
+          // Use preset values if they exist, otherwise use default of 15
+          const minBillable = preset.minimum_billable_time !== undefined && preset.minimum_billable_time !== null
+            ? preset.minimum_billable_time
+            : 15;
+          const roundUp = preset.round_up_to_nearest !== undefined && preset.round_up_to_nearest !== null
+            ? preset.round_up_to_nearest
+            : 15;
+
+          setHourlyPresetInputs(prev => ({
+            ...prev,
+            [presetId]: {
+              minimum_billable_time: minBillable.toString(),
+              round_up_to_nearest: roundUp.toString()
+            }
+          }));
+
+          setHourlyPresetOverrides(prev => ({
+            ...prev,
+            [presetId]: {
+              minimum_billable_time: minBillable,
+              round_up_to_nearest: roundUp
+            }
+          }));
+        }
+      }
     }
     setSelectedPresetIds(newSet);
   };
@@ -217,19 +248,27 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           }
         } else if (preset?.contract_line_type === 'Hourly') {
           // Initialize hourly preset configuration from preset defaults
+          // Use preset values if they exist, otherwise use default of 15
+          const minBillable = preset.minimum_billable_time !== undefined && preset.minimum_billable_time !== null
+            ? preset.minimum_billable_time
+            : 15;
+          const roundUp = preset.round_up_to_nearest !== undefined && preset.round_up_to_nearest !== null
+            ? preset.round_up_to_nearest
+            : 15;
+
           setHourlyPresetInputs(prev => ({
             ...prev,
             [presetId]: {
-              minimum_billable_time: preset.minimum_billable_time?.toString() || '15',
-              round_up_to_nearest: preset.round_up_to_nearest?.toString() || '15'
+              minimum_billable_time: minBillable.toString(),
+              round_up_to_nearest: roundUp.toString()
             }
           }));
 
           setHourlyPresetOverrides(prev => ({
             ...prev,
             [presetId]: {
-              minimum_billable_time: preset.minimum_billable_time ?? 15,
-              round_up_to_nearest: preset.round_up_to_nearest ?? 15
+              minimum_billable_time: minBillable,
+              round_up_to_nearest: roundUp
             }
           }));
         }
