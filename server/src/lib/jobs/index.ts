@@ -126,7 +126,8 @@ export type {
   ReconcileBucketUsageJobData,
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
-  GooglePubSubVerificationJobData
+  GooglePubSubVerificationJobData, 
+  AssetImportJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
