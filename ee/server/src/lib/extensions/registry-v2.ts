@@ -4,6 +4,8 @@ import type { ManifestV2, ManifestEndpoint } from './bundles/manifest';
 import { isValidSemverLike } from './bundles/manifest';
 import type { SignatureVerificationResult } from './bundles/verify';
 import { computeDomain, enqueueProvisioningWorkflow } from './runtime/provision';
+import { isKnownCapability, normalizeCapability } from './providers';
+import { upsertInstallConfigRecord } from './installConfig';
 
 export type RegistryId = string;
 export type VersionId = string;
@@ -123,13 +125,19 @@ export class ExtensionRegistryServiceV2 {
     entryId: RegistryId,
     v: Omit<VersionEntry, 'id' | 'registryId'>
   ): Promise<VersionEntry> {
+    const normalizedCapabilities = (v.capabilities ?? []).map(normalizeCapability);
+    const unknownCaps = normalizedCapabilities.filter((cap) => !isKnownCapability(cap));
+    if (unknownCaps.length > 0) {
+      throw new Error(`Unknown capabilities requested: ${unknownCaps.join(', ')}`);
+    }
+
     try {
       const row = {
         registry_id: entryId,
         version: v.version,
         runtime: v.runtime,
         main_entry: v.mainEntry,
-        capabilities: JSON.stringify(v.capabilities ?? []),
+        capabilities: JSON.stringify(normalizedCapabilities),
         api_endpoints: JSON.stringify(v.api?.endpoints ?? []),
         ui: v.ui ? JSON.stringify(v.ui) : null,
       };
@@ -219,10 +227,32 @@ export class ExtensionRegistryServiceV2 {
     // Resolve version_id
     const v = await this.db('extension_version')
       .where({ registry_id: registryId, version })
-      .first(['id']);
+      .first(['id', 'capabilities']);
     if (!v) {
       throw new Error('Version not found for provided registry/version');
     }
+
+    let versionCaps: string[] = [];
+    try {
+      if (Array.isArray((v as any).capabilities)) {
+        versionCaps = ((v as any).capabilities as string[]).filter((cap) => typeof cap === 'string');
+      } else if (typeof (v as any).capabilities === 'string') {
+        const parsed = JSON.parse((v as any).capabilities as string);
+        if (Array.isArray(parsed)) {
+          versionCaps = parsed.filter((cap: unknown): cap is string => typeof cap === 'string');
+        }
+      }
+    } catch (err) {
+      console.warn('[ExtensionRegistryServiceV2] failed to parse version capabilities', {
+        registryId,
+        version,
+        error: (err as any)?.message,
+      });
+    }
+    const normalizedCaps =
+      opts?.grantedCaps?.length
+        ? opts.grantedCaps.map(normalizeCapability).filter((cap) => isKnownCapability(cap))
+        : versionCaps.map((cap) => normalizeCapability(cap)).filter((cap) => isKnownCapability(cap));
 
     const now = this.db.fn.now();
     // Compute per-install domain
@@ -237,7 +267,7 @@ export class ExtensionRegistryServiceV2 {
       registry_id: registryId,
       version_id: v.id,
       status: 'enabled',
-      granted_caps: JSON.stringify(opts?.grantedCaps ?? []),
+      granted_caps: JSON.stringify(normalizedCaps),
       config: JSON.stringify(opts?.config ?? {}),
       is_enabled: true,
       runner_domain: runnerDomain,
@@ -246,7 +276,7 @@ export class ExtensionRegistryServiceV2 {
       updated_at: now,
     };
 
-    await this.db('tenant_extension_install')
+    const rows = await this.db('tenant_extension_install')
       .insert(payload)
       .onConflict(['tenant_id', 'registry_id'])
       .merge({
@@ -258,15 +288,34 @@ export class ExtensionRegistryServiceV2 {
         runner_domain: payload.runner_domain,
         runner_status: payload.runner_status,
         updated_at: payload.updated_at,
-      });
+      })
+      .returning(['id', 'tenant_id']);
+
+    const installRow = rows[0];
+
+    if (installRow?.id) {
+      try {
+        await upsertInstallConfigRecord({
+          installId: installRow.id,
+          tenantId,
+          config: opts?.config ?? {},
+          providers: normalizedCaps,
+          connection: this.db,
+        });
+      } catch (error: any) {
+        console.error('[ExtensionRegistryServiceV2] failed to upsert install config record', {
+          installId: installRow.id,
+          tenantId,
+          error: error?.message,
+        });
+      }
+    }
 
     // Fire-and-forget: enqueue provisioning workflow
     try {
-      const row = await this.db('tenant_extension_install')
-        .where({ tenant_id: tenantId, registry_id: registryId })
-        .first(['id']);
-      if (row?.id && runnerDomain) {
-        await enqueueProvisioningWorkflow({ tenantId, extensionId: registryId, installId: row.id });
+      const installId = installRow?.id;
+      if (installId && runnerDomain) {
+        await enqueueProvisioningWorkflow({ tenantId, extensionId: registryId, installId });
       }
     } catch (_e) {
       // swallow errors; status remains pending and can be retried from UI

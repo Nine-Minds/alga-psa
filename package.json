@@ -7,7 +7,9 @@
     "services/workflow-worker",
     "shared",
     "packages/*",
-    "sdk/*"
+    "sdk/*",
+    "sdk/samples/*",
+    "sdk/samples/*/*"
   ],
   "scripts": {
     "install:ignore": "npm ci --ignore-scripts",

@@ -37,6 +37,32 @@ export async function packProject(opts: PackProjectOptions = {}): Promise<string
     }
   }
 
+  const componentWasm = join(project, 'dist', 'component.wasm');
+  if (!existsSync(componentWasm)) {
+    throw new Error(`dist/component.wasm not found in project: ${project}`);
+  }
+  const componentMeta = join(project, 'dist', 'component.json');
+  const componentDestDir = join(stage, 'artifacts', 'component');
+  ensureDir(componentDestDir);
+  cpSync(componentWasm, join(componentDestDir, 'component.wasm'));
+  if (existsSync(componentMeta)) {
+    cpSync(componentMeta, join(componentDestDir, 'component.json'));
+  }
+
+  const distDir = join(stage, 'dist');
+  ensureDir(distDir);
+  cpSync(componentWasm, join(distDir, 'main.wasm'));
+  if (existsSync(componentMeta)) {
+    cpSync(componentMeta, join(distDir, 'component.json'));
+  }
+
+  const witDir = join(project, 'wit');
+  if (existsSync(witDir)) {
+    const witDest = join(stage, 'wit');
+    cpSync(witDir, witDest, { recursive: true });
+    opts.logger?.info?.('[pack-project] staged: wit');
+  }
+
   ensureDir(dirname(outFile));
   const outDir = dirname(outFile);
   const outFileName = outFile.split('/').pop() || 'bundle.tar.zst';

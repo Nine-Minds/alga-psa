@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import { createNewProject, packProject, sign as signBundle } from '@alga-psa/client-sdk';
+import { createComponentProject, createNewProject, packProject, sign as signBundle } from '@alga-psa/client-sdk';
+import { spawn } from 'node:child_process';
+import { existsSync, watch } from 'node:fs';
+import { resolve, join } from 'node:path';
 
 function printHelp() {
   console.log(`
@@ -7,6 +10,8 @@ Alga CLI
 
 Usage:
   alga create extension <name> [--template basic|ui-gallery] [--dir <path>]
+  alga create component <name> [--dir <path>] [--template component-basic]
+  alga component create <name> [--dir <path>] [--template component-basic]
   alga pack [options]         (coming soon)
   alga publish [options]      (coming soon)
   alga sign <bundlePath> --algorithm cosign|x509|pgp
@@ -14,6 +19,7 @@ Usage:
 Examples:
   alga create extension my-ext
   alga create extension my-ui --template ui-gallery --dir ./apps
+  alga component create my-component --dir ./components
 `);
 }
 
@@ -49,6 +55,53 @@ async function main(argv: string[]) {
 
     await createNewProject({ name, template, directory });
     console.log(`Created extension project: ${name}`);
+    return;
+  }
+
+  if ((cmd === 'create' && sub === 'component') || (cmd === 'component' && sub === 'create')) {
+    const projectName = cmd === 'create' ? name : sub === 'create' ? name : undefined;
+    const argOffset = cmd === 'create' ? rest : args.slice(3);
+    if (!projectName) {
+      console.error('Error: component name is required');
+      process.exitCode = 1;
+      return;
+    }
+
+    let template: 'component-basic' | undefined;
+    let directory: string | undefined;
+    for (let i = 0; i < argOffset.length; i++) {
+      const value = argOffset[i];
+      if (value === '--template') {
+        template = argOffset[i + 1] as any;
+        i++;
+      } else if (value === '--dir' || value === '--directory') {
+        directory = argOffset[i + 1];
+        i++;
+      }
+    }
+
+    await createComponentProject({ name: projectName, template, directory });
+    console.log(`Created component project: ${projectName}`);
+    return;
+  }
+
+  if ((cmd === 'component' && sub === 'dev') || (cmd === 'dev' && sub === 'component')) {
+    const argOffset = cmd === 'component' ? [name, ...rest] : args.slice(2);
+    let targetDir: string | undefined;
+    let projectName: string | undefined = cmd === 'component' ? rest[0] : name;
+    for (let i = 0; i < argOffset.length; i++) {
+      const value = argOffset[i];
+      if (!value) continue;
+      if (value === '--dir' || value === '--directory') {
+        targetDir = argOffset[i + 1];
+        i++;
+      } else if (!value.startsWith('--') && !projectName) {
+        projectName = value;
+      }
+    }
+
+    const projectPath = resolve(targetDir ?? (projectName ? projectName : '.'));
+    runComponentDev(projectPath);
     return;
   }
 
@@ -114,3 +167,59 @@ async function main(argv: string[]) {
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 main(process.argv);
+
+function runComponentDev(projectDir: string) {
+  const normalized = resolve(projectDir);
+  console.log(`[component dev] watching ${normalized}`);
+
+  let building = false;
+  let pending = false;
+  const triggerBuild = () => {
+    if (building) {
+      pending = true;
+      return;
+    }
+    building = true;
+    const child = spawn('npm', ['run', 'build'], {
+      cwd: normalized,
+      stdio: 'inherit',
+    });
+    child.on('exit', (code) => {
+      building = false;
+      if (code === 0) {
+        console.log('[component dev] build complete');
+      } else {
+        console.error(`[component dev] build failed with code ${code}`);
+      }
+      if (pending) {
+        pending = false;
+        triggerBuild();
+      }
+    });
+  };
+
+  const watchTargets = [
+    join(normalized, 'src'),
+    join(normalized, 'wit'),
+    join(normalized, 'manifest.json'),
+  ];
+
+  const startWatch = (target: string) => {
+    if (!existsSync(target)) return;
+    try {
+      const watcher = watch(target, { recursive: !target.endsWith('.json') }, () => {
+        pending = false;
+        triggerBuild();
+      });
+      process.on('SIGINT', () => watcher.close());
+    } catch (err) {
+      console.warn(`[component dev] failed to watch ${target}: ${err}`);
+    }
+  };
+
+  triggerBuild();
+  for (const target of watchTargets) {
+    startWatch(target);
+  }
+  console.log('[component dev] watching for changes (Ctrl+C to exit)…');
+}
