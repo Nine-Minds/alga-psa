@@ -71,7 +71,10 @@ async fn executes_dynamic_component_in_process() -> anyhow::Result<()> {
             body_b64: Some(BASE64_STANDARD.encode(raw_payload)),
         },
         limits: Limits {
-            timeout_ms: None,
+            // Compilation of the JS component inside Wasmtime takes a noticeable amount of time on
+            // cold runs. Give the host the same 5s window that the container test uses so the epoch
+            // interrupt guard does not fire spuriously during local/CI runs.
+            timeout_ms: Some(5_000),
             memory_mb: Some(64),
             fuel: None,
         },
@@ -176,7 +179,10 @@ async fn executes_dynamic_component_with_secrets_capability() -> anyhow::Result<
             body_b64: None,
         },
         limits: Limits {
-            timeout_ms: Some(1_000),
+            // Match the generous 5s window used by the container integration tests so the initial
+            // component instantiation and proxy round-trip complete without the epoch watchdog
+            // interrupting execution during cold runs.
+            timeout_ms: Some(5_000),
             memory_mb: Some(64),
             fuel: None,
         },
@@ -349,7 +355,7 @@ async fn ui_proxy_capability_denied() -> anyhow::Result<()> {
             body_b64: Some(body_b64),
         },
         limits: Limits {
-            timeout_ms: Some(1_000),
+            timeout_ms: Some(5_000),
             memory_mb: Some(64),
             fuel: None,
         },
@@ -562,12 +568,22 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
 
     assert_eq!(response.status, 200);
     let body_json = decode_body(response.body_b64.as_ref().expect("body_b64 present"))?;
-    assert_eq!(body_json.get("ok").and_then(|v| v.as_bool()), Some(false));
+    let ok_value = body_json.get("ok").and_then(|v| v.as_bool());
+    assert_eq!(
+        ok_value,
+        Some(true),
+        "ui proxy response payload: {:?}",
+        body_json
+    );
     let proxy = body_json
         .get("proxy")
         .and_then(|v| v.as_object())
         .expect("proxy object present");
-    assert!(proxy.get("error").and_then(|v| v.as_str()).is_none());
+    assert!(
+        proxy.get("error").and_then(|v| v.as_str()).is_none(),
+        "proxy error payload: {:?}",
+        proxy
+    );
     let response_bytes: Vec<u8> = proxy
         .get("response")
         .and_then(|v| v.as_array())
