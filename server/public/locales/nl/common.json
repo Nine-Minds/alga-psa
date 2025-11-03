@@ -39,7 +39,8 @@
     "copy": "Kopiëren",
     "duplicate": "Dupliceren",
     "openMenu": "Menu openen",
-    "confirmDeletion": "Verwijderen bevestigen"
+    "confirmDeletion": "Verwijderen bevestigen",
+    "saving": "Opslaan..."
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -583,9 +584,9 @@
           "enabled": "Trigger actief"
         },
         "placeholders": {
-          "boardIds": "Voer ID's in, gescheiden door komma's of regeleinden",
-          "statusIds": "Voer ID's in, gescheiden door komma's of regeleinden",
-          "priorities": "Voer ID's of namen in, gescheiden door komma's of regeleinden"
+          "boardIds": "Selecteer board",
+          "statusIds": "Status toevoegen",
+          "priorities": "Prioriteit toevoegen"
         },
         "help": {
           "conditions": "Laat een veld leeg om elke waarde toe te staan."
@@ -598,7 +599,12 @@
         "triggerTypes": {
           "ticket_closed": "Ticket afgesloten",
           "project_completed": "Project afgerond"
-        }
+        },
+        "errors": {
+          "reference": "De triggeropties konden niet worden geladen. Probeer het opnieuw."
+        },
+        "noTemplates": "Maak eerst een enquêtemal voordat u triggers toevoegt.",
+        "prioritiesMixed": "De geselecteerde boards gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond."
       },
       "response": {
         "invalidTitle": "Enquête niet beschikbaar",

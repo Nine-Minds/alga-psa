@@ -39,7 +39,8 @@
     "copy": "Kopieren",
     "duplicate": "Duplizieren",
     "openMenu": "Menü öffnen",
-    "confirmDeletion": "Löschung bestätigen"
+    "confirmDeletion": "Löschung bestätigen",
+    "saving": "Speichern..."
   },
   "status": {
     "loading": "Wird geladen...",
@@ -583,9 +584,9 @@
           "enabled": "Auslöser aktiv"
         },
         "placeholders": {
-          "boardIds": "IDs durch Kommas oder Zeilenumbrüche trennen",
-          "statusIds": "IDs durch Kommas oder Zeilenumbrüche trennen",
-          "priorities": "IDs oder Namen durch Kommas oder Zeilenumbrüche trennen"
+          "boardIds": "Board auswählen",
+          "statusIds": "Status hinzufügen",
+          "priorities": "Priorität hinzufügen"
         },
         "help": {
           "conditions": "Felder leer lassen, um alle Werte zuzulassen."
@@ -598,7 +599,12 @@
         "triggerTypes": {
           "ticket_closed": "Ticket geschlossen",
           "project_completed": "Projekt abgeschlossen"
-        }
+        },
+        "errors": {
+          "reference": "Trigger-Optionen konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+        },
+        "noTemplates": "Erstellen Sie eine Umfragevorlage, bevor Sie Auslöser hinzufügen.",
+        "prioritiesMixed": "Die ausgewählten Boards verwenden unterschiedliche Prioritätstypen. Alle Prioritäten werden angezeigt."
       }
     },
     "response": {

@@ -17,6 +17,7 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import TriggerForm from './TriggerForm';
 import { PlusIcon, RefreshCw } from 'lucide-react';
+import { useTriggerReferenceData } from 'server/src/components/surveys/hooks/useTriggerReferenceData';
 
 interface TriggerListProps {
   templates: SurveyTemplate[];
@@ -29,6 +30,7 @@ interface TriggerListProps {
 export function TriggerList({ templates, triggers, isLoading, onTriggersChange, onRefresh }: TriggerListProps) {
   const { t } = useTranslation('common');
   const { toast } = useToast();
+  const { data: referenceData } = useTriggerReferenceData();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTrigger, setEditingTrigger] = useState<SurveyTrigger | null>(null);
@@ -148,9 +150,39 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
     }
   };
 
-  const formatCondition = (values?: string[]) =>
+  const boardsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    referenceData?.boards?.forEach((board) => {
+      if (board.board_id) {
+        map.set(board.board_id, board.board_name ?? board.board_id);
+      }
+    });
+    return map;
+  }, [referenceData?.boards]);
+
+  const statusMap = useMemo(() => {
+    const map = new Map<string, string>();
+    referenceData?.statuses?.forEach((status) => {
+      if (status.status_id) {
+        map.set(status.status_id, status.name);
+      }
+    });
+    return map;
+  }, [referenceData?.statuses]);
+
+  const priorityMap = useMemo(() => {
+    const map = new Map<string, string>();
+    referenceData?.priorities?.forEach((priority) => {
+      if (priority.priority_id) {
+        map.set(priority.priority_id, priority.priority_name);
+      }
+    });
+    return map;
+  }, [referenceData?.priorities]);
+
+  const formatCondition = (values: string[] | undefined, lookup: Map<string, string>) =>
     values && values.length > 0
-      ? values.join(', ')
+      ? values.map((value) => lookup.get(value) ?? value).join(', ')
       : t('surveys.settings.triggerList.conditions.any', 'Any');
 
   const renderConditions = (trigger: SurveyTrigger) => (
@@ -159,19 +191,19 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
         <span className="font-medium">
           {t('surveys.settings.triggerList.conditions.boards', 'Boards')}:
         </span>{' '}
-        {formatCondition(trigger.triggerConditions.board_id)}
+        {formatCondition(trigger.triggerConditions.board_id, boardsMap)}
       </div>
       <div>
         <span className="font-medium">
           {t('surveys.settings.triggerList.conditions.statuses', 'Statuses')}:
         </span>{' '}
-        {formatCondition(trigger.triggerConditions.status_id)}
+        {formatCondition(trigger.triggerConditions.status_id, statusMap)}
       </div>
       <div>
         <span className="font-medium">
           {t('surveys.settings.triggerList.conditions.priorities', 'Priorities')}:
         </span>{' '}
-        {formatCondition(trigger.triggerConditions.priority)}
+        {formatCondition(trigger.triggerConditions.priority, priorityMap)}
       </div>
     </div>
   );

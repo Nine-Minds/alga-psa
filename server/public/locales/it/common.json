@@ -39,7 +39,8 @@
     "copy": "Copia",
     "duplicate": "Duplica",
     "openMenu": "Apri menu",
-    "confirmDeletion": "Conferma eliminazione"
+    "confirmDeletion": "Conferma eliminazione",
+    "saving": "Salvataggio..."
   },
   "status": {
     "loading": "Caricamento...",
@@ -713,9 +714,9 @@
           "enabled": "Trigger attivo"
         },
         "placeholders": {
-          "boardIds": "Inserisci gli ID separati da virgole o a capo",
-          "statusIds": "Inserisci gli ID separati da virgole o a capo",
-          "priorities": "Inserisci ID o nomi separati da virgole o a capo"
+          "boardIds": "Seleziona bacheca",
+          "statusIds": "Aggiungi stato",
+          "priorities": "Aggiungi priorità"
         },
         "help": {
           "conditions": "Lascia un campo vuoto per accettare qualsiasi valore."
@@ -728,7 +729,12 @@
         "triggerTypes": {
           "ticket_closed": "Ticket chiuso",
           "project_completed": "Progetto completato"
-        }
+        },
+        "errors": {
+          "reference": "Impossibile caricare le opzioni del trigger. Riprova."
+        },
+        "noTemplates": "Crea un modello di sondaggio prima di aggiungere i trigger.",
+        "prioritiesMixed": "Le board selezionate utilizzano tipi di priorità diversi. Vengono mostrate tutte le priorità."
       },
       "response": {
         "invalidTitle": "Sondaggio non disponibile",
