@@ -18,12 +18,18 @@ import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
 } from 'server/src/lib/actions/contractLineServiceActions';
-import { updateConfiguration } from 'server/src/lib/actions/contractLineServiceConfigurationActions';
+import {
+  updateConfiguration,
+  upsertContractLineServiceBucketConfigurationAction
+} from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Badge } from 'server/src/components/ui/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { BucketOverlayFields } from './BucketOverlayFields';
+import { BucketOverlayInput } from './ContractWizard';
 
 interface ContractLinesProps {
   contract: IContract;
@@ -61,6 +67,7 @@ interface ServiceConfiguration {
     quantity?: number;
   };
   typeConfig: any;
+  bucketConfig?: any; // Add bucketConfig property for merged bucket data
 }
 
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged }) => {
@@ -74,6 +81,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [editLineData, setEditLineData] = useState<Partial<DetailedContractLineMapping>>({});
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
+  const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
 
   useEffect(() => {
     if (contract.contract_id) {
@@ -181,8 +189,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       // Populate service configs for editing
       const services = lineServices[line.contract_line_id] || [];
       const serviceConfigsData: Record<string, any> = {};
+      const bucketConfigsData: Record<string, BucketOverlayInput | null> = {};
 
       services.forEach(serviceConfig => {
+        const serviceId = serviceConfig.service.service_id;
+
         serviceConfigsData[serviceConfig.configuration.config_id] = {
           quantity: serviceConfig.configuration.quantity,
           custom_rate: serviceConfig.configuration.custom_rate,
@@ -190,9 +201,22 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
           base_rate: serviceConfig.typeConfig?.base_rate,
           unit_of_measure: serviceConfig.typeConfig?.unit_of_measure,
         };
+
+        // Load existing bucket configuration from the bucketConfig property
+        if (serviceConfig.bucketConfig) {
+          bucketConfigsData[serviceId] = {
+            total_minutes: serviceConfig.bucketConfig.total_minutes,
+            overage_rate: serviceConfig.bucketConfig.overage_rate,
+            allow_rollover: serviceConfig.bucketConfig.allow_rollover,
+            billing_period: serviceConfig.bucketConfig.billing_period
+          };
+        } else {
+          bucketConfigsData[serviceId] = null;
+        }
       });
 
       setEditServiceConfigs(serviceConfigsData);
+      setEditBucketConfigs(bucketConfigsData);
     } catch (err) {
       console.error('Error checking contract invoices:', err);
       setError('Failed to check if contract can be edited');
@@ -211,7 +235,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       const services = lineServices[contractLineId] || [];
       for (const serviceConfig of services) {
         const configId = serviceConfig.configuration.config_id;
+        const serviceId = serviceConfig.service.service_id;
         const editData = editServiceConfigs[configId];
+        const bucketConfig = editBucketConfigs[serviceId];
 
         if (editData) {
           const baseConfig: any = {
@@ -241,6 +267,20 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
           await updateConfiguration(configId, baseConfig, typeConfig);
         }
+
+        // Update bucket configuration if it exists
+        if (bucketConfig && bucketConfig.total_minutes !== undefined && bucketConfig.overage_rate !== undefined) {
+          await upsertContractLineServiceBucketConfigurationAction(
+            contractLineId,
+            serviceId,
+            {
+              total_minutes: bucketConfig.total_minutes,
+              overage_rate: bucketConfig.overage_rate,
+              allow_rollover: bucketConfig.allow_rollover ?? false,
+              billing_period: bucketConfig.billing_period ?? 'monthly'
+            }
+          );
+        }
       }
 
       // Reload services for this line
@@ -249,6 +289,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       setEditingLineId(null);
       setEditLineData({});
       setEditServiceConfigs({});
+      setEditBucketConfigs({});
       onContractLinesChanged?.();
     } catch (err) {
       console.error('Error updating contract line:', err);
@@ -260,6 +301,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     setEditingLineId(null);
     setEditLineData({});
     setEditServiceConfigs({});
+    setEditBucketConfigs({});
   };
 
   const formatRate = (rate?: number | null) => {
@@ -724,6 +766,76 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                           </div>
                                         )}
                                       </div>
+
+                                      {/* Bucket Configuration - Hourly and Usage services only */}
+                                      {isEditing && (serviceConfig.configuration.configuration_type === 'Hourly' || serviceConfig.configuration.configuration_type === 'Usage') && (
+                                        <div className="col-span-2 pt-4 border-t border-dashed border-gray-200">
+                                          <SwitchWithLabel
+                                            label="Enable bucket usage tracking"
+                                            checked={Boolean(editBucketConfigs[serviceConfig.service.service_id])}
+                                            onCheckedChange={(checked) => {
+                                              const serviceId = serviceConfig.service.service_id;
+                                              if (checked) {
+                                                // Initialize with default values
+                                                setEditBucketConfigs({
+                                                  ...editBucketConfigs,
+                                                  [serviceId]: {
+                                                    total_minutes: undefined,
+                                                    overage_rate: undefined,
+                                                    allow_rollover: false,
+                                                    billing_period: line.billing_frequency === 'weekly' ? 'weekly' : 'monthly'
+                                                  }
+                                                });
+                                              } else {
+                                                // Remove bucket config
+                                                setEditBucketConfigs({
+                                                  ...editBucketConfigs,
+                                                  [serviceId]: null
+                                                });
+                                              }
+                                            }}
+                                          />
+                                          {editBucketConfigs[serviceConfig.service.service_id] && (
+                                            <BucketOverlayFields
+                                              mode={serviceConfig.configuration.configuration_type === 'Hourly' ? 'hours' : 'usage'}
+                                              value={editBucketConfigs[serviceConfig.service.service_id] || {}}
+                                              onChange={(next) => {
+                                                const serviceId = serviceConfig.service.service_id;
+                                                setEditBucketConfigs({
+                                                  ...editBucketConfigs,
+                                                  [serviceId]: next
+                                                });
+                                              }}
+                                              unitLabel={serviceConfig.typeConfig?.unit_of_measure}
+                                              billingFrequency={line.billing_frequency}
+                                              automationId={`bucket-${serviceConfig.configuration.config_id}`}
+                                            />
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Display bucket configuration in read-only mode */}
+                                      {!isEditing && serviceConfig.bucketConfig && (
+                                        <div className="col-span-2 pt-4 border-t border-dashed border-gray-200">
+                                          <div className="rounded-md border border-blue-100 bg-blue-50 p-4">
+                                            <p className="text-sm font-medium text-blue-900 mb-2">Bucket Configuration</p>
+                                            <div className="text-sm text-blue-800 space-y-1">
+                                              {serviceConfig.bucketConfig.total_minutes && (
+                                                <p>Included: {serviceConfig.configuration.configuration_type === 'Hourly' ? `${(serviceConfig.bucketConfig.total_minutes / 60).toFixed(2)} hours` : `${serviceConfig.bucketConfig.total_minutes} ${serviceConfig.typeConfig?.unit_of_measure || 'units'}`}</p>
+                                              )}
+                                              {serviceConfig.bucketConfig.overage_rate && (
+                                                <p>Overage Rate: {formatRate(serviceConfig.bucketConfig.overage_rate)} per {serviceConfig.configuration.configuration_type === 'Hourly' ? 'hour' : serviceConfig.typeConfig?.unit_of_measure || 'unit'}</p>
+                                              )}
+                                              {serviceConfig.bucketConfig.billing_period && (
+                                                <p>Billing Period: {serviceConfig.bucketConfig.billing_period}</p>
+                                              )}
+                                              {serviceConfig.bucketConfig.allow_rollover && (
+                                                <p>Rollover: Enabled</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })}

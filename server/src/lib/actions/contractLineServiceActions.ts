@@ -342,12 +342,14 @@ export async function removeServiceFromContractLine(contractLineId: string, serv
 
 /**
  * Get all services in a plan with their configurations, service type name, and user type rates (for hourly).
+ * Bucket configurations are merged into their parent Hourly/Usage configurations as a nested property.
  */
 export async function getContractLineServicesWithConfigurations(contractLineId: string): Promise<{
   service: IService & { service_type_name?: string };
   configuration: IContractLineServiceConfiguration;
   typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
-  userTypeRates?: IUserTypeRate[]; // Add userTypeRates to the return type
+  userTypeRates?: IUserTypeRate[];
+  bucketConfig?: IContractLineServiceBucketConfig | null; // Add bucketConfig to the return type
 }[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -355,9 +357,36 @@ export async function getContractLineServicesWithConfigurations(contractLineId: 
   // Get all configurations for the plan
   const configurations = await planServiceConfigActions.getConfigurationsForPlan(contractLineId);
 
-  // Get service details including service type name for each configuration
-  const result: Array<{ service: IService & { service_type_name?: string }; configuration: IContractLineServiceConfiguration; typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null; userTypeRates?: IUserTypeRate[] }> = [];
+  // Group configurations by service_id to merge bucket configs
+  const configsByService = new Map<string, IContractLineServiceConfiguration[]>();
   for (const config of configurations) {
+    if (!configsByService.has(config.service_id)) {
+      configsByService.set(config.service_id, []);
+    }
+    configsByService.get(config.service_id)!.push(config);
+  }
+
+  // Build result with merged bucket configs
+  const result: Array<{
+    service: IService & { service_type_name?: string };
+    configuration: IContractLineServiceConfiguration;
+    typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+    userTypeRates?: IUserTypeRate[];
+    bucketConfig?: IContractLineServiceBucketConfig | null;
+  }> = [];
+
+  for (const [serviceId, serviceConfigs] of configsByService.entries()) {
+    // Find primary config (Hourly, Usage, or Fixed) and bucket config
+    const primaryConfig = serviceConfigs.find(c => c.configuration_type !== 'Bucket');
+    const bucketConfigRecord = serviceConfigs.find(c => c.configuration_type === 'Bucket');
+
+    // If no primary config exists, use bucket as primary (standalone bucket service)
+    const configToUse = primaryConfig || bucketConfigRecord;
+
+    if (!configToUse) {
+      continue;
+    }
+
     // Join service_catalog with service_types to get the name
     const service = await trx('service_catalog as sc')
       .leftJoin('service_types as st', function() {
@@ -365,34 +394,39 @@ export async function getContractLineServicesWithConfigurations(contractLineId: 
             .andOn('sc.tenant', '=', 'st.tenant');
       })
       .where({
-        'sc.service_id': config.service_id,
+        'sc.service_id': serviceId,
         'sc.tenant': tenant
       })
       .select('sc.*', 'st.name as service_type_name')
-      .first() as IService & { service_type_name?: string }; // Cast to include the new field
+      .first() as IService & { service_type_name?: string };
 
     if (!service) {
       continue;
     }
 
-    const configDetails = await planServiceConfigActions.getConfigurationWithDetails(config.config_id);
+    const configDetails = await planServiceConfigActions.getConfigurationWithDetails(configToUse.config_id);
 
     let userTypeRates: IUserTypeRate[] | undefined = undefined;
 
     // If it's an hourly config, fetch user type rates
-    if (config.configuration_type === 'Hourly') {
-      // Assuming PlanServiceHourlyConfig model is accessible or we use an action
-      // For simplicity, let's assume we can access the model instance via the service
-      // This might need adjustment based on actual service/model structure
+    if (configToUse.configuration_type === 'Hourly') {
       const hourlyConfigModel = new (await import('server/src/lib/models/contractLineServiceHourlyConfig')).default(trx);
-      userTypeRates = await hourlyConfigModel.getUserTypeRates(config.config_id);
+      userTypeRates = await hourlyConfigModel.getUserTypeRates(configToUse.config_id);
+    }
+
+    // Fetch bucket config details if it exists
+    let bucketConfigDetails: IContractLineServiceBucketConfig | null = null;
+    if (bucketConfigRecord) {
+      const bucketDetails = await planServiceConfigActions.getConfigurationWithDetails(bucketConfigRecord.config_id);
+      bucketConfigDetails = bucketDetails.typeConfig as IContractLineServiceBucketConfig;
     }
 
     result.push({
       service,
-      configuration: config,
+      configuration: configToUse,
       typeConfig: configDetails.typeConfig,
-      userTypeRates: userTypeRates // Add the fetched rates
+      userTypeRates: userTypeRates,
+      bucketConfig: bucketConfigDetails // Add the merged bucket config
       });
     }
 
@@ -404,6 +438,7 @@ export async function getTemplateLineServicesWithConfigurations(templateLineId: 
   service: IService & { service_type_name?: string };
   configuration: IContractLineServiceConfiguration;
   typeConfig: IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+  bucketConfig?: IContractLineServiceBucketConfig | null; // Add bucketConfig to the return type
 }[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -414,6 +449,15 @@ export async function getTemplateLineServicesWithConfigurations(templateLineId: 
       })
       .select('*');
 
+    // Group configurations by service_id to merge bucket configs
+    const configsByService = new Map<string, any[]>();
+    for (const config of configurations) {
+      if (!configsByService.has(config.service_id)) {
+        configsByService.set(config.service_id, []);
+      }
+      configsByService.get(config.service_id)!.push(config);
+    }
+
     const results: Array<{
       service: IService & { service_type_name?: string };
       configuration: IContractLineServiceConfiguration;
@@ -422,16 +466,28 @@ export async function getTemplateLineServicesWithConfigurations(templateLineId: 
         | IContractLineServiceUsageConfig
         | IContractLineServiceBucketConfig
         | null;
+      bucketConfig?: IContractLineServiceBucketConfig | null;
     }> = [];
 
-    for (const config of configurations) {
+    for (const [serviceId, serviceConfigs] of configsByService.entries()) {
+      // Find primary config (Hourly, Usage, or Fixed) and bucket config
+      const primaryConfig = serviceConfigs.find(c => c.configuration_type !== 'Bucket');
+      const bucketConfigRecord = serviceConfigs.find(c => c.configuration_type === 'Bucket');
+
+      // If no primary config exists, use bucket as primary (standalone bucket service)
+      const configToUse = primaryConfig || bucketConfigRecord;
+
+      if (!configToUse) {
+        continue;
+      }
+
       const service = await trx('service_catalog as sc')
         .leftJoin('service_types as st', function joinTypes() {
           this.on('sc.custom_service_type_id', '=', 'st.id')
             .andOn('sc.tenant', '=', 'st.tenant');
         })
         .where({
-          'sc.service_id': config.service_id,
+          'sc.service_id': serviceId,
           'sc.tenant': tenant,
         })
         .select('sc.*', 'st.name as service_type_name')
@@ -447,38 +503,50 @@ export async function getTemplateLineServicesWithConfigurations(templateLineId: 
         | IContractLineServiceBucketConfig
         | null = null;
 
-      if (config.configuration_type === 'Bucket') {
+      if (configToUse.configuration_type === 'Bucket') {
         typeConfig = await trx('contract_template_line_service_bucket_config')
           .where({
             tenant,
-            config_id: config.config_id,
+            config_id: configToUse.config_id,
           })
           .first();
-      } else if (config.configuration_type === 'Hourly') {
+      } else if (configToUse.configuration_type === 'Hourly') {
         typeConfig = await trx('contract_template_line_service_hourly_config')
           .where({
             tenant,
-            config_id: config.config_id,
+            config_id: configToUse.config_id,
           })
           .first();
-      } else if (config.configuration_type === 'Usage') {
+      } else if (configToUse.configuration_type === 'Usage') {
         typeConfig = await trx('contract_template_line_service_usage_config')
           .where({
             tenant,
-            config_id: config.config_id,
+            config_id: configToUse.config_id,
+          })
+          .first();
+      }
+
+      // Fetch bucket config details if it exists
+      let bucketConfigDetails: IContractLineServiceBucketConfig | null = null;
+      if (bucketConfigRecord) {
+        bucketConfigDetails = await trx('contract_template_line_service_bucket_config')
+          .where({
+            tenant,
+            config_id: bucketConfigRecord.config_id,
           })
           .first();
       }
 
       const configuration: IContractLineServiceConfiguration = {
-        ...config,
-        contract_line_id: config.template_line_id,
+        ...configToUse,
+        contract_line_id: configToUse.template_line_id,
       };
 
       results.push({
         service,
         configuration,
         typeConfig,
+        bucketConfig: bucketConfigDetails, // Add the merged bucket config
       });
     }
 
