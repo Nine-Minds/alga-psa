@@ -1543,7 +1543,7 @@ export interface StatsFilters {
 
 ### Phase 1: Core Infrastructure (MVP)
 **Estimated: 3-5 days**
-**Status: In Progress** (Database, Token Service, Server Actions, and Services ✅ Complete; Email templates and UI pending)
+**Status: In Progress** (Database, Token Service, Server Actions, Services, and Email templates ✅ Complete; UI pending)
 
 1. **Database Setup** ✅ COMPLETE
    - [x] Create migration files for all tables with proper tenant isolation
@@ -1566,11 +1566,11 @@ export interface StatsFilters {
    - [x] Create `surveySubscriber.ts` (listen to ticket closure events)
    - [x] Register subscriber in event bus initialization
 
-5. **Email Integration** ⏳ PENDING
-   - [ ] Register `SURVEY_TICKET_CLOSED` template in `system_email_templates`
-   - [ ] Design HTML email template with rating buttons
-   - [ ] Implement token-based one-click rating links
-   - [ ] Add email provider tests for localization and fallbacks
+5. **Email Integration** ✅ COMPLETE
+   - [x] Register `SURVEY_TICKET_CLOSED` template in `system_email_templates`
+   - [x] Design HTML email template with rating buttons
+   - [x] Implement token-based one-click rating links
+   - [x] Add email provider tests for localization and fallbacks
 
 6. **UI Components** ⏳ PENDING
    - [ ] Build `SurveySettings.tsx` (templates + triggers management)

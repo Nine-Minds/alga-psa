@@ -10,6 +10,7 @@ export interface EmailTemplateContent {
 export interface TemplateProcessorOptions {
   tenantId?: string;
   templateData?: Record<string, any>;
+  locale?: string;
 }
 
 /**
@@ -88,40 +89,63 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
   }
 
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
-    const { tenantId, templateData } = options;
+    const { tenantId, templateData, locale } = options;
+    const requestedLocale = (locale || 'en').toLowerCase();
+    const fallbacks = requestedLocale === 'en' ? ['en'] : [requestedLocale, 'en'];
 
-    // Try to get tenant-specific template first
-    let template: any = null;
-    
-    if (tenantId) {
-      template = await this.knex('tenant_email_templates')
-        .where({ tenant: tenantId, name: this.templateName })
-        .first();
-    }
-    
-    // Fall back to system template if no tenant template
+    const template = await this.fetchTemplate({
+      tenantId,
+      locales: fallbacks,
+    });
+
     if (!template) {
-      template = await this.knex('system_email_templates')
-        .where({ name: this.templateName })
-        .first();
+      const context = tenantId ? `tenant ${tenantId}` : 'system';
+      throw new Error(`Template '${this.templateName}' not found for ${context}`);
     }
-    
-    if (!template) {
-      throw new Error(`Template '${this.templateName}' not found`);
-    }
+
+    const templateVariables = templateData ?? {};
 
     let subject = template.subject;
     let html = template.html_content;
     let text = template.text_content || this.htmlToText(html);
 
     // Replace template variables if data provided
-    if (templateData) {
-      subject = this.replaceTemplateVariables(subject, templateData);
-      html = this.replaceTemplateVariables(html, templateData);
-      text = this.replaceTemplateVariables(text, templateData);
-    }
+    subject = this.replaceTemplateVariables(subject, templateVariables);
+    html = this.replaceTemplateVariables(html, templateVariables);
+    text = this.replaceTemplateVariables(text, templateVariables);
 
     return { subject, html, text };
+  }
+
+  private async fetchTemplate(params: {
+    tenantId?: string;
+    locales: string[];
+  }): Promise<{ subject: string; html_content: string; text_content: string | null } | null> {
+    const { tenantId, locales } = params;
+
+    if (tenantId) {
+      for (const language of locales) {
+        const tenantTemplate = await this.knex('tenant_email_templates')
+          .where({ tenant: tenantId, name: this.templateName, language_code: language })
+          .first();
+
+        if (tenantTemplate) {
+          return tenantTemplate;
+        }
+      }
+    }
+
+    for (const language of locales) {
+      const systemTemplate = await this.knex('system_email_templates')
+        .where({ name: this.templateName, language_code: language })
+        .first();
+
+      if (systemTemplate) {
+        return systemTemplate;
+      }
+    }
+
+    return null;
   }
 }
 

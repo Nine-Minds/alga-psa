@@ -38,13 +38,19 @@ exports.seed = async function(knex) {
         is_enabled: true,
         is_default_enabled: true
       },
-      {
-        name: 'Time Entries',
-        description: 'Notifications related to time tracking and approvals',
-        is_enabled: true,
-        is_default_enabled: true
-      }
-    ]).returning('*');
+    {
+      name: 'Time Entries',
+      description: 'Notifications related to time tracking and approvals',
+      is_enabled: true,
+      is_default_enabled: true
+    },
+    {
+      name: 'Surveys',
+      description: 'Customer satisfaction surveys and feedback loops',
+      is_enabled: true,
+      is_default_enabled: true
+    }
+  ]).returning('*');
   
     // Map categories by name for easier reference
     const categoryMap = categories.reduce((acc, cat) => {
@@ -69,20 +75,29 @@ exports.seed = async function(knex) {
         is_enabled: true,
         is_default_enabled: true
       },
-      {
-        category_id: categoryMap.Tickets.id,
-        name: 'Ticket Updated',
-        description: 'When a ticket is modified',
-        is_enabled: true,
-        is_default_enabled: true
-      },
-      {
-        category_id: categoryMap.Tickets.id,
-        name: 'Ticket Closed',
-        description: 'When a ticket is closed',
-        is_enabled: true,
-        is_default_enabled: true
-      },
+    {
+      category_id: categoryMap.Tickets.id,
+      name: 'Ticket Updated',
+      description: 'When a ticket is modified',
+      is_enabled: true,
+      is_default_enabled: true
+    },
+    {
+      category_id: categoryMap.Tickets.id,
+      name: 'Ticket Closed',
+      description: 'When a ticket is closed',
+      is_enabled: true,
+      is_default_enabled: true
+    },
+
+    // Survey notifications
+    {
+      category_id: categoryMap.Surveys.id,
+      name: 'survey-ticket-closed',
+      description: 'When a customer satisfaction survey invitation is sent after a ticket is closed',
+      is_enabled: true,
+      is_default_enabled: true
+    },
       {
         category_id: categoryMap.Tickets.id,
         name: 'Ticket Comment Added',

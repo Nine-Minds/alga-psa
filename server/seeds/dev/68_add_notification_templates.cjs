@@ -1,3 +1,12 @@
+const {
+  SURVEY_TEMPLATE_NAME,
+  SURVEY_SUBTYPE_NAME,
+  SURVEY_CATEGORY_NAME,
+  SURVEY_TEMPLATE_TRANSLATIONS,
+  buildSurveyHtmlTemplate,
+  buildSurveyTextTemplate,
+} = require('../../migrations/utils/surveyEmailTemplates.cjs');
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> } 
@@ -35,7 +44,14 @@ exports.seed = async function(knex) {
   await knex('tenant_email_templates').del();
 
   // Delete only notification-related system templates, preserve authentication templates
-  const authTemplateNames = ['email-verification', 'password-reset', 'portal-invitation', 'tenant-recovery', 'no-account-found'];
+  const authTemplateNames = [
+    'email-verification',
+    'password-reset',
+    'portal-invitation',
+    'tenant-recovery',
+    'no-account-found',
+    'SURVEY_TICKET_CLOSED'
+  ];
   await knex('system_email_templates')
     .whereNotIn('name', authTemplateNames)
     .del();
@@ -614,6 +630,61 @@ View time entry at: {{timeEntry.url}}
       `
     }
   ]).returning('*');
+
+  const now = new Date();
+  let surveysCategory = await knex('notification_categories').where({ name: SURVEY_CATEGORY_NAME }).first();
+  if (!surveysCategory) {
+    [surveysCategory] = await knex('notification_categories')
+      .insert({
+        name: SURVEY_CATEGORY_NAME,
+        description: 'Customer satisfaction surveys and feedback loops',
+        is_enabled: true,
+        is_default_enabled: true,
+        created_at: now,
+        updated_at: now,
+      })
+      .returning('*');
+  }
+
+  let surveySubtype = await knex('notification_subtypes').where({ name: SURVEY_SUBTYPE_NAME }).first();
+  if (!surveySubtype) {
+    [surveySubtype] = await knex('notification_subtypes')
+      .insert({
+        category_id: surveysCategory.id,
+        name: SURVEY_SUBTYPE_NAME,
+        description: 'Customer satisfaction survey invitation when a ticket is closed',
+        is_enabled: true,
+        is_default_enabled: true,
+        created_at: now,
+        updated_at: now,
+      })
+      .returning('*');
+  }
+
+  for (const translation of SURVEY_TEMPLATE_TRANSLATIONS) {
+    const payload = {
+      name: SURVEY_TEMPLATE_NAME,
+      language_code: translation.language,
+      subject: translation.subject,
+      html_content: buildSurveyHtmlTemplate(translation),
+      text_content: buildSurveyTextTemplate(translation),
+      notification_subtype_id: surveySubtype.id,
+      updated_at: now,
+      created_at: now,
+    };
+
+    const existingSurveyTemplate = await knex('system_email_templates')
+      .where({ name: SURVEY_TEMPLATE_NAME, language_code: translation.language })
+      .first();
+
+    if (existingSurveyTemplate) {
+      await knex('system_email_templates')
+        .where({ id: existingSurveyTemplate.id })
+        .update({ ...payload, created_at: existingSurveyTemplate.created_at });
+    } else {
+      await knex('system_email_templates').insert(payload);
+    }
+  }
 
   // No need to create tenant templates by default - users will customize them as needed
 };
