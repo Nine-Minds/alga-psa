@@ -21,6 +21,10 @@ export interface CustomTabsProps {
     content?: string;
   };
   extraContent?: React.ReactNode;
+  /**
+   * Optional prefix applied to tab trigger ids to satisfy unique id requirements
+   */
+  idPrefix?: string;
   orientation?: 'horizontal' | 'vertical';
 }
 
@@ -30,9 +34,12 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   onTabChange,
   tabStyles,
   extraContent,
+  idPrefix,
   orientation = 'horizontal'
 }) => {
   const [value, setValue] = React.useState(defaultTab || tabs[0].label);
+  const generatedId = React.useId();
+  const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
 
   React.useEffect(() => {
     if (defaultTab) {
@@ -67,9 +74,10 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
       }}
     >
       <Tabs.List className={`${defaultListClass} ${tabStyles?.list || ''}`}>
-        {tabs.map((tab): JSX.Element => (
+        {tabs.map((tab, index): JSX.Element => (
           <Tabs.Trigger
             key={tab.label}
+            id={`${prefix}-trigger-${index}`}
             className={`${defaultTriggerClass} ${tabStyles?.trigger || ''} ${(tabStyles?.activeTrigger || defaultActiveTriggerClass)}`}
             value={tab.label}
           >
@@ -78,9 +86,10 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
         ))}
         {extraContent}
       </Tabs.List>
-      {tabs.map((tab): JSX.Element => (
+      {tabs.map((tab, index): JSX.Element => (
         <Tabs.Content 
-          key={tab.label} 
+          key={tab.label}
+          id={`${prefix}-content-${index}`}
           value={tab.label} 
           className={`focus:outline-none ${tabStyles?.content || ''}`}
         >

@@ -1543,7 +1543,7 @@ export interface StatsFilters {
 
 ### Phase 1: Core Infrastructure (MVP)
 **Estimated: 3-5 days**
-**Status: In Progress** (Database, Token Service, Server Actions, Services, and Email templates ✅ Complete; UI pending)
+**Status: In Progress** (Database, Token Service, Server Actions, Services, Email templates, and UI ✅ Complete)
 
 1. **Database Setup** ✅ COMPLETE
    - [x] Create migration files for all tables with proper tenant isolation
@@ -1572,12 +1572,12 @@ export interface StatsFilters {
    - [x] Implement token-based one-click rating links
    - [x] Add email provider tests for localization and fallbacks
 
-6. **UI Components** ⏳ PENDING
-   - [ ] Build `SurveySettings.tsx` (templates + triggers management)
-   - [ ] Build `TemplateList.tsx` + `TemplateForm.tsx`
-   - [ ] Build `TriggerList.tsx` + `TriggerForm.tsx`
-   - [ ] Build `SurveyResponsePage.tsx` (public survey page)
-   - [ ] Add navigation integration to Settings menu
+6. **UI Components** ✅ COMPLETE
+   - [x] Build `SurveySettings.tsx` (templates + triggers management)
+   - [x] Build `TemplateList.tsx` + `TemplateForm.tsx`
+   - [x] Build `TriggerList.tsx` + `TriggerForm.tsx`
+   - [x] Build `SurveyResponsePage.tsx` (public survey page)
+   - [x] Add navigation integration to Settings menu
 
 7. **API Routes** ⏳ PENDING (optional for external integrations)
    - [ ] `POST /api/surveys/respond` (public, wraps surveyResponseActions)
