@@ -446,5 +446,14 @@
       "namePlaceholder": "Inserisci il nome della cartella",
       "willCreateIn": "Verrà creata in: {{folder}}"
     }
+  },
+  "notifications": {
+    "categories": {
+      "Authentication": "Autenticazione",
+      "Invoices": "Fatture",
+      "Projects": "Progetti",
+      "Tickets": "Ticket",
+      "Time Entries": "Inserimenti orari"
+    }
   }
 }

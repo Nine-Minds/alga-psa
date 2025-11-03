@@ -460,19 +460,24 @@ export async function deleteNotificationAction(
  * Get all categories
  */
 export async function getCategoriesAction(
-  forClientPortal?: boolean
+  forClientPortal?: boolean,
+  locale?: string
 ): Promise<InternalNotificationCategory[]> {
   const { knex } = await (await import("../../db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    let query = trx('internal_notification_categories')
-      .where({ is_enabled: true });
+    let query = trx('internal_notification_categories as cat')
+      .select('cat.*')
+      .where({ 'cat.is_enabled': true });
+
+    // Categories are translated in the frontend using i18n keys
+    // No need to fetch display_title from database
 
     if (forClientPortal === true) {
-      query = query.where({ available_for_client_portal: true });
+      query = query.where({ 'cat.available_for_client_portal': true });
     }
 
-    return await query.orderBy('name');
+    return await query.orderBy('cat.name');
   });
 }
 
@@ -481,22 +486,35 @@ export async function getCategoriesAction(
  */
 export async function getSubtypesAction(
   categoryId: number,
-  forClientPortal?: boolean
+  forClientPortal?: boolean,
+  locale?: string
 ): Promise<InternalNotificationSubtype[]> {
   const { knex } = await (await import("../../db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    let query = trx('internal_notification_subtypes')
+    let query = trx('internal_notification_subtypes as sub')
+      .select('sub.*')
       .where({
-        internal_category_id: categoryId,
-        is_enabled: true
+        'sub.internal_category_id': categoryId,
+        'sub.is_enabled': true
       });
 
-    if (forClientPortal === true) {
-      query = query.where({ available_for_client_portal: true });
+    // Join with templates to get translated titles
+    // We'll get the first template title for this subtype in the user's locale
+    if (locale) {
+      query = query
+        .leftJoin('internal_notification_templates as tmpl', function() {
+          this.on('sub.internal_notification_subtype_id', '=', 'tmpl.subtype_id')
+              .andOn('tmpl.language_code', '=', trx.raw('?', [locale]));
+        })
+        .select(trx.raw('(SELECT title FROM internal_notification_templates WHERE subtype_id = sub.internal_notification_subtype_id AND language_code = ? LIMIT 1) as display_title', [locale]));
     }
 
-    return await query.orderBy('name');
+    if (forClientPortal === true) {
+      query = query.where({ 'sub.available_for_client_portal': true });
+    }
+
+    return await query.orderBy('sub.name');
   });
 }
 

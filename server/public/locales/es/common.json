@@ -446,5 +446,14 @@
       "namePlaceholder": "Ingresa el nombre de la carpeta",
       "willCreateIn": "Se creará en: {{folder}}"
     }
+  },
+  "notifications": {
+    "categories": {
+      "Authentication": "Autenticación",
+      "Invoices": "Facturas",
+      "Projects": "Proyectos",
+      "Tickets": "Tickets",
+      "Time Entries": "Entradas de tiempo"
+    }
   }
 }

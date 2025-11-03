@@ -1,7 +1,7 @@
 /**
  * Internal Notification Types
  *
- * For in-app/internal notifications (not email)
+ * For internal notifications (not email)
  */
 
 export interface InternalNotificationCategory {
@@ -11,6 +11,7 @@ export interface InternalNotificationCategory {
   is_enabled: boolean;
   is_default_enabled: boolean;
   available_for_client_portal: boolean;
+  display_title?: string; // Translated title from templates
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +24,7 @@ export interface InternalNotificationSubtype {
   is_enabled: boolean;
   is_default_enabled: boolean;
   available_for_client_portal: boolean;
+  display_title?: string; // Translated title from templates
   created_at: string;
   updated_at: string;
 }

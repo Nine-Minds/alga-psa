@@ -317,7 +317,7 @@ export function ClientProfile() {
                 onChange={setNotificationView}
                 options={[
                   { value: 'email', label: t('profile.notifications.emailPreferences', 'Email') },
-                  { value: 'internal', label: t('profile.notifications.inAppPreferences', 'In-App') },
+                  { value: 'internal', label: t('profile.notifications.internalPreferences', 'Internal') },
                 ] as ViewSwitcherOption<NotificationView>[]}
               />
             </div>

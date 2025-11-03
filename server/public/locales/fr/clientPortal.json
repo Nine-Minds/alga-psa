@@ -10,7 +10,8 @@
     "account": "Compte",
     "signOut": "Déconnexion",
     "clientPortal": "Portail client",
-    "portal": "Portail"
+    "portal": "Portail",
+    "notifications": "Notifications"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -394,7 +395,9 @@
       "ticketUpdates": "Mises à jour des tickets",
       "projectUpdates": "Mises à jour des projets",
       "invoices": "Notifications de factures",
-      "announcements": "Annonces système"
+      "announcements": "Annonces système",
+      "emailPreferences": "E-mail",
+      "internalPreferences": "Internes"
     },
     "actions": {
       "save": "Enregistrer les modifications",
@@ -952,7 +955,24 @@
     "markAllAsRead": "Tout marquer comme lu",
     "noNotifications": "Aucune nouvelle notification",
     "settings": "Paramètres de notification",
-    "viewAll": "Voir toutes les notifications"
+    "viewAll": "Voir toutes les notifications",
+    "preferences": {
+      "title": "Préférences de notification",
+      "description": "Gérez les notifications internes que vous recevez",
+      "loading": "Chargement des préférences...",
+      "loadError": "Échec du chargement des préférences",
+      "saveError": "Échec de l'enregistrement de la préférence",
+      "noCategories": "Aucune catégorie de notification disponible",
+      "emailPreferences": "E-mail",
+      "internalPreferences": "Internes"
+    },
+    "categories": {
+      "tickets": "Tickets",
+      "invoices": "Factures",
+      "messages": "Messages",
+      "projects": "Projets",
+      "system": "Système"
+    }
   },
   "pagination": {
     "showing": "Affichage de {{from}} à {{to}} sur {{total}} résultats",

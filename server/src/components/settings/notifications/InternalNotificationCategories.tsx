@@ -209,7 +209,7 @@ function InternalNotificationCategoriesContent({
         <div>
           <h2 className="text-lg font-semibold">Internal Notification Categories</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Control which in-app notification types are available system-wide and set defaults for new users.
+            Control which internal notification types are available system-wide and set defaults for new users.
           </p>
           <ul className="text-sm text-gray-600 mt-2 ml-4 list-disc space-y-1">
             <li><strong>Enabled:</strong> Controls whether this notification type is active in the system</li>

@@ -15,8 +15,10 @@ import {
   UserInternalNotificationPreference
 } from "server/src/lib/models/internalNotification";
 import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
+import { useTranslation } from "server/src/lib/i18n/client";
 
 export function InternalNotificationPreferences() {
+  const { t, i18n } = useTranslation('clientPortal');
   const [categories, setCategories] = useState<InternalNotificationCategory[]>([]);
   const [subtypes, setSubtypes] = useState<Record<number, InternalNotificationSubtype[]>>({});
   const [preferences, setPreferences] = useState<UserInternalNotificationPreference[]>([]);
@@ -31,7 +33,7 @@ export function InternalNotificationPreferences() {
         const currentUser = await getCurrentUser();
 
         if (!currentUser) {
-          setError("User not found");
+          setError(t('profile.messages.userNotFound', 'User not found'));
           setLoading(false);
           return;
         }
@@ -42,10 +44,13 @@ export function InternalNotificationPreferences() {
         setTenant(userTenant);
         setUserId(currentUser.user_id);
 
+        // Get user's locale from i18n
+        const userLocale = i18n.language || 'en';
+
         // Load categories and preferences in parallel
         // Filter to only client portal categories if user is a client
         const [categoriesData, preferencesData] = await Promise.all([
-          getInternalCategoriesAction(isClientPortalUser),
+          getInternalCategoriesAction(isClientPortalUser, userLocale),
           getUserInternalNotificationPreferencesAction(userTenant, currentUser.user_id)
         ]);
 
@@ -58,7 +63,8 @@ export function InternalNotificationPreferences() {
           categoriesData.map(async (category) => {
             const categorySubtypes = await getInternalSubtypesAction(
               category.internal_notification_category_id,
-              isClientPortalUser
+              isClientPortalUser,
+              userLocale
             );
             subtypesData[category.internal_notification_category_id] = categorySubtypes;
           })
@@ -68,12 +74,12 @@ export function InternalNotificationPreferences() {
         setLoading(false);
       } catch (err) {
         console.error('[InternalNotificationPreferences] Error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load preferences');
+        setError(err instanceof Error ? err.message : t('notifications.preferences.loadError', 'Failed to load preferences'));
         setLoading(false);
       }
     }
     init();
-  }, []);
+  }, [t, i18n]);
 
   const getCategoryPreference = (categoryId: number): boolean => {
     // Check if there's a category-level preference
@@ -133,7 +139,7 @@ export function InternalNotificationPreferences() {
       setPreferences(updatedPreferences);
     } catch (err) {
       console.error("Failed to update category preference:", err);
-      setError("Failed to save preference");
+      setError(t('notifications.preferences.saveError', 'Failed to save preference'));
     }
   };
 
@@ -156,12 +162,12 @@ export function InternalNotificationPreferences() {
       setPreferences(updatedPreferences);
     } catch (err) {
       console.error("Failed to update subtype preference:", err);
-      setError("Failed to save preference");
+      setError(t('notifications.preferences.saveError', 'Failed to save preference'));
     }
   };
 
   if (loading) {
-    return <div>Loading preferences...</div>;
+    return <div>{t('notifications.preferences.loading', 'Loading preferences...')}</div>;
   }
 
   if (error) {
@@ -177,7 +183,7 @@ export function InternalNotificationPreferences() {
         return (
           <div key={category.internal_notification_category_id} className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>{category.name}</Label>
+              <Label>{t(`notifications.categories.${category.name}`, category.name)}</Label>
               <Switch
                 checked={isEnabled}
                 onCheckedChange={() => handleCategoryToggle(category.internal_notification_category_id)}
@@ -193,7 +199,7 @@ export function InternalNotificationPreferences() {
 
                 return (
                   <div key={subtype.internal_notification_subtype_id} className="flex items-center justify-between">
-                    <Label className="text-sm">{subtype.name}</Label>
+                    <Label className="text-sm">{subtype.display_title || subtype.name}</Label>
                     <Switch
                       checked={subtypeEnabled}
                       disabled={!category.is_enabled || !subtype.is_enabled || !isEnabled}
@@ -211,7 +217,7 @@ export function InternalNotificationPreferences() {
       })}
 
       {categories.length === 0 && (
-        <p className="text-center text-gray-500">No notification categories available</p>
+        <p className="text-center text-gray-500">{t('notifications.preferences.noCategories', 'No notification categories available')}</p>
       )}
     </div>
   );

@@ -48,6 +48,18 @@ exports.up = async function(knex) {
       'message-sent': {
         title: 'Nouveau message',
         message: '{{senderName}}: {{messagePreview}}'
+      },
+      'invoice-generated': {
+        title: 'Nouvelle facture générée',
+        message: 'La facture #{{invoiceNumber}} pour {{clientName}} a été générée'
+      },
+      'payment-received': {
+        title: 'Paiement reçu',
+        message: 'Paiement de {{amount}} reçu pour la facture #{{invoiceNumber}}'
+      },
+      'payment-overdue': {
+        title: 'Paiement en retard',
+        message: 'La facture #{{invoiceNumber}} est en retard de {{daysOverdue}} jours'
       }
     },
     es: {
@@ -70,6 +82,18 @@ exports.up = async function(knex) {
       'message-sent': {
         title: 'Nuevo mensaje',
         message: '{{senderName}}: {{messagePreview}}'
+      },
+      'invoice-generated': {
+        title: 'Nueva factura generada',
+        message: 'La factura #{{invoiceNumber}} para {{clientName}} ha sido generada'
+      },
+      'payment-received': {
+        title: 'Pago recibido',
+        message: 'Pago de {{amount}} recibido para la factura #{{invoiceNumber}}'
+      },
+      'payment-overdue': {
+        title: 'Pago vencido',
+        message: 'La factura #{{invoiceNumber}} está vencida desde hace {{daysOverdue}} días'
       }
     },
     de: {
@@ -92,6 +116,18 @@ exports.up = async function(knex) {
       'message-sent': {
         title: 'Neue Nachricht',
         message: '{{senderName}}: {{messagePreview}}'
+      },
+      'invoice-generated': {
+        title: 'Neue Rechnung erstellt',
+        message: 'Rechnung #{{invoiceNumber}} für {{clientName}} wurde erstellt'
+      },
+      'payment-received': {
+        title: 'Zahlung erhalten',
+        message: 'Zahlung von {{amount}} für Rechnung #{{invoiceNumber}} erhalten'
+      },
+      'payment-overdue': {
+        title: 'Zahlung überfällig',
+        message: 'Rechnung #{{invoiceNumber}} ist {{daysOverdue}} Tage überfällig'
       }
     },
     nl: {
@@ -114,6 +150,18 @@ exports.up = async function(knex) {
       'message-sent': {
         title: 'Nieuw bericht',
         message: '{{senderName}}: {{messagePreview}}'
+      },
+      'invoice-generated': {
+        title: 'Nieuwe factuur gegenereerd',
+        message: 'Factuur #{{invoiceNumber}} voor {{clientName}} is gegenereerd'
+      },
+      'payment-received': {
+        title: 'Betaling ontvangen',
+        message: 'Betaling van {{amount}} ontvangen voor factuur #{{invoiceNumber}}'
+      },
+      'payment-overdue': {
+        title: 'Betaling achterstallig',
+        message: 'Factuur #{{invoiceNumber}} is {{daysOverdue}} dagen achterstallig'
       }
     },
     it: {
@@ -136,6 +184,18 @@ exports.up = async function(knex) {
       'message-sent': {
         title: 'Nuovo messaggio',
         message: '{{senderName}}: {{messagePreview}}'
+      },
+      'invoice-generated': {
+        title: 'Nuova fattura generata',
+        message: 'La fattura #{{invoiceNumber}} per {{clientName}} è stata generata'
+      },
+      'payment-received': {
+        title: 'Pagamento ricevuto',
+        message: 'Pagamento di {{amount}} ricevuto per la fattura #{{invoiceNumber}}'
+      },
+      'payment-overdue': {
+        title: 'Pagamento scaduto',
+        message: 'La fattura #{{invoiceNumber}} è scaduta da {{daysOverdue}} giorni'
       }
     }
   };
