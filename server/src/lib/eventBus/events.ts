@@ -269,4 +269,7 @@ export type Event =
   | CalendarSyncStartedEvent
   | CalendarSyncCompletedEvent
   | CalendarSyncFailedEvent
-  | CalendarConflictDetectedEvent;
+  | CalendarConflictDetectedEvent
+  | SurveyInvitationSentEvent
+  | SurveyResponseSubmittedEvent
+  | SurveyNegativeResponseEvent;
