@@ -9,10 +9,27 @@ function jsonbDefault(knex, fallback) {
   return knex.raw(`${fallback}::jsonb`);
 }
 
+async function ensureTable(knex, tableName, builder) {
+  const exists = await knex.schema.hasTable(tableName);
+  if (!exists) {
+    await knex.schema.createTable(tableName, builder);
+    return true;
+  }
+  return false;
+}
+
+async function ensureIndex(knex, table, sql) {
+  const exists = await knex.schema.hasTable(table);
+  if (!exists) {
+    return;
+  }
+  await knex.raw(sql);
+}
+
 exports.up = async function up(knex) {
   const clientReference = await resolveClientReference(knex);
 
-  await knex.schema.createTable(TABLES.templates, (table) => {
+  await ensureTable(knex, TABLES.templates, (table) => {
     table.uuid('template_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.string('template_name', 255).notNullable();
@@ -35,7 +52,7 @@ exports.up = async function up(knex) {
       .inTable('tenants');
   });
 
-  await knex.schema.createTable(TABLES.triggers, (table) => {
+  await ensureTable(knex, TABLES.triggers, (table) => {
     table.uuid('trigger_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.uuid('template_id').notNullable();
@@ -57,7 +74,7 @@ exports.up = async function up(knex) {
       .inTable('tenants');
   });
 
-  await knex.schema.createTable(TABLES.invitations, (table) => {
+  await ensureTable(knex, TABLES.invitations, (table) => {
     table.uuid('invitation_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.uuid('ticket_id').notNullable();
@@ -98,7 +115,7 @@ exports.up = async function up(knex) {
       .inTable('tenants');
   });
 
-  await knex.schema.createTable(TABLES.responses, (table) => {
+  await ensureTable(knex, TABLES.responses, (table) => {
     table.uuid('response_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('tenant').notNullable();
     table.uuid('ticket_id').notNullable();
@@ -139,68 +156,70 @@ exports.up = async function up(knex) {
       .inTable('tenants');
   });
 
-  await knex.raw(`
-    ALTER TABLE ${TABLES.templates} ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE ${TABLES.triggers} ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE ${TABLES.invitations} ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE ${TABLES.responses} ENABLE ROW LEVEL SECURITY;
-  `);
+  await ensureIndex(
+    knex,
+    TABLES.triggers,
+    `CREATE INDEX IF NOT EXISTS idx_survey_triggers_tenant_type
+        ON ${TABLES.triggers} (tenant, trigger_type)
+        WHERE enabled = true`
+  );
+  await ensureIndex(
+    knex,
+    TABLES.triggers,
+    `CREATE INDEX IF NOT EXISTS idx_survey_triggers_template
+        ON ${TABLES.triggers} (tenant, template_id)`
+  );
 
-  await knex.raw(`
-    CREATE POLICY tenant_isolation ON ${TABLES.templates}
-      USING (tenant = current_setting('app.current_tenant')::uuid);
-    CREATE POLICY tenant_isolation ON ${TABLES.triggers}
-      USING (tenant = current_setting('app.current_tenant')::uuid);
-    CREATE POLICY tenant_isolation ON ${TABLES.invitations}
-      USING (tenant = current_setting('app.current_tenant')::uuid);
-    CREATE POLICY tenant_isolation ON ${TABLES.responses}
-      USING (tenant = current_setting('app.current_tenant')::uuid);
-  `);
+  await ensureIndex(
+    knex,
+    TABLES.invitations,
+    `CREATE INDEX IF NOT EXISTS idx_survey_invitations_tenant_ticket
+        ON ${TABLES.invitations} (tenant, ticket_id)`
+  );
+  await ensureIndex(
+    knex,
+    TABLES.invitations,
+    `CREATE INDEX IF NOT EXISTS idx_survey_invitations_token
+        ON ${TABLES.invitations} (tenant, survey_token_hash)`
+  );
+  await ensureIndex(
+    knex,
+    TABLES.invitations,
+    `CREATE INDEX IF NOT EXISTS idx_survey_invitations_sent
+        ON ${TABLES.invitations} (tenant, sent_at DESC)`
+  );
 
-  await knex.raw(`
-    CREATE INDEX idx_survey_triggers_tenant_type
-      ON ${TABLES.triggers} (tenant, trigger_type)
-      WHERE enabled = true;
-  `);
-  await knex.raw(`
-    CREATE INDEX idx_survey_triggers_template
-      ON ${TABLES.triggers} (tenant, template_id);
-  `);
-
-  await knex.raw(`
-    CREATE INDEX idx_survey_invitations_tenant_ticket
-      ON ${TABLES.invitations} (tenant, ticket_id);
-  `);
-  await knex.raw(`
-    CREATE INDEX idx_survey_invitations_token
-      ON ${TABLES.invitations} (tenant, survey_token_hash);
-  `);
-  await knex.raw(`
-    CREATE INDEX idx_survey_invitations_sent
-      ON ${TABLES.invitations} (tenant, sent_at DESC);
-  `);
-
-  await knex.raw(`
-    CREATE INDEX idx_survey_responses_tenant_ticket
-      ON ${TABLES.responses} (tenant, ticket_id);
-  `);
-  await knex.raw(`
-    CREATE INDEX idx_survey_responses_tenant_client
-      ON ${TABLES.responses} (tenant, client_id);
-  `);
-  await knex.raw(`
-    CREATE INDEX idx_survey_responses_tenant_submitted
-      ON ${TABLES.responses} (tenant, submitted_at);
-  `);
-  await knex.raw(`
-    CREATE INDEX idx_survey_responses_token
-      ON ${TABLES.responses} (tenant, survey_token_hash)
-      WHERE submitted_at IS NULL;
-  `);
-  await knex.raw(`
-    CREATE INDEX idx_survey_responses_rating
-      ON ${TABLES.responses} (tenant, rating);
-  `);
+  await ensureIndex(
+    knex,
+    TABLES.responses,
+    `CREATE INDEX IF NOT EXISTS idx_survey_responses_tenant_ticket
+        ON ${TABLES.responses} (tenant, ticket_id)`
+  );
+  await ensureIndex(
+    knex,
+    TABLES.responses,
+    `CREATE INDEX IF NOT EXISTS idx_survey_responses_tenant_client
+        ON ${TABLES.responses} (tenant, client_id)`
+  );
+  await ensureIndex(
+    knex,
+    TABLES.responses,
+    `CREATE INDEX IF NOT EXISTS idx_survey_responses_tenant_submitted
+        ON ${TABLES.responses} (tenant, submitted_at)`
+  );
+  await ensureIndex(
+    knex,
+    TABLES.responses,
+    `CREATE INDEX IF NOT EXISTS idx_survey_responses_token
+        ON ${TABLES.responses} (tenant, survey_token_hash)
+        WHERE submitted_at IS NULL`
+  );
+  await ensureIndex(
+    knex,
+    TABLES.responses,
+    `CREATE INDEX IF NOT EXISTS idx_survey_responses_rating
+        ON ${TABLES.responses} (tenant, rating)`
+  );
 };
 
 async function resolveClientReference(knex) {

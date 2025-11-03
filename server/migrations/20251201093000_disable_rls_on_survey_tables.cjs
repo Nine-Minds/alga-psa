@@ -14,10 +14,18 @@ const POLICIES = {
 
 exports.up = async function up(knex) {
   for (const table of TABLES) {
+    const exists = await knex.schema.hasTable(table);
+    if (!exists) {
+      continue;
+    }
     await knex.raw(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
   }
 
   for (const [table, policies] of Object.entries(POLICIES)) {
+    const exists = await knex.schema.hasTable(table);
+    if (!exists) {
+      continue;
+    }
     for (const policy of policies) {
       await knex.raw(`DROP POLICY IF EXISTS ${policy} ON ${table}`);
     }
@@ -26,6 +34,10 @@ exports.up = async function up(knex) {
 
 exports.down = async function down(knex) {
   for (const table of TABLES) {
+    const exists = await knex.schema.hasTable(table);
+    if (!exists) {
+      continue;
+    }
     await knex.raw(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
   }
 };

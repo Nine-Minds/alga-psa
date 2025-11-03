@@ -1,4 +1,4 @@
-'use server';
+"use server";
 
 import { withTransaction } from '@alga-psa/shared/db';
 import type { Knex } from 'knex';
@@ -7,8 +7,8 @@ import { z } from 'zod';
 import { createTenantKnex, runWithTenant } from '../db';
 import { getCurrentUser } from './user-actions/userActions';
 
-export const SURVEY_TEMPLATE_TABLE = 'survey_templates';
-export const SURVEY_TRIGGER_TABLE = 'survey_triggers';
+const SURVEY_TEMPLATE_TABLE = 'survey_templates';
+const SURVEY_TRIGGER_TABLE = 'survey_triggers';
 
 const ratingTypeSchema = z.enum(['stars', 'numbers', 'emojis']);
 const ratingScaleSchema = z.union([z.literal(3), z.literal(5), z.literal(10)]);
