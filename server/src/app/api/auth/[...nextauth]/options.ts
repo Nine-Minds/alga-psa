@@ -1,6 +1,7 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers/azure-ad";
 import type { NextAuthConfig } from "next-auth";
 import "server/src/types/next-auth";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
@@ -14,6 +15,7 @@ import {
 } from "server/src/lib/auth/sessionCookies";
 import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "server/src/lib/utils/tenantSlug";
+import { isEnterprise } from "server/src/lib/features";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -197,18 +199,87 @@ interface ExtendedUser {
     contactId?: string;
 }
 
+type EnterpriseOAuthProvider = 'google' | 'microsoft';
+
+async function mapOAuthProfileToExtendedUser({
+    provider,
+    email,
+    image,
+    profile,
+}: {
+    provider: EnterpriseOAuthProvider;
+    email?: string | null;
+    image?: unknown;
+    profile: Record<string, unknown>;
+}): Promise<ExtendedUser> {
+    const logger = (await import('@alga-psa/shared/core/logger')).default;
+
+    if (!email || typeof email !== 'string') {
+        logger.warn(`[auth] ${provider} profile missing email`, { profile });
+        throw new Error('User not found');
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const User = (await import('server/src/lib/models/user')).default;
+
+    logger.info(`[auth] Starting ${provider} OAuth`, { email: normalizedEmail });
+    const user = await User.findUserByEmail(normalizedEmail);
+
+    if (!user || !user.user_id) {
+        logger.warn(`[auth] User not found during ${provider} OAuth`, { email: normalizedEmail });
+        throw new Error('User not found');
+    }
+
+    if (user.is_inactive) {
+        logger.warn(`[auth] Inactive user attempted ${provider} OAuth`, { email: normalizedEmail });
+        throw new Error('User not found');
+    }
+
+    logger.info(`[auth] ${provider} OAuth successful`, { email: normalizedEmail });
+
+    const displayName = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
+
+    return {
+        id: user.user_id.toString(),
+        email: user.email,
+        name: displayName.length > 0 ? displayName : user.username,
+        username: user.username,
+        image: typeof image === 'string' ? image : undefined,
+        proToken: '',
+        tenant: user.tenant,
+        user_type: user.user_type,
+        clientId: user.client_id ?? undefined,
+        contactId: user.contact_id ?? undefined,
+    };
+}
+
 // Helper function to get OAuth secrets from secret provider with env fallback
 async function getOAuthSecrets() {
     const { getSecretProviderInstance } = await import('@alga-psa/shared/core/secretProvider');
     const secretProvider = await getSecretProviderInstance();
 
-    const [googleClientId, googleClientSecret, keycloakClientId, keycloakClientSecret, keycloakUrl, keycloakRealm] = await Promise.all([
+    const [
+        googleClientId,
+        googleClientSecret,
+        keycloakClientId,
+        keycloakClientSecret,
+        keycloakUrl,
+        keycloakRealm,
+        microsoftClientId,
+        microsoftClientSecret,
+        microsoftTenantId,
+        microsoftAuthority,
+    ] = await Promise.all([
         secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_ID'),
         secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_SECRET'),
         secretProvider.getAppSecret('KEYCLOAK_CLIENT_ID'),
         secretProvider.getAppSecret('KEYCLOAK_CLIENT_SECRET'),
         secretProvider.getAppSecret('KEYCLOAK_URL'),
-        secretProvider.getAppSecret('KEYCLOAK_REALM')
+        secretProvider.getAppSecret('KEYCLOAK_REALM'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_CLIENT_ID'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_CLIENT_SECRET'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_TENANT_ID'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_AUTHORITY'),
     ]);
 
     return {
@@ -217,7 +288,11 @@ async function getOAuthSecrets() {
         keycloakClientId: keycloakClientId || process.env.KEYCLOAK_CLIENT_ID || '',
         keycloakClientSecret: keycloakClientSecret || process.env.KEYCLOAK_CLIENT_SECRET || '',
         keycloakUrl: keycloakUrl || process.env.KEYCLOAK_URL || '',
-        keycloakRealm: keycloakRealm || process.env.KEYCLOAK_REALM || ''
+        keycloakRealm: keycloakRealm || process.env.KEYCLOAK_REALM || '',
+        microsoftClientId: microsoftClientId || process.env.MICROSOFT_OAUTH_CLIENT_ID || '',
+        microsoftClientSecret: microsoftClientSecret || process.env.MICROSOFT_OAUTH_CLIENT_SECRET || '',
+        microsoftTenantId: microsoftTenantId || process.env.MICROSOFT_OAUTH_TENANT_ID || '',
+        microsoftAuthority: microsoftAuthority || process.env.MICROSOFT_OAUTH_AUTHORITY || '',
     };
 }
 
@@ -230,44 +305,43 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
     trustHost: true,
     secret: nextAuthSecret,
     providers: [
-        GoogleProvider({
-            clientId: secrets.googleClientId,
-            clientSecret: secrets.googleClientSecret,
-            profile: async (profile): Promise<ExtendedUser> => {
-                const logger = (await import('@alga-psa/shared/core/logger')).default;
-                const User = (await import('server/src/lib/models/user')).default;
-                logger.info("Starting Google OAuth")
-                const user = await User.findUserByEmail(profile.email);
-                if (!user || !user.user_id) {
-                    logger.warn("User not found with email", profile.email);
-                    throw new Error("User not found");
-                }
-
-                // Check if user is inactive
-                if (user.is_inactive) {
-                    logger.warn(`Inactive user attempted to login via Google: ${profile.email}`);
-                    // Track failed Google login due to inactive account
-                    // const { analytics } = await import('server/src/lib/analytics/posthog');
-                    // analytics.capture('login_failed', {
-                    //     reason: 'inactive_account',
-                    //     provider: 'google',
-                    // });
-                    throw new Error("User not found");
-                }
-
-                logger.info("User sign in successful with email", profile.email);
-                return {
-                    id: user.user_id.toString(),
-                    email: user.email,
-                    name: `${user.first_name} ${user.last_name}`,
-                    username: user.username,
-                    image: profile.picture,
-                    proToken: '',
-                    tenant: user.tenant,
-                    user_type: user.user_type
-                };
-            },
-        }),
+        ...(isEnterprise && secrets.googleClientId && secrets.googleClientSecret
+            ? [
+                GoogleProvider({
+                    clientId: secrets.googleClientId,
+                    clientSecret: secrets.googleClientSecret,
+                    profile: async (profile): Promise<ExtendedUser> =>
+                        mapOAuthProfileToExtendedUser({
+                            provider: 'google',
+                            email: profile.email,
+                            image: profile.picture,
+                            profile,
+                        }),
+                }),
+            ]
+            : []),
+        ...(isEnterprise && secrets.microsoftClientId && secrets.microsoftClientSecret
+            ? [
+                AzureADProvider({
+                    clientId: secrets.microsoftClientId,
+                    clientSecret: secrets.microsoftClientSecret,
+                    tenantId: secrets.microsoftTenantId || 'common',
+                    profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
+                        const emailCandidate =
+                            profile.email ??
+                            profile.mail ??
+                            profile.preferred_username ??
+                            profile.userPrincipalName;
+                        return mapOAuthProfileToExtendedUser({
+                            provider: 'microsoft',
+                            email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
+                            image: profile.picture ?? profile.photo ?? undefined,
+                            profile,
+                        });
+                    },
+                }),
+            ]
+            : []),
         CredentialsProvider({
             name: "Credentials",
             credentials: {
@@ -422,26 +496,33 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 }
             }
         }),
-        KeycloakProvider({
-            clientId: secrets.keycloakClientId,
-            clientSecret: secrets.keycloakClientSecret,
-            issuer: `${secrets.keycloakUrl}/realms/${secrets.keycloakRealm}`,
-            profile: async (profile): Promise<ExtendedUser> => {
-                const logger = (await import('@alga-psa/shared/core/logger')).default;
-                logger.info("Starting Keycloak OAuth")
-                return {
-                    id: profile.sub,
-                    name: profile.name ?? profile.preferred_username,
-                    email: profile.email,
-                    image: profile.picture,
-                    username: profile.preferred_username,
-                    proToken: '',
-                    tenant: profile.tenant,
-                    user_type: profile.user_type,
-                    clientId: profile.clientId
-                }
-            },
-        }),
+        ...(secrets.keycloakClientId &&
+        secrets.keycloakClientSecret &&
+        secrets.keycloakUrl &&
+        secrets.keycloakRealm
+            ? [
+                KeycloakProvider({
+                    clientId: secrets.keycloakClientId,
+                    clientSecret: secrets.keycloakClientSecret,
+                    issuer: `${secrets.keycloakUrl}/realms/${secrets.keycloakRealm}`,
+                    profile: async (profile): Promise<ExtendedUser> => {
+                        const logger = (await import('@alga-psa/shared/core/logger')).default;
+                        logger.info("Starting Keycloak OAuth");
+                        return {
+                            id: profile.sub,
+                            name: profile.name ?? profile.preferred_username,
+                            email: profile.email,
+                            image: profile.picture,
+                            username: profile.preferred_username,
+                            proToken: '',
+                            tenant: profile.tenant,
+                            user_type: profile.user_type,
+                            clientId: profile.clientId,
+                        };
+                    },
+                }),
+            ]
+            : []),
         // CredentialsProvider({
         //     id: "keycloak-credentials",
         //     name: "Keycloak-credentials",
@@ -760,22 +841,47 @@ export const options: NextAuthConfig = {
     trustHost: true,
     secret: getNextAuthSecretSync(),
     providers: [
-        GoogleProvider({
-            clientId: process.env.GOOGLE_OAUTH_CLIENT_ID as string,
-            clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
-            profile: async (profile): Promise<ExtendedUser> => {
-                return {
-                    id: (profile as any).sub || profile.email,
-                    email: profile.email,
-                    name: (profile as any).name || '',
-                    username: (profile as any).given_name || profile.email?.split('@')[0] || '',
-                    image: (profile as any).picture,
-                    proToken: '',
-                    tenant: '',
-                    user_type: 'internal'
-                };
-            },
-        }),
+        ...(isEnterprise &&
+        process.env.GOOGLE_OAUTH_CLIENT_ID &&
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET
+            ? [
+                GoogleProvider({
+                    clientId: process.env.GOOGLE_OAUTH_CLIENT_ID as string,
+                    clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
+                    profile: async (profile): Promise<ExtendedUser> =>
+                        mapOAuthProfileToExtendedUser({
+                            provider: 'google',
+                            email: profile.email,
+                            image: (profile as any).picture,
+                            profile,
+                        }),
+                }),
+            ]
+            : []),
+        ...(isEnterprise &&
+        process.env.MICROSOFT_OAUTH_CLIENT_ID &&
+        process.env.MICROSOFT_OAUTH_CLIENT_SECRET
+            ? [
+                AzureADProvider({
+                    clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
+                    clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
+                    tenantId: process.env.MICROSOFT_OAUTH_TENANT_ID || 'common',
+                    profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
+                        const emailCandidate =
+                            profile.email ??
+                            profile.mail ??
+                            profile.preferred_username ??
+                            profile.userPrincipalName;
+                        return mapOAuthProfileToExtendedUser({
+                            provider: 'microsoft',
+                            email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
+                            image: profile.picture ?? profile.photo ?? undefined,
+                            profile,
+                        });
+                    },
+                }),
+            ]
+            : []),
         CredentialsProvider({
             name: "Credentials",
             credentials: {
@@ -928,24 +1034,31 @@ export const options: NextAuthConfig = {
                 }
             }
         }),
-        KeycloakProvider({
-            clientId: process.env.KEYCLOAK_CLIENT_ID as string,
-            clientSecret: process.env.KEYCLOAK_CLIENT_SECRET as string,
-            issuer: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`,
-            profile: async (profile): Promise<ExtendedUser> => {
-                return {
-                    id: (profile as any).sub || (profile as any).email,
-                    name: (profile as any).name || (profile as any).preferred_username,
-                    email: (profile as any).email,
-                    image: (profile as any).picture,
-                    username: (profile as any).preferred_username || '',
-                    proToken: '',
-                    tenant: '',
-                    user_type: 'internal',
-                    clientId: (profile as any).clientId
-                };
-            },
-        }),
+        ...(process.env.KEYCLOAK_CLIENT_ID &&
+        process.env.KEYCLOAK_CLIENT_SECRET &&
+        process.env.KEYCLOAK_URL &&
+        process.env.KEYCLOAK_REALM
+            ? [
+                KeycloakProvider({
+                    clientId: process.env.KEYCLOAK_CLIENT_ID as string,
+                    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET as string,
+                    issuer: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`,
+                    profile: async (profile): Promise<ExtendedUser> => {
+                        return {
+                            id: (profile as any).sub || (profile as any).email,
+                            name: (profile as any).name || (profile as any).preferred_username,
+                            email: (profile as any).email,
+                            image: (profile as any).picture,
+                            username: (profile as any).preferred_username || '',
+                            proToken: '',
+                            tenant: (profile as any).tenant,
+                            user_type: (profile as any).user_type ?? 'internal',
+                            clientId: (profile as any).clientId,
+                        };
+                    },
+                }),
+            ]
+            : []),
         // CredentialsProvider({
         //     id: "keycloak-credentials",
         //     name: "Keycloak-credentials",

@@ -9,11 +9,11 @@
 
 ### Phase 0 – Foundations and Provider Enablement
 - [ ] Provision Azure AD enterprise app, confirm Google OAuth project, and capture client IDs, secrets, tenant IDs, and redirect URIs.
-- [ ] Update secret loader so Microsoft OAuth values (client ID, secret, authority/tenant) are available alongside Google via `getNextAuthSecret`.
-- [ ] Add Microsoft provider configuration (e.g., `AzureADProvider`) and refresh Google provider options to share the common claim extractor.
-- [ ] Refresh `.env.example`, devbox/dev compose templates, and developer docs to include both providers for local testing.
-- [ ] Document OAuth secrets and redirect URIs in EE configuration guides while leaving CE `.env.example` entries absent or commented.
-- [ ] Wrap provider registration in `server/src/app/api/auth/[...nextauth]/options.ts` with the existing `isEnterprise` guard so CE builds resolve to stubs.
+- [x] Update secret loader so Microsoft OAuth values (client ID, secret, authority/tenant) are available alongside Google via `getNextAuthSecret`.
+- [x] Add Microsoft provider configuration (e.g., `AzureADProvider`) and refresh Google provider options to share the common claim extractor.
+- [x] Refresh `.env.example`, devbox/dev compose templates, and developer docs to include both providers for local testing.
+- [x] Document OAuth secrets and redirect URIs in EE configuration guides while leaving CE `.env.example` entries absent or commented.
+- [x] Wrap provider registration in `server/src/app/api/auth/[...nextauth]/options.ts` with the existing `isEnterprise` guard so CE builds resolve to stubs.
 
 ### Phase 1 – Provider Integration and Claim Normalization
 - [ ] Implement a shared profile mapper that converts Google and Microsoft payloads into the `ExtendedUser` schema.
