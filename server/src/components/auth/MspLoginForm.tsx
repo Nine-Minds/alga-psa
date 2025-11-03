@@ -1,15 +1,18 @@
 "use client";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertProps } from '../../interfaces/general.interfaces';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+import SsoProviderButtons from '@ee/components/auth/SsoProviderButtons';
+import { getLinkedSsoProvidersAction } from '@ee/lib/actions/auth/getLinkedSsoProviders';
 
 interface MspLoginFormProps {
   callbackUrl: string;
@@ -21,6 +24,8 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
+  const [lookupError, setLookupError] = useState<string | null>(null);
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
@@ -28,6 +33,40 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
     type: 'form',
     label: 'MSP Login'
   });
+
+  useEffect(() => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setLinkedProviders([]);
+      setLookupError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = setTimeout(async () => {
+      try {
+        const result = await getLinkedSsoProvidersAction({
+          email: normalizedEmail,
+          userType: 'internal',
+        });
+
+        if (!cancelled) {
+          setLinkedProviders(result.providers ?? []);
+          setLookupError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLinkedProviders([]);
+          setLookupError('Unable to look up single sign-on status right now.');
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,6 +157,20 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         </div>
       </div>
 
+      {linkedProviders.length > 0 && (
+        <Alert>
+          <AlertDescription>
+            We found a linked single sign-on provider for this account. Use the SSO buttons below to sign in without your local password.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {lookupError && (
+        <Alert variant="destructive">
+          <AlertDescription>{lookupError}</AlertDescription>
+        </Alert>
+      )}
+
         <div className="text-sm text-right">
           <Link href="/auth/msp/forgot-password"
           className="font-medium text-purple-600 hover:text-purple-500"
@@ -135,6 +188,11 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
           Sign in
         </Button>
       </div>
+
+      <SsoProviderButtons
+        callbackUrl={callbackUrl}
+        linkedProviders={linkedProviders}
+      />
 
     </form>
   );
