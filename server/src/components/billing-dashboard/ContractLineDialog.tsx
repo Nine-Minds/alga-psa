@@ -386,7 +386,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <div className="space-y-4">
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>What are Fixed Fee Services?</strong> These services have a set monthly price. You'll still track time entries
+            <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries
             for these services, but billing is based on the fixed rate, not hours worked.
           </p>
         </div>
@@ -975,7 +975,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 <div>
                   <h3 className="text-lg font-semibold">Fixed Fee Services</h3>
                   <p className="text-sm text-gray-600">
-                    Set up services that are billed at a fixed monthly rate, regardless of usage.
+                    Set up services that are billed at a fixed recurring rate, regardless of usage.
                   </p>
                 </div>
                 {renderFixedConfig()}
@@ -983,7 +983,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 {fixedServices.length > 0 && (
                   <>
                     <div className="space-y-2 pt-4 border-t">
-                      <Label htmlFor="base-rate">Monthly Base Rate (Optional)</Label>
+                      <Label htmlFor="base-rate">Recurring Base Rate (Optional)</Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                         <Input
@@ -1014,7 +1014,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                           className="pl-7"
                         />
                       </div>
-                      <p className="text-xs text-gray-500">Suggested monthly fee for all fixed services. Can be overridden when adding this preset to a contract.</p>
+                      <p className="text-xs text-gray-500">Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.</p>
                     </div>
 
                     <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
@@ -1032,7 +1032,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         />
                       </div>
                       <p className="text-xs text-gray-500">
-                        When enabled, the monthly fee will be prorated for partial months based on the start/end date
+                        When enabled, the recurring fee will be prorated for partial billing periods based on the start/end date
                       </p>
                     </div>
                   </>

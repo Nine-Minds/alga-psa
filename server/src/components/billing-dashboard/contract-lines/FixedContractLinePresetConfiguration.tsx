@@ -235,7 +235,7 @@ export function FixedPresetConfiguration({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="base-rate">Monthly Base Rate (Optional)</Label>
+                <Label htmlFor="base-rate">Recurring Base Rate (Optional)</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <Input
@@ -267,7 +267,7 @@ export function FixedPresetConfiguration({
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Suggested monthly fee for all fixed services. Can be overridden when adding this preset to a contract.
+                  Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.
                 </p>
               </div>
               <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">

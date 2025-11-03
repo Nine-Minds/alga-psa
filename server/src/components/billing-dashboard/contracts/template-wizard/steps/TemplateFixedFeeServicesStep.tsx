@@ -360,7 +360,7 @@ export function TemplateFixedFeeServicesStep({
 
         <div className="p-4 bg-accent-50 border border-accent-200 rounded-md">
           <p className="text-sm text-accent-900">
-            <strong>What are Fixed Fee Services?</strong> These services have a set monthly price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
+            <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
           </p>
         </div>
 

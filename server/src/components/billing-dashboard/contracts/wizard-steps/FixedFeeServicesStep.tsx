@@ -138,7 +138,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
 
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>What are Fixed Fee Services?</strong> These services have a set monthly price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
+            <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
           </p>
         </div>
 
@@ -146,7 +146,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           <div className="space-y-2">
             <Label htmlFor="fixed_base_rate" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
-              Monthly Base Rate *
+              Recurring Base Rate *
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
@@ -178,7 +178,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
               />
             </div>
             <p className="text-xs text-gray-500">
-              Total monthly fee for all fixed services combined.
+              Total recurring fee for all fixed services combined.
             </p>
           </div>
         )}
@@ -191,12 +191,12 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                 checked={data.enable_proration}
                 onCheckedChange={(checked) => updateData({ enable_proration: checked })}
               />
-              <Tooltip content="Automatically adjust the monthly fee for partial months based on the contract start and end dates.">
+              <Tooltip content="Automatically adjust the recurring fee for partial billing periods based on the contract start and end dates.">
                 <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
               </Tooltip>
             </div>
             <p className="text-xs text-gray-500">
-              When enabled, the monthly fee is prorated if the contract starts or ends mid-cycle.
+              When enabled, the recurring fee is prorated if the contract starts or ends mid-cycle.
             </p>
           </div>
         )}
@@ -285,7 +285,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                 <strong>Services:</strong> {data.fixed_services.length}
               </p>
               <p>
-                <strong>Monthly Rate:</strong> {formatCurrency(data.fixed_base_rate)}
+                <strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}
               </p>
               <p>
                 <strong>Proration:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}
