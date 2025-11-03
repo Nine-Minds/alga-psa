@@ -8,6 +8,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import Spinner from 'server/src/components/ui/Spinner';
 import { getAsset, updateAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { useRouter } from 'next/navigation';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale } from 'lucide-react';
@@ -790,8 +791,11 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
   if (loading) {
     return (
-      <div id="asset-form-loading" className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-500">Loading asset details...</div>
+      <div id="asset-form-loading" className="flex min-h-[400px] items-center justify-center">
+        <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-4 py-2 text-sm text-gray-500">
+          <Spinner size="sm" className="text-primary-500" />
+          Loading asset details...
+        </div>
       </div>
     );
   }

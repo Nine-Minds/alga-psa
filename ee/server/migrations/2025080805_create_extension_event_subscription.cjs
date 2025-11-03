@@ -2,6 +2,11 @@
 
 /** @param {import('knex').Knex} knex */
 exports.up = async function up(knex) {
+  const exists = await knex.schema.hasTable('extension_event_subscription');
+  if (exists) {
+    return;
+  }
+
   await knex.schema.createTable('extension_event_subscription', (t) => {
     t.uuid('id').primary();
     t.string('tenant_id').notNullable();
@@ -17,4 +22,3 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('extension_event_subscription');
 };
-

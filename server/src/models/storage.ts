@@ -98,7 +98,12 @@ export class FileStoreModel extends BaseModel {
       metadata: Record<string, unknown>;
     }
   ): Promise<void> {
+    const tenant = await this.getTenant();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
     await knexOrTrx('document_system_entries').insert({
+      tenant,
       file_id: options.fileId,
       category: options.category,
       metadata: options.metadata,

@@ -36,9 +36,11 @@ import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegions
 import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
 import XeroIntegrationSettings from '../integrations/XeroIntegrationSettings';
 import { useSearchParams } from 'next/navigation';
+import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
+import { CalendarIntegrationsSettings } from 'server/src/components/calendar/CalendarIntegrationsSettings';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import SurveySettings from 'server/src/components/surveys/SurveySettings';
@@ -83,6 +85,7 @@ const SettingsPage = (): JSX.Element =>  {
     surveys: 'Surveys',
     'time-entry': 'Time Entry',
     billing: 'Billing',
+    'import-export': 'Import/Export',
     tax: 'Tax',
     email: 'Email',
     integrations: 'Integrations',
@@ -224,6 +227,10 @@ const SettingsPage = (): JSX.Element =>  {
       ),
     },
     {
+      label: "Import/Export",
+      content: <ImportExportSettings />,
+    },
+    {
       label: "Tax",
       content: isBillingEnabled ? (
         <Card>
@@ -279,6 +286,19 @@ const SettingsPage = (): JSX.Element =>  {
             </CardHeader>
             <CardContent>
               <EmailProviderConfiguration />
+            </CardContent>
+          </Card>
+
+          {/* Calendar Integrations */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Calendar Integrations</CardTitle>
+              <CardDescription>
+                Connect Google Calendar or Microsoft Outlook Calendar to sync schedule entries
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CalendarIntegrationsSettings />
             </CardContent>
           </Card>
         </div>

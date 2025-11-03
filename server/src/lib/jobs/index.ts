@@ -9,8 +9,15 @@ import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData 
 import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
+import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
+import {
+  renewMicrosoftCalendarWebhooks,
+  verifyGoogleCalendarProvisioning,
+  MicrosoftWebhookRenewalJobData,
+  GooglePubSubVerificationJobData
+} from './handlers/calendarWebhookMaintenanceHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -36,6 +43,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<GenerateInvoiceData>('generate-invoice', async (job: Job<GenerateInvoiceData>) => {
       await generateInvoiceHandler(job.data);
     });
+    jobScheduler.registerJobHandler<AssetImportJobData>('asset_import', handleAssetImportJob);
     
     // Register expired credits handler
     jobScheduler.registerJobHandler<ExpiredCreditsJobData>('expired-credits', async (job: Job<ExpiredCreditsJobData>) => {
@@ -86,6 +94,20 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       });
     }
 
+    jobScheduler.registerJobHandler<MicrosoftWebhookRenewalJobData>(
+      'renew-microsoft-calendar-webhooks',
+      async (job: Job<MicrosoftWebhookRenewalJobData>) => {
+        await renewMicrosoftCalendarWebhooks(job.data);
+      }
+    );
+
+    jobScheduler.registerJobHandler<GooglePubSubVerificationJobData>(
+      'verify-google-calendar-pubsub',
+      async (job: Job<GooglePubSubVerificationJobData>) => {
+        await verifyGoogleCalendarProvisioning(job.data);
+      }
+    );
+
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
 
@@ -95,7 +117,18 @@ export const initializeScheduler = async (storageService?: StorageService) => {
 
 
 // Export types
-export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData, ReconcileBucketUsageJobData, CleanupAiSessionKeysJobData };
+export type {
+  JobFilter,
+  GenerateInvoiceData,
+  ExpiredCreditsJobData,
+  ExpiringCreditsNotificationJobData,
+  CreditReconciliationJobData,
+  ReconcileBucketUsageJobData,
+  CleanupAiSessionKeysJobData,
+  MicrosoftWebhookRenewalJobData,
+  GooglePubSubVerificationJobData, 
+  AssetImportJobData
+};
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
   clientId: string,
@@ -198,6 +231,30 @@ export const scheduleReconcileBucketUsageJob = async (
     'reconcile-bucket-usage',
     cronExpression,
     { tenantId } // Only needs tenantId
+  );
+};
+
+export const scheduleMicrosoftWebhookRenewalJob = async (
+  tenantId: string,
+  cronExpression: string = '*/30 * * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<MicrosoftWebhookRenewalJobData>(
+    'renew-microsoft-calendar-webhooks',
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleGooglePubSubVerificationJob = async (
+  tenantId: string,
+  cronExpression: string = '15 * * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<GooglePubSubVerificationJobData>(
+    'verify-google-calendar-pubsub',
+    cronExpression,
+    { tenantId }
   );
 };
 

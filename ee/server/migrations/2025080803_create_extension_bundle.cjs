@@ -2,6 +2,11 @@
 
 /** @param {import('knex').Knex} knex */
 exports.up = async function up(knex) {
+  const exists = await knex.schema.hasTable('extension_bundle');
+  if (exists) {
+    return;
+  }
+
   await knex.schema.createTable('extension_bundle', (t) => {
     t.uuid('id').primary();
     t.uuid('version_id').notNullable().references('id').inTable('extension_version').onDelete('CASCADE');
@@ -17,4 +22,3 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('extension_bundle');
 };
-

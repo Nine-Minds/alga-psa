@@ -2006,18 +2006,19 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
     console.log('[TicketEmailSubscriber] Starting registration');
     
     // Subscribe to all ticket events with a single handler
-    const ticketEventTypes: EventType[] = [
+    const ticketEventTypes = [
       'TICKET_CREATED',
       'TICKET_UPDATED',
       'TICKET_CLOSED',
       'TICKET_ASSIGNED',
       'TICKET_COMMENT_ADDED'
-    ];
+    ] as const;
 
     const channel = getEmailEventChannel();
     console.log(`[TicketEmailSubscriber] Using channel "${channel}" for ticket email events`);
 
     for (const eventType of ticketEventTypes) {
+      // @ts-ignore - EventType union
       await getEventBus().subscribe(eventType, handleTicketEvent, { channel });
       console.log(`[TicketEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
@@ -2034,17 +2035,18 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
  */
 export async function unregisterTicketEmailSubscriber(): Promise<void> {
   try {
-    const ticketEventTypes: EventType[] = [
+    const ticketEventTypes = [
       'TICKET_CREATED',
       'TICKET_UPDATED',
       'TICKET_CLOSED',
       'TICKET_ASSIGNED',
       'TICKET_COMMENT_ADDED'
-    ];
+    ] as const;
 
     const channel = getEmailEventChannel();
 
     for (const eventType of ticketEventTypes) {
+      // @ts-ignore - EventType union
       await getEventBus().unsubscribe(eventType, handleTicketEvent, { channel });
     }
 
