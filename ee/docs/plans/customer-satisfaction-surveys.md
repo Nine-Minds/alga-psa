@@ -1543,7 +1543,7 @@ export interface StatsFilters {
 
 ### Phase 1: Core Infrastructure (MVP)
 **Estimated: 3-5 days**
-**Status: In Progress** (Database & Token Service ✅ Complete; Server Actions, Services, UI, Email pending)
+**Status: In Progress** (Database, Token Service, Server Actions, and Services ✅ Complete; Email templates and UI pending)
 
 1. **Database Setup** ✅ COMPLETE
    - [x] Create migration files for all tables with proper tenant isolation
@@ -1556,15 +1556,15 @@ export interface StatsFilters {
    - [x] Unit tests for token hashing and issuance
    - [x] Integration tests with real database
 
-3. **Server Actions** 🔄 IN PROGRESS
-   - [ ] Implement `surveyActions.ts` (CRUD for templates/triggers via server actions)
-   - [ ] Implement `surveyResponseActions.ts` (public response submission via server action)
+3. **Server Actions** ✅ COMPLETE
+   - [x] Implement `surveyActions.ts` (CRUD for templates/triggers via server actions)
+   - [x] Implement `surveyResponseActions.ts` (public response submission via server action)
    - [x] Add event types to `events.ts` (SURVEY_INVITATION_SENT, SURVEY_RESPONSE_SUBMITTED, SURVEY_NEGATIVE_RESPONSE)
 
-4. **Services & Integration** ⏳ PENDING
-   - [ ] Create `surveyService.ts` (email sending logic via server action)
-   - [ ] Create `surveySubscriber.ts` (listen to ticket closure events)
-   - [ ] Register subscriber in event bus initialization
+4. **Services & Integration** ✅ COMPLETE
+   - [x] Create `surveyService.ts` (email sending logic via server action)
+   - [x] Create `surveySubscriber.ts` (listen to ticket closure events)
+   - [x] Register subscriber in event bus initialization
 
 5. **Email Integration** ⏳ PENDING
    - [ ] Register `SURVEY_TICKET_CLOSED` template in `system_email_templates`
