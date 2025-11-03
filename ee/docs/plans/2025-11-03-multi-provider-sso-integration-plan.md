@@ -23,11 +23,11 @@
 - [x] Place provider adapters, claim mappers, and account-link helpers in `ee/server/src/lib/auth/ssoProviders.ts` with matching stubs in `server/src/empty/lib/auth/ssoProviders.ts`.
 
 ### Phase 2 – Account Linking and Migration Path
-- [ ] Create or extend a `user_auth_accounts` table keyed by user ID and provider (google|microsoft) with provider subject IDs and metadata.
+- [x] Create or extend a `user_auth_accounts` table keyed by user ID and provider (google|microsoft) with provider subject IDs and metadata.
 - [ ] Deliver an authenticated “Connect SSO” flow that revalidates password and TOTP before capturing OAuth provider details.
 - [ ] Update credential login surfaces to detect linked providers, show migration prompts, and suppress local 2FA prompts after successful OAuth login (tenant configurable).
 - [ ] Build a batch backfill script for federated email domains and log unresolved accounts for manual review.
-- [ ] Store schema migrations for the new linking table under `ee/server/src/lib/db/migrations` and supply CE no-op stubs.
+- [x] Store schema migrations for the new linking table under `ee/server/migrations` and supply CE no-op stubs.
 - [ ] Serve SSO buttons and the “Connect SSO” settings page from `@ee` components/pages with CE stubs in `server/src/empty`.
 
 ### Phase 3 – Rollout, Monitoring, and Policy Controls

@@ -18,8 +18,14 @@ import { buildTenantPortalSlug, isValidTenantSlug } from "server/src/lib/utils/t
 import { isEnterprise } from "server/src/lib/features";
 import {
     applyOAuthAccountHints,
+    decodeOAuthJwtPayload,
     mapOAuthProfileToExtendedUser,
 } from "@ee/lib/auth/ssoProviders";
+import {
+    OAuthAccountLinkConflictError,
+    upsertOAuthAccountLink,
+} from "@ee/lib/auth/oauthAccountLinks";
+import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -201,6 +207,177 @@ interface ExtendedUser {
     user_type: string;
     clientId?: string;
     contactId?: string;
+}
+
+const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
+    google: 'google',
+    'azure-ad': 'microsoft',
+    microsoft: 'microsoft',
+};
+
+function normalizeOAuthProvider(providerId?: string | null): OAuthLinkProvider | null {
+    if (!providerId) {
+        return null;
+    }
+    return OAUTH_PROVIDER_ALIASES[providerId] ?? null;
+}
+
+function toOptionalString(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function pickFirstString(values: unknown[]): string | undefined {
+    for (const value of values) {
+        const candidate = toOptionalString(value);
+        if (candidate) {
+            return candidate;
+        }
+    }
+    return undefined;
+}
+
+function getSafeRecord(value: unknown): Record<string, unknown> | undefined {
+    if (value && typeof value === 'object') {
+        return value as Record<string, unknown>;
+    }
+    return undefined;
+}
+
+function extractOAuthAccountMetadata(
+    account: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+    if (!account) {
+        return {};
+    }
+
+    const metadata: Record<string, unknown> = {};
+    const params = getSafeRecord(account.params);
+
+    const scope = toOptionalString(account.scope);
+    if (scope) {
+        metadata.scope = scope;
+    }
+
+    const tenantHint = pickFirstString([
+        account.tenant,
+        account.tenant_hint,
+        account.tenantId,
+        account.tenant_id,
+        params?.tenant,
+        params?.tenant_hint,
+    ]);
+    if (tenantHint) {
+        metadata.tenantHint = tenantHint;
+    }
+
+    const vanityHostHint = pickFirstString([
+        account.vanity_host,
+        params?.vanity_host,
+    ]);
+    if (vanityHostHint) {
+        metadata.vanityHostHint = vanityHostHint;
+    }
+
+    const sessionState = toOptionalString(account.session_state);
+    if (sessionState) {
+        metadata.sessionState = sessionState;
+    }
+
+    const idToken = toOptionalString(account.id_token);
+    const claims = decodeOAuthJwtPayload(idToken);
+    if (claims) {
+        const allowedClaims = ['sub', 'tid', 'oid', 'email', 'upn', 'preferred_username'];
+        const filteredClaims: Record<string, unknown> = {};
+        for (const key of allowedClaims) {
+            const claimValue = claims[key];
+            if (typeof claimValue === 'string' && claimValue.length > 0) {
+                filteredClaims[key] = claimValue;
+            }
+        }
+        if (Object.keys(filteredClaims).length > 0) {
+            metadata.idTokenClaims = filteredClaims;
+        }
+    }
+
+    return metadata;
+}
+
+function extractProviderAccountId(
+    account: Record<string, unknown> | null | undefined,
+    metadata: Record<string, unknown>,
+): string | undefined {
+    const direct = toOptionalString(account?.providerAccountId);
+    if (direct) {
+        return direct;
+    }
+
+    const legacyId = toOptionalString(account?.id);
+    if (legacyId) {
+        return legacyId;
+    }
+
+    const claims = metadata.idTokenClaims as Record<string, unknown> | undefined;
+    if (claims && typeof claims.sub === 'string' && claims.sub.length > 0) {
+        return claims.sub;
+    }
+
+    return undefined;
+}
+
+async function ensureOAuthAccountLink(
+    user: ExtendedUser | undefined,
+    account: Record<string, unknown> | null | undefined,
+    providerId?: string | null,
+): Promise<void> {
+    if (!user || !providerId) {
+        return;
+    }
+
+    const normalizedProvider = normalizeOAuthProvider(providerId);
+    if (!normalizedProvider || !user.tenant) {
+        return;
+    }
+
+    const metadata = extractOAuthAccountMetadata(account);
+    const providerAccountId = extractProviderAccountId(account, metadata);
+    if (!providerAccountId) {
+        console.warn('[oauth] Missing provider account identifier', {
+            providerId,
+            userId: user.id,
+        });
+        return;
+    }
+
+    try {
+        await upsertOAuthAccountLink({
+            tenant: user.tenant,
+            userId: user.id,
+            provider: normalizedProvider,
+            providerAccountId,
+            providerEmail: user.email,
+            metadata,
+        });
+    } catch (error) {
+        if (error instanceof OAuthAccountLinkConflictError) {
+            console.warn('[oauth] account already linked to another user', {
+                providerId,
+                providerAccountId,
+                userId: user.id,
+            });
+            return;
+        }
+
+        console.warn('[oauth] failed to persist account link', {
+            providerId,
+            providerAccountId,
+            userId: user.id,
+            error,
+        });
+    }
 }
 
 // Helper function to get OAuth secrets from secret provider with env fallback
@@ -589,10 +766,11 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             const extendedUser = user as ExtendedUser | undefined;
 
             if (extendedUser && providerId && providerId !== 'credentials') {
+                const accountRecord = account as unknown as Record<string, unknown> | null;
                 try {
                     const enrichedUser = await applyOAuthAccountHints(
                         extendedUser,
-                        account as unknown as Record<string, unknown>,
+                        accountRecord,
                     );
                     Object.assign(extendedUser, enrichedUser);
                 } catch (error) {
@@ -601,6 +779,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         error,
                     });
                 }
+
+                await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
             }
 
             // Track last login
@@ -1210,6 +1390,24 @@ export const options: NextAuthConfig = {
                 } catch (error) {
                     console.warn('[signIn] failed to update last login', error);
                 }
+            }
+
+            if (extendedUser && providerId && providerId !== 'credentials') {
+                const accountRecord = account as unknown as Record<string, unknown> | null;
+                try {
+                    const enrichedUser = await applyOAuthAccountHints(
+                        extendedUser,
+                        accountRecord,
+                    );
+                    Object.assign(extendedUser, enrichedUser);
+                } catch (error) {
+                    console.warn('[signIn] failed to apply OAuth tenant hints', {
+                        providerId,
+                        error,
+                    });
+                }
+
+                await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
             }
 
             if (providerId === 'credentials') {

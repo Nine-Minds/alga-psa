@@ -177,7 +177,7 @@ function parseStateValue(state: unknown, key: string): string | undefined {
   }
 }
 
-function decodeJwtPayload(token: string | undefined): Record<string, unknown> | undefined {
+export function decodeOAuthJwtPayload(token: string | undefined): Record<string, unknown> | undefined {
   if (!token) {
     return undefined;
   }
@@ -278,7 +278,7 @@ export async function applyOAuthAccountHints(
     return user;
   }
 
-  const idTokenPayload = decodeJwtPayload(coerceString(account.id_token));
+  const idTokenPayload = decodeOAuthJwtPayload(coerceString(account.id_token));
 
   const tenantHint = pickFirstCandidate([
     account.tenant,

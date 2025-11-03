@@ -31,3 +31,7 @@ export async function mapOAuthProfileToExtendedUser(): Promise<OAuthProfileMappi
 export async function applyOAuthAccountHints(): Promise<OAuthProfileMappingResult> {
   throw new Error('OAuth providers are only available in Enterprise Edition');
 }
+
+export function decodeOAuthJwtPayload(): Record<string, unknown> | undefined {
+  return undefined;
+}
