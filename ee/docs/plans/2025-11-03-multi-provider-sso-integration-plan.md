@@ -16,11 +16,11 @@
 - [x] Wrap provider registration in `server/src/app/api/auth/[...nextauth]/options.ts` with the existing `isEnterprise` guard so CE builds resolve to stubs.
 
 ### Phase 1 – Provider Integration and Claim Normalization
-- [ ] Implement a shared profile mapper that converts Google and Microsoft payloads into the `ExtendedUser` schema.
-- [ ] Extend `signIn` and `jwt` callbacks to apply tenant resolution from query `tenant_hint`, vanity-domain headers, or email-domain heuristics when provider data is incomplete.
-- [ ] Invoke existing user validation (active status, tenant membership, user_type) within the OAuth callback before token issuance.
-- [ ] Confirm `session` and `redirect` callbacks read normalized claims so OTT and redirect flows behave consistently across providers.
-- [ ] Place provider adapters, claim mappers, and account-link helpers in `ee/server/src/lib/auth/ssoProviders.ts` with matching stubs in `server/src/empty/lib/auth/ssoProviders.ts`.
+- [x] Implement a shared profile mapper that converts Google and Microsoft payloads into the `ExtendedUser` schema.
+- [x] Extend `signIn` and `jwt` callbacks to apply tenant resolution from query `tenant_hint`, vanity-domain headers, or email-domain heuristics when provider data is incomplete.
+- [x] Invoke existing user validation (active status, tenant membership, user_type) within the OAuth callback before token issuance.
+- [x] Confirm `session` and `redirect` callbacks read normalized claims so OTT and redirect flows behave consistently across providers.
+- [x] Place provider adapters, claim mappers, and account-link helpers in `ee/server/src/lib/auth/ssoProviders.ts` with matching stubs in `server/src/empty/lib/auth/ssoProviders.ts`.
 
 ### Phase 2 – Account Linking and Migration Path
 - [ ] Create or extend a `user_auth_accounts` table keyed by user ID and provider (google|microsoft) with provider subject IDs and metadata.

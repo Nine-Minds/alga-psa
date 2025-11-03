@@ -16,6 +16,10 @@ import {
 import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "server/src/lib/utils/tenantSlug";
 import { isEnterprise } from "server/src/lib/features";
+import {
+    applyOAuthAccountHints,
+    mapOAuthProfileToExtendedUser,
+} from "@ee/lib/auth/ssoProviders";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -199,60 +203,6 @@ interface ExtendedUser {
     contactId?: string;
 }
 
-type EnterpriseOAuthProvider = 'google' | 'microsoft';
-
-async function mapOAuthProfileToExtendedUser({
-    provider,
-    email,
-    image,
-    profile,
-}: {
-    provider: EnterpriseOAuthProvider;
-    email?: string | null;
-    image?: unknown;
-    profile: Record<string, unknown>;
-}): Promise<ExtendedUser> {
-    const logger = (await import('@alga-psa/shared/core/logger')).default;
-
-    if (!email || typeof email !== 'string') {
-        logger.warn(`[auth] ${provider} profile missing email`, { profile });
-        throw new Error('User not found');
-    }
-
-    const normalizedEmail = email.toLowerCase();
-    const User = (await import('server/src/lib/models/user')).default;
-
-    logger.info(`[auth] Starting ${provider} OAuth`, { email: normalizedEmail });
-    const user = await User.findUserByEmail(normalizedEmail);
-
-    if (!user || !user.user_id) {
-        logger.warn(`[auth] User not found during ${provider} OAuth`, { email: normalizedEmail });
-        throw new Error('User not found');
-    }
-
-    if (user.is_inactive) {
-        logger.warn(`[auth] Inactive user attempted ${provider} OAuth`, { email: normalizedEmail });
-        throw new Error('User not found');
-    }
-
-    logger.info(`[auth] ${provider} OAuth successful`, { email: normalizedEmail });
-
-    const displayName = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
-
-    return {
-        id: user.user_id.toString(),
-        email: user.email,
-        name: displayName.length > 0 ? displayName : user.username,
-        username: user.username,
-        image: typeof image === 'string' ? image : undefined,
-        proToken: '',
-        tenant: user.tenant,
-        user_type: user.user_type,
-        clientId: user.client_id ?? undefined,
-        contactId: user.contact_id ?? undefined,
-    };
-}
-
 // Helper function to get OAuth secrets from secret provider with env fallback
 async function getOAuthSecrets() {
     const { getSecretProviderInstance } = await import('@alga-psa/shared/core/secretProvider');
@@ -310,13 +260,28 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 GoogleProvider({
                     clientId: secrets.googleClientId,
                     clientSecret: secrets.googleClientSecret,
-                    profile: async (profile): Promise<ExtendedUser> =>
-                        mapOAuthProfileToExtendedUser({
+                    profile: async (profile): Promise<ExtendedUser> => {
+                        const googleProfile = profile as Record<string, unknown>;
+                        const tenantHint =
+                            typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined;
+                        const userTypeHint =
+                            typeof googleProfile.user_type === 'string'
+                                ? googleProfile.user_type
+                                : undefined;
+                        const vanityHostHint =
+                            typeof googleProfile.vanity_host === 'string'
+                                ? googleProfile.vanity_host
+                                : undefined;
+                        return mapOAuthProfileToExtendedUser({
                             provider: 'google',
                             email: profile.email,
                             image: profile.picture,
                             profile,
-                        }),
+                            tenantHint,
+                            vanityHostHint,
+                            userTypeHint,
+                        }) as Promise<ExtendedUser>;
+                    },
                 }),
             ]
             : []),
@@ -332,12 +297,29 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             profile.mail ??
                             profile.preferred_username ??
                             profile.userPrincipalName;
+                        const tenantHint =
+                            typeof profile.tenant === 'string'
+                                ? profile.tenant
+                                : typeof profile.tenantId === 'string'
+                                ? profile.tenantId
+                                : typeof profile.tid === 'string'
+                                ? profile.tid
+                                : typeof profile.domain === 'string'
+                                ? profile.domain
+                                : undefined;
+                        const vanityHostHint =
+                            typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
+                        const userTypeHint =
+                            typeof profile.user_type === 'string' ? profile.user_type : undefined;
                         return mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
                             email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
                             image: profile.picture ?? profile.photo ?? undefined,
                             profile,
-                        });
+                            tenantHint,
+                            vanityHostHint,
+                            userTypeHint,
+                        }) as Promise<ExtendedUser>;
                     },
                 }),
             ]
@@ -606,6 +588,21 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
 
+            if (extendedUser && providerId && providerId !== 'credentials') {
+                try {
+                    const enrichedUser = await applyOAuthAccountHints(
+                        extendedUser,
+                        account as unknown as Record<string, unknown>,
+                    );
+                    Object.assign(extendedUser, enrichedUser);
+                } catch (error) {
+                    console.warn('[signIn] failed to apply OAuth tenant hints', {
+                        providerId,
+                        error,
+                    });
+                }
+            }
+
             // Track last login
             if (extendedUser?.id && extendedUser?.tenant && providerId) {
                 try {
@@ -691,6 +688,9 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     tenant: extendedUser.tenant,
                     clientId: extendedUser.clientId
                 });
+                if (!extendedUser.tenantSlug && extendedUser.tenant) {
+                    extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
+                }
                 token.id = extendedUser.id;
                 token.email = extendedUser.email;
                 token.name = extendedUser.name;
@@ -848,13 +848,28 @@ export const options: NextAuthConfig = {
                 GoogleProvider({
                     clientId: process.env.GOOGLE_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
-                    profile: async (profile): Promise<ExtendedUser> =>
-                        mapOAuthProfileToExtendedUser({
+                    profile: async (profile): Promise<ExtendedUser> => {
+                        const googleProfile = profile as Record<string, unknown>;
+                        const tenantHint =
+                            typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined;
+                        const userTypeHint =
+                            typeof googleProfile.user_type === 'string'
+                                ? googleProfile.user_type
+                                : undefined;
+                        const vanityHostHint =
+                            typeof googleProfile.vanity_host === 'string'
+                                ? googleProfile.vanity_host
+                                : undefined;
+                        return mapOAuthProfileToExtendedUser({
                             provider: 'google',
                             email: profile.email,
                             image: (profile as any).picture,
                             profile,
-                        }),
+                            tenantHint,
+                            vanityHostHint,
+                            userTypeHint,
+                        }) as Promise<ExtendedUser>;
+                    },
                 }),
             ]
             : []),
@@ -872,12 +887,29 @@ export const options: NextAuthConfig = {
                             profile.mail ??
                             profile.preferred_username ??
                             profile.userPrincipalName;
+                        const tenantHint =
+                            typeof profile.tenant === 'string'
+                                ? profile.tenant
+                                : typeof profile.tenantId === 'string'
+                                ? profile.tenantId
+                                : typeof profile.tid === 'string'
+                                ? profile.tid
+                                : typeof profile.domain === 'string'
+                                ? profile.domain
+                                : undefined;
+                        const vanityHostHint =
+                            typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
+                        const userTypeHint =
+                            typeof profile.user_type === 'string' ? profile.user_type : undefined;
                         return mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
                             email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
                             image: profile.picture ?? profile.photo ?? undefined,
                             profile,
-                        });
+                            tenantHint,
+                            vanityHostHint,
+                            userTypeHint,
+                        }) as Promise<ExtendedUser>;
                     },
                 }),
             ]
@@ -1148,9 +1180,23 @@ export const options: NextAuthConfig = {
             //     has_two_factor: false, // We'd need to check this from the user object
             //     login_method: account?.provider || 'email',
             // }, extendedUser.id);
-
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
+
+            if (extendedUser && providerId && providerId !== 'credentials') {
+                try {
+                    const enrichedUser = await applyOAuthAccountHints(
+                        extendedUser,
+                        account as unknown as Record<string, unknown>,
+                    );
+                    Object.assign(extendedUser, enrichedUser);
+                } catch (error) {
+                    console.warn('[signIn] failed to apply OAuth tenant hints', {
+                        providerId,
+                        error,
+                    });
+                }
+            }
 
             // Track last login
             if (extendedUser?.id && extendedUser?.tenant && providerId) {
@@ -1220,6 +1266,9 @@ export const options: NextAuthConfig = {
                     tenant: extendedUser.tenant,
                     clientId: extendedUser.clientId
                 });
+                if (!extendedUser.tenantSlug && extendedUser.tenant) {
+                    extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
+                }
                 token.id = extendedUser.id;
                 token.email = extendedUser.email;
                 token.name = extendedUser.name;
