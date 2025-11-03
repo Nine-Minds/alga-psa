@@ -12,7 +12,14 @@ import CustomSelect from '@/components/ui/CustomSelect';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { fetchExtensionById, getExtensionSettings, updateExtensionSettings, resetExtensionSettings } from '../../../lib/actions/extensionActions';
+import {
+  fetchExtensionById,
+  getExtensionSecretsMetadata,
+  getExtensionSettings,
+  resetExtensionSettings,
+  updateExtensionSecrets,
+  updateExtensionSettings,
+} from '../../../lib/actions/extensionActions';
 import { Extension, ExtensionSettingDefinition, ExtensionSettingType } from '../../../lib/extensions/types';
 
 // Local helper to attach automation IDs consistently (data attribute only)
@@ -25,12 +32,26 @@ export default function ExtensionSettings() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [settingsData, setSettingsData] = useState<Record<string, any>>({});
+  const [secretValues, setSecretValues] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [secretChanged, setSecretChanged] = useState(false);
   const [extension, setExtension] = useState<Extension | null>(null);
+  const [hasStoredSecrets, setHasStoredSecrets] = useState(false);
+  const [secretsVersion, setSecretsVersion] = useState<string | null>(null);
   
-  const settingsDefinitions = useMemo(() => {
+  const allSettingDefinitions = useMemo(() => {
     return extension?.manifest?.settings || [];
   }, [extension]);
+
+  const configSettingDefinitions = useMemo(
+    () => allSettingDefinitions.filter((definition) => !definition.encrypted),
+    [allSettingDefinitions]
+  );
+
+  const secretDefinitions = useMemo(
+    () => allSettingDefinitions.filter((definition) => definition.encrypted),
+    [allSettingDefinitions]
+  );
   
   // Group settings by category
   const settingsByCategory = useMemo(() => {
@@ -38,7 +59,7 @@ export default function ExtensionSettings() {
       'General': []
     };
     
-    settingsDefinitions.forEach(setting => {
+    configSettingDefinitions.forEach(setting => {
       const category = setting.category || 'General';
       if (!grouped[category]) {
         grouped[category] = [];
@@ -47,7 +68,7 @@ export default function ExtensionSettings() {
     });
     
     return grouped;
-  }, [settingsDefinitions]);
+  }, [configSettingDefinitions]);
   
   // Categories for tabs
   const categories = useMemo(() => {
@@ -77,22 +98,34 @@ export default function ExtensionSettings() {
         }
         
         setExtension(extensionData);
-        
-        // Load settings
-        const savedSettings = await getExtensionSettings(extensionId);
-        
-        // Initialize with defaults if no saved settings
+
+        const manifestSettings = extensionData.manifest.settings || [];
+        const configDefs = manifestSettings.filter((definition) => !definition.encrypted);
+        const secretDefs = manifestSettings.filter((definition) => definition.encrypted);
+
+        const [savedSettings, metadata] = await Promise.all([
+          getExtensionSettings(extensionId),
+          getExtensionSecretsMetadata(extensionId),
+        ]);
+
         const initialSettings: Record<string, any> = {};
-        extensionData.manifest.settings?.forEach(def => {
-          initialSettings[def.key] = savedSettings?.[def.key] !== undefined 
-            ? savedSettings[def.key] 
-            : def.defaultValue !== undefined 
-              ? def.defaultValue 
-              : null;
+        configDefs.forEach((def) => {
+          const defaultValue = def.defaultValue ?? def.default ?? null;
+          initialSettings[def.key] =
+            savedSettings?.[def.key] !== undefined ? savedSettings[def.key] : defaultValue;
         });
-        
+
+        const initialSecrets: Record<string, string> = {};
+        secretDefs.forEach((def) => {
+          initialSecrets[def.key] = '';
+        });
+
         setSettingsData(initialSettings);
+        setSecretValues(initialSecrets);
         setHasChanges(false);
+        setSecretChanged(false);
+        setHasStoredSecrets(Boolean(metadata?.hasEnvelope));
+        setSecretsVersion(metadata?.secretsVersion ?? null);
       } catch (error) {
         console.error('Failed to load extension settings', error);
         toast.error('Failed to load extension settings.');
@@ -112,21 +145,81 @@ export default function ExtensionSettings() {
     }));
     setHasChanges(true);
   };
+
+  const handleSecretChange = (key: string, value: string) => {
+    setSecretValues((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    setSecretChanged(true);
+  };
   
   // Save settings
   const handleSaveSettings = async () => {
-    setIsLoading(true);
-    
-    try {
-      const result = await updateExtensionSettings(extensionId, settingsData);
-      
-      if (!result.success) {
-        toast.error(result.message || 'Failed to save extension settings.');
+    if (secretDefinitions.length > 0 && !hasStoredSecrets) {
+      const missingRequired = secretDefinitions.filter(
+        (definition) => definition.required && !secretValues[definition.key]
+      );
+      if (missingRequired.length > 0) {
+        toast.error('Please provide values for required secrets before saving.');
         return;
       }
-      
-      toast.success('Extension settings saved successfully.');
-      
+      const hasAnySecretInput = Object.values(secretValues).some((value) => value && value.length > 0);
+      if (!hasAnySecretInput) {
+        toast.error('Enter secret values before saving.');
+        return;
+      }
+    }
+
+    setIsLoading(true);
+
+    try {
+      const shouldUpdateConfig = hasChanges;
+      let configMessage: string | null = null;
+
+      if (shouldUpdateConfig) {
+        const updateResult = await updateExtensionSettings(extensionId, settingsData);
+        if (!updateResult.success) {
+          toast.error(updateResult.message || 'Failed to save extension settings.');
+          return;
+        }
+        configMessage = updateResult.message || 'Extension settings saved successfully.';
+      }
+
+      const secretsPayload = secretDefinitions.reduce<Record<string, string>>((acc, definition) => {
+        const raw = secretValues[definition.key] ?? '';
+        const trimmed = typeof raw === 'string' ? raw : '';
+        if (trimmed.length > 0) {
+          acc[definition.key] = trimmed;
+        }
+        return acc;
+      }, {});
+
+      if (secretDefinitions.length > 0 && (Object.keys(secretsPayload).length > 0 || !hasStoredSecrets)) {
+        const secretResult = await updateExtensionSecrets(extensionId, secretsPayload);
+        if (!secretResult.success) {
+          toast.error(secretResult.message || 'Failed to update extension secrets.');
+          return;
+        }
+        toast.success(secretResult.message || 'Extension secrets updated.');
+        const metadata = await getExtensionSecretsMetadata(extensionId);
+        setHasStoredSecrets(Boolean(metadata?.hasEnvelope));
+        setSecretsVersion(metadata?.secretsVersion ?? null);
+        setSecretValues(
+          secretDefinitions.reduce<Record<string, string>>((acc, definition) => {
+            acc[definition.key] = '';
+            return acc;
+          }, {})
+        );
+        setSecretChanged(false);
+      }
+
+      if (configMessage) {
+        toast.success(configMessage);
+      }
+      if (!configMessage && !(secretDefinitions.length > 0 && (Object.keys(secretsPayload).length > 0 || !hasStoredSecrets))) {
+        toast.success('Extension settings saved successfully.');
+      }
       setHasChanges(false);
     } catch (error) {
       console.error('Failed to save extension settings', error);
@@ -154,12 +247,19 @@ export default function ExtensionSettings() {
       
       // Reset local state to defaults
       const defaultSettings: Record<string, any> = {};
-      settingsDefinitions.forEach(def => {
-        defaultSettings[def.key] = def.defaultValue !== undefined ? def.defaultValue : null;
+      configSettingDefinitions.forEach(def => {
+        defaultSettings[def.key] = def.defaultValue !== undefined ? def.defaultValue : def.default ?? null;
       });
-      
+
       setSettingsData(defaultSettings);
       setHasChanges(false);
+      setSecretValues(
+        secretDefinitions.reduce<Record<string, string>>((acc, definition) => {
+          acc[definition.key] = '';
+          return acc;
+        }, {})
+      );
+      setSecretChanged(false);
       
       toast.success('Settings reset to default values.');
     } catch (error) {
@@ -301,7 +401,7 @@ export default function ExtensionSettings() {
             <Button 
               id="save-settings-button"
               onClick={handleSaveSettings}
-              disabled={isLoading || !hasChanges}
+              disabled={isLoading || (!hasChanges && !secretChanged)}
             >
               Save Changes
             </Button>
@@ -316,7 +416,7 @@ export default function ExtensionSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {settingsDefinitions.length === 0 ? (
+            {configSettingDefinitions.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">This extension doesn't have any configurable settings.</p>
               </div>
@@ -357,6 +457,56 @@ export default function ExtensionSettings() {
             )}
           </CardContent>
         </Card>
+
+        {secretDefinitions.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Secret Values</CardTitle>
+              <CardDescription>
+                Secrets are encrypted at rest. {hasStoredSecrets ? 'Leave a field blank to keep the existing secret.' : 'Provide values for required secrets before saving.'}
+                {secretsVersion && (
+                  <span className="ml-2 text-xs text-gray-500">Version: {secretsVersion}</span>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {secretDefinitions.map((secret) => {
+                  const automationProps = automationId(`extension-secret-${secret.key}`)
+                  const value = secretValues[secret.key] ?? ''
+                  return (
+                    <div key={secret.key} className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor={`secret-${secret.key}`} className="text-sm font-medium">
+                          {secret.label || secret.key}
+                          {secret.required && <span className="text-red-500 ml-1">*</span>}
+                        </label>
+                      </div>
+                      {secret.description && (
+                        <p className="text-sm text-gray-500 mb-1">{secret.description}</p>
+                      )}
+                      <Input
+                        id={`secret-${secret.key}`}
+                        type="password"
+                        autoComplete="new-password"
+                        value={value}
+                        placeholder={secret.placeholder || 'Enter secret value'}
+                        onChange={(e) => handleSecretChange(secret.key, e.target.value)}
+                        className="max-w-md"
+                        {...automationProps}
+                      />
+                      {hasStoredSecrets && (
+                        <p className="text-xs text-gray-500">
+                          Stored secret present. Enter a new value to rotate.
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </ReflectionContainer>
   );
