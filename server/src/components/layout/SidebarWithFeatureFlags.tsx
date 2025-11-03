@@ -3,7 +3,15 @@
 import React from 'react';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import Sidebar from './Sidebar';
-import { menuItems as originalMenuItems, bottomMenuItems, MenuItem } from '../../config/menuConfig';
+import { useEffect } from 'react';
+import {
+  navigationSections as originalSections,
+  bottomMenuItems,
+  MenuItem,
+  NavigationSection,
+  menuItems as legacyMenuItems
+} from '../../config/menuConfig';
+import { analytics } from 'server/src/lib/analytics/client';
 
 interface SidebarWithFeatureFlagsProps {
   sidebarOpen: boolean;
@@ -14,28 +22,46 @@ interface SidebarWithFeatureFlagsProps {
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
   const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
   const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
+  const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
+  const useNavigationSections = typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+
+  useEffect(() => {
+    if (useNavigationSections) {
+      analytics.capture('ui.nav.v2.enabled');
+    }
+  }, [useNavigationSections]);
 
   // Filter and modify menu items based on feature flags
-  const menuItems = React.useMemo(() => {
-    return originalMenuItems.map(item => {
-      // For Automation Hub menu item, check advanced features flag
-      if (item.name === 'Automation Hub' && !isAdvancedFeaturesEnabled) {
-        return {
-          ...item,
-          href: '/msp/automation-hub',
-          subItems: undefined,
-          underConstruction: true
-        } as MenuItem & { underConstruction?: boolean };
-      }
+  const menuSections = React.useMemo<NavigationSection[]>(() => {
+    if (!useNavigationSections) {
+      return [
+        {
+          title: '',
+          items: legacyMenuItems
+        }
+      ];
+    }
 
-      return item;
-    });
-  }, [isAdvancedFeaturesEnabled]);
+    return originalSections.map((section) => ({
+      ...section,
+      items: section.items.map((item) => {
+        if (item.name === 'Automation Hub' && !isAdvancedFeaturesEnabled) {
+          return {
+            ...item,
+            href: '/msp/automation-hub',
+            subItems: undefined,
+            underConstruction: true
+          } as MenuItem;
+        }
+        return item;
+      })
+    }));
+  }, [isAdvancedFeaturesEnabled, useNavigationSections]);
 
   return (
     <Sidebar
       {...props}
-      menuItems={menuItems}
+      menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
       disableTransition={props.disableTransition}
     />

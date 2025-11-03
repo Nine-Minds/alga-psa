@@ -424,6 +424,41 @@ export async function getDocumentByClientId(clientId: string) {
   }
 }
 
+export async function associateDocumentWithClient(input: IDocumentAssociationInput) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    if (!await hasPermission(currentUser, 'document', 'create')) {
+      throw new Error('Permission denied: Cannot associate documents');
+    }
+
+    if (!await hasPermission(currentUser, 'client', 'update')) {
+      throw new Error('Permission denied: Cannot modify client documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const association = await DocumentAssociation.create(trx, {
+        ...input,
+        entity_type: 'client',
+        tenant
+      });
+
+      return association;
+    });
+  } catch (error) {
+    console.error('Error associating document with client:', error);
+    throw new Error('Failed to associate document with client');
+  }
+}
+
 // Get documents by contact
 export async function getDocumentByContactNameId(contactNameId: string) {
   try {
