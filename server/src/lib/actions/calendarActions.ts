@@ -89,7 +89,7 @@ export async function initiateCalendarOAuth(params: {
     }
 
     if (!clientId && existingProviderConfig && provider === 'microsoft') {
-      clientId = existingProviderConfig.clientId || existingProviderConfig.client_id || null;
+      clientId = existingProviderConfig.clientId || null;
     }
 
     if (!clientId) {

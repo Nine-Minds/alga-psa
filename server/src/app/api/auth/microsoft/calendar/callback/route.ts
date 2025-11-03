@@ -312,7 +312,7 @@ export async function GET(request: NextRequest) {
               calendarId: primaryCalendar.id,
               webhookNotificationUrl: webhookUrl,
               webhookVerificationToken: webhookVerificationToken
-            };
+            } as any;
             Reflect.set(adapter as any, 'calendarId', primaryCalendar.id);
 
             // Update provider with tokens and calendar ID
