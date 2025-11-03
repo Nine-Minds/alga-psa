@@ -31,14 +31,29 @@ use component::alga::extension::{
     ui_proxy::{self, ProxyError},
 };
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct HostRuntimeConfig {
     pub egress_allowlist: Vec<String>,
+    pub ui_proxy_base: Option<Url>,
+    pub ui_proxy_auth: Option<String>,
+    pub ui_proxy_timeout: Duration,
+}
+
+impl Default for HostRuntimeConfig {
+    fn default() -> Self {
+        Self {
+            egress_allowlist: Vec::new(),
+            ui_proxy_base: None,
+            ui_proxy_auth: None,
+            ui_proxy_timeout: Duration::from_millis(5_000),
+        }
+    }
 }
 
 impl HostRuntimeConfig {
     pub fn from_env() -> Self {
-        let allowlist = std::env::var("EXT_EGRESS_ALLOWLIST")
+        let mut cfg = Self::default();
+        cfg.egress_allowlist = std::env::var("EXT_EGRESS_ALLOWLIST")
             .ok()
             .map(|s| {
                 s.split(',')
@@ -47,9 +62,37 @@ impl HostRuntimeConfig {
                     .collect()
             })
             .unwrap_or_default();
-        Self {
-            egress_allowlist: allowlist,
+
+        if let Ok(base) = std::env::var("UI_PROXY_BASE_URL") {
+            match Url::parse(&base) {
+                Ok(url) => cfg.ui_proxy_base = Some(url),
+                Err(err) => {
+                    tracing::warn!(base = %base, error = %err, "UI_PROXY_BASE_URL is invalid; UI proxy calls disabled");
+                }
+            }
         }
+
+        if let Ok(auth) = std::env::var("UI_PROXY_AUTH_KEY") {
+            if !auth.trim().is_empty() {
+                cfg.ui_proxy_auth = Some(auth);
+            }
+        }
+
+        if let Ok(raw_timeout) = std::env::var("UI_PROXY_TIMEOUT_MS") {
+            match raw_timeout.parse::<u64>() {
+                Ok(ms) if ms > 0 => {
+                    cfg.ui_proxy_timeout = Duration::from_millis(ms);
+                }
+                Ok(_) => {
+                    tracing::warn!(value = %raw_timeout, "UI_PROXY_TIMEOUT_MS must be > 0; falling back to default");
+                }
+                Err(err) => {
+                    tracing::warn!(value = %raw_timeout, error = %err, "failed to parse UI_PROXY_TIMEOUT_MS; using default");
+                }
+            }
+        }
+
+        cfg
     }
 }
 
@@ -668,15 +711,176 @@ impl storage::HostWithStore for HasSelf<HostState> {
 impl ui_proxy::HostWithStore for HasSelf<HostState> {
     fn call_route<T>(
         accessor: &Accessor<T, Self>,
-        _route: String,
-        _payload: Option<Vec<u8>>,
+        route: String,
+        payload: Option<Vec<u8>>,
     ) -> impl std::future::Future<Output = Result<Vec<u8>, ProxyError>> + Send {
-        let providers = accessor.with(|mut access| access.get().context.providers.clone());
+        let (providers, ctx, runtime) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.clone(),
+                state.runtime.clone(),
+            )
+        });
         async move {
             if !has_capability(&providers, CAP_UI_PROXY) {
                 return Err(ProxyError::Denied);
             }
-            Err(ProxyError::RouteNotFound)
+            let Some(base_url) = runtime.ui_proxy_base.clone() else {
+                tracing::warn!(
+                    tenant=?ctx.tenant_id,
+                    extension=?ctx.extension_id,
+                    "ui_proxy capability invoked but UI_PROXY_BASE_URL is not configured"
+                );
+                return Err(ProxyError::RouteNotFound);
+            };
+
+            let tenant = ctx.tenant_id.clone().ok_or_else(|| {
+                tracing::error!("ui_proxy call missing tenant id in host context");
+                ProxyError::Internal
+            })?;
+
+            let extension = ctx.extension_id.clone().ok_or_else(|| {
+                tracing::error!("ui_proxy call missing extension id in host context");
+                ProxyError::Internal
+            })?;
+
+            let request_id = ctx
+                .request_id
+                .clone()
+                .unwrap_or_else(|| "ui-proxy-call".to_string());
+
+            let trimmed_route = route.trim();
+            if trimmed_route.is_empty() {
+                tracing::warn!(
+                    tenant=%tenant,
+                    extension=%extension,
+                    "ui_proxy route was empty"
+                );
+                return Err(ProxyError::BadRequest);
+            }
+
+            let (path_part, query_part) = match trimmed_route.split_once('?') {
+                Some((path, query)) => (path, Some(query)),
+                None => (trimmed_route, None),
+            };
+
+            let mut url = base_url.clone();
+            {
+                let mut segments = url.path_segments_mut().map_err(|_| ProxyError::Internal)?;
+                segments.pop_if_empty();
+                segments.push(&extension);
+                for segment in path_part.trim_start_matches('/').split('/') {
+                    if segment.is_empty() {
+                        continue;
+                    }
+                    if matches!(segment, "." | "..") {
+                        tracing::warn!(
+                            tenant=%tenant,
+                            extension=%extension,
+                            segment=%segment,
+                            "ui_proxy route contains invalid segment"
+                        );
+                        return Err(ProxyError::BadRequest);
+                    }
+                    segments.push(segment);
+                }
+            }
+            if let Some(query) = query_part {
+                if query.is_empty() {
+                    url.set_query(None);
+                } else {
+                    url.set_query(Some(query));
+                }
+            } else {
+                url.set_query(None);
+            }
+
+            let client: &Client = &HTTP_CLIENT;
+            let mut request = client.post(url.clone()).timeout(runtime.ui_proxy_timeout);
+            request = request
+                .header("x-request-id", &request_id)
+                .header("x-alga-tenant", &tenant)
+                .header("x-alga-extension", &extension);
+            if let Some(install) = ctx.install_id.clone() {
+                request = request.header("x-ext-install-id", install);
+            }
+            if let Some(version) = ctx.version_id.clone() {
+                request = request.header("x-ext-version-id", version);
+            }
+            if let Some(auth) = runtime.ui_proxy_auth.clone() {
+                request = request.header("x-runner-auth", auth);
+            }
+
+            let has_body = payload.is_some();
+            if let Some(body) = payload {
+                request = request
+                    .header("content-type", "application/json")
+                    .body(body);
+            } else {
+                request = request.header("content-type", "application/json");
+            }
+
+            let started = Instant::now();
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                route=%path_part,
+                url=%url,
+                has_body,
+                "ui proxy dispatch start"
+            );
+
+            let response = match request.send().await {
+                Ok(resp) => resp,
+                Err(err) => {
+                    tracing::error!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        route=%path_part,
+                        error=%err,
+                        "ui proxy request failed during transport"
+                    );
+                    return Err(ProxyError::Internal);
+                }
+            };
+
+            let status = response.status();
+            let duration_ms = started.elapsed().as_millis();
+
+            if !status.is_success() {
+                tracing::warn!(
+                    tenant=%tenant,
+                    extension=%extension,
+                    route=%path_part,
+                    status=status.as_u16(),
+                    duration_ms,
+                    "ui proxy backend returned non-success status"
+                );
+                return Err(map_proxy_status(status));
+            }
+
+            let bytes = response.bytes().await.map_err(|err| {
+                tracing::error!(
+                    tenant=%tenant,
+                    extension=%extension,
+                    route=%path_part,
+                    error=%err,
+                    "failed to read ui proxy response body"
+                );
+                ProxyError::Internal
+            })?;
+
+            tracing::info!(
+                tenant=%tenant,
+                extension=%extension,
+                route=%path_part,
+                duration_ms,
+                response_bytes = bytes.len(),
+                "ui proxy dispatch completed"
+            );
+
+            Ok(bytes.to_vec())
         }
     }
 }
@@ -821,6 +1025,17 @@ fn map_storage_status(status: StatusCode) -> StorageError {
         StatusCode::CONFLICT => StorageError::Conflict,
         StatusCode::TOO_MANY_REQUESTS => StorageError::Denied,
         _ => StorageError::Internal,
+    }
+}
+
+fn map_proxy_status(status: StatusCode) -> ProxyError {
+    match status {
+        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => ProxyError::Denied,
+        StatusCode::NOT_FOUND => ProxyError::RouteNotFound,
+        StatusCode::BAD_REQUEST => ProxyError::BadRequest,
+        StatusCode::TOO_MANY_REQUESTS => ProxyError::Denied,
+        code if code.is_client_error() => ProxyError::BadRequest,
+        _ => ProxyError::Internal,
     }
 }
 
