@@ -345,6 +345,8 @@ export async function copyPresetToContractLine(
     overrides?: {
         base_rate?: number | null;
         services?: Record<string, { quantity?: number; custom_rate?: number }>;
+        minimum_billable_time?: number;
+        round_up_to_nearest?: number;
     }
 ): Promise<string> {
     try {
@@ -452,8 +454,8 @@ export async function copyPresetToContractLine(
                     if (configurationType === 'Hourly') {
                         typeConfig = {
                             hourly_rate: baseConfig.custom_rate,
-                            minimum_billable_time: 15,
-                            round_up_to_nearest: 15
+                            minimum_billable_time: overrides?.minimum_billable_time ?? preset.minimum_billable_time ?? 15,
+                            round_up_to_nearest: overrides?.round_up_to_nearest ?? preset.round_up_to_nearest ?? 15
                         };
                     } else if (configurationType === 'Usage') {
                         typeConfig = {

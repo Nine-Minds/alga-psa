@@ -36,18 +36,32 @@ export interface TemplateWizardData {
     service_id: string;
     service_name?: string;
     quantity?: number;
-    bucket_overlay?: TemplateBucketOverlayInput | null;
+  }>;
+  fixed_presets?: Array<{
+    preset_id: string;
+    preset_name?: string;
+    service_quantities?: Record<string, number>; // Map of service_id to quantity
   }>;
   hourly_services: Array<{
     service_id: string;
     service_name?: string;
     bucket_overlay?: TemplateBucketOverlayInput | null;
   }>;
+  hourly_presets?: Array<{
+    preset_id: string;
+    preset_name?: string;
+    minimum_billable_time?: number;
+    round_up_to_nearest?: number;
+  }>;
   usage_services?: Array<{
     service_id: string;
     service_name?: string;
     unit_of_measure?: string;
     bucket_overlay?: TemplateBucketOverlayInput | null;
+  }>;
+  usage_presets?: Array<{
+    preset_id: string;
+    preset_name?: string;
   }>;
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
@@ -70,8 +84,11 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     description: '',
     billing_frequency: 'monthly',
     fixed_services: [],
+    fixed_presets: [],
     hourly_services: [],
+    hourly_presets: [],
     usage_services: [],
+    usage_presets: [],
   });
 
   useEffect(() => {
@@ -81,8 +98,11 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         description: '',
         billing_frequency: 'monthly',
         fixed_services: [],
+        fixed_presets: [],
         hourly_services: [],
+        hourly_presets: [],
         usage_services: [],
+        usage_presets: [],
       });
       setErrors({});
       setCompletedSteps(new Set());
@@ -94,8 +114,11 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
     fixed_services: wizardData.fixed_services ?? [],
+    fixed_presets: wizardData.fixed_presets ?? [],
     hourly_services: wizardData.hourly_services ?? [],
+    hourly_presets: wizardData.hourly_presets ?? [],
     usage_services: wizardData.usage_services ?? [],
+    usage_presets: wizardData.usage_presets ?? [],
     minimum_billable_time: wizardData.minimum_billable_time,
     round_up_to_nearest: wizardData.round_up_to_nearest,
     billing_frequency: wizardData.billing_frequency,

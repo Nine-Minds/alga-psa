@@ -7,11 +7,9 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X } from 'lucide-react';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
-import { IContractLine } from 'server/src/interfaces/billing.interfaces';
-import { getContractLines, updateContractLine } from 'server/src/lib/actions/contractLineAction';
+import { updateContractLine } from 'server/src/lib/actions/contractLineAction';
 import {
   getDetailedContractLines,
-  addContractLine,
   removeContractLine,
   updateContractLineAssociation,
 } from 'server/src/lib/actions/contractLineMappingActions';
@@ -67,7 +65,6 @@ interface ServiceConfiguration {
 
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged }) => {
   const [contractLines, setContractLines] = useState<DetailedContractLineMapping[]>([]);
-  const [availableContractLines, setAvailableContractLines] = useState<IContractLine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedLines, setExpandedLines] = useState<Record<string, boolean>>({});
@@ -91,18 +88,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     setError(null);
 
     try {
-      const [allContractLines, detailedContractLines] = await Promise.all([
-        getContractLines(),
-        getDetailedContractLines(contract.contract_id),
-      ]);
-
+      const detailedContractLines = await getDetailedContractLines(contract.contract_id);
       setContractLines(detailedContractLines);
-
-      // Filter to only show contract lines that aren't already added
-      const unusedLines = allContractLines.filter(
-        (line) => !detailedContractLines.some((cl) => cl.contract_line_id === line.contract_line_id)
-      );
-      setAvailableContractLines(unusedLines);
     } catch (err) {
       console.error('Error fetching contract lines:', err);
       setError('Failed to load contract lines');
@@ -145,20 +132,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
-  const handleAddContractLines = async (selectedLineIds: string[]) => {
-    if (!contract.contract_id || selectedLineIds.length === 0) return;
+  const handleAddContractLines = async () => {
+    if (!contract.contract_id) return;
 
     try {
-      // Add all selected contract lines
-      await Promise.all(
-        selectedLineIds.map(lineId => addContractLine(contract.contract_id, lineId, undefined))
-      );
+      // Refresh the contract lines after presets are added
       await fetchData();
       onContractLinesChanged?.();
     } catch (err) {
-      console.error('Error adding contract lines:', err);
-      setError('Failed to add contract lines');
-      throw err; // Re-throw to let dialog handle it
+      console.error('Error refreshing contract lines:', err);
+      setError('Failed to refresh contract lines');
+      throw err;
     }
   };
 
@@ -358,7 +342,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
           <Button
             id="add-contract-line-btn"
             onClick={() => setShowAddDialog(true)}
-            disabled={availableContractLines.length === 0}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Contract Lines
@@ -761,7 +744,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       <AddContractLinesDialog
         isOpen={showAddDialog}
         onClose={() => setShowAddDialog(false)}
-        availableContractLines={availableContractLines}
+        contractId={contract.contract_id}
         onAdd={handleAddContractLines}
       />
     </Card>

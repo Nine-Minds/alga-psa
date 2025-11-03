@@ -223,6 +223,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         billing_frequency: billingFrequency,
         contract_line_type: planType!,
         tenant,
+        // Add hourly-specific fields if this is an hourly preset
+        ...(planType === 'Hourly' ? {
+          minimum_billable_time: minimumBillableTime ?? null,
+          round_up_to_nearest: roundUpToNearest ?? null,
+        } : {}),
       };
 
       let savedPresetId: string | undefined;

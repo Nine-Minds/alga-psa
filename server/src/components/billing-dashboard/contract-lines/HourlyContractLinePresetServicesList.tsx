@@ -1,11 +1,11 @@
-// server/src/components/billing-dashboard/FixedContractLinePresetServicesList.tsx
+// server/src/components/billing-dashboard/contract-lines/HourlyContractLinePresetServicesList.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
-import { Plus, MoreVertical, HelpCircle } from 'lucide-react';
+import { Plus, MoreVertical, HelpCircle, DollarSign } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,19 +24,17 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
-// Define billing method options
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
   { value: 'fixed', label: 'Fixed Price' },
   { value: 'hourly', label: 'Hourly' },
   { value: 'usage', label: 'Usage Based' }
 ];
 
-interface FixedContractLinePresetServicesListProps {
-  planId: string; // This is actually the presetId
+interface HourlyContractLinePresetServicesListProps {
+  presetId: string;
   onServiceAdded?: () => void;
 }
 
-// Simplified interface for display
 interface SimplePresetService {
   preset_id: string;
   service_id: string;
@@ -44,10 +42,10 @@ interface SimplePresetService {
   service_type_name?: string;
   billing_method?: 'fixed' | 'hourly' | 'usage' | null;
   default_rate?: number;
-  quantity?: number;
+  custom_rate?: number; // Hourly rate in cents
 }
 
-const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServicesListProps> = ({ planId, onServiceAdded }) => {
+const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetServicesListProps> = ({ presetId, onServiceAdded }) => {
   const [presetServices, setPresetServices] = useState<SimplePresetService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
@@ -55,22 +53,18 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!planId) return;
+    if (!presetId) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // Fetch preset services
-      const presetServicesData = await getContractLinePresetServices(planId);
-
-      // Fetch all available services
+      const presetServicesData = await getContractLinePresetServices(presetId);
       const servicesResponse = await getServices();
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
         : (servicesResponse.services || []);
 
-      // Enhance preset services with service details
       const enhancedServices: SimplePresetService[] = presetServicesData.map((presetService) => {
         const serviceDetails = allAvailableServices.find(s => s.service_id === presetService.service_id);
         return {
@@ -80,7 +74,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
           service_type_name: serviceDetails?.service_type_name || 'N/A',
           billing_method: serviceDetails?.billing_method,
           default_rate: serviceDetails?.default_rate,
-          quantity: presetService.quantity || 1
+          custom_rate: presetService.custom_rate || serviceDetails?.default_rate
         };
       });
 
@@ -93,39 +87,40 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
     } finally {
       setIsLoading(false);
     }
-  }, [planId]);
+  }, [presetId]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const handleAddServices = async () => {
-    if (!planId || selectedServicesToAdd.length === 0) return;
+    if (!presetId || selectedServicesToAdd.length === 0) return;
 
     try {
-      // Get current services
-      const currentServices = await getContractLinePresetServices(planId);
+      const currentServices = await getContractLinePresetServices(presetId);
+      const newServices = selectedServicesToAdd.map(serviceId => {
+        const service = availableServices.find(s => s.service_id === serviceId);
+        return {
+          preset_id: presetId,
+          service_id: serviceId,
+          custom_rate: service?.default_rate || 0,
+          quantity: null,
+          unit_of_measure: null
+        };
+      });
 
-      // Add new services to the list
-      const newServices = selectedServicesToAdd.map(serviceId => ({
-        preset_id: planId,
-        service_id: serviceId,
-        quantity: 1
-      }));
-
-      // Combine current and new services
       const allServices = [
         ...currentServices.map(s => ({
           preset_id: s.preset_id,
           service_id: s.service_id,
-          quantity: s.quantity || 1
+          custom_rate: s.custom_rate,
+          quantity: null,
+          unit_of_measure: null
         })),
         ...newServices
       ];
 
-      // Update all services
-      await updateContractLinePresetServices(planId, allServices);
-
+      await updateContractLinePresetServices(presetId, allServices);
       fetchData();
       setSelectedServicesToAdd([]);
 
@@ -139,24 +134,21 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
   };
 
   const handleRemoveService = async (serviceId: string) => {
-    if (!planId) return;
+    if (!presetId) return;
 
     try {
-      // Get current services
-      const currentServices = await getContractLinePresetServices(planId);
-
-      // Remove the service
+      const currentServices = await getContractLinePresetServices(presetId);
       const updatedServices = currentServices
         .filter(s => s.service_id !== serviceId)
         .map(s => ({
           preset_id: s.preset_id,
           service_id: s.service_id,
-          quantity: s.quantity || 1
+          custom_rate: s.custom_rate,
+          quantity: null,
+          unit_of_measure: null
         }));
 
-      // Update services
-      await updateContractLinePresetServices(planId, updatedServices);
-
+      await updateContractLinePresetServices(presetId, updatedServices);
       fetchData();
 
       if (onServiceAdded) {
@@ -168,31 +160,28 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
     }
   };
 
-  const handleQuantityChange = async (serviceId: string, newQuantity: number) => {
-    if (!planId) return;
+  const handleRateChange = async (serviceId: string, newRate: number) => {
+    if (!presetId) return;
 
     try {
-      // Get current services
-      const currentServices = await getContractLinePresetServices(planId);
-
-      // Update the quantity for the specific service
+      const currentServices = await getContractLinePresetServices(presetId);
       const updatedServices = currentServices.map(s => ({
         preset_id: s.preset_id,
         service_id: s.service_id,
-        quantity: s.service_id === serviceId ? Math.max(1, newQuantity) : (s.quantity || 1)
+        custom_rate: s.service_id === serviceId ? newRate : s.custom_rate,
+        quantity: null,
+        unit_of_measure: null
       }));
 
-      // Update services
-      await updateContractLinePresetServices(planId, updatedServices);
-
+      await updateContractLinePresetServices(presetId, updatedServices);
       fetchData();
 
       if (onServiceAdded) {
         onServiceAdded();
       }
     } catch (error) {
-      console.error('Error updating service quantity:', error);
-      setError('Failed to update quantity');
+      console.error('Error updating service rate:', error);
+      setError('Failed to update rate');
     }
   };
 
@@ -211,40 +200,30 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value || 'N/A',
     },
     {
-      title: 'Quantity',
-      dataIndex: 'quantity',
+      title: 'Hourly Rate',
+      dataIndex: 'custom_rate',
       render: (value, record) => (
-        <Input
-          type="number"
-          min="1"
-          value={value ?? 1}
-          onChange={(e) => {
-            const newValue = parseInt(e.target.value) || 1;
-            handleQuantityChange(record.service_id, newValue);
-          }}
-          className="w-20"
-          onClick={(e) => e.stopPropagation()}
-        />
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500">$</span>
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={value !== undefined ? (value / 100).toFixed(2) : ''}
+            onChange={(e) => {
+              const dollars = parseFloat(e.target.value) || 0;
+              const cents = Math.round(dollars * 100);
+              handleRateChange(record.service_id, cents);
+            }}
+            className="w-24"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       ),
-    },
-    {
-      title: (
-        <Tooltip content={
-          <p>Service's standard rate, used for internal value allocation and reporting within the fixed plan total.</p>
-        }>
-          <span className="flex items-center cursor-help">
-            Default Rate
-            <HelpCircle className="h-4 w-4 ml-1 text-muted-foreground" />
-          </span>
-        </Tooltip>
-      ),
-      dataIndex: 'default_rate',
-      render: (value) => value !== undefined ? `$${(Number(value) / 100).toFixed(2)}` : 'N/A',
     },
     {
       title: 'Actions',
       dataIndex: 'service_id',
-      render: (value, record) => (
+      render: (value) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -274,11 +253,10 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
     },
   ];
 
-  // Filter out services already in the preset from the add list and only include services with 'fixed' billing method
   const servicesAvailableToAdd = availableServices.filter(
     availService =>
       !presetServices.some(ps => ps.service_id === availService.service_id) &&
-      availService.billing_method === 'fixed'
+      availService.billing_method === 'hourly'
   );
 
   return (
@@ -300,13 +278,13 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
               columns={presetServiceColumns}
               pagination={false}
             />
-            {presetServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line.</p>}
+            {presetServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line preset.</p>}
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Contract Line</h4>
+            <h4 className="text-md font-medium mb-2">Add Services to Contract Line Preset</h4>
             {servicesAvailableToAdd.length === 0 ? (
-              <p className="text-sm text-muted-foreground">All available services are already associated with this contract line.</p>
+              <p className="text-sm text-muted-foreground">All available hourly services are already associated with this preset.</p>
             ) : (
               <>
                 <div className="mb-3">
@@ -335,7 +313,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
                           <div className="flex-grow flex flex-col text-sm">
                             <span>{service.service_name}</span>
                             <span className="text-xs text-muted-foreground">
-                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${(Number(service.default_rate) / 100).toFixed(2)}
+                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Default Rate: ${(Number(service.default_rate) / 100).toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -361,4 +339,4 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
   );
 };
 
-export default FixedContractLinePresetServicesList;
+export default HourlyContractLinePresetServicesList;

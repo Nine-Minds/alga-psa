@@ -27,8 +27,7 @@ import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from '../../TenantProvider';
 
-// Keep GenericPlanServicesList for now, might remove in Phase 3
-import GenericPlanServicesList from './GenericContractLineServicesList';
+import UsageContractLinePresetServicesList from './UsageContractLinePresetServicesList';
 interface UsagePresetConfigurationProps {
   presetId: string;
   className?: string;
@@ -555,9 +554,7 @@ export function UsagePresetConfiguration({
                       <CardTitle>Manage Contract Line Preset Services</CardTitle>
                   </CardHeader>
                   <CardContent>
-                      <p className="text-muted-foreground mb-4">No services are currently associated with this contract line preset. Add services below to configure their pricing.</p>
-                      {/* Keep the GenericPlanServicesList to allow adding services */}
-                      <GenericPlanServicesList presetId={presetId} onServicesChanged={handleServicesChanged} />
+                      <UsageContractLinePresetServicesList presetId={presetId} onServiceAdded={handleServicesChanged} />
                   </CardContent>
               </Card>
           </div>
@@ -728,7 +725,7 @@ export function UsagePresetConfiguration({
             <CardTitle>Manage Contract Line Preset Services</CardTitle>
            </CardHeader>
            <CardContent>
-               <GenericPlanServicesList presetId={presetId} onServicesChanged={handleServicesChanged} disableEditing={true} />
+               <UsageContractLinePresetServicesList presetId={presetId} onServiceAdded={handleServicesChanged} />
            </CardContent>
        </Card>
     </div>

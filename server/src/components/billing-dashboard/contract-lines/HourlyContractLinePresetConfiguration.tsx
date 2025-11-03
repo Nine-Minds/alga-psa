@@ -19,7 +19,7 @@ import { getContractLinePresetById, updateContractLinePreset } from 'server/src/
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from '../../TenantProvider';
 import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Corrected import path
-import GenericPlanServicesList from './GenericContractLineServicesList';
+import HourlyContractLinePresetServicesList from './HourlyContractLinePresetServicesList';
 import { IContractLinePreset, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 import {
@@ -118,6 +118,10 @@ export function HourlyPresetConfiguration({
 
   const markBasicsDirty = () => setIsBasicsDirty(true);
 
+  // Hourly preset-specific fields
+  const [minimumBillableTime, setMinimumBillableTime] = useState<number | undefined>(undefined);
+  const [roundUpToNearest, setRoundUpToNearest] = useState<number | undefined>(undefined);
+
   const [enableOvertime, setEnableOvertime] = useState<boolean>(false);
   const [overtimeRate, setOvertimeRate] = useState<number | undefined>(undefined);
   const [overtimeRateInput, setOvertimeRateInput] = useState<string>('');
@@ -171,8 +175,14 @@ export function HourlyPresetConfiguration({
       setBillingFrequency(fetchedPlan.billing_frequency);
       setIsBasicsDirty(false);
 
+      // Set preset-specific fields
+      setMinimumBillableTime(fetchedPlan.minimum_billable_time ?? undefined);
+      setRoundUpToNearest(fetchedPlan.round_up_to_nearest ?? undefined);
+
       // Set initial plan-wide states
       const initialData: Partial<HourlyPlanData> = {
+          minimum_billable_time: fetchedPlan.minimum_billable_time,
+          round_up_to_nearest: fetchedPlan.round_up_to_nearest,
           enable_overtime: fetchedPlan.enable_overtime ?? false,
           overtime_rate: fetchedPlan.overtime_rate,
           overtime_threshold: fetchedPlan.overtime_threshold ?? 40,
@@ -335,6 +345,8 @@ export function HourlyPresetConfiguration({
       const planData: Partial<HourlyPlanData> = {
         preset_name: planName,
         billing_frequency: billingFrequency,
+        minimum_billable_time: minimumBillableTime ?? null,
+        round_up_to_nearest: roundUpToNearest ?? null,
         tenant,
       };
 
@@ -556,146 +568,6 @@ export function HourlyPresetConfiguration({
                 </Alert>
             )}
 
-            {/* Contract Line Preset Wide Settings (Overtime, After-Hours) */}
-            <Accordion.Root type="single" collapsible value={isPlanWideSettingsOpen ? "plan-wide-settings" : ""} onValueChange={(value) => setIsPlanWideSettingsOpen(value === "plan-wide-settings")}>
-                <Accordion.Item value="plan-wide-settings" className="border rounded-md overflow-hidden">
-                    <Accordion.Header className="flex">
-                         <Accordion.Trigger className="flex flex-1 items-center justify-between p-4 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
-                            Contract Line Preset Hourly Settings (Overtime, After-Hours)
-                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                        </Accordion.Trigger>
-                    </Accordion.Header>
-                    <Accordion.Content className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-                        <CardContent className="space-y-6 p-4 border-t">
-                            {/* User Type Rates section removed from here */}
-
-                            {/* Overtime */}
-                            <div className="space-y-3 mt-4"> {/* Added mt-4 */}
-                                <div className="flex items-center space-x-2">
-                                <Switch id="enable-overtime" checked={enableOvertime} onCheckedChange={setEnableOvertime} disabled={saving} />
-                                <Label htmlFor="enable-overtime" className="cursor-pointer flex items-center">
-                                    Enable Overtime Rates
-                                    <Tooltip.Root delayDuration={100}>
-                                        <Tooltip.Trigger asChild>
-                                            <Button id="overtime-rate-tooltip-trigger" variant="ghost" size="sm" className="ml-1 h-5 w-5 p-0">
-                                                <Info className="h-4 w-4 text-muted-foreground" />
-                                            </Button>
-                                        </Tooltip.Trigger>
-                                         <Tooltip.Content side="top" className="max-w-xs bg-gray-800 text-white p-2 rounded shadow-lg text-sm z-50">
-                                            <p>Apply a different rate when total hours worked within the contract line preset's billing period exceed a specified threshold.</p>
-                                        </Tooltip.Content>
-                                    </Tooltip.Root>
-                                </Label>
-                                </div>
-                                {enableOvertime && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-8">
-                                    <div>
-                                    <Label htmlFor="overtime-rate">Overtime Rate ($/hr)</Label>
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                                      <Input
-                                        id="overtime-rate"
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={overtimeRateInput}
-                                        onChange={(e) => {
-                                          const value = e.target.value.replace(/[^0-9.]/g, '');
-                                          const decimalCount = (value.match(/\./g) || []).length;
-                                          if (decimalCount <= 1) {
-                                            setOvertimeRateInput(value);
-                                          }
-                                        }}
-                                        onBlur={() => {
-                                          if (overtimeRateInput.trim() === '' || overtimeRateInput === '.') {
-                                            setOvertimeRateInput('');
-                                            setOvertimeRate(undefined);
-                                          } else {
-                                            const dollars = parseFloat(overtimeRateInput) || 0;
-                                            const cents = Math.round(dollars * 100);
-                                            setOvertimeRate(cents);
-                                            setOvertimeRateInput((cents / 100).toFixed(2));
-                                          }
-                                        }}
-                                        placeholder="0.00"
-                                        disabled={saving}
-                                        className={`pl-7 ${planValidationErrors.overtimeRate ? 'border-red-500' : ''}`}
-                                      />
-                                    </div>
-                                    {planValidationErrors.overtimeRate && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeRate}</p>}
-                                    {!planValidationErrors.overtimeRate && <p className="text-sm text-muted-foreground mt-1">Rate applied after threshold.</p>}
-                                    </div>
-                                    <div>
-                                    <Label htmlFor="overtime-threshold">Overtime Threshold (hrs/period)</Label>
-                                    <Input
-                                        id="overtime-threshold" type="number"
-                                        value={overtimeThreshold?.toString() || ''}
-                                        onChange={handleNumberInputChange(setOvertimeThreshold)}
-                                        placeholder="40" disabled={saving} min={0} step={1}
-                                        className={planValidationErrors.overtimeThreshold ? 'border-red-500' : ''}
-                                    />
-                                    {planValidationErrors.overtimeThreshold && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeThreshold}</p>}
-                                    {!planValidationErrors.overtimeThreshold && <p className="text-sm text-muted-foreground mt-1">Hours before OT applies.</p>}
-                                    </div>
-                                </div>
-                                )}
-                            </div>
-
-                            {/* After Hours */}
-                            <div className="space-y-3 pt-3 border-t">
-                                <div className="flex items-center space-x-2">
-                                <Switch id="enable-after-hours" checked={enableAfterHoursRate} onCheckedChange={setEnableAfterHoursRate} disabled={saving} />
-                                <Label htmlFor="enable-after-hours" className="cursor-pointer flex items-center">
-                                    Enable After-Hours Rate Multiplier
-                                    <Tooltip.Root delayDuration={100}>
-                                        <Tooltip.Trigger asChild>
-                                            <Button id="after-hours-tooltip-trigger" variant="ghost" size="sm" className="ml-1 h-5 w-5 p-0">
-                                                <Info className="h-4 w-4 text-muted-foreground" />
-                                            </Button>
-                                        </Tooltip.Trigger>
-                                        <Tooltip.Content side="top" className="max-w-xs bg-gray-800 text-white p-2 rounded shadow-lg text-sm z-50">
-                                            <p>Apply a multiplier to the standard hourly rate for work performed outside of defined business hours (requires Business Hours configuration).</p>
-                                        </Tooltip.Content>
-                                    </Tooltip.Root>
-                                </Label>
-                                </div>
-                                {enableAfterHoursRate && (
-                                <div className="pl-8">
-                                    <Label htmlFor="after-hours-multiplier">After-Hours Multiplier</Label>
-                                    <Input
-                                      id="after-hours-multiplier"
-                                      type="text"
-                                      inputMode="decimal"
-                                      value={afterHoursMultiplierInput}
-                                      onChange={(e) => {
-                                        const value = e.target.value.replace(/[^0-9.]/g, '');
-                                        const decimalCount = (value.match(/\./g) || []).length;
-                                        if (decimalCount <= 1) {
-                                          setAfterHoursMultiplierInput(value);
-                                        }
-                                      }}
-                                      onBlur={() => {
-                                        if (afterHoursMultiplierInput.trim() === '' || afterHoursMultiplierInput === '.') {
-                                          setAfterHoursMultiplierInput('1.5');
-                                          setAfterHoursMultiplier(1.5);
-                                        } else {
-                                          const multiplier = parseFloat(afterHoursMultiplierInput) || 1.5;
-                                          setAfterHoursMultiplier(multiplier);
-                                          setAfterHoursMultiplierInput(multiplier.toFixed(2));
-                                        }
-                                      }}
-                                      placeholder="1.5"
-                                      disabled={saving}
-                                      className={`w-full md:w-1/2 ${planValidationErrors.afterHoursMultiplier ? 'border-red-500' : ''}`}
-                                    />
-                                    {planValidationErrors.afterHoursMultiplier && <p className="text-sm text-red-500 mt-1">{planValidationErrors.afterHoursMultiplier}</p>}
-                                    {!planValidationErrors.afterHoursMultiplier && <p className="text-sm text-muted-foreground mt-1">Multiplier for non-business hours (e.g., 1.5x).</p>}
-                                </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Accordion.Content>
-                </Accordion.Item>
-            </Accordion.Root>
 
             {/* Contract Line Preset Basics - Inline Editing */}
             <Card>
@@ -751,6 +623,39 @@ export function HourlyPresetConfiguration({
                                 />
                             </div>
                         </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                            <div>
+                                <Label htmlFor="minimum-billable-time">Minimum Billable Time (minutes)</Label>
+                                <Input
+                                    id="minimum-billable-time"
+                                    type="number"
+                                    min="0"
+                                    value={minimumBillableTime ?? ''}
+                                    onChange={(e) => {
+                                        setMinimumBillableTime(e.target.value ? parseInt(e.target.value) : undefined);
+                                        markBasicsDirty();
+                                    }}
+                                    placeholder="e.g., 15"
+                                />
+                                <p className="text-sm text-muted-foreground mt-1">e.g., 15 minutes - any time entry less than this will be rounded up</p>
+                            </div>
+                            <div>
+                                <Label htmlFor="round-up-to-nearest">Round Up To Nearest (minutes)</Label>
+                                <Input
+                                    id="round-up-to-nearest"
+                                    type="number"
+                                    min="0"
+                                    value={roundUpToNearest ?? ''}
+                                    onChange={(e) => {
+                                        setRoundUpToNearest(e.target.value ? parseInt(e.target.value) : undefined);
+                                        markBasicsDirty();
+                                    }}
+                                    placeholder="e.g., 15"
+                                />
+                                <p className="text-sm text-muted-foreground mt-1">e.g., 15 minutes - time entries will be rounded up to the nearest interval</p>
+                            </div>
+                        </div>
                     </section>
 
                     <div className="flex justify-end gap-2 pt-4 border-t">
@@ -773,63 +678,6 @@ export function HourlyPresetConfiguration({
                 </CardContent>
             </Card>
 
-            {/* Service Specific Settings */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Service Rates & Settings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {serviceConfigs.length > 0 ? (
-                        <Accordion.Root type="multiple" className="w-full space-y-2">
-                            {serviceConfigs.map((serviceConfig) => (
-                                // Use config_id as the key and value for the Accordion Item
-                                <Accordion.Item key={serviceConfig.config_id} value={serviceConfig.config_id} className="border rounded-md overflow-hidden">
-                                    <Accordion.Header className="flex">
-                                        <Accordion.Trigger className="flex flex-1 items-center justify-between p-4 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180">
-                                            {/* Use optional chaining for service name */}
-                                            {serviceConfig.service?.service_name ?? `Service ID: ${serviceConfig.service_id}`}
-                                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                                        </Accordion.Trigger>
-                                    </Accordion.Header>
-                                    <Accordion.Content className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-                                        <div className="p-4 border-t">
-                                            {/* Conditionally render form or message based on isHourlyConfigurable */}
-                                            {serviceConfig.isHourlyConfigurable && serviceConfig.hourly_config ? (
-                                                <ServiceHourlyConfigForm
-                                                    configId={serviceConfig.config_id} // Pass the config_id
-                                                    config={serviceConfig.hourly_config} // Pass hourly fields
-                                                    userTypeRates={serviceConfig.user_type_rates || []} // Pass user type rates for this config
-                                                    onHourlyFieldChange={(field: keyof IContractLinePresetServiceHourlyConfig, value: any) => handleHourlyFieldChange(serviceConfig.config_id, field, value)}
-                                                    onUserTypeRatesChange={(newRates: IUserTypeRate[]) => handleUserTypeRatesChange(serviceConfig.config_id, newRates)} // Pass handler for rates with types
-                                                    validationErrors={serviceValidationErrors[serviceConfig.config_id] || {}}
-                                                    disabled={saving}
-                                                />
-                                            ) : (
-                                                <p className="text-muted-foreground text-sm">
-                                                    This service (Billing Method: {serviceConfig.service?.billing_method || 'N/A'}) cannot be configured with specific hourly rates on this plan.
-                                                </p>
-                                            )}
-                                        </div>
-                                    </Accordion.Content>
-                                </Accordion.Item>
-                            ))}
-                        </Accordion.Root>
-                    ) : (
-                        <p className="text-muted-foreground">No services are currently associated with this contract line preset.</p>
-                    )}
-                </CardContent>
-            </Card>
-
-            <div className="flex justify-end pt-4 sticky bottom-0 bg-background py-4 border-t border-border">
-                <Button
-                    id="save-hourly-config-button"
-                    onClick={handleSave}
-                    // Disable save if saving, no changes, or plan-wide errors exist. Service errors handled by action.
-                    disabled={saving || !hasUnsavedChanges || Object.values(planValidationErrors).some(e => e)}
-                >
-                {saving ? <LoadingIndicator spinnerProps={{ size: "sm" }} text="Save Configuration" /> : "Save Configuration"}
-                </Button>
-            </div>
 
             {/* Add Services to Contract Line Preset */}
             <Card>
@@ -837,7 +685,7 @@ export function HourlyPresetConfiguration({
                     <CardTitle>Manage Contract Line Preset Services</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <GenericPlanServicesList presetId={presetId} onServicesChanged={handleServicesChanged} disableEditing={true} />
+                    <HourlyContractLinePresetServicesList presetId={presetId} onServiceAdded={handleServicesChanged} />
                 </CardContent>
             </Card>
         </div>

@@ -85,6 +85,10 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [presetServiceOverrides, setPresetServiceOverrides] = useState<Record<string, Record<string, PresetServiceOverrides>>>({});
   const [presetServiceInputs, setPresetServiceInputs] = useState<Record<string, Record<string, { quantity: string; rate: string }>>>({});
 
+  // Hourly preset configuration overrides
+  const [hourlyPresetOverrides, setHourlyPresetOverrides] = useState<Record<string, { minimum_billable_time?: number; round_up_to_nearest?: number }>>({});
+  const [hourlyPresetInputs, setHourlyPresetInputs] = useState<Record<string, { minimum_billable_time: string; round_up_to_nearest: string }>>({});
+
   // Load clients and contract line presets on mount
   useEffect(() => {
     loadClients();
@@ -246,8 +250,9 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
           [presetId]: serviceInputs
         }));
 
-        // Load fixed config for Fixed type presets
+        // Load config for type-specific presets
         const preset = availableContractLinePresets.find(p => p.preset_id === presetId);
+
         if (preset?.contract_line_type === 'Fixed') {
           const fixedConfig = await getContractLinePresetFixedConfig(presetId);
           setContractLinePresetFixedConfigs(prev => ({
@@ -262,6 +267,23 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
               [presetId]: (fixedConfig.base_rate! / 100).toFixed(2)
             }));
           }
+        } else if (preset?.contract_line_type === 'Hourly') {
+          // Initialize hourly preset configuration from preset defaults
+          setHourlyPresetInputs(prev => ({
+            ...prev,
+            [presetId]: {
+              minimum_billable_time: preset.minimum_billable_time?.toString() || '15',
+              round_up_to_nearest: preset.round_up_to_nearest?.toString() || '15'
+            }
+          }));
+
+          setHourlyPresetOverrides(prev => ({
+            ...prev,
+            [presetId]: {
+              minimum_billable_time: preset.minimum_billable_time ?? 15,
+              round_up_to_nearest: preset.round_up_to_nearest ?? 15
+            }
+          }));
         }
       } catch (error) {
         console.error(`Error loading services for contract line preset ${presetId}:`, error);
@@ -336,11 +358,24 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
             const overrides: {
               base_rate?: number | null;
               services?: Record<string, { quantity?: number; custom_rate?: number }>;
+              minimum_billable_time?: number;
+              round_up_to_nearest?: number;
             } = {};
 
             // Add base_rate override for Fixed type presets
             if (presetRateOverrides[presetId] !== undefined) {
               overrides.base_rate = presetRateOverrides[presetId];
+            }
+
+            // Add hourly configuration overrides
+            const hourlyConfig = hourlyPresetOverrides[presetId];
+            if (hourlyConfig) {
+              if (hourlyConfig.minimum_billable_time !== undefined) {
+                overrides.minimum_billable_time = hourlyConfig.minimum_billable_time;
+              }
+              if (hourlyConfig.round_up_to_nearest !== undefined) {
+                overrides.round_up_to_nearest = hourlyConfig.round_up_to_nearest;
+              }
             }
 
             // Add service-level overrides (quantity and custom_rate)
@@ -774,8 +809,185 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                         </div>
                                       ))}
                                     </div>
+                                  ) : preset.contract_line_type === 'Hourly' ? (
+                                    /* For Hourly presets, show hourly configuration fields */
+                                    <div className="space-y-4">
+                                      {/* Hourly Configuration */}
+                                      <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
+                                        <Label className="text-xs font-semibold text-gray-900 mb-2 block">Time Billing Configuration</Label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                          <div>
+                                            <Label htmlFor={`min-billable-${preset.preset_id}`} className="text-xs font-medium text-gray-700">
+                                              Minimum billable minutes
+                                            </Label>
+                                            <Input
+                                              id={`min-billable-${preset.preset_id}`}
+                                              type="number"
+                                              min="0"
+                                              step="1"
+                                              value={hourlyPresetInputs[preset.preset_id]?.minimum_billable_time || '15'}
+                                              onChange={(e) => {
+                                                setHourlyPresetInputs(prev => ({
+                                                  ...prev,
+                                                  [preset.preset_id]: {
+                                                    ...(prev[preset.preset_id] || { minimum_billable_time: '15', round_up_to_nearest: '15' }),
+                                                    minimum_billable_time: e.target.value
+                                                  }
+                                                }));
+                                              }}
+                                              onBlur={() => {
+                                                const value = Math.max(0, parseInt(hourlyPresetInputs[preset.preset_id]?.minimum_billable_time || '15') || 0);
+                                                setHourlyPresetOverrides(prev => ({
+                                                  ...prev,
+                                                  [preset.preset_id]: {
+                                                    ...(prev[preset.preset_id] || {}),
+                                                    minimum_billable_time: value
+                                                  }
+                                                }));
+                                                setHourlyPresetInputs(prev => ({
+                                                  ...prev,
+                                                  [preset.preset_id]: {
+                                                    ...(prev[preset.preset_id] || { minimum_billable_time: '15', round_up_to_nearest: '15' }),
+                                                    minimum_billable_time: value.toString()
+                                                  }
+                                                }));
+                                              }}
+                                              className="h-9 text-sm mt-1"
+                                            />
+                                          </div>
+                                          <div>
+                                            <Label htmlFor={`round-up-${preset.preset_id}`} className="text-xs font-medium text-gray-700">
+                                              Round up to nearest (minutes)
+                                            </Label>
+                                            <Input
+                                              id={`round-up-${preset.preset_id}`}
+                                              type="number"
+                                              min="0"
+                                              step="1"
+                                              value={hourlyPresetInputs[preset.preset_id]?.round_up_to_nearest || '15'}
+                                              onChange={(e) => {
+                                                setHourlyPresetInputs(prev => ({
+                                                  ...prev,
+                                                  [preset.preset_id]: {
+                                                    ...(prev[preset.preset_id] || { minimum_billable_time: '15', round_up_to_nearest: '15' }),
+                                                    round_up_to_nearest: e.target.value
+                                                  }
+                                                }));
+                                              }}
+                                              onBlur={() => {
+                                                const value = Math.max(0, parseInt(hourlyPresetInputs[preset.preset_id]?.round_up_to_nearest || '15') || 0);
+                                                setHourlyPresetOverrides(prev => ({
+                                                  ...prev,
+                                                  [preset.preset_id]: {
+                                                    ...(prev[preset.preset_id] || {}),
+                                                    round_up_to_nearest: value
+                                                  }
+                                                }));
+                                                setHourlyPresetInputs(prev => ({
+                                                  ...prev,
+                                                  [preset.preset_id]: {
+                                                    ...(prev[preset.preset_id] || { minimum_billable_time: '15', round_up_to_nearest: '15' }),
+                                                    round_up_to_nearest: value.toString()
+                                                  }
+                                                }));
+                                              }}
+                                              className="h-9 text-sm mt-1"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Services with hourly rates */}
+                                      <div>
+                                        <Label className="text-xs font-semibold text-gray-900 mb-2 block">Services & Hourly Rates</Label>
+                                        <div className="space-y-2">
+                                          {services.map((service) => {
+                                            const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
+                                              ? (typeof service.custom_rate === 'string' ? parseFloat(service.custom_rate) : service.custom_rate)
+                                              : null;
+
+                                            const rateInCents = customRateValue !== null
+                                              ? customRateValue
+                                              : (service.default_rate || 0);
+
+                                            const serviceInputs = presetServiceInputs[preset.preset_id]?.[service.service_id] || {
+                                              quantity: service.quantity?.toString() || '1',
+                                              rate: (rateInCents / 100).toFixed(2)
+                                            };
+
+                                            return (
+                                              <div key={service.service_id} className="bg-gray-50 rounded-md p-3 border border-gray-200">
+                                                <div className="font-medium text-sm text-gray-900 mb-2">{service.service_name}</div>
+                                                <div>
+                                                  <Label htmlFor={`hourly-rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
+                                                    Hourly Rate
+                                                  </Label>
+                                                  <div className="relative mt-1">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                                    <Input
+                                                      id={`hourly-rate-${preset.preset_id}-${service.service_id}`}
+                                                      type="text"
+                                                      inputMode="decimal"
+                                                      value={serviceInputs.rate}
+                                                      onChange={(e) => {
+                                                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                                                        const decimalCount = (value.match(/\./g) || []).length;
+                                                        if (decimalCount <= 1) {
+                                                          const newInputs = {
+                                                            ...presetServiceInputs,
+                                                            [preset.preset_id]: {
+                                                              ...(presetServiceInputs[preset.preset_id] || {}),
+                                                              [service.service_id]: {
+                                                                ...serviceInputs,
+                                                                rate: value
+                                                              }
+                                                            }
+                                                          };
+                                                          setPresetServiceInputs(newInputs);
+                                                        }
+                                                      }}
+                                                      onBlur={() => {
+                                                        const dollars = parseFloat(serviceInputs.rate) || 0;
+                                                        const cents = Math.round(dollars * 100);
+                                                        const newOverrides = {
+                                                          ...presetServiceOverrides,
+                                                          [preset.preset_id]: {
+                                                            ...(presetServiceOverrides[preset.preset_id] || {}),
+                                                            [service.service_id]: {
+                                                              ...(presetServiceOverrides[preset.preset_id]?.[service.service_id] || {}),
+                                                              custom_rate: cents
+                                                            }
+                                                          }
+                                                        };
+                                                        setPresetServiceOverrides(newOverrides);
+                                                        const newInputs = {
+                                                          ...presetServiceInputs,
+                                                          [preset.preset_id]: {
+                                                            ...(presetServiceInputs[preset.preset_id] || {}),
+                                                            [service.service_id]: {
+                                                              ...serviceInputs,
+                                                              rate: (cents / 100).toFixed(2)
+                                                            }
+                                                          }
+                                                        };
+                                                        setPresetServiceInputs(newInputs);
+                                                      }}
+                                                      placeholder={(service.default_rate! / 100).toFixed(2)}
+                                                      className="pl-8 h-9 text-sm"
+                                                    />
+                                                  </div>
+                                                  <p className="text-xs text-gray-500 mt-0.5">
+                                                    Default: ${(service.default_rate! / 100).toFixed(2)}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
                                   ) : (
-                                    /* For non-Fixed presets (Hourly/Usage), show editable fields */
+                                    /* For Usage presets, show quantity, rate, and unit of measure */
                                     <div className="space-y-3">
                                       {services.map((service) => {
                                         // Fallback: calculate rate if not in state yet
@@ -796,7 +1008,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                         return (
                                           <div key={service.service_id} className="bg-gray-50 rounded-md p-3 border border-gray-200">
                                             <div className="font-medium text-sm text-gray-900 mb-2">{service.service_name}</div>
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-3 gap-3">
                                               <div>
                                                 <Label htmlFor={`quantity-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
                                                   Quantity
@@ -897,6 +1109,21 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                                                 </div>
                                                 <p className="text-xs text-gray-500 mt-0.5">
                                                   Default: ${(service.default_rate! / 100).toFixed(2)}
+                                                </p>
+                                              </div>
+                                              <div>
+                                                <Label htmlFor={`unit-measure-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
+                                                  Unit of Measure
+                                                </Label>
+                                                <Input
+                                                  id={`unit-measure-${preset.preset_id}-${service.service_id}`}
+                                                  type="text"
+                                                  value={service.unit_of_measure || 'unit'}
+                                                  disabled
+                                                  className="h-9 text-sm mt-1 bg-gray-100"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                  e.g., GB, API call, user
                                                 </p>
                                               </div>
                                             </div>
