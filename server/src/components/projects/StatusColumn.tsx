@@ -233,7 +233,6 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
     // Log the actual order keys for debugging
     const beforeTask = beforeTaskId ? tasks.find(t => t.task_id === beforeTaskId) : null;
     const afterTask = afterTaskId ? tasks.find(t => t.task_id === afterTaskId) : null;
-    console.log('Drop position:', { 
       beforeTaskId, 
       beforeKey: beforeTask?.order_key,
       afterTaskId, 

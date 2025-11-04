@@ -201,25 +201,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   const handleMoveClick = (event: Event) => {
     event.stopPropagation();
-    console.log("Move task clicked:", task.task_id);
     onMoveTaskClick(task);
   };
 
   const handleDuplicateClick = (event: Event) => {
     event.stopPropagation();
-    console.log("Duplicate task clicked:", task.task_id);
     onDuplicateTaskClick(task);
   };
 
   const handleEditClick = (event: Event) => {
     event.stopPropagation();
-    console.log("Edit task clicked:", task.task_id);
     onEditTaskClick(task);
   };
 
   const handleDeleteClick = (event: Event) => {
     event.stopPropagation();
-    console.log("Delete task clicked:", task.task_id);
     onDeleteTaskClick(task);
   };
 
@@ -230,8 +226,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       onDragEnd={handleDragEnd}
       onDragOver={(e) => e.preventDefault()} // Allow drop
       onClick={() => {
-        // Log that we're using cached project tree data when selecting a task
-        console.log('Using cached project tree data when selecting task for editing');
         onTaskSelected(task);
       }}
       className={`${styles.taskCard} relative bg-white p-3 mb-2 rounded shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 flex flex-col gap-1 ${

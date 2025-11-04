@@ -40,6 +40,11 @@ exports.up = async function(knex) {
     table.index(['tenant', 'user_id'], 'idx_project_phase_comment_user');
     table.index(['tenant', 'created_at'], 'idx_project_phase_comment_created');
   });
+
+  // Create distributed tables for CitusDB multi-tenant support
+  // Colocate with projects table for efficient joins
+  await knex.raw("SELECT create_distributed_table('project_task_comment', 'tenant', colocate_with => 'projects')");
+  await knex.raw("SELECT create_distributed_table('project_phase_comment', 'tenant', colocate_with => 'projects')");
 };
 
 /**

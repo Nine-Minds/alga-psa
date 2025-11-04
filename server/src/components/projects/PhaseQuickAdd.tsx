@@ -60,7 +60,6 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
     setHasAttemptedSubmit(true);
     if (phaseName.trim() === '') return;
 
-    console.log('PhaseQuickAdd handleSubmit started');
     setIsSubmitting(true);
 
     try {
@@ -79,29 +78,24 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
 
       // Save any comments that were added during creation
       if (phaseComments.length > 0) {
-        console.log('Processing phase comments - count:', phaseComments.length);
         try {
           for (const comment of phaseComments) {
             if (comment.note) {
-              console.log('Adding phase comment:', comment.project_phase_comment_id);
               await addPhaseComment(newPhase.phase_id, comment.note);
             }
           }
-          console.log('Phase comment processing completed');
         } catch (error) {
           console.error('Error saving comments:', error);
           toast.error('Phase created but failed to save comments');
         }
       }
 
-      console.log('Calling onPhaseAdded and onClose');
       onPhaseAdded(newPhase);
       onClose();
     } catch (error) {
       console.error('Error adding phase:', error);
       toast.error('Failed to add phase. Please try again.');
     } finally {
-      console.log('PhaseQuickAdd finally block - setting isSubmitting to false');
       setIsSubmitting(false);
     }
   };

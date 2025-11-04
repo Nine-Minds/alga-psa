@@ -209,19 +209,15 @@ export default function TaskForm({
         if (task?.task_id) {
           // Use checklist items and resources from the task object if they exist
           if (task.checklist_items !== undefined) {
-            console.log('Using checklist items from task object');
             setChecklistItems(task.checklist_items);
           } else {
             // Only fetch if not available on the task object
-            console.log('Fetching checklist items from API');
             const existingChecklistItems = await getTaskChecklistItems(task.task_id);
             setChecklistItems(existingChecklistItems);
           }
 
           // Always fetch resources to ensure we have the latest data
-          console.log('Fetching resources from API for task:', task.task_id);
           const resources = await getTaskResourcesAction(task.task_id);
-          console.log('Fetched resources:', resources);
           setTaskResources(resources);
 
           // Fetch tags
@@ -240,7 +236,6 @@ export default function TaskForm({
     const loadDependencies = async () => {
       if (task?.task_id && mode === 'edit') {
         try {
-          console.log('Fetching task dependencies from API');
           const dependencies = await getTaskDependencies(task.task_id);
           setTaskDependencies(dependencies);
         } catch (error) {
@@ -461,7 +456,6 @@ export default function TaskForm({
   };
 
   const performSubmit = async () => {
-    console.log('performSubmit started - mode:', mode);
     setIsSubmitting(true);
 
     try {
@@ -471,7 +465,6 @@ export default function TaskForm({
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
 
       if (mode === 'edit' && task?.task_id) {
-        console.log('Edit mode - task_id:', task.task_id);
         // Check if phase or status actually changed
         const phaseChanged = task.phase_id !== selectedPhaseId;
         const statusChanged = task.project_status_mapping_id !== selectedStatusId;
@@ -514,36 +507,30 @@ export default function TaskForm({
 
         // Handle comment changes for edit mode (only if there are comment changes)
         if (deletedTaskCommentIds.length > 0 || taskComments.some(c => c.project_task_comment_id?.startsWith('temp-'))) {
-          console.log('Processing comment changes - deleted:', deletedTaskCommentIds.length, 'new:', taskComments.filter(c => c.project_task_comment_id?.startsWith('temp-')).length);
           try {
             // Handle deleted comments
             for (const deletedId of deletedTaskCommentIds) {
-              console.log('Deleting comment:', deletedId);
               await deleteTaskComment(deletedId);
             }
 
             // Handle new comments only (existing comments don't need updating unless they were actually changed)
             for (const comment of taskComments) {
               if (comment.project_task_comment_id?.startsWith('temp-')) {
-                console.log('Adding new comment:', comment.project_task_comment_id);
                 // New comment - create it
                 if (resultTask?.task_id) {
                   await addTaskComment(resultTask.task_id, comment.note);
                 }
               }
             }
-            console.log('Comment processing completed');
           } catch (error) {
             console.error('Error saving comments:', error);
             toast.error('Task updated but failed to save comments');
           }
         }
 
-        console.log('Calling onSubmit and onClose for edit mode');
         onSubmit(resultTask);
         onClose();
       } else {
-        console.log('Create mode');
         // Create mode
         if (!phase) {
           console.error('Phase is undefined in create mode');
@@ -609,7 +596,6 @@ export default function TaskForm({
       console.error('Error saving task:', error);
       toast.error('Failed to save task');
     } finally {
-      console.log('Finally block - setting isSubmitting to false');
       setIsSubmitting(false);
     }
   };
@@ -950,7 +936,6 @@ export default function TaskForm({
     const targetStatusId = path['status'] || null;
  
     if (targetPhaseId) {
-      console.log("Duplicate destination selected:", targetPhaseId, "Status:", targetStatusId);
       setSelectedDuplicatePhaseId(targetPhaseId);
 
       // Find target phase name from tree data (similar to move logic)
@@ -994,7 +979,6 @@ export default function TaskForm({
         ticketLinkCount: pendingTicketLinks.length,
       };
 
-      console.log("Duplicate Task Details:", details);
       setDuplicateTaskDetails(details);
       setShowDuplicateConfirm(true);
 
@@ -1543,7 +1527,6 @@ export default function TaskForm({
           initialTargetStatusId={duplicateTaskDetails.targetStatusId}
           onConfirm={async (targetPhaseId: string, options: DuplicateOptions) => {
             if (!duplicateTaskDetails) return;
-            console.log("Duplicate confirmed for phase:", targetPhaseId, "with options:", options);
             setIsSubmitting(true);
             try {
               const duplicatedTask = await duplicateTaskToPhase(

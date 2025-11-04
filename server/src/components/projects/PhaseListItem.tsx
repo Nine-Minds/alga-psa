@@ -152,15 +152,12 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('PhaseListItem handleDrop called for phase:', phase.phase_name);
     
     const draggedPhaseId = e.dataTransfer.getData('text/plain');
     const dropData = e.dataTransfer.getData('application/json');
     
-    console.log('PhaseListItem drop data:', { draggedPhaseId, dropData });
     
     if (draggedPhaseId === phase.phase_id) {
-      console.log('Cannot drop phase on itself');
       return; // Can't drop on itself
     }
     

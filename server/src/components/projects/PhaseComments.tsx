@@ -135,6 +135,7 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
           <h2 className="text-xl font-bold">Comments</h2>
           <div className="flex items-center gap-2">
             <button
+              id="phase-comments-sort-button"
               type="button"
               onClick={toggleCommentOrder}
               className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 px-3 py-1 rounded"
@@ -144,6 +145,7 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
             </button>
             {!showEditor && (
               <Button
+                id="phase-add-comment-button"
                 onClick={handleAddCommentClick}
               >
                 Add Comment
@@ -164,6 +166,7 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
               />
               <div className="flex-grow">
                 <TextArea
+                  id="phase-comment-input"
                   value={newCommentContent}
                   onChange={(e) => setNewCommentContent(e.target.value)}
                   placeholder="Write a comment..."
@@ -172,12 +175,14 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                 />
                 <div className="flex justify-end gap-2">
                   <Button
+                    id="phase-comment-save-button"
                     onClick={handleSubmitComment}
                     disabled={isSubmitting || !newCommentContent.trim()}
                   >
                     {isSubmitting ? 'Adding...' : 'Add Comment'}
                   </Button>
                   <Button
+                    id="phase-comment-cancel-button"
                     onClick={handleCancelComment}
                     variant="outline"
                     disabled={isSubmitting}
@@ -218,6 +223,7 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                       {comment.user_id === currentUser?.id && (
                         <div className="flex items-center gap-1">
                           <button
+                            id="phase-comment-edit-button"
                             type="button"
                             onClick={() => handleEdit(comment)}
                             className="p-1 text-gray-400 hover:text-gray-600"
@@ -225,6 +231,7 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
+                            id="phase-comment-delete-button"
                             type="button"
                             onClick={() => handleDelete(comment)}
                             className="p-1 text-gray-400 hover:text-red-600"
@@ -238,6 +245,7 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                     {isCurrentlyEditing ? (
                       <div>
                         <TextArea
+                          id="phase-comment-edit-input"
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
                           className="mb-3"
@@ -245,6 +253,7 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                         />
                         <div className="flex justify-end gap-2">
                           <Button
+                            id="phase-comment-edit-save-button"
                             onClick={handleSave}
                             disabled={!editContent.trim()}
                             size="sm"
@@ -252,6 +261,7 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                             Save
                           </Button>
                           <Button
+                            id="phase-comment-edit-cancel-button"
                             onClick={handleClose}
                             variant="outline"
                             size="sm"
