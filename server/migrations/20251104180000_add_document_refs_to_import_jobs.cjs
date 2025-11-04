@@ -68,8 +68,8 @@ exports.up = async function up(knex) {
       ) THEN
         ALTER TABLE import_jobs
           ADD CONSTRAINT import_jobs_source_doc_assoc_foreign
-          FOREIGN KEY (source_document_association_id)
-          REFERENCES document_associations (association_id)
+          FOREIGN KEY (tenant, source_document_association_id)
+          REFERENCES document_associations (tenant, association_id)
           ON DELETE SET NULL;
       END IF;
     END
@@ -78,6 +78,7 @@ exports.up = async function up(knex) {
 
   await knex.raw('CREATE INDEX IF NOT EXISTS import_jobs_source_file_idx ON import_jobs (tenant, source_file_id)');
   await knex.raw('CREATE INDEX IF NOT EXISTS import_jobs_source_document_idx ON import_jobs (tenant, source_document_id)');
+  await knex.raw('CREATE INDEX IF NOT EXISTS import_jobs_source_doc_assoc_idx ON import_jobs (tenant, source_document_association_id)');
 };
 
 /**
@@ -87,6 +88,7 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.raw('DROP INDEX IF EXISTS import_jobs_source_file_idx');
   await knex.raw('DROP INDEX IF EXISTS import_jobs_source_document_idx');
+  await knex.raw('DROP INDEX IF EXISTS import_jobs_source_doc_assoc_idx');
 
   await knex.raw('ALTER TABLE import_jobs DROP CONSTRAINT IF EXISTS import_jobs_source_file_foreign');
   await knex.raw('ALTER TABLE import_jobs DROP CONSTRAINT IF EXISTS import_jobs_source_document_foreign');
