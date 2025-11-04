@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
+import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 // Define the props interface based on the consolidated data structure
 interface TicketDetailsContainerProps {
@@ -34,10 +35,11 @@ interface TicketDetailsContainerProps {
     locations: any[];
     agentSchedules: any[];
   };
+  surveySummary?: SurveyTicketSatisfactionSummary | null;
 }
 
 
-export default function TicketDetailsContainer({ ticketData }: TicketDetailsContainerProps) {
+export default function TicketDetailsContainer({ ticketData, surveySummary = null }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -188,6 +190,7 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
           onAddComment={handleAddComment}
           onUpdateDescription={handleUpdateDescription}
           isSubmitting={isSubmitting}
+          surveySummary={surveySummary}
         />
       </Suspense>
     </div>

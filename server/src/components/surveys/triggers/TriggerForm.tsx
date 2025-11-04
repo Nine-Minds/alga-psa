@@ -119,13 +119,13 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     enabled: trigger?.enabled ?? true,
   });
   const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>(
-    trigger?.triggerConditions.board_id ?? []
+    (trigger?.triggerType === 'ticket_closed' && 'board_id' in trigger.triggerConditions ? trigger.triggerConditions.board_id : undefined) ?? []
   );
   const [selectedStatusIds, setSelectedStatusIds] = useState<string[]>(
     trigger?.triggerConditions.status_id ?? []
   );
   const [selectedPriorityIds, setSelectedPriorityIds] = useState<string[]>(
-    trigger?.triggerConditions.priority ?? []
+    (trigger?.triggerType === 'ticket_closed' && 'priority' in trigger.triggerConditions ? trigger.triggerConditions.priority : undefined) ?? []
   );
   const [boardFilterState, setBoardFilterState] = useState<TriggerBoardFilterState>('active');
   const [boardPickerValue, setBoardPickerValue] = useState<string | null>(null);
@@ -140,10 +140,11 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       triggerType: trigger?.triggerType ?? 'ticket_closed',
       enabled: trigger?.enabled ?? true,
     });
-    setSelectedBoardIds(trigger?.triggerConditions.board_id ?? []);
+    setSelectedBoardIds((trigger?.triggerType === 'ticket_closed' && 'board_id' in trigger.triggerConditions ? trigger.triggerConditions.board_id : undefined) ?? []);
     setSelectedStatusIds(trigger?.triggerConditions.status_id ?? []);
-    setSelectedPriorityIds(trigger?.triggerConditions.priority ?? []);
-    setBoardPickerValue(trigger?.triggerConditions.board_id?.[0] ?? null);
+    setSelectedPriorityIds((trigger?.triggerType === 'ticket_closed' && 'priority' in trigger.triggerConditions ? trigger.triggerConditions.priority : undefined) ?? []);
+    const boardId = trigger?.triggerType === 'ticket_closed' && 'board_id' in trigger.triggerConditions ? trigger.triggerConditions.board_id?.[0] : undefined;
+    setBoardPickerValue(boardId ?? null);
   }, [trigger, templateOptions]);
 
   useEffect(() => {
@@ -370,14 +371,14 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     }
 
     const triggerConditions: SurveyTriggerConditions = {};
-    if (selectedBoardIds.length > 0) {
-      triggerConditions.board_id = selectedBoardIds;
+    if (formState.triggerType === 'ticket_closed' && selectedBoardIds.length > 0) {
+      (triggerConditions as any).board_id = selectedBoardIds;
     }
     if (selectedStatusIds.length > 0) {
       triggerConditions.status_id = selectedStatusIds;
     }
-    if (selectedPriorityIds.length > 0) {
-      triggerConditions.priority = selectedPriorityIds;
+    if (formState.triggerType === 'ticket_closed' && selectedPriorityIds.length > 0) {
+      (triggerConditions as any).priority = selectedPriorityIds;
     }
 
     const payloadConditions = Object.keys(triggerConditions).length > 0 ? triggerConditions : undefined;
@@ -395,6 +396,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
         });
         toast({
           title: t('surveys.settings.triggerList.toasts.updated', 'Trigger updated'),
+          description: '',
         });
       } else {
         result = await createSurveyTrigger({
@@ -405,6 +407,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
         });
         toast({
           title: t('surveys.settings.triggerList.toasts.created', 'Trigger created'),
+          description: '',
         });
       }
 
@@ -413,7 +416,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       console.error('[TriggerForm] Failed to save trigger', error);
       toast({
         title: t('surveys.settings.triggerList.toasts.error', 'Unable to save trigger'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {
@@ -442,13 +445,14 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       await deleteSurveyTrigger(trigger.triggerId);
       toast({
         title: t('surveys.settings.triggerList.toasts.deleted', 'Trigger deleted'),
+        description: '',
       });
       onDeleteSuccess?.(trigger.triggerId);
     } catch (error) {
       console.error('[TriggerForm] Failed to delete trigger', error);
       toast({
         title: t('surveys.settings.triggerList.toasts.deleteError', 'Unable to delete trigger'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {
@@ -478,6 +482,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           <AlertDescription>{referenceErrorMessage}</AlertDescription>
           <div className="mt-3 flex justify-end">
             <Button
+              id="reload-reference-data"
               type="button"
               variant="outline"
               onClick={reloadReferenceData}
