@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { ArrowUpDown, Edit2, Trash2, MessageSquare, Bold, Italic, Link, Code, List, ListOrdered, Quote, Paperclip, Smile, MoreHorizontal, Eye } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Edit2, Trash2, MessageSquare, ArrowUpDown, Bold, Italic, Link, Code, List, ListOrdered, Smile, MoreHorizontal, Image } from 'lucide-react';
 import { IProjectPhaseComment } from 'server/src/interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
-import { TextArea } from 'server/src/components/ui/TextArea';
 
 interface PhaseCommentsProps {
   phaseId: string;
@@ -38,10 +37,20 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showEditPreview, setShowEditPreview] = useState(false);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const editTextAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [attachedImages, setAttachedImages] = useState<File[]>([]);
+  const [editAttachedImages, setEditAttachedImages] = useState<File[]>([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showEditEmojiPicker, setShowEditEmojiPicker] = useState(false);
+  const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
+  const [editActiveFormats, setEditActiveFormats] = useState<Set<string>>(new Set());
+  const contentEditableRef = useRef<HTMLDivElement>(null);
+  const editContentEditableRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const editEmojiButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleAddCommentClick = () => {
     setShowEditor(true);
@@ -65,6 +74,10 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
   const handleCancelComment = () => {
     setShowEditor(false);
     setNewCommentContent('');
+    setAttachedImages([]);
+    if (contentEditableRef.current) {
+      contentEditableRef.current.innerHTML = '';
+    }
   };
 
   const toggleCommentOrder = () => {
@@ -88,74 +101,181 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
   const handleCancelEdit = () => {
     setEditingCommentId(null);
     setEditContent('');
-    setShowEditPreview(false);
+    setEditAttachedImages([]);
+    if (editContentEditableRef.current) {
+      editContentEditableRef.current.innerHTML = '';
+    }
   };
 
-  // Rich text formatting functions
-  const insertFormatting = (format: string, ref: React.RefObject<HTMLTextAreaElement>, content: string, setContent: (content: string) => void) => {
-    if (!ref.current) return;
+  // Check active formatting states
+  const updateActiveFormats = (isEdit = false) => {
+    const formats = new Set<string>();
 
-    const textarea = ref.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.substring(start, end);
+    if (document.queryCommandState('bold')) formats.add('bold');
+    if (document.queryCommandState('italic')) formats.add('italic');
+    if (document.queryCommandState('underline')) formats.add('underline');
+    if (document.queryCommandState('insertUnorderedList')) formats.add('bulletList');
+    if (document.queryCommandState('insertOrderedList')) formats.add('numberedList');
 
-    let newText = '';
-    let newCursorPos = start;
+    if (isEdit) {
+      setEditActiveFormats(formats);
+    } else {
+      setActiveFormats(formats);
+    }
+  };
 
-    switch (format) {
-      case 'bold':
-        newText = `**${selectedText || 'bold text'}**`;
-        newCursorPos = selectedText ? end + 4 : start + 2;
-        break;
-      case 'italic':
-        newText = `*${selectedText || 'italic text'}*`;
-        newCursorPos = selectedText ? end + 2 : start + 1;
-        break;
-      case 'code':
-        newText = `\`${selectedText || 'code'}\``;
-        newCursorPos = selectedText ? end + 2 : start + 1;
-        break;
-      case 'link':
-        newText = `[${selectedText || 'link text'}](url)`;
-        newCursorPos = selectedText ? end + 7 : start + 11;
-        break;
-      case 'bullet':
-        newText = `\n* ${selectedText || 'list item'}`;
-        newCursorPos = selectedText ? end + 3 : start + 3;
-        break;
-      case 'numbered':
-        newText = `\n1. ${selectedText || 'list item'}`;
-        newCursorPos = selectedText ? end + 4 : start + 4;
-        break;
-      case 'quote':
-        newText = `\n> ${selectedText || 'quote'}`;
-        newCursorPos = selectedText ? end + 3 : start + 3;
-        break;
-      default:
-        return;
+  // WYSIWYG formatting functions
+  const applyFormatting = (command: string, isEdit = false) => {
+    const ref = isEdit ? editContentEditableRef : contentEditableRef;
+    if (ref.current) {
+      ref.current.focus();
+      document.execCommand(command, false, undefined);
+      updateActiveFormats(isEdit);
+      handleContentChange(isEdit);
+    }
+  };
+
+  // Handle image upload
+  const handleImageUpload = useCallback((files: FileList | null, isEdit = false) => {
+    if (!files) return;
+
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+
+    if (isEdit) {
+      setEditAttachedImages(prev => [...prev, ...imageFiles]);
+    } else {
+      setAttachedImages(prev => [...prev, ...imageFiles]);
     }
 
-    const newContent = content.substring(0, start) + newText + content.substring(end);
-    setContent(newContent);
+    // Insert image previews into the editor
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.createElement('img');
+        img.src = e.target?.result as string;
+        img.style.maxWidth = '200px';
+        img.style.margin = '4px';
+        img.style.borderRadius = '4px';
+        img.className = 'inline-block';
 
-    // Set cursor position after state update
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
+        const ref = isEdit ? editContentEditableRef : contentEditableRef;
+        if (ref.current) {
+          ref.current.appendChild(img);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  // Handle @mentions
+  const handleMentionInput = useCallback((text: string) => {
+    const mentionMatch = text.match(/@(\w*)$/);
+    if (mentionMatch) {
+      const query = mentionMatch[1].toLowerCase();
+      const suggestions = Object.values(userMap).filter(user =>
+        user.first_name.toLowerCase().includes(query) ||
+        user.last_name.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query)
+      ).slice(0, 8);
+
+      setMentionSuggestions(suggestions);
+      setShowMentions(suggestions.length > 0);
+    } else {
+      setShowMentions(false);
+    }
+  }, [userMap]);
+
+  // Insert mention
+  const insertMention = (user: any) => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const mentionSpan = document.createElement('span');
+      mentionSpan.contentEditable = 'false';
+      mentionSpan.className = 'bg-blue-100 text-blue-800 px-1 rounded mx-1';
+      mentionSpan.textContent = `@${user.first_name} ${user.last_name}`;
+      mentionSpan.setAttribute('data-user-id', user.user_id);
+
+      range.deleteContents();
+      range.insertNode(mentionSpan);
+
+      // Move cursor after mention
+      range.setStartAfter(mentionSpan);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    setShowMentions(false);
+  };
+
+  // Comprehensive emoji list (excluding inappropriate ones)
+  const commonEmojis = [
+    // Smileys & Emotion
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐', '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾',
+
+    // People & Body
+    '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄', '👶', '🧒', '👦', '👧', '🧑', '👱', '👨', '🧔', '👩', '🧓', '👴', '👵', '🙍', '🙎', '🙅', '🙆', '💁', '🙋', '🧏', '🙇', '🤦', '🤷', '👮', '🕵️', '💂', '👷', '🤴', '👸', '👳', '👲', '🧕', '🤵', '👰', '🤰', '🤱', '👼', '🎅', '🤶', '🦸', '🦹', '🧙', '🧚', '🧛', '🧜', '🧝', '🧞', '🧟', '💆', '💇', '🚶', '🧍', '🧎', '🏃', '💃', '🕺', '🕴️', '👯', '🧖', '🧗', '🤺', '🏇', '⛷️', '🏂', '🏌️', '🏄', '🚣', '🏊', '⛹️', '🏋️', '🚴', '🚵', '🤸', '🤼', '🤽', '🤾', '🤹', '🧘', '🛀', '🛌',
+
+    // Animals & Nature
+    '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦣', '🦏', '🦛', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔',
+
+    // Food & Drink
+    '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🫖', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾',
+
+    // Activities
+    '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️‍♀️', '🏋️', '🏋️‍♂️', '🤼‍♀️', '🤼', '🤼‍♂️', '🤸‍♀️', '🤸', '🤸‍♂️', '⛹️‍♀️', '⛹️', '⛹️‍♂️', '🤺', '🤾‍♀️', '🤾', '🤾‍♂️', '🏌️‍♀️', '🏌️', '🏌️‍♂️', '🏇', '🧘‍♀️', '🧘', '🧘‍♂️', '🏄‍♀️', '🏄', '🏄‍♂️', '🏊‍♀️', '🏊', '🏊‍♂️', '🤽‍♀️', '🤽', '🤽‍♂️', '🚣‍♀️', '🚣', '🚣‍♂️', '🧗‍♀️', '🧗', '🧗‍♂️', '🚵‍♀️', '🚵', '🚵‍♂️', '🚴‍♀️', '🚴', '🚴‍♂️', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🤹‍♀️', '🤹‍♂️', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎵', '🎶', '🥁', '🪘', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰', '🧩',
+
+    // Travel & Places
+    '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼', '🚁', '🛸', '✈️', '🛩️', '🛫', '🛬', '🪂', '💺', '🚀', '🛰️', '🚁', '🛶', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '🚢', '⚓', '⛽', '🚧', '🚨', '🚥', '🚦', '🛑', '🚏', '🗺️', '🗿', '🗽', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️', '🏖️', '🏝️', '🏜️', '🌋', '⛰️', '🏔️', '🗻', '🏕️', '⛺', '🛖', '🏠', '🏡', '🏘️', '🏚️', '🏗️', '🏭', '🏢', '🏬', '🏣', '🏤', '🏥', '🏦', '🏨', '🏪', '🏫', '🏩', '💒', '🏛️', '⛪', '🕌', '🛕', '🕍', '🕋', '⛩️', '🛤️', '🛣️', '🗾', '🎑', '🏞️', '🌅', '🌄', '🌠', '🎇', '🎆', '🌇', '🌆', '🏙️', '🌃', '🌌', '🌉', '🌁',
+
+    // Objects
+    '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🪤', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🪠', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🪆', '🖼️', '🪟', '🪜', '🪣', '🪝', '🧴', '🧷', '🧹', '🧺', '🧻', '🪒', '🧼', '🪥', '🪞', '🛁', '🛀', '🚿', '🚽', '🧯', '🛒', '🚬', '💰', '🎁', '🎀', '🎊', '🎉', '🎈', '🎂', '🎆', '🧧', '🎎', '🎏', '🎐', '🧨', '✨', '🎃', '🎄', '🎋', '🎍', '🪩', '🎨', '🧵', '🪡', '🧶', '🪢',
+
+    // Symbols
+    '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🈳', '🈂️', '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '⚧️', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸️', '⏯️', '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '✖️', '🟰', '♾️', '💲', '💱', '™️', '©️', '®️', '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜', '✔️', '☑️', '🔘', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁️‍🗨️', '💬', '💭', '🗯️', '♠️', '♣️', '♥️', '♦️', '🃏', '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛', '🕜', '🕝', '🕞', '🕟', '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦', '🕧',
+
+    // Flags (just a few popular ones to keep the list manageable)
+    '🏁', '🚩', '🎌', '🏴', '🏳️', '🏳️‍🌈', '🏳️‍⚧️', '🏴‍☠️', '🇺🇸', '🇬🇧', '🇨🇦', '🇦🇺', '🇩🇪', '🇫🇷', '🇪🇸', '🇮🇹', '🇯🇵', '🇰🇷', '🇨🇳', '🇮🇳', '🇧🇷', '🇲🇽', '🇷🇺', '🇿🇦'
+  ];
+
+  // Insert emoji
+  const insertEmoji = (emoji: string) => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const textNode = document.createTextNode(emoji);
+      range.deleteContents();
+      range.insertNode(textNode);
+
+      // Move cursor after emoji
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    setShowEmojiPicker(false);
+    setShowEditEmojiPicker(false);
+  };
+
+  // Handle contenteditable input
+  const handleContentChange = (isEdit = false) => {
+    const ref = isEdit ? editContentEditableRef : contentEditableRef;
+    if (!ref.current) return;
+
+    const content = ref.current.innerText;
+    if (isEdit) {
+      setEditContent(content);
+    } else {
+      setNewCommentContent(content);
+    }
+
+    handleMentionInput(content);
   };
 
   const renderFormattedText = (text: string) => {
-    // Simple markdown-like rendering for preview
+    // Render text with @mentions highlighted
     let formatted = text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 rounded">$1</code>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline">$1</a>')
-      .replace(/^> (.*)/gm, '<blockquote class="border-l-4 border-gray-300 pl-3 text-gray-600 italic">$1</blockquote>')
-      .replace(/^\* (.*)/gm, '<li class="ml-4">$1</li>')
-      .replace(/^\d+\. (.*)/gm, '<li class="ml-4">$1</li>')
+      .replace(/@(\w+\s+\w+)/g, '<span class="bg-blue-100 text-blue-800 px-1 rounded">@$1</span>')
       .replace(/\n/g, '<br>');
 
     return <div dangerouslySetInnerHTML={{ __html: formatted }} />;
@@ -207,6 +327,13 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
 
   return (
     <div className={`${className}`}>
+      <style jsx>{`
+        [contenteditable]:empty:before {
+          content: attr(data-placeholder);
+          color: #9ca3af;
+          pointer-events: none;
+        }
+      `}</style>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
@@ -248,116 +375,184 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                   size="md"
                 />
                 <div className="flex-grow">
-                  <div className="border rounded-md">
+                  <div className="border rounded-md relative">
                     {/* Formatting toolbar */}
                     <div className="border-b bg-gray-50 px-3 py-2 flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => insertFormatting('bold', textAreaRef, newCommentContent, setNewCommentContent)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                        title="Bold"
+                        onClick={() => applyFormatting('bold')}
+                        className={`p-1 hover:bg-gray-200 rounded ${activeFormats.has('bold') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                        title="Bold (Ctrl+B)"
                       >
                         <Bold className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => insertFormatting('italic', textAreaRef, newCommentContent, setNewCommentContent)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                        title="Italic"
+                        onClick={() => applyFormatting('italic')}
+                        className={`p-1 hover:bg-gray-200 rounded ${activeFormats.has('italic') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                        title="Italic (Ctrl+I)"
                       >
                         <Italic className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => insertFormatting('code', textAreaRef, newCommentContent, setNewCommentContent)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                        title="Code"
+                        onClick={() => applyFormatting('underline')}
+                        className={`p-1 hover:bg-gray-200 rounded ${activeFormats.has('underline') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                        title="Underline (Ctrl+U)"
                       >
                         <Code className="w-4 h-4" />
                       </button>
                       <div className="w-px h-4 bg-gray-300 mx-1" />
                       <button
                         type="button"
-                        onClick={() => insertFormatting('bullet', textAreaRef, newCommentContent, setNewCommentContent)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                        onClick={() => applyFormatting('insertUnorderedList')}
+                        className={`p-1 hover:bg-gray-200 rounded ${activeFormats.has('bulletList') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
                         title="Bullet List"
                       >
                         <List className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => insertFormatting('numbered', textAreaRef, newCommentContent, setNewCommentContent)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                        onClick={() => applyFormatting('insertOrderedList')}
+                        className={`p-1 hover:bg-gray-200 rounded ${activeFormats.has('numberedList') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
                         title="Numbered List"
                       >
                         <ListOrdered className="w-4 h-4" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => insertFormatting('quote', textAreaRef, newCommentContent, setNewCommentContent)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                        title="Quote"
-                      >
-                        <Quote className="w-4 h-4" />
-                      </button>
                       <div className="w-px h-4 bg-gray-300 mx-1" />
                       <button
                         type="button"
-                        onClick={() => insertFormatting('link', textAreaRef, newCommentContent, setNewCommentContent)}
+                        onClick={() => applyFormatting('createLink')}
                         className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                        title="Link"
+                        title="Insert Link"
                       >
                         <Link className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
+                        onClick={() => fileInputRef.current?.click()}
                         className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                        title="Attach file"
+                        title="Attach Image"
                       >
-                        <Paperclip className="w-4 h-4" />
+                        <Image className="w-4 h-4" />
                       </button>
                       <button
+                        ref={emojiButtonRef}
                         type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                         className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                        title="Add emoji"
+                        title="Add Emoji"
                       >
                         <Smile className="w-4 h-4" />
                       </button>
-                      <div className="ml-auto flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowPreview(!showPreview)}
-                          className={`px-2 py-1 text-xs rounded ${showPreview ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-                        >
-                          <Eye className="w-3 h-3 inline mr-1" />
-                          Preview
-                        </button>
-                      </div>
                     </div>
 
-                    {/* Text area or preview */}
-                    {showPreview ? (
-                      <div className="p-3 min-h-[100px] text-sm">
-                        {newCommentContent ? renderFormattedText(newCommentContent) : (
-                          <span className="text-gray-400">Nothing to preview</span>
-                        )}
+                    {/* WYSIWYG Editor */}
+                    <div
+                      ref={contentEditableRef}
+                      contentEditable
+                      onInput={() => {
+                        handleContentChange();
+                        updateActiveFormats();
+                      }}
+                      onKeyUp={() => updateActiveFormats()}
+                      onMouseUp={() => updateActiveFormats()}
+                      onKeyDown={(e) => {
+                        if (e.key === '@') {
+                          setTimeout(() => handleContentChange(), 0);
+                        }
+                        // Handle keyboard shortcuts
+                        if (e.ctrlKey || e.metaKey) {
+                          switch (e.key) {
+                            case 'b':
+                              e.preventDefault();
+                              applyFormatting('bold');
+                              break;
+                            case 'i':
+                              e.preventDefault();
+                              applyFormatting('italic');
+                              break;
+                            case 'u':
+                              e.preventDefault();
+                              applyFormatting('underline');
+                              break;
+                          }
+                        }
+                      }}
+                      className="p-3 min-h-[100px] text-sm focus:outline-none text-black"
+                      style={{ whiteSpace: 'pre-wrap', color: '#000000' }}
+                      data-placeholder="Add a comment... Type @ to mention team members"
+                    />
+
+                    {/* Emoji Picker - positioned relative to emoji button */}
+                    {showEmojiPicker && emojiButtonRef.current && (
+                      <div
+                        className="absolute z-10 bg-white border rounded-lg shadow-lg p-2 max-w-xs"
+                        style={{
+                          top: emojiButtonRef.current.offsetTop + emojiButtonRef.current.offsetHeight + 8,
+                          left: emojiButtonRef.current.offsetLeft
+                        }}
+                      >
+                        <div className="grid grid-cols-8 gap-1 max-h-40 overflow-y-auto">
+                          {commonEmojis.map((emoji, index) => (
+                            <button
+                              key={index}
+                              onClick={() => insertEmoji(emoji)}
+                              className="p-1 hover:bg-gray-100 rounded text-lg"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      <TextArea
-                        ref={textAreaRef}
-                        id="phase-comment-input"
-                        value={newCommentContent}
-                        onChange={(e) => setNewCommentContent(e.target.value)}
-                        placeholder="Add a comment... (supports **bold**, *italic*, `code`, [links](url), @mentions)"
-                        className="border-0 shadow-none resize-none focus:ring-0 text-sm min-h-[100px]"
-                        rows={4}
-                      />
+                    )}
+
+                    {/* Mention Suggestions */}
+                    {showMentions && mentionSuggestions.length > 0 && (
+                      <div className="absolute z-10 top-full left-0 mt-1 bg-white border rounded-lg shadow-lg max-w-xs">
+                        {mentionSuggestions.map((user) => (
+                          <button
+                            key={user.user_id}
+                            onClick={() => insertMention(user)}
+                            className="w-full flex items-center gap-2 p-2 hover:bg-gray-100 text-left"
+                          >
+                            <UserAvatar
+                              userId={user.user_id}
+                              userName={`${user.first_name} ${user.last_name}`}
+                              avatarUrl={user.avatarUrl}
+                              size="sm"
+                            />
+                            <span className="text-sm">{user.first_name} {user.last_name}</span>
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
 
+                  {/* Image preview */}
+                  {attachedImages.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {attachedImages.map((file, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt="Attached"
+                            className="w-20 h-20 object-cover rounded border"
+                          />
+                          <button
+                            onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== index))}
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center mt-3">
                     <div className="text-xs text-gray-500">
-                      Pro tip: Use @ to mention team members
+                      Type @ to mention team members • Use toolbar for formatting
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -382,6 +577,16 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => handleImageUpload(e.target.files)}
+              className="hidden"
+            />
           </div>
         )}
 
@@ -451,70 +656,132 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                     </div>
 
                     {isCurrentlyEditing ? (
-                      <div className="border rounded-md">
+                      <div className="border rounded-md relative">
                         {/* Edit formatting toolbar */}
                         <div className="border-b bg-gray-50 px-3 py-2 flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => insertFormatting('bold', editTextAreaRef, editContent, setEditContent)}
-                            className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                            onClick={() => applyFormatting('bold', true)}
+                            className={`p-1 hover:bg-gray-200 rounded ${editActiveFormats.has('bold') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
                             title="Bold"
                           >
                             <Bold className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
-                            onClick={() => insertFormatting('italic', editTextAreaRef, editContent, setEditContent)}
-                            className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                            onClick={() => applyFormatting('italic', true)}
+                            className={`p-1 hover:bg-gray-200 rounded ${editActiveFormats.has('italic') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
                             title="Italic"
                           >
                             <Italic className="w-4 h-4" />
                           </button>
                           <button
                             type="button"
-                            onClick={() => insertFormatting('code', editTextAreaRef, editContent, setEditContent)}
-                            className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                            title="Code"
+                            onClick={() => applyFormatting('underline', true)}
+                            className={`p-1 hover:bg-gray-200 rounded ${editActiveFormats.has('underline') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                            title="Underline"
                           >
                             <Code className="w-4 h-4" />
                           </button>
                           <div className="w-px h-4 bg-gray-300 mx-1" />
                           <button
                             type="button"
-                            onClick={() => insertFormatting('link', editTextAreaRef, editContent, setEditContent)}
+                            onClick={() => editFileInputRef.current?.click()}
                             className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                            title="Link"
+                            title="Attach Image"
                           >
-                            <Link className="w-4 h-4" />
+                            <Image className="w-4 h-4" />
                           </button>
-                          <div className="ml-auto">
-                            <button
-                              type="button"
-                              onClick={() => setShowEditPreview(!showEditPreview)}
-                              className={`px-2 py-1 text-xs rounded ${showEditPreview ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-                            >
-                              <Eye className="w-3 h-3 inline mr-1" />
-                              Preview
-                            </button>
-                          </div>
+                          <button
+                            ref={editEmojiButtonRef}
+                            type="button"
+                            onClick={() => setShowEditEmojiPicker(!showEditEmojiPicker)}
+                            className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                            title="Add Emoji"
+                          >
+                            <Smile className="w-4 h-4" />
+                          </button>
                         </div>
 
-                        {/* Edit text area or preview */}
-                        {showEditPreview ? (
-                          <div className="p-3 min-h-[80px] text-sm">
-                            {editContent ? renderFormattedText(editContent) : (
-                              <span className="text-gray-400">Nothing to preview</span>
-                            )}
+                        {/* Edit WYSIWYG Editor */}
+                        <div
+                          ref={editContentEditableRef}
+                          contentEditable
+                          onInput={() => {
+                            handleContentChange(true);
+                            updateActiveFormats(true);
+                          }}
+                          onKeyUp={() => updateActiveFormats(true)}
+                          onMouseUp={() => updateActiveFormats(true)}
+                          onKeyDown={(e) => {
+                            if (e.key === '@') {
+                              setTimeout(() => handleContentChange(true), 0);
+                            }
+                            // Handle keyboard shortcuts
+                            if (e.ctrlKey || e.metaKey) {
+                              switch (e.key) {
+                                case 'b':
+                                  e.preventDefault();
+                                  applyFormatting('bold', true);
+                                  break;
+                                case 'i':
+                                  e.preventDefault();
+                                  applyFormatting('italic', true);
+                                  break;
+                                case 'u':
+                                  e.preventDefault();
+                                  applyFormatting('underline', true);
+                                  break;
+                              }
+                            }
+                          }}
+                          className="p-3 min-h-[80px] text-sm focus:outline-none text-black"
+                          style={{ whiteSpace: 'pre-wrap', color: '#000000' }}
+                          dangerouslySetInnerHTML={{ __html: comment.note }}
+                        />
+
+                        {/* Edit Emoji Picker - positioned relative to emoji button */}
+                        {showEditEmojiPicker && editEmojiButtonRef.current && (
+                          <div
+                            className="absolute z-10 bg-white border rounded-lg shadow-lg p-2 max-w-xs"
+                            style={{
+                              top: editEmojiButtonRef.current.offsetTop + editEmojiButtonRef.current.offsetHeight + 8,
+                              left: editEmojiButtonRef.current.offsetLeft
+                            }}
+                          >
+                            <div className="grid grid-cols-8 gap-1 max-h-40 overflow-y-auto">
+                              {commonEmojis.map((emoji, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => insertEmoji(emoji)}
+                                  className="p-1 hover:bg-gray-100 rounded text-lg"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        ) : (
-                          <TextArea
-                            ref={editTextAreaRef}
-                            id="phase-comment-edit-input"
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            className="border-0 shadow-none resize-none focus:ring-0 text-sm min-h-[80px]"
-                            rows={3}
-                          />
+                        )}
+
+                        {/* Edit Image preview */}
+                        {editAttachedImages.length > 0 && (
+                          <div className="p-3 flex flex-wrap gap-2">
+                            {editAttachedImages.map((file, index) => (
+                              <div key={index} className="relative">
+                                <img
+                                  src={URL.createObjectURL(file)}
+                                  alt="Attached"
+                                  className="w-20 h-20 object-cover rounded border"
+                                />
+                                <button
+                                  onClick={() => setEditAttachedImages(prev => prev.filter((_, i) => i !== index))}
+                                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         )}
 
                         <div className="flex justify-end gap-2 p-3 border-t bg-gray-50">
@@ -535,11 +802,19 @@ const PhaseComments: React.FC<PhaseCommentsProps> = ({
                             Update
                           </Button>
                         </div>
+
+                        {/* Hidden edit file input */}
+                        <input
+                          ref={editFileInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e.target.files, true)}
+                          className="hidden"
+                        />
                       </div>
                     ) : (
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        {renderFormattedText(comment.note)}
-                      </div>
+                      <div className="text-sm text-black leading-relaxed" dangerouslySetInnerHTML={{ __html: comment.note }} />
                     )}
 
                     {/* Comment reactions/actions */}

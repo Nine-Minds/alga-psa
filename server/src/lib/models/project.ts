@@ -785,50 +785,60 @@ const ProjectModel = {
       }
       const isTransaction = (knexOrTrx as any).isTransaction || false;
       const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
-      
+
       try {
-        // First, delete all checklist items for tasks in this phase
-        await trx('task_checklist_items')
-          .whereIn('task_id',
-            trx('project_tasks')
-              .select('task_id')
-              .where('phase_id', phaseId)
-          )
-          .andWhere('tenant', tenant)
-          .del();
-
-        // Delete task resources for tasks in this phase
-        await trx('task_resources')
-          .whereIn('task_id',
-            trx('project_tasks')
-              .select('task_id')
-              .where('phase_id', phaseId)
-          )
-          .andWhere('tenant', tenant)
-          .del();
-
-        // Delete task comments for tasks in this phase
-        await trx('project_task_comment')
-          .whereIn('project_task_id',
-            trx('project_tasks')
-              .select('task_id')
-              .where('phase_id', phaseId)
-          )
-          .andWhere('tenant', tenant)
-          .del();
-
-        // Delete all tasks in the phase
-        await trx('project_tasks')
+        // Get the task IDs that will be deleted
+        const tasksToDelete = await trx('project_tasks')
+          .select('task_id')
           .where('phase_id', phaseId)
+          .andWhere('tenant', tenant);
+
+        const taskIds = tasksToDelete.map(task => task.task_id);
+
+        if (taskIds.length > 0) {
+          // Delete all checklist items for these specific tasks
+          const checklistItemsDeleted = await trx('task_checklist_items')
+            .whereIn('task_id', taskIds)
+            .andWhere('tenant', tenant)
+            .del();
+          console.log(`Deleted ${checklistItemsDeleted} checklist items for tasks:`, taskIds);
+
+          // Delete task resources for these specific tasks
+          const taskResourcesDeleted = await trx('task_resources')
+            .whereIn('task_id', taskIds)
+            .andWhere('tenant', tenant)
+            .del();
+          console.log(`Deleted ${taskResourcesDeleted} task resources for tasks:`, taskIds);
+
+          // Delete task comments for these specific tasks
+          const taskCommentsDeleted = await trx('project_task_comment')
+            .whereIn('project_task_id', taskIds)
+            .andWhere('tenant', tenant)
+            .del();
+          console.log(`Deleted ${taskCommentsDeleted} task comments for tasks:`, taskIds);
+
+          // Delete all tasks in the phase
+          const tasksDeleted = await trx('project_tasks')
+            .where('phase_id', phaseId)
+            .andWhere('tenant', tenant)
+            .del();
+          console.log(`Deleted ${tasksDeleted} tasks for phase:`, phaseId);
+        }
+
+        // Delete phase comments
+        const phaseCommentsDeleted = await trx('project_phase_comment')
+          .where('project_phase_id', phaseId)
           .andWhere('tenant', tenant)
           .del();
+        console.log(`Deleted ${phaseCommentsDeleted} phase comments for phase:`, phaseId);
 
         // Finally, delete the phase itself
-        await trx('project_phases')
+        const phasesDeleted = await trx('project_phases')
           .where('phase_id', phaseId)
           .andWhere('tenant', tenant)
           .del();
-        
+        console.log(`Deleted ${phasesDeleted} phases with ID:`, phaseId);
+
         if (!isTransaction) {
           await trx.commit();
         }
