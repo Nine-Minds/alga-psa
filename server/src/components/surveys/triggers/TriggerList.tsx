@@ -118,12 +118,13 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
       );
       toast({
         title: t('surveys.settings.triggerList.toasts.updated', 'Trigger updated'),
+        description: '',
       });
     } catch (error) {
       console.error('[TriggerList] Failed to toggle trigger enabled', error);
       toast({
         title: t('surveys.settings.triggerList.toasts.error', 'Unable to save trigger'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {
@@ -137,12 +138,13 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
       onTriggersChange((prev) => prev.filter((item) => item.triggerId !== trigger.triggerId));
       toast({
         title: t('surveys.settings.triggerList.toasts.deleted', 'Trigger deleted'),
+        description: '',
       });
     } catch (error) {
       console.error('[TriggerList] Failed to delete trigger', error);
       toast({
         title: t('surveys.settings.triggerList.toasts.deleteError', 'Unable to delete trigger'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     }
@@ -156,7 +158,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
       console.error('[TriggerList] Failed to refresh triggers', error);
       toast({
         title: t('surveys.settings.triggerList.toasts.error', 'Unable to save trigger'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {
@@ -206,24 +208,28 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
 
   const renderConditions = (trigger: SurveyTrigger) => (
     <div className="space-y-1 text-xs text-gray-600">
-      <div>
-        <span className="font-medium">
-          {t('surveys.settings.triggerList.conditions.boards', 'Boards')}:
-        </span>{' '}
-        {formatCondition(trigger.triggerConditions.board_id, boardsMap)}
-      </div>
+      {trigger.triggerType === 'ticket_closed' && (
+        <div>
+          <span className="font-medium">
+            {t('surveys.settings.triggerList.conditions.boards', 'Boards')}:
+          </span>{' '}
+          {formatCondition(('board_id' in trigger.triggerConditions ? trigger.triggerConditions.board_id : undefined), boardsMap)}
+        </div>
+      )}
       <div>
         <span className="font-medium">
           {t('surveys.settings.triggerList.conditions.statuses', 'Statuses')}:
         </span>{' '}
         {formatCondition(trigger.triggerConditions.status_id, statusMap)}
       </div>
-      <div>
-        <span className="font-medium">
-          {t('surveys.settings.triggerList.conditions.priorities', 'Priorities')}:
-        </span>{' '}
-        {formatCondition(trigger.triggerConditions.priority, priorityMap)}
-      </div>
+      {trigger.triggerType === 'ticket_closed' && (
+        <div>
+          <span className="font-medium">
+            {t('surveys.settings.triggerList.conditions.priorities', 'Priorities')}:
+          </span>{' '}
+          {formatCondition(('priority' in trigger.triggerConditions ? trigger.triggerConditions.priority : undefined), priorityMap)}
+        </div>
+      )}
     </div>
   );
 

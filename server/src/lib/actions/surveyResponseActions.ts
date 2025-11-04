@@ -92,7 +92,7 @@ export async function getSurveyInvitationForToken(token: string): Promise<Survey
         tenant,
         invitation_id: invitation.invitationId,
       })
-      .andWhereNull('opened_at')
+      .whereNull('opened_at')
       .update({ opened_at: knex.fn.now() })
       .catch(() => undefined);
   });

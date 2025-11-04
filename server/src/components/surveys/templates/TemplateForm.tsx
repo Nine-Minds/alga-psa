@@ -153,7 +153,7 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
       console.error('[TemplateForm] Failed to save survey template', error);
       toast({
         title: t('surveys.settings.templateList.toasts.error', 'Unable to save template'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {
@@ -189,7 +189,7 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
       console.error('[TemplateForm] Failed to delete survey template', error);
       toast({
         title: t('surveys.settings.templateList.toasts.deleteError', 'Unable to delete template'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {

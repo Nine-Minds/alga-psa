@@ -87,8 +87,10 @@ const createStripePrices = (knex) =>
     table.text('stripe_price_external_id').notNullable();
     table
       .uuid('stripe_product_id')
-      .notNullable()
-      .references('stripe_product_id')
+      .notNullable();
+    table
+      .foreign(['tenant', 'stripe_product_id'])
+      .references(['tenant', 'stripe_product_id'])
       .inTable('stripe_products')
       .onDelete('CASCADE');
     table.integer('unit_amount').notNullable();
@@ -116,14 +118,18 @@ const createStripeSubscriptions = (knex) =>
     table.text('stripe_subscription_external_id').notNullable();
     table
       .uuid('stripe_customer_id')
-      .notNullable()
-      .references('stripe_customer_id')
+      .notNullable();
+    table
+      .foreign(['tenant', 'stripe_customer_id'])
+      .references(['tenant', 'stripe_customer_id'])
       .inTable('stripe_customers')
       .onDelete('CASCADE');
     table
       .uuid('stripe_price_id')
-      .notNullable()
-      .references('stripe_price_id')
+      .notNullable();
+    table
+      .foreign(['tenant', 'stripe_price_id'])
+      .references(['tenant', 'stripe_price_id'])
       .inTable('stripe_prices')
       .onDelete('CASCADE');
     table.integer('quantity').notNullable().defaultTo(1);

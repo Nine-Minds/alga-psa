@@ -4,6 +4,7 @@ import TicketDetailsContainer from './TicketDetailsContainer';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
+import { getSurveyTicketSummary } from 'server/src/lib/actions/survey-actions/surveyDashboardActions';
 
 interface TicketDetailsPageProps {
   params: Promise<{
@@ -22,13 +23,18 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
   }
 
   try {
-    // Fetch all ticket data in a single consolidated request
-    const ticketData = await getConsolidatedTicketData(id, user);
+    const [ticketData, surveySummary] = await Promise.all([
+      getConsolidatedTicketData(id, user),
+      getSurveyTicketSummary(id).catch((error) => {
+        console.error('[TicketDetailsPage] Failed to load survey summary', error);
+        return null;
+      }),
+    ]);
     
     return (
       <div id="ticket-details-container" className="bg-gray-100">
         <Suspense fallback={<TicketDetailsSkeleton />}>
-          <TicketDetailsContainer ticketData={ticketData} />
+          <TicketDetailsContainer ticketData={ticketData} surveySummary={surveySummary ?? null} />
         </Suspense>
       </div>
     );

@@ -97,7 +97,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
       console.error('[TemplateList] Failed to toggle template enabled', error);
       toast({
         title: t('surveys.settings.templateList.toasts.error', 'Unable to save template'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {
@@ -123,7 +123,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
       console.error('[TemplateList] Failed to set default template', error);
       toast({
         title: t('surveys.settings.templateList.toasts.error', 'Unable to save template'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {
@@ -143,7 +143,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
       console.error('[TemplateList] Failed to delete template', error);
       toast({
         title: t('surveys.settings.templateList.toasts.deleteError', 'Unable to delete template'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     }
@@ -157,7 +157,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
       console.error('[TemplateList] Failed to refresh templates', error);
       toast({
         title: t('surveys.settings.templateList.toasts.error', 'Unable to save template'),
-        description: error instanceof Error ? error.message : undefined,
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     } finally {

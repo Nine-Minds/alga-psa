@@ -56,6 +56,8 @@ import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/opti
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import ClientSurveySummaryCard from 'server/src/components/surveys/ClientSurveySummaryCard';
+import type { SurveyClientSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 
 const SwitchDetailItem: React.FC<{
@@ -169,6 +171,7 @@ interface ClientDetailsProps {
   contacts?: IContact[];
   isInDrawer?: boolean;
   quickView?: boolean;
+  surveySummary?: SurveyClientSatisfactionSummary | null;
 }
 
 const ClientDetails: React.FC<ClientDetailsProps> = ({
@@ -177,7 +180,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   documents = [],
   contacts = [],
   isInDrawer = false,
-  quickView = false
+  quickView = false,
+  surveySummary = null
 }) => {
   const { t } = useTranslation('common');
   const featureFlag = useFeatureFlag('billing-enabled');
@@ -775,7 +779,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </div>
             
             {/* Right Column - Client Locations Only */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Text as="label" size="2" className="text-gray-700 font-medium">{t('clients.locations.sectionTitle', 'Client Locations')}</Text>
                 <Button
@@ -794,6 +798,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   isEditing={false}
                 />
               </div>
+              <ClientSurveySummaryCard summary={surveySummary} />
             </div>
           </div>
           

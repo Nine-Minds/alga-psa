@@ -2,6 +2,7 @@ import { Knex, knex } from 'knex';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { getSecret } from '../src/lib/utils/getSecret';
 
 dotenv.config();
 
@@ -9,14 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const serverRoot = path.resolve(__dirname, '..');
 
-const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod'];
-const TEST_DB_NAME = 'sebastian_integration';
-const DB_HOST = 'localhost';
-const DB_PORT = 5432;
-const ADMIN_USER = 'postgres';
-const ADMIN_PASSWORD = 'test_password';
-const APP_USER = 'app_user';
-const APP_PASSWORD = 'postpass123';
+const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod', 'server'];
+const TEST_DB_NAME = 'test_database';
 
 export function verifyTestDatabase(dbName: string): void {
   if (PRODUCTION_DB_NAMES.includes(dbName.toLowerCase())) {
@@ -27,23 +22,28 @@ export function verifyTestDatabase(dbName: string): void {
 export async function createTestDbConnection(): Promise<Knex> {
   verifyTestDatabase(TEST_DB_NAME);
 
-  await recreateDatabase(TEST_DB_NAME);
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbPort = parseInt(process.env.DB_PORT || '5432', 10);
+  const adminUser = process.env.DB_USER_ADMIN || 'postgres';
+  const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
+  const appUser = process.env.DB_USER_SERVER || 'app_user';
+  const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
 
-  process.env.DB_HOST = DB_HOST;
-  process.env.DB_PORT = String(DB_PORT);
+  await recreateDatabase(TEST_DB_NAME, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
+
+  process.env.DB_HOST = dbHost;
+  process.env.DB_PORT = String(dbPort);
   process.env.DB_NAME_SERVER = TEST_DB_NAME;
-  process.env.DB_USER_SERVER = APP_USER;
-  process.env.DB_PASSWORD_SERVER = APP_PASSWORD;
-  process.env.DB_USER_ADMIN = ADMIN_USER;
-  process.env.DB_PASSWORD_ADMIN = ADMIN_PASSWORD;
+  process.env.DB_USER_SERVER = appUser;
+  process.env.DB_USER_ADMIN = adminUser;
 
   const adminKnex = knex({
     client: 'pg',
     connection: {
-      host: DB_HOST,
-      port: DB_PORT,
-      user: ADMIN_USER,
-      password: ADMIN_PASSWORD,
+      host: dbHost,
+      port: dbPort,
+      user: adminUser,
+      password: adminPassword,
       database: TEST_DB_NAME,
     },
     migrations: {
@@ -61,10 +61,10 @@ export async function createTestDbConnection(): Promise<Knex> {
   const db = knex({
     client: 'pg',
     connection: {
-      host: DB_HOST,
-      port: DB_PORT,
-      user: APP_USER,
-      password: APP_PASSWORD,
+      host: dbHost,
+      port: dbPort,
+      user: appUser,
+      password: appPassword,
       database: TEST_DB_NAME,
     },
     asyncStackTraces: true,
@@ -77,14 +77,22 @@ export async function createTestDbConnection(): Promise<Knex> {
   return db;
 }
 
-async function recreateDatabase(databaseName: string): Promise<void> {
+async function recreateDatabase(
+  databaseName: string,
+  dbHost: string,
+  dbPort: number,
+  adminUser: string,
+  adminPassword: string,
+  appUser: string,
+  appPassword: string
+): Promise<void> {
   const adminConnection = knex({
     client: 'pg',
     connection: {
-      host: DB_HOST,
-      port: DB_PORT,
-      user: ADMIN_USER,
-      password: ADMIN_PASSWORD,
+      host: dbHost,
+      port: dbPort,
+      user: adminUser,
+      password: adminPassword,
       database: 'postgres',
     },
     pool: {
@@ -103,15 +111,15 @@ async function recreateDatabase(databaseName: string): Promise<void> {
     await adminConnection.raw(`CREATE DATABASE "${safeDbName}"`);
     await adminConnection.raw(`DO $$
       BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${APP_USER}') THEN
-          CREATE ROLE ${APP_USER} WITH LOGIN PASSWORD '${APP_PASSWORD}';
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${appUser}') THEN
+          CREATE ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
         ELSE
-          ALTER ROLE ${APP_USER} WITH LOGIN PASSWORD '${APP_PASSWORD}';
+          ALTER ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
         END IF;
       END;
     $$;`);
-    await adminConnection.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${APP_USER}`);
-    await adminConnection.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${APP_USER}`);
+    await adminConnection.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${appUser}`);
+    await adminConnection.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${appUser}`);
   } finally {
     await adminConnection.destroy().catch(() => undefined);
   }

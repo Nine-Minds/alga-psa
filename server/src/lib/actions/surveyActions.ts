@@ -458,13 +458,13 @@ function normaliseTriggerConditions(
   const conditions: SurveyTriggerConditions = {};
 
   if (Array.isArray(value.board_id)) {
-    conditions.board_id = value.board_id.filter(isNonEmptyString);
+    (conditions as any).board_id = value.board_id.filter(isNonEmptyString);
   }
   if (Array.isArray(value.status_id)) {
     conditions.status_id = value.status_id.filter(isNonEmptyString);
   }
   if (Array.isArray(value.priority)) {
-    conditions.priority = value.priority.filter(isNonEmptyString);
+    (conditions as any).priority = value.priority.filter(isNonEmptyString);
   }
 
   return conditions;

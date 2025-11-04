@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -7,6 +7,36 @@ type SurveyTokenServiceModule = typeof import('../../lib/actions/surveyTokenServ
 
 let issueSurveyToken!: SurveyTokenServiceModule['issueSurveyToken'];
 let resolveSurveyTenantFromToken!: SurveyTokenServiceModule['resolveSurveyTenantFromToken'];
+
+let integrationDb: Knex | null = null;
+let currentTenantId: string | null = null;
+
+vi.mock('@alga-psa/shared/db/admin', () => ({
+  getAdminConnection: vi.fn(async () => {
+    if (!integrationDb) {
+      throw new Error('Test database connection is not initialised');
+    }
+    return integrationDb;
+  }),
+  destroyAdminConnection: vi.fn(async () => undefined),
+}));
+
+vi.mock('../../lib/db', async () => {
+  const actual = await vi.importActual<typeof import('../../lib/db')>('../../lib/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => {
+      if (!integrationDb) {
+        throw new Error('Test database connection is not initialised');
+      }
+      return {
+        knex: integrationDb,
+        tenant: currentTenantId,
+      };
+    }),
+    runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<unknown>) => fn()),
+  } satisfies typeof actual;
+});
 
 type ColumnInfoMap = Record<string, Knex.ColumnInfo>;
 
@@ -27,6 +57,7 @@ describe('Survey Token Service integration', () => {
   beforeAll(async () => {
     try {
       db = await createTestDbConnection();
+      integrationDb = db;
 
       const surveyModule = await import('../../lib/actions/surveyTokenService');
       issueSurveyToken = surveyModule.issueSurveyToken;
@@ -47,6 +78,7 @@ describe('Survey Token Service integration', () => {
 
   afterAll(async () => {
     await db?.destroy().catch(() => undefined);
+    integrationDb = null;
   });
 
   beforeEach(async () => {
@@ -63,6 +95,7 @@ describe('Survey Token Service integration', () => {
     ticketId = uuidv4();
     templateId = uuidv4();
     invitationId = uuidv4();
+    currentTenantId = tenantId;
 
     await insertTenant();
     await insertClient();
@@ -83,6 +116,7 @@ describe('Survey Token Service integration', () => {
     await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete().catch(() => undefined);
     await db('clients').where({ tenant: tenantId, client_id: clientId }).delete().catch(() => undefined);
     await db('tenants').where({ tenant: tenantId }).delete().catch(() => undefined);
+    currentTenantId = null;
 
   });
 
