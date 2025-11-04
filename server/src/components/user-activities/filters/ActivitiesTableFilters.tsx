@@ -113,7 +113,8 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
                   { value: ActivityType.PROJECT_TASK, label: 'Project Tasks' },
                   { value: ActivityType.TICKET, label: 'Tickets' },
                   { value: ActivityType.TIME_ENTRY, label: 'Time Entries' },
-                  { value: ActivityType.WORKFLOW_TASK, label: 'Workflow Tasks' }
+                  { value: ActivityType.WORKFLOW_TASK, label: 'Workflow Tasks' },
+                  { value: ActivityType.NOTIFICATION, label: 'Notifications' }
                 ].map(option => (
                     <Checkbox
                       key={option.value}

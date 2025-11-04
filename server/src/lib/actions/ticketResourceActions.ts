@@ -7,8 +7,7 @@ import { hasPermission } from 'server/src/lib/auth/rbac';
 import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
-import { getEventBus } from '../../lib/eventBus';
-import { getEmailEventChannel } from '../notifications/emailChannel';
+import { publishEvent } from '../../lib/eventBus/publishers';
 
 export async function addTicketResource(
   ticketId: string,
@@ -53,17 +52,14 @@ export async function addTicketResource(
           throw new Error(`Failed to set primary assignment for ticket ${ticketId}`);
         }
 
-        await getEventBus().publish(
-          {
-            eventType: 'TICKET_ASSIGNED',
-            payload: {
-              tenantId: tenant,
-              ticketId: ticketId,
-              userId: additionalUserId
-            }
-          },
-          { channel: getEmailEventChannel() }
-        );
+        await publishEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            tenantId: tenant,
+            ticketId: ticketId,
+            userId: additionalUserId
+          }
+        });
 
         return null;
       }
@@ -94,17 +90,14 @@ export async function addTicketResource(
         .returning('*');
 
         // Publish TICKET_ASSIGNED event for additional user assignment
-        await getEventBus().publish(
-          {
-            eventType: 'TICKET_ASSIGNED',
-            payload: {
-              tenantId: tenant,
-              ticketId: ticketId,
-              userId: additionalUserId
-            }
-          },
-          { channel: getEmailEventChannel() }
-        );
+        await publishEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            tenantId: tenant,
+            ticketId: ticketId,
+            userId: additionalUserId
+          }
+        });
 
         return resource;
     } catch (error) {

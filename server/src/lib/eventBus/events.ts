@@ -27,6 +27,7 @@ export const EventTypeEnum = z.enum([
   'CALENDAR_SYNC_FAILED',
   'CALENDAR_CONFLICT_DETECTED',
   'MESSAGE_SENT',
+  'USER_MENTIONED_IN_DOCUMENT',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -80,6 +81,15 @@ export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(),
   assignedTo: z.string().uuid(),
   additionalUsers: z.array(z.string().uuid()).optional(),
+});
+
+// Document mention event payload schema
+export const DocumentMentionPayloadSchema = BasePayloadSchema.extend({
+  documentId: z.string().uuid(),
+  documentName: z.string(),
+  userId: z.string().uuid(), // User who updated the document
+  content: z.string(), // Document content with mentions
+  changes: z.record(z.unknown()).optional(),
 });
 
 // Time entry event payload schema
@@ -179,6 +189,7 @@ export const EventPayloadSchemas = {
   CALENDAR_SYNC_FAILED: CalendarSyncEventPayloadSchema,
   CALENDAR_CONFLICT_DETECTED: CalendarConflictEventPayloadSchema,
   MESSAGE_SENT: MessageEventPayloadSchema,
+  USER_MENTIONED_IN_DOCUMENT: DocumentMentionPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -220,6 +231,7 @@ export type CalendarSyncCompletedEvent = z.infer<typeof EventSchemas.CALENDAR_SY
 export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_FAILED>;
 export type CalendarConflictDetectedEvent = z.infer<typeof EventSchemas.CALENDAR_CONFLICT_DETECTED>;
 export type MessageSentEvent = z.infer<typeof EventSchemas.MESSAGE_SENT>;
+export type UserMentionedInDocumentEvent = z.infer<typeof EventSchemas.USER_MENTIONED_IN_DOCUMENT>;
 
 export type Event =
   | TicketCreatedEvent
@@ -245,5 +257,6 @@ export type Event =
   | CalendarSyncStartedEvent
   | CalendarSyncCompletedEvent
   | CalendarSyncFailedEvent
+  | UserMentionedInDocumentEvent
   | CalendarConflictDetectedEvent
   | MessageSentEvent;

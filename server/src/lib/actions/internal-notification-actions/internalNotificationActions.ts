@@ -320,6 +320,30 @@ export async function getNotificationsAction(
 }
 
 /**
+ * Get a single notification by internal notification ID
+ */
+export async function getNotificationByIdAction(
+  internalNotificationId: string,
+  tenant: string,
+  userId: string
+): Promise<InternalNotification | null> {
+  const { knex } = await (await import("../../db")).createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const notification = await trx('internal_notifications')
+      .where({
+        internal_notification_id: parseInt(internalNotificationId),
+        tenant,
+        user_id: userId
+      })
+      .whereNull('deleted_at')
+      .first();
+
+    return notification || null;
+  });
+}
+
+/**
  * Get unread notification count
  */
 export async function getUnreadCountAction(

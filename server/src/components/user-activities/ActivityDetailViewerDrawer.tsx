@@ -25,6 +25,12 @@ import { toast } from 'react-hot-toast';
 import { formatISO } from 'date-fns';
 import { IWorkItem } from "server/src/interfaces/workItem.interfaces";
 import { TimeSheetStatus, ITimePeriodWithStatusView } from "server/src/interfaces/timeEntry.interfaces";
+import { NotificationDetailView } from "server/src/components/notifications/NotificationDetailView";
+import { NotificationActivity } from "server/src/interfaces/activity.interfaces";
+import { getNotificationByIdAction } from "server/src/lib/actions/internal-notification-actions/internalNotificationActions";
+import { getBlockContent } from "server/src/lib/actions/document-actions/documentBlockContentActions";
+import RichTextViewer from "server/src/components/editor/RichTextViewer";
+import { PartialBlock } from '@blocknote/core';
 
 interface ActivityDetailViewerDrawerProps {
   activityType: ActivityType;
@@ -342,7 +348,318 @@ export function ActivityDetailViewerDrawer({
           }
           break;
         }
-        
+
+        case ActivityType.DOCUMENT: {
+          // Extract documentId - it's the same as activityId for documents
+          const documentId = activityId;
+
+          try {
+            // Load the document content
+            const content = await getBlockContent(documentId);
+            let parsedContent: PartialBlock[] = [{
+              type: "paragraph",
+              props: {
+                textAlignment: "left",
+                backgroundColor: "default",
+                textColor: "default"
+              },
+              content: [{
+                type: "text",
+                text: "",
+                styles: {}
+              }]
+            }];
+
+            if (content?.block_data) {
+              try {
+                parsedContent = typeof content.block_data === 'string'
+                  ? JSON.parse(content.block_data)
+                  : content.block_data;
+              } catch (parseError) {
+                console.error('Error parsing document content:', parseError);
+              }
+            }
+
+            // Render document viewer
+            setContent(
+              <div className="h-full flex flex-col bg-white">
+                <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">Document Viewer</h2>
+                    <button
+                      onClick={onClose}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      aria-label="Close"
+                    >
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 py-4">
+                  <RichTextViewer
+                    id={`document-viewer-${documentId}`}
+                    content={parsedContent}
+                  />
+                </div>
+              </div>
+            );
+          } catch (error) {
+            console.error('Error loading document:', error);
+            throw new Error('Failed to load document content');
+          }
+          break;
+        }
+
+        case ActivityType.NOTIFICATION: {
+          // Fetch the full notification details
+          const notificationData = await getNotificationByIdAction(activityId, tenant || '', currentUser.user_id);
+
+          if (!notificationData) {
+            throw new Error('Notification not found');
+          }
+
+          // Convert to NotificationActivity for the detail view
+          // Map priority based on notification type
+          let priority: any;
+          switch (notificationData.type) {
+            case 'error':
+              priority = 'high';
+              break;
+            case 'warning':
+              priority = 'medium';
+              break;
+            default:
+              priority = 'low';
+          }
+
+          const notificationActivity: NotificationActivity = {
+            id: activityId,
+            notificationId: notificationData.internal_notification_id,
+            title: notificationData.title,
+            message: notificationData.message,
+            description: notificationData.message,
+            type: ActivityType.NOTIFICATION,
+            sourceType: ActivityType.NOTIFICATION,
+            sourceId: activityId,
+            status: notificationData.type || 'info',
+            priority: priority,
+            isRead: notificationData.is_read,
+            readAt: notificationData.read_at || undefined,
+            link: notificationData.link || undefined,
+            category: notificationData.category || undefined,
+            templateName: notificationData.template_name || '',
+            metadata: notificationData.metadata as Record<string, any>,
+            assignedTo: notificationData.user_id ? [notificationData.user_id] : [],
+            actions: [],
+            tenant: tenant || '',
+            createdAt: notificationData.created_at,
+            updatedAt: notificationData.updated_at || notificationData.created_at
+          };
+
+          setContent(
+            <div className="h-full">
+              <NotificationDetailView
+                notification={notificationActivity}
+                onClose={onClose}
+                onNavigateToTicket={async (ticketId) => {
+                  // Store the current notification content to allow going back
+                  const currentNotificationContent = content;
+
+                  // Load ticket data and render
+                  try {
+                    setIsLoading(true);
+                    const ticketData = await getConsolidatedTicketData(ticketId, currentUser);
+
+                    setContent(
+                      <div className="h-full flex flex-col">
+                        <div className="flex-shrink-0 border-b border-gray-200 px-4 py-3">
+                          <button
+                            onClick={() => setContent(currentNotificationContent)}
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            Back to Notification
+                          </button>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <TicketDetails
+                            isInDrawer={true}
+                            initialTicket={ticketData.ticket}
+                            initialComments={ticketData.comments}
+                            initialBoard={ticketData.board}
+                            initialClient={ticketData.client}
+                            initialContactInfo={ticketData.contactInfo}
+                            initialCreatedByUser={ticketData.createdByUser}
+                            initialAdditionalAgents={ticketData.additionalAgents}
+                            statusOptions={ticketData.options.status}
+                            agentOptions={ticketData.options.agent}
+                            boardOptions={ticketData.options.board}
+                            priorityOptions={ticketData.options.priority}
+                            initialCategories={ticketData.categories}
+                            initialClients={ticketData.clients}
+                            initialLocations={ticketData.locations}
+                            initialAgentSchedules={ticketData.agentSchedules}
+                            currentUser={currentUser}
+                            initialUserMap={ticketData.userMap}
+                            initialAvailableAgents={ticketData.availableAgents}
+                            onClose={onClose}
+                          />
+                        </div>
+                      </div>
+                    );
+                  } catch (error) {
+                    console.error('Error loading ticket:', error);
+                    setError('Failed to load ticket details');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                onNavigateToProjectTask={async (taskId, projectId) => {
+                  // Store the current notification content to allow going back
+                  const currentNotificationContent = content;
+
+                  // Load task data and render
+                  try {
+                    setIsLoading(true);
+                    const taskData = await getTaskWithDetails(taskId, currentUser);
+                    const users = await getAllUsers();
+
+                    setContent(
+                      <div className="h-full flex flex-col">
+                        <div className="flex-shrink-0 border-b border-gray-200 px-4 py-3">
+                          <button
+                            onClick={() => setContent(currentNotificationContent)}
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            Back to Notification
+                          </button>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <TaskEdit
+                            inDrawer={true}
+                            users={users || []}
+                            phase={{
+                              phase_id: taskData.phase_id,
+                              project_id: taskData.project_id || '',
+                              phase_name: taskData.phase_name || '',
+                              description: null,
+                              start_date: null,
+                              end_date: null,
+                              status: taskData.status_id || '',
+                              order_number: 0,
+                              created_at: new Date(),
+                              updated_at: new Date(),
+                              wbs_code: taskData.wbs_code,
+                              tenant: tenant || ''
+                            }}
+                            task={{
+                              ...taskData,
+                              tenant: tenant || ''
+                            }}
+                            onClose={onClose}
+                            onTaskUpdated={async () => {
+                              invalidateCache({ activityType: ActivityType.PROJECT_TASK });
+                              onActionComplete?.();
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  } catch (error) {
+                    console.error('Error loading task:', error);
+                    setError('Failed to load task details');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                onNavigateToDocument={(documentId, documentName) => {
+                  // Store the current notification content to allow going back
+                  const currentNotificationContent = content;
+
+                  // Directly load the document case without reloading notification
+                  (async () => {
+                    try {
+                      setIsLoading(true);
+                      const documentContent = await getBlockContent(documentId);
+                      let parsedContent: PartialBlock[] = [{
+                        type: "paragraph",
+                        props: {
+                          textAlignment: "left",
+                          backgroundColor: "default",
+                          textColor: "default"
+                        },
+                        content: [{
+                          type: "text",
+                          text: "",
+                          styles: {}
+                        }]
+                      }];
+
+                      if (documentContent?.block_data) {
+                        try {
+                          parsedContent = typeof documentContent.block_data === 'string'
+                            ? JSON.parse(documentContent.block_data)
+                            : documentContent.block_data;
+                        } catch (parseError) {
+                          console.error('Error parsing document content:', parseError);
+                        }
+                      }
+
+                      // Render document viewer with back button
+                      setContent(
+                        <div className="h-full flex flex-col bg-white">
+                          <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4">
+                            <div className="flex items-center justify-between">
+                              <button
+                                onClick={() => setContent(currentNotificationContent)}
+                                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                              >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back to Notification
+                              </button>
+                              <button
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                aria-label="Close"
+                              >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            <h2 className="text-xl font-semibold mt-3">{documentName}</h2>
+                          </div>
+                          <div className="flex-1 overflow-y-auto px-6 py-4">
+                            <RichTextViewer
+                              id={`document-viewer-${documentId}`}
+                              content={parsedContent}
+                            />
+                          </div>
+                        </div>
+                      );
+                    } catch (error) {
+                      console.error('Error loading document:', error);
+                      setError('Failed to load document content');
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  })();
+                }}
+              />
+            </div>
+          );
+          break;
+        }
+
         default:
           setContent(
             <div className="h-full p-6">

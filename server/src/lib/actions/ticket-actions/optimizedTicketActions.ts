@@ -16,8 +16,7 @@ import { revalidatePath } from 'next/cache';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
-import { getEventBus } from '../../../lib/eventBus';
-import { getEmailEventChannel } from '../../notifications/emailChannel';
+import { publishEvent } from '../../../lib/eventBus/publishers';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
@@ -43,29 +42,6 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 }
 
 // Helper function to safely publish events
-async function safePublishEvent(eventType: string, payload: any) {
-  try {
-    // Publish to email channel
-    await getEventBus().publish(
-      {
-        eventType,
-        payload
-      },
-      { channel: getEmailEventChannel() }
-    );
-
-    // Also publish to internal notifications channel
-    await getEventBus().publish(
-      {
-        eventType,
-        payload
-      },
-      { channel: 'internal-notifications' }
-    );
-  } catch (error) {
-    console.error(`Failed to publish ${eventType} event:`, error);
-  }
-}
 
 /**
  * Consolidated function to get all ticket data for the ticket details page
@@ -880,7 +856,7 @@ export async function getTicketFormOptions(user: IUser) {
       const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
       return {
         ...clientData,
-        properties: clientData.properties || {}, 
+        properties: clientData.properties || {},
         logoUrl,
       };
     });
@@ -1110,27 +1086,36 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       // Ticket was closed
-      await safePublishEvent('TICKET_CLOSED', {
-        tenantId: tenant,
-        ticketId: id,
-        userId: user.user_id,
-        changes: structuredChanges
+      await publishEvent({
+        eventType: 'TICKET_CLOSED',
+        payload: {
+          tenantId: tenant,
+          ticketId: id,
+          userId: user.user_id,
+          changes: structuredChanges
+        }
       });
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned
-      await safePublishEvent('TICKET_ASSIGNED', {
-        tenantId: tenant,
-        ticketId: id,
-        userId: user.user_id,
-        changes: structuredChanges
+      await publishEvent({
+        eventType: 'TICKET_ASSIGNED',
+        payload: {
+          tenantId: tenant,
+          ticketId: id,
+          userId: user.user_id,
+          changes: structuredChanges
+        }
       });
     } else {
       // Regular update
-      await safePublishEvent('TICKET_UPDATED', {
-        tenantId: tenant,
-        ticketId: id,
-        userId: user.user_id,
-        changes: structuredChanges
+      await publishEvent({
+        eventType: 'TICKET_UPDATED',
+        payload: {
+          tenantId: tenant,
+          ticketId: id,
+          userId: user.user_id,
+          changes: structuredChanges
+        }
       });
     }
 
@@ -1205,15 +1190,18 @@ export async function addTicketCommentWithCache(
     }).returning('*');
 
     // Publish comment added event
-    await safePublishEvent('TICKET_COMMENT_ADDED', {
-      tenantId: tenant,
-      ticketId: ticketId,
-      userId: user.user_id,
-      comment: {
-        id: newComment.comment_id,
-        content: content,
-        author: `${user.first_name} ${user.last_name}`,
-        isInternal
+    await publishEvent({
+      eventType: 'TICKET_COMMENT_ADDED',
+      payload: {
+        tenantId: tenant,
+        ticketId: ticketId,
+        userId: user.user_id,
+        comment: {
+          id: newComment.comment_id,
+          content: content,
+          author: `${user.first_name} ${user.last_name}`,
+          isInternal
+        }
       }
     });
     

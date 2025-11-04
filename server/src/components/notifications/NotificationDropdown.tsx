@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCheck, RefreshCw, Loader2, WifiOff, AlertCircle } from 'lucide-react';
 import { NotificationItem } from './NotificationItem';
-import type { InternalNotification } from '../../lib/models/internalNotification';
+import type { InternalNotification } from 'server/src/lib/models/internalNotification';
+import { useActivityDrawer } from 'server/src/components/user-activities/ActivityDrawerProvider';
+import { ActivityType, NotificationActivity } from 'server/src/interfaces/activity.interfaces';
+import { useTenant } from 'server/src/components/TenantProvider';
 
 interface NotificationDropdownProps {
   notifications: InternalNotification[];
@@ -28,8 +31,10 @@ export function NotificationDropdown({
   onRefresh,
   onClose
 }: NotificationDropdownProps) {
-  const [isMarkingAllAsRead, setIsMarkingAllAsRead] = React.useState(false);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { openActivityDrawer } = useActivityDrawer();
+  const tenant = useTenant();
 
   const handleMarkAllAsRead = async () => {
     try {
@@ -59,11 +64,47 @@ export function NotificationDropdown({
       await onMarkAsRead(notification.internal_notification_id);
     }
 
-    // Navigate to the link if provided
-    if (notification.link) {
-      window.location.href = notification.link;
-      onClose();
+    // Convert InternalNotification to NotificationActivity
+    // Map priority based on notification type
+    let priority: any;
+    switch (notification.type) {
+      case 'error':
+        priority = 'high';
+        break;
+      case 'warning':
+        priority = 'medium';
+        break;
+      default:
+        priority = 'low';
     }
+
+    const notificationActivity: NotificationActivity = {
+      id: notification.internal_notification_id.toString(),
+      notificationId: notification.internal_notification_id,
+      title: notification.title,
+      message: notification.message,
+      description: notification.message,
+      type: ActivityType.NOTIFICATION,
+      sourceType: ActivityType.NOTIFICATION,
+      sourceId: notification.internal_notification_id.toString(),
+      status: notification.type || 'info',
+      priority: priority,
+      isRead: notification.is_read,
+      readAt: notification.read_at || undefined,
+      link: notification.link || undefined,
+      category: notification.category || undefined,
+      templateName: notification.template_name || '',
+      metadata: notification.metadata as Record<string, any>,
+      assignedTo: notification.user_id ? [notification.user_id] : [],
+      actions: [],
+      tenant: tenant || '',
+      createdAt: notification.created_at,
+      updatedAt: notification.updated_at || notification.created_at
+    };
+
+    // Close the dropdown and open the notification in the drawer
+    onClose();
+    openActivityDrawer(notificationActivity);
   };
 
   return (
