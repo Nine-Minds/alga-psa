@@ -179,18 +179,8 @@ export async function deleteContact(contactId: string) {
       // Note: Boards are not directly associated with contacts, so we skip this check
       // The boards table doesn't have a contact_name_id column
 
-      // Check for comments
-      const commentCount = await trx('comments')
-        .where({
-          contact_name_id: contactId,
-          tenant
-        })
-        .count('* as count')
-        .first();
-      if (commentCount && Number(commentCount.count) > 0) {
-        dependencies.push('comment');
-        counts['comment'] = Number(commentCount.count);
-      }
+      // Note: Comments are not directly associated with contacts, so we skip this check
+      // The comments table doesn't have a contact_name_id column (removed by migration 20250217202553_drop_contact_columns.cjs)
     });
 
     // If there are dependencies, throw a detailed error
@@ -1069,19 +1059,33 @@ export async function importContactsFromCSV(
             }
           }
 
-          // Check for existing contact
-          const existingContact = await trx('contacts')
-            .where({
-              full_name: contactData.full_name.trim(),
-              tenant,
-              client_id: contactData.client_id
-            })
-            .first();
+          // Check for existing contact by email (primary unique constraint)
+          let existingContact = null;
+          if (contactData.email) {
+            existingContact = await trx('contacts')
+              .where({
+                email: contactData.email.trim().toLowerCase(),
+                tenant
+              })
+              .first();
+          }
+
+          // If no email provided or no match by email, check by name and client
+          if (!existingContact) {
+            existingContact = await trx('contacts')
+              .where({
+                full_name: contactData.full_name.trim(),
+                tenant,
+                client_id: contactData.client_id
+              })
+              .first();
+          }
 
           if (existingContact && !updateExisting) {
+            const duplicateField = contactData.email && existingContact.email === contactData.email.trim().toLowerCase() ? 'email' : 'name';
             results.push({
               success: false,
-              message: `VALIDATION_ERROR: Contact with name ${contactData.full_name} already exists`,
+              message: `VALIDATION_ERROR: Contact with this ${duplicateField} already exists: ${duplicateField === 'email' ? contactData.email : contactData.full_name}`,
               originalData: contactData
             });
             continue;
@@ -1091,8 +1095,10 @@ export async function importContactsFromCSV(
 
           if (existingContact && updateExisting) {
             // Prepare update data with proper sanitization
+            // Exclude tags from updateData - it's handled separately below
+            const { tags, ...contactDataWithoutTags } = contactData;
             const updateData = {
-              ...contactData,
+              ...contactDataWithoutTags,
               full_name: contactData.full_name.trim(),
               email: contactData.email?.trim().toLowerCase() || existingContact.email,
               phone_number: contactData.phone_number?.trim() || existingContact.phone_number,
@@ -1209,7 +1215,7 @@ export async function importContactsFromCSV(
             }
 
             // Handle database-specific errors
-            if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
+            if (message.includes('duplicate key') && (message.includes('contacts_email_tenant_unique') || message.includes('contacts_tenant_email_unique'))) {
               results.push({
                 success: false,
                 message: `EMAIL_EXISTS: A contact with this email address already exists: ${contactData.email}`,
