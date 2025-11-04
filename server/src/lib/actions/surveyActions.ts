@@ -61,9 +61,7 @@ const baseTriggerSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
-const updateTriggerSchema = baseTriggerSchema.partial().extend({
-  triggerId: z.string().uuid(),
-});
+const updateTriggerSchema = baseTriggerSchema.partial();
 
 type CreateTemplateInput = z.input<typeof baseTemplateSchema>;
 type UpdateTemplateInput = z.input<typeof updateTemplateSchema>;
