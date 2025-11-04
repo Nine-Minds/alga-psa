@@ -1,20 +1,38 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { signOut } from "next-auth/react";
+import React, { useEffect, useMemo, useState } from 'react';
+import { signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { LogOut, ChevronRight, Home, User, Settings } from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  Activity,
+  Bell,
+  ChevronRight,
+  Home,
+  Menu,
+  PlusCircle,
+  Settings,
+  User,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from 'server/src/components/ui/DropdownMenu';
+import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { usePathname } from 'next/navigation';
 import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { useRouter } from 'next/navigation';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
+import type { JobMetrics } from 'server/src/lib/actions/job-actions';
+import { getQueueMetricsAction } from 'server/src/lib/actions/job-actions';
+import { analytics } from 'server/src/lib/analytics/client';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -23,18 +41,32 @@ interface HeaderProps {
   setRightSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+interface QuickCreateOption {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+}
+
+const quickCreateOptions: QuickCreateOption[] = [
+  {
+    id: 'create-asset',
+    label: 'Asset',
+    description: 'Add a new device to your workspace',
+    href: '/msp/assets?intent=new-asset'
+  }
+];
+
 const getMenuItemNameByPath = (path: string | null | undefined): string => {
   if (!path) return 'Dashboard';
-  
+
   const allMenuItems = [...menuItems, ...bottomMenuItems];
-  
-  // Get the first segment of the path (e.g., /tickets/123 -> /tickets)
+
   const segments = path.split('/');
   const topLevelPath = segments.length > 1 ? '/' + segments[1] : '/';
-  
+
   const findMenuItem = (items: MenuItem[]): string | null => {
     for (const item of items) {
-      // Match based on the top-level path
       if (item.href === topLevelPath || (item.href && path.startsWith(item.href))) {
         return item.name;
       }
@@ -49,18 +81,161 @@ const getMenuItemNameByPath = (path: string | null | undefined): string => {
   return findMenuItem(allMenuItems) || 'Dashboard';
 };
 
-const Header: React.FC<HeaderProps> = ({
+const TenantBadge: React.FC<{ tenant?: string | null }> = ({ tenant }) => {
+  if (!tenant) {
+    return null;
+  }
+
+  return (
+    <span
+      className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 border border-slate-200"
+      aria-label={`Active tenant ${tenant}`}
+    >
+      {tenant}
+    </span>
+  );
+};
+
+const QuickCreateMenu: React.FC<{ onNavigate: (href: string) => void }> = ({ onNavigate }) => {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          id="global-quick-create-trigger"
+          variant="ghost"
+          size="sm"
+          className="flex items-center gap-2"
+          aria-label="Open quick create"
+        >
+          <PlusCircle className="h-5 w-5" />
+          <span className="hidden lg:inline text-sm font-medium">Quick Create</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <div className="px-3 py-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Create</p>
+        </div>
+        {quickCreateOptions.map((option) => (
+          <DropdownMenuItem
+            key={option.id}
+            id={`${option.id}-menu-item`}
+            onSelect={() => {
+              analytics.capture('ui.quick_create.select', { target: option.id });
+              onNavigate(option.href);
+            }}
+            className="flex flex-col items-start gap-0.5"
+          >
+            <span className="text-sm font-medium text-gray-900">{option.label}</span>
+            <span className="text-xs text-gray-500">{option.description}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+
+const JobActivityIndicator: React.FC = () => {
+  const router = useRouter();
+  const [metrics, setMetrics] = useState<JobMetrics | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    let interval: ReturnType<typeof setInterval> | undefined;
+
+    const fetchMetrics = async () => {
+      setLoading(true);
+      try {
+        const data = await getQueueMetricsAction();
+        if (isMounted) {
+          setMetrics(data);
+        }
+      } catch (error) {
+        console.error('[Header] Failed to fetch job metrics', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchMetrics();
+    interval = setInterval(fetchMetrics, 15000);
+
+    return () => {
+      isMounted = false;
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, []);
+
+  const activeJobs = metrics?.active ?? 0;
+  const failedJobs = metrics?.failed ?? 0;
+  const hasAttention = failedJobs > 0;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          id="job-activity-trigger"
+          variant="ghost"
+          size="icon"
+          aria-label="View background job activity"
+          className="relative h-9 w-9"
+        >
+          <Activity className={`h-5 w-5 ${hasAttention ? 'text-amber-600' : 'text-gray-600'}`} />
+          {(activeJobs > 0 || failedJobs > 0) && (
+            <span className={`absolute right-1 top-1 inline-flex h-2.5 w-2.5 rounded-full ${failedJobs > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        <div className="px-3 py-2">
+          <p className="text-sm font-semibold text-gray-900">Background Jobs</p>
+          <p className="text-xs text-gray-500">Track imports, automation runs, and scheduled work.</p>
+        </div>
+        <DropdownMenuSeparator />
+        <div className="px-3 py-2 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">Active jobs</span>
+            <span className="font-medium text-gray-900">{loading ? '—' : activeJobs}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">Queued jobs</span>
+            <span className="font-medium text-gray-900">{loading ? '—' : metrics?.queued ?? 0}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">Failed last 24h</span>
+            <span className={`font-medium ${failedJobs > 0 ? 'text-amber-600' : 'text-gray-900'}`}>{loading ? '—' : failedJobs}</span>
+          </div>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          id="open-job-center-menu-item"
+          onSelect={() => {
+            analytics.capture('ui.job_center.opened');
+            router.push('/msp/jobs');
+          }}
+        >
+          Open Job Center
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+export default function Header({
   sidebarOpen,
   setSidebarOpen,
-  rightSidebarOpen,
-  setRightSidebarOpen,
-}) => {
+  rightSidebarOpen: _rightSidebarOpen,
+  setRightSidebarOpen: _setRightSidebarOpen,
+}: HeaderProps) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const router = useRouter();
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  console.log('Environment:', process.env.NODE_ENV, 'isDevelopment:', isDevelopment);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -68,11 +243,9 @@ const Header: React.FC<HeaderProps> = ({
       if (user) {
         setUserData(user);
 
-        // Check account management permission
         const hasAccountPermission = await checkAccountManagementPermission();
         setCanManageAccount(hasAccountPermission);
 
-        // Fetch the user's avatar URL using server action
         if (user.tenant && user.user_id) {
           try {
             const userAvatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
@@ -90,7 +263,6 @@ const Header: React.FC<HeaderProps> = ({
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/auth/signin', redirect: true });
-    console.log('Signing out...');
   };
 
   const getBreadcrumbItems = (path: string | null | undefined): { name: string; href: string }[] => {
@@ -100,62 +272,83 @@ const Header: React.FC<HeaderProps> = ({
         href: '/'
       }
     ];
-  
-    // Add only the menu item name if path exists and is not home
+
     if (path && path !== '/') {
       const menuName = getMenuItemNameByPath(path);
       breadcrumbs.push({
         name: menuName,
-        href: '#' // We don't need the actual path since it contains UUID
+        href: '#'
       });
     }
-  
+
     return breadcrumbs;
   };
 
   const pathname = usePathname();
-  const breadcrumbItems = getBreadcrumbItems(pathname);
+  const breadcrumbItems = useMemo(() => getBreadcrumbItems(pathname), [pathname]);
 
   return (
-    <header className="bg-transparent py-4 flex items-center justify-between border-b border-main-300 shadow-[0_5px_10px_rgba(0,0,0,0.1)] p-2">
-      <nav aria-label="Breadcrumb">
-        <ol className="flex items-center space-x-2">
-          {breadcrumbItems.map((item, index):JSX.Element => (
-            <li key={item.href} className="flex items-center">
-              {index > 0 && (
-                <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
-              )}
-              {index === 0 ? (
-                <Link
-                  prefetch={false}
-                  href={item.href}
-                  className="text-gray-500 hover:text-main-800 text-md transition-colors cursor-pointer"
-                  aria-label="Home"
-                >
-                  <Home className="w-5 h-5" />
-                </Link>
-              ) : index === breadcrumbItems.length - 1 ? (
-                <span className="text-xl font-semibold text-main-800">
-                  {item.name}
-                </span>
-              ) : (
-                <Link
-                  prefetch={false}
-                  href={item.href}
-                  className="text-md text-gray-500 hover:text-main-800 transition-colors cursor-pointer"
-                >
-                  {item.name}
-                </Link>
-              )}
-            </li>
-          ))}
-        </ol>
-      </nav>
-      <div className="flex items-center gap-2">
+    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-3">
+        <Button
+          id="sidebar-toggle-button"
+          variant="ghost"
+          size="icon"
+          aria-label={sidebarOpen ? 'Collapse navigation' : 'Expand navigation'}
+          onClick={() => setSidebarOpen((prev) => !prev)}
+          className="h-9 w-9"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <nav aria-label="Breadcrumb">
+          <ol className="flex items-center space-x-2">
+            {breadcrumbItems.map((item, index) => (
+              <li key={`${item.href}-${index}`} className="flex items-center">
+                {index > 0 && (
+                  <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
+                )}
+                {index === 0 ? (
+                  <Link
+                    prefetch={false}
+                    href={item.href}
+                    className="text-gray-500 hover:text-main-800 text-md transition-colors cursor-pointer"
+                    aria-label="Home"
+                  >
+                    <Home className="w-5 h-5" />
+                  </Link>
+                ) : index === breadcrumbItems.length - 1 ? (
+                  <span className="text-xl font-semibold text-main-800">
+                    {item.name}
+                  </span>
+                ) : (
+                  <Link
+                    prefetch={false}
+                    href={item.href}
+                    className="text-md text-gray-500 hover:text-main-800 transition-colors cursor-pointer"
+                  >
+                    {item.name}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <TenantBadge tenant={userData?.tenant} />
+        <QuickCreateMenu onNavigate={(href) => router.push(href)} />
         <NotificationBell />
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button id="user-menu-header" className="relative" aria-label="User menu">
+        <JobActivityIndicator />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="user-menu-trigger"
+              variant="ghost"
+              size="icon"
+              aria-label="Open user menu"
+              className="relative h-10 w-10 rounded-full"
+            >
               {userData?.user_type === 'client' ? (
                 <ContactAvatar
                   contactId={userData?.contact_id || ''}
@@ -171,47 +364,44 @@ const Header: React.FC<HeaderProps> = ({
                   size="sm"
                 />
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
-            </button>
-          </DropdownMenu.Trigger>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+            </Button>
+          </DropdownMenuTrigger>
 
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              className="min-w-[220px] bg-subMenu-bg rounded-md p-1 shadow-md"
-              sideOffset={5}
-              align="end"
+          <DropdownMenuContent align="end" className="min-w-[220px]">
+            <div className="px-3 py-2">
+              <p className="text-sm font-semibold text-gray-900">
+                {userData ? `${userData.first_name ?? ''} ${userData.last_name ?? ''}`.trim() : 'User'}
+              </p>
+              <p className="text-xs text-gray-500">Quick access to profile & account.</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              id="user-profile-menu-item"
+              onSelect={() => router.push(userData?.user_type === 'client' ? '/client/profile' : '/msp/profile')}
             >
-              <DropdownMenu.Item
-                className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                onSelect={() => router.push(userData?.user_type === 'client' ? '/client/profile' : '/msp/profile')}
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            {canManageAccount && (
+              <DropdownMenuItem
+                id="user-account-menu-item"
+                onSelect={() => router.push('/msp/account')}
               >
-                <User className="mr-2 h-3.5 w-3.5" />
-                <span>Profile</span>
-              </DropdownMenu.Item>
-              {canManageAccount && (
-                <DropdownMenu.Item
-                  className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                  onSelect={() => router.push('/msp/account')}
-                >
-                  <Settings className="mr-2 h-3.5 w-3.5" />
-                  <span>Account</span>
-                </DropdownMenu.Item>
-              )}
-              <DropdownMenu.Item
-                className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                onSelect={handleSignOut}
-              >
-                <LogOut className="mr-2 h-3.5 w-3.5" />
-                <span>Sign out</span>
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+                <Settings className="mr-2 h-4 w-4" />
+                Account
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              id="user-sign-out-menu-item"
+              onSelect={handleSignOut}
+            >
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-
-
     </header>
   );
 }
-
-export default Header;

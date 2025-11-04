@@ -12,6 +12,8 @@ import {
     Asset,
     AssetListResponse,
     AssetAssociation,
+    AssetHistory,
+    AssetTicketSummary,
     AssetMaintenanceSchedule,
     AssetMaintenanceHistory,
     AssetMaintenanceReport,
@@ -912,6 +914,148 @@ export async function getAssetMaintenanceReport(asset_id: string): Promise<Asset
     } catch (error) {
         console.error('Error getting asset maintenance report:', error);
         throw new Error('Failed to get asset maintenance report');
+    }
+}
+
+export async function getAssetHistory(asset_id: string): Promise<AssetHistory[]> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error('No tenant found');
+        }
+
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetHistory[]> => {
+            if (!await hasPermission(currentUser, 'asset', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read asset history');
+            }
+
+            const history = await trx('asset_history')
+                .where({ tenant, asset_id })
+                .orderBy('changed_at', 'desc');
+
+            return history.map((record): AssetHistory => ({
+                ...record,
+                changed_at: typeof record.changed_at === 'string'
+                    ? record.changed_at
+                    : new Date(record.changed_at).toISOString()
+            }));
+        });
+    } catch (error) {
+        console.error('Error getting asset history:', error);
+        throw new Error('Failed to get asset history');
+    }
+}
+
+type RawLinkedTicket = {
+    entity_id: string;
+    relationship_type?: string | null;
+    linked_at: string | Date;
+    ticket_id: string | null;
+    title: string | null;
+    status_id: string | null;
+    status_name: string | null;
+    priority_id: string | null;
+    priority_name: string | null;
+    updated_at: string | Date | null;
+    assigned_first_name?: string | null;
+    assigned_last_name?: string | null;
+    client_name?: string | null;
+};
+
+export async function getAssetLinkedTickets(asset_id: string): Promise<AssetTicketSummary[]> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error('No tenant found');
+        }
+
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetTicketSummary[]> => {
+            if (!await hasPermission(currentUser, 'ticket', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read linked tickets');
+            }
+
+            const rows = await trx('asset_associations as aa')
+                .leftJoin('tickets as t', function(this: Knex.JoinClause) {
+                    this.on('aa.entity_id', '=', 't.ticket_id')
+                        .andOn('aa.tenant', '=', 't.tenant');
+                })
+                .leftJoin('statuses as s', function(this: Knex.JoinClause) {
+                    this.on('t.status_id', '=', 's.status_id')
+                        .andOn('t.tenant', '=', 's.tenant');
+                })
+                .leftJoin('priorities as p', function(this: Knex.JoinClause) {
+                    this.on('t.priority_id', '=', 'p.priority_id')
+                        .andOn('t.tenant', '=', 'p.tenant');
+                })
+                .leftJoin('users as u', function(this: Knex.JoinClause) {
+                    this.on('t.assigned_to', '=', 'u.user_id')
+                        .andOn('t.tenant', '=', 'u.tenant');
+                })
+                .leftJoin('clients as c', function(this: Knex.JoinClause) {
+                    this.on('t.client_id', '=', 'c.client_id')
+                        .andOn('t.tenant', '=', 'c.tenant');
+                })
+                .where({
+                    'aa.tenant': tenant,
+                    'aa.asset_id': asset_id,
+                    'aa.entity_type': 'ticket'
+                })
+                .orderBy('aa.created_at', 'desc')
+                .select<RawLinkedTicket[]>(
+                    'aa.entity_id',
+                    'aa.relationship_type',
+                    'aa.created_at as linked_at',
+                    't.ticket_id',
+                    't.title',
+                    't.status_id',
+                    's.name as status_name',
+                    't.priority_id',
+                    'p.priority_name',
+                    't.updated_at',
+                    'u.first_name as assigned_first_name',
+                    'u.last_name as assigned_last_name',
+                    'c.client_name'
+                );
+
+            return rows.map((row): AssetTicketSummary => {
+                const ticketId = row.ticket_id || row.entity_id;
+                const assigned_to_name = [row.assigned_first_name, row.assigned_last_name]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim();
+
+                return {
+                    ticket_id: ticketId,
+                    title: row.title || 'Linked ticket unavailable',
+                    status_id: row.status_id || 'unknown',
+                    status_name: row.status_name || 'Unknown',
+                    priority_id: row.priority_id || undefined,
+                    priority_name: row.priority_name || undefined,
+                    linked_at: typeof row.linked_at === 'string'
+                        ? row.linked_at
+                        : row.linked_at.toISOString(),
+                    updated_at: row.updated_at
+                        ? (row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at)
+                        : undefined,
+                    client_name: row.client_name || undefined,
+                    assigned_to_name: assigned_to_name.length > 0 ? assigned_to_name : undefined,
+                    relationship_type: row.relationship_type || undefined
+                };
+            });
+        });
+    } catch (error) {
+        console.error('Error getting asset linked tickets:', error);
+        throw new Error('Failed to get asset linked tickets');
     }
 }
 

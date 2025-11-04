@@ -17,6 +17,7 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]',
         destructive: 'bg-[rgb(var(--color-accent-500))] text-white hover:bg-[rgb(var(--color-accent-600))]',
+        accent: 'bg-[rgb(var(--color-accent-500))] text-white hover:bg-[rgb(var(--color-accent-600))]',
         outline: 'border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]',
         secondary: 'bg-[rgb(var(--color-secondary-500))] text-white hover:bg-[rgb(var(--color-secondary-600))]',
         ghost: 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]',

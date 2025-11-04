@@ -21,6 +21,7 @@ export interface CustomTabsProps {
     content?: string;
   };
   extraContent?: React.ReactNode;
+  orientation?: 'horizontal' | 'vertical';
 }
 
 export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({ 
@@ -28,7 +29,8 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   defaultTab, 
   onTabChange,
   tabStyles,
-  extraContent
+  extraContent,
+  orientation = 'horizontal'
 }) => {
   const [value, setValue] = React.useState(defaultTab || tabs[0].label);
 
@@ -38,24 +40,37 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     }
   }, [defaultTab]);
 
+  const defaultRootClass = orientation === 'vertical'
+    ? 'md:grid md:grid-cols-[220px_minmax(0,1fr)] gap-6'
+    : '';
+
+  const defaultListClass = orientation === 'vertical'
+    ? 'flex flex-col border-r border-border/60 dark:border-border/40 space-y-1 pr-4'
+    : 'flex items-center border-b border-gray-200 mb-4';
+
+  const defaultTriggerClass = orientation === 'vertical'
+    ? 'w-full justify-start px-3 py-2 text-left text-sm text-muted-foreground hover:text-foreground border-l-2 border-transparent data-[state=active]:border-primary-500 data-[state=active]:text-primary-600'
+    : 'px-4 py-2 focus:outline-none transition-colors text-gray-500 hover:text-gray-700 border-b-2 border-transparent';
+
+  const defaultActiveTriggerClass = orientation === 'vertical'
+    ? ''
+    : 'data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600';
+
   return (
     <Tabs.Root 
-      className={tabStyles?.root || ''} 
+      className={`${defaultRootClass} ${tabStyles?.root || ''}`} 
       value={value}
+      orientation={orientation}
       onValueChange={(newValue) => {
         setValue(newValue);
         onTabChange?.(newValue);
       }}
     >
-      <Tabs.List className={`flex items-center border-b border-gray-200 mb-4 ${tabStyles?.list || ''}`}>
+      <Tabs.List className={`${defaultListClass} ${tabStyles?.list || ''}`}>
         {tabs.map((tab): JSX.Element => (
           <Tabs.Trigger
             key={tab.label}
-            className={`px-4 py-2 focus:outline-none transition-colors text-gray-500 hover:text-gray-700 border-b-2 border-transparent ${
-              tabStyles?.trigger || ''
-            } ${
-              tabStyles?.activeTrigger || 'data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600'
-            }`}
+            className={`${defaultTriggerClass} ${tabStyles?.trigger || ''} ${(tabStyles?.activeTrigger || defaultActiveTriggerClass)}`}
             value={tab.label}
           >
             {tab.label}

@@ -4,7 +4,13 @@ import * as RadixIcons from '@radix-ui/react-icons';
 import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { menuItems as defaultMenuItems, bottomMenuItems as defaultBottomMenuItems, MenuItem } from '../../config/menuConfig';
+import {
+  menuItems as defaultMenuItems,
+  bottomMenuItems as defaultBottomMenuItems,
+  navigationSections as defaultNavigationSections,
+  MenuItem,
+  NavigationSection
+} from '../../config/menuConfig';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
@@ -18,6 +24,7 @@ interface SidebarProps {
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   menuItems?: MenuItem[];
   bottomMenuItems?: MenuItem[];
+  menuSections?: NavigationSection[];
   disableTransition?: boolean;
 }
 
@@ -26,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   setSidebarOpen,
   menuItems = defaultMenuItems,
   bottomMenuItems = defaultBottomMenuItems,
+  menuSections,
   disableTransition = false
 }): JSX.Element => {
   const appVersion = getAppVersion();
@@ -134,6 +142,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
   };
 
+  const sectionsToRender: NavigationSection[] = menuSections ?? defaultNavigationSections;
+
   return (
     <aside
       data-automation-id="main-sidebar"
@@ -183,10 +193,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       */}
 
       <nav className="mt-4 flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav">
-        <ul className="space-y-1">
-          {menuItems.map(renderMenuItem)}
-        </ul>
-        
+        {sectionsToRender.map((section) => (
+          <div key={section.title || 'nav-section'} className="px-2">
+            {sidebarOpen && section.title ? (
+              <p className="text-xs uppercase tracking-wide text-gray-400 px-2 mb-2 mt-4 first:mt-0" aria-label={section.title}>
+                {section.title}
+              </p>
+            ) : (
+              !sidebarOpen && section.title ? (
+                <div className="h-px bg-gray-700 my-3" aria-hidden="true" />
+              ) : null
+            )}
+            <ul className="space-y-1">
+              {section.items.map((item) => renderMenuItem(item))}
+            </ul>
+          </div>
+        ))}
         {/* Extension navigation items */}
         <div className="mt-4 border-t border-gray-700 pt-4 px-2">
           <DynamicNavigationSlot collapsed={!sidebarOpen} />

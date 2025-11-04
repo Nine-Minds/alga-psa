@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 interface StorageProviderConfig {
@@ -33,15 +34,23 @@ async function buildStorageConfig(): Promise<StorageConfig> {
     const s3AccessKey = await secretProvider.getAppSecret('STORAGE_S3_ACCESS_KEY') || process.env.STORAGE_S3_ACCESS_KEY;
     const s3SecretKey = await secretProvider.getAppSecret('STORAGE_S3_SECRET_KEY') || process.env.STORAGE_S3_SECRET_KEY;
 
+    const defaultLocalBasePath =
+        process.env.STORAGE_LOCAL_BASE_PATH ||
+        path.resolve(process.cwd(), 'tmp', 'storage');
+
+    const defaultLocalMimeTypes =
+        process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES ||
+        'image/*,application/pdf,text/plain,application/zip,video/*,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
     cachedConfig = {
         defaultProvider: process.env.STORAGE_DEFAULT_PROVIDER || 'local',
         providers: {
             local: {
                 type: 'local',
-                basePath: process.env.STORAGE_LOCAL_BASE_PATH || '/data/files',
+                basePath: defaultLocalBasePath,
                 // Use LOCAL-specific env var for local provider max file size
                 maxFileSize: Number(process.env.STORAGE_LOCAL_MAX_FILE_SIZE || '524288000'), // 500MB
-                allowedMimeTypes: (process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,application/zip,video/*').split(','),
+                allowedMimeTypes: defaultLocalMimeTypes.split(','),
                 retentionDays: parseInt(process.env.STORAGE_LOCAL_RETENTION_DAYS || '30'),
             },
             s3: {

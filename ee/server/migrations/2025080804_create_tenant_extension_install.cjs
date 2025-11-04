@@ -2,6 +2,11 @@
 
 /** @param {import('knex').Knex} knex */
 exports.up = async function up(knex) {
+  const exists = await knex.schema.hasTable('tenant_extension_install');
+  if (exists) {
+    return;
+  }
+
   await knex.schema.createTable('tenant_extension_install', (t) => {
     t.uuid('id').primary();
     t.string('tenant_id').notNullable();
@@ -20,4 +25,3 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('tenant_extension_install');
 };
-
