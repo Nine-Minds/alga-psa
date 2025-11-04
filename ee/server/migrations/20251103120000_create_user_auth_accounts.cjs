@@ -31,14 +31,12 @@ const createUserAuthAccountsTable = (knex) =>
 
     table
       .foreign('tenant')
-      .references('tenants.tenant')
-      .onDelete('CASCADE');
+      .references('tenants.tenant');
 
     table
-      .foreign('user_id')
-      .references('user_id')
-      .inTable('users')
-      .onDelete('CASCADE');
+      .foreign(['tenant', 'user_id'])
+      .references(['tenant', 'user_id'])
+      .inTable('users');
 
     table.unique(['provider', 'provider_account_id'], 'uq_user_auth_accounts_provider_account');
     table.index(['tenant', 'provider'], 'idx_user_auth_accounts_tenant_provider');

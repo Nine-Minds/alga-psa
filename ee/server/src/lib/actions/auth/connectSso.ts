@@ -1,11 +1,12 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
+import { randomBytes, createHmac } from "node:crypto";
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { authenticateUser } from "server/src/lib/actions/auth";
 import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
 import logger from "@alga-psa/shared/core/logger";
+import { getNextAuthSecret } from "server/src/lib/auth/sessionCookies";
+import { cookies } from "next/headers";
 
 interface AuthorizeSsoLinkingInput {
   password: string;
@@ -16,26 +17,57 @@ interface AuthorizeSsoLinkingResult {
   success: boolean;
   error?: string;
   nonce?: string;
+  nonceIssuedAt?: number;
+  nonceSignature?: string;
   requiresTwoFactor?: boolean;
 }
 
 interface LinkNoncePayload {
   nonce: string;
   userId: string;
-  exp: number;
 }
 
-const COOKIE_NAME = "sso-link-nonce";
 const LINK_TTL_SECONDS = 5 * 60; // 5 minutes
+const LINK_TTL_MS = LINK_TTL_SECONDS * 1000;
+const LINK_STATE_COOKIE = "sso-link-state";
 
-function setLinkNonceCookie(payload: LinkNoncePayload): void {
-  cookies().set(COOKIE_NAME, JSON.stringify(payload), {
-    maxAge: LINK_TTL_SECONDS,
-    sameSite: "lax",
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-  });
+async function signLinkNonce({ nonce, userId }: LinkNoncePayload): Promise<{ issuedAt: number; signature: string }> {
+  const secret = await getNextAuthSecret();
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is required to sign SSO link state.");
+  }
+
+  const issuedAt = Date.now();
+  const signature = createHmac("sha256", secret)
+    .update(`${userId}:${nonce}:${issuedAt}`)
+    .digest("hex");
+
+  return { issuedAt, signature };
+}
+
+function toBase64Url(input: string): string {
+  return Buffer.from(input, "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+// Keep a signed copy of the linking state server-side so the callback can recover it if the provider strips `state`.
+async function persistLinkStateCookie(payload: { userId: string; nonce: string; issuedAt: number; signature: string }) {
+  try {
+    const store = await cookies();
+    const rawJson = JSON.stringify(payload);
+    const encoded = toBase64Url(rawJson);
+
+    store.set({
+      name: LINK_STATE_COOKIE,
+      value: encoded,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: LINK_TTL_SECONDS,
+    });
+  } catch (error) {
+    logger.warn("[connect-sso] failed to persist link state cookie", { error });
+  }
 }
 
 export async function authorizeSsoLinkingAction(
@@ -115,17 +147,20 @@ export async function authorizeSsoLinkingAction(
   }
 
   const nonce = randomBytes(16).toString("hex");
-  const payload: LinkNoncePayload = {
+  const userId = authenticatedUser.user_id.toString();
+  const { issuedAt, signature } = await signLinkNonce({
     nonce,
-    userId: authenticatedUser.user_id.toString(),
-    exp: Date.now() + LINK_TTL_SECONDS * 1000,
-  };
+    userId,
+  });
 
-  setLinkNonceCookie(payload);
+  console.log("[connect-sso] issued link nonce", { userId, nonce, issuedAt });
+  await persistLinkStateCookie({ userId, nonce, issuedAt, signature });
 
   return {
     success: true,
     nonce,
+    nonceIssuedAt: issuedAt,
+    nonceSignature: signature,
     requiresTwoFactor: Boolean(authenticatedUser.two_factor_enabled),
   };
 }

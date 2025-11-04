@@ -48,6 +48,8 @@ export default function ConnectSsoClient({
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(twoFactorEnabled);
   const [reauthNonce, setReauthNonce] = useState<string | null>(null);
+  const [reauthNonceIssuedAt, setReauthNonceIssuedAt] = useState<number | null>(null);
+  const [reauthNonceSignature, setReauthNonceSignature] = useState<string | null>(null);
   const [reauthComplete, setReauthComplete] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(
@@ -59,6 +61,8 @@ export default function ConnectSsoClient({
     if (linkStatus === "linked") {
       setReauthComplete(false);
       setReauthNonce(null);
+      setReauthNonceIssuedAt(null);
+      setReauthNonceSignature(null);
       setPassword("");
       setTwoFactorCode("");
     }
@@ -92,6 +96,8 @@ export default function ConnectSsoClient({
 
       setReauthComplete(true);
       setReauthNonce(result.nonce ?? null);
+      setReauthNonceIssuedAt(result.nonceIssuedAt ?? null);
+      setReauthNonceSignature(result.nonceSignature ?? null);
       setFormSuccess(
         "Credentials verified. Choose a provider below to finish linking your account."
       );
@@ -100,7 +106,7 @@ export default function ConnectSsoClient({
   };
 
   const handleProviderClick = async (providerId: string) => {
-    if (!reauthComplete || !reauthNonce) {
+    if (!reauthComplete || !reauthNonce || !reauthNonceIssuedAt || !reauthNonceSignature) {
       setFormError(
         "Verify your password (and two-factor code if required) before connecting a provider."
       );
@@ -110,9 +116,19 @@ export default function ConnectSsoClient({
     const statePayload = {
       mode: "link",
       nonce: reauthNonce,
+      nonceIssuedAt: reauthNonceIssuedAt,
+      nonceSignature: reauthNonceSignature,
       provider: providerId,
       email,
     };
+
+    const jsonState = JSON.stringify(statePayload);
+    const encoder = new TextEncoder();
+    const ascii = Array.from(encoder.encode(jsonState))
+      .map((byte) => String.fromCharCode(byte))
+      .join("");
+    const base64 = btoa(ascii);
+    const encodedState = base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 
     await signIn(
       providerId,
@@ -120,7 +136,7 @@ export default function ConnectSsoClient({
         callbackUrl: "/msp/account/sso?linked=1",
       },
       {
-        state: JSON.stringify(statePayload),
+        state: encodedState,
         prompt: "login",
       }
     );
@@ -130,6 +146,8 @@ export default function ConnectSsoClient({
     setPassword("");
     setTwoFactorCode("");
     setReauthNonce(null);
+    setReauthNonceIssuedAt(null);
+    setReauthNonceSignature(null);
     setReauthComplete(false);
     setFormError(null);
     setFormSuccess(null);

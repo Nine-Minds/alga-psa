@@ -155,26 +155,61 @@ function coerceString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function decodeBase64Url(value: string): string | null {
+  if (!/^[A-Za-z0-9_-]+={0,2}$/.test(value)) {
+    return null;
+  }
+
+  try {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padding = (4 - (normalized.length % 4 || 4)) % 4;
+    const padded = normalized + '='.repeat(padding);
+    return Buffer.from(padded, 'base64').toString('utf8');
+  } catch (error) {
+    return null;
+  }
+}
+
 function parseStateValue(state: unknown, key: string): string | undefined {
   if (typeof state !== 'string' || state.length === 0) {
     return undefined;
   }
 
-  try {
-    const parsed = JSON.parse(state);
-    const candidate = (parsed as Record<string, unknown>)[key];
-    return coerceString(candidate);
-  } catch (error) {
-    // state might not be JSON; fall back to querystring parsing
+  const candidates: string[] = [];
+  const decoded = decodeBase64Url(state);
+  if (decoded) {
+    candidates.push(decoded);
+  }
+  candidates.push(state);
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      const value = (parsed as Record<string, unknown>)[key];
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return String(value);
+      }
+      const stringCandidate = coerceString(value);
+      if (stringCandidate) {
+        return stringCandidate;
+      }
+    } catch (error) {
+      // state might not be JSON; fall back to querystring parsing
+    }
+
+    try {
+      const params = new URLSearchParams(candidate);
+      const value = params.get(key);
+      const stringCandidate = coerceString(value ?? undefined);
+      if (stringCandidate) {
+        return stringCandidate;
+      }
+    } catch (error) {
+      // ignore
+    }
   }
 
-  try {
-    const params = new URLSearchParams(state);
-    const candidate = params.get(key);
-    return coerceString(candidate);
-  } catch (error) {
-    return undefined;
-  }
+  return undefined;
 }
 
 export function decodeOAuthJwtPayload(token: string | undefined): Record<string, unknown> | undefined {
@@ -279,6 +314,17 @@ export async function applyOAuthAccountHints(
   }
 
   const idTokenPayload = decodeOAuthJwtPayload(coerceString(account.id_token));
+  const linkMode =
+    parseStateValue(account.state, 'mode') ||
+    parseStateValue((account.params as Record<string, unknown> | undefined)?.state, 'mode');
+  const providerId = coerceString((account as Record<string, unknown>).provider) ?? user.email;
+  if (linkMode === 'link') {
+    logger.debug('[auth] OAuth link mode detected in account state', {
+      providerUser: user.email,
+      tenant: user.tenant,
+    });
+  }
+  const isLinkMode = linkMode === 'link';
 
   const tenantHint = pickFirstCandidate([
     account.tenant,
@@ -326,8 +372,19 @@ export async function applyOAuthAccountHints(
   };
 
   if (tenantIdFromHints) {
-    nextUser.tenant = tenantIdFromHints;
-    nextUser.tenantSlug = buildTenantPortalSlug(tenantIdFromHints);
+    if (!nextUser.tenant) {
+      nextUser.tenant = tenantIdFromHints;
+      nextUser.tenantSlug = buildTenantPortalSlug(tenantIdFromHints);
+    } else if (tenantIdFromHints === nextUser.tenant) {
+      nextUser.tenantSlug = buildTenantPortalSlug(tenantIdFromHints);
+    } else if (!isLinkMode) {
+      logger.debug('[auth] OAuth tenant hint differs from user tenant; preserving existing tenant', {
+        existingTenant: nextUser.tenant,
+        hintedTenant: tenantIdFromHints,
+        email: nextUser.email,
+        provider: providerId,
+      });
+    }
   }
 
   if (!nextUser.tenant && tenantHint) {
@@ -344,7 +401,7 @@ export async function applyOAuthAccountHints(
     });
   }
 
-  if (userTypeHint) {
+  if (userTypeHint && (!isLinkMode || !nextUser.user_type)) {
     nextUser.user_type = pickUserType(userTypeHint);
   }
 

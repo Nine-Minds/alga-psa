@@ -2,42 +2,18 @@
 
 import clsx from "clsx";
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "server/src/components/ui/Button";
 import { Alert, AlertDescription } from "server/src/components/ui/Alert";
 import { Badge } from "server/src/components/ui/Badge";
 import { LogIn, Network } from "lucide-react";
-
-interface ProviderOption {
-  id: string;
-  name: string;
-  description: string;
-  configured: boolean;
-}
+import type { SsoProviderOption } from "@ee/lib/auth/providerConfig";
+import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 
 interface SsoProviderButtonsProps {
   callbackUrl: string;
   tenantHint?: string;
   linkedProviders?: string[];
-}
-
-function resolveProviderOptions(): ProviderOption[] {
-  return [
-    {
-      id: "google",
-      name: "Google Workspace",
-      description: "Use your Google-managed account",
-      configured:
-        Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET),
-    },
-    {
-      id: "azure-ad",
-      name: "Microsoft 365",
-      description: "Sign in with Azure AD",
-      configured:
-        Boolean(process.env.MICROSOFT_OAUTH_CLIENT_ID && process.env.MICROSOFT_OAUTH_CLIENT_SECRET),
-    },
-  ];
 }
 
 export default function SsoProviderButtons({
@@ -46,8 +22,31 @@ export default function SsoProviderButtons({
   linkedProviders = [],
 }: SsoProviderButtonsProps) {
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
+  const [providerOptions, setProviderOptions] = useState<SsoProviderOption[]>([]);
 
-  const providerOptions = resolveProviderOptions();
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOptions = async () => {
+      try {
+        const result = await getSsoProviderOptionsAction();
+        if (!cancelled && result.options) {
+          setProviderOptions(result.options);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProviderOptions([]);
+        }
+      }
+    };
+
+    void loadOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const configuredOptions = providerOptions.filter((option) => option.configured);
 
   if (configuredOptions.length === 0) {

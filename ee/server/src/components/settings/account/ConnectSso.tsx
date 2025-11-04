@@ -3,9 +3,12 @@ import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import User from "server/src/lib/models/user";
 import { listOAuthAccountLinksForUser } from "@ee/lib/auth/oauthAccountLinks";
 import ConnectSsoClient from "./ConnectSsoClient";
+import { getSsoProviderOptions } from "@ee/lib/auth/providerConfig";
 
 interface ConnectSsoProps {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?:
+    | Record<string, string | string[] | undefined>
+    | Promise<Record<string, string | string[] | undefined>>;
 }
 
 function getFirstQueryValue(value: string | string[] | undefined): string | undefined {
@@ -13,25 +16,6 @@ function getFirstQueryValue(value: string | string[] | undefined): string | unde
     return undefined;
   }
   return Array.isArray(value) ? value[0] : value;
-}
-
-function resolveProviderOptions() {
-  return [
-    {
-      id: "google",
-      name: "Google Workspace",
-      description: "Let users sign in with their Google-managed identity.",
-      configured:
-        Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET),
-    },
-    {
-      id: "azure-ad",
-      name: "Microsoft 365 (Azure AD)",
-      description: "Allow Azure Active Directory accounts to access Alga PSA.",
-      configured:
-        Boolean(process.env.MICROSOFT_OAUTH_CLIENT_ID && process.env.MICROSOFT_OAUTH_CLIENT_SECRET),
-    },
-  ];
 }
 
 export default async function ConnectSso({ searchParams }: ConnectSsoProps) {
@@ -64,15 +48,18 @@ export default async function ConnectSso({ searchParams }: ConnectSsoProps) {
       : null,
   }));
 
-  const statusParam = getFirstQueryValue(searchParams?.linked);
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const statusParam = getFirstQueryValue(resolvedSearchParams?.linked);
   const linkStatus = statusParam === "1" ? "linked" : undefined;
+
+  const providerOptions = await getSsoProviderOptions();
 
   return (
     <ConnectSsoClient
       email={email}
       twoFactorEnabled={Boolean(userRecord.two_factor_enabled)}
       linkedAccounts={linkedAccounts}
-      providerOptions={resolveProviderOptions()}
+      providerOptions={providerOptions}
       linkStatus={linkStatus}
     />
   );

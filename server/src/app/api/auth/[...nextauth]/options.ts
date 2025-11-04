@@ -2,7 +2,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
-import { cookies } from "next/headers";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextAuthConfig } from "next-auth";
 import "server/src/types/next-auth";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
@@ -28,6 +28,7 @@ import {
     findOAuthAccountLink,
 } from "@ee/lib/auth/oauthAccountLinks";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
+import { cookies } from "next/headers";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -249,59 +250,127 @@ function getSafeRecord(value: unknown): Record<string, unknown> | undefined {
     return undefined;
 }
 
+function decodeBase64Url(value: string): string | null {
+    if (!/^[A-Za-z0-9_-]+={0,2}$/.test(value)) {
+        return null;
+    }
+
+    try {
+        const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+        const padding = (4 - (normalized.length % 4 || 4)) % 4;
+        const padded = normalized + '='.repeat(padding);
+        return Buffer.from(padded, 'base64').toString('utf8');
+    } catch {
+        return null;
+    }
+}
+
 function parseStateValue(rawState: unknown, key: string): string | undefined {
     const asString = toOptionalString(rawState);
     if (!asString) {
         return undefined;
     }
 
-    try {
-        const parsed = JSON.parse(asString);
-        const candidate = (parsed as Record<string, unknown>)[key];
-        return toOptionalString(candidate);
-    } catch (error) {
-        // Ignore JSON parsing issues; fall back to query parsing below.
+    const candidates = [asString];
+    const decoded = decodeBase64Url(asString);
+    if (decoded) {
+        // OAuth providers can transform or strip the state query; hang on to a decoded copy as a fallback.
+        candidates.unshift(decoded);
     }
 
-    try {
-        const params = new URLSearchParams(asString);
-        const candidate = params.get(key);
-        return toOptionalString(candidate ?? undefined);
-    } catch (error) {
-        return undefined;
+    for (const candidate of candidates) {
+        try {
+            const parsed = JSON.parse(candidate);
+            const value = (parsed as Record<string, unknown>)[key];
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return String(value);
+            }
+            const stringValue = toOptionalString(value);
+            if (stringValue !== undefined) {
+                return stringValue;
+            }
+        } catch {
+            // ignore
+        }
+
+        try {
+            const params = new URLSearchParams(candidate);
+            const value = params.get(key);
+            if (value !== null) {
+                return value;
+            }
+        } catch {
+            // ignore
+        }
     }
+
+    return undefined;
 }
 
-function consumeSsoLinkNonce(userId: string, nonce: string | undefined): boolean {
-    if (!nonce) {
+const LINK_SIGNATURE_TTL_MS = 5 * 60 * 1000;
+const LINK_STATE_COOKIE = 'sso-link-state';
+
+// Recompute the client-issued signature so we can validate the callback payload without reaching for shared code.
+function computeLinkSignature(secret: string, userId: string, nonce: string, issuedAt: number): string {
+    return createHmac('sha256', secret)
+        .update(`${userId}:${nonce}:${issuedAt}`)
+        .digest('hex');
+}
+
+function validateLinkSignature(
+    userId: string,
+    linkNonce: string | undefined,
+    linkIssuedAt: string | number | undefined,
+    linkSignature: string | undefined,
+): boolean {
+    if (!linkNonce || !linkSignature || linkIssuedAt === undefined || linkIssuedAt === null) {
+        console.warn('[oauth] link signature missing fields', {
+            hasNonce: Boolean(linkNonce),
+            hasSignature: Boolean(linkSignature),
+            linkIssuedAt,
+        });
         return false;
     }
 
+    const issuedAt = typeof linkIssuedAt === 'number' ? linkIssuedAt : Number(linkIssuedAt);
+    if (!Number.isFinite(issuedAt)) {
+        console.warn('[oauth] link signature issuedAt invalid', { linkIssuedAt });
+        return false;
+    }
+
+    if (Date.now() - issuedAt > LINK_SIGNATURE_TTL_MS) {
+        console.warn('[oauth] link signature expired', { userId, issuedAt });
+        return false;
+    }
+
+    const secret = getNextAuthSecretSync();
+    if (!secret) {
+        console.warn('[oauth] missing NEXTAUTH_SECRET when validating link signature');
+        return false;
+    }
+
+    const expected = computeLinkSignature(secret, userId, linkNonce, issuedAt);
+
     try {
-        const store = cookies();
-        const cookie = store.get('sso-link-nonce');
-        if (!cookie?.value) {
-            return false;
+        const expectedBuf = Buffer.from(expected, 'hex');
+        const providedBuf = Buffer.from(linkSignature, 'hex');
+        const matches =
+            expectedBuf.length === providedBuf.length &&
+            timingSafeEqual(expectedBuf, providedBuf);
+
+        if (!matches) {
+            console.warn('[oauth] link signature mismatch', {
+                userId,
+                linkNonce,
+                issuedAt,
+            });
+        } else {
+            console.log('[oauth] link signature validated', { userId, nonce: linkNonce });
         }
 
-        const payload = JSON.parse(cookie.value) as {
-            nonce: string;
-            userId: string;
-            exp?: number;
-        };
-
-        const isMatch =
-            payload.nonce === nonce &&
-            payload.userId === userId &&
-            (typeof payload.exp !== 'number' || payload.exp > Date.now());
-
-        if (isMatch) {
-            store.delete('sso-link-nonce');
-        }
-
-        return isMatch;
+        return matches;
     } catch (error) {
-        console.warn('[oauth] Failed to consume link nonce', { error });
+        console.warn('[oauth] link signature comparison failed', { error });
         return false;
     }
 }
@@ -313,12 +382,44 @@ function extractOAuthAccountMetadata(
         return {};
     }
 
+    console.log('[oauth] account payload received', {
+        keys: Object.keys(account),
+        hasParams: typeof account.params === 'object',
+        rawParams: account.params,
+    });
+
     const metadata: Record<string, unknown> = {};
     const params = getSafeRecord(account.params);
+    const rawState = account.state ?? params?.state;
+    console.log('[oauth] raw state candidates', {
+        accountState: account.state,
+        paramsState: params?.state,
+        hasParams: Boolean(params),
+    });
 
     const scope = toOptionalString(account.scope);
     if (scope) {
         metadata.scope = scope;
+    }
+
+    const linkMode = parseStateValue(rawState, 'mode');
+    if (linkMode) {
+        metadata.linkMode = linkMode;
+    }
+
+    const linkNonce = parseStateValue(rawState, 'nonce');
+    if (linkNonce) {
+        metadata.linkNonce = linkNonce;
+    }
+
+    const linkNonceIssuedAt = parseStateValue(rawState, 'nonceIssuedAt');
+    if (linkNonceIssuedAt) {
+        metadata.linkNonceIssuedAt = linkNonceIssuedAt;
+    }
+
+    const linkNonceSignature = parseStateValue(rawState, 'nonceSignature');
+    if (linkNonceSignature) {
+        metadata.linkNonceSignature = linkNonceSignature;
     }
 
     const tenantHint = pickFirstString([
@@ -362,17 +463,61 @@ function extractOAuthAccountMetadata(
         }
     }
 
-    const linkMode = parseStateValue(account.state, 'mode');
-    if (linkMode) {
-        metadata.linkMode = linkMode;
-    }
-
-    const linkNonce = parseStateValue(account.state, 'nonce');
-    if (linkNonce) {
-        metadata.linkNonce = linkNonce;
-    }
-
     return metadata;
+}
+
+interface LinkStateCookiePayload {
+    userId: string;
+    nonce: string;
+    issuedAt: number;
+    signature: string;
+}
+
+// Pull the signed link state out of the HTTP-only cookie in case the provider drops the `state` parameter.
+async function consumeLinkStateCookie(
+    expectedUserId: string | undefined,
+): Promise<LinkStateCookiePayload | undefined> {
+    try {
+        const store = await cookies();
+        const stored = store.get(LINK_STATE_COOKIE);
+        if (!stored) {
+            return undefined;
+        }
+
+        store.delete(LINK_STATE_COOKIE);
+
+        try {
+            const normalized = stored.value.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+            const decoded = Buffer.from(padded, 'base64').toString('utf8');
+            const payload = JSON.parse(decoded) as Partial<LinkStateCookiePayload>;
+            if (
+                !payload ||
+                typeof payload.userId !== 'string' ||
+                typeof payload.nonce !== 'string' ||
+                typeof payload.signature !== 'string' ||
+                typeof payload.issuedAt !== 'number'
+            ) {
+                console.warn('[oauth] link state cookie malformed', { payload });
+                return undefined;
+            }
+
+            if (expectedUserId && payload.userId !== expectedUserId) {
+                console.warn('[oauth] link state cookie user mismatch', {
+                    expected: expectedUserId,
+                    actual: payload.userId,
+                });
+            }
+
+            return payload as LinkStateCookiePayload;
+        } catch (error) {
+            console.warn('[oauth] failed to parse link state cookie', { error });
+            return undefined;
+        }
+    } catch (error) {
+        console.warn('[oauth] unable to access cookies when consuming link state', { error });
+        return undefined;
+    }
 }
 
 function extractProviderAccountId(
@@ -417,13 +562,44 @@ async function ensureOAuthAccountLink(
         console.warn('[oauth] Missing provider account identifier', {
             providerId,
             userId: user.id,
+            accountKeys: account ? Object.keys(account) : null,
+            accountSnapshot: account,
         });
         return;
     }
 
+    // Some providers echo only an access token back; fall back to the cookie if the signed link fields are missing.
+    const cookieState =
+        !metadata.linkNonce || !metadata.linkNonceSignature
+            ? await consumeLinkStateCookie(undefined)
+            : undefined;
+
+    if (cookieState) {
+        metadata.linkMode = metadata.linkMode ?? 'link';
+        metadata.linkNonce = metadata.linkNonce ?? cookieState.nonce;
+        metadata.linkNonceIssuedAt = metadata.linkNonceIssuedAt ?? cookieState.issuedAt;
+        metadata.linkNonceSignature = metadata.linkNonceSignature ?? cookieState.signature;
+    }
+
     const linkNonce = toOptionalString(metadata.linkNonce);
     const linkMode = toOptionalString(metadata.linkMode);
-    const linkingAuthorized = consumeSsoLinkNonce(user.id, linkNonce);
+    const linkUserId = cookieState?.userId ?? user.id;
+    const linkingAuthorized = validateLinkSignature(
+        linkUserId,
+        toOptionalString(metadata.linkNonce),
+        metadata.linkNonceIssuedAt,
+        toOptionalString(metadata.linkNonceSignature),
+    );
+    console.log('[oauth] account metadata for link', {
+        providerId,
+        userId: user.id,
+        linkUserId,
+        linkMode,
+        hasNonce: Boolean(linkNonce),
+        nonceIssuedAt: metadata.linkNonceIssuedAt,
+        hasSignature: Boolean(metadata.linkNonceSignature),
+        linkingAuthorized,
+    });
 
     const existingLink = await findOAuthAccountLink(normalizedProvider, providerAccountId);
     if (!linkingAuthorized && (!existingLink || existingLink.user_id !== user.id)) {
@@ -431,8 +607,10 @@ async function ensureOAuthAccountLink(
         return;
     }
 
+    const { linkNonceIssuedAt, linkNonceSignature, ...metadataForStorage } = metadata;
+
     const finalMetadata = {
-        ...metadata,
+        ...metadataForStorage,
         linkMode: linkingAuthorized ? linkMode ?? 'link' : linkMode ?? 'login',
         linkNonce: linkingAuthorized ? linkNonce : undefined,
     };
@@ -440,7 +618,7 @@ async function ensureOAuthAccountLink(
     try {
         await upsertOAuthAccountLink({
             tenant: user.tenant,
-            userId: user.id,
+            userId: linkUserId,
             provider: normalizedProvider,
             providerAccountId,
             providerEmail: user.email,
@@ -553,6 +731,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
                     tenantId: secrets.microsoftTenantId || 'common',
+                    checks: ['pkce', 'state'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??

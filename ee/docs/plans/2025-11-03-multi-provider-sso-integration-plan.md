@@ -37,6 +37,14 @@
 - [ ] Publish operational runbooks covering break-glass password resets, tenant onboarding checklists, and SSO troubleshooting.
 - [ ] Update `scripts/build-enterprise.sh`, validate CE Docker builds resolve `@ee` imports to stubs, and gate new OAuth integration tests behind `process.env.EDITION === 'enterprise'`.
 
+### Acceptance Tests
+- [ ] EE Connect SSO flow: verifies password + TOTP gating, sets nonce cookie, and redirects through selected provider; linking renders in Account Management afterwards.
+- [ ] Migration banner journey: credential user with new SSO link sees call-to-action on next password login, completes OAuth sign-in, and subsequent logins default to provider without local 2FA prompts.
+- [ ] MSP credential form: with linked provider returns SSO prompt, `Sign in with <provider>` launches OAuth and lands on dashboard.
+- [ ] Client portal credential form: with tenant slug + linked provider displays SSO banner and respects vanity domain callback handling.
+- [ ] JWT/session callbacks: ensure tenant slug and contact/client data persist across logins for both Google and Microsoft profiles.
+- [ ] Backfill script dry-run/live modes: process sample users without creating duplicates; verify CE builds skip EE scripts/components and migration prompts respect pre-linked accounts.
+
 ## Background and Investigational Notes
 
 ### Existing Authentication Architecture
