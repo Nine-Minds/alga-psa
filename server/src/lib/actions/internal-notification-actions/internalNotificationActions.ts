@@ -26,6 +26,8 @@ import {
 
 /**
  * Get user's locale preference with fallback hierarchy:
+ * MSP Internal Users: Always English (ignore preferences)
+ * Client Portal Users:
  * 1. User's language preference (user_preferences.locale)
  * 2. Client company language (clients.properties.defaultLocale)
  * 3. Tenant language (tenant_settings.settings.defaultLocale)
@@ -36,20 +38,7 @@ async function getUserLocale(
   tenant: string,
   userId: string
 ): Promise<string> {
-  // 1. Try user's language preference
-  const userPreference = await trx('user_preferences')
-    .where({
-      tenant,
-      user_id: userId,
-      setting_name: 'locale'
-    })
-    .first();
-
-  if (userPreference?.setting_value) {
-    return userPreference.setting_value;
-  }
-
-  // 2. Try client company language (for client portal users)
+  // First, check user type
   const user = await trx('users as u')
     .select('u.user_type', 'u.contact_id', 'c.properties')
     .leftJoin('contacts as con', function() {
@@ -64,7 +53,27 @@ async function getUserLocale(
     .andWhere('u.tenant', tenant)
     .first();
 
-  if (user?.user_type === 'client' && user?.properties?.defaultLocale) {
+  // MSP internal users always get English, regardless of preferences
+  if (user?.user_type === 'internal') {
+    return 'en';
+  }
+
+  // For client portal users, use preference hierarchy
+  // 1. Try user's language preference
+  const userPreference = await trx('user_preferences')
+    .where({
+      tenant,
+      user_id: userId,
+      setting_name: 'locale'
+    })
+    .first();
+
+  if (userPreference?.setting_value) {
+    return userPreference.setting_value;
+  }
+
+  // 2. Try client company language
+  if (user?.properties?.defaultLocale) {
     return user.properties.defaultLocale;
   }
 

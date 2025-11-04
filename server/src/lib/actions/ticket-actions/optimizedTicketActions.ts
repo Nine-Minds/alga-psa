@@ -1083,6 +1083,30 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
         .first() :
       oldStatus;
 
+    // Build structured changes object with old/new values
+    const structuredChanges: Record<string, any> = {};
+
+    if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
+      structuredChanges.status_id = {
+        old: currentTicket.status_id,
+        new: updateData.status_id
+      };
+    }
+
+    if (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id) {
+      structuredChanges.priority_id = {
+        old: currentTicket.priority_id,
+        new: updateData.priority_id
+      };
+    }
+
+    if (updateData.assigned_to !== undefined && updateData.assigned_to !== currentTicket.assigned_to) {
+      structuredChanges.assigned_to = {
+        old: currentTicket.assigned_to,
+        new: updateData.assigned_to
+      };
+    }
+
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       // Ticket was closed
@@ -1090,7 +1114,7 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
         tenantId: tenant,
         ticketId: id,
         userId: user.user_id,
-        changes: updateData
+        changes: structuredChanges
       });
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned
@@ -1098,7 +1122,7 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
         tenantId: tenant,
         ticketId: id,
         userId: user.user_id,
-        changes: updateData
+        changes: structuredChanges
       });
     } else {
       // Regular update
@@ -1106,7 +1130,7 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
         tenantId: tenant,
         ticketId: id,
         userId: user.user_id,
-        changes: updateData
+        changes: structuredChanges
       });
     }
 

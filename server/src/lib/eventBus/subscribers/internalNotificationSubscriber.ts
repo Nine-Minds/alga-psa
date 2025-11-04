@@ -65,7 +65,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         category: 'tickets',
         link: `/msp/tickets/${ticketId}`,
         data: {
-          ticketId: ticket.ticket_number || ticketId,
+          ticketId: ticket.ticket_number || 'New Ticket',
           ticketTitle: ticket.title,
           clientName: ticket.client_name || 'Unknown'
         }
@@ -99,7 +99,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
           category: 'tickets',
           link: `/client-portal/tickets/${ticketId}`,
           data: {
-            ticketId: ticket.ticket_number || ticketId,
+            ticketId: ticket.ticket_number || 'New Ticket',
             ticketTitle: ticket.title
           }
         });
@@ -125,15 +125,34 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
  */
 async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId } = payload;
+  const { tenantId, ticketId, userId } = payload;
 
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket details
-    const ticket = await db('tickets')
-      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'tenant')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+    // Get ticket details including priority and status
+    const ticket = await db('tickets as t')
+      .select(
+        't.ticket_id',
+        't.ticket_number',
+        't.title',
+        't.assigned_to',
+        't.tenant',
+        't.priority_id',
+        't.status_id',
+        'p.priority_name',
+        'p.priority_color',
+        's.name as status_name'
+      )
+      .leftJoin('priorities as p', function() {
+        this.on('t.priority_id', 'p.priority_id')
+            .andOn('t.tenant', 'p.tenant');
+      })
+      .leftJoin('statuses as s', function() {
+        this.on('t.status_id', 's.status_id')
+            .andOn('t.tenant', 's.tenant');
+      })
+      .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
       .first();
 
     if (!ticket || !ticket.assigned_to) {
@@ -144,6 +163,14 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       return;
     }
 
+    // Get user who performed the assignment
+    const performedByUser = await db('users')
+      .select('user_id', 'first_name', 'last_name')
+      .where({ user_id: userId, tenant: tenantId })
+      .first();
+
+    const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
+
     // Create notification for assigned user
     await createNotificationFromTemplateAction({
       tenant: tenantId,
@@ -153,8 +180,13 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       category: 'tickets',
       link: `/msp/tickets/${ticketId}`,
       data: {
-        ticketId: ticket.ticket_number || ticketId,
-        ticketTitle: ticket.title
+        ticketId: ticket.ticket_number || 'New Ticket',
+        ticketTitle: ticket.title,
+        performedByName,
+        performedById: userId,
+        priority: ticket.priority_name || 'None',
+        priorityColor: ticket.priority_color,
+        status: ticket.status_name || 'Unknown'
       }
     });
 
@@ -177,14 +209,14 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
  */
 async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId } = payload;
+  const { tenantId, ticketId, userId, changes } = payload;
 
   try {
     const db = await getConnection(tenantId);
 
     // Get ticket details including contact
     const ticket = await db('tickets')
-      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
+      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'status_id', 'priority_id', 'tenant')
       .where({ ticket_id: ticketId, tenant: tenantId })
       .first();
 
@@ -192,25 +224,121 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       return;
     }
 
+    // Get user who made the change
+    const performedByUser = await db('users')
+      .select('user_id', 'first_name', 'last_name')
+      .where({ user_id: userId, tenant: tenantId })
+      .first();
+
+    const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
+
+    // Build metadata with change details
+    const metadata: Record<string, any> = {
+      ticketId: ticket.ticket_number || 'New Ticket',
+      ticketTitle: ticket.title,
+      performedByName,
+      performedById: userId
+    };
+
+    // Process changes to get human-readable names
+    if (changes && typeof changes === 'object') {
+      const changeDetails: Record<string, any> = {};
+
+      // Handle status change
+      if (changes.status_id && typeof changes.status_id === 'object') {
+        const oldStatus = await db('statuses')
+          .select('name')
+          .where({ status_id: changes.status_id.old, tenant: tenantId })
+          .first();
+        const newStatus = await db('statuses')
+          .select('name')
+          .where({ status_id: changes.status_id.new, tenant: tenantId })
+          .first();
+
+        if (oldStatus || newStatus) {
+          changeDetails.status = {
+            old: oldStatus?.name || 'Unknown',
+            new: newStatus?.name || 'Unknown'
+          };
+          metadata.oldStatus = oldStatus?.name || 'Unknown';
+          metadata.newStatus = newStatus?.name || 'Unknown';
+        }
+      }
+
+      // Handle priority change
+      if (changes.priority_id && typeof changes.priority_id === 'object') {
+        const oldPriority = await db('priorities')
+          .select('priority_name', 'priority_color')
+          .where({ priority_id: changes.priority_id.old, tenant: tenantId })
+          .first();
+        const newPriority = await db('priorities')
+          .select('priority_name', 'priority_color')
+          .where({ priority_id: changes.priority_id.new, tenant: tenantId })
+          .first();
+
+        if (oldPriority || newPriority) {
+          changeDetails.priority = {
+            old: oldPriority?.priority_name || 'None',
+            oldColor: oldPriority?.priority_color,
+            new: newPriority?.priority_name || 'None',
+            newColor: newPriority?.priority_color
+          };
+          metadata.oldPriority = oldPriority?.priority_name || 'None';
+          metadata.oldPriorityColor = oldPriority?.priority_color;
+          metadata.newPriority = newPriority?.priority_name || 'None';
+          metadata.newPriorityColor = newPriority?.priority_color;
+        }
+      }
+
+      // Handle assignment change
+      if (changes.assigned_to && typeof changes.assigned_to === 'object') {
+        const oldAssignee = changes.assigned_to.old ? await db('users')
+          .select('first_name', 'last_name')
+          .where({ user_id: changes.assigned_to.old, tenant: tenantId })
+          .first() : null;
+        const newAssignee = changes.assigned_to.new ? await db('users')
+          .select('first_name', 'last_name')
+          .where({ user_id: changes.assigned_to.new, tenant: tenantId })
+          .first() : null;
+
+        changeDetails.assigned_to = {
+          old: oldAssignee ? `${oldAssignee.first_name} ${oldAssignee.last_name}` : 'Unassigned',
+          new: newAssignee ? `${newAssignee.first_name} ${newAssignee.last_name}` : 'Unassigned'
+        };
+        metadata.oldAssignedTo = oldAssignee ? `${oldAssignee.first_name} ${oldAssignee.last_name}` : 'Unassigned';
+        metadata.newAssignedTo = newAssignee ? `${newAssignee.first_name} ${newAssignee.last_name}` : 'Unassigned';
+      }
+
+      metadata.changes = changeDetails;
+    }
+
+    // Determine template name based on changes
+    let templateName = 'ticket-updated';
+    if (metadata.changes?.status) {
+      templateName = 'ticket-status-changed';
+    } else if (metadata.changes?.priority) {
+      templateName = 'ticket-priority-changed';
+    } else if (metadata.changes?.assigned_to) {
+      templateName = 'ticket-reassigned';
+    }
+
     // Create notification for assigned MSP user if ticket is assigned
     if (ticket.assigned_to) {
       await createNotificationFromTemplateAction({
         tenant: tenantId,
         user_id: ticket.assigned_to,
-        template_name: 'ticket-updated',
+        template_name: templateName,
         type: 'info',
         category: 'tickets',
         link: `/msp/tickets/${ticketId}`,
-        data: {
-          ticketId: ticket.ticket_number || ticketId,
-          ticketTitle: ticket.title
-        }
+        data: metadata
       });
 
       logger.info('[InternalNotificationSubscriber] Created notification for ticket updated (MSP user)', {
         ticketId,
         userId: ticket.assigned_to,
-        tenantId
+        tenantId,
+        changes: metadata.changes
       });
     }
 
@@ -233,10 +361,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           type: 'info',
           category: 'tickets',
           link: `/client-portal/tickets/${ticketId}`,
-          data: {
-            ticketId: ticket.ticket_number || ticketId,
-            ticketTitle: ticket.title
-          }
+          data: metadata
         });
 
         logger.info('[InternalNotificationSubscriber] Created notification for ticket updated (client portal)', {
@@ -285,7 +410,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         category: 'tickets',
         link: `/msp/tickets/${ticketId}`,
         data: {
-          ticketId: ticket.ticket_number || ticketId,
+          ticketId: ticket.ticket_number || 'New Ticket',
           ticketTitle: ticket.title
         }
       });
@@ -317,7 +442,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           category: 'tickets',
           link: `/client-portal/tickets/${ticketId}`,
           data: {
-            ticketId: ticket.ticket_number || ticketId,
+            ticketId: ticket.ticket_number || 'New Ticket',
             ticketTitle: ticket.title
           }
         });
@@ -339,11 +464,141 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 }
 
 /**
+ * Truncate text to a maximum length, breaking at word boundaries
+ */
+function truncateText(text: string, maxLength: number = 100): string {
+  if (!text || text.length <= maxLength) {
+    return text;
+  }
+
+  // Truncate to maxLength
+  let truncated = text.substring(0, maxLength);
+
+  // Find the last space to avoid breaking mid-word
+  const lastSpace = truncated.lastIndexOf(' ');
+  if (lastSpace > maxLength * 0.8) { // Only break at word if we're not losing too much
+    truncated = truncated.substring(0, lastSpace);
+  }
+
+  return truncated.trim() + '...';
+}
+
+/**
+ * Strip HTML tags and decode HTML entities from text
+ */
+function stripHtml(html: string): string {
+  if (!html) return '';
+
+  // Remove HTML tags
+  let text = html.replace(/<[^>]*>/g, '');
+
+  // Decode common HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+
+  // Replace multiple spaces/newlines with single space
+  text = text.replace(/\s+/g, ' ').trim();
+
+  return text;
+}
+
+/**
+ * Extract user IDs from BlockNote mention inline content
+ * BlockNote stores mentions as structured objects, not plain text
+ */
+function extractMentionUserIds(content: any): string[] {
+  if (!content) return [];
+
+  const userIds: string[] = [];
+
+  try {
+    // Parse content if it's a string
+    const blocks = typeof content === 'string' ? JSON.parse(content) : content;
+
+    if (!Array.isArray(blocks)) return [];
+
+    // Traverse blocks to find mention inline content
+    for (const block of blocks) {
+      if (block.content && Array.isArray(block.content)) {
+        for (const inlineContent of block.content) {
+          // Check if this is a mention inline content
+          if (inlineContent.type === 'mention' && inlineContent.props?.userId) {
+            userIds.push(inlineContent.props.userId);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[extractMentionUserIds] Error parsing content:', error);
+  }
+
+  // Remove duplicates
+  return Array.from(new Set(userIds));
+}
+
+/**
+ * Parse comment text for @mentions (legacy fallback)
+ * Supports both @username and @[Display Name] formats
+ */
+function extractMentions(text: string): string[] {
+  if (!text) return [];
+
+  const mentions: string[] = [];
+
+  // Pattern 1: @username (alphanumeric and underscores, must start with letter)
+  const usernamePattern = /@([a-zA-Z][a-zA-Z0-9_]*)/g;
+  let match;
+  while ((match = usernamePattern.exec(text)) !== null) {
+    mentions.push(match[1]);
+  }
+
+  // Pattern 2: @[Display Name] (any characters between brackets)
+  const displayNamePattern = /@\[([^\]]+)\]/g;
+  while ((match = displayNamePattern.exec(text)) !== null) {
+    mentions.push(match[1]);
+  }
+
+  // Remove duplicates and return
+  return Array.from(new Set(mentions));
+}
+
+/**
+ * Look up users by username or display name
+ */
+async function findMentionedUsers(db: Knex, tenantId: string, mentions: string[]): Promise<Array<{user_id: string, username: string, display_name: string}>> {
+  if (mentions.length === 0) return [];
+
+  // Query users by username or display name
+  const users = await db('users')
+    .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+    .where('tenant', tenantId)
+    .andWhere(function() {
+      this.whereIn('username', mentions)
+        .orWhereRaw("CONCAT(first_name, ' ', last_name) IN (?)", [mentions]);
+    });
+
+  return users;
+}
+
+/**
  * Handle ticket comment added events
  */
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId, comment } = payload;
+
+  console.log('[InternalNotificationSubscriber] handleTicketCommentAdded START', {
+    ticketId,
+    userId,
+    hasComment: !!comment,
+    commentContent: comment?.content ? 'present' : 'missing'
+  });
 
   try {
     const db = await getConnection(tenantId);
@@ -355,6 +610,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       .first();
 
     if (!ticket) {
+      console.log('[InternalNotificationSubscriber] Ticket not found:', ticketId);
       return;
     }
 
@@ -366,8 +622,87 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
 
-    // Create notification for assigned MSP user (if not the comment author)
-    if (ticket.assigned_to && ticket.assigned_to !== userId) {
+    // Extract comment text preview
+    let commentPreview = '';
+    let commentText = '';
+    if (comment?.content) {
+      // Strip HTML/markdown and truncate
+      commentText = stripHtml(comment.content);
+      commentPreview = truncateText(commentText, 100);
+    }
+
+    console.log('[InternalNotificationSubscriber] About to extract mentions from:', {
+      contentType: typeof comment?.content,
+      contentLength: comment?.content?.length,
+      contentPreview: comment?.content?.substring(0, 200)
+    });
+
+    // Extract user IDs from BlockNote mention inline content
+    const mentionedUserIds = extractMentionUserIds(comment?.content);
+    console.log('[InternalNotificationSubscriber] Found mentioned user IDs:', mentionedUserIds);
+
+    // Get user details for mentioned users
+    const mentionedUsers = mentionedUserIds.length > 0
+      ? await db('users')
+          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .whereIn('user_id', mentionedUserIds)
+          .andWhere('tenant', tenantId)
+      : [];
+
+    console.log('[InternalNotificationSubscriber] Found mentioned users:', mentionedUsers.length);
+
+    // Track users who have been notified to avoid duplicates
+    const notifiedUserIds = new Set<string>();
+
+    // Create notifications for mentioned users (excluding the comment author)
+    for (const mentionedUser of mentionedUsers) {
+      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
+        await createNotificationFromTemplateAction({
+          tenant: tenantId,
+          user_id: mentionedUser.user_id,
+          template_name: 'user-mentioned-in-comment',
+          type: 'info',
+          category: 'messages',
+          link: `/msp/tickets/${ticketId}#comment-${comment?.id || ''}`,
+          data: {
+            commentAuthor: authorName,
+            ticketNumber: ticket.ticket_number || 'New Ticket',
+            commentPreview
+          },
+          metadata: {
+            ticketId: ticket.ticket_id,
+            ticketNumber: ticket.ticket_number || 'New Ticket',
+            ticketTitle: ticket.title,
+            commentId: comment?.id || '',
+            commentText: commentPreview,
+            commentAuthor: authorName,
+            commentAuthorId: userId,
+            contextType: 'ticket',
+            contextId: ticketId
+          }
+        });
+
+        notifiedUserIds.add(mentionedUser.user_id);
+
+        console.log('[InternalNotificationSubscriber] Created notification for user mentioned in comment', {
+          ticketId,
+          mentionedUserId: mentionedUser.user_id,
+          mentionedUsername: mentionedUser.username,
+          commentAuthor: userId,
+          tenantId
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for user mentioned in comment', {
+          ticketId,
+          mentionedUserId: mentionedUser.user_id,
+          commentAuthor: userId,
+          tenantId
+        });
+      }
+    }
+
+    // Create notification for assigned MSP user (if not the comment author and not already notified via mention)
+    if (ticket.assigned_to && ticket.assigned_to !== userId && !notifiedUserIds.has(ticket.assigned_to)) {
       await createNotificationFromTemplateAction({
         tenant: tenantId,
         user_id: ticket.assigned_to,
@@ -377,7 +712,19 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         link: `/msp/tickets/${ticketId}`,
         data: {
           authorName,
-          ticketId: ticket.ticket_number || ticketId
+          ticketId: ticket.ticket_number || 'New Ticket',
+          commentPreview
+        },
+        metadata: {
+          ticketId: ticket.ticket_id,
+          ticketNumber: ticket.ticket_number || 'New Ticket',
+          comment: {
+            id: comment?.id,
+            text: commentPreview,
+            author: authorName,
+            authorId: userId,
+            isInternal: comment?.isInternal || false
+          }
         }
       });
 
@@ -400,7 +747,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         })
         .first();
 
-      if (contactUser && contactUser.user_id !== userId) {
+      if (contactUser && contactUser.user_id !== userId && !notifiedUserIds.has(contactUser.user_id)) {
         await createNotificationFromTemplateAction({
           tenant: tenantId,
           user_id: contactUser.user_id,
@@ -410,7 +757,19 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           link: `/client-portal/tickets/${ticketId}`,
           data: {
             authorName,
-            ticketId: ticket.ticket_number || ticketId
+            ticketId: ticket.ticket_number || 'New Ticket',
+            commentPreview
+          },
+          metadata: {
+            ticketId: ticket.ticket_id,
+            ticketNumber: ticket.ticket_number || 'New Ticket',
+            comment: {
+              id: comment?.id,
+              text: commentPreview,
+              author: authorName,
+              authorId: userId,
+              isInternal: false
+            }
           }
         });
 

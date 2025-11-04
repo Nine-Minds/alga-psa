@@ -106,10 +106,18 @@ exports.up = function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = function(knex) {
-  return knex.schema
-    .dropTableIfExists('internal_notifications')
-    .dropTableIfExists('internal_notification_templates')
-    .dropTableIfExists('internal_notification_subtypes')
-    .dropTableIfExists('internal_notification_categories');
+exports.down = async function(knex) {
+  // Drop indexes first
+  await knex.raw(`
+    DROP INDEX IF EXISTS idx_internal_notifications_delivery;
+    DROP INDEX IF EXISTS idx_internal_notifications_cleanup;
+    DROP INDEX IF EXISTS idx_internal_notifications_list;
+    DROP INDEX IF EXISTS idx_internal_notifications_unread;
+  `);
+
+  // Drop tables in reverse order with CASCADE to handle foreign key dependencies
+  await knex.raw('DROP TABLE IF EXISTS internal_notifications CASCADE');
+  await knex.raw('DROP TABLE IF EXISTS internal_notification_templates CASCADE');
+  await knex.raw('DROP TABLE IF EXISTS internal_notification_subtypes CASCADE');
+  await knex.raw('DROP TABLE IF EXISTS internal_notification_categories CASCADE');
 };

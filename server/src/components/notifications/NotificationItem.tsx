@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Info, CheckCircle, AlertTriangle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Info, CheckCircle, AlertTriangle, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
 import type { InternalNotification } from '../../lib/models/internalNotification';
 
 interface NotificationItemProps {
@@ -42,6 +42,19 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
     }
   };
 
+  // Render priority with color indicator
+  const renderPriority = (name: string, color?: string) => {
+    return (
+      <div className="flex items-center gap-1.5">
+        <div
+          className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0"
+          style={{ backgroundColor: color || '#6B7280' }}
+        />
+        <span className="font-medium">{name}</span>
+      </div>
+    );
+  };
+
   // Format timestamp
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -65,6 +78,106 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
         day: 'numeric',
         year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
       });
+    }
+  };
+
+  // Check if this is a comment notification with preview
+  const hasCommentPreview = notification.metadata?.comment?.text;
+  const isInternalComment = notification.metadata?.comment?.isInternal;
+
+  // Parse notification data for change details
+  const renderRichContent = () => {
+    try {
+      // Try to parse the data field if it exists
+      const data = notification.data as any;
+
+      if (!data) {
+        return (
+          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+            {notification.message}
+          </p>
+        );
+      }
+
+      // Check if this is a change notification with structured data
+      const changes = data.changes;
+
+      if (changes) {
+        return (
+          <div className="space-y-1 mb-2">
+            {/* Status change */}
+            {changes.status && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-600">Status:</span>
+                <span className="font-medium text-gray-900">{changes.status.old}</span>
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+                <span className="font-medium text-blue-600">{changes.status.new}</span>
+              </div>
+            )}
+
+            {/* Priority change */}
+            {changes.priority && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-600">Priority:</span>
+                {renderPriority(changes.priority.old, changes.priority.oldColor)}
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+                {renderPriority(changes.priority.new, changes.priority.newColor)}
+              </div>
+            )}
+
+            {/* Assignment change */}
+            {changes.assigned_to && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-600">Assigned:</span>
+                <span className="font-medium text-gray-900">{changes.assigned_to.old}</span>
+                <ArrowRight className="w-4 h-4 text-gray-400" />
+                <span className="font-medium text-blue-600">{changes.assigned_to.new}</span>
+              </div>
+            )}
+
+            {/* Performed by info */}
+            {data.performedByName && (
+              <p className="text-xs text-gray-500 mt-1">
+                by {data.performedByName}
+              </p>
+            )}
+          </div>
+        );
+      }
+
+      // Check for priority in assigned notification
+      if (data.priority && notification.title.includes('Assigned')) {
+        return (
+          <div className="space-y-1 mb-2">
+            <p className="text-sm text-gray-600">
+              {notification.message}
+            </p>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-600">Priority:</span>
+              {renderPriority(data.priority, data.priorityColor)}
+            </div>
+            {data.performedByName && (
+              <p className="text-xs text-gray-500 mt-1">
+                by {data.performedByName}
+              </p>
+            )}
+          </div>
+        );
+      }
+
+      // Default: show the message
+      return (
+        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+          {notification.message}
+        </p>
+      );
+    } catch (error) {
+      // Fallback to basic message display
+      return (
+        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+          {notification.message}
+        </p>
+      );
     }
   };
 
@@ -93,13 +206,30 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             )}
           </div>
 
-          {/* Message */}
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-            {notification.message}
-          </p>
+          {/* Rich content with change details */}
+          {renderRichContent()}
+
+          {/* Comment preview (if available) */}
+          {hasCommentPreview && (
+            <div className={`mt-2 pl-3 border-l-2 ${
+              isInternalComment ? 'border-yellow-400 bg-yellow-50/50' : 'border-blue-300 bg-blue-50/50'
+            } py-1.5 px-3 rounded-r`}>
+              <p className="text-xs text-gray-700 italic line-clamp-2">
+                "{notification.metadata.comment.text}"
+              </p>
+              {isInternalComment && (
+                <span className="inline-flex items-center gap-1 mt-1 text-xs text-yellow-700">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                  Internal
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Footer */}
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
             {/* Category badge */}
             {notification.category && (
               <span className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor()}`}>

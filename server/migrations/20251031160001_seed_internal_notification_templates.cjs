@@ -91,6 +91,27 @@ exports.up = async function(knex) {
         is_enabled: true,
         is_default_enabled: true
       },
+      {
+        internal_category_id: ticketsCat.internal_notification_category_id,
+        name: 'ticket-status-changed',
+        description: 'Ticket status changed',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: ticketsCat.internal_notification_category_id,
+        name: 'ticket-priority-changed',
+        description: 'Ticket priority changed',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: ticketsCat.internal_notification_category_id,
+        name: 'ticket-reassigned',
+        description: 'Ticket reassigned to different user',
+        is_enabled: true,
+        is_default_enabled: true
+      },
       // Project subtypes
       {
         internal_category_id: projectsCat.internal_notification_category_id,
@@ -188,7 +209,7 @@ exports.up = async function(knex) {
         name: 'ticket-assigned',
         language_code: 'en',
         title: 'Ticket Assigned',
-        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" has been assigned to you',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) has been assigned to you by {{performedByName}}',
         subtype_id: getSubtypeId('ticket-assigned')
       },
       {
@@ -237,14 +258,14 @@ exports.up = async function(knex) {
         name: 'ticket-comment-added',
         language_code: 'en',
         title: 'New Comment',
-        message: '{{authorName}} added a comment to ticket #{{ticketId}}',
+        message: '{{authorName}} commented on ticket #{{ticketId}}: "{{commentPreview}}"',
         subtype_id: getSubtypeId('ticket-comment-added')
       },
       {
         name: 'ticket-comment-added-client',
         language_code: 'en',
         title: 'New Comment on Your Ticket',
-        message: '{{authorName}} added a comment to your ticket #{{ticketId}}',
+        message: '{{authorName}} commented on your ticket #{{ticketId}}: "{{commentPreview}}"',
         subtype_id: getSubtypeId('ticket-comment-added')
       },
       // Project templates
@@ -313,6 +334,34 @@ exports.up = async function(knex) {
         message: '{{authorName}} mentioned you in {{entityType}} {{entityName}}',
         subtype_id: getSubtypeId('user-mentioned')
       },
+      {
+        name: 'user-mentioned-in-comment',
+        language_code: 'en',
+        title: 'You were mentioned in a comment',
+        message: '{{commentAuthor}} mentioned you in ticket #{{ticketNumber}}: {{commentPreview}}',
+        subtype_id: getSubtypeId('user-mentioned')
+      },
+      {
+        name: 'ticket-status-changed',
+        language_code: 'en',
+        title: 'Ticket Status Changed',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" status changed: {{oldStatus}} → {{newStatus}} by {{performedByName}}',
+        subtype_id: getSubtypeId('ticket-status-changed')
+      },
+      {
+        name: 'ticket-priority-changed',
+        language_code: 'en',
+        title: 'Ticket Priority Changed',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" priority changed: {{oldPriority}} → {{newPriority}} by {{performedByName}}',
+        subtype_id: getSubtypeId('ticket-priority-changed')
+      },
+      {
+        name: 'ticket-reassigned',
+        language_code: 'en',
+        title: 'Ticket Reassigned',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" reassigned: {{oldAssignedTo}} → {{newAssignedTo}} by {{performedByName}}',
+        subtype_id: getSubtypeId('ticket-reassigned')
+      },
       // Message templates
       {
         name: 'message-sent',
@@ -342,6 +391,7 @@ exports.down = async function(knex) {
   await knex('internal_notification_subtypes')
     .whereIn('name', [
       'ticket-assigned', 'ticket-created', 'ticket-updated', 'ticket-closed', 'ticket-comment-added',
+      'ticket-status-changed', 'ticket-priority-changed', 'ticket-reassigned',
       'project-assigned', 'project-created', 'task-assigned', 'milestone-completed',
       'invoice-generated', 'payment-received', 'payment-overdue',
       'system-announcement', 'user-mentioned',

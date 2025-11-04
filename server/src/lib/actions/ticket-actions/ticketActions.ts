@@ -486,6 +486,30 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           .first() :
         oldStatus;
 
+      // Build structured changes object with old/new values
+      const structuredChanges: Record<string, any> = {};
+
+      if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
+        structuredChanges.status_id = {
+          old: currentTicket.status_id,
+          new: updateData.status_id
+        };
+      }
+
+      if (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id) {
+        structuredChanges.priority_id = {
+          old: currentTicket.priority_id,
+          new: updateData.priority_id
+        };
+      }
+
+      if (updateData.assigned_to !== undefined && updateData.assigned_to !== currentTicket.assigned_to) {
+        structuredChanges.assigned_to = {
+          old: currentTicket.assigned_to,
+          new: updateData.assigned_to
+        };
+      }
+
       // Publish appropriate event based on the update
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
         // Ticket was closed
@@ -493,12 +517,12 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           tenantId: tenant,
           ticketId: id,
           userId: user.user_id,
-          changes: updateData
+          changes: structuredChanges
         });
-        
+
         // Track ticket resolved analytics
         analytics.capture(AnalyticsEvents.TICKET_RESOLVED, {
-          time_to_resolution: currentTicket.entered_at ? 
+          time_to_resolution: currentTicket.entered_at ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
           priority_id: updatedTicket.priority_id,
           category_id: updatedTicket.category_id,
@@ -510,13 +534,13 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           tenantId: tenant,
           ticketId: id,
           userId: user.user_id,
-          changes: updateData
+          changes: structuredChanges
         });
-        
+
         // Track ticket assignment analytics
         analytics.capture(AnalyticsEvents.TICKET_ASSIGNED, {
           was_reassignment: !!currentTicket.assigned_to,
-          time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ? 
+          time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
         }, user.user_id);
       } else {
@@ -525,7 +549,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           tenantId: tenant,
           ticketId: id,
           userId: user.user_id,
-          changes: updateData
+          changes: structuredChanges
         });
       }
       
