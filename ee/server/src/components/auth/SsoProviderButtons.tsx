@@ -4,11 +4,19 @@ import clsx from "clsx";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Button } from "server/src/components/ui/Button";
-import { Alert, AlertDescription } from "server/src/components/ui/Alert";
-import { Badge } from "server/src/components/ui/Badge";
-import { LogIn, Network } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
 import type { SsoProviderOption } from "@ee/lib/auth/providerConfig";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
+
+const MicrosoftMulticolorLogo = () => (
+  <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="8" height="8" fill="#F25022" />
+    <rect x="14" y="2" width="8" height="8" fill="#7FBA00" />
+    <rect x="2" y="14" width="8" height="8" fill="#00A4EF" />
+    <rect x="14" y="14" width="8" height="8" fill="#FFB900" />
+  </svg>
+);
 
 interface SsoProviderButtonsProps {
   callbackUrl: string;
@@ -75,54 +83,44 @@ export default function SsoProviderButtons({
     }
   };
 
+  const getProviderIcon = (providerId: string) => {
+    if (providerId === "google") {
+      return <SiGoogle className="h-8 w-8" style={{ color: "#34A853" }} aria-hidden />;
+    }
+    if (providerId === "azure-ad" || providerId === "microsoft") {
+      return <MicrosoftMulticolorLogo />;
+    }
+    return null;
+  };
+
   return (
-    <div className="space-y-4">
-      {linkedProviders.length > 0 && (
-        <Alert>
-          <AlertDescription className="flex items-center gap-2">
-            <LogIn className="h-4 w-4" />
-            <span>
-              Single sign-on is enabled for this account. Use one of the providers below to skip local password and two-factor prompts.
-            </span>
-          </AlertDescription>
-        </Alert>
-      )}
+    <div className="flex gap-3">
+      {configuredOptions.map((provider) => {
+        const isPending = pendingProvider === provider.id;
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {configuredOptions.map((provider) => {
-          const isLinked = linkedProviders.includes(provider.id);
-          const isPending = pendingProvider === provider.id;
-
-          return (
-            <div
-              key={provider.id}
-              className={clsx(
-                "flex flex-col justify-between rounded-md border p-4",
-                isLinked ? "border-primary/70" : "border-muted"
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <Network className="h-5 w-5 text-primary" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{provider.name}</span>
-                    {isLinked && <Badge variant="secondary">Linked</Badge>}
-                  </div>
-                  <p className="text-sm text-muted-foreground">{provider.description}</p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                className="mt-4"
-                onClick={() => handleSignIn(provider.id)}
-                disabled={isPending}
-              >
-                {isPending ? "Redirecting..." : `Sign in with ${provider.name}`}
-              </Button>
-            </div>
-          );
-        })}
-      </div>
+        return (
+          <Button
+            key={provider.id}
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => handleSignIn(provider.id)}
+            disabled={isPending}
+            className={clsx(
+              "flex items-center gap-2 px-6 py-2 h-auto",
+              provider.id === "google" && "border-[#34A853] hover:bg-[#34A853]/5",
+              (provider.id === "azure-ad" || provider.id === "microsoft") && "border-[#0078D4] hover:bg-[#0078D4]/5"
+            )}
+          >
+            {isPending ? (
+              <Loader2 className="h-8 w-8 animate-spin" />
+            ) : (
+              getProviderIcon(provider.id)
+            )}
+            {isPending ? "Redirecting..." : `${provider.name}`}
+          </Button>
+        );
+      })}
     </div>
   );
 }
