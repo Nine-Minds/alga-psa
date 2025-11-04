@@ -1060,7 +1060,7 @@ export async function importContactsFromCSV(
           }
 
           // Check for existing contact by email (primary unique constraint)
-          let existingContact = null;
+          let existingContact: IContact | null = null;
           if (contactData.email) {
             existingContact = await trx('contacts')
               .where({
