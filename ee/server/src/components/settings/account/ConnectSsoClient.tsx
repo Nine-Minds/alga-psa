@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { authorizeSsoLinkingAction } from "@ee/lib/actions/auth/connectSso";
@@ -11,7 +11,60 @@ import { Button } from "server/src/components/ui/Button";
 import { Alert, AlertDescription } from "server/src/components/ui/Alert";
 import { Badge } from "server/src/components/ui/Badge";
 import clsx from "clsx";
-import { Loader2, ShieldCheck, KeyRound, LogIn, Network } from "lucide-react";
+import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
+
+type ProviderBranding = {
+  icon: ReactNode;
+  iconBg: string;
+  buttonLabel: string;
+  buttonClass?: string;
+  buttonVariant?: React.ComponentProps<typeof Button>["variant"];
+  cardClass?: string;
+};
+
+const MicrosoftMulticolorLogo = () => (
+  <svg className="h-16 w-16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="8" height="8" fill="#F25022" />
+    <rect x="14" y="2" width="8" height="8" fill="#7FBA00" />
+    <rect x="2" y="14" width="8" height="8" fill="#00A4EF" />
+    <rect x="14" y="14" width="8" height="8" fill="#FFB900" />
+  </svg>
+);
+
+const providerBranding: Record<string, ProviderBranding> = {
+  google: {
+    icon: <SiGoogle className="h-16 w-16" style={{ color: "#34A853" }} aria-hidden />,
+    iconBg: "bg-[#E8F0FE]",
+    buttonLabel: "Continue with Google",
+    buttonClass: "bg-[#34A853] hover:bg-[#2d8659] text-white",
+    buttonVariant: "default",
+    cardClass: "hover:shadow-lg hover:shadow-[#34A853]/10",
+  },
+  "azure-ad": {
+    icon: <MicrosoftMulticolorLogo />,
+    iconBg: "bg-[#F3F2F1]",
+    buttonLabel: "Continue with Microsoft",
+    buttonClass: "bg-[#0078D4] hover:bg-[#005a9e] text-white",
+    buttonVariant: "default",
+    cardClass: "hover:shadow-lg hover:shadow-[#0078D4]/10",
+  },
+  microsoft: {
+    icon: <MicrosoftMulticolorLogo />,
+    iconBg: "bg-[#F3F2F1]",
+    buttonLabel: "Continue with Microsoft",
+    buttonClass: "bg-[#0078D4] hover:bg-[#005a9e] text-white",
+    buttonVariant: "default",
+    cardClass: "hover:shadow-lg hover:shadow-[#0078D4]/10",
+  },
+  default: {
+    icon: <LogIn className="h-16 w-16 text-primary" aria-hidden />,
+    iconBg: "bg-primary/10",
+    buttonLabel: "Continue",
+    buttonVariant: "secondary",
+    cardClass: "hover:shadow-md hover:shadow-primary/10",
+  },
+};
 
 interface LinkedAccount {
   provider: string;
@@ -207,7 +260,7 @@ export default function ConnectSsoClient({
               </Alert>
             )}
             <div className="flex items-center gap-3">
-              <Button type="submit" disabled={isPending}>
+              <Button id="verify-credentials" type="submit" disabled={isPending}>
                 {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -221,7 +274,7 @@ export default function ConnectSsoClient({
                 )}
               </Button>
               {reauthComplete && (
-                <Button type="button" variant="ghost" onClick={handleReset}>
+                <Button id="reset" type="button" variant="ghost" onClick={handleReset}>
                   Reset
                 </Button>
               )}
@@ -248,38 +301,76 @@ export default function ConnectSsoClient({
             </Alert>
           )}
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {providerOptions.map((provider) => {
               const disabled = !provider.configured || !reauthComplete || !reauthNonce;
+              const branding = providerBranding[provider.id] ?? providerBranding.default;
 
               return (
-                <Card
+                <div
                   key={provider.id}
+                  role="button"
+                  tabIndex={disabled ? -1 : 0}
+                  onClick={() => {
+                    if (!disabled) {
+                      void handleProviderClick(provider.id);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (!disabled && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      void handleProviderClick(provider.id);
+                    }
+                  }}
                   className={clsx(
-                    "border transition",
-                    disabled ? "opacity-60" : "hover:border-primary"
+                    "p-8 rounded-lg border-2 transition-all duration-200",
+                    branding.cardClass,
+                    disabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-md cursor-pointer"
                   )}
+                  style={{
+                    borderColor:
+                      provider.id === "google" ? "#4285F4" :
+                      provider.id === "azure-ad" || provider.id === "microsoft" ? "#6264A7" :
+                      "var(--color-primary)",
+                    backgroundColor:
+                      provider.id === "google" ? "rgba(66, 133, 244, 0.05)" :
+                      provider.id === "azure-ad" || provider.id === "microsoft" ? "rgba(98, 100, 167, 0.05)" :
+                      "rgba(var(--color-primary-rgb), 0.05)"
+                  }}
                 >
-                  <CardContent className="flex min-h-[130px] flex-col justify-between p-4">
-                    <div className="flex items-center gap-3">
-                      <Network className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-semibold">{provider.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {provider.description}
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className={clsx(
+                      "w-32 h-32 rounded-full flex items-center justify-center flex-shrink-0",
+                      branding.iconBg
+                    )}>
+                      {branding.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">{provider.name}</h3>
+                      <p className="text-sm text-muted-foreground">{provider.description}</p>
+                      {!provider.configured && (
+                        <p className="text-xs text-destructive mt-2 font-medium">
+                          Not configured
                         </p>
-                      </div>
+                      )}
                     </div>
                     <Button
+                      id={`provider-${provider.id}`}
                       type="button"
-                      className="mt-4"
+                      className={clsx(
+                        "w-full mt-4",
+                        branding.buttonClass
+                      )}
+                      variant={branding.buttonVariant ?? "secondary"}
                       disabled={disabled}
-                      onClick={() => handleProviderClick(provider.id)}
+                      onClick={() => {
+                        void handleProviderClick(provider.id);
+                      }}
                     >
-                      Link {provider.name}
+                      {branding.buttonLabel}
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
