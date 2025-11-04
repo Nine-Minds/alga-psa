@@ -51,6 +51,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'results' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVPreviewData | null>(null);
+  const [fullCSVData, setFullCSVData] = useState<string[][] | null>(null);
   const [columnMappings, setColumnMappings] = useState<ICSVColumnMapping[]>([]);
   const [validationResults, setValidationResults] = useState<ICSVValidationResult[]>([]);
   const [importProgress, setImportProgress] = useState<number>(0);
@@ -62,6 +63,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   });
   const [importResults, setImportResults] = useState<ImportContactResult[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [showUpdateConfirmation, setShowUpdateConfirmation] = useState(false);
   const [existingContactsCount, setExistingContactsCount] = useState(0);
   const [processingDetails, setProcessingDetails] = useState<{
@@ -87,6 +89,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       setStep('upload');
       setFile(null);
       setPreviewData(null);
+      setFullCSVData(null);
       setColumnMappings([]);
       setValidationResults([]);
       setImportProgress(0);
@@ -98,6 +101,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       });
       setImportResults([]);
       setIsImporting(false);
+      setIsProcessing(false);
       setShowUpdateConfirmation(false);
       setExistingContactsCount(0);
       setProcessingDetails({ current: 0, total: 0 });
@@ -140,11 +144,12 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       }
 
       const headers = rows[0];
-      const dataRows = rows.slice(1);
+      const dataRows = rows.slice(1); // All data rows (excluding header)
 
+      setFullCSVData(dataRows); // Store all rows for import
       setPreviewData({
         headers,
-        rows: dataRows.slice(0, 5)
+        rows: dataRows.slice(0, 5) // First 5 rows for preview only
       });
 
       const autoMappings: ICSVColumnMapping[] = headers.map((header: string): ICSVColumnMapping => {
@@ -205,56 +210,65 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       return;
     }
 
-    if (previewData) {
-      const results = previewData.rows.map((row: string[]): ICSVValidationResult => {
-        const mappedData: Record<MappableField, string> = {} as Record<MappableField, string>;
-        const errors: string[] = [];
-        const warnings: string[] = [];
+    if (fullCSVData) {
+      setIsProcessing(true);
+      setErrors([]);
 
-        columnMappings.forEach((mapping, index) => {
-          if (mapping.contactField !== null) {
-            mappedData[mapping.contactField] = row[index];
+      try {
+        // Process ALL rows from fullCSVData, not just preview rows
+        const results = fullCSVData.map((row: string[]): ICSVValidationResult => {
+          const mappedData: Record<MappableField, string> = {} as Record<MappableField, string>;
+          const errors: string[] = [];
+          const warnings: string[] = [];
+
+          columnMappings.forEach((mapping, index) => {
+            if (mapping.contactField !== null) {
+              mappedData[mapping.contactField] = row[index];
+            }
+          });
+
+          if (!mappedData.full_name) errors.push('Name is required');
+          if (!mappedData.email) {
+            errors.push('Email is required');
+          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.email)) {
+            errors.push('Invalid email format');
           }
+
+          return {
+            isValid: errors.length === 0,
+            errors,
+            warnings,
+            data: mappedData
+          };
         });
 
-        if (!mappedData.full_name) errors.push('Name is required');
-        if (!mappedData.email) {
-          errors.push('Email is required');
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.email)) {
-          errors.push('Invalid email format');
+        // Check for existing emails
+        const emails = results
+          .map(r => r.data.email)
+          .filter((email): email is string => !!email);
+
+        const existingEmails = await checkExistingEmails(emails);
+        const existingEmailSet = new Set(existingEmails.map(e => e.toLowerCase()));
+
+        // Add isExisting property to results
+        const resultsWithExisting = results.map(result => ({
+          ...result,
+          isExisting: result.data.email ? existingEmailSet.has(result.data.email.toLowerCase()) : false
+        }));
+
+        // Count existing contacts
+        const existingCount = resultsWithExisting.filter(r => r.isExisting).length;
+        if (existingCount > 0 && !importOptions.updateExisting) {
+          setExistingContactsCount(existingCount);
+          setShowUpdateConfirmation(true);
         }
 
-        return {
-          isValid: errors.length === 0,
-          errors,
-          warnings,
-          data: mappedData
-        };
-      });
-
-      // Check for existing emails
-      const emails = results
-        .map(r => r.data.email)
-        .filter((email): email is string => !!email);
-      
-      const existingEmails = await checkExistingEmails(emails);
-      const existingEmailSet = new Set(existingEmails.map(e => e.toLowerCase()));
-      
-      // Add isExisting property to results
-      const resultsWithExisting = results.map(result => ({
-        ...result,
-        isExisting: result.data.email ? existingEmailSet.has(result.data.email.toLowerCase()) : false
-      }));
-      
-      setValidationResults(resultsWithExisting);
-      
-      // Count existing contacts
-      const existingCount = resultsWithExisting.filter(r => r.isExisting).length;
-      if (existingCount > 0 && !importOptions.updateExisting) {
-        setExistingContactsCount(existingCount);
-        setShowUpdateConfirmation(true);
-      } else {
+        setValidationResults(resultsWithExisting);
         setStep('preview');
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : 'Error processing CSV data']);
+      } finally {
+        setIsProcessing(false);
       }
     }
   };
@@ -346,15 +360,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         };
         return data;
       });
-
-    if (importOptions.updateExisting) {
-      const existingCount = await checkExistingContacts(validData);
-      if (existingCount > 0) {
-        setExistingContactsCount(existingCount);
-        setShowUpdateConfirmation(true);
-        return;
-      }
-    }
 
     await processImport(validData);
   };
@@ -618,10 +623,20 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               <div className="mt-6 text-xs text-gray-500">
                 <p>* Required fields must be mapped for import to proceed</p>
               </div>
+              {fullCSVData && fullCSVData.length > 100 && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-sm text-yellow-800">
+                    <AlertTriangle className="inline h-4 w-4 mr-1" />
+                    You are importing {fullCSVData.length} records. Processing may take a moment.
+                  </p>
+                </div>
+              )}
               <div className="mt-4">
                 <DialogFooter>
-                  <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')}>Back</Button>
-                  <Button id='preview-import' onClick={handlePreview}>Preview</Button>
+                  <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>Back</Button>
+                  <Button id='preview-import' onClick={handlePreview} disabled={isProcessing}>
+                    {isProcessing ? 'Processing...' : 'Preview'}
+                  </Button>
                 </DialogFooter>
               </div>
             </div>
@@ -630,6 +645,13 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           {step === 'preview' && validationResults.length > 0 && (
             <div>
               <h3 className="text-lg font-medium mb-4">Preview Import</h3>
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Total records:</strong> {validationResults.length} |
+                  <strong className="ml-2">Valid:</strong> {validationResults.filter(r => r.isValid).length} |
+                  <strong className="ml-2">Invalid:</strong> {validationResults.filter(r => !r.isValid).length}
+                </p>
+              </div>
               <ImportOptions
                 importOptions={importOptions}
                 onOptionsChange={setImportOptions}
@@ -643,7 +665,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                   pageSize={pageSize}
                   onItemsPerPageChange={handlePageSizeChange}
                   data={validationResults.map((result: ICSVValidationResult, index: number): Record<string, any> => {
-                    const rowData = (previewData?.rows[index] || []).reduce((
+                    const rowData = (fullCSVData?.[index] || []).reduce((
                       acc: Record<string, string>,
                       cell: string,
                       idx: number
@@ -787,18 +809,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         onClose={() => setShowUpdateConfirmation(false)}
         onConfirm={() => {
           setShowUpdateConfirmation(false);
-          const validData = validationResults
-            .filter((result: ICSVValidationResult): boolean => result.isValid || importOptions.skipInvalid)
-            .map((result: ICSVValidationResult): Record<MappableField, string> => ({
-              full_name: result.data.full_name || '',
-              email: result.data.email || '',
-              phone_number: result.data.phone_number || '',
-              client: result.data.client || '',
-              tags: result.data.tags || '',
-              role: result.data.role || '',
-              notes: result.data.notes || ''
-            }));
-          processImport(validData);
+          setImportOptions(prev => ({ ...prev, updateExisting: true }));
         }}
         title="Update Existing Contacts"
         message={`${existingContactsCount} contacts already exist. Do you want to update them with the new data?`}
