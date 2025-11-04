@@ -342,6 +342,13 @@ exports.up = async function(knex) {
         subtype_id: getSubtypeId('user-mentioned')
       },
       {
+        name: 'user-mentioned-in-document',
+        language_code: 'en',
+        title: 'You were mentioned in a document',
+        message: '{{authorName}} mentioned you in document "{{documentName}}"',
+        subtype_id: getSubtypeId('user-mentioned')
+      },
+      {
         name: 'ticket-status-changed',
         language_code: 'en',
         title: 'Ticket Status Changed',

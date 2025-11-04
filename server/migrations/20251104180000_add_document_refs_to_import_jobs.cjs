@@ -68,8 +68,8 @@ exports.up = async function up(knex) {
       ) THEN
         ALTER TABLE import_jobs
           ADD CONSTRAINT import_jobs_source_doc_assoc_foreign
-          FOREIGN KEY (source_document_association_id)
-          REFERENCES document_associations (association_id)
+          FOREIGN KEY (tenant, source_document_association_id)
+          REFERENCES document_associations (tenant, association_id)
           ON DELETE SET NULL;
       END IF;
     END

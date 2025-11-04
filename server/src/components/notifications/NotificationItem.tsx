@@ -81,9 +81,10 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
     }
   };
 
-  // Check if this is a comment notification with preview
-  const hasCommentPreview = notification.metadata?.comment?.text;
-  const isInternalComment = notification.metadata?.comment?.isInternal;
+  // Check if this is a comment notification with preview (supports both old and new structure)
+  const commentText = notification.metadata?.commentPreview || notification.metadata?.comment?.text;
+  const hasCommentPreview = !!commentText;
+  const isInternalComment = notification.metadata?.comment?.isInternal || false;
 
   // Parse notification data for change details
   const renderRichContent = () => {
@@ -214,8 +215,8 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             <div className={`mt-2 pl-3 border-l-2 ${
               isInternalComment ? 'border-yellow-400 bg-yellow-50/50' : 'border-blue-300 bg-blue-50/50'
             } py-1.5 px-3 rounded-r`}>
-              <p className="text-xs text-gray-700 italic line-clamp-2">
-                "{notification.metadata.comment.text}"
+              <p className="text-xs text-gray-700 line-clamp-2">
+                {commentText}
               </p>
               {isInternalComment && (
                 <span className="inline-flex items-center gap-1 mt-1 text-xs text-yellow-700">

@@ -7,6 +7,7 @@ import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import Drawer from 'server/src/components/ui/Drawer';
 import { DrawerProvider } from "server/src/context/DrawerContext";
+import { ActivityDrawerProvider } from "server/src/components/user-activities/ActivityDrawerProvider";
 import { savePreference } from 'server/src/lib/utils/cookies';
 
 interface DefaultLayoutProps {
@@ -119,41 +120,43 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
   return (
     <DrawerProvider>
-      <div className="flex h-screen overflow-hidden bg-gray-100">
-        <SidebarWithFeatureFlags
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          disableTransition={disableTransition}
-        />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header
+      <ActivityDrawerProvider>
+        <div className="flex h-screen overflow-hidden bg-gray-100">
+          <SidebarWithFeatureFlags
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
-            rightSidebarOpen={rightSidebarOpen}
-            setRightSidebarOpen={setRightSidebarOpen}
+            disableTransition={disableTransition}
           />
-          <main className="flex-1 overflow-hidden flex pt-2 px-3">
-            <Body>{children}</Body>
-            <RightSidebar
-              isOpen={rightSidebarOpen}
-              setIsOpen={setRightSidebarOpen}
-              clientUrl={clientUrl}
-              accountId={accountId}
-              messages={messages}
-              userRole={userRole}
-              userId={userId}
-              selectedAccount={selectedAccount}
-              handleSelectAccount={handleSelectAccount}
-              auth_token={auth_token}
-              setChatTitle={setChatTitle}
-              isTitleLocked={isTitleLocked}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Header
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+              rightSidebarOpen={rightSidebarOpen}
+              setRightSidebarOpen={setRightSidebarOpen}
             />
-          </main>
-          <Drawer isOpen={isDrawerOpen} onClose={closeDrawer}>
-            {drawerContent}
-          </Drawer>
+            <main className="flex-1 overflow-hidden flex pt-2 px-3">
+              <Body>{children}</Body>
+              <RightSidebar
+                isOpen={rightSidebarOpen}
+                setIsOpen={setRightSidebarOpen}
+                clientUrl={clientUrl}
+                accountId={accountId}
+                messages={messages}
+                userRole={userRole}
+                userId={userId}
+                selectedAccount={selectedAccount}
+                handleSelectAccount={handleSelectAccount}
+                auth_token={auth_token}
+                setChatTitle={setChatTitle}
+                isTitleLocked={isTitleLocked}
+              />
+            </main>
+            <Drawer isOpen={isDrawerOpen} onClose={closeDrawer}>
+              {drawerContent}
+            </Drawer>
+          </div>
         </div>
-      </div>
+      </ActivityDrawerProvider>
     </DrawerProvider>
   );
 }

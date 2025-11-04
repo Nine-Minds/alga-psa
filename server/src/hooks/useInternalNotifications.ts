@@ -67,18 +67,14 @@ export function useInternalNotifications(
       setUnreadCount(response.unread_count);
       setError(null);
 
-      // Initialize Y.js document with fetched data if connected
-      if (ydocRef.current) {
+      // Update Y.js document with fetched data if connected
+      if (ydocRef.current && providerRef.current?.status === 'connected') {
         const notificationsMap = ydocRef.current.getMap('notifications');
         const unreadCountMap = ydocRef.current.getMap('unreadCount');
 
-        // Only initialize if not already set (to avoid overwriting real-time updates)
-        if (!notificationsMap.get('data')) {
-          notificationsMap.set('data', response.notifications);
-        }
-        if (typeof unreadCountMap.get('count') !== 'number') {
-          unreadCountMap.set('count', response.unread_count);
-        }
+        // Always update with fresh data from API to ensure consistency
+        notificationsMap.set('data', response.notifications);
+        unreadCountMap.set('count', response.unread_count);
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err);

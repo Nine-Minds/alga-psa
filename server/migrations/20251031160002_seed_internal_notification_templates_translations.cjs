@@ -25,7 +25,8 @@ exports.up = async function(knex) {
     'ticket-closed-client': 'ticket-closed',
     'ticket-comment-added-client': 'ticket-comment-added',
     'message-sent': 'message-sent',
-    'user-mentioned-in-comment': 'user-mentioned'
+    'user-mentioned-in-comment': 'user-mentioned',
+    'user-mentioned-in-document': 'user-mentioned'
   };
 
   const translations = {
@@ -69,6 +70,10 @@ exports.up = async function(knex) {
       'user-mentioned-in-comment': {
         title: 'Vous avez été mentionné dans un commentaire',
         message: '{{commentAuthor}} vous a mentionné dans le ticket #{{ticketNumber}}: {{commentPreview}}'
+      },
+      'user-mentioned-in-document': {
+        title: 'Vous avez été mentionné dans un document',
+        message: '{{authorName}} vous a mentionné dans le document "{{documentName}}"'
       },
       'ticket-status-changed': {
         title: 'Statut du ticket modifié',
@@ -124,6 +129,10 @@ exports.up = async function(knex) {
         title: 'Te mencionaron en un comentario',
         message: '{{commentAuthor}} te mencionó en el ticket #{{ticketNumber}}: {{commentPreview}}'
       },
+      'user-mentioned-in-document': {
+        title: 'Te mencionaron en un documento',
+        message: '{{authorName}} te mencionó en el documento "{{documentName}}"'
+      },
       'ticket-status-changed': {
         title: 'Estado del ticket cambiado',
         message: 'Estado del ticket #{{ticketId}} "{{ticketTitle}}" cambiado: {{oldStatus}} → {{newStatus}} por {{performedByName}}'
@@ -177,6 +186,10 @@ exports.up = async function(knex) {
       'user-mentioned-in-comment': {
         title: 'Sie wurden in einem Kommentar erwähnt',
         message: '{{commentAuthor}} hat Sie im Ticket #{{ticketNumber}} erwähnt: {{commentPreview}}'
+      },
+      'user-mentioned-in-document': {
+        title: 'Sie wurden in einem Dokument erwähnt',
+        message: '{{authorName}} hat Sie im Dokument "{{documentName}}" erwähnt'
       },
       'ticket-status-changed': {
         title: 'Ticket-Status geändert',
@@ -232,6 +245,10 @@ exports.up = async function(knex) {
         title: 'U bent genoemd in een opmerking',
         message: '{{commentAuthor}} heeft u genoemd in ticket #{{ticketNumber}}: {{commentPreview}}'
       },
+      'user-mentioned-in-document': {
+        title: 'Je bent vermeld in een document',
+        message: '{{authorName}} heeft je vermeld in document "{{documentName}}"'
+      },
       'ticket-status-changed': {
         title: 'Ticket status gewijzigd',
         message: 'Ticket #{{ticketId}} "{{ticketTitle}}" status gewijzigd: {{oldStatus}} → {{newStatus}} door {{performedByName}}'
@@ -285,6 +302,10 @@ exports.up = async function(knex) {
       'user-mentioned-in-comment': {
         title: 'Sei stato menzionato in un commento',
         message: '{{commentAuthor}} ti ha menzionato nel ticket #{{ticketNumber}}: {{commentPreview}}'
+      },
+      'user-mentioned-in-document': {
+        title: 'Sei stato menzionato in un documento',
+        message: '{{authorName}} ti ha menzionato nel documento "{{documentName}}"'
       },
       'ticket-status-changed': {
         title: 'Stato del ticket modificato',

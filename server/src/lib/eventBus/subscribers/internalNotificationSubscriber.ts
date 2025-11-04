@@ -12,12 +12,15 @@ import {
   ProjectAssignedEvent,
   ProjectTaskAssignedEvent,
   InvoiceGeneratedEvent,
-  MessageSentEvent
+  MessageSentEvent,
+  UserMentionedInDocumentEvent
 } from '../events';
 import { createNotificationFromTemplateAction } from '../../actions/internal-notification-actions/internalNotificationActions';
 import logger from '@alga-psa/shared/core/logger';
 import { getConnection } from '../../db/db';
 import type { Knex } from 'knex';
+import { convertBlockNoteToMarkdown } from '../../utils/blocknoteUtils';
+import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
 
 /**
  * Handle ticket created events
@@ -55,6 +58,13 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       return;
     }
 
+    // Resolve links for both MSP and client portal
+    const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number
+    });
+
     // Create notification for assigned MSP user if ticket is assigned
     if (ticket.assigned_to) {
       await createNotificationFromTemplateAction({
@@ -63,7 +73,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         template_name: 'ticket-created',
         type: 'info',
         category: 'tickets',
-        link: `/msp/tickets/${ticketId}`,
+        link: internalUrl,
         data: {
           ticketId: ticket.ticket_number || 'New Ticket',
           ticketTitle: ticket.title,
@@ -79,7 +89,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     }
 
     // Create notification for client contact if they have portal access
-    if (ticket.contact_name_id) {
+    if (ticket.contact_name_id && portalUrl) {
       // Check if contact has a user account
       const contactUser = await db('users')
         .select('user_id', 'user_type')
@@ -97,7 +107,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
           template_name: 'ticket-created-client',
           type: 'info',
           category: 'tickets',
-          link: `/client-portal/tickets/${ticketId}`,
+          link: portalUrl,
           data: {
             ticketId: ticket.ticket_number || 'New Ticket',
             ticketTitle: ticket.title
@@ -171,6 +181,13 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
 
+    // Resolve links for MSP portal
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number
+    });
+
     // Create notification for assigned user
     await createNotificationFromTemplateAction({
       tenant: tenantId,
@@ -178,7 +195,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       template_name: 'ticket-assigned',
       type: 'info',
       category: 'tickets',
-      link: `/msp/tickets/${ticketId}`,
+      link: internalUrl,
       data: {
         ticketId: ticket.ticket_number || 'New Ticket',
         ticketTitle: ticket.title,
@@ -322,6 +339,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       templateName = 'ticket-reassigned';
     }
 
+    // Resolve links for both MSP and client portal
+    const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number
+    });
+
     // Create notification for assigned MSP user if ticket is assigned
     if (ticket.assigned_to) {
       await createNotificationFromTemplateAction({
@@ -330,7 +354,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         template_name: templateName,
         type: 'info',
         category: 'tickets',
-        link: `/msp/tickets/${ticketId}`,
+        link: internalUrl,
         data: metadata
       });
 
@@ -343,7 +367,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     }
 
     // Create notification for client contact if they have portal access
-    if (ticket.contact_name_id) {
+    if (ticket.contact_name_id && portalUrl) {
       const contactUser = await db('users')
         .select('user_id', 'user_type')
         .where({
@@ -360,7 +384,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           template_name: 'ticket-updated-client',
           type: 'info',
           category: 'tickets',
-          link: `/client-portal/tickets/${ticketId}`,
+          link: portalUrl,
           data: metadata
         });
 
@@ -400,6 +424,13 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       return;
     }
 
+    // Resolve links for both MSP and client portal
+    const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number
+    });
+
     // Create notification for assigned MSP user if ticket is assigned
     if (ticket.assigned_to) {
       await createNotificationFromTemplateAction({
@@ -408,7 +439,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         template_name: 'ticket-closed',
         type: 'success',
         category: 'tickets',
-        link: `/msp/tickets/${ticketId}`,
+        link: internalUrl,
         data: {
           ticketId: ticket.ticket_number || 'New Ticket',
           ticketTitle: ticket.title
@@ -423,7 +454,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     }
 
     // Create notification for client contact if they have portal access
-    if (ticket.contact_name_id) {
+    if (ticket.contact_name_id && portalUrl) {
       const contactUser = await db('users')
         .select('user_id', 'user_type')
         .where({
@@ -440,7 +471,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           template_name: 'ticket-closed-client',
           type: 'success',
           category: 'tickets',
-          link: `/client-portal/tickets/${ticketId}`,
+          link: portalUrl,
           data: {
             ticketId: ticket.ticket_number || 'New Ticket',
             ticketTitle: ticket.title
@@ -622,13 +653,21 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
 
-    // Extract comment text preview
+    // Extract comment text preview from BlockNote content
     let commentPreview = '';
     let commentText = '';
     if (comment?.content) {
-      // Strip HTML/markdown and truncate
-      commentText = stripHtml(comment.content);
-      commentPreview = truncateText(commentText, 100);
+      // Parse BlockNote JSON to plain text
+      try {
+        commentText = convertBlockNoteToMarkdown(comment.content);
+        // Remove markdown formatting for preview
+        commentPreview = truncateText(commentText.replace(/[*_~`#\[\]]/g, ''), 100);
+      } catch (error) {
+        console.error('[InternalNotificationSubscriber] Failed to parse BlockNote content:', error);
+        // Fallback to stripHtml for older content
+        commentText = stripHtml(comment.content);
+        commentPreview = truncateText(commentText, 100);
+      }
     }
 
     console.log('[InternalNotificationSubscriber] About to extract mentions from:', {
@@ -651,6 +690,14 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     console.log('[InternalNotificationSubscriber] Found mentioned users:', mentionedUsers.length);
 
+    // Resolve links for both MSP and client portal
+    const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number,
+      commentId: comment?.id
+    });
+
     // Track users who have been notified to avoid duplicates
     const notifiedUserIds = new Set<string>();
 
@@ -663,7 +710,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           template_name: 'user-mentioned-in-comment',
           type: 'info',
           category: 'messages',
-          link: `/msp/tickets/${ticketId}#comment-${comment?.id || ''}`,
+          link: internalUrl,
           data: {
             commentAuthor: authorName,
             ticketNumber: ticket.ticket_number || 'New Ticket',
@@ -674,7 +721,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             ticketNumber: ticket.ticket_number || 'New Ticket',
             ticketTitle: ticket.title,
             commentId: comment?.id || '',
-            commentText: commentPreview,
+            commentText: commentText, // Full parsed text
+            commentPreview: commentPreview, // Truncated preview
             commentAuthor: authorName,
             commentAuthorId: userId,
             contextType: 'ticket',
@@ -701,6 +749,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       }
     }
 
+    // Resolve link without comment anchor for general notifications
+    const { internalUrl: ticketUrl, portalUrl: ticketPortalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number
+    });
+
     // Create notification for assigned MSP user (if not the comment author and not already notified via mention)
     if (ticket.assigned_to && ticket.assigned_to !== userId && !notifiedUserIds.has(ticket.assigned_to)) {
       await createNotificationFromTemplateAction({
@@ -709,7 +764,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         template_name: 'ticket-comment-added',
         type: 'info',
         category: 'tickets',
-        link: `/msp/tickets/${ticketId}`,
+        link: ticketUrl,
         data: {
           authorName,
           ticketId: ticket.ticket_number || 'New Ticket',
@@ -737,7 +792,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Create notification for client contact if they have portal access (and are not the comment author)
     // Skip if comment is internal - internal comments are not visible to client portal users
-    if (ticket.contact_name_id && !comment?.isInternal) {
+    if (ticket.contact_name_id && !comment?.isInternal && ticketPortalUrl) {
       const contactUser = await db('users')
         .select('user_id', 'user_type')
         .where({
@@ -754,7 +809,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           template_name: 'ticket-comment-added-client',
           type: 'info',
           category: 'tickets',
-          link: `/client-portal/tickets/${ticketId}`,
+          link: ticketPortalUrl,
           data: {
             authorName,
             ticketId: ticket.ticket_number || 'New Ticket',
@@ -790,6 +845,113 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 }
 
 /**
+ * Handle user mentioned in document events
+ */
+async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent): Promise<void> {
+  const { payload } = event;
+  const { tenantId, documentId, documentName, userId, content } = payload;
+
+  console.log('[InternalNotificationSubscriber] handleUserMentionedInDocument START', {
+    documentId,
+    userId,
+    hasContent: !!content
+  });
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Get document details
+    const document = await db('documents')
+      .select('document_id', 'document_name', 'tenant')
+      .where({ document_id: documentId, tenant: tenantId })
+      .first();
+
+    if (!document) {
+      console.log('[InternalNotificationSubscriber] Document not found:', documentId);
+      return;
+    }
+
+    // Get author name
+    const author = await db('users')
+      .select('first_name', 'last_name')
+      .where({ user_id: userId, tenant: tenantId })
+      .first();
+
+    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+
+    // Extract user IDs from BlockNote mention inline content
+    const mentionedUserIds = extractMentionUserIds(content);
+    console.log('[InternalNotificationSubscriber] Found mentioned user IDs in document:', mentionedUserIds);
+
+    // Get user details for mentioned users
+    const mentionedUsers = mentionedUserIds.length > 0
+      ? await db('users')
+          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .whereIn('user_id', mentionedUserIds)
+          .andWhere('tenant', tenantId)
+      : [];
+
+    console.log('[InternalNotificationSubscriber] Found mentioned users in document:', mentionedUsers.length);
+
+    // Resolve links for MSP portal
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'document',
+      documentId
+    });
+
+    // Track users who have been notified to avoid duplicates
+    const notifiedUserIds = new Set<string>();
+
+    // Create notifications for mentioned users (excluding the document author)
+    for (const mentionedUser of mentionedUsers) {
+      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
+        await createNotificationFromTemplateAction({
+          tenant: tenantId,
+          user_id: mentionedUser.user_id,
+          template_name: 'user-mentioned-in-document',
+          type: 'info',
+          category: 'messages',
+          link: internalUrl,
+          data: {
+            authorName,
+            documentName: document.document_name || 'Untitled Document'
+          },
+          metadata: {
+            documentId: document.document_id,
+            documentName: document.document_name || 'Untitled Document',
+            authorName: authorName,
+            authorId: userId
+          }
+        });
+
+        notifiedUserIds.add(mentionedUser.user_id);
+
+        console.log('[InternalNotificationSubscriber] Created notification for user mentioned in document', {
+          documentId,
+          mentionedUserId: mentionedUser.user_id,
+          mentionedUsername: mentionedUser.username,
+          documentAuthor: userId,
+          tenantId
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for user mentioned in document', {
+          documentId,
+          mentionedUserId: mentionedUser.user_id,
+          documentAuthor: userId,
+          tenantId
+        });
+      }
+    }
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling user mentioned in document', {
+      error,
+      documentId,
+      tenantId
+    });
+  }
+}
+
+/**
  * Handle project created events
  */
 async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
@@ -799,19 +961,21 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
   try {
     const db = await getConnection(tenantId);
 
-    // Get project details
+    // Get project details including assigned_to
     const project = await db('projects as p')
       .select(
         'p.project_id',
         'p.project_name',
         'p.wbs_code',
+        'p.assigned_to',
         'c.client_name'
       )
-      .leftJoin('companies as c', function() {
-        this.on('p.company_id', 'c.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('p.client_id', 'c.client_id')
             .andOn('p.tenant', 'c.tenant');
       })
       .where('p.project_id', projectId)
+      .andWhere('p.tenant', tenantId)
       .first();
 
     if (!project) {
@@ -822,33 +986,35 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       return;
     }
 
-    // Get project manager
-    const projectManager = await db('project_team_members')
-      .select('user_id')
-      .where({
-        project_id: projectId,
-        tenant: tenantId,
-        role: 'manager'
-      })
-      .first();
+    // Resolve links for MSP portal
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'project',
+      projectId
+    });
 
-    if (projectManager && projectManager.user_id !== userId) {
+    // Notify the assigned user (if assigned and not the creator)
+    if (project.assigned_to && project.assigned_to !== userId) {
       await createNotificationFromTemplateAction({
         tenant: tenantId,
-        user_id: projectManager.user_id,
+        user_id: project.assigned_to,
         template_name: 'project-created',
         type: 'info',
         category: 'projects',
-        link: `/msp/projects/${projectId}`,
+        link: internalUrl,
         data: {
           projectName: project.project_name,
           clientName: project.client_name || 'Unknown'
+        },
+        metadata: {
+          projectId: project.project_id,
+          projectName: project.project_name,
+          wbsCode: project.wbs_code
         }
       });
 
       logger.info('[InternalNotificationSubscriber] Created notification for project created', {
         projectId,
-        userId: projectManager.user_id,
+        userId: project.assigned_to,
         tenantId
       });
     }
@@ -885,6 +1051,12 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       return;
     }
 
+    // Resolve links for MSP portal
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'project',
+      projectId
+    });
+
     // Create notification for assigned user
     await createNotificationFromTemplateAction({
       tenant: tenantId,
@@ -892,7 +1064,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       template_name: 'project-assigned',
       type: 'info',
       category: 'projects',
-      link: `/msp/projects/${projectId}`,
+      link: internalUrl,
       data: {
         projectName: project.project_name
       }
@@ -928,9 +1100,13 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
         'pt.task_name',
         'p.project_name'
       )
+      .leftJoin('project_phases as ph', function() {
+        this.on('pt.phase_id', 'ph.phase_id')
+            .andOn('pt.tenant', 'ph.tenant');
+      })
       .leftJoin('projects as p', function() {
-        this.on('pt.project_id', 'p.project_id')
-            .andOn('pt.tenant', 'p.tenant');
+        this.on('ph.project_id', 'p.project_id')
+            .andOn('ph.tenant', 'p.tenant');
       })
       .where({
         'pt.task_id': taskId,
@@ -947,6 +1123,13 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
       return;
     }
 
+    // Resolve links for MSP portal
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'project_task',
+      projectId,
+      taskId
+    });
+
     // Create notification for assigned user
     await createNotificationFromTemplateAction({
       tenant: tenantId,
@@ -954,8 +1137,10 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
       template_name: 'task-assigned',
       type: 'info',
       category: 'projects',
-      link: `/msp/projects/${projectId}/tasks/${taskId}`,
+      link: internalUrl,
       data: {
+        taskId,
+        projectId,
         taskName: task.task_name,
         projectName: task.project_name
       }
@@ -994,7 +1179,7 @@ async function handleInvoiceGenerated(event: InvoiceGeneratedEvent): Promise<voi
         'c.client_name'
       )
       .leftJoin('clients as c', function() {
-        this.on('i.company_id', 'c.client_id')
+        this.on('i.client_id', 'c.client_id')
             .andOn('i.tenant', 'c.tenant');
       })
       .where('i.invoice_id', invoiceId)
@@ -1008,6 +1193,12 @@ async function handleInvoiceGenerated(event: InvoiceGeneratedEvent): Promise<voi
       return;
     }
 
+    // Resolve links for MSP portal
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'invoice',
+      invoiceId
+    });
+
     // Get users who should be notified about invoices (e.g., accounting team)
     // For now, notify the user who created the invoice
     if (userId) {
@@ -1017,7 +1208,7 @@ async function handleInvoiceGenerated(event: InvoiceGeneratedEvent): Promise<voi
         template_name: 'invoice-generated',
         type: 'success',
         category: 'invoices',
-        link: `/msp/invoices/${invoiceId}`,
+        link: internalUrl,
         data: {
           invoiceNumber: invoice.invoice_number || invoiceId,
           clientName: invoice.client_name || 'Unknown'
@@ -1047,6 +1238,14 @@ async function handleMessageSent(event: MessageSentEvent): Promise<void> {
   const { tenantId, recipientId, senderName, messagePreview, conversationId } = payload;
 
   try {
+    const db = await getConnection(tenantId);
+
+    // Resolve links for MSP portal
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'message',
+      conversationId
+    });
+
     // Create notification for the recipient
     await createNotificationFromTemplateAction({
       tenant: tenantId,
@@ -1054,7 +1253,7 @@ async function handleMessageSent(event: MessageSentEvent): Promise<void> {
       template_name: 'message-sent',
       type: 'info',
       category: 'messages',
-      link: conversationId ? `/msp/messages/${conversationId}` : '/msp/messages',
+      link: internalUrl,
       data: {
         senderName,
         messagePreview
@@ -1120,6 +1319,9 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
     case 'MESSAGE_SENT':
       await handleMessageSent(validatedEvent as MessageSentEvent);
       break;
+    case 'USER_MENTIONED_IN_DOCUMENT':
+      await handleUserMentionedInDocument(validatedEvent as UserMentionedInDocumentEvent);
+      break;
     default:
       // Silently ignore other events
       break;
@@ -1143,7 +1345,8 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
       'INVOICE_GENERATED',
-      'MESSAGE_SENT'
+      'MESSAGE_SENT',
+      'USER_MENTIONED_IN_DOCUMENT'
     ];
 
     // Use a dedicated channel for internal notifications
@@ -1176,7 +1379,8 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
       'INVOICE_GENERATED',
-      'MESSAGE_SENT'
+      'MESSAGE_SENT',
+      'USER_MENTIONED_IN_DOCUMENT'
     ];
 
     const channel = 'internal-notifications';

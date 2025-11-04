@@ -29,6 +29,7 @@ export const EventTypeEnum = z.enum([
   'CALENDAR_SYNC_FAILED',
   'CALENDAR_CONFLICT_DETECTED',
   'MESSAGE_SENT',
+  'USER_MENTIONED_IN_DOCUMENT',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -192,6 +193,24 @@ export const CalendarConflictEventPayloadSchema = BasePayloadSchema.extend({
   externalLastModified: z.string().datetime(),
 });
 
+// Document mention event payload schema
+export const DocumentMentionPayloadSchema = BasePayloadSchema.extend({
+  documentId: z.string().uuid(),
+  documentName: z.string(),
+  userId: z.string().uuid(), // User who updated the document
+  content: z.string(), // Document content with mentions
+  changes: z.record(z.unknown()).optional(),
+});
+
+// Message sent event payload schema
+export const MessageSentPayloadSchema = BasePayloadSchema.extend({
+  messageId: z.string().uuid().optional(),
+  userId: z.string().uuid(),
+  content: z.string().optional(),
+  recipientId: z.string().uuid().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -220,6 +239,8 @@ export const EventPayloadSchemas = {
   CALENDAR_SYNC_COMPLETED: CalendarSyncEventPayloadSchema,
   CALENDAR_SYNC_FAILED: CalendarSyncEventPayloadSchema,
   CALENDAR_CONFLICT_DETECTED: CalendarConflictEventPayloadSchema,
+  MESSAGE_SENT: MessageSentPayloadSchema,
+  USER_MENTIONED_IN_DOCUMENT: DocumentMentionPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -262,6 +283,8 @@ export type CalendarSyncStartedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC
 export type CalendarSyncCompletedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_COMPLETED>;
 export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_FAILED>;
 export type CalendarConflictDetectedEvent = z.infer<typeof EventSchemas.CALENDAR_CONFLICT_DETECTED>;
+export type MessageSentEvent = z.infer<typeof EventSchemas.MESSAGE_SENT>;
+export type UserMentionedInDocumentEvent = z.infer<typeof EventSchemas.USER_MENTIONED_IN_DOCUMENT>;
 
 export type Event =
   | TicketCreatedEvent
@@ -289,7 +312,9 @@ export type Event =
   | CalendarSyncStartedEvent
   | CalendarSyncCompletedEvent
   | CalendarSyncFailedEvent
-  | CalendarConflictDetectedEvent;
+  | CalendarConflictDetectedEvent
+  | MessageSentEvent
+  | UserMentionedInDocumentEvent;
 
 /**
  * Convert an event bus event to a workflow event

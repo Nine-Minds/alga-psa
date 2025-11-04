@@ -9,7 +9,6 @@ import { Badge } from "server/src/components/ui/Badge";
 import { ActivityActionMenu } from "server/src/components/user-activities/ActivityActionMenu";
 import { Bell, Info, CheckCircle, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useRouter } from 'next/navigation';
 import { markAsReadAction } from 'server/src/lib/actions/internal-notification-actions/internalNotificationActions';
 
 interface NotificationCardProps {
@@ -52,7 +51,6 @@ const getBorderColor = (type: string) => {
 
 export function NotificationCard({ activity, onViewDetails, onActionComplete }: NotificationCardProps) {
   const { openActivityDrawer } = useActivityDrawer();
-  const router = useRouter();
   const notification = activity as NotificationActivity;
 
   const handleClick = async () => {
@@ -69,13 +67,9 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
       }
     }
 
-    // Navigate to linked entity if link exists
-    if (notification.link) {
-      router.push(notification.link);
-    } else {
-      // Otherwise, open drawer
-      openActivityDrawer(activity);
-    }
+    // Always open the drawer to show notification details first
+    // The drawer will have a button to navigate to the linked entity if needed
+    openActivityDrawer(activity);
   };
 
   return (

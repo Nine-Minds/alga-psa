@@ -14,7 +14,8 @@ export enum ActivityType {
   TICKET = 'ticket',
   TIME_ENTRY = 'timeEntry',
   WORKFLOW_TASK = 'workflowTask',
-  NOTIFICATION = 'notification'
+  NOTIFICATION = 'notification',
+  DOCUMENT = 'document'
 }
 
 /**
@@ -144,7 +145,17 @@ export interface NotificationActivity extends ActivityBase {
   isRead: boolean;
   readAt?: ISO8601String;
   link?: string;
+  category?: string;
   metadata?: Record<string, any>;
+}
+
+/**
+ * Document-specific activity interface
+ */
+export interface DocumentActivity extends ActivityBase {
+  sourceType: ActivityType.DOCUMENT;
+  documentId: string;
+  documentName: string;
 }
 
 /**
@@ -156,7 +167,8 @@ export type Activity =
   | TicketActivity
   | TimeEntryActivity
   | WorkflowTaskActivity
-  | NotificationActivity;
+  | NotificationActivity
+  | DocumentActivity;
 
 /**
  * Filters for querying activities
