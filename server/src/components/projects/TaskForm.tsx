@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { IComment } from 'server/src/interfaces';
+import { IProjectTaskComment } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -52,7 +52,7 @@ import TimeEntryDialog from 'server/src/components/time-management/time-entry/ti
 import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import TaskComments from './TaskComments';
-import { getTaskComments, addTaskComment, updateProjectComment, deleteProjectComment, getCommentUserMap } from 'server/src/lib/actions/project-actions/projectCommentActions';
+import { getTaskComments, addTaskComment, updateTaskComment, deleteTaskComment, getCommentUserMap } from 'server/src/lib/actions/project-actions/projectCommentActions';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -89,6 +89,7 @@ export default function TaskForm({
   const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [taskName, setTaskName] = useState(task?.task_name || '');
   const [description, setDescription] = useState(task?.description || '');
   const [projectTreeOptions, setProjectTreeOptions] = useState<Array<TreeSelectOption<'project' | 'phase' | 'status'>>>([]);
@@ -145,9 +146,10 @@ export default function TaskForm({
   );
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [taskComments, setTaskComments] = useState<IComment[]>([]);
+  const [taskComments, setTaskComments] = useState<IProjectTaskComment[]>([]);
   const [commentUserMap, setCommentUserMap] = useState<Record<string, any>>({});
   const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [deletedTaskCommentIds, setDeletedTaskCommentIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -155,6 +157,7 @@ export default function TaskForm({
         const user = await getCurrentUser();
         if (user) {
           setCurrentUserId(user.user_id);
+          setCurrentUser(user);
         }
 
         // Load comments if in edit mode
@@ -164,6 +167,19 @@ export default function TaskForm({
             const comments = await getTaskComments(task.task_id);
             setTaskComments(comments);
             const userMap = await getCommentUserMap(comments);
+
+            // Ensure current user is in the userMap
+            if (user && user.user_id && !userMap[user.user_id]) {
+              userMap[user.user_id] = {
+                user_id: user.user_id,
+                first_name: user.first_name || '',
+                last_name: user.last_name || '',
+                email: user.email || '',
+                user_type: 'internal',
+                avatarUrl: null
+              };
+            }
+
             setCommentUserMap(userMap);
           } catch (error) {
             console.error('Error loading task comments:', error);
@@ -181,7 +197,7 @@ export default function TaskForm({
         setTaskTypes(types);
         
         // Fetch all tasks in the project
-        if (phase.project_id) {
+        if (phase?.project_id) {
           try {
             const { tasks } = await getProjectDetails(phase.project_id);
             setAllProjectTasks(tasks);
@@ -323,7 +339,7 @@ export default function TaskForm({
     };
 
     const newProjectId = findProjectId(projectTreeOptions);
-    const currentProjectId = phase.project_id;
+    const currentProjectId = phase?.project_id;
     const isMovingToNewProject = Boolean(newProjectId && currentProjectId !== newProjectId);
     setIsCrossProjectMove(isMovingToNewProject);
 
@@ -357,7 +373,7 @@ export default function TaskForm({
     }
     
     // Show move confirmation if it's a different phase
-    if (phaseId !== phase.phase_id) {
+    if (phase && phaseId !== phase.phase_id) {
       setSelectedPhase({ ...phase, phase_id: phaseId });
       setShowMoveConfirmation(true);
     }
@@ -445,6 +461,7 @@ export default function TaskForm({
   };
 
   const performSubmit = async () => {
+    console.log('performSubmit started - mode:', mode);
     setIsSubmitting(true);
 
     try {
@@ -454,6 +471,7 @@ export default function TaskForm({
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
 
       if (mode === 'edit' && task?.task_id) {
+        console.log('Edit mode - task_id:', task.task_id);
         // Check if phase or status actually changed
         const phaseChanged = task.phase_id !== selectedPhaseId;
         const statusChanged = task.project_status_mapping_id !== selectedStatusId;
@@ -493,10 +511,45 @@ export default function TaskForm({
           order_key: task.order_key // Always preserve the original order_key
         };
         resultTask = await updateTaskWithChecklist(taskToUpdate.task_id, taskData);
+
+        // Handle comment changes for edit mode (only if there are comment changes)
+        if (deletedTaskCommentIds.length > 0 || taskComments.some(c => c.project_task_comment_id?.startsWith('temp-'))) {
+          console.log('Processing comment changes - deleted:', deletedTaskCommentIds.length, 'new:', taskComments.filter(c => c.project_task_comment_id?.startsWith('temp-')).length);
+          try {
+            // Handle deleted comments
+            for (const deletedId of deletedTaskCommentIds) {
+              console.log('Deleting comment:', deletedId);
+              await deleteTaskComment(deletedId);
+            }
+
+            // Handle new comments only (existing comments don't need updating unless they were actually changed)
+            for (const comment of taskComments) {
+              if (comment.project_task_comment_id?.startsWith('temp-')) {
+                console.log('Adding new comment:', comment.project_task_comment_id);
+                // New comment - create it
+                if (resultTask?.task_id) {
+                  await addTaskComment(resultTask.task_id, comment.note);
+                }
+              }
+            }
+            console.log('Comment processing completed');
+          } catch (error) {
+            console.error('Error saving comments:', error);
+            toast.error('Task updated but failed to save comments');
+          }
+        }
+
+        console.log('Calling onSubmit and onClose for edit mode');
         onSubmit(resultTask);
         onClose();
       } else {
+        console.log('Create mode');
         // Create mode
+        if (!phase) {
+          console.error('Phase is undefined in create mode');
+          throw new Error('Phase is required for task creation');
+        }
+
         const taskData = {
           task_name: taskName,
           project_status_mapping_id: selectedStatusId,
@@ -530,14 +583,8 @@ export default function TaskForm({
             if (taskComments.length > 0) {
               try {
                 for (const comment of taskComments) {
-                  if (comment.markdown_content) {
-                    const content = JSON.parse(comment.markdown_content);
-                    await addTaskComment(
-                      resultTask.task_id,
-                      content,
-                      comment.is_internal || false,
-                      comment.is_resolution || false
-                    );
+                  if (comment.note) {
+                    await addTaskComment(resultTask.task_id, comment.note);
                   }
                 }
               } catch (error) {
@@ -562,6 +609,7 @@ export default function TaskForm({
       console.error('Error saving task:', error);
       toast.error('Failed to save task');
     } finally {
+      console.log('Finally block - setting isSubmitting to false');
       setIsSubmitting(false);
     }
   };
@@ -585,7 +633,7 @@ export default function TaskForm({
     if (!phases) return;
     
     const newPhase = phases.find(p => p.phase_id === phaseId);
-    if (newPhase && newPhase.phase_id !== phase.phase_id) {
+    if (newPhase && phase && newPhase.phase_id !== phase.phase_id) {
       setSelectedPhase(newPhase);
       setShowMoveConfirmation(true);
     }
@@ -798,8 +846,8 @@ export default function TaskForm({
         type: 'project_task' as WorkItemType,
         name: `${task.task_name}`,
         description: '',  // Don't copy task description to time entry notes
-        project_name: phase.phase_name, // Using phase name as a placeholder
-        phase_name: phase.phase_name,
+        project_name: phase?.phase_name || '', // Using phase name as a placeholder
+        phase_name: phase?.phase_name || '',
         task_name: task.task_name
       };
 
@@ -1313,14 +1361,16 @@ export default function TaskForm({
           )}
 
           {/* Full width Associated Tickets section */}
-          <TaskTicketLinks
-            taskId={task?.task_id || undefined}
-            phaseId={phase.phase_id}
-            projectId={phase.project_id}
-            initialLinks={task?.ticket_links}
-            users={users}
-            onLinksChange={setPendingTicketLinks}
-          />
+          {phase && (
+            <TaskTicketLinks
+              taskId={task?.task_id || undefined}
+              phaseId={phase.phase_id}
+              projectId={phase.project_id}
+              initialLinks={task?.ticket_links}
+              users={users}
+              onLinksChange={setPendingTicketLinks}
+            />
+          )}
 
           {/* Comments section - show in both create and edit modes */}
           <div className="mt-6">
@@ -1328,71 +1378,39 @@ export default function TaskForm({
               taskId={task?.task_id || tempTaskId}
               comments={taskComments}
               userMap={commentUserMap}
-              currentUser={{ id: currentUserId, name: null, email: null, avatarUrl: null }}
-              onAddComment={async (content, isInternal, isResolution) => {
-                if (mode === 'edit' && task?.task_id) {
-                  try {
-                    const newComment = await addTaskComment(task.task_id, content, isInternal, isResolution);
-                    setTaskComments([newComment, ...taskComments]);
-                    const updatedUserMap = await getCommentUserMap([newComment, ...taskComments]);
-                    setCommentUserMap(updatedUserMap);
-                    return true;
-                  } catch (error) {
-                    console.error('Error adding comment:', error);
-                    toast.error('Failed to add comment');
-                    return false;
-                  }
-                } else {
-                  // For create mode, just add to local state - will be saved when task is created
-                  const newComment = {
-                    comment_id: `temp-${Date.now()}`,
-                    tenant: '',
-                    project_task_id: tempTaskId,
-                    user_id: currentUserId,
-                    author_type: 'internal' as const,
-                    note: '',
-                    markdown_content: JSON.stringify(content),
-                    is_internal: isInternal,
-                    is_resolution: isResolution,
-                    is_initial_description: false,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  };
-                  setTaskComments([newComment, ...taskComments]);
-                  return true;
-                }
+              currentUser={{
+                id: currentUserId,
+                name: currentUser ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() : null,
+                email: currentUser?.email || null,
+                avatarUrl: null
               }}
-              onEditComment={async (commentId, updates) => {
-                if (mode === 'edit') {
-                  try {
-                    const updatedComment = await updateProjectComment(commentId, updates);
-                    setTaskComments(taskComments.map(c =>
-                      c.comment_id === commentId ? updatedComment : c
-                    ));
-                  } catch (error) {
-                    console.error('Error updating comment:', error);
-                    toast.error('Failed to update comment');
-                  }
-                } else {
-                  // For create mode, update local state
-                  setTaskComments(taskComments.map(c =>
-                    c.comment_id === commentId ? { ...c, ...updates } : c
-                  ));
-                }
+              onAddComment={async (content) => {
+                // For both edit and create mode, just add to local state - will be saved when task is saved
+                const newComment = {
+                  project_task_comment_id: `temp-${Date.now()}`,
+                  tenant: '',
+                  project_task_id: task?.task_id || tempTaskId,
+                  user_id: currentUserId,
+                  note: content,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                };
+                setTaskComments([newComment, ...taskComments]);
+                return true;
+              }}
+              onEditComment={async (commentId, content) => {
+                // For both edit and create mode, update local state - will be saved when task is saved
+                setTaskComments(taskComments.map(c =>
+                  c.project_task_comment_id === commentId ? { ...c, note: content } : c
+                ));
               }}
               onDeleteComment={async (commentId) => {
-                if (mode === 'edit') {
-                  try {
-                    await deleteProjectComment(commentId);
-                    setTaskComments(taskComments.filter(c => c.comment_id !== commentId));
-                  } catch (error) {
-                    console.error('Error deleting comment:', error);
-                    toast.error('Failed to delete comment');
-                  }
-                } else {
-                  // For create mode, remove from local state
-                  setTaskComments(taskComments.filter(c => c.comment_id !== commentId));
+                // For both edit and create mode, remove from local state - will be saved when task is saved
+                // Track deleted comments that need to be removed from database (for edit mode)
+                if (mode === 'edit' && !commentId.startsWith('temp-')) {
+                  setDeletedTaskCommentIds([...deletedTaskCommentIds, commentId]);
                 }
+                setTaskComments(taskComments.filter(c => c.project_task_comment_id !== commentId));
               }}
               isSubmitting={false}
               className="mb-6"
@@ -1501,11 +1519,11 @@ export default function TaskForm({
           isOpen={showMoveConfirmation}
           onClose={() => {
             setShowMoveConfirmation(false);
-            setSelectedPhase(phase);
+            setSelectedPhase(phase || null);
           }}
           onConfirm={handleMoveConfirm}
           title="Move Task"
-          message={`Are you sure you want to move task "${taskName}" to phase "${selectedPhase.phase_name}"?`}
+          message={`Are you sure you want to move task "${taskName}" to phase "${selectedPhase?.phase_name || 'Unknown Phase'}"?`}
           confirmLabel="Move"
           cancelLabel="Cancel"
         />

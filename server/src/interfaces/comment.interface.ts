@@ -19,3 +19,22 @@ export interface IComment extends TenantEntity {
   updated_at?: string;
   markdown_content?: string;
 }
+
+// Simplified interfaces for project comments
+export interface IProjectTaskComment extends TenantEntity {
+  project_task_comment_id?: string;
+  project_task_id: string;
+  user_id: string;
+  note: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface IProjectPhaseComment extends TenantEntity {
+  project_phase_comment_id?: string;
+  project_phase_id: string;
+  user_id: string;
+  note: string;
+  created_at?: string;
+  updated_at?: string;
+}

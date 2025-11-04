@@ -1,15 +1,15 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { IComment } from 'server/src/interfaces';
-import { PartialBlock } from '@blocknote/core';
+import { IProjectTaskComment, IProjectPhaseComment } from 'server/src/interfaces';
 import { getCurrentUser } from '../user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Get comments for a project task
  */
-export async function getTaskComments(taskId: string): Promise<IComment[]> {
+export async function getTaskComments(taskId: string): Promise<IProjectTaskComment[]> {
   const user = await getCurrentUser();
   if (!user || !user.tenant) {
     throw new Error('No authenticated user or tenant found');
@@ -17,7 +17,12 @@ export async function getTaskComments(taskId: string): Promise<IComment[]> {
 
   const { knex } = await createTenantKnex();
 
-  const comments = await knex('comments')
+  // Check permission to read project data
+  if (!await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read project comments');
+  }
+
+  const comments = await knex('project_task_comment')
     .where({
       tenant: user.tenant,
       project_task_id: taskId
@@ -30,7 +35,7 @@ export async function getTaskComments(taskId: string): Promise<IComment[]> {
 /**
  * Get comments for a project phase
  */
-export async function getPhaseComments(phaseId: string): Promise<IComment[]> {
+export async function getPhaseComments(phaseId: string): Promise<IProjectPhaseComment[]> {
   const user = await getCurrentUser();
   if (!user || !user.tenant) {
     throw new Error('No authenticated user or tenant found');
@@ -38,7 +43,12 @@ export async function getPhaseComments(phaseId: string): Promise<IComment[]> {
 
   const { knex } = await createTenantKnex();
 
-  const comments = await knex('comments')
+  // Check permission to read project data
+  if (!await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read project comments');
+  }
+
+  const comments = await knex('project_phase_comment')
     .where({
       tenant: user.tenant,
       project_phase_id: phaseId
@@ -53,10 +63,8 @@ export async function getPhaseComments(phaseId: string): Promise<IComment[]> {
  */
 export async function addTaskComment(
   taskId: string,
-  content: PartialBlock[],
-  isInternal: boolean = false,
-  isResolution: boolean = false
-): Promise<IComment> {
+  content: string
+): Promise<IProjectTaskComment> {
   const user = await getCurrentUser();
   if (!user || !user.tenant) {
     throw new Error('No authenticated user or tenant found');
@@ -64,25 +72,22 @@ export async function addTaskComment(
 
   const { knex } = await createTenantKnex();
 
-  // Convert content to markdown
-  const markdown = blocksToMarkdown(content);
+  // Check permission to update project data
+  if (!await hasPermission(user, 'project', 'update', knex)) {
+    throw new Error('Permission denied: Cannot add project comments');
+  }
 
-  const comment: IComment = {
-    comment_id: uuidv4(),
+  const comment: IProjectTaskComment = {
+    project_task_comment_id: uuidv4(),
     tenant: user.tenant,
     project_task_id: taskId,
     user_id: user.user_id,
-    author_type: 'internal',
-    note: markdown,
-    markdown_content: JSON.stringify(content),
-    is_internal: isInternal,
-    is_resolution: isResolution,
-    is_initial_description: false,
+    note: content,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 
-  const [insertedComment] = await knex('comments')
+  const [insertedComment] = await knex('project_task_comment')
     .insert(comment)
     .returning('*');
 
@@ -94,10 +99,8 @@ export async function addTaskComment(
  */
 export async function addPhaseComment(
   phaseId: string,
-  content: PartialBlock[],
-  isInternal: boolean = false,
-  isResolution: boolean = false
-): Promise<IComment> {
+  content: string
+): Promise<IProjectPhaseComment> {
   const user = await getCurrentUser();
   if (!user || !user.tenant) {
     throw new Error('No authenticated user or tenant found');
@@ -105,25 +108,22 @@ export async function addPhaseComment(
 
   const { knex } = await createTenantKnex();
 
-  // Convert content to markdown
-  const markdown = blocksToMarkdown(content);
+  // Check permission to update project data
+  if (!await hasPermission(user, 'project', 'update', knex)) {
+    throw new Error('Permission denied: Cannot add project comments');
+  }
 
-  const comment: IComment = {
-    comment_id: uuidv4(),
+  const comment: IProjectPhaseComment = {
+    project_phase_comment_id: uuidv4(),
     tenant: user.tenant,
     project_phase_id: phaseId,
     user_id: user.user_id,
-    author_type: 'internal',
-    note: markdown,
-    markdown_content: JSON.stringify(content),
-    is_internal: isInternal,
-    is_resolution: isResolution,
-    is_initial_description: false,
+    note: content,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 
-  const [insertedComment] = await knex('comments')
+  const [insertedComment] = await knex('project_phase_comment')
     .insert(comment)
     .returning('*');
 
@@ -131,12 +131,12 @@ export async function addPhaseComment(
 }
 
 /**
- * Update a comment
+ * Update a task comment
  */
-export async function updateProjectComment(
+export async function updateTaskComment(
   commentId: string,
-  updates: Partial<IComment>
-): Promise<IComment> {
+  content: string
+): Promise<IProjectTaskComment> {
   const user = await getCurrentUser();
   if (!user || !user.tenant) {
     throw new Error('No authenticated user or tenant found');
@@ -144,18 +144,20 @@ export async function updateProjectComment(
 
   const { knex } = await createTenantKnex();
 
-  // If markdown_content is being updated, also update the note field
-  if (updates.markdown_content) {
-    const content = JSON.parse(updates.markdown_content as string) as PartialBlock[];
-    updates.note = blocksToMarkdown(content);
+  // Check permission to update project data
+  if (!await hasPermission(user, 'project', 'update', knex)) {
+    throw new Error('Permission denied: Cannot update project comments');
   }
 
-  updates.updated_at = new Date().toISOString();
+  const updates = {
+    note: content,
+    updated_at: new Date().toISOString()
+  };
 
-  const [updatedComment] = await knex('comments')
+  const [updatedComment] = await knex('project_task_comment')
     .where({
       tenant: user.tenant,
-      comment_id: commentId
+      project_task_comment_id: commentId
     })
     .update(updates)
     .returning('*');
@@ -168,9 +170,12 @@ export async function updateProjectComment(
 }
 
 /**
- * Delete a comment
+ * Update a phase comment
  */
-export async function deleteProjectComment(commentId: string): Promise<void> {
+export async function updatePhaseComment(
+  commentId: string,
+  content: string
+): Promise<IProjectPhaseComment> {
   const user = await getCurrentUser();
   if (!user || !user.tenant) {
     throw new Error('No authenticated user or tenant found');
@@ -178,10 +183,51 @@ export async function deleteProjectComment(commentId: string): Promise<void> {
 
   const { knex } = await createTenantKnex();
 
-  const deletedRows = await knex('comments')
+  // Check permission to update project data
+  if (!await hasPermission(user, 'project', 'update', knex)) {
+    throw new Error('Permission denied: Cannot update project comments');
+  }
+
+  const updates = {
+    note: content,
+    updated_at: new Date().toISOString()
+  };
+
+  const [updatedComment] = await knex('project_phase_comment')
     .where({
       tenant: user.tenant,
-      comment_id: commentId
+      project_phase_comment_id: commentId
+    })
+    .update(updates)
+    .returning('*');
+
+  if (!updatedComment) {
+    throw new Error('Comment not found');
+  }
+
+  return updatedComment;
+}
+
+/**
+ * Delete a task comment
+ */
+export async function deleteTaskComment(commentId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || !user.tenant) {
+    throw new Error('No authenticated user or tenant found');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  // Check permission to update project data (deletion requires update permission)
+  if (!await hasPermission(user, 'project', 'update', knex)) {
+    throw new Error('Permission denied: Cannot delete project comments');
+  }
+
+  const deletedRows = await knex('project_task_comment')
+    .where({
+      tenant: user.tenant,
+      project_task_comment_id: commentId
     })
     .delete();
 
@@ -191,55 +237,9 @@ export async function deleteProjectComment(commentId: string): Promise<void> {
 }
 
 /**
- * Helper function to convert block content to markdown
+ * Delete a phase comment
  */
-function blocksToMarkdown(blocks: PartialBlock[]): string {
-  // Simple conversion - you may want to enhance this based on your needs
-  let markdown = '';
-
-  for (const block of blocks) {
-    if (block.type === 'paragraph' && block.content) {
-      for (const content of block.content as any[]) {
-        if (content.type === 'text') {
-          markdown += content.text || '';
-        }
-      }
-      markdown += '\n\n';
-    } else if (block.type === 'heading' && block.content) {
-      const level = (block.props as any)?.level || 1;
-      markdown += '#'.repeat(level) + ' ';
-      for (const content of block.content as any[]) {
-        if (content.type === 'text') {
-          markdown += content.text || '';
-        }
-      }
-      markdown += '\n\n';
-    } else if (block.type === 'bulletListItem' && block.content) {
-      markdown += '- ';
-      for (const content of block.content as any[]) {
-        if (content.type === 'text') {
-          markdown += content.text || '';
-        }
-      }
-      markdown += '\n';
-    } else if (block.type === 'numberedListItem' && block.content) {
-      markdown += '1. ';
-      for (const content of block.content as any[]) {
-        if (content.type === 'text') {
-          markdown += content.text || '';
-        }
-      }
-      markdown += '\n';
-    }
-  }
-
-  return markdown.trim();
-}
-
-/**
- * Get user map for comments
- */
-export async function getCommentUserMap(comments: IComment[]): Promise<Record<string, any>> {
+export async function deletePhaseComment(commentId: string): Promise<void> {
   const user = await getCurrentUser();
   if (!user || !user.tenant) {
     throw new Error('No authenticated user or tenant found');
@@ -247,7 +247,40 @@ export async function getCommentUserMap(comments: IComment[]): Promise<Record<st
 
   const { knex } = await createTenantKnex();
 
-  const userIds = [...new Set(comments.map(c => c.user_id).filter(Boolean))];
+  // Check permission to update project data (deletion requires update permission)
+  if (!await hasPermission(user, 'project', 'update', knex)) {
+    throw new Error('Permission denied: Cannot delete project comments');
+  }
+
+  const deletedRows = await knex('project_phase_comment')
+    .where({
+      tenant: user.tenant,
+      project_phase_comment_id: commentId
+    })
+    .delete();
+
+  if (deletedRows === 0) {
+    throw new Error('Comment not found');
+  }
+}
+
+/**
+ * Get user map for comments
+ */
+export async function getCommentUserMap(comments: (IProjectTaskComment | IProjectPhaseComment)[]): Promise<Record<string, any>> {
+  const user = await getCurrentUser();
+  if (!user || !user.tenant) {
+    throw new Error('No authenticated user or tenant found');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  // Check permission to read project data
+  if (!await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read user data');
+  }
+
+  const userIds = [...new Set(comments.map(c => c.user_id).filter(Boolean))] as string[];
 
   if (userIds.length === 0) {
     return {};

@@ -22,10 +22,9 @@ const createRedisClient = async () => {
   if (!password) {
     logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
   }
-  
-  const client = createClient({
+
+  const clientConfig: any = {
     url: config.url,
-    password,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
@@ -37,7 +36,14 @@ const createRedisClient = async () => {
         );
       }
     }
-  });
+  };
+
+  // Only set password if it's a non-empty string
+  if (password && password.trim()) {
+    clientConfig.password = password;
+  }
+
+  const client = createClient(clientConfig);
 
   client.on('error', (err) => {
     logger.error('Redis Client Error:', err);

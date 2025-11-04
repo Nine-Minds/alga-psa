@@ -2,7 +2,7 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
-import { IComment } from 'server/src/interfaces';
+import { IProjectPhaseComment } from 'server/src/interfaces';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -34,9 +34,10 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [phaseComments, setPhaseComments] = useState<IComment[]>([]);
+  const [phaseComments, setPhaseComments] = useState<IProjectPhaseComment[]>([]);
   const [commentUserMap, setCommentUserMap] = useState<Record<string, any>>({});
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [tempPhaseId] = useState<string>(`temp-phase-${Date.now()}`);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
         const user = await getCurrentUser();
         if (user) {
           setCurrentUserId(user.user_id);
+          setCurrentUser(user);
         }
       } catch (error) {
         console.error('Error loading current user:', error);
@@ -58,6 +60,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
     setHasAttemptedSubmit(true);
     if (phaseName.trim() === '') return;
 
+    console.log('PhaseQuickAdd handleSubmit started');
     setIsSubmitting(true);
 
     try {
@@ -76,30 +79,29 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
 
       // Save any comments that were added during creation
       if (phaseComments.length > 0) {
+        console.log('Processing phase comments - count:', phaseComments.length);
         try {
           for (const comment of phaseComments) {
-            if (comment.markdown_content) {
-              const content = JSON.parse(comment.markdown_content);
-              await addPhaseComment(
-                newPhase.phase_id,
-                content,
-                comment.is_internal || false,
-                comment.is_resolution || false
-              );
+            if (comment.note) {
+              console.log('Adding phase comment:', comment.project_phase_comment_id);
+              await addPhaseComment(newPhase.phase_id, comment.note);
             }
           }
+          console.log('Phase comment processing completed');
         } catch (error) {
           console.error('Error saving comments:', error);
           toast.error('Phase created but failed to save comments');
         }
       }
 
+      console.log('Calling onPhaseAdded and onClose');
       onPhaseAdded(newPhase);
       onClose();
     } catch (error) {
       console.error('Error adding phase:', error);
       toast.error('Failed to add phase. Please try again.');
     } finally {
+      console.log('PhaseQuickAdd finally block - setting isSubmitting to false');
       setIsSubmitting(false);
     }
   };
@@ -170,20 +172,20 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                   phaseId={tempPhaseId}
                   comments={phaseComments}
                   userMap={commentUserMap}
-                  currentUser={{ id: currentUserId, name: null, email: null, avatarUrl: null }}
-                  onAddComment={async (content, isInternal, isResolution) => {
+                  currentUser={{
+                    id: currentUserId,
+                    name: currentUser ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() : null,
+                    email: currentUser?.email || null,
+                    avatarUrl: null
+                  }}
+                  onAddComment={async (content) => {
                     // For create mode, just add to local state - will be saved when phase is created
                     const newComment = {
-                      comment_id: `temp-${Date.now()}`,
+                      project_phase_comment_id: `temp-${Date.now()}`,
                       tenant: '',
                       project_phase_id: tempPhaseId,
                       user_id: currentUserId,
-                      author_type: 'internal' as const,
-                      note: '',
-                      markdown_content: JSON.stringify(content),
-                      is_internal: isInternal,
-                      is_resolution: isResolution,
-                      is_initial_description: false,
+                      note: content,
                       created_at: new Date().toISOString(),
                       updated_at: new Date().toISOString()
                     };
@@ -193,12 +195,12 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                   onEditComment={async (commentId, updates) => {
                     // For create mode, update local state
                     setPhaseComments(phaseComments.map(c =>
-                      c.comment_id === commentId ? { ...c, ...updates } : c
+                      c.project_phase_comment_id === commentId ? { ...c, note: updates } : c
                     ));
                   }}
                   onDeleteComment={async (commentId) => {
                     // For create mode, remove from local state
-                    setPhaseComments(phaseComments.filter(c => c.comment_id !== commentId));
+                    setPhaseComments(phaseComments.filter(c => c.project_phase_comment_id !== commentId));
                   }}
                   isSubmitting={false}
                   className="mb-6"
