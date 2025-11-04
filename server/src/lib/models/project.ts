@@ -788,8 +788,28 @@ const ProjectModel = {
       
       try {
         // First, delete all checklist items for tasks in this phase
-        await trx('task_checklist_items')        
-          .whereIn('task_id', 
+        await trx('task_checklist_items')
+          .whereIn('task_id',
+            trx('project_tasks')
+              .select('task_id')
+              .where('phase_id', phaseId)
+          )
+          .andWhere('tenant', tenant)
+          .del();
+
+        // Delete task resources for tasks in this phase
+        await trx('task_resources')
+          .whereIn('task_id',
+            trx('project_tasks')
+              .select('task_id')
+              .where('phase_id', phaseId)
+          )
+          .andWhere('tenant', tenant)
+          .del();
+
+        // Delete task comments for tasks in this phase
+        await trx('project_task_comment')
+          .whereIn('project_task_id',
             trx('project_tasks')
               .select('task_id')
               .where('phase_id', phaseId)
