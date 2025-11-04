@@ -2,7 +2,6 @@
 
 import type { ElementType } from 'react';
 import {
-  Activity,
   AlertTriangle,
   BarChart3,
   Bell,
@@ -19,6 +18,7 @@ import {
   Layout,
   LayoutDashboard,
   MapPin,
+  MessageSquare,
   Monitor,
   PlusCircle,
   Rocket,
@@ -74,7 +74,7 @@ export const navigationSections: NavigationSection[] = [
     items: [
       {
         name: 'Tickets',
-        icon: Activity,
+        icon: MessageSquare,
         href: '/msp/tickets'
       },
       {
