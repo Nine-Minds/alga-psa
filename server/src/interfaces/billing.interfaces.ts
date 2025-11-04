@@ -195,19 +195,16 @@ export interface IContractLine extends TenantEntity {
   is_custom: boolean;
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
-  // Add potentially existing hourly fields (to be deprecated for Hourly type)
-  hourly_rate?: number | null;
-  minimum_billable_time?: number | null;
-  round_up_to_nearest?: number | null;
-  // Add other contract line-wide fields that might exist (like overtime, etc.)
+  // Hourly contract line fields (contract-line-level, same for all services)
+  hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
+  minimum_billable_time?: number | null; // Minimum time to bill for hourly services
+  round_up_to_nearest?: number | null; // Round up time entries to nearest X minutes
+  // Other contract line-wide fields
   enable_overtime?: boolean | null;
   overtime_rate?: number | null;
-  overtime_threshold?: number | null; // Assuming threshold is numeric
+  overtime_threshold?: number | null;
   enable_after_hours_rate?: boolean | null;
   after_hours_multiplier?: number | null;
-  // user_type_rates might be handled differently (e.g., separate table/JSON)
-  // If it's a JSONB column in contract_lines, it could be:
-  // user_type_rates?: Record<string, number> | null;
 }
 
 /**

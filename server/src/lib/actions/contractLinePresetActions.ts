@@ -382,12 +382,30 @@ export async function copyPresetToContractLine(
             });
 
             // 2. Create the contract line
+            // Use override if provided, otherwise use preset value, otherwise use default
+            const minBillableTime = overrides?.minimum_billable_time !== undefined
+                ? overrides.minimum_billable_time
+                : preset.minimum_billable_time !== undefined && preset.minimum_billable_time !== null
+                    ? preset.minimum_billable_time
+                    : 15;
+
+            const roundUpToNearest = overrides?.round_up_to_nearest !== undefined
+                ? overrides.round_up_to_nearest
+                : preset.round_up_to_nearest !== undefined && preset.round_up_to_nearest !== null
+                    ? preset.round_up_to_nearest
+                    : 15;
+
             const contractLineData: Omit<IContractLine, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'> = {
                 contract_line_name: preset.preset_name,
                 contract_line_type: preset.contract_line_type,
                 billing_frequency: preset.billing_frequency,
                 service_category: undefined, // Presets don't have service_category
                 is_custom: false, // Contract lines created from presets are not custom
+                // Add hourly-specific fields if this is an hourly contract line
+                ...(preset.contract_line_type === 'Hourly' ? {
+                    minimum_billable_time: minBillableTime,
+                    round_up_to_nearest: roundUpToNearest,
+                } : {}),
             };
 
             const contractLine = await ContractLine.create(trx, contractLineData);

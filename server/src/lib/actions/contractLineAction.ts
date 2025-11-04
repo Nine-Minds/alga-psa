@@ -152,16 +152,12 @@ export async function updateContractLine(
             }
 
             // Remove tenant field if present in updateData to prevent override
-            // Use Object.assign to create a mutable copy if needed, or rely on delete below
             const { tenant: _, ...safeUpdateData } = updateData;
 
-            // If the plan is hourly, remove the per-service fields from the update data
+            // If the plan is hourly, remove only the per-service hourly_rate field
+            // minimum_billable_time and round_up_to_nearest are now contract-line-level
             if (existingPlan.contract_line_type === 'Hourly') {
                 delete safeUpdateData.hourly_rate;
-                delete safeUpdateData.minimum_billable_time;
-                delete safeUpdateData.round_up_to_nearest;
-                // Optional: Log that fields were removed for debugging
-                // console.log(`Hourly plan update: Removed per-service fields for plan ${planId}`);
             }
 
             // Proceed with the update using the potentially modified data

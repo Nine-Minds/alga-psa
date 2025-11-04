@@ -563,6 +563,8 @@ export async function createContractTemplateFromWizard(
         service_category: null as any,
         contract_line_type: 'Hourly',
         is_template: true,
+        minimum_billable_time: submission.minimum_billable_time ?? 15,
+        round_up_to_nearest: submission.round_up_to_nearest ?? 15,
       } as any);
       const hourlyPlanId = createdHourlyLine.contract_line_id!;
       createdContractLineIds.push(hourlyPlanId);
@@ -831,6 +833,8 @@ export async function createClientContractFromWizard(
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
+        minimum_billable_time: submission.minimum_billable_time ?? 15,
+        round_up_to_nearest: submission.round_up_to_nearest ?? 15,
       } as any);
       const hourlyPlanId = createdHourlyLine.contract_line_id!;
       createdContractLineIds.push(hourlyPlanId);

@@ -573,7 +573,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                       />
                                     ) : (
                                       <p className="mt-1 text-sm text-gray-800">
-                                        {line.minimum_billable_time || 0} minutes
+                                        {line.minimum_billable_time || 15} minutes
                                       </p>
                                     )}
                                   </div>
@@ -596,7 +596,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                       />
                                     ) : (
                                       <p className="mt-1 text-sm text-gray-800">
-                                        {line.round_up_to_nearest || 0} minutes
+                                        {line.round_up_to_nearest || 15} minutes
                                       </p>
                                     )}
                                   </div>

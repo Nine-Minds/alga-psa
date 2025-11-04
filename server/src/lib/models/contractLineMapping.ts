@@ -328,14 +328,6 @@ const ContractLineMapping = {
           this.on('cl.contract_line_id', '=', 'fc.contract_line_id')
               .andOn('cl.tenant', '=', 'fc.tenant');
         })
-        .leftJoin('contract_line_service_configuration as clsc', function() {
-          this.on('cl.contract_line_id', '=', 'clsc.contract_line_id')
-              .andOn('cl.tenant', '=', 'clsc.tenant');
-        })
-        .leftJoin('contract_line_service_hourly_configs as clshc', function() {
-          this.on('clsc.config_id', '=', 'clshc.config_id')
-              .andOn('clsc.tenant', '=', 'clshc.tenant');
-        })
         .where({
           'clm.contract_id': contractId,
           'clm.tenant': tenant
@@ -346,23 +338,11 @@ const ContractLineMapping = {
           'cl.billing_frequency',
           'cl.is_custom',
           'cl.contract_line_type',
-          'fc.base_rate as default_rate',
-          db.raw('MAX(clshc.minimum_billable_time) as minimum_billable_time'),
-          db.raw('MAX(clshc.round_up_to_nearest) as round_up_to_nearest')
+          'cl.minimum_billable_time',
+          'cl.round_up_to_nearest',
+          'fc.base_rate as default_rate'
         )
-        .groupBy(
-          'clm.tenant',
-          'clm.contract_id',
-          'clm.contract_line_id',
-          'clm.display_order',
-          'clm.custom_rate',
-          'clm.created_at',
-          'cl.contract_line_name',
-          'cl.billing_frequency',
-          'cl.is_custom',
-          'cl.contract_line_type',
-          'fc.base_rate'
-        );
+        .orderBy('clm.display_order', 'asc');
     } catch (error) {
       console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);
       throw error;

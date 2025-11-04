@@ -392,6 +392,8 @@ export async function getDetailedContractLines(contractId: string): Promise<any[
           'lines.billing_frequency',
           'base.is_custom',
           'lines.line_type as contract_line_type',
+          'lines.minimum_billable_time',
+          'lines.round_up_to_nearest',
           'tfc.base_rate as default_rate',
         ]);
 
