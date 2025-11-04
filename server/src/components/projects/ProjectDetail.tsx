@@ -637,12 +637,6 @@ export default function ProjectDetail({
     setPhaseDropTarget(null);
     setTaskDraggingOverPhaseId(null); // Clear highlight on drop
     
-    // Debug logging
-      targetPhase: targetPhase.phase_name,
-      beforePhaseId,
-      afterPhaseId,
-      dataTransferTypes: e.dataTransfer.types
-    });
     
     // Check if it's a phase being dropped
     const dropData = e.dataTransfer.getData('application/json');

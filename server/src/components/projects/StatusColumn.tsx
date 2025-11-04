@@ -230,20 +230,9 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       }
     }
     
-    // Log the actual order keys for debugging
+    // Find task references for validation
     const beforeTask = beforeTaskId ? tasks.find(t => t.task_id === beforeTaskId) : null;
     const afterTask = afterTaskId ? tasks.find(t => t.task_id === afterTaskId) : null;
-      beforeTaskId, 
-      beforeKey: beforeTask?.order_key,
-      afterTaskId, 
-      afterKey: afterTask?.order_key,
-      draggedTaskId,
-      draggedTaskKey: draggedTask?.order_key,
-      targetStatusId: status.project_status_mapping_id,
-      isDraggedTaskInSameStatus: sortedTasks.some(t => t.task_id === draggedTaskId),
-      sortedTasksCount: sortedTasks.length,
-      dropTargetElement: taskElement?.getAttribute('data-task-id')
-    });
     
     // Validate that we don't have the same key for before and after
     if (beforeTask && afterTask && beforeTask.order_key === afterTask.order_key) {

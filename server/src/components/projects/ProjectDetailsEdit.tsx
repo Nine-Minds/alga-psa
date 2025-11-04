@@ -42,10 +42,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   
   // Debug logs
   useEffect(() => {
-      initialProject,
-      clientsLength: clients?.length,
-      clients
-    });
+    // Component mounted with initial project data
   }, [initialProject, clients]);
 
   const [project, setProject] = useState<IProject>(initialProject);
