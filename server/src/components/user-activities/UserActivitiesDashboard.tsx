@@ -6,15 +6,17 @@ import { ScheduleSection } from './ScheduleSection';
 import { TicketsSection } from './TicketsSection';
 import { ProjectsSection } from './ProjectsSection';
 import { WorkflowTasksSection } from './WorkflowTasksSection';
+import { NotificationsSection } from './NotificationsSection';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
 import { Button } from '../ui/Button';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
 import { ActivityFilters as ActivityFiltersType, ActivityType } from 'server/src/interfaces/activity.interfaces';
 import { CustomTabs } from '../ui/CustomTabs';
 import { DrawerProvider } from 'server/src/context/DrawerContext';
 import { ActivityDrawerProvider } from './ActivityDrawerProvider';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import { Card, CardHeader } from '../ui/Card';
 
 export function UserActivitiesDashboard() {
   // Define view mode type
@@ -39,6 +41,19 @@ export function UserActivitiesDashboard() {
   
   const [tableInitialFilters, setTableInitialFilters] = useState<ActivityFiltersType | null>(null); // State for specific filters
 
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState({
+    notifications: true,
+    schedule: true,
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   // Generic handler for "View All" clicks
   const handleViewAll = (types: ActivityType[]) => {
     const filters: ActivityFiltersType = { types, isClosed: false };
@@ -51,6 +66,7 @@ export function UserActivitiesDashboard() {
   const handleViewAllProjects = () => handleViewAll([ActivityType.PROJECT_TASK]);
   const handleViewAllTickets = () => handleViewAll([ActivityType.TICKET]);
   const handleViewAllWorkflowTasks = () => handleViewAll([ActivityType.WORKFLOW_TASK]);
+  const handleViewAllNotifications = () => handleViewAll([ActivityType.NOTIFICATION]);
 
 
   // Determine the filters to apply to the table
@@ -71,34 +87,77 @@ export function UserActivitiesDashboard() {
 
   // Card view content - Defined before use and memoized to prevent unnecessary re-renders
   const cardViewContent = useMemo(() => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Schedule Section */}
-      <ScheduleSection
-        limit={5}
-        onViewAll={handleViewAllSchedule}
-      />
+    <div className="space-y-6">
+      {/* Notifications Section - Full width at top with collapsible card wrapper */}
+      <Card>
+        <CardHeader
+          className="cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => toggleSection('notifications')}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Notifications</h2>
+            {expandedSections.notifications ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </CardHeader>
+        {expandedSections.notifications && (
+          <NotificationsSection
+            limit={5}
+            onViewAll={handleViewAllNotifications}
+          />
+        )}
+      </Card>
 
-      {/* Tickets Section */}
-      <TicketsSection
-        limit={5}
-        onViewAll={handleViewAllTickets}
-      />
+      {/* Schedule Section - Full width with collapsible card wrapper */}
+      <Card>
+        <CardHeader
+          className="cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => toggleSection('schedule')}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Schedule</h2>
+            {expandedSections.schedule ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </CardHeader>
+        {expandedSections.schedule && (
+          <ScheduleSection
+            limit={5}
+            onViewAll={handleViewAllSchedule}
+          />
+        )}
+      </Card>
 
-      {/* Projects Section */}
-      <ProjectsSection
-        limit={5}
-        onViewAll={handleViewAllProjects}
-      />
-
-      {/* Workflow Tasks Section - Only show if advanced features are enabled */}
-      {isAdvancedFeaturesEnabled && (
-        <WorkflowTasksSection
+      {/* Other sections in 2-column grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Tickets Section */}
+        <TicketsSection
           limit={5}
-          onViewAll={handleViewAllWorkflowTasks}
+          onViewAll={handleViewAllTickets}
         />
-      )}
+
+        {/* Projects Section */}
+        <ProjectsSection
+          limit={5}
+          onViewAll={handleViewAllProjects}
+        />
+
+        {/* Workflow Tasks Section - Only show if advanced features are enabled */}
+        {isAdvancedFeaturesEnabled && (
+          <WorkflowTasksSection
+            limit={5}
+            onViewAll={handleViewAllWorkflowTasks}
+          />
+        )}
+      </div>
     </div>
-  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllWorkflowTasks, isAdvancedFeaturesEnabled]
+  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllNotifications, handleViewAllWorkflowTasks, isAdvancedFeaturesEnabled, expandedSections.notifications, expandedSections.schedule]
   );
 
   // Define options for the ViewSwitcher with explicit type

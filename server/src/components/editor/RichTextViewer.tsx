@@ -5,8 +5,21 @@ import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
-import { PartialBlock } from '@blocknote/core';
+import {
+  PartialBlock,
+  BlockNoteSchema,
+  defaultInlineContentSpecs,
+} from '@blocknote/core';
+import { Mention } from './Mention';
 import styles from '../tickets/ticket/TicketDetails.module.css';
+
+// Create custom schema with mention support (same as TextEditor)
+const schema = BlockNoteSchema.create({
+  inlineContentSpecs: {
+    ...defaultInlineContentSpecs,
+    mention: Mention,
+  },
+});
 
 interface RichTextViewerProps {
   id?: string;
@@ -141,8 +154,9 @@ export default function RichTextViewer({
     prevContentKey.current = contentKey;
   }, [contentKey]);
 
-  // Create the editor at the top level with the parsed content
+  // Create the editor at the top level with the parsed content and custom schema
   const editor = useCreateBlockNote({
+    schema,
     initialContent: parsedContent,
     domAttributes: {
       editor: {

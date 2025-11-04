@@ -24,11 +24,16 @@ exports.up = async function(knex) {
     'ticket-updated-client': 'ticket-updated',
     'ticket-closed-client': 'ticket-closed',
     'ticket-comment-added-client': 'ticket-comment-added',
-    'message-sent': 'message-sent'
+    'message-sent': 'message-sent',
+    'user-mentioned-in-comment': 'user-mentioned'
   };
 
   const translations = {
     fr: {
+      'ticket-assigned': {
+        title: 'Ticket assigné',
+        message: 'Le ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) vous a été assigné par {{performedByName}}'
+      },
       'ticket-created-client': {
         title: 'Votre ticket d\'assistance a été créé',
         message: 'Votre ticket #{{ticketId}} "{{ticketTitle}}" a été créé et notre équipe vous répondra bientôt'
@@ -43,7 +48,7 @@ exports.up = async function(knex) {
       },
       'ticket-comment-added-client': {
         title: 'Nouveau commentaire sur votre ticket',
-        message: '{{authorName}} a ajouté un commentaire à votre ticket #{{ticketId}}'
+        message: '{{authorName}} a commenté votre ticket #{{ticketId}}: "{{commentPreview}}"'
       },
       'message-sent': {
         title: 'Nouveau message',
@@ -60,9 +65,29 @@ exports.up = async function(knex) {
       'payment-overdue': {
         title: 'Paiement en retard',
         message: 'La facture #{{invoiceNumber}} est en retard de {{daysOverdue}} jours'
+      },
+      'user-mentioned-in-comment': {
+        title: 'Vous avez été mentionné dans un commentaire',
+        message: '{{commentAuthor}} vous a mentionné dans le ticket #{{ticketNumber}}: {{commentPreview}}'
+      },
+      'ticket-status-changed': {
+        title: 'Statut du ticket modifié',
+        message: 'Statut du ticket #{{ticketId}} "{{ticketTitle}}" modifié: {{oldStatus}} → {{newStatus}} par {{performedByName}}'
+      },
+      'ticket-priority-changed': {
+        title: 'Priorité du ticket modifiée',
+        message: 'Priorité du ticket #{{ticketId}} "{{ticketTitle}}" modifiée: {{oldPriority}} → {{newPriority}} par {{performedByName}}'
+      },
+      'ticket-reassigned': {
+        title: 'Ticket réassigné',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" réassigné: {{oldAssignedTo}} → {{newAssignedTo}} par {{performedByName}}'
       }
     },
     es: {
+      'ticket-assigned': {
+        title: 'Ticket asignado',
+        message: 'El ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) le ha sido asignado por {{performedByName}}'
+      },
       'ticket-created-client': {
         title: 'Su ticket de soporte ha sido creado',
         message: 'Su ticket #{{ticketId}} "{{ticketTitle}}" ha sido creado y nuestro equipo responderá pronto'
@@ -77,7 +102,7 @@ exports.up = async function(knex) {
       },
       'ticket-comment-added-client': {
         title: 'Nuevo comentario en su ticket',
-        message: '{{authorName}} agregó un comentario a su ticket #{{ticketId}}'
+        message: '{{authorName}} comentó su ticket #{{ticketId}}: "{{commentPreview}}"'
       },
       'message-sent': {
         title: 'Nuevo mensaje',
@@ -94,9 +119,29 @@ exports.up = async function(knex) {
       'payment-overdue': {
         title: 'Pago vencido',
         message: 'La factura #{{invoiceNumber}} está vencida desde hace {{daysOverdue}} días'
+      },
+      'user-mentioned-in-comment': {
+        title: 'Te mencionaron en un comentario',
+        message: '{{commentAuthor}} te mencionó en el ticket #{{ticketNumber}}: {{commentPreview}}'
+      },
+      'ticket-status-changed': {
+        title: 'Estado del ticket cambiado',
+        message: 'Estado del ticket #{{ticketId}} "{{ticketTitle}}" cambiado: {{oldStatus}} → {{newStatus}} por {{performedByName}}'
+      },
+      'ticket-priority-changed': {
+        title: 'Prioridad del ticket cambiada',
+        message: 'Prioridad del ticket #{{ticketId}} "{{ticketTitle}}" cambiada: {{oldPriority}} → {{newPriority}} por {{performedByName}}'
+      },
+      'ticket-reassigned': {
+        title: 'Ticket reasignado',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" reasignado: {{oldAssignedTo}} → {{newAssignedTo}} por {{performedByName}}'
       }
     },
     de: {
+      'ticket-assigned': {
+        title: 'Ticket zugewiesen',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) wurde Ihnen von {{performedByName}} zugewiesen'
+      },
       'ticket-created-client': {
         title: 'Ihr Support-Ticket wurde erstellt',
         message: 'Ihr Ticket #{{ticketId}} "{{ticketTitle}}" wurde erstellt und unser Team wird sich in Kürze bei Ihnen melden'
@@ -111,7 +156,7 @@ exports.up = async function(knex) {
       },
       'ticket-comment-added-client': {
         title: 'Neuer Kommentar zu Ihrem Ticket',
-        message: '{{authorName}} hat einen Kommentar zu Ihrem Ticket #{{ticketId}} hinzugefügt'
+        message: '{{authorName}} hat Ihr Ticket #{{ticketId}} kommentiert: "{{commentPreview}}"'
       },
       'message-sent': {
         title: 'Neue Nachricht',
@@ -128,9 +173,29 @@ exports.up = async function(knex) {
       'payment-overdue': {
         title: 'Zahlung überfällig',
         message: 'Rechnung #{{invoiceNumber}} ist {{daysOverdue}} Tage überfällig'
+      },
+      'user-mentioned-in-comment': {
+        title: 'Sie wurden in einem Kommentar erwähnt',
+        message: '{{commentAuthor}} hat Sie im Ticket #{{ticketNumber}} erwähnt: {{commentPreview}}'
+      },
+      'ticket-status-changed': {
+        title: 'Ticket-Status geändert',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" Status geändert: {{oldStatus}} → {{newStatus}} von {{performedByName}}'
+      },
+      'ticket-priority-changed': {
+        title: 'Ticket-Priorität geändert',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" Priorität geändert: {{oldPriority}} → {{newPriority}} von {{performedByName}}'
+      },
+      'ticket-reassigned': {
+        title: 'Ticket neu zugewiesen',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" neu zugewiesen: {{oldAssignedTo}} → {{newAssignedTo}} von {{performedByName}}'
       }
     },
     nl: {
+      'ticket-assigned': {
+        title: 'Ticket toegewezen',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) is aan u toegewezen door {{performedByName}}'
+      },
       'ticket-created-client': {
         title: 'Uw supportticket is aangemaakt',
         message: 'Uw ticket #{{ticketId}} "{{ticketTitle}}" is aangemaakt en ons team reageert spoedig'
@@ -145,7 +210,7 @@ exports.up = async function(knex) {
       },
       'ticket-comment-added-client': {
         title: 'Nieuwe opmerking bij uw ticket',
-        message: '{{authorName}} heeft een opmerking toegevoegd aan uw ticket #{{ticketId}}'
+        message: '{{authorName}} heeft commentaar gegeven op uw ticket #{{ticketId}}: "{{commentPreview}}"'
       },
       'message-sent': {
         title: 'Nieuw bericht',
@@ -162,9 +227,29 @@ exports.up = async function(knex) {
       'payment-overdue': {
         title: 'Betaling achterstallig',
         message: 'Factuur #{{invoiceNumber}} is {{daysOverdue}} dagen achterstallig'
+      },
+      'user-mentioned-in-comment': {
+        title: 'U bent genoemd in een opmerking',
+        message: '{{commentAuthor}} heeft u genoemd in ticket #{{ticketNumber}}: {{commentPreview}}'
+      },
+      'ticket-status-changed': {
+        title: 'Ticket status gewijzigd',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" status gewijzigd: {{oldStatus}} → {{newStatus}} door {{performedByName}}'
+      },
+      'ticket-priority-changed': {
+        title: 'Ticket prioriteit gewijzigd',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" prioriteit gewijzigd: {{oldPriority}} → {{newPriority}} door {{performedByName}}'
+      },
+      'ticket-reassigned': {
+        title: 'Ticket opnieuw toegewezen',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" opnieuw toegewezen: {{oldAssignedTo}} → {{newAssignedTo}} door {{performedByName}}'
       }
     },
     it: {
+      'ticket-assigned': {
+        title: 'Ticket assegnato',
+        message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) le è stato assegnato da {{performedByName}}'
+      },
       'ticket-created-client': {
         title: 'Il suo ticket di supporto è stato creato',
         message: 'Il suo ticket #{{ticketId}} "{{ticketTitle}}" è stato creato e il nostro team risponderà a breve'
@@ -179,7 +264,7 @@ exports.up = async function(knex) {
       },
       'ticket-comment-added-client': {
         title: 'Nuovo commento sul suo ticket',
-        message: '{{authorName}} ha aggiunto un commento al suo ticket #{{ticketId}}'
+        message: '{{authorName}} ha commentato il suo ticket #{{ticketId}}: "{{commentPreview}}"'
       },
       'message-sent': {
         title: 'Nuovo messaggio',
@@ -196,6 +281,22 @@ exports.up = async function(knex) {
       'payment-overdue': {
         title: 'Pagamento scaduto',
         message: 'La fattura #{{invoiceNumber}} è scaduta da {{daysOverdue}} giorni'
+      },
+      'user-mentioned-in-comment': {
+        title: 'Sei stato menzionato in un commento',
+        message: '{{commentAuthor}} ti ha menzionato nel ticket #{{ticketNumber}}: {{commentPreview}}'
+      },
+      'ticket-status-changed': {
+        title: 'Stato del ticket modificato',
+        message: 'Stato del ticket #{{ticketId}} "{{ticketTitle}}" modificato: {{oldStatus}} → {{newStatus}} da {{performedByName}}'
+      },
+      'ticket-priority-changed': {
+        title: 'Priorità del ticket modificata',
+        message: 'Priorità del ticket #{{ticketId}} "{{ticketTitle}}" modificata: {{oldPriority}} → {{newPriority}} da {{performedByName}}'
+      },
+      'ticket-reassigned': {
+        title: 'Ticket riassegnato',
+        message: 'Ticket #{{ticketId}} "{{ticketTitle}}" riassegnato: {{oldAssignedTo}} → {{newAssignedTo}} da {{performedByName}}'
       }
     }
   };

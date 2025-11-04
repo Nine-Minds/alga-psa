@@ -13,7 +13,8 @@ export enum ActivityType {
   PROJECT_TASK = 'projectTask',
   TICKET = 'ticket',
   TIME_ENTRY = 'timeEntry',
-  WORKFLOW_TASK = 'workflowTask'
+  WORKFLOW_TASK = 'workflowTask',
+  NOTIFICATION = 'notification'
 }
 
 /**
@@ -133,14 +134,29 @@ export interface WorkflowTaskActivity extends ActivityBase {
 }
 
 /**
+ * Notification-specific activity interface
+ */
+export interface NotificationActivity extends ActivityBase {
+  sourceType: ActivityType.NOTIFICATION;
+  notificationId: number;
+  templateName: string;
+  message: string;
+  isRead: boolean;
+  readAt?: ISO8601String;
+  link?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
  * Union type for all activity types
  */
-export type Activity = 
+export type Activity =
   | ScheduleActivity
   | ProjectTaskActivity
   | TicketActivity
   | TimeEntryActivity
-  | WorkflowTaskActivity;
+  | WorkflowTaskActivity
+  | NotificationActivity;
 
 /**
  * Filters for querying activities

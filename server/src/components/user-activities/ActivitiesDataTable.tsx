@@ -3,7 +3,8 @@ import {
   Activity,
   ActivityType,
   ActivityPriority,
-  ScheduleActivity
+  ScheduleActivity,
+  NotificationActivity
 } from '../../interfaces/activity.interfaces';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { DataTable } from '../ui/DataTable';
@@ -11,7 +12,7 @@ import { ColumnDefinition } from '../../interfaces/dataTable.interfaces';
 import { Badge } from '../ui/Badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ActivityActionMenu } from './ActivityActionMenu';
-import { AlertTriangle, Calendar, Briefcase, TicketIcon, Clock, ListChecks, Repeat } from 'lucide-react';
+import { AlertTriangle, Calendar, Briefcase, TicketIcon, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
 
 interface ActivitiesDataTableProps {
   activities: Activity[];
@@ -55,6 +56,8 @@ const getActivityTypeIcon = (type: ActivityType) => {
       return <Clock className="h-4 w-4 text-orange-500" />;
     case ActivityType.WORKFLOW_TASK:
       return <ListChecks className="h-4 w-4 text-red-500" />;
+    case ActivityType.NOTIFICATION:
+      return <Bell className="h-4 w-4 text-indigo-500" />;
     default:
       return null;
   }
@@ -87,6 +90,8 @@ const getActivityTypeLabel = (type: ActivityType) => {
       return 'Time Entry';
     case ActivityType.WORKFLOW_TASK:
       return 'Workflow Task';
+    case ActivityType.NOTIFICATION:
+      return 'Notification';
     default:
       return 'Unknown';
   }
@@ -130,6 +135,9 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
              <span title="Recurring Event">
                <Repeat className="h-4 w-4 text-gray-500 flex-shrink-0" />
              </span>
+          )}
+          {record.type === ActivityType.NOTIFICATION && !(record as NotificationActivity).isRead && (
+            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" title="Unread" />
           )}
           {record.priority === ActivityPriority.HIGH && (
             <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 ml-1" />
