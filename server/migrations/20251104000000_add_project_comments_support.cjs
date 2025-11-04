@@ -15,6 +15,11 @@ exports.up = async function(knex) {
 
     // Set composite primary key with tenant and project_task_comment_id
     table.primary(['tenant', 'project_task_comment_id']);
+
+    // Add indexes for performance
+    table.index(['tenant', 'project_task_id'], 'idx_project_task_comment_task');
+    table.index(['tenant', 'user_id'], 'idx_project_task_comment_user');
+    table.index(['tenant', 'created_at'], 'idx_project_task_comment_created');
   });
 
   // Create project_phase_comment table
@@ -29,21 +34,8 @@ exports.up = async function(knex) {
 
     // Set composite primary key with tenant and project_phase_comment_id
     table.primary(['tenant', 'project_phase_comment_id']);
-  });
 
-  // Create distributed tables for CitusDB multi-tenant support
-  // Colocate with projects table for efficient joins
-  await knex.raw("SELECT create_distributed_table('project_task_comment', 'tenant', colocate_with => 'projects')");
-  await knex.raw("SELECT create_distributed_table('project_phase_comment', 'tenant', colocate_with => 'projects')");
-
-  // Add indexes for performance - must be created after distribution to exist on all shards
-  await knex.schema.alterTable('project_task_comment', (table) => {
-    table.index(['tenant', 'project_task_id'], 'idx_project_task_comment_task');
-    table.index(['tenant', 'user_id'], 'idx_project_task_comment_user');
-    table.index(['tenant', 'created_at'], 'idx_project_task_comment_created');
-  });
-
-  await knex.schema.alterTable('project_phase_comment', (table) => {
+    // Add indexes for performance
     table.index(['tenant', 'project_phase_id'], 'idx_project_phase_comment_phase');
     table.index(['tenant', 'user_id'], 'idx_project_phase_comment_user');
     table.index(['tenant', 'created_at'], 'idx_project_phase_comment_created');
@@ -55,9 +47,13 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
-  // Drop project_phase_comment table
+  // Drop indexes first, then tables
+  // Note: Indexes are automatically dropped when the table is dropped,
+  // but listing them explicitly for clarity and consistency
+
+  // Drop project_phase_comment table (indexes will be dropped automatically)
   await knex.schema.dropTableIfExists('project_phase_comment');
 
-  // Drop project_task_comment table
+  // Drop project_task_comment table (indexes will be dropped automatically)
   await knex.schema.dropTableIfExists('project_task_comment');
 };
