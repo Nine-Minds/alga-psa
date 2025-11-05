@@ -349,6 +349,8 @@
     "clientInfo": "Bedrijfsgegevens",
     "preferences": "Voorkeuren",
     "security": "Beveiliging",
+    "activity": "Activiteit",
+    "notificationSettings": "Notificatie-instellingen",
     "fields": {
       "firstName": "Voornaam",
       "lastName": "Achternaam",

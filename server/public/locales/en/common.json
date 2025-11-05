@@ -447,6 +447,7 @@
       "willCreateIn": "Will be created in: {{folder}}"
     },
     "notifications": {
+      "viewAll": "View all notifications",
       "categories": {
         "Authentication": "Authentication",
         "Invoices": "Invoices",

@@ -448,6 +448,7 @@
     }
   },
   "notifications": {
+    "viewAll": "Ver todas las notificaciones",
     "categories": {
       "Authentication": "Autenticación",
       "Invoices": "Facturas",
