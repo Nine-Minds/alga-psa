@@ -349,6 +349,8 @@
     "clientInfo": "Información de la empresa",
     "preferences": "Preferencias",
     "security": "Seguridad",
+    "activity": "Actividad",
+    "notificationSettings": "Configuración de notificaciones",
     "fields": {
       "firstName": "Nombre",
       "lastName": "Apellido",

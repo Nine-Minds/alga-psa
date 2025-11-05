@@ -2,11 +2,14 @@
 
 import React, { useState } from 'react';
 import { CheckCheck, RefreshCw, Loader2, WifiOff, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 import { NotificationItem } from './NotificationItem';
 import type { InternalNotification } from 'server/src/lib/models/internalNotification';
 import { useActivityDrawer } from 'server/src/components/user-activities/ActivityDrawerProvider';
 import { ActivityType, NotificationActivity } from 'server/src/interfaces/activity.interfaces';
 import { useTenant } from 'server/src/components/TenantProvider';
+import { useTranslation } from 'server/src/lib/i18n/client';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 interface NotificationDropdownProps {
   notifications: InternalNotification[];
@@ -33,8 +36,25 @@ export function NotificationDropdown({
 }: NotificationDropdownProps) {
   const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [userType, setUserType] = useState<'client' | 'internal' | null>(null);
   const { openActivityDrawer } = useActivityDrawer();
   const tenant = useTenant();
+
+  // Load both translation namespaces
+  const { t: tClient } = useTranslation('clientPortal');
+  const { t: tCommon } = useTranslation('common');
+
+  // Get user type to determine the "View All" link
+  React.useEffect(() => {
+    getCurrentUser().then(user => {
+      if (user) {
+        setUserType(user.user_type);
+      }
+    });
+  }, []);
+
+  // Use appropriate translation function based on user type
+  const t = userType === 'client' ? tClient : tCommon;
 
   const handleMarkAllAsRead = async () => {
     try {
@@ -187,7 +207,18 @@ export function NotificationDropdown({
         )}
       </div>
 
-      {/* Footer - removed for now since all notifications are in dropdown */}
+      {/* Footer */}
+      {userType && (
+        <div className="border-t border-gray-200">
+          <Link
+            href={userType === 'client' ? '/client-portal/profile?tab=activity' : '/msp/user-activities'}
+            onClick={onClose}
+            className="flex items-center justify-center px-4 py-3 text-sm font-medium text-main-600 hover:text-main-700 hover:bg-gray-50 transition-colors"
+          >
+            {t('notifications.viewAll', 'View all notifications')}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

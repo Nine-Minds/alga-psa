@@ -448,6 +448,7 @@
     "notes": "Notizen"
   },
   "notifications": {
+    "viewAll": "Alle Benachrichtigungen anzeigen",
     "categories": {
       "Authentication": "Authentifizierung",
       "Invoices": "Rechnungen",

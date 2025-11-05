@@ -347,6 +347,8 @@
     "clientInfo": "Client Information",
     "preferences": "Preferences",
     "security": "Security",
+    "activity": "Activity",
+    "notificationSettings": "Notification Settings",
     "fields": {
       "firstName": "First Name",
       "lastName": "Last Name",

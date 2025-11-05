@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
@@ -40,6 +40,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 export function TicketList() {
   const { t } = useTranslation('clientPortal');
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -248,6 +249,17 @@ export function TicketList() {
     setExcludedCategories([]);
     setSearchQuery('');
   }, []);
+
+  const handleCloseTicketDialog = useCallback(() => {
+    setSelectedTicketId(null);
+    // Remove the ticket query parameter from the URL to prevent the dialog from reopening
+    const params = new URLSearchParams(searchParams.toString());
+    if (params.has('ticket')) {
+      params.delete('ticket');
+      const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
     {
@@ -475,7 +487,7 @@ export function TicketList() {
         <TicketDetails
           ticketId={selectedTicketId}
           isOpen={!!selectedTicketId}
-          onClose={() => setSelectedTicketId(null)}
+          onClose={handleCloseTicketDialog}
         />
       )}
 

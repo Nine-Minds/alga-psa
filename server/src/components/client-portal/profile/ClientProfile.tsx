@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
@@ -26,11 +27,13 @@ import { LanguagePreference } from 'server/src/components/ui/LanguagePreference'
 import { SupportedLocale } from '@/lib/i18n/config';
 import { updateUserLocaleAction, getUserLocaleAction } from 'server/src/lib/actions/user-actions/localeActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { ClientNotificationsList } from 'server/src/components/client-portal/notifications/ClientNotificationsList';
 
 type NotificationView = 'email' | 'internal';
 
 export function ClientProfile() {
   const { t } = useTranslation('clientPortal');
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -185,6 +188,19 @@ export function ClientProfile() {
     }));
   };
 
+  // Define tab labels (must be before early returns to maintain hook order)
+  const profileTabLabel = t('nav.profile');
+  const activityTabLabel = t('profile.activity', 'Activity');
+
+  // Determine the default tab based on URL parameter
+  const defaultTab = useMemo(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'activity') {
+      return activityTabLabel;
+    }
+    return profileTabLabel;
+  }, [searchParams, profileTabLabel, activityTabLabel]);
+
   if (loading) {
     return (
       <Card className="p-6">
@@ -209,7 +225,6 @@ export function ClientProfile() {
     );
   }
 
-  const profileTabLabel = t('nav.profile');
   const tabContent: TabContent[] = [
     {
       label: profileTabLabel,
@@ -306,7 +321,11 @@ export function ClientProfile() {
       content: <PasswordChangeForm />,
     },
     {
-      label: t('nav.notifications', 'Notifications'),
+      label: t('profile.activity', 'Activity'),
+      content: <ClientNotificationsList />,
+    },
+    {
+      label: t('profile.notificationSettings', 'Notification Settings'),
       content: (
         <Card>
           <CardHeader>
@@ -362,7 +381,7 @@ export function ClientProfile() {
     <div className="space-y-6">
       <CustomTabs
         tabs={tabContent}
-        defaultTab={profileTabLabel}
+        defaultTab={defaultTab}
       />
 
       {/* Action Buttons */}
