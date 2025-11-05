@@ -1,5 +1,3 @@
-'use server';
-
 import type { Knex } from 'knex';
 
 import type {
@@ -22,8 +20,8 @@ const CONTACTS_TABLE = 'contacts';
 const USERS_TABLE = 'users';
 const NEGATIVE_RATING_THRESHOLD = 2;
 
-export class SurveyAnalyticsService {
-  static async getDashboardMetrics(
+const SurveyAnalyticsService = {
+  async getDashboardMetrics(
     knex: Knex,
     tenantId: string,
     filters?: SurveyDashboardFilters
@@ -46,7 +44,7 @@ export class SurveyAnalyticsService {
       recentNegativeResponsesRow,
     ] = await Promise.all([
       invitationsQuery.clone().count<{ count: string }>('si.invitation_id as count').first(),
-      this.baseResponseQuery(knex, tenantId, filters)
+      baseResponseQuery(knex, tenantId, filters)
         .clone()
         .count<{ count: string }>('sr.response_id as count')
         .first(),
@@ -54,11 +52,11 @@ export class SurveyAnalyticsService {
         .clone()
         .count<{ count: string }>('si.invitation_id as count')
         .first(),
-      this.baseResponseQuery(knex, tenantId, filters)
+      baseResponseQuery(knex, tenantId, filters)
         .clone()
         .avg<{ avg: string }>('sr.rating as avg')
         .first(),
-      this.baseResponseQuery(knex, tenantId, filters)
+      baseResponseQuery(knex, tenantId, filters)
         .clone()
         .where('sr.rating', '<=', NEGATIVE_RATING_THRESHOLD)
         .count<{ count: string }>('sr.response_id as count')
@@ -81,14 +79,14 @@ export class SurveyAnalyticsService {
       outstandingInvitations,
       recentNegativeResponses,
     };
-  }
+  },
 
-  static async getResponseTrend(
+  async getResponseTrend(
     knex: Knex,
     tenantId: string,
     filters?: SurveyDashboardFilters
   ): Promise<SurveyTrendPoint[]> {
-    const rows = await this.baseResponseQuery(knex, tenantId, filters)
+    const rows = await baseResponseQuery(knex, tenantId, filters)
       .select(
         knex.raw("date_trunc('day', sr.submitted_at)::date as date"),
         knex.raw('AVG(sr.rating)::numeric as average_rating'),
@@ -102,9 +100,9 @@ export class SurveyAnalyticsService {
       averageRating: toNullableNumber(row.average_rating),
       responseCount: toNumber(row.response_count),
     }));
-  }
+  },
 
-  static async getRatingDistribution(
+  async getRatingDistribution(
     knex: Knex,
     tenantId: string,
     totalResponses: number,
@@ -114,7 +112,7 @@ export class SurveyAnalyticsService {
       return [];
     }
 
-    const rows = await this.baseResponseQuery(knex, tenantId, filters)
+    const rows = await baseResponseQuery(knex, tenantId, filters)
       .select('sr.rating')
       .count<{ count: string }>('sr.response_id as count')
       .groupBy('sr.rating')
@@ -134,15 +132,15 @@ export class SurveyAnalyticsService {
         percentage,
       };
     });
-  }
+  },
 
-  static async getTopNegativeResponses(
+  async getTopNegativeResponses(
     knex: Knex,
     tenantId: string,
     filters?: SurveyDashboardFilters,
     limit = 5
   ): Promise<SurveyIssueSummary[]> {
-    const rows = await this.baseResponseQuery(knex, tenantId, filters)
+    const rows = await baseResponseQuery(knex, tenantId, filters)
       .leftJoin(`${TICKETS_TABLE} as t`, function joinTickets() {
         this.on('sr.ticket_id', '=', 't.ticket_id').andOn('sr.tenant', '=', 't.tenant');
       })
@@ -177,9 +175,9 @@ export class SurveyAnalyticsService {
       submittedAt: formatDateTime(row.submitted_at),
       assignedAgentName: row.technician_name ? row.technician_name.trim() || null : null,
     }));
-  }
+  },
 
-  static async getRecentResponses(
+  async getRecentResponses(
     knex: Knex,
     tenantId: string,
     filters?: SurveyDashboardFilters,
@@ -190,9 +188,9 @@ export class SurveyAnalyticsService {
       pageSize: limit,
     });
     return items;
-  }
+  },
 
-  static async getResponsesPage(
+  async getResponsesPage(
     knex: Knex,
     tenantId: string,
     options?: {
@@ -205,7 +203,7 @@ export class SurveyAnalyticsService {
     const pageSize = Math.min(100, Math.max(1, options?.pageSize ?? 25));
     const filters = options?.filters;
 
-    const baseQuery = this.baseResponseQuery(knex, tenantId, filters);
+    const baseQuery = baseResponseQuery(knex, tenantId, filters);
 
     const responsesQuery = baseQuery
       .clone()
@@ -265,9 +263,9 @@ export class SurveyAnalyticsService {
       pageSize,
       hasMore,
     };
-  }
+  },
 
-  static async getClientSummary(
+  async getClientSummary(
     knex: Knex,
     tenantId: string,
     clientId: string
@@ -327,9 +325,9 @@ export class SurveyAnalyticsService {
         responseCount: toNumber(row.response_count),
       })),
     };
-  }
+  },
 
-  static async getTicketSummary(
+  async getTicketSummary(
     knex: Knex,
     tenantId: string,
     ticketId: string
@@ -365,35 +363,9 @@ export class SurveyAnalyticsService {
     };
   }
 
-  private static baseResponseQuery(
-    knex: Knex,
-    tenantId: string,
-    filters?: SurveyDashboardFilters
-  ) {
-    const query = knex(`${RESPONSES_TABLE} as sr`).where('sr.tenant', tenantId);
+};
 
-    if (filters?.startDate) {
-      query.andWhere('sr.submitted_at', '>=', filters.startDate);
-    }
-    if (filters?.endDate) {
-      query.andWhere('sr.submitted_at', '<=', filters.endDate);
-    }
-    if (filters?.clientId) {
-      query.andWhere('sr.client_id', filters.clientId);
-    }
-    if (filters?.templateId) {
-      query.andWhere('sr.template_id', filters.templateId);
-    }
-    if (filters?.technicianId) {
-      query.leftJoin(`${TICKETS_TABLE} as t_filter`, function joinTickets() {
-        this.on('sr.ticket_id', '=', 't_filter.ticket_id').andOn('sr.tenant', '=', 't_filter.tenant');
-      });
-      query.andWhere('t_filter.assigned_to', filters.technicianId);
-    }
-
-    return query;
-  }
-}
+export default SurveyAnalyticsService;
 
 function toNumber(value: string | number | null | undefined): number {
   if (value === null || value === undefined) {
@@ -435,4 +407,29 @@ function formatDateTime(value: unknown): string {
     return value;
   }
   return '';
+}
+
+function baseResponseQuery(knex: Knex, tenantId: string, filters?: SurveyDashboardFilters) {
+  const query = knex(`${RESPONSES_TABLE} as sr`).where('sr.tenant', tenantId);
+
+  if (filters?.startDate) {
+    query.andWhere('sr.submitted_at', '>=', filters.startDate);
+  }
+  if (filters?.endDate) {
+    query.andWhere('sr.submitted_at', '<=', filters.endDate);
+  }
+  if (filters?.clientId) {
+    query.andWhere('sr.client_id', filters.clientId);
+  }
+  if (filters?.templateId) {
+    query.andWhere('sr.template_id', filters.templateId);
+  }
+  if (filters?.technicianId) {
+    query.leftJoin(`${TICKETS_TABLE} as t_filter`, function joinTickets() {
+      this.on('sr.ticket_id', '=', 't_filter.ticket_id').andOn('sr.tenant', '=', 't_filter.tenant');
+    });
+    query.andWhere('t_filter.assigned_to', filters.technicianId);
+  }
+
+  return query;
 }
