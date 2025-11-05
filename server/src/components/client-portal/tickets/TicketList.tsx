@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -12,7 +12,6 @@ import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { IStatus } from 'server/src/interfaces/status.interface';
 import { TicketDetails } from './TicketDetails';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
@@ -200,15 +199,6 @@ export function TicketList() {
       }
     }
   }, [searchParams, tickets, selectedTicketId]);
-
-  const handleSort = useCallback((field: string) => {
-    setSortDirection(current => 
-      sortField === field 
-        ? current === 'asc' ? 'desc' : 'asc'
-        : 'asc'
-    );
-    setSortField(field);
-  }, [sortField]);
 
   const handleStatusChange = useCallback(async () => {
     if (!ticketToUpdateStatus) return;

@@ -1,468 +1,327 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
 
-/**
- * Integration Tests: Internal Notification Preferences
- *
- * Tests user preferences for internal notifications:
- * - Getting user preferences
- * - Updating category-level preferences
- * - Updating subtype-level preferences
- * - Checking if notification type is enabled for user
- * - Hierarchy: subtype > category > system default
- * - System-wide enable/disable overrides
- */
+import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import {
+  createTestUser,
+  cleanupNotifications,
+  cleanupPreferences
+} from '../../helpers/notificationTestHelpers';
 
-let db: Knex;
+let testDb: Knex;
 let testTenantId: string;
 let testUserId: string;
+let testCategoryId: number | undefined;
+let testSubtypeId: number | undefined;
+let testTemplateName: string;
 
-// Mock the database module
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(async () => ({
-    knex: db,
-    tenant: testTenantId
-  })),
-  getConnection: vi.fn(async () => db)
+vi.mock('server/src/lib/realtime/internalNotificationBroadcaster', () => ({
+  broadcastNotification: vi.fn().mockResolvedValue(undefined),
+  broadcastNotificationRead: vi.fn().mockResolvedValue(undefined),
+  broadcastAllNotificationsRead: vi.fn().mockResolvedValue(undefined),
+  broadcastUnreadCount: vi.fn().mockResolvedValue(undefined)
 }));
 
-// Import after mocking
-let getUserInternalNotificationPreferencesAction: any;
-let updateUserInternalNotificationPreferenceAction: any;
-let isInternalNotificationEnabledAction: any;
-let createNotificationFromTemplateAction: any;
-let getCategoriesAction: any;
-let getSubtypesAction: any;
+vi.mock('server/src/lib/db', () => ({
+  createTenantKnex: vi.fn(async () => ({
+    knex: testDb,
+    tenant: testTenantId
+  })),
+  getConnection: vi.fn(async () => testDb)
+}));
 
-describe('Internal Notification Preferences', () => {
+import {
+  broadcastNotification
+} from 'server/src/lib/realtime/internalNotificationBroadcaster';
+
+let createNotificationFromTemplateAction: typeof import('server/src/lib/actions/internal-notification-actions/internalNotificationActions')['createNotificationFromTemplateAction'];
+
+function parseMetadata(metadata: unknown) {
+  if (!metadata) return null;
+  if (typeof metadata === 'string') {
+    try {
+      return JSON.parse(metadata);
+    } catch {
+      return null;
+    }
+  }
+  return metadata as Record<string, unknown>;
+}
+
+describe('Internal Notification Preferences (integration)', () => {
   beforeAll(async () => {
-    // Note: In real implementation, set up test database connection
-    testTenantId = 'test-tenant-1';
-    testUserId = 'test-user-1';
-
-    // Import actions after mocking
     const actions = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
-    getUserInternalNotificationPreferencesAction = actions.getUserInternalNotificationPreferencesAction;
-    updateUserInternalNotificationPreferenceAction = actions.updateUserInternalNotificationPreferenceAction;
-    isInternalNotificationEnabledAction = actions.isInternalNotificationEnabledAction;
     createNotificationFromTemplateAction = actions.createNotificationFromTemplateAction;
-    getCategoriesAction = actions.getCategoriesAction;
-    getSubtypesAction = actions.getSubtypesAction;
+
+    testDb = await createTestDbConnection();
+    testTenantId = uuidv4();
+    testTemplateName = `integration-template-${Date.now()}`;
+
+    // Seed tenant
+    await testDb('tenants').insert({
+      tenant: testTenantId,
+      client_name: 'Integration Tenant',
+      email: 'integration@example.com',
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    // Seed user (client user to exercise locale preferences)
+    const user = await createTestUser(testDb, testTenantId, { user_type: 'client' });
+    testUserId = user.user_id;
+
+    // Seed custom category
+    const categoryRows = await testDb('internal_notification_categories')
+      .insert({
+        name: `integration-category-${uuidv4()}`,
+        description: 'Integration category',
+        is_enabled: true,
+        is_default_enabled: true,
+        available_for_client_portal: true
+      })
+      .returning('internal_notification_category_id');
+
+    const categoryRow = Array.isArray(categoryRows) ? categoryRows[0] : categoryRows;
+    const categoryValue =
+      typeof categoryRow === 'number'
+        ? categoryRow
+        : categoryRow.internal_notification_category_id;
+    testCategoryId = Number(categoryValue);
+
+    // Seed custom subtype
+    const subtypeRows = await testDb('internal_notification_subtypes')
+      .insert({
+        internal_category_id: testCategoryId,
+        name: `integration-subtype-${uuidv4()}`,
+        description: 'Integration subtype',
+        is_enabled: true,
+        is_default_enabled: true,
+        available_for_client_portal: true
+      })
+      .returning('internal_notification_subtype_id');
+
+    const subtypeRow = Array.isArray(subtypeRows) ? subtypeRows[0] : subtypeRows;
+    const subtypeValue =
+      typeof subtypeRow === 'number'
+        ? subtypeRow
+        : subtypeRow.internal_notification_subtype_id;
+    testSubtypeId = Number(subtypeValue);
+
+    // Seed templates (English + Spanish)
+    await testDb('internal_notification_templates').insert([
+      {
+        name: testTemplateName,
+        language_code: 'en',
+        title: 'Ticket {{ticketId}} assigned',
+        message: 'Ticket {{ticketTitle}} assigned',
+        subtype_id: testSubtypeId
+      },
+      {
+        name: testTemplateName,
+        language_code: 'es',
+        title: 'Ticket {{ticketId}} asignado',
+        message: 'Ticket {{ticketTitle}} asignado',
+        subtype_id: testSubtypeId
+      }
+    ]);
+  });
+
+  beforeEach(async () => {
+    await cleanupNotifications(testDb, testTenantId);
+    await cleanupPreferences(testDb, testTenantId, testUserId);
+    await testDb('user_preferences').where({ tenant: testTenantId, user_id: testUserId }).delete();
+
+    if (typeof testCategoryId !== 'number' || typeof testSubtypeId !== 'number') {
+      throw new Error('Internal notification taxonomy not initialized for tests');
+    }
+
+    await testDb('internal_notification_categories')
+      .where({ internal_notification_category_id: testCategoryId })
+      .update({ is_enabled: true, is_default_enabled: true });
+
+    await testDb('internal_notification_subtypes')
+      .where({ internal_notification_subtype_id: testSubtypeId })
+      .update({ is_enabled: true, is_default_enabled: true });
+
+    vi.mocked(broadcastNotification).mockClear();
   });
 
   afterAll(async () => {
-    // Clean up database connection
+    await cleanupNotifications(testDb, testTenantId);
+    await cleanupPreferences(testDb, testTenantId);
+
+    await testDb('user_preferences').where({ tenant: testTenantId }).delete();
+    await testDb('internal_notification_templates').where({ name: testTemplateName }).delete();
+    if (typeof testSubtypeId === 'number') {
+      await testDb('internal_notification_subtypes').where({ internal_notification_subtype_id: testSubtypeId }).delete();
+    }
+    if (typeof testCategoryId === 'number') {
+      await testDb('internal_notification_categories').where({ internal_notification_category_id: testCategoryId }).delete();
+    }
+    await testDb('users').where({ tenant: testTenantId }).delete();
+    await testDb('tenants').where({ tenant: testTenantId }).delete();
+    await testDb.destroy();
   });
 
-  describe('getUserInternalNotificationPreferencesAction', () => {
-    it.todo('should return empty array for user with no preferences', async () => {
-      const preferences = await getUserInternalNotificationPreferencesAction(
-        testTenantId,
-        'new-user-id'
-      );
-
-      expect(preferences).toBeInstanceOf(Array);
-      expect(preferences).toHaveLength(0);
+  it('creates a notification when preferences allow it', async () => {
+    const result = await createNotificationFromTemplateAction({
+      tenant: testTenantId,
+      user_id: testUserId,
+      template_name: testTemplateName,
+      data: {
+        ticketId: 'T-100',
+        ticketTitle: 'Integration check'
+      },
+      type: 'info',
+      category: 'integration',
+      metadata: { scope: 'integration-test' }
     });
 
-    it.todo('should return user preferences', async () => {
-      // Set up some preferences
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1, // tickets
-        is_enabled: false
-      });
+    expect(result).toBeTruthy();
+    expect(result?.user_id).toBe(testUserId);
 
-      const preferences = await getUserInternalNotificationPreferencesAction(
-        testTenantId,
-        testUserId
-      );
+    const stored = await testDb('internal_notifications')
+      .where({ tenant: testTenantId, user_id: testUserId })
+      .first();
 
-      expect(preferences).toBeInstanceOf(Array);
-      expect(preferences.length).toBeGreaterThan(0);
-      expect(preferences[0]).toHaveProperty('category_id');
-      expect(preferences[0]).toHaveProperty('is_enabled');
+    expect(stored).toBeTruthy();
+    expect(stored?.title).toBe('Ticket T-100 assigned');
+    const metadata = parseMetadata(stored?.metadata);
+    expect(metadata?.scope).toBe('integration-test');
+    expect(broadcastNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not create a notification when category preference is disabled', async () => {
+    await testDb('user_internal_notification_preferences').insert({
+      tenant: testTenantId,
+      user_id: testUserId,
+      category_id: testCategoryId,
+      subtype_id: null,
+      is_enabled: false
     });
 
-    it.todo('should return both category and subtype preferences', async () => {
-      // Set category preference
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
+    const result = await createNotificationFromTemplateAction({
+      tenant: testTenantId,
+      user_id: testUserId,
+      template_name: testTemplateName,
+      data: {
+        ticketId: 'T-101',
+        ticketTitle: 'Preference disabled'
+      },
+      type: 'info',
+      category: 'integration'
+    });
 
-      // Set subtype preference
-      await updateUserInternalNotificationPreferenceAction({
+    expect(result).toBeNull();
+
+    const stored = await testDb('internal_notifications')
+      .where({ tenant: testTenantId, user_id: testUserId })
+      .first();
+
+    expect(stored).toBeUndefined();
+    expect(broadcastNotification).not.toHaveBeenCalled();
+  });
+
+  it('allows subtype preference to override disabled category', async () => {
+    await testDb('user_internal_notification_preferences').insert([
+      {
         tenant: testTenantId,
         user_id: testUserId,
-        subtype_id: 1,
+        category_id: testCategoryId,
+        subtype_id: null,
+        is_enabled: false
+      },
+      {
+        tenant: testTenantId,
+        user_id: testUserId,
+        category_id: null,
+        subtype_id: testSubtypeId,
         is_enabled: true
-      });
+      }
+    ]);
 
-      const preferences = await getUserInternalNotificationPreferencesAction(
-        testTenantId,
-        testUserId
-      );
-
-      const categoryPref = preferences.find(p => p.category_id && !p.subtype_id);
-      const subtypePref = preferences.find(p => p.subtype_id);
-
-      expect(categoryPref).toBeDefined();
-      expect(subtypePref).toBeDefined();
+    const result = await createNotificationFromTemplateAction({
+      tenant: testTenantId,
+      user_id: testUserId,
+      template_name: testTemplateName,
+      data: {
+        ticketId: 'T-102',
+        ticketTitle: 'Subtype override'
+      },
+      type: 'info',
+      category: 'integration'
     });
+
+    expect(result).toBeTruthy();
+
+    const stored = await testDb('internal_notifications')
+      .where({ tenant: testTenantId, user_id: testUserId })
+      .first();
+
+    expect(stored).toBeTruthy();
+    expect(broadcastNotification).toHaveBeenCalledTimes(1);
   });
 
-  describe('updateUserInternalNotificationPreferenceAction', () => {
-    it.todo('should create new category preference', async () => {
-      const preference = await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
-
-      expect(preference).toBeDefined();
-      expect(preference.category_id).toBe(1);
-      expect(preference.subtype_id).toBeNull();
-      expect(preference.is_enabled).toBe(false);
+  it('renders notification using user locale when localized template exists', async () => {
+    await testDb('user_preferences').insert({
+      tenant: testTenantId,
+      user_id: testUserId,
+      setting_name: 'locale',
+      setting_value: JSON.stringify('es'),
+      updated_at: new Date()
     });
 
-    it.todo('should update existing category preference', async () => {
-      // Create preference
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
-
-      // Update it
-      const updated = await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: true
-      });
-
-      expect(updated.is_enabled).toBe(true);
+    const result = await createNotificationFromTemplateAction({
+      tenant: testTenantId,
+      user_id: testUserId,
+      template_name: testTemplateName,
+      data: {
+        ticketId: 'T-103',
+        ticketTitle: 'Servidor caído'
+      },
+      type: 'info',
+      category: 'integration'
     });
 
-    it.todo('should create new subtype preference', async () => {
-      const preference = await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        subtype_id: 1,
-        is_enabled: false
-      });
+    expect(result).toBeTruthy();
 
-      expect(preference).toBeDefined();
-      expect(preference.subtype_id).toBe(1);
-      expect(preference.category_id).toBeNull();
-      expect(preference.is_enabled).toBe(false);
-    });
+    const stored = await testDb('internal_notifications')
+      .where({ tenant: testTenantId, user_id: testUserId })
+      .first();
 
-    it.todo('should update existing subtype preference', async () => {
-      // Create preference
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        subtype_id: 1,
-        is_enabled: false
-      });
-
-      // Update it
-      const updated = await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        subtype_id: 1,
-        is_enabled: true
-      });
-
-      expect(updated.is_enabled).toBe(true);
-    });
-
-    it.todo('should handle both category and subtype preferences independently', async () => {
-      // Disable category
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
-
-      // Enable specific subtype in that category
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        subtype_id: 1, // belongs to category 1
-        is_enabled: true
-      });
-
-      const preferences = await getUserInternalNotificationPreferencesAction(
-        testTenantId,
-        testUserId
-      );
-
-      expect(preferences.length).toBe(2);
-    });
-
-    it.todo('should set updated_at timestamp', async () => {
-      const preference = await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
-
-      expect(preference.updated_at).toBeTruthy();
-    });
+    expect(stored?.language_code).toBe('es');
+    expect(stored?.title).toBe('Ticket T-103 asignado');
   });
 
-  describe('isInternalNotificationEnabledAction', () => {
-    it.todo('should return true by default if no preference set', async () => {
-      // Assuming subtype is enabled by default
-      const isEnabled = await isInternalNotificationEnabledAction(
-        testTenantId,
-        'new-user-id',
-        1 // subtype_id
-      );
-
-      expect(isEnabled).toBe(true);
+  it('falls back to English template while preserving user locale when translation is missing', async () => {
+    await testDb('user_preferences').insert({
+      tenant: testTenantId,
+      user_id: testUserId,
+      setting_name: 'locale',
+      setting_value: JSON.stringify('fr'),
+      updated_at: new Date()
     });
 
-    it.todo('should respect subtype preference', async () => {
-      // Disable subtype
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        subtype_id: 1,
-        is_enabled: false
-      });
-
-      const isEnabled = await isInternalNotificationEnabledAction(
-        testTenantId,
-        testUserId,
-        1
-      );
-
-      expect(isEnabled).toBe(false);
+    const result = await createNotificationFromTemplateAction({
+      tenant: testTenantId,
+      user_id: testUserId,
+      template_name: testTemplateName,
+      data: {
+        ticketId: 'T-104',
+        ticketTitle: 'Fallback check'
+      },
+      type: 'info',
+      category: 'integration'
     });
 
-    it.todo('should respect category preference if no subtype preference', async () => {
-      // Disable category
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
+    expect(result).toBeTruthy();
 
-      // Check subtype in that category (subtype 1 belongs to category 1)
-      const isEnabled = await isInternalNotificationEnabledAction(
-        testTenantId,
-        testUserId,
-        1
-      );
+    const stored = await testDb('internal_notifications')
+      .where({ tenant: testTenantId, user_id: testUserId })
+      .first();
 
-      expect(isEnabled).toBe(false);
-    });
-
-    it.todo('should prioritize subtype preference over category preference', async () => {
-      // Disable category
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
-
-      // Enable specific subtype in that category
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        subtype_id: 1, // belongs to category 1
-        is_enabled: true
-      });
-
-      const isEnabled = await isInternalNotificationEnabledAction(
-        testTenantId,
-        testUserId,
-        1
-      );
-
-      // Subtype preference wins
-      expect(isEnabled).toBe(true);
-    });
-
-    it.todo('should return false for non-existent subtype', async () => {
-      const isEnabled = await isInternalNotificationEnabledAction(
-        testTenantId,
-        testUserId,
-        99999
-      );
-
-      expect(isEnabled).toBe(false);
-    });
-  });
-
-  describe('Notification creation with preferences', () => {
-    it.todo('should not create notification if user disabled it', async () => {
-      // Disable ticket notifications
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1, // tickets
-        is_enabled: false
-      });
-
-      // Try to create ticket notification
-      const notification = await createNotificationFromTemplateAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        template_name: 'ticket-assigned',
-        data: { ticketId: 'T-123', ticketTitle: 'Test' }
-      });
-
-      // Should return null (not created)
-      expect(notification).toBeNull();
-    });
-
-    it.todo('should create notification if enabled at subtype level despite category disabled', async () => {
-      // Disable ticket category
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
-
-      // Enable specific ticket subtype
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        subtype_id: 1, // ticket-assigned subtype
-        is_enabled: true
-      });
-
-      // Create notification
-      const notification = await createNotificationFromTemplateAction({
-        tenant: testTenantId,
-        user_id: testUserId,
-        template_name: 'ticket-assigned',
-        data: { ticketId: 'T-123', ticketTitle: 'Test' }
-      });
-
-      // Should be created
-      expect(notification).not.toBeNull();
-    });
-  });
-
-  describe('System-wide settings', () => {
-    it.todo('should not create notification if disabled system-wide', async () => {
-      // TODO: Disable subtype system-wide
-      // Try to create notification
-      // Should return null even if user preference is enabled
-    });
-
-    it.todo('should not create notification if category disabled system-wide', async () => {
-      // TODO: Disable category system-wide
-      // Try to create notification in that category
-      // Should return null
-    });
-
-    it.todo('should respect system-wide settings before user preferences', async () => {
-      // TODO: Disable system-wide, enable user preference
-      // Should still not create notification
-    });
-  });
-
-  describe('getCategoriesAction', () => {
-    it.todo('should return all enabled categories', async () => {
-      const categories = await getCategoriesAction();
-
-      expect(categories).toBeInstanceOf(Array);
-      expect(categories.length).toBeGreaterThan(0);
-      expect(categories.every(c => c.is_enabled)).toBe(true);
-    });
-
-    it.todo('should filter by client portal availability', async () => {
-      const clientCategories = await getCategoriesAction(true);
-
-      expect(clientCategories.every(c => c.available_for_client_portal)).toBe(true);
-    });
-
-    it.todo('should not return disabled categories', async () => {
-      // TODO: Disable a category
-      const categories = await getCategoriesAction();
-
-      // Should not include disabled category
-      expect(categories.every(c => c.is_enabled)).toBe(true);
-    });
-  });
-
-  describe('getSubtypesAction', () => {
-    it.todo('should return subtypes for category', async () => {
-      const subtypes = await getSubtypesAction(1); // tickets category
-
-      expect(subtypes).toBeInstanceOf(Array);
-      expect(subtypes.length).toBeGreaterThan(0);
-      expect(subtypes.every(s => s.internal_category_id === 1)).toBe(true);
-    });
-
-    it.todo('should filter by client portal availability', async () => {
-      const clientSubtypes = await getSubtypesAction(1, true);
-
-      expect(clientSubtypes.every(s => s.available_for_client_portal)).toBe(true);
-    });
-
-    it.todo('should not return disabled subtypes', async () => {
-      const subtypes = await getSubtypesAction(1);
-
-      expect(subtypes.every(s => s.is_enabled)).toBe(true);
-    });
-
-    it.todo('should include translated titles with locale', async () => {
-      const subtypes = await getSubtypesAction(1, false, 'en');
-
-      expect(subtypes[0]).toHaveProperty('display_title');
-    });
-  });
-
-  describe('Multi-tenant isolation', () => {
-    it.todo('should isolate preferences by tenant', async () => {
-      // Create preference for tenant-1
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: 'tenant-1',
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: false
-      });
-
-      // Create preference for tenant-2
-      await updateUserInternalNotificationPreferenceAction({
-        tenant: 'tenant-2',
-        user_id: testUserId,
-        category_id: 1,
-        is_enabled: true
-      });
-
-      // Get preferences for tenant-1
-      const tenant1Prefs = await getUserInternalNotificationPreferencesAction(
-        'tenant-1',
-        testUserId
-      );
-
-      // Get preferences for tenant-2
-      const tenant2Prefs = await getUserInternalNotificationPreferencesAction(
-        'tenant-2',
-        testUserId
-      );
-
-      // Should be different
-      expect(tenant1Prefs[0].is_enabled).not.toBe(tenant2Prefs[0].is_enabled);
-    });
+    expect(stored?.language_code).toBe('fr');
+    expect(stored?.title).toBe('Ticket T-104 assigned');
   });
 });

@@ -57,7 +57,8 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
     // Mark as read if unread
     if (!notification.isRead) {
       try {
-        await markAsReadAction(notification.tenant, notification.assignedTo?.[0] || '', notification.notificationId);
+        const userId = notification.assignedTo?.[0] ?? '';
+        await markAsReadAction(notification.tenant as string, userId as string, notification.notificationId);
         // Refresh the list after marking as read
         if (onActionComplete) {
           onActionComplete();

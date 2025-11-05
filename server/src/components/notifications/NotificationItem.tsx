@@ -89,8 +89,8 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   // Parse notification data for change details
   const renderRichContent = () => {
     try {
-      // Try to parse the data field if it exists
-      const data = notification.data as any;
+      // Try to parse the metadata field if it exists
+      const data = notification.metadata as any;
 
       if (!data) {
         return (

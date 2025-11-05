@@ -36,6 +36,7 @@ export const EventTypeEnum = z.enum([
   'CALENDAR_SYNC_FAILED',
   'CALENDAR_CONFLICT_DETECTED',
   'MESSAGE_SENT',
+  'USER_MENTIONED_IN_DOCUMENT',
   'UNKNOWN'
 ]);
 
