@@ -1,58 +1,64 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { bootstrapIframe } from '@ee/lib/extensions/ui/iframeBridge';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 type Props = {
-  domain: string;
+  src: string;
 };
 
-export default function ExtensionIframe({ domain }: Props) {
+/**
+ * Extension iframe component for Docker backend mode.
+ * Uses same-origin path-based URLs instead of custom domains.
+ */
+export default function DockerExtensionIframe({ src }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-
-  const src = useMemo(() => `https://${domain}` as const, [domain]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe || !src) return;
 
-    const isAllowedDomain = domain === 'apps.algapsa.com' || domain.endsWith('.apps.algapsa.com');
-    if (!isAllowedDomain) {
-      console.warn('ExtensionIframe: refusing to bootstrap non-allowed domain', { domain });
-      return;
-    }
-
-    let allowedOrigin: string | undefined = undefined;
+    let allowedOrigin: string | undefined;
     try {
-      allowedOrigin = `https://${domain}`;
-    } catch {}
+      allowedOrigin = new URL(iframe.src || src, window.location.href).origin;
+    } catch {
+      allowedOrigin = window.location.origin;
+    }
 
     // Listen for the 'ready' message from the extension to hide loading state
     const handleMessage = (ev: MessageEvent) => {
-      // Validate origin matches the expected extension domain
-      if (ev.origin !== allowedOrigin) return;
+      // Validate origin matches same origin (Docker mode)
+      if (allowedOrigin && ev.origin !== allowedOrigin) {
+        console.warn('DockerExtensionIframe: ignoring message from different origin', {
+          expected: allowedOrigin,
+          received: ev.origin
+        });
+        return;
+      }
 
       const data = ev.data as any;
       // Check for Alga envelope format with ready message
       if (data?.alga === true && data?.version === '1' && data?.type === 'ready') {
+        console.log('DockerExtensionIframe: extension ready');
         setIsLoading(false);
       }
     };
 
     window.addEventListener('message', handleMessage);
 
+    // Bootstrap iframe communication
     bootstrapIframe({ iframe, allowedOrigin });
 
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [src, domain]);
+  }, [src]);
 
   useEffect(() => {
-    // Reset state whenever the domain changes so we show the loading state again.
+    // Reset state whenever the src changes so we show the loading state again.
     setIsLoading(true);
     setHasError(false);
   }, [src]);
@@ -76,7 +82,7 @@ export default function ExtensionIframe({ domain }: Props) {
             textClassName="extension-loading-text"
             spinnerProps={{ size: 'sm', color: 'border-primary-400' }}
           />
-          <p className="extension-loading-subtext">Connecting to the runtime workspace&hellip;</p>
+          <p className="extension-loading-subtext">Loading extension UI&hellip;</p>
         </div>
       )}
 
@@ -96,7 +102,11 @@ export default function ExtensionIframe({ domain }: Props) {
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+        onLoad={() => {
+          setIsLoading(false);
+        }}
         onError={() => {
+          console.error('DockerExtensionIframe: iframe error');
           setHasError(true);
           setIsLoading(false);
         }}

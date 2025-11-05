@@ -3,6 +3,8 @@ import {
   createComponentProject,
   createNewProject,
   installExtension,
+  uninstallExtension,
+  publishExtension,
   packProject,
   sign as signBundle,
 } from '@alga-psa/client-sdk';
@@ -19,15 +21,18 @@ Usage:
   alga create extension <name> [--template basic|ui-gallery] [--dir <path>]
   alga create component <name> [--dir <path>] [--template component-basic]
   alga component create <name> [--dir <path>] [--template component-basic]
+  alga extension publish <dir> [--api-key <key>] [--tenant <tenantId>] [--base-url <url>] [--no-install]
   alga extension install <registryId> --version <version> [--api-key <key>] [--tenant <tenantId>] [--base-url <url>]
-  alga pack [options]         (coming soon)
-  alga publish [options]      (coming soon)
+  alga extension uninstall <registryId> [--api-key <key>] [--tenant <tenantId>] [--base-url <url>]
+  alga pack [options]
   alga sign <bundlePath> --algorithm cosign|x509|pgp
 
 Examples:
   alga create extension my-ext
   alga create extension my-ui --template ui-gallery --dir ./apps
+  alga extension publish ./my-extension --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
   alga extension install awesome-extension --version 1.2.3 --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
+  alga extension uninstall awesome-extension --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
   alga component create my-component --dir ./components
 `);
 }
@@ -111,6 +116,104 @@ export async function runCLI(argv: string[]) {
 
     const projectPath = resolve(targetDir ?? (projectName ? projectName : '.'));
     runComponentDev(projectPath);
+    return;
+  }
+
+  if (cmd === 'extension' && sub === 'publish') {
+    const projectPath = name;
+    const rem = rest;
+    if (!projectPath) {
+      console.error('Error: extension directory is required');
+      process.exitCode = 1;
+      return;
+    }
+
+    let apiKeyArg: string | undefined;
+    let tenantIdArg: string | undefined;
+    let baseUrlArg: string | undefined;
+    let timeoutMs: number | undefined;
+    let install = true;
+    let force = false;
+
+    for (let i = 0; i < rem.length; i++) {
+      const value = rem[i];
+      if (!value) continue;
+      switch (value) {
+        case '--api-key':
+        case '--apikey':
+          apiKeyArg = rem[i + 1];
+          i++;
+          break;
+        case '--tenant':
+        case '--tenant-id':
+          tenantIdArg = rem[i + 1];
+          i++;
+          break;
+        case '--base-url':
+        case '--url':
+          baseUrlArg = rem[i + 1];
+          i++;
+          break;
+        case '--timeout':
+          timeoutMs = Number(rem[i + 1]);
+          i++;
+          break;
+        case '--no-install':
+          install = false;
+          break;
+        case '--force':
+        case '-f':
+          force = true;
+          break;
+        default:
+          break;
+      }
+    }
+
+    const apiKey = apiKeyArg ?? process.env.ALGA_API_KEY;
+    if (!apiKey) {
+      console.error('Error: --api-key is required (or set ALGA_API_KEY)');
+      process.exitCode = 1;
+      return;
+    }
+
+    const tenantId = tenantIdArg ?? process.env.ALGA_TENANT_ID ?? process.env.ALGA_TENANT;
+    if (!tenantId) {
+      console.error('Error: --tenant is required (or set ALGA_TENANT_ID)');
+      process.exitCode = 1;
+      return;
+    }
+
+    const baseUrl = baseUrlArg ?? process.env.ALGA_API_BASE_URL;
+
+    try {
+      const result = await publishExtension({
+        projectPath,
+        apiKey,
+        tenantId,
+        baseUrl,
+        install,
+        force,
+        timeoutMs,
+        logger: console,
+      });
+
+      if (!result.success) {
+        console.error('[extension publish] failed:', result.error);
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log('[extension publish] success!', {
+        registryId: result.registryId,
+        versionId: result.versionId,
+        contentHash: result.contentHash,
+        installId: result.installId,
+      });
+    } catch (error: any) {
+      console.error('[extension publish] error', error?.message ?? error);
+      process.exitCode = 1;
+    }
     return;
   }
 
@@ -213,6 +316,94 @@ export async function runCLI(argv: string[]) {
       });
     } catch (error: any) {
       console.error('[extension install] error', error?.message ?? error);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (cmd === 'extension' && sub === 'uninstall') {
+    const registryId = name;
+    const rem = rest;
+    if (!registryId) {
+      console.error('Error: registryId is required');
+      process.exitCode = 1;
+      return;
+    }
+
+    let apiKeyArg: string | undefined;
+    let tenantIdArg: string | undefined;
+    let baseUrlArg: string | undefined;
+    let timeoutMs: number | undefined;
+
+    for (let i = 0; i < rem.length; i++) {
+      const value = rem[i];
+      if (!value) continue;
+      switch (value) {
+        case '--api-key':
+        case '--apikey':
+          apiKeyArg = rem[i + 1];
+          i++;
+          break;
+        case '--tenant':
+        case '--tenant-id':
+          tenantIdArg = rem[i + 1];
+          i++;
+          break;
+        case '--base-url':
+        case '--url':
+          baseUrlArg = rem[i + 1];
+          i++;
+          break;
+        case '--timeout':
+          timeoutMs = Number(rem[i + 1]);
+          i++;
+          break;
+        default:
+          break;
+      }
+    }
+
+    const apiKey = apiKeyArg ?? process.env.ALGA_API_KEY;
+    if (!apiKey) {
+      console.error('Error: --api-key is required (or set ALGA_API_KEY)');
+      process.exitCode = 1;
+      return;
+    }
+
+    const tenantId = tenantIdArg ?? process.env.ALGA_TENANT_ID ?? process.env.ALGA_TENANT;
+    if (!tenantId) {
+      console.error('Error: --tenant is required (or set ALGA_TENANT_ID)');
+      process.exitCode = 1;
+      return;
+    }
+
+    const baseUrl = baseUrlArg ?? process.env.ALGA_API_BASE_URL;
+
+    try {
+      const result = await uninstallExtension({
+        registryId,
+        apiKey,
+        tenantId,
+        baseUrl,
+        timeoutMs,
+      });
+
+      if (!result.success) {
+        console.error('[extension uninstall] failed', {
+          status: result.status,
+          message: result.message,
+          details: result.raw,
+        });
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log('[extension uninstall] success', {
+        registryId,
+        message: result.message,
+      });
+    } catch (error: any) {
+      console.error('[extension uninstall] error', error?.message ?? error);
       process.exitCode = 1;
     }
     return;

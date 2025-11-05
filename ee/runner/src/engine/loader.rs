@@ -306,17 +306,18 @@ pub fn bundle_url(bundle_store_base: &Url, content_hash: &str) -> anyhow::Result
     if hex.is_empty() {
         anyhow::bail!("empty content hash");
     }
-    let mut base = bundle_store_base.clone();
-    // Ensure trailing slash handling
     let path = format!("sha256/{}/bundle.tar.zst", hex);
-    let joined = base.join(&path)?;
-    Ok(joined)
+    bundle_url_for_key(bundle_store_base, &path)
 }
 
 pub fn bundle_url_for_key(bundle_store_base: &Url, key: &str) -> anyhow::Result<Url> {
-    let mut base = bundle_store_base.clone();
-    let joined = base.join(key.trim_start_matches('/'))?;
-    Ok(joined)
+    let trimmed = key.trim_start_matches('/');
+    if trimmed.is_empty() {
+        anyhow::bail!("empty bundle key");
+    }
+    let base_str = bundle_store_base.as_str().trim_end_matches('/');
+    let full = format!("{}/{}", base_str, trimmed);
+    Ok(Url::parse(&full)?)
 }
 
 /// Stream a bundle archive to a temp file while computing sha256, verifying against expected hex.
@@ -387,31 +388,32 @@ pub async fn verify_archive_sha256(
                         .force_path_style(true)
                         .build();
                     let s3 = S3Client::from_conf(conf);
-                    // Derive object key from URL path by stripping the bucket segment
-                    let full_path = url.path().trim_start_matches('/');
-                    let mut parts = full_path.splitn(2, '/');
-                    let _bucket_seg = parts.next();
-                    let key = parts.next().unwrap_or("").to_string();
-                    if let Ok(cfg) = aws_sdk_s3::presigning::PresigningConfig::expires_in(
-                        Duration::from_secs(60),
-                    ) {
-                        match s3
-                            .get_object()
-                            .bucket(bucket)
-                            .key(&key)
-                            .presigned(cfg)
-                            .await
-                        {
-                            Ok(ps) => {
-                                if let Ok(u) = Url::parse(&ps.uri().to_string()) {
-                                    tracing::info!(bucket=%bucket, key=%key, "using presigned S3 GET");
-                                    fetch_url = u;
+                    if let Some((bucket_name, object_key)) =
+                        presign_target_from_urls(&base_url, &url)
+                    {
+                        if let Ok(cfg) = aws_sdk_s3::presigning::PresigningConfig::expires_in(
+                            Duration::from_secs(60),
+                        ) {
+                            match s3
+                                .get_object()
+                                .bucket(&bucket_name)
+                                .key(&object_key)
+                                .presigned(cfg)
+                                .await
+                            {
+                                Ok(ps) => {
+                                    if let Ok(u) = Url::parse(&ps.uri().to_string()) {
+                                        tracing::info!(bucket=%bucket_name, key=%object_key, "using presigned S3 GET");
+                                        fetch_url = u;
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::warn!(err=%e.to_string(), bucket=%bucket_name, key=%object_key, "presign failed; falling back to direct URL");
                                 }
                             }
-                            Err(e) => {
-                                tracing::warn!(err=%e.to_string(), bucket=%bucket, key=%key, "presign failed; falling back to direct URL");
-                            }
                         }
+                    } else {
+                        tracing::debug!(bundle_url=%url.to_string(), "presign skipped; unable to derive bucket/key from URLs");
                     }
                 }
             }
@@ -452,6 +454,33 @@ pub async fn verify_archive_sha256(
     Ok(tmp_path)
 }
 
+fn presign_target_from_urls(base_url: &Url, bundle_url: &Url) -> Option<(String, String)> {
+    let bucket = base_url
+        .path()
+        .trim_matches('/')
+        .split('/')
+        .next()
+        .unwrap_or("")
+        .to_string();
+    if bucket.is_empty() {
+        return None;
+    }
+
+    let mut key = bundle_url.path().trim_start_matches('/').to_string();
+    let prefix = format!("{}/", bucket);
+    if key.starts_with(&prefix) {
+        key = key[prefix.len()..].to_string();
+    } else if key == bucket {
+        key.clear();
+    }
+
+    if key.is_empty() {
+        None
+    } else {
+        Some((bucket, key))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -490,5 +519,62 @@ mod tests {
         assert_eq!(deadline_ticks_for_timeout(EPOCH_TICK_MS), 1);
         assert_eq!(deadline_ticks_for_timeout(EPOCH_TICK_MS + 1), 1);
         assert_eq!(deadline_ticks_for_timeout(25), 2);
+    }
+
+    #[test]
+    fn bundle_url_for_key_retains_bucket_without_trailing_slash() {
+        let base = Url::parse("http://host.docker.internal:9000/extensions").unwrap();
+        let url = bundle_url_for_key(
+            &base,
+            "tenants/abc/extensions/def/sha256/123/bundle.tar.zst",
+        )
+        .unwrap();
+        assert_eq!(
+            url.as_str(),
+            "http://host.docker.internal:9000/extensions/tenants/abc/extensions/def/sha256/123/bundle.tar.zst"
+        );
+    }
+
+    #[test]
+    fn bundle_url_for_key_retains_bucket_with_trailing_slash() {
+        let base = Url::parse("http://host.docker.internal:9000/extensions/").unwrap();
+        let url =
+            bundle_url_for_key(&base, "/tenants/foo/extensions/bar/sha256/abc/bundle.tar.zst")
+                .unwrap();
+        assert_eq!(
+            url.as_str(),
+            "http://host.docker.internal:9000/extensions/tenants/foo/extensions/bar/sha256/abc/bundle.tar.zst"
+        );
+    }
+
+    #[test]
+    fn bundle_url_uses_bundle_key_builder() {
+        let base = Url::parse("http://host.docker.internal:9000/extensions").unwrap();
+        let url = bundle_url(&base, "sha256:deadbeef").unwrap();
+        assert_eq!(
+            url.as_str(),
+            "http://host.docker.internal:9000/extensions/sha256/deadbeef/bundle.tar.zst"
+        );
+    }
+
+    #[test]
+    fn presign_target_handles_url_with_bucket_segment() {
+        let base = Url::parse("http://host:9000/extensions").unwrap();
+        let bundle =
+            Url::parse("http://host:9000/extensions/tenants/t1/extensions/e1/sha256/h/bundle.tar.zst")
+                .unwrap();
+        let (bucket, key) = presign_target_from_urls(&base, &bundle).unwrap();
+        assert_eq!(bucket, "extensions");
+        assert_eq!(key, "tenants/t1/extensions/e1/sha256/h/bundle.tar.zst");
+    }
+
+    #[test]
+    fn presign_target_handles_url_without_bucket_segment() {
+        let base = Url::parse("http://host:9000/extensions").unwrap();
+        let bundle =
+            Url::parse("http://host:9000/tenants/t1/extensions/e1/sha256/h/bundle.tar.zst").unwrap();
+        let (bucket, key) = presign_target_from_urls(&base, &bundle).unwrap();
+        assert_eq!(bucket, "extensions");
+        assert_eq!(key, "tenants/t1/extensions/e1/sha256/h/bundle.tar.zst");
     }
 }

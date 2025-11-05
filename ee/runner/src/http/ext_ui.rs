@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
@@ -12,9 +13,11 @@ use axum::{
 use serde::Deserialize;
 use std::io::ErrorKind;
 use std::io::Read;
+use once_cell::sync::Lazy;
 use tar::Archive;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
+use tokio::sync::RwLock;
 use tracing::info;
 use url::Url;
 use zstd::stream::read::Decoder as ZstdDecoder;
@@ -26,6 +29,9 @@ use crate::util::{
     errors::IntegrityError, etag::etag_for_file, mime::content_type_for, path_sanitize,
 };
 use reqwest::Client as HttpClient;
+
+static TENANT_HINTS: Lazy<RwLock<HashMap<(String, String), String>>> =
+    Lazy::new(|| RwLock::new(HashMap::new()));
 
 #[derive(Clone)]
 pub struct AppState {
@@ -92,11 +98,26 @@ pub async fn handle_get(
         }
     };
 
-    // Strict validation behavior: enabled by default
-    let strict = true;
+    // Strict validation behavior can be relaxed via EXT_STATIC_STRICT_VALIDATION=false
+    let strict = std::env::var("EXT_STATIC_STRICT_VALIDATION")
+        .map(|v| {
+            let lower = v.to_ascii_lowercase();
+            matches!(lower.as_str(), "1" | "true" | "yes")
+        })
+        .unwrap_or(true);
 
     // Resolve tenant via header or registry host lookup
     let mut tenant = query.tenant.clone().unwrap_or_else(|| tenant_id.clone());
+    if tenant.is_empty() {
+        if let Some(cached) = TENANT_HINTS
+            .read()
+            .await
+            .get(&(extension_id.clone(), hash_hex.clone()))
+            .cloned()
+        {
+            tenant = cached;
+        }
+    }
     if tenant.is_empty() {
         if let Ok(base) = std::env::var("REGISTRY_BASE_URL") {
             if let Ok(mut u) = Url::parse(&base) {
@@ -141,6 +162,12 @@ pub async fn handle_get(
                 }
             }
         }
+    }
+    if !tenant.is_empty() {
+        TENANT_HINTS
+            .write()
+            .await
+            .insert((extension_id.clone(), hash_hex.clone()), tenant.clone());
     }
     if strict && tenant.is_empty() {
         tracing::info!(request_id=%req_id, host=%host, "strict validation on and tenant resolution failed");

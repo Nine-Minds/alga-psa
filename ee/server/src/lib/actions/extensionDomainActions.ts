@@ -9,6 +9,9 @@ export interface InstallInfo {
   install_id: string;
   runner_domain: string | null;
   runner_status: any;
+  tenant_id: string;
+  content_hash?: string | null;
+  version_id?: string | null;
 }
 
 // Accepts only registryId (v2). Classic extension id is not supported.
@@ -18,14 +21,27 @@ export async function getInstallInfo(registryId: string): Promise<InstallInfo | 
   const adminDb: Knex = await getAdminConnection();
   const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
   if (!reg) return null;
-  const install = await adminDb('tenant_extension_install')
-    .where({ tenant_id: tenant, registry_id: registryId })
-    .first(['id', 'runner_domain', 'runner_status']);
-  if (!install) return null;
+
+  // Join with extension_bundle to get content_hash for Docker backend
+  const result = await adminDb('tenant_extension_install as ti')
+    .leftJoin('extension_bundle as eb', 'eb.version_id', 'ti.version_id')
+    .where({ 'ti.tenant_id': tenant, 'ti.registry_id': registryId })
+    .first([
+      'ti.id as install_id',
+      'ti.runner_domain',
+      'ti.runner_status',
+      'ti.version_id',
+      'eb.content_hash'
+    ]);
+
+  if (!result) return null;
   return {
-    install_id: (install as any).id,
-    runner_domain: (install as any).runner_domain || null,
-    runner_status: (install as any).runner_status || { state: 'pending' },
+    install_id: (result as any).install_id,
+    runner_domain: (result as any).runner_domain || null,
+    runner_status: (result as any).runner_status || { state: 'pending' },
+    tenant_id: tenant,
+    content_hash: (result as any).content_hash || null,
+    version_id: (result as any).version_id || null,
   };
 }
 

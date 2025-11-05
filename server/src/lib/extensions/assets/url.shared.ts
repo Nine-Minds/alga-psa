@@ -6,15 +6,27 @@
  *   const src = buildExtUiSrc("ext-123", "sha256:...64hex...", "/");
  *   <iframe src={src} sandbox="allow-scripts"></iframe>
  */
-export function buildExtUiSrc(extensionId: string, contentHash: string, clientPath: string): string {
+export function buildExtUiSrc(
+  extensionId: string,
+  contentHash: string,
+  clientPath: string,
+  opts?: { tenantId?: string; publicBaseOverride?: string }
+): string {
   if (!/^sha256:[0-9a-f]{64}$/i.test(contentHash)) {
     throw new Error("Invalid content hash; expected format 'sha256:<hex64>'");
   }
 
   const mode = (process.env.EXT_UI_HOST_MODE || 'rust').toLowerCase();
-  const publicBase = mode === 'rust' ? normalizePublicBase(process.env.RUNNER_PUBLIC_BASE) : null;
+  const overrideBase = normalizePublicBase(opts?.publicBaseOverride);
+  const publicBase =
+    overrideBase ?? (mode === 'rust' ? normalizePublicBase(process.env.RUNNER_PUBLIC_BASE) : null);
 
-  const qs = new URLSearchParams({ path: clientPath || '/' }).toString();
+  const params = new URLSearchParams({ path: clientPath || '/' });
+  if (opts?.tenantId) {
+    params.set('tenant', opts.tenantId);
+  }
+  params.set('extensionId', extensionId);
+  const qs = params.toString();
   const suffix = `/ext-ui/${encodeURIComponent(extensionId)}/${encodeURIComponent(contentHash)}/index.html?${qs}`;
 
   if (!publicBase) {

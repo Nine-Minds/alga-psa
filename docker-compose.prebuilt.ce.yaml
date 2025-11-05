@@ -212,6 +212,7 @@ services:
     secrets:
       - db_password_hocuspocus
       - redis_password
+      - postgres_password
     networks:
       - app-network
     depends_on:
