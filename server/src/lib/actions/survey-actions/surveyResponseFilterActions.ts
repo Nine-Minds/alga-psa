@@ -7,10 +7,18 @@ type FilterOption = {
   label: string;
 };
 
+export type SurveyFilterClient = {
+  client_id: string;
+  client_name: string;
+  client_type: 'company' | 'individual';
+  is_inactive: boolean;
+  logoUrl: string | null;
+};
+
 export type SurveyFilterOptions = {
   templates: FilterOption[];
   technicians: FilterOption[];
-  clients: FilterOption[];
+  clients: SurveyFilterClient[];
 };
 
 const TEMPLATES_TABLE = 'survey_templates';
@@ -53,8 +61,12 @@ export async function getSurveyFilterOptions(): Promise<SurveyFilterOptions> {
       })
       .where('sr.tenant', tenantId)
       .whereNotNull('sr.client_id')
-      .distinct('sr.client_id as client_id')
-      .select('c.client_name')
+      .distinct(
+        'sr.client_id as client_id',
+        'c.client_name',
+        'c.client_type',
+        'c.is_inactive'
+      )
       .orderBy('c.client_name', 'asc'),
   ]);
 
@@ -72,8 +84,11 @@ export async function getSurveyFilterOptions(): Promise<SurveyFilterOptions> {
     clients: clientRows
       .filter((row) => row.client_id)
       .map((row) => ({
-        value: row.client_id,
-        label: row.client_name ?? 'Unnamed Client',
+        client_id: row.client_id,
+        client_name: row.client_name ?? 'Unnamed Client',
+        client_type: row.client_type === 'individual' ? 'individual' : 'company',
+        is_inactive: Boolean(row.is_inactive),
+        logoUrl: null,
       })),
   };
 }

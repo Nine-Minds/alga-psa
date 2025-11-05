@@ -7,7 +7,7 @@ import {
   type SurveyClientSatisfactionSummary,
 } from 'server/src/interfaces/survey.interface';
 import { createTenantKnex } from '../../db';
-import { SurveyDashboardService } from 'server/src/services/SurveyDashboardService';
+import SurveyDashboardService from 'server/src/services/SurveyDashboardService';
 
 function ensureTenant(tenant: string | null): string {
   if (!tenant) {

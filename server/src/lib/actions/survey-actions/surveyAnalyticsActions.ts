@@ -9,7 +9,7 @@ import {
   type SurveyResponsePage,
 } from 'server/src/interfaces/survey.interface';
 import { createTenantKnex } from '../../db';
-import { SurveyAnalyticsService } from 'server/src/services/SurveyAnalyticsService';
+import SurveyAnalyticsService from 'server/src/services/SurveyAnalyticsService';
 
 function ensureTenant(tenant: string | null): string {
   if (!tenant) {

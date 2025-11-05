@@ -35,7 +35,7 @@ export default function SurveyModuleFrame({ children }: SurveyModuleFrameProps) 
           </div>
           <div className="hidden items-center rounded-full bg-primary-50 px-4 py-2 text-primary-600 sm:flex">
             <BarChart3 className="mr-2 h-4 w-4" />
-            Phase 2 Dashboard
+            Satisfaction Insights
           </div>
         </div>
 
