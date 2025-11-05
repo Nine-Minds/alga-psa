@@ -22,6 +22,9 @@ import { Package, Clock, Activity, Plus, X, DollarSign } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
+import { SwitchWithLabel } from '../ui/SwitchWithLabel';
+import { BucketOverlayFields } from './contracts/BucketOverlayFields';
+import { BucketOverlayInput } from './contracts/ContractWizard';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
@@ -49,9 +52,20 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [services, setServices] = useState<IService[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [fixedServices, setFixedServices] = useState<Array<{ service_id: string; service_name: string; quantity: number }>>([]);
-  const [hourlyServices, setHourlyServices] = useState<Array<{ service_id: string; service_name: string; hourly_rate: number | undefined }>>([]);
+  const [hourlyServices, setHourlyServices] = useState<Array<{
+    service_id: string;
+    service_name: string;
+    hourly_rate: number | undefined;
+    bucket_overlay?: BucketOverlayInput | null;
+  }>>([]);
   const [hourlyServiceRateInputs, setHourlyServiceRateInputs] = useState<Record<number, string>>({});
-  const [usageServices, setUsageServices] = useState<Array<{ service_id: string; service_name: string; unit_rate: number | undefined; unit_of_measure: string }>>([]);
+  const [usageServices, setUsageServices] = useState<Array<{
+    service_id: string;
+    service_name: string;
+    unit_rate: number | undefined;
+    unit_of_measure: string;
+    bucket_overlay?: BucketOverlayInput | null;
+  }>>([]);
   const [usageServiceRateInputs, setUsageServiceRateInputs] = useState<Record<number, string>>({});
 
   // Hourly plan state
@@ -118,7 +132,13 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               const hourlySvcs = presetServices.map(s => ({
                 service_id: s.service_id,
                 service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
-                hourly_rate: s.custom_rate ? s.custom_rate / 100 : undefined
+                hourly_rate: s.custom_rate ? s.custom_rate / 100 : undefined,
+                bucket_overlay: (s.bucket_total_minutes != null || s.bucket_overage_rate != null || s.bucket_allow_rollover != null) ? {
+                  total_minutes: s.bucket_total_minutes ?? undefined,
+                  overage_rate: s.bucket_overage_rate ?? undefined,
+                  allow_rollover: s.bucket_allow_rollover ?? false,
+                  billing_period: editingPlan.billing_frequency as 'weekly' | 'monthly'
+                } : null
               }));
               setHourlyServices(hourlySvcs);
             } else if (editingPlan.contract_line_type === 'Usage') {
@@ -126,7 +146,13 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 service_id: s.service_id,
                 service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
                 unit_rate: s.custom_rate ? s.custom_rate / 100 : undefined,
-                unit_of_measure: s.unit_of_measure || ''
+                unit_of_measure: s.unit_of_measure || '',
+                bucket_overlay: (s.bucket_total_minutes != null || s.bucket_overage_rate != null || s.bucket_allow_rollover != null) ? {
+                  total_minutes: s.bucket_total_minutes ?? undefined,
+                  overage_rate: s.bucket_overage_rate ?? undefined,
+                  allow_rollover: s.bucket_allow_rollover ?? false,
+                  billing_period: editingPlan.billing_frequency as 'weekly' | 'monthly'
+                } : null
               }));
               setUsageServices(usageSvcs);
             }
@@ -274,7 +300,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 service_id: service.service_id,
                 quantity: null,
                 custom_rate: service.hourly_rate, // Already in cents from handleHourlyRateChange
-                unit_of_measure: null
+                unit_of_measure: null,
+                // Add bucket overlay fields
+                bucket_total_minutes: service.bucket_overlay?.total_minutes ?? null,
+                bucket_overage_rate: service.bucket_overlay?.overage_rate ?? null,
+                bucket_allow_rollover: service.bucket_overlay?.allow_rollover ?? null
               });
             }
           });
@@ -287,7 +317,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 service_id: service.service_id,
                 quantity: null,
                 custom_rate: service.unit_rate, // Already in cents from handleUsageRateChange
-                unit_of_measure: service.unit_of_measure || ''
+                unit_of_measure: service.unit_of_measure || '',
+                // Add bucket overlay fields
+                bucket_total_minutes: service.bucket_overlay?.total_minutes ?? null,
+                bucket_overage_rate: service.bucket_overlay?.overage_rate ?? null,
+                bucket_allow_rollover: service.bucket_overlay?.allow_rollover ?? null
               });
             }
           });
@@ -618,6 +652,52 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     {service.hourly_rate ? `${formatCurrency(service.hourly_rate)}/hour` : 'Enter hourly rate'}
                   </p>
                 </div>
+
+                {/* Bucket Overlay Section */}
+                <div className="space-y-3 pt-3 border-t border-dashed border-gray-200">
+                  <SwitchWithLabel
+                    label="Recommend bucket of hours"
+                    checked={Boolean(service.bucket_overlay)}
+                    onCheckedChange={(checked) => {
+                      const newServices = [...hourlyServices];
+                      if (checked) {
+                        newServices[index] = {
+                          ...newServices[index],
+                          bucket_overlay: {
+                            total_minutes: undefined,
+                            overage_rate: undefined,
+                            allow_rollover: false,
+                            billing_period: billingFrequency as 'weekly' | 'monthly'
+                          }
+                        };
+                      } else {
+                        newServices[index] = {
+                          ...newServices[index],
+                          bucket_overlay: null
+                        };
+                      }
+                      setHourlyServices(newServices);
+                      markDirty();
+                    }}
+                  />
+                  {service.bucket_overlay && (
+                    <BucketOverlayFields
+                      mode="hours"
+                      value={service.bucket_overlay}
+                      onChange={(overlay) => {
+                        const newServices = [...hourlyServices];
+                        newServices[index] = {
+                          ...newServices[index],
+                          bucket_overlay: overlay
+                        };
+                        setHourlyServices(newServices);
+                        markDirty();
+                      }}
+                      automationId={`hourly-bucket-${index}`}
+                      billingFrequency={billingFrequency}
+                    />
+                  )}
+                </div>
               </div>
 
               <Button
@@ -793,6 +873,53 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       e.g., GB, API call, transaction
                     </p>
                   </div>
+                </div>
+
+                {/* Bucket Overlay Section */}
+                <div className="space-y-3 pt-3 border-t border-dashed border-gray-200">
+                  <SwitchWithLabel
+                    label="Recommend bucket of consumption"
+                    checked={Boolean(service.bucket_overlay)}
+                    onCheckedChange={(checked) => {
+                      const newServices = [...usageServices];
+                      if (checked) {
+                        newServices[index] = {
+                          ...newServices[index],
+                          bucket_overlay: {
+                            total_minutes: undefined,
+                            overage_rate: undefined,
+                            allow_rollover: false,
+                            billing_period: billingFrequency as 'weekly' | 'monthly'
+                          }
+                        };
+                      } else {
+                        newServices[index] = {
+                          ...newServices[index],
+                          bucket_overlay: null
+                        };
+                      }
+                      setUsageServices(newServices);
+                      markDirty();
+                    }}
+                  />
+                  {service.bucket_overlay && (
+                    <BucketOverlayFields
+                      mode="usage"
+                      value={service.bucket_overlay}
+                      onChange={(overlay) => {
+                        const newServices = [...usageServices];
+                        newServices[index] = {
+                          ...newServices[index],
+                          bucket_overlay: overlay
+                        };
+                        setUsageServices(newServices);
+                        markDirty();
+                      }}
+                      unitLabel={service.unit_of_measure || 'units'}
+                      automationId={`usage-bucket-${index}`}
+                      billingFrequency={billingFrequency}
+                    />
+                  )}
                 </div>
               </div>
 

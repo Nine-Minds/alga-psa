@@ -5,23 +5,25 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
-import { Plus, MoreVertical } from 'lucide-react';
+import { Plus, MoreVertical, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
-import { DataTable } from 'server/src/components/ui/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IContractLinePresetService, IService } from 'server/src/interfaces/billing.interfaces';
 import {
   getContractLinePresetServices,
-  updateContractLinePresetServices
+  updateContractLinePresetServices,
+  getContractLinePresetById
 } from 'server/src/lib/actions/contractLinePresetActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
+import { BucketOverlayInput } from '../contracts/ContractWizard';
 
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
   { value: 'fixed', label: 'Fixed Price' },
@@ -34,23 +36,21 @@ interface UsageContractLinePresetServicesListProps {
   onServiceAdded?: () => void;
 }
 
-interface SimplePresetService {
-  preset_id: string;
-  service_id: string;
+interface PresetServiceWithBucket extends IContractLinePresetService {
   service_name?: string;
   service_type_name?: string;
   billing_method?: 'fixed' | 'hourly' | 'usage' | null;
   default_rate?: number;
-  custom_rate?: number; // Unit rate in cents
-  unit_of_measure?: string;
+  bucket_overlay?: BucketOverlayInput | null;
 }
 
 const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServicesListProps> = ({ presetId, onServiceAdded }) => {
-  const [presetServices, setPresetServices] = useState<SimplePresetService[]>([]);
+  const [presetServices, setPresetServices] = useState<PresetServiceWithBucket[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
 
   const fetchData = useCallback(async () => {
     if (!presetId) return;
@@ -59,23 +59,39 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     setError(null);
 
     try {
+      // Fetch preset to get billing frequency
+      const preset = await getContractLinePresetById(presetId);
+      if (preset) {
+        setBillingFrequency(preset.billing_frequency || 'monthly');
+      }
+
       const presetServicesData = await getContractLinePresetServices(presetId);
       const servicesResponse = await getServices();
       const allAvailableServices = Array.isArray(servicesResponse)
         ? servicesResponse
         : (servicesResponse.services || []);
 
-      const enhancedServices: SimplePresetService[] = presetServicesData.map((presetService) => {
+      const enhancedServices: PresetServiceWithBucket[] = presetServicesData.map((presetService) => {
         const serviceDetails = allAvailableServices.find(s => s.service_id === presetService.service_id);
+
+        // Convert bucket fields to bucket_overlay format
+        const bucketOverlay: BucketOverlayInput | null =
+          presetService.bucket_total_minutes != null && presetService.bucket_overage_rate != null
+            ? {
+                total_minutes: presetService.bucket_total_minutes,
+                overage_rate: presetService.bucket_overage_rate,
+                allow_rollover: presetService.bucket_allow_rollover ?? false,
+                billing_period: (preset?.billing_frequency || 'monthly') as 'weekly' | 'monthly'
+              }
+            : null;
+
         return {
-          preset_id: presetService.preset_id,
-          service_id: presetService.service_id,
+          ...presetService,
           service_name: serviceDetails?.service_name || 'Unknown Service',
           service_type_name: serviceDetails?.service_type_name || 'N/A',
           billing_method: serviceDetails?.billing_method,
           default_rate: serviceDetails?.default_rate,
-          custom_rate: presetService.custom_rate || serviceDetails?.default_rate,
-          unit_of_measure: presetService.unit_of_measure || serviceDetails?.unit_of_measure || 'unit'
+          bucket_overlay: bucketOverlay
         };
       });
 
@@ -94,6 +110,69 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     fetchData();
   }, [fetchData]);
 
+  const getDefaultOverlay = useCallback((): BucketOverlayInput => ({
+    total_minutes: undefined,
+    overage_rate: undefined,
+    allow_rollover: false,
+    billing_period: billingFrequency as 'weekly' | 'monthly'
+  }), [billingFrequency]);
+
+  const toggleBucketOverlay = async (serviceId: string, enabled: boolean) => {
+    try {
+      const currentServices = await getContractLinePresetServices(presetId);
+      const updatedServices = currentServices.map(s => {
+        if (s.service_id === serviceId) {
+          if (enabled) {
+            const defaultOverlay = getDefaultOverlay();
+            return {
+              ...s,
+              bucket_total_minutes: defaultOverlay.total_minutes,
+              bucket_overage_rate: defaultOverlay.overage_rate,
+              bucket_allow_rollover: defaultOverlay.allow_rollover ?? false
+            };
+          } else {
+            return {
+              ...s,
+              bucket_total_minutes: undefined,
+              bucket_overage_rate: undefined,
+              bucket_allow_rollover: undefined
+            };
+          }
+        }
+        return s;
+      });
+
+      await updateContractLinePresetServices(presetId, updatedServices);
+      fetchData();
+    } catch (error) {
+      console.error('Error toggling bucket overlay:', error);
+      setError('Failed to toggle bucket configuration');
+    }
+  };
+
+  const updateBucketOverlay = async (serviceId: string, overlay: BucketOverlayInput) => {
+    try {
+      const currentServices = await getContractLinePresetServices(presetId);
+      const updatedServices = currentServices.map(s => {
+        if (s.service_id === serviceId) {
+          return {
+            ...s,
+            bucket_total_minutes: overlay.total_minutes,
+            bucket_overage_rate: overlay.overage_rate,
+            bucket_allow_rollover: overlay.allow_rollover ?? false
+          };
+        }
+        return s;
+      });
+
+      await updateContractLinePresetServices(presetId, updatedServices);
+      fetchData();
+    } catch (error) {
+      console.error('Error updating bucket overlay:', error);
+      setError('Failed to update bucket configuration');
+    }
+  };
+
   const handleAddServices = async () => {
     if (!presetId || selectedServicesToAdd.length === 0) return;
 
@@ -105,21 +184,15 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
           preset_id: presetId,
           service_id: serviceId,
           custom_rate: service?.default_rate || 0,
-          quantity: null,
-          unit_of_measure: service?.unit_of_measure || 'unit'
+          quantity: undefined,
+          unit_of_measure: service?.unit_of_measure || 'unit',
+          bucket_total_minutes: undefined,
+          bucket_overage_rate: undefined,
+          bucket_allow_rollover: undefined
         };
       });
 
-      const allServices = [
-        ...currentServices.map(s => ({
-          preset_id: s.preset_id,
-          service_id: s.service_id,
-          custom_rate: s.custom_rate,
-          quantity: null,
-          unit_of_measure: s.unit_of_measure
-        })),
-        ...newServices
-      ];
+      const allServices = [...currentServices, ...newServices];
 
       await updateContractLinePresetServices(presetId, allServices);
       fetchData();
@@ -139,15 +212,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
 
     try {
       const currentServices = await getContractLinePresetServices(presetId);
-      const updatedServices = currentServices
-        .filter(s => s.service_id !== serviceId)
-        .map(s => ({
-          preset_id: s.preset_id,
-          service_id: s.service_id,
-          custom_rate: s.custom_rate,
-          quantity: null,
-          unit_of_measure: s.unit_of_measure
-        }));
+      const updatedServices = currentServices.filter(s => s.service_id !== serviceId);
 
       await updateContractLinePresetServices(presetId, updatedServices);
       fetchData();
@@ -167,11 +232,8 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     try {
       const currentServices = await getContractLinePresetServices(presetId);
       const updatedServices = currentServices.map(s => ({
-        preset_id: s.preset_id,
-        service_id: s.service_id,
-        custom_rate: s.service_id === serviceId ? newRate : s.custom_rate,
-        quantity: null,
-        unit_of_measure: s.unit_of_measure
+        ...s,
+        custom_rate: s.service_id === serviceId ? newRate : s.custom_rate
       }));
 
       await updateContractLinePresetServices(presetId, updatedServices);
@@ -192,10 +254,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     try {
       const currentServices = await getContractLinePresetServices(presetId);
       const updatedServices = currentServices.map(s => ({
-        preset_id: s.preset_id,
-        service_id: s.service_id,
-        custom_rate: s.custom_rate,
-        quantity: null,
+        ...s,
         unit_of_measure: s.service_id === serviceId ? newUnit : s.unit_of_measure
       }));
 
@@ -210,90 +269,6 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       setError('Failed to update unit of measure');
     }
   };
-
-  const presetServiceColumns: ColumnDefinition<SimplePresetService>[] = [
-    {
-      title: 'Service Name',
-      dataIndex: 'service_name',
-    },
-    {
-      title: 'Service Type',
-      dataIndex: 'service_type_name',
-    },
-    {
-      title: 'Billing Method',
-      dataIndex: 'billing_method',
-      render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value || 'N/A',
-    },
-    {
-      title: 'Rate per Unit',
-      dataIndex: 'custom_rate',
-      render: (value, record) => (
-        <div className="flex items-center gap-2">
-          <span className="text-gray-500">$</span>
-          <Input
-            type="text"
-            inputMode="decimal"
-            value={value !== undefined ? (value / 100).toFixed(2) : ''}
-            onChange={(e) => {
-              const dollars = parseFloat(e.target.value) || 0;
-              const cents = Math.round(dollars * 100);
-              handleRateChange(record.service_id, cents);
-            }}
-            className="w-24"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      ),
-    },
-    {
-      title: 'Unit of Measure',
-      dataIndex: 'unit_of_measure',
-      render: (value, record) => (
-        <Input
-          type="text"
-          value={value || 'unit'}
-          onChange={(e) => {
-            handleUnitChange(record.service_id, e.target.value);
-          }}
-          className="w-32"
-          onClick={(e) => e.stopPropagation()}
-          placeholder="e.g., GB, user, device"
-        />
-      ),
-    },
-    {
-      title: 'Actions',
-      dataIndex: 'service_id',
-      render: (value) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id={`preset-service-actions-${value}`}
-              variant="ghost"
-              className="h-8 w-8 p-0"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className="sr-only">Open menu</span>
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id={`remove-preset-service-${value}`}
-              className="text-red-600 focus:text-red-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRemoveService(value);
-              }}
-            >
-              Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
-  ];
 
   const servicesAvailableToAdd = availableServices.filter(
     availService =>
@@ -315,12 +290,97 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       ) : (
         <>
           <div className="mb-4">
-            <DataTable
-              data={presetServices}
-              columns={presetServiceColumns}
-              pagination={false}
-            />
-            {presetServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line preset.</p>}
+            {presetServices.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No services currently associated with this contract line preset.</p>
+            ) : (
+              <div className="space-y-3">
+                {presetServices.map((service) => (
+                  <div key={service.service_id} className="border rounded-lg p-4 bg-white">
+                    {/* Service Header */}
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{service.service_name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Service Type: {service.service_type_name} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method}
+                        </p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            id={`preset-service-actions-${service.service_id}`}
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                          >
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            id={`remove-preset-service-${service.service_id}`}
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => handleRemoveService(service.service_id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Rate and Unit */}
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium">Rate per Unit:</label>
+                        <span className="text-gray-500">$</span>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={service.custom_rate !== undefined ? (service.custom_rate / 100).toFixed(2) : ''}
+                          onChange={(e) => {
+                            const dollars = parseFloat(e.target.value) || 0;
+                            const cents = Math.round(dollars * 100);
+                            handleRateChange(service.service_id, cents);
+                          }}
+                          className="w-24"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium">Unit:</label>
+                        <Input
+                          type="text"
+                          value={service.unit_of_measure || 'unit'}
+                          onChange={(e) => {
+                            handleUnitChange(service.service_id, e.target.value);
+                          }}
+                          className="w-32"
+                          placeholder="e.g., GB, user, device"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bucket Overlay Section */}
+                    <div className="space-y-3 pt-3 border-t border-dashed border-secondary-100">
+                      <SwitchWithLabel
+                        label="Recommend bucket of consumption"
+                        checked={Boolean(service.bucket_overlay)}
+                        onCheckedChange={(checked) => toggleBucketOverlay(service.service_id, Boolean(checked))}
+                      />
+                      {service.bucket_overlay && (
+                        <BucketOverlayFields
+                          mode="usage"
+                          value={service.bucket_overlay}
+                          onChange={(overlay) => updateBucketOverlay(service.service_id, overlay)}
+                          unitLabel={service.unit_of_measure || 'units'}
+                          automationId={`preset-usage-bucket-${service.service_id}`}
+                          billingFrequency={billingFrequency}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-6 border-t pt-4">

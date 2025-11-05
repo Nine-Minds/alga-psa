@@ -1,5 +1,6 @@
 // server/src/lib/actions/contractLinePresetActions.ts
 'use server'
+import { v4 as uuidv4 } from 'uuid';
 import ContractLinePreset from 'server/src/lib/models/contractLinePreset';
 import ContractLinePresetService from 'server/src/lib/models/contractLinePresetService';
 import ContractLinePresetFixedConfig from 'server/src/lib/models/contractLinePresetFixedConfig';
@@ -508,6 +509,36 @@ export async function copyPresetToContractLine(
                     await configService.createConfiguration(baseConfig, typeConfig);
 
                     console.log(`[copyPresetToContractLine] Successfully created configuration for service ${presetService.service_id}`);
+
+                    // Handle bucket overlay if present
+                    if (presetService.bucket_total_minutes != null && presetService.bucket_overage_rate != null) {
+                        console.log(`[copyPresetToContractLine] Creating bucket overlay for service ${presetService.service_id}`);
+
+                        const bucketConfigId = uuidv4();
+
+                        // Create bucket service configuration
+                        const bucketConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+                            contract_line_id: contractLineId,
+                            service_id: presetService.service_id,
+                            configuration_type: 'Bucket',
+                            custom_rate: undefined,
+                            quantity: undefined,
+                            instance_name: undefined,
+                            tenant: tenantId
+                        };
+
+                        // Create bucket-specific config matching the contract line's billing frequency
+                        const bucketTypeConfig = {
+                            total_minutes: Math.max(0, Math.round(presetService.bucket_total_minutes)),
+                            billing_period: contractLine.billing_frequency,
+                            overage_rate: Math.max(0, Math.round(presetService.bucket_overage_rate)),
+                            allow_rollover: presetService.bucket_allow_rollover ?? false
+                        };
+
+                        await configService.createConfiguration(bucketConfig, bucketTypeConfig);
+
+                        console.log(`[copyPresetToContractLine] Successfully created bucket configuration for service ${presetService.service_id}`);
+                    }
                 }
             } else {
                 console.log(`[copyPresetToContractLine] No services found for preset ${presetId}, skipping service copy`);

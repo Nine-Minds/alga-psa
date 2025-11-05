@@ -259,6 +259,10 @@ export interface IContractLinePresetService extends TenantEntity {
   quantity?: number;
   custom_rate?: number;
   unit_of_measure?: string;
+  // Bucket overlay fields - recommended bucket configuration
+  bucket_total_minutes?: number;
+  bucket_overage_rate?: number;
+  bucket_allow_rollover?: boolean;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
