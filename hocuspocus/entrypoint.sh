@@ -45,28 +45,37 @@ get_secret() {
 # Function to check if postgres is ready
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
-    
-    # First get postgres password as it may be needed as fallback
-    local postgres_password=$(get_secret "postgres_password" "POSTGRES_PASSWORD")
-    if [ -z "$postgres_password" ]; then
-        log "Error: No postgres password available"
-        exit 1
+
+    # Try to get hocuspocus password first
+    local db_password=$(get_secret "db_password_hocuspocus" "DB_PASSWORD_HOCUSPOCUS")
+
+    # If not found, try postgres password as fallback
+    if [ -z "$db_password" ]; then
+        log "DB_PASSWORD_HOCUSPOCUS not found, trying POSTGRES_PASSWORD as fallback"
+        db_password=$(get_secret "postgres_password" "POSTGRES_PASSWORD")
+        if [ -z "$db_password" ]; then
+            log "Error: No database password available (tried DB_PASSWORD_HOCUSPOCUS and POSTGRES_PASSWORD)"
+            exit 1
+        fi
     fi
-    
-    # Get hocuspocus credentials, falling back to postgres password if needed
-    local db_password=$(get_secret "db_password_hocuspocus" "DB_PASSWORD_HOCUSPOCUS" "$postgres_password")
     local db_user=$(get_secret "db_user_hocuspocus" "DB_USER_HOCUSPOCUS" "hocuspocus_user")
     local db_name=$(get_secret "db_name_hocuspocus" "DB_NAME_HOCUSPOCUS" "hocuspocus")
 
     # Store credentials before logging
     export PGPASSWORD="$db_password"
 
+    # Get DB host from environment or default
+    local db_host=${DB_HOST:-postgres}
+    local db_port=${DB_PORT:-5432}
+
     # Debug logging after storing credentials
+    log "Using database host: $db_host"
+    log "Using database port: $db_port"
     log "Using database user: $db_user"
     log "Using database name: $db_name"
     log "Using database password: ${db_password:0:3}..." # Only show first 3 chars for security
 
-    until psql -h postgres -U "$db_user" -d "$db_name" -c '\q' 2>&1; do
+    until psql -h "$db_host" -p "$db_port" -U "$db_user" -d "$db_name" -c '\q' 2>&1; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done

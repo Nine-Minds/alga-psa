@@ -15,7 +15,7 @@ import {
   MessageSentEvent,
   UserMentionedInDocumentEvent
 } from '../events';
-import { createNotificationFromTemplateAction } from '../../actions/internal-notification-actions/internalNotificationActions';
+import { createNotificationFromTemplateInternal } from '../../actions/internal-notification-actions/internalNotificationActions';
 import logger from '@alga-psa/shared/core/logger';
 import { getConnection } from '../../db/db';
 import type { Knex } from 'knex';
@@ -67,7 +67,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
 
     // Create notification for assigned MSP user if ticket is assigned
     if (ticket.assigned_to) {
-      await createNotificationFromTemplateAction({
+      await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: ticket.assigned_to,
         template_name: 'ticket-created',
@@ -101,7 +101,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         .first();
 
       if (contactUser) {
-        await createNotificationFromTemplateAction({
+        await createNotificationFromTemplateInternal(db, {
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-created-client',
@@ -151,7 +151,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         't.priority_id',
         't.status_id',
         'p.priority_name',
-        'p.priority_color',
+        'p.color as priority_color',
         's.name as status_name'
       )
       .leftJoin('priorities as p', function() {
@@ -189,7 +189,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     });
 
     // Create notification for assigned user
-    await createNotificationFromTemplateAction({
+    await createNotificationFromTemplateInternal(db, {
       tenant: tenantId,
       user_id: ticket.assigned_to,
       template_name: 'ticket-assigned',
@@ -348,7 +348,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
     // Create notification for assigned MSP user if ticket is assigned
     if (ticket.assigned_to) {
-      await createNotificationFromTemplateAction({
+      await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: ticket.assigned_to,
         template_name: templateName,
@@ -378,7 +378,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         .first();
 
       if (contactUser) {
-        await createNotificationFromTemplateAction({
+        await createNotificationFromTemplateInternal(db, {
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-updated-client',
@@ -433,7 +433,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     // Create notification for assigned MSP user if ticket is assigned
     if (ticket.assigned_to) {
-      await createNotificationFromTemplateAction({
+      await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: ticket.assigned_to,
         template_name: 'ticket-closed',
@@ -465,7 +465,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         .first();
 
       if (contactUser) {
-        await createNotificationFromTemplateAction({
+        await createNotificationFromTemplateInternal(db, {
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-closed-client',
@@ -704,7 +704,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Create notifications for mentioned users (excluding the comment author)
     for (const mentionedUser of mentionedUsers) {
       if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
-        await createNotificationFromTemplateAction({
+        await createNotificationFromTemplateInternal(db, {
           tenant: tenantId,
           user_id: mentionedUser.user_id,
           template_name: 'user-mentioned-in-comment',
@@ -758,7 +758,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Create notification for assigned MSP user (if not the comment author and not already notified via mention)
     if (ticket.assigned_to && ticket.assigned_to !== userId && !notifiedUserIds.has(ticket.assigned_to)) {
-      await createNotificationFromTemplateAction({
+      await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: ticket.assigned_to,
         template_name: 'ticket-comment-added',
@@ -803,7 +803,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .first();
 
       if (contactUser && contactUser.user_id !== userId && !notifiedUserIds.has(contactUser.user_id)) {
-        await createNotificationFromTemplateAction({
+        await createNotificationFromTemplateInternal(db, {
           tenant: tenantId,
           user_id: contactUser.user_id,
           template_name: 'ticket-comment-added-client',
@@ -905,7 +905,7 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
     // Create notifications for mentioned users (excluding the document author)
     for (const mentionedUser of mentionedUsers) {
       if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
-        await createNotificationFromTemplateAction({
+        await createNotificationFromTemplateInternal(db, {
           tenant: tenantId,
           user_id: mentionedUser.user_id,
           template_name: 'user-mentioned-in-document',
@@ -994,7 +994,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
 
     // Notify the assigned user (if assigned and not the creator)
     if (project.assigned_to && project.assigned_to !== userId) {
-      await createNotificationFromTemplateAction({
+      await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: project.assigned_to,
         template_name: 'project-created',
@@ -1058,7 +1058,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
     });
 
     // Create notification for assigned user
-    await createNotificationFromTemplateAction({
+    await createNotificationFromTemplateInternal(db, {
       tenant: tenantId,
       user_id: assignedTo,
       template_name: 'project-assigned',
@@ -1131,7 +1131,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     });
 
     // Create notification for assigned user
-    await createNotificationFromTemplateAction({
+    await createNotificationFromTemplateInternal(db, {
       tenant: tenantId,
       user_id: assignedTo,
       template_name: 'task-assigned',
@@ -1202,7 +1202,7 @@ async function handleInvoiceGenerated(event: InvoiceGeneratedEvent): Promise<voi
     // Get users who should be notified about invoices (e.g., accounting team)
     // For now, notify the user who created the invoice
     if (userId) {
-      await createNotificationFromTemplateAction({
+      await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: userId,
         template_name: 'invoice-generated',
@@ -1247,7 +1247,7 @@ async function handleMessageSent(event: MessageSentEvent): Promise<void> {
     });
 
     // Create notification for the recipient
-    await createNotificationFromTemplateAction({
+    await createNotificationFromTemplateInternal(db, {
       tenant: tenantId,
       user_id: recipientId,
       template_name: 'message-sent',

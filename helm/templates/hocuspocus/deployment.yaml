@@ -61,7 +61,14 @@ spec:
             - name: REDIS_USERNAME
               value: "default"
             - name: REDIS_PASSWORD
+              {{- if .Values.config.redis.passwordSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.redis.passwordSecret.name }}
+                  key: {{ .Values.config.redis.passwordSecret.key }}
+              {{- else }}
               value: "{{ .Values.config.redis.password }}"
+              {{- end }}
             {{- end }}
       containers:
         - name: {{ .Chart.Name }}
@@ -94,7 +101,14 @@ spec:
           - name: REDIS_USERNAME
             value: "default"
           - name: REDIS_PASSWORD
+            {{- if .Values.config.redis.passwordSecret }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.config.redis.passwordSecret.name }}
+                key: {{ .Values.config.redis.passwordSecret.key }}
+            {{- else }}
             value: "{{ .Values.config.redis.password }}"
+            {{- end }}
           {{- end }}
           {{- if .Values.db.enabled }}
           - name: DB_HOST
@@ -114,13 +128,20 @@ spec:
           - name: DB_HOST
             value: "{{ .Values.config.db.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: DB_USER_HOCUSPOCUS
-            value: "{{ .Values.config.db.user }}"
+            value: "{{ .Values.config.db.hocuspocus_user | default "hocuspocus_user" }}"
           - name: DB_PORT
             value: "{{ .Values.config.db.port }}"
           - name: DB_NAME_HOCUSPOCUS
             value: "{{ .Values.config.db.hocuspocus_database }}"
           - name: DB_PASSWORD_HOCUSPOCUS
+            {{- if .Values.config.db.hocuspocus_password_secret }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.config.db.hocuspocus_password_secret.name }}
+                key: {{ .Values.config.db.hocuspocus_password_secret.key }}
+            {{- else }}
             value: "{{ .Values.config.db.password }}"
+            {{- end }}
           {{- end }}
           ports:
             - name: http
