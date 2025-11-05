@@ -168,40 +168,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
         timezone: timezone
       });
 
-      // Update notification preferences
-      await Promise.all(
-        categories.map(async (category: NotificationCategory): Promise<UserNotificationPreference> => {
-          // Update category preference
-          return await updateUserPreferenceAction(
-            user!.tenant,
-            user!.user_id,
-            {
-              subtype_id: category.id,
-              is_enabled: category.is_enabled,
-              email_address: email,
-              frequency: 'realtime'
-            }
-          );
-
-          // Update subtype preferences
-          // todo - this is unreachable, need to investigate
-          const subtypes = subtypesByCategory[category.id] || [];
-          await Promise.all(
-            subtypes.map((subtype: NotificationSubtype): Promise<UserNotificationPreference> =>
-              updateUserPreferenceAction(
-                user!.tenant,
-                user!.user_id,
-                {
-                  subtype_id: subtype.id,
-                  is_enabled: subtype.is_enabled && category.is_enabled,
-                  email_address: email,
-                  frequency: 'realtime'
-                }
-              )
-            )
-          );
-        })
-      );
+      // Note: Notification preferences are managed separately through their own UI components:
+      // - InternalNotificationPreferences handles internal notification settings
+      // - Email notification preferences should be managed through their dedicated section
 
       // Show success confirmation
       setHasAttemptedSubmit(false);

@@ -37,6 +37,7 @@
   "tickets": {
     "title": "Support-Tickets",
     "subtitle": "Zeige und verwalte deine Support-Tickets",
+    "backToTickets": "Zurück zu den Tickets",
     "createNew": "Neues Ticket erstellen",
     "createButton": "Support-Ticket erstellen",
     "viewAll": "Alle Tickets anzeigen",
@@ -93,7 +94,9 @@
       "category": "Kategorie",
       "subcategory": "Unterkategorie",
       "attachments": "Anhänge",
+      "created": "Erstellt",
       "createdAt": "Erstellt",
+      "lastUpdated": "Zuletzt aktualisiert",
       "updatedAt": "Zuletzt aktualisiert",
       "assignedTo": "Zugewiesen an",
       "requester": "Anfragende Person",

@@ -88,7 +88,8 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
     if (notification.link) {
       // Check entity type from link
       const isDocumentLink = notification.link.includes('/msp/documents');
-      const isTicketLink = notification.link.includes('/msp/tickets/');
+      const isMspTicketLink = notification.link.includes('/msp/tickets/');
+      const isClientPortalTicketLink = notification.link.includes('/client-portal/tickets/');
       const isProjectTaskLink = notification.link.includes('/msp/projects/') && notification.link.includes('/tasks/');
 
       if (isDocumentLink) {
@@ -102,7 +103,19 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
           // Use the callback to open the document
           onNavigateToDocument(documentId, documentName);
         }
-      } else if (isTicketLink && onNavigateToTicket) {
+      } else if (isClientPortalTicketLink) {
+        // For client portal tickets, navigate to the dedicated ticket page
+        // Extract ticket ID from URL (format: /client-portal/tickets/<ticketId>)
+        const ticketId = notification.metadata?.ticketId || notification.link.split('/client-portal/tickets/')[1]?.split('?')[0]?.split('#')[0];
+        if (ticketId) {
+          router.push(`/client-portal/tickets/${ticketId}`);
+          // Close the drawer after navigation
+          if (onClose) {
+            onClose();
+          }
+        }
+      } else if (isMspTicketLink && onNavigateToTicket) {
+        // For MSP tickets, use the callback to open in drawer
         // Extract ticket ID from URL (format: /msp/tickets/<ticketId>)
         const ticketId = notification.metadata?.ticketId || notification.link.split('/msp/tickets/')[1]?.split('?')[0]?.split('#')[0];
         if (ticketId) {
@@ -389,7 +402,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
                 size="lg"
               >
                 {notification.link.includes('/msp/documents') ? 'Open Document' :
-                 notification.link.includes('/msp/tickets/') ? 'View Ticket' :
+                 notification.link.includes('/msp/tickets/') || notification.link.includes('/client-portal/tickets/') ? 'View Ticket' :
                  notification.link.includes('/msp/projects/') && notification.link.includes('/tasks/') ? 'View Task' :
                  'View Details'}
                 <ExternalLink className="h-4 w-4" />

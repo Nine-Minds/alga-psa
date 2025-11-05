@@ -301,6 +301,10 @@
       "bulkDeleteSuccess_one": "{{count}} document is succesvol verwijderd",
       "bulkDeleteSuccess_other": "{{count}} documenten zijn succesvol verwijderd"
     },
+    "empty": {
+      "default": "Geen documenten gevonden",
+      "folder": "Geen documenten gevonden in deze map"
+    },
     "validation": {
       "nameRequired": "Documentnaam is verplicht"
     },
@@ -442,6 +446,16 @@
       "nameLabel": "Mapnaam",
       "namePlaceholder": "Voer de mapnaam in",
       "willCreateIn": "Wordt aangemaakt in: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Alle meldingen bekijken",
+      "categories": {
+        "Authentication": "Authenticatie",
+        "Invoices": "Facturen",
+        "Projects": "Projecten",
+        "Tickets": "Tickets",
+        "Time Entries": "Tijdregistraties"
+      }
     }
   },
   "fields": {

@@ -12,7 +12,6 @@ import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { TicketDetails } from './TicketDetails';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
@@ -44,7 +43,6 @@ export function TicketList() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>('entered_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [statusOptions, setStatusOptions] = useState<SelectOption[]>([]);
@@ -186,19 +184,18 @@ export function TicketList() {
     loadTickets();
   }, [loadTickets]);
 
-  // Handle deep link - open ticket from URL parameter
+  // Handle deep link - navigate to ticket page from URL parameter
   useEffect(() => {
     const ticketParam = searchParams.get('ticket');
-    if (ticketParam && tickets.length > 0 && !selectedTicketId) {
-      // Find ticket by ticket_number (e.g., TIC001025) or ticket_id
-      const ticket = tickets.find(
-        t => t.ticket_number === ticketParam || t.ticket_id === ticketParam
-      );
+    if (ticketParam && tickets.length > 0) {
+      // Find ticket by ticket_id (UUID)
+      const ticket = tickets.find(t => t.ticket_id === ticketParam);
       if (ticket && ticket.ticket_id) {
-        setSelectedTicketId(ticket.ticket_id);
+        // Navigate to the dedicated ticket page
+        router.push(`/client-portal/tickets/${ticket.ticket_id}`);
       }
     }
-  }, [searchParams, tickets, selectedTicketId]);
+  }, [searchParams, tickets, router]);
 
   const handleStatusChange = useCallback(async () => {
     if (!ticketToUpdateStatus) return;
@@ -240,17 +237,6 @@ export function TicketList() {
     setSearchQuery('');
   }, []);
 
-  const handleCloseTicketDialog = useCallback(() => {
-    setSelectedTicketId(null);
-    // Remove the ticket query parameter from the URL to prevent the dialog from reopening
-    const params = new URLSearchParams(searchParams.toString());
-    if (params.has('ticket')) {
-      params.delete('ticket');
-      const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
-      router.replace(newUrl, { scroll: false });
-    }
-  }, [searchParams, router]);
-
   const columns: ColumnDefinition<ITicketListItem>[] = [
     {
       title: t('tickets.fields.ticketNumber'),
@@ -262,7 +248,7 @@ export function TicketList() {
           onClick={(e) => {
             e.stopPropagation();
             if (record.ticket_id) {
-              setSelectedTicketId(record.ticket_id);
+              router.push(`/client-portal/tickets/${record.ticket_id}`);
             }
           }}
         >
@@ -275,12 +261,12 @@ export function TicketList() {
       dataIndex: 'title',
       width: '25%',
       render: (value: string, record: ITicketListItem) => (
-        <div 
+        <div
           className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
           onClick={(e) => {
             e.stopPropagation();
             if (record.ticket_id) {
-              setSelectedTicketId(record.ticket_id);
+              router.push(`/client-portal/tickets/${record.ticket_id}`);
             }
           }}
         >
@@ -472,14 +458,6 @@ export function TicketList() {
           />
         </div>
       </div>
-
-      {selectedTicketId && (
-        <TicketDetails
-          ticketId={selectedTicketId}
-          isOpen={!!selectedTicketId}
-          onClose={handleCloseTicketDialog}
-        />
-      )}
 
       <ClientAddTicket 
         open={isAddTicketOpen} 

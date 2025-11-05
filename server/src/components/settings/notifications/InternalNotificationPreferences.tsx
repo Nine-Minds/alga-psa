@@ -191,14 +191,14 @@ export function InternalNotificationPreferences() {
               />
             </div>
             <div className="ml-6 space-y-2">
-              {categorySubtypes.map((subtype) => {
+              {categorySubtypes.map((subtype, index) => {
                 const subtypeEnabled = getSubtypePreference(
                   category.internal_notification_category_id,
                   subtype.internal_notification_subtype_id
                 );
 
                 return (
-                  <div key={subtype.internal_notification_subtype_id} className="flex items-center justify-between">
+                  <div key={`${category.internal_notification_category_id}-${subtype.internal_notification_subtype_id}-${index}`} className="flex items-center justify-between">
                     <Label className="text-sm">{subtype.display_title || subtype.name}</Label>
                     <Switch
                       checked={subtypeEnabled}

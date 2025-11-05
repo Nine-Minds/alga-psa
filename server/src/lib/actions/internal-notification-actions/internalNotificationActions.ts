@@ -526,20 +526,16 @@ export async function getSubtypesAction(
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     let query = trx('internal_notification_subtypes as sub')
-      .select('sub.*')
+      .distinct('sub.*')
       .where({
         'sub.internal_category_id': categoryId,
         'sub.is_enabled': true
       });
 
-    // Join with templates to get translated titles
-    // We'll get the first template title for this subtype in the user's locale
+    // Get translated title using subquery to avoid duplicate rows
+    // (multiple templates can exist for the same subtype_id + language_code)
     if (locale) {
       query = query
-        .leftJoin('internal_notification_templates as tmpl', function() {
-          this.on('sub.internal_notification_subtype_id', '=', 'tmpl.subtype_id')
-              .andOn('tmpl.language_code', '=', trx.raw('?', [locale]));
-        })
         .select(trx.raw('(SELECT title FROM internal_notification_templates WHERE subtype_id = sub.internal_notification_subtype_id AND language_code = ? LIMIT 1) as display_title', [locale]));
     }
 

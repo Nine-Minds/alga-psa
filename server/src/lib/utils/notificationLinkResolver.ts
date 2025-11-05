@@ -175,9 +175,9 @@ async function resolvePortalUrl(
   }
 
   const tenantSlug = buildTenantPortalSlug(tenantId);
-  const identifier = (input.ticketNumber && input.ticketNumber.trim()) || input.ticketId;
-  const baseParams = new URLSearchParams({ ticket: identifier });
-  const clientPortalPath = `/client-portal/tickets`;
+  // Always use ticket UUID for the URL path
+  const clientPortalPath = `/client-portal/tickets/${input.ticketId}`;
+  const baseParams = new URLSearchParams();
   let portalUrl: string;
 
   if (portalHost) {
@@ -185,17 +185,19 @@ async function resolvePortalUrl(
 
     if (isActiveVanityDomain) {
       // Active vanity domains don't need tenant parameter (they use OTT/domain-based detection)
-      portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
+      portalUrl = `https://${sanitizedHost}${clientPortalPath}${input.commentId ? `#comment-${input.commentId}` : ''}`;
     } else {
       // Canonical host always needs tenant parameter for authentication
       baseParams.set('tenant', tenantSlug);
-      portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
+      const queryString = baseParams.toString();
+      portalUrl = `https://${sanitizedHost}${clientPortalPath}${queryString ? '?' + queryString : ''}${input.commentId ? `#comment-${input.commentId}` : ''}`;
     }
   } else {
     // Fallback to NEXTAUTH_URL with tenant parameter
     const fallbackBase = getBaseUrl();
     baseParams.set('tenant', tenantSlug);
-    portalUrl = `${fallbackBase}${clientPortalPath}?${baseParams.toString()}`;
+    const queryString = baseParams.toString();
+    portalUrl = `${fallbackBase}${clientPortalPath}${queryString ? '?' + queryString : ''}${input.commentId ? `#comment-${input.commentId}` : ''}`;
   }
 
   return portalUrl;

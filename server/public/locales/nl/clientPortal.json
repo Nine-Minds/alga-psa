@@ -37,6 +37,7 @@
   "tickets": {
     "title": "Supporttickets",
     "subtitle": "Bekijk en beheer je supporttickets",
+    "backToTickets": "Terug naar tickets",
     "createNew": "Nieuw ticket aanmaken",
     "createButton": "Supportticket aanmaken",
     "viewAll": "Alle tickets bekijken",
@@ -93,7 +94,9 @@
       "category": "Categorie",
       "subcategory": "Subcategorie",
       "attachments": "Bijlagen",
+      "created": "Aangemaakt",
       "createdAt": "Aangemaakt",
+      "lastUpdated": "Laatst bijgewerkt",
       "updatedAt": "Laatst bijgewerkt",
       "assignedTo": "Toegewezen aan",
       "requester": "Aanvrager",

@@ -37,6 +37,7 @@
   "tickets": {
     "title": "Tickets d'assistance",
     "subtitle": "Consultez et gérez vos tickets d'assistance",
+    "backToTickets": "Retour aux tickets",
     "createNew": "Créer un nouveau ticket",
     "createButton": "Créer un ticket d'assistance",
     "viewAll": "Voir tous les tickets",
@@ -93,7 +94,9 @@
       "category": "Catégorie",
       "subcategory": "Sous-catégorie",
       "attachments": "Pièces jointes",
+      "created": "Créé",
       "createdAt": "Créé",
+      "lastUpdated": "Dernière mise à jour",
       "updatedAt": "Dernière mise à jour",
       "assignedTo": "Attribué à",
       "requester": "Demandeur",
