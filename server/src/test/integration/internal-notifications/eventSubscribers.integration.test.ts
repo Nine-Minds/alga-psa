@@ -1,340 +1,722 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import type { Knex } from 'knex';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
+import { v4 as uuidv4 } from 'uuid';
 
-/**
- * Integration Tests: Event Bus Subscribers for Internal Notifications
- *
- * Tests the event bus integration for automatic notification creation:
- * - Subscribe to ticket events (created, assigned, updated, closed, comment added)
- * - Subscribe to project events (created, assigned, task assigned)
- * - Subscribe to invoice events (generated)
- * - Subscribe to message events (sent)
- * - Parse and validate event payloads
- * - Create appropriate notifications
- * - Handle errors gracefully
- */
+type QueryQueue = Array<any>;
+type JoinHelpers = {
+  on: (...args: any[]) => JoinHelpers;
+  andOn: (...args: any[]) => JoinHelpers;
+};
 
-let db: Knex;
-let testTenantId: string;
-let testUserId: string;
+const eventHandlers = new Map<string, Array<{ channel: string; handler: (event: any) => Promise<void> }>>();
 
-// Mock the database module
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(async () => ({
-    knex: db,
-    tenant: testTenantId
-  })),
-  getConnection: vi.fn(async () => db)
+const loggerMock = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn()
+};
+
+vi.mock('@alga-psa/shared/core/logger', () => ({
+  __esModule: true,
+  default: loggerMock,
+  ...loggerMock
 }));
 
-// Import after mocking
-let getEventBus: any;
-let getNotificationsAction: any;
-
-describe('Event Bus Subscribers for Internal Notifications', () => {
-  beforeAll(async () => {
-    // Note: In real implementation, set up test database connection
-    testTenantId = 'test-tenant-1';
-    testUserId = 'test-user-1';
-
-    // Import actions after mocking
-    const eventBus = await import('server/src/lib/eventBus');
-    getEventBus = eventBus.getEventBus;
-
-    const actions = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
-    getNotificationsAction = actions.getNotificationsAction;
+vi.mock('server/src/lib/eventBus', () => {
+  const subscribe = vi.fn(async (eventType: string, handler: (event: any) => Promise<void>, options?: { channel?: string }) => {
+    const channel = options?.channel ?? 'default';
+    const handlers = eventHandlers.get(eventType) ?? [];
+    handlers.push({ channel, handler });
+    eventHandlers.set(eventType, handlers);
   });
 
-  afterAll(async () => {
-    // Clean up database connection
+  const unsubscribe = vi.fn(async (eventType: string, handler: (event: any) => Promise<void>, options?: { channel?: string }) => {
+    const channel = options?.channel ?? 'default';
+    const handlers = eventHandlers.get(eventType) ?? [];
+    eventHandlers.set(
+      eventType,
+      handlers.filter(entry => entry.handler !== handler || entry.channel !== channel)
+    );
   });
 
-  describe('Ticket event subscriptions', () => {
-    it.todo('should create notification on TICKET_CREATED event', async () => {
-      // TODO: Publish TICKET_CREATED event
-      // Wait for async processing
-      // Verify notification created for assigned user
-    });
-
-    it.todo('should create notification on TICKET_ASSIGNED event', async () => {
-      // TODO: Create ticket
-      // Publish TICKET_ASSIGNED event
-      // Verify notification created for assigned user
-      // Verify notification contains ticket details
-    });
-
-    it.todo('should create notification on TICKET_UPDATED event', async () => {
-      // TODO: Publish TICKET_UPDATED event
-      // Verify notification created for assigned user
-    });
-
-    it.todo('should create notification on TICKET_CLOSED event', async () => {
-      // TODO: Publish TICKET_CLOSED event
-      // Verify notification created with type 'success'
-    });
-
-    it.todo('should create notification on TICKET_COMMENT_ADDED event', async () => {
-      // TODO: Publish TICKET_COMMENT_ADDED event
-      // Verify notification created for assigned user
-      // Should not notify comment author
-    });
-
-    it.todo('should not notify comment author on TICKET_COMMENT_ADDED', async () => {
-      // Publish event where author is also assignee
-      // No notification should be created
-    });
-
-    it.todo('should create client portal notification for ticket events', async () => {
-      // TODO: Create ticket with client contact
-      // Publish TICKET_CREATED event
-      // Verify notification created for client portal user
-    });
-
-    it.todo('should not create client notification for internal comments', async () => {
-      // Publish TICKET_COMMENT_ADDED with is_internal: true
-      // Client user should not get notification
-    });
+  const publish = vi.fn(async (event: any, options?: { channel?: string }) => {
+    const channel = options?.channel ?? 'default';
+    const handlers = eventHandlers.get(event.eventType) ?? [];
+    for (const entry of handlers) {
+      if (entry.channel === channel) {
+        await entry.handler({ ...event, id: event.id ?? uuidv4(), timestamp: event.timestamp ?? new Date().toISOString() });
+      }
+    }
   });
 
-  describe('Project event subscriptions', () => {
-    it.todo('should create notification on PROJECT_CREATED event', async () => {
-      // TODO: Publish PROJECT_CREATED event
-      // Verify notification created for project manager
+  const reset = () => {
+    eventHandlers.clear();
+    subscribe.mockClear();
+    unsubscribe.mockClear();
+    publish.mockClear();
+  };
+
+  return {
+    getEventBus: () => ({
+      subscribe,
+      unsubscribe,
+      publish,
+      __reset: reset,
+      __handlers: eventHandlers
+    })
+  };
+});
+
+const createNotificationFromTemplateActionMock = vi.fn().mockResolvedValue({
+  internal_notification_id: 1
+});
+
+vi.mock('server/src/lib/actions/internal-notification-actions/internalNotificationActions', () => ({
+  createNotificationFromTemplateAction: createNotificationFromTemplateActionMock,
+  getNotificationsAction: vi.fn(),
+  getUnreadCountAction: vi.fn(),
+  markAsReadAction: vi.fn(),
+  markAllAsReadAction: vi.fn(),
+  deleteNotificationAction: vi.fn()
+}));
+
+const getConnectionMock = vi.fn();
+const createTenantKnexMock = vi.fn();
+
+vi.mock('server/src/lib/db/db', () => ({
+  getConnection: getConnectionMock
+}));
+
+vi.mock('server/src/lib/db', () => ({
+  createTenantKnex: createTenantKnexMock
+}));
+
+vi.mock('server/src/lib/utils/notificationLinkResolver', () => ({
+  resolveNotificationLinks: vi.fn(async () => ({
+    internalUrl: '/internal/ticket/123',
+    portalUrl: '/portal/ticket/123'
+  }))
+}));
+
+vi.mock('server/src/lib/utils/blocknoteUtils', () => ({
+  convertBlockNoteToMarkdown: vi.fn((content: string) => content)
+}));
+
+function createQueryBuilder(queue: QueryQueue) {
+  const builder: any = {};
+
+  builder.select = vi.fn(() => builder);
+  builder.selectRaw = vi.fn(() => builder);
+  builder.leftJoin = vi.fn((_table: string, callback?: (this: JoinHelpers) => void) => {
+    if (typeof callback === 'function') {
+      const joinHelpers: JoinHelpers = {
+        on: vi.fn(() => joinHelpers),
+        andOn: vi.fn(() => joinHelpers)
+      };
+      callback.call(joinHelpers);
+    }
+    return builder;
+  });
+  builder.where = vi.fn((arg?: any) => {
+    if (typeof arg === 'function') {
+      arg.call(builder);
+    }
+    return builder;
+  });
+  builder.andWhere = vi.fn((arg?: any) => {
+    if (typeof arg === 'function') {
+      arg.call(builder);
+    }
+    return builder;
+  });
+  builder.whereIn = vi.fn(() => builder);
+  builder.orderBy = vi.fn(() => builder);
+  builder.limit = vi.fn(() => builder);
+  builder.offset = vi.fn(() => builder);
+  builder.first = vi.fn(async () => queue.shift());
+  builder.insert = vi.fn(async () => queue.shift());
+  builder.update = vi.fn(async () => queue.shift() ?? 1);
+  builder.delete = vi.fn(async () => queue.shift() ?? 1);
+  builder.returning = vi.fn(() => builder);
+  builder.then = (resolve: (value: any) => any, reject?: (reason: any) => any) =>
+    Promise.resolve(queue.shift()).then(resolve, reject);
+
+  return builder;
+}
+
+function createConnectionStub(responses: Record<string, any | any[]>) {
+  const builders = new Map<string, ReturnType<typeof createQueryBuilder>>();
+  const knexStub: any = vi.fn((table: string) => {
+    const response = responses[table];
+    if (response === undefined) {
+      throw new Error(`No stub configured for table "${table}"`);
+    }
+    if (!builders.has(table)) {
+      const queue = Array.isArray(response) ? [...response] : [response];
+      builders.set(table, createQueryBuilder(queue));
+    }
+    return builders.get(table);
+  });
+  knexStub.raw = vi.fn(() => '');
+  return knexStub;
+}
+
+const expectedEventTypes = [
+  'TICKET_CREATED',
+  'TICKET_ASSIGNED',
+  'TICKET_UPDATED',
+  'TICKET_CLOSED',
+  'TICKET_COMMENT_ADDED',
+  'PROJECT_CREATED',
+  'PROJECT_ASSIGNED',
+  'PROJECT_TASK_ASSIGNED',
+  'INVOICE_GENERATED',
+  'MESSAGE_SENT',
+  'USER_MENTIONED_IN_DOCUMENT'
+];
+
+let registerInternalNotificationSubscriber: typeof import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber').registerInternalNotificationSubscriber;
+let unregisterInternalNotificationSubscriber: typeof import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber').unregisterInternalNotificationSubscriber;
+
+let eventBus: ReturnType<typeof import('server/src/lib/eventBus').getEventBus> & {
+  __reset: () => void;
+  __handlers: typeof eventHandlers;
+};
+
+beforeAll(async () => {
+  const subscriberModule = await import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber');
+  registerInternalNotificationSubscriber = subscriberModule.registerInternalNotificationSubscriber;
+  unregisterInternalNotificationSubscriber = subscriberModule.unregisterInternalNotificationSubscriber;
+
+  const eventBusModule = await import('server/src/lib/eventBus');
+  eventBus = eventBusModule.getEventBus() as typeof eventBus;
+});
+
+beforeEach(() => {
+  eventBus.__reset();
+  createNotificationFromTemplateActionMock.mockClear();
+  getConnectionMock.mockReset();
+  createTenantKnexMock.mockReset();
+});
+
+describe('internal notification event subscriber registration', () => {
+  it('subscribes to all expected event types on the internal channel', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const subscribeMock = eventBus.subscribe as Mock;
+    expect(subscribeMock.mock.calls).toHaveLength(expectedEventTypes.length);
+    for (const eventType of expectedEventTypes) {
+      expect(subscribeMock).toHaveBeenCalledWith(
+        eventType,
+        expect.any(Function),
+        expect.objectContaining({ channel: 'internal-notifications' })
+      );
+    }
+
+    await unregisterInternalNotificationSubscriber();
+    expect((eventBus.unsubscribe as Mock).mock.calls).toHaveLength(expectedEventTypes.length);
+  });
+});
+
+describe('internal notification event handling', () => {
+  const getCallByTemplate = (templateName: string) =>
+    createNotificationFromTemplateActionMock.mock.calls.find(([args]) => args.template_name === templateName);
+
+  it('creates notification for ticket assignment events targeting the assignee', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const ticketId = uuidv4();
+    const tenantId = uuidv4();
+    const assignedUser = uuidv4();
+    const performedBy = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'tickets as t': [
+        {
+          ticket_id: ticketId,
+          ticket_number: 'T-101',
+          title: 'Printer issue',
+          assigned_to: assignedUser,
+          priority_name: 'High',
+          priority_color: '#ff0000',
+          status_name: 'Open'
+        }
+      ],
+      users: [
+        {
+          user_id: performedBy,
+          first_name: 'Alex',
+          last_name: 'Admin'
+        }
+      ]
     });
 
-    it.todo('should create notification on PROJECT_ASSIGNED event', async () => {
-      // TODO: Publish PROJECT_ASSIGNED event
-      // Verify notification created for assigned user
-    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
-    it.todo('should create notification on PROJECT_TASK_ASSIGNED event', async () => {
-      // TODO: Publish PROJECT_TASK_ASSIGNED event
-      // Verify notification created for assigned user
-      // Verify notification includes task and project details
-    });
+    const assignmentEvent = {
+      id: uuidv4(),
+      eventType: 'TICKET_ASSIGNED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: performedBy
+      }
+    };
 
-    it.todo('should not notify creator on PROJECT_CREATED', async () => {
-      // Publish event where creator is also manager
-      // No notification should be created
-    });
+    await eventBus.publish(assignmentEvent, { channel: 'internal-notifications' });
+
+    expect(getConnectionMock).toHaveBeenCalledWith(tenantId);
+    expect(createNotificationFromTemplateActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant: tenantId,
+        user_id: assignedUser,
+        template_name: 'ticket-assigned'
+      })
+    );
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Invoice event subscriptions', () => {
-    it.todo('should create notification on INVOICE_GENERATED event', async () => {
-      // TODO: Publish INVOICE_GENERATED event
-      // Verify notification created for relevant user
-      // Type should be 'success'
-    });
+  it('does not invoke notification creation for events without handlers', async () => {
+    await registerInternalNotificationSubscriber();
 
-    it.todo('should include invoice details in notification', async () => {
-      // Publish INVOICE_GENERATED event
-      // Verify notification includes invoice number and client name
-    });
+    const unrelatedEvent = {
+      id: uuidv4(),
+      eventType: 'ACCOUNTING_EXPORT_COMPLETED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId: uuidv4(),
+        batchId: uuidv4(),
+        adapterType: 'qbo'
+      }
+    };
+
+    await eventBus.publish(unrelatedEvent, { channel: 'internal-notifications' });
+    expect(createNotificationFromTemplateActionMock).not.toHaveBeenCalled();
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Message event subscriptions', () => {
-    it.todo('should create notification on MESSAGE_SENT event', async () => {
-      // TODO: Publish MESSAGE_SENT event
-      // Verify notification created for recipient
+  it('creates notifications for ticket created events for assignee and portal contact', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const ticketId = uuidv4();
+    const creatorId = uuidv4();
+    const assignedUserId = uuidv4();
+    const contactId = uuidv4();
+    const contactUserId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'tickets as t': [
+        {
+          ticket_id: ticketId,
+          ticket_number: 'T-500',
+          title: 'Printer install',
+          assigned_to: assignedUserId,
+          contact_name_id: contactId,
+          client_id: 'client-1',
+          client_name: 'Acme Inc'
+        }
+      ],
+      users: [
+        {
+          user_id: contactUserId,
+          user_type: 'client'
+        }
+      ]
     });
 
-    it.todo('should include message preview in notification', async () => {
-      // Publish MESSAGE_SENT event with message preview
-      // Verify notification includes preview
-    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
-    it.todo('should link to conversation', async () => {
-      // Publish MESSAGE_SENT event with conversation ID
-      // Verify notification link goes to conversation
-    });
+    const event = {
+      id: uuidv4(),
+      eventType: 'TICKET_CREATED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: creatorId
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('ticket-created')?.[0].user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('ticket-created-client')?.[0].user_id).toBe(contactUserId);
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Event payload validation', () => {
-    it.todo('should validate event payload schema', async () => {
-      // TODO: Publish event with invalid payload
-      // Should log warning and not create notification
+  it('creates status change notifications for ticket updated events', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const ticketId = uuidv4();
+    const performerId = uuidv4();
+    const assignedUserId = uuidv4();
+    const oldStatusId = uuidv4();
+    const newStatusId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      tickets: [
+        {
+          ticket_id: ticketId,
+          ticket_number: 'T-510',
+          title: 'VPN outage',
+          assigned_to: assignedUserId,
+          contact_name_id: null,
+          tenant: tenantId
+        }
+      ],
+      users: [
+        {
+          user_id: performerId,
+          first_name: 'Taylor',
+          last_name: 'Tech'
+        }
+      ],
+      statuses: [
+        { name: 'Open' },
+        { name: 'Resolved' }
+      ]
     });
 
-    it.todo('should handle missing required fields gracefully', async () => {
-      // Publish event missing tenantId
-      // Should handle gracefully without crashing
-    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
-    it.todo('should validate event types', async () => {
-      // Publish event with unknown type
-      // Should ignore silently
-    });
+    const event = {
+      id: uuidv4(),
+      eventType: 'TICKET_UPDATED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: performerId,
+        changes: {
+          status_id: {
+            old: oldStatusId,
+            new: newStatusId
+          }
+        }
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('ticket-status-changed')?.[0].user_id).toBe(assignedUserId);
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Error handling', () => {
-    it.todo('should handle database errors gracefully', async () => {
-      // TODO: Mock database error
-      // Publish event
-      // Should log error but not crash
+  it('creates notifications for ticket closed events including client portal user', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const ticketId = uuidv4();
+    const assignedUserId = uuidv4();
+    const contactId = uuidv4();
+    const contactUserId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      tickets: [
+        {
+          ticket_id: ticketId,
+          ticket_number: 'T-520',
+          title: 'Completed task',
+          assigned_to: assignedUserId,
+          contact_name_id: contactId,
+          tenant: tenantId
+        }
+      ],
+      users: [
+        {
+          user_id: contactUserId,
+          user_type: 'client'
+        }
+      ]
     });
 
-    it.todo('should handle notification creation failure', async () => {
-      // TODO: Mock notification action to throw error
-      // Publish event
-      // Should log error and continue
-    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
-    it.todo('should handle missing user/ticket/project gracefully', async () => {
-      // Publish event referencing non-existent entity
-      // Should log warning and not create notification
-    });
+    const event = {
+      id: uuidv4(),
+      eventType: 'TICKET_CLOSED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: uuidv4()
+      }
+    };
 
-    it.todo('should continue processing other events after error', async () => {
-      // Publish event that causes error
-      // Publish valid event
-      // Second event should still be processed
-    });
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('ticket-closed')?.[0].user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('ticket-closed-client')?.[0].user_id).toBe(contactUserId);
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Event retries', () => {
-    it.todo('should retry on transient failures', async () => {
-      // TODO: Mock temporary database failure
-      // Publish event
-      // Should retry and eventually succeed
+  it('creates project created notifications for assigned user', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const projectId = uuidv4();
+    const assignedUserId = uuidv4();
+    const creatorId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'projects as p': [
+        {
+          project_id: projectId,
+          project_name: 'Migration',
+          wbs_code: 'PRJ-10',
+          assigned_to: assignedUserId,
+          client_name: 'Globex'
+        }
+      ]
     });
 
-    it.todo('should not retry on permanent failures', async () => {
-      // Mock permanent error (e.g., invalid data)
-      // Should not retry indefinitely
-    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
+
+    const event = {
+      id: uuidv4(),
+      eventType: 'PROJECT_CREATED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        projectId,
+        userId: creatorId
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('project-created')?.[0].user_id).toBe(assignedUserId);
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Performance', () => {
-    it.todo('should handle high event volume', async () => {
-      // Publish 100 events rapidly
-      // All notifications should be created
+  it('creates project assigned notifications', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const projectId = uuidv4();
+    const assignedUserId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      projects: [
+        {
+          project_id: projectId,
+          project_name: 'Migration',
+          tenant: tenantId
+        }
+      ]
     });
 
-    it.todo('should process events asynchronously', async () => {
-      // Publish event
-      // Should not block
-    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
-    it.todo('should handle concurrent events', async () => {
-      // Publish multiple events for same user simultaneously
-      // All notifications should be created correctly
-    });
+    const event = {
+      id: uuidv4(),
+      eventType: 'PROJECT_ASSIGNED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        projectId,
+        assignedTo: assignedUserId,
+        userId: uuidv4()
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('project-assigned')?.[0].user_id).toBe(assignedUserId);
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Subscriber registration', () => {
-    it.todo('should subscribe to all relevant event types', async () => {
-      // Verify subscriber is registered for:
-      // - TICKET_CREATED
-      // - TICKET_ASSIGNED
-      // - TICKET_UPDATED
-      // - TICKET_CLOSED
-      // - TICKET_COMMENT_ADDED
-      // - PROJECT_CREATED
-      // - PROJECT_ASSIGNED
-      // - PROJECT_TASK_ASSIGNED
-      // - INVOICE_GENERATED
-      // - MESSAGE_SENT
+  it('creates project task assigned notifications', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const projectId = uuidv4();
+    const taskId = uuidv4();
+    const assignedUserId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'project_tasks as pt': [
+        {
+          task_name: 'Configure firewall',
+          project_name: 'Migration'
+        }
+      ]
     });
 
-    it.todo('should use dedicated channel for internal notifications', async () => {
-      // Verify subscriber uses 'internal-notifications' channel
-    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
-    it.todo('should gracefully handle unsubscribe', async () => {
-      // Unsubscribe from events
-      // Publish event
-      // No notification should be created
-    });
+    const event = {
+      id: uuidv4(),
+      eventType: 'PROJECT_TASK_ASSIGNED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        projectId,
+        taskId,
+        assignedTo: assignedUserId,
+        userId: uuidv4()
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('task-assigned')?.[0].user_id).toBe(assignedUserId);
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Multi-tenant isolation', () => {
-    it.todo('should only create notifications for correct tenant', async () => {
-      // Publish event for tenant-1
-      // Verify notification created in tenant-1, not tenant-2
+  it('creates invoice generated notifications', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const invoiceId = uuidv4();
+    const userId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'invoices as i': [
+        {
+          invoice_number: 'INV-100',
+          client_name: 'Globex'
+        }
+      ]
     });
 
-    it.todo('should handle events from multiple tenants', async () => {
-      // Publish events for tenant-1 and tenant-2
-      // Verify notifications created in correct tenants
-    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
+
+    const event = {
+      id: uuidv4(),
+      eventType: 'INVOICE_GENERATED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        invoiceId,
+        clientId: uuidv4(),
+        userId,
+        amount: 1000
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('invoice-generated')?.[0].user_id).toBe(userId);
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Real-world scenarios', () => {
-    it.todo('should handle ticket lifecycle', async () => {
-      // 1. Publish TICKET_CREATED
-      // 2. Publish TICKET_ASSIGNED
-      // 3. Publish TICKET_COMMENT_ADDED
-      // 4. Publish TICKET_UPDATED
-      // 5. Publish TICKET_CLOSED
-      // Verify notifications created at each step
-    });
+  it('creates message sent notifications for recipients', async () => {
+    await registerInternalNotificationSubscriber();
 
-    it.todo('should handle project task assignment chain', async () => {
-      // 1. Publish PROJECT_CREATED
-      // 2. Publish PROJECT_ASSIGNED
-      // 3. Publish PROJECT_TASK_ASSIGNED (multiple tasks)
-      // Verify all relevant users get notifications
-    });
+    const tenantId = uuidv4();
+    const recipientId = uuidv4();
 
-    it.todo('should handle concurrent ticket updates', async () => {
-      // Multiple users updating same ticket
-      // All should get appropriate notifications
-    });
+    const knexStub = createConnectionStub({});
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
+
+    const event = {
+      id: uuidv4(),
+      eventType: 'MESSAGE_SENT' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        recipientId,
+        messageId: uuidv4(),
+        senderId: uuidv4(),
+        senderName: 'Support Agent',
+        messagePreview: 'Hello there',
+        conversationId: uuidv4()
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('message-sent')?.[0].user_id).toBe(recipientId);
+
+    await unregisterInternalNotificationSubscriber();
   });
 
-  describe('Integration with mention notifications', () => {
-    it.todo('should create both comment and mention notifications', async () => {
-      // Publish TICKET_COMMENT_ADDED with mentions
-      // Assignee should get comment notification
-      // Mentioned users should get mention notifications
+  it('creates document mention notifications', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const documentId = uuidv4();
+    const authorId = uuidv4();
+    const mentionedUserId = uuidv4();
+
+    const content = JSON.stringify([
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'mention',
+            props: { userId: mentionedUserId }
+          }
+        ]
+      }
+    ]);
+
+    const knexStub = createConnectionStub({
+      documents: [
+        {
+          document_id: documentId,
+          document_name: 'Security Policy',
+          tenant: tenantId
+        }
+      ],
+      users: [
+        {
+          first_name: 'Doc',
+          last_name: 'Author'
+        },
+        [
+          {
+            user_id: mentionedUserId,
+            username: 'doc.user',
+            display_name: 'Doc User'
+          }
+        ]
+      ]
     });
 
-    it.todo('should not duplicate notifications', async () => {
-      // Publish TICKET_COMMENT_ADDED mentioning assignee
-      // Assignee should get comment notification only, not mention
-    });
-  });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
 
-  describe('Notification deduplication', () => {
-    it.todo('should not create duplicate notifications for same event', async () => {
-      // Publish same event twice
-      // Only one notification should be created
-    });
+    const event = {
+      id: uuidv4(),
+      eventType: 'USER_MENTIONED_IN_DOCUMENT' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        documentId,
+        documentName: 'Security Policy',
+        userId: authorId,
+        content
+      }
+    };
 
-    it.todo('should handle rapid successive events', async () => {
-      // Publish TICKET_UPDATED multiple times quickly
-      // Each should create notification (or implement deduplication logic)
-    });
-  });
+    await eventBus.publish(event, { channel: 'internal-notifications' });
 
-  describe('Event metadata', () => {
-    it.todo('should include event metadata in notifications', async () => {
-      // Publish event with custom metadata
-      // Verify notification includes metadata
-    });
+    expect(getCallByTemplate('user-mentioned-in-document')?.[0].user_id).toBe(mentionedUserId);
 
-    it.todo('should preserve event context in notification', async () => {
-      // Publish event with changes field
-      // Verify notification can access change information
-    });
-  });
-
-  describe('Logging and observability', () => {
-    it.todo('should log successful notification creation', async () => {
-      // TODO: Mock logger
-      // Publish event
-      // Verify appropriate logs
-    });
-
-    it.todo('should log errors with context', async () => {
-      // Mock error
-      // Publish event
-      // Verify error logged with event details
-    });
-
-    it.todo('should include tenant and user in logs', async () => {
-      // Publish event
-      // Verify logs include tenant and user IDs
-    });
+    await unregisterInternalNotificationSubscriber();
   });
 });

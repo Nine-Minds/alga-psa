@@ -28,7 +28,7 @@ interface TextEditorProps {
   initialContent?: string | PartialBlock[];
   onContentChange?: (blocks: PartialBlock[]) => void;
   children?: React.ReactNode;
-  editorRef?: MutableRefObject<BlockNoteEditor | null>;
+  editorRef?: MutableRefObject<BlockNoteEditor<any, any, any> | null>;
   documentId?: string;
 }
 
@@ -141,7 +141,7 @@ export default function TextEditor({
         contenteditable: 'true'
       }
     }
-  }) as BlockNoteEditor<typeof schema.schema>;
+  });
 
   // Get mention menu items based on search query
   const getMentionMenuItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
@@ -201,7 +201,7 @@ export default function TextEditor({
         console.log('TextEditor: Editor content changed:', editor.topLevelBlocks);
       }
       if (onContentChange) {
-        onContentChange(editor.topLevelBlocks);
+        onContentChange(editor.topLevelBlocks as any);
       }
     };
 

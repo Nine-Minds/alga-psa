@@ -31,7 +31,9 @@ function parseMentions(text: string): string[] {
 
   // Pattern 2: @username (word characters only, not part of email)
   // Negative lookbehind/lookahead to avoid matching email addresses
-  const usernamePattern = /(?<!\w)@(\w+)(?![@\.])/g;
+  // Use (?<![a-zA-Z0-9]) to allow @ after markdown chars like * _ `
+  // Match word chars but must end with alphanumeric (not _ * or `)
+  const usernamePattern = /(?<![a-zA-Z0-9])@([a-zA-Z0-9_]*[a-zA-Z0-9])(?![@\.])/g;
 
   while ((match = usernamePattern.exec(text)) !== null) {
     mentions.push(match[1]);

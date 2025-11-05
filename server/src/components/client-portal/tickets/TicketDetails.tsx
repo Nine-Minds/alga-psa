@@ -79,8 +79,11 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
 
   useEffect(() => {
     const loadTicketDetails = async () => {
-      if (!isOpen) return;
-      
+      if (!isOpen) {
+        // Don't load when dialog is closed, but preserve existing data for close animation
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
@@ -99,15 +102,16 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
             avatarUrl: user.avatarUrl // Include avatarUrl from the fetched user object
           });
         }
+        setLoading(false);
       } catch (err) {
         setError(t('tickets.messages.loadError', 'Failed to load ticket details'));
         console.error(err);
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     loadTicketDetails();
-  }, [ticketId, isOpen]);
+  }, [ticketId, isOpen, t]);
 
   const handleNewCommentContentChange = (content: PartialBlock[]) => {
     setNewCommentContent(content);
@@ -364,7 +368,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       <Dialog
         isOpen={isOpen}
         onClose={onClose}
-        title={loading ? t('common.loading') : ticket?.title || ''}
+        title={ticket?.title || (loading ? t('common.loading') : '')}
         className="max-w-[800px] max-h-[80vh] overflow-y-auto"
         id="ticket-details"
       >

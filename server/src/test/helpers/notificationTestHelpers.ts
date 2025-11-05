@@ -26,26 +26,63 @@ export async function createTestUser(
     email: string;
     is_active: boolean;
     user_type: 'internal' | 'client';
+    contact_id: string | null;
+    hris_id: string | null;
+    password: string;
   }> = {}
 ) {
   const userId = overrides.user_id || uuidv4();
+  const columnInfo = await db('users').columnInfo();
+  const user: Record<string, unknown> = {};
 
-  const user = {
-    user_id: userId,
-    tenant,
-    username: overrides.username || `user_${userId.slice(0, 8)}`,
-    first_name: overrides.first_name || 'Test',
-    last_name: overrides.last_name || 'User',
-    email: overrides.email || `test_${userId.slice(0, 8)}@example.com`,
-    is_active: overrides.is_active !== undefined ? overrides.is_active : true,
-    user_type: overrides.user_type || 'internal',
-    password: 'hashed_password', // Mock password
-    hris_id: null,
-    contact_id: null
-  };
+  const passwordSource = overrides.password ?? 'hashed_password';
+
+  if ('user_id' in columnInfo) {
+    user.user_id = userId;
+  }
+  if ('tenant' in columnInfo) {
+    user.tenant = tenant;
+  }
+  if ('username' in columnInfo) {
+    user.username = overrides.username || `user_${userId.slice(0, 8)}`;
+  }
+  if ('first_name' in columnInfo) {
+    user.first_name = overrides.first_name || 'Test';
+  }
+  if ('last_name' in columnInfo) {
+    user.last_name = overrides.last_name || 'User';
+  }
+  if ('email' in columnInfo) {
+    user.email = overrides.email || `test_${userId.slice(0, 8)}@example.com`;
+  }
+  if ('is_active' in columnInfo) {
+    user.is_active = overrides.is_active !== undefined ? overrides.is_active : true;
+  }
+  if ('user_type' in columnInfo) {
+    user.user_type = overrides.user_type || 'internal';
+  }
+  if ('hashed_password' in columnInfo) {
+    user.hashed_password = passwordSource;
+  } else if ('password' in columnInfo) {
+    user.password = passwordSource;
+  }
+  if ('contact_id' in columnInfo) {
+    user.contact_id = overrides?.contact_id ?? null;
+  }
+  if ('hris_id' in columnInfo) {
+    user.hris_id = overrides?.hris_id ?? null;
+  }
 
   await db('users').insert(user);
-  return user;
+  return {
+    user_id: userId,
+    tenant,
+    username: user.username,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    email: user.email,
+    user_type: user.user_type
+  } as typeof user;
 }
 
 /**
