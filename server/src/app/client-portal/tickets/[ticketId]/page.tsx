@@ -1,19 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { TicketDetailsPage } from 'server/src/components/client-portal/tickets/TicketDetailsPage';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 export default function TicketPage() {
-  const router = useRouter();
-  const params = useParams();
-  const ticketId = params.ticketId as string;
-
-  useEffect(() => {
-    // Redirect to tickets page with ticket query parameter
-    if (ticketId) {
-      router.replace(`/client-portal/tickets?ticket=${ticketId}`);
-    }
-  }, [ticketId, router]);
-
-  return null;
+  return (
+    <div className="w-full">
+      <Suspense fallback={<Skeleton className="h-96" />}>
+        <TicketDetailsPage />
+      </Suspense>
+    </div>
+  );
 }

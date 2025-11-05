@@ -39,7 +39,6 @@ async function resolveTicketLinks(
   ticketNumber?: string | null
 ): Promise<{ internalUrl: string; portalUrl: string }> {
   const internalBase = getBaseUrl();
-  const identifier = (ticketNumber && ticketNumber.trim()) || ticketId;
   const internalUrl = `${internalBase}/msp/tickets/${ticketId}`;
 
   let portalHost: string | null = null;
@@ -68,8 +67,9 @@ async function resolveTicketLinks(
   }
 
   const tenantSlug = buildTenantPortalSlug(tenantId);
-  const baseParams = new URLSearchParams({ ticket: identifier });
-  const clientPortalPath = `/client-portal/tickets`;
+  const baseParams = new URLSearchParams();
+  // Always use ticket UUID for the URL path
+  const clientPortalPath = `/client-portal/tickets/${ticketId}`;
   let portalUrl: string;
 
   if (portalHost) {
@@ -77,7 +77,7 @@ async function resolveTicketLinks(
 
     if (isActiveVanityDomain) {
       // Active vanity domains don't need tenant parameter (they use OTT/domain-based detection)
-      portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
+      portalUrl = `https://${sanitizedHost}${clientPortalPath}${baseParams.toString() ? '?' + baseParams.toString() : ''}`;
     } else {
       // Canonical host always needs tenant parameter for authentication
       baseParams.set('tenant', tenantSlug);

@@ -37,6 +37,7 @@
   "tickets": {
     "title": "Tickets de soporte",
     "subtitle": "Consulta y gestiona tus tickets de soporte",
+    "backToTickets": "Volver a los tickets",
     "createNew": "Crear nuevo ticket",
     "createButton": "Crear ticket de soporte",
     "viewAll": "Ver todos los tickets",
@@ -93,7 +94,9 @@
       "category": "Categoría",
       "subcategory": "Subcategoría",
       "attachments": "Adjuntos",
+      "created": "Creado",
       "createdAt": "Creado",
+      "lastUpdated": "Última actualización",
       "updatedAt": "Última actualización",
       "assignedTo": "Asignado a",
       "requester": "Solicitante",

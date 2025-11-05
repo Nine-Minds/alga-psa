@@ -117,7 +117,7 @@ export function ClientProfile() {
 
     try {
       // Update user profile
-        await updateUser(user.user_id, {
+      await updateUser(user.user_id, {
         first_name: firstName,
         last_name: lastName,
         email: email,
@@ -128,40 +128,9 @@ export function ClientProfile() {
       // Show success toast
       toast.success(t('profile.messages.updateSuccess'));
 
-      // Update notification preferences
-      await Promise.all(
-        categories.map(async (category: NotificationCategory): Promise<UserNotificationPreference> => {
-          // Update category preference
-          return await updateUserPreferenceAction(
-            user!.tenant,
-            user!.user_id,
-            {
-              subtype_id: category.id,
-              is_enabled: category.is_enabled,
-              email_address: email,
-              frequency: 'realtime'
-            }
-          );
-
-          // Update subtype preferences
-          // todo - this is unreachable, need to investigate
-          const subtypes = subtypesByCategory[category.id] || [];
-          await Promise.all(
-            subtypes.map((subtype: NotificationSubtype): Promise<UserNotificationPreference> =>
-              updateUserPreferenceAction(
-                user!.tenant,
-                user!.user_id,
-                {
-                  subtype_id: subtype.id,
-                  is_enabled: subtype.is_enabled && category.is_enabled,
-                  email_address: email,
-                  frequency: 'realtime'
-                }
-              )
-            )
-          );
-        })
-      );
+      // Note: Notification preferences are managed separately through their own UI components:
+      // - InternalNotificationPreferences handles internal notification settings
+      // - Email notification preferences should be managed through their dedicated section
 
     } catch (err) {
       console.error('Error saving profile:', err);

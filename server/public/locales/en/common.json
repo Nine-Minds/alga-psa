@@ -304,6 +304,10 @@
       "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
       "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
     },
+    "empty": {
+      "default": "No documents found",
+      "folder": "No documents found in this folder"
+    },
     "validation": {
       "nameRequired": "Document name is required"
     },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ActivityFilters, NotificationActivity } from "server/src/interfaces/activity.interfaces";
 import { Button } from "server/src/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "server/src/components/ui/Card";
@@ -7,9 +7,10 @@ import { fetchNotificationActivities } from "server/src/lib/actions/activity-act
 import { NotificationSectionFiltersDialog } from "server/src/components/user-activities/filters/NotificationSectionFiltersDialog";
 import { Filter, XCircleIcon } from 'lucide-react';
 import { useActivityDrawer } from "server/src/components/user-activities/ActivityDrawerProvider";
-import { getUnreadCountAction } from "server/src/lib/actions/internal-notification-actions/internalNotificationActions";
 import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
 import { Badge } from "server/src/components/ui/Badge";
+import { useInternalNotifications } from "server/src/hooks/useInternalNotifications";
+import { useSession } from 'next-auth/react';
 
 interface NotificationsSectionProps {
   limit?: number;
@@ -18,6 +19,7 @@ interface NotificationsSectionProps {
 }
 
 export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: NotificationsSectionProps) {
+  const { data: session } = useSession();
   const [activities, setActivities] = useState<NotificationActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
@@ -26,7 +28,20 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
   const [notificationFilters, setNotificationFilters] = useState<Partial<ActivityFilters>>({
     isClosed: false // Default: show unread only
   });
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  // Use real-time notifications hook to detect changes
+  const tenant = session?.user?.tenant;
+  const userId = session?.user?.id;
+  const realTimeHook = useInternalNotifications({
+    tenant: tenant || '',
+    userId: userId || '',
+    limit: 1, // We only need this to detect changes, not to display
+    enablePolling: true
+  });
+
+  // Track previous unread count to detect changes
+  const prevUnreadCountRef = useRef<number>(realTimeHook.unreadCount);
+  const prevNotificationCountRef = useRef<number>(realTimeHook.notifications.length);
 
   // Fetch initial activities
   const loadActivities = useCallback(async (filters: Partial<ActivityFilters>) => {
@@ -51,29 +66,36 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     }
   }, [limit]);
 
-  // Fetch unread count
-  const loadUnreadCount = useCallback(async () => {
-    try {
-      const user = await getCurrentUser();
-      if (user) {
-        const result = await getUnreadCountAction(user.tenant, user.user_id);
-        setUnreadCount(result.unread_count);
-      }
-    } catch (err) {
-      console.error('Error loading unread count:', err);
-    }
-  }, []);
-
   // Load activities initially and when filters change
   useEffect(() => {
     loadActivities(notificationFilters);
-    loadUnreadCount();
-  }, [notificationFilters, loadActivities, loadUnreadCount]);
+  }, [notificationFilters, loadActivities]);
+
+  // Watch for changes in real-time notifications and auto-refresh
+  useEffect(() => {
+    // Skip initial render
+    if (prevUnreadCountRef.current === undefined) {
+      prevUnreadCountRef.current = realTimeHook.unreadCount;
+      prevNotificationCountRef.current = realTimeHook.notifications.length;
+      return;
+    }
+
+    // Check if unread count or notification count changed
+    const unreadCountChanged = prevUnreadCountRef.current !== realTimeHook.unreadCount;
+    const notificationCountChanged = prevNotificationCountRef.current !== realTimeHook.notifications.length;
+
+    if (unreadCountChanged || notificationCountChanged) {
+      console.log('Notifications changed, auto-refreshing list...');
+      loadActivities(notificationFilters);
+      prevUnreadCountRef.current = realTimeHook.unreadCount;
+      prevNotificationCountRef.current = realTimeHook.notifications.length;
+    }
+  }, [realTimeHook.unreadCount, realTimeHook.notifications.length, loadActivities, notificationFilters]);
 
   const handleRefresh = () => {
     // Reload activities with the current filters
     loadActivities(notificationFilters);
-    loadUnreadCount();
+    // Real-time hook will automatically update unread count
   };
 
   const handleApplyFilters = (newFilters: Partial<ActivityFilters>) => {
@@ -108,9 +130,9 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     <div className="flex flex-row items-center justify-between pb-2 px-6 pt-6">
       <div className="flex items-center gap-2">
         {!noCard && <h3 className="text-lg font-semibold">Notifications</h3>}
-        {unreadCount > 0 && (
+        {realTimeHook.unreadCount > 0 && (
           <Badge variant="default" className="bg-blue-500">
-            {unreadCount}
+            {realTimeHook.unreadCount}
           </Badge>
         )}
       </div>
@@ -212,9 +234,9 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
           <CardTitle>Notifications</CardTitle>
-          {unreadCount > 0 && (
+          {realTimeHook.unreadCount > 0 && (
             <Badge variant="default" className="bg-blue-500">
-              {unreadCount}
+              {realTimeHook.unreadCount}
             </Badge>
           )}
         </div>

@@ -304,6 +304,10 @@
       "bulkDeleteSuccess_one": "{{count}} documento eliminato correttamente",
       "bulkDeleteSuccess_other": "{{count}} documenti eliminati correttamente"
     },
+    "empty": {
+      "default": "Nessun documento trovato",
+      "folder": "Nessun documento trovato in questa cartella"
+    },
     "validation": {
       "nameRequired": "Il nome del documento è obbligatorio"
     },
@@ -445,6 +449,16 @@
       "nameLabel": "Nome cartella",
       "namePlaceholder": "Inserisci il nome della cartella",
       "willCreateIn": "Verrà creata in: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Visualizza tutte le notifiche",
+      "categories": {
+        "Authentication": "Autenticazione",
+        "Invoices": "Fatture",
+        "Projects": "Progetti",
+        "Tickets": "Ticket",
+        "Time Entries": "Registrazioni tempo"
+      }
     }
   },
   "notifications": {
