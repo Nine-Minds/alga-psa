@@ -106,8 +106,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
-  const loadServicesForLine = async (contractLineId: string) => {
-    if (lineServices[contractLineId] || loadingServices[contractLineId]) {
+  const loadServicesForLine = async (contractLineId: string, forceReload: boolean = false) => {
+    if (!forceReload && (lineServices[contractLineId] || loadingServices[contractLineId])) {
       return; // Already loaded or loading
     }
 
@@ -191,7 +191,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       const serviceConfigsData: Record<string, any> = {};
       const bucketConfigsData: Record<string, BucketOverlayInput | null> = {};
 
-      services.forEach(serviceConfig => {
+      // Filter out Bucket configurations - they're handled separately via bucketConfig property
+      services.filter(s => s.configuration.configuration_type !== 'Bucket').forEach(serviceConfig => {
         const serviceId = serviceConfig.service.service_id;
 
         serviceConfigsData[serviceConfig.configuration.config_id] = {
@@ -231,44 +232,51 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         round_up_to_nearest: editLineData.round_up_to_nearest,
       });
 
-      // Update all service configurations
+      // Update all service configurations based on what was actually edited
+      // Use editServiceConfigs keys to ensure we update the correct config_ids
       const services = lineServices[contractLineId] || [];
-      for (const serviceConfig of services) {
-        const configId = serviceConfig.configuration.config_id;
-        const serviceId = serviceConfig.service.service_id;
-        const editData = editServiceConfigs[configId];
-        const bucketConfig = editBucketConfigs[serviceId];
 
-        if (editData) {
-          const baseConfig: any = {
-            quantity: editData.quantity,
-            custom_rate: editData.custom_rate,
-          };
+      // Build a map of service_id to serviceConfig for bucket updates
+      const serviceById = new Map();
+      services.forEach(svc => {
+        serviceById.set(svc.service.service_id, svc);
+      });
 
-          const typeConfig: any = {};
+      for (const [configId, editData] of Object.entries(editServiceConfigs)) {
+        // Find the matching service config to get configuration_type
+        const serviceConfig = services.find(s => s.configuration.config_id === configId);
+        if (!serviceConfig) continue;
 
-          // Build type-specific config based on configuration type
-          if (serviceConfig.configuration.configuration_type === 'Hourly') {
-            if (editData.hourly_rate !== undefined) {
-              typeConfig.hourly_rate = editData.hourly_rate;
-            }
-          } else if (serviceConfig.configuration.configuration_type === 'Usage') {
-            if (editData.base_rate !== undefined) {
-              typeConfig.base_rate = editData.base_rate;
-            }
-            if (editData.unit_of_measure !== undefined) {
-              typeConfig.unit_of_measure = editData.unit_of_measure;
-            }
-          } else if (serviceConfig.configuration.configuration_type === 'Fixed') {
-            if (editData.base_rate !== undefined) {
-              typeConfig.base_rate = editData.base_rate;
-            }
+        const baseConfig: any = {
+          quantity: editData.quantity,
+          custom_rate: editData.custom_rate,
+        };
+
+        const typeConfig: any = {};
+
+        // Build type-specific config based on configuration type
+        if (serviceConfig.configuration.configuration_type === 'Hourly') {
+          if (editData.hourly_rate !== undefined) {
+            typeConfig.hourly_rate = editData.hourly_rate;
           }
-
-          await updateConfiguration(configId, baseConfig, typeConfig);
+        } else if (serviceConfig.configuration.configuration_type === 'Usage') {
+          if (editData.base_rate !== undefined) {
+            typeConfig.base_rate = editData.base_rate;
+          }
+          if (editData.unit_of_measure !== undefined) {
+            typeConfig.unit_of_measure = editData.unit_of_measure;
+          }
+        } else if (serviceConfig.configuration.configuration_type === 'Fixed') {
+          if (editData.base_rate !== undefined) {
+            typeConfig.base_rate = editData.base_rate;
+          }
         }
 
-        // Update bucket configuration if it exists
+        await updateConfiguration(configId, baseConfig, typeConfig);
+      }
+
+      // Update bucket configurations separately
+      for (const [serviceId, bucketConfig] of Object.entries(editBucketConfigs)) {
         if (bucketConfig && bucketConfig.total_minutes !== undefined && bucketConfig.overage_rate !== undefined) {
           await upsertContractLineServiceBucketConfigurationAction(
             contractLineId,
@@ -283,8 +291,15 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         }
       }
 
-      // Reload services for this line
-      await loadServicesForLine(contractLineId);
+      // Clear cached services for this line and force reload
+      setLineServices(prev => {
+        const updated = { ...prev };
+        delete updated[contractLineId];
+        return updated;
+      });
+
+      // Force reload services for this line (bypass cache check)
+      await loadServicesForLine(contractLineId, true);
       await fetchData();
       setEditingLineId(null);
       setEditLineData({});
@@ -626,15 +641,15 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           {/* Services List Section */}
                           <div>
                             <h4 className="text-sm font-medium text-gray-700 mb-3">
-                              Services ({services.length})
+                              Services ({services.filter(s => s.configuration.configuration_type !== 'Bucket').length})
                             </h4>
-                            {services.length === 0 ? (
+                            {services.filter(s => s.configuration.configuration_type !== 'Bucket').length === 0 ? (
                               <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
                                 <p className="text-sm">No services configured for this contract line.</p>
                               </div>
                             ) : (
                               <div className="space-y-3">
-                                {services.map((serviceConfig, idx) => {
+                                {services.filter(s => s.configuration.configuration_type !== 'Bucket').map((serviceConfig, idx) => {
                                   const isEditing = editingLineId === line.contract_line_id;
                                   const configId = serviceConfig.configuration.config_id;
                                   const editData = editServiceConfigs[configId] || {};
