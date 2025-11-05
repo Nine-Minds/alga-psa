@@ -134,7 +134,72 @@ function renderTemplate(template: string, data: Record<string, any>): string {
 }
 
 /**
- * Create a notification from a template
+ * Internal helper to create a notification from a template (used by event subscribers)
+ * Accepts an existing Knex connection to avoid creating a new transaction
+ */
+export async function createNotificationFromTemplateInternal(
+  knex: Knex,
+  request: CreateInternalNotificationRequest
+): Promise<InternalNotification | null> {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Get user's locale
+    const userLocale = await getUserLocale(trx, request.tenant, request.user_id);
+
+    // Get template in user's language
+    const template = await getNotificationTemplate(
+      trx,
+      request.tenant,
+      request.template_name,
+      userLocale
+    );
+
+    if (!template) {
+      throw new Error(`Template '${request.template_name}' not found`);
+    }
+
+    // Check if user has this notification type enabled
+    const subtypeId = template.subtype_id;
+    const isEnabled = await checkInternalNotificationEnabled(trx, request.tenant, request.user_id, subtypeId);
+
+    if (!isEnabled) {
+      console.log(`Internal notification disabled for user ${request.user_id}, subtype ${subtypeId}`);
+      return null;
+    }
+
+    // Render template with data
+    const title = renderTemplate(template.title, request.data);
+    const message = renderTemplate(template.message, request.data);
+
+    // Insert notification
+    const [notification] = await trx('internal_notifications')
+      .insert({
+        tenant: request.tenant,
+        user_id: request.user_id,
+        template_name: request.template_name,
+        language_code: userLocale,
+        title,
+        message,
+        type: request.type || 'info',
+        category: request.category || null,
+        link: request.link || null,
+        metadata: request.metadata ? JSON.stringify(request.metadata) : null,
+        is_read: false,
+        delivery_status: 'pending',
+        delivery_attempts: 0
+      })
+      .returning('*');
+
+    // Broadcast notification to connected clients (async, don't await)
+    broadcastNotification(notification).catch(err => {
+      console.error('Failed to broadcast notification:', err);
+    });
+
+    return notification;
+  });
+}
+
+/**
+ * Create a notification from a template (Server Action for UI components)
  */
 export async function createNotificationFromTemplateAction(
   request: CreateInternalNotificationRequest

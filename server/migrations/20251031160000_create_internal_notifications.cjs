@@ -53,8 +53,11 @@ exports.up = function(knex) {
 
     // Tenant-specific internal notifications (with RLS)
     .createTable('internal_notifications', table => {
-      table.increments('internal_notification_id').primary();
+      table.increments('internal_notification_id');
       table.uuid('tenant').notNullable();
+
+      // Composite primary key including tenant for CitusDB
+      table.primary(['internal_notification_id', 'tenant']);
       table.uuid('user_id').notNullable();
       table.string('template_name').notNullable(); // Reference to template (e.g., 'ticket-assigned')
       table.string('language_code', 2).notNullable(); // Which language version was used
