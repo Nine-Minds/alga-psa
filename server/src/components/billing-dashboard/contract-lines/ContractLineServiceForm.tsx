@@ -23,6 +23,12 @@ import {
 } from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import { useTenant } from 'server/src/components/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
+import {
+  BucketOverlayInput,
+  getBucketOverlay,
+  upsertBucketOverlay,
+  deleteBucketOverlay
+} from 'server/src/lib/actions/bucketOverlayActions';
 
 interface ContractLineServiceFormProps {
   planService: IContractLineService;
@@ -80,6 +86,10 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   });
   const [rateTiers, setRateTiers] = useState<IContractLineServiceRateTier[]>([]);
   const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
+
+  // Bucket overlay state
+  const [bucketOverlay, setBucketOverlay] = useState<BucketOverlayInput | null>(null);
+  const [initialBucketOverlay, setInitialBucketOverlay] = useState<BucketOverlayInput | null>(null);
 
   // Load existing configuration if available
   useEffect(() => {
@@ -151,6 +161,20 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
             }));
           }
         }
+
+        // Load bucket overlay if this is an Hourly or Usage service
+        if (service && (service.billing_method === 'hourly' || service.billing_method === 'usage')) {
+          try {
+            const overlay = await getBucketOverlay(planService.contract_line_id, planService.service_id);
+            if (overlay) {
+              setBucketOverlay(overlay);
+              setInitialBucketOverlay(overlay);
+            }
+          } catch (err) {
+            console.error('Error loading bucket overlay:', err);
+            // Don't fail the whole form if bucket overlay fails to load
+          }
+        }
       } catch (error) {
         console.error('Error loading service configuration:', error);
         setError('Failed to load service configuration');
@@ -215,6 +239,29 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         );
       }
 
+      // Handle bucket overlay for Hourly and Usage services
+      if (service && (service.billing_method === 'hourly' || service.billing_method === 'usage')) {
+        const hadBucketOverlay = initialBucketOverlay !== null;
+        const hasBucketOverlay = bucketOverlay !== null;
+
+        if (hasBucketOverlay && bucketOverlay) {
+          // Save or update bucket overlay
+          await upsertBucketOverlay(
+            planService.contract_line_id,
+            planService.service_id,
+            bucketOverlay,
+            baseConfig.quantity,
+            baseConfig.custom_rate
+          );
+        } else if (hadBucketOverlay && !hasBucketOverlay) {
+          // Delete bucket overlay if it was removed
+          await deleteBucketOverlay(
+            planService.contract_line_id,
+            planService.service_id
+          );
+        }
+      }
+
       onServiceUpdated();
     } catch (error) {
       console.error('Error updating service:', error);
@@ -256,6 +303,9 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
               error={error}
               isSubmitting={isSubmitting}
               contractLineBillingFrequency={contractLineBillingFrequency}
+              // Pass bucket overlay props
+              bucketOverlay={bucketOverlay}
+              onBucketOverlayChange={setBucketOverlay}
             />
           )}
       </DialogContent>

@@ -6,7 +6,7 @@ import { FixedServiceConfigPanel } from './FixedServiceConfigPanel';
 import { HourlyServiceConfigPanel } from './HourlyServiceConfigPanel';
 import { UsageServiceConfigPanel } from './UsageServiceConfigPanel';
 import { BucketServiceConfigPanel } from './BucketServiceConfigPanel';
-import { 
+import {
   IContractLineServiceConfiguration,
   IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
@@ -18,6 +18,9 @@ import {
 import { IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Button } from 'server/src/components/ui/Button';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
+import { BucketOverlayInput } from 'server/src/lib/actions/bucketOverlayActions';
 
 interface ServiceConfigurationPanelProps {
   configuration: Partial<IContractLineServiceConfiguration>;
@@ -38,6 +41,9 @@ interface ServiceConfigurationPanelProps {
   error?: string | null;
   isSubmitting?: boolean;
   contractLineBillingFrequency?: string;
+  // Bucket overlay props
+  bucketOverlay?: BucketOverlayInput | null;
+  onBucketOverlayChange?: (overlay: BucketOverlayInput | null) => void;
 }
 
 export function ServiceConfigurationPanel({
@@ -58,7 +64,9 @@ export function ServiceConfigurationPanel({
   disabled = false,
   error = null,
   isSubmitting = false,
-  contractLineBillingFrequency
+  contractLineBillingFrequency,
+  bucketOverlay,
+  onBucketOverlayChange
 }: ServiceConfigurationPanelProps) {
   const [configurationType, setConfigurationType] = useState<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>(
     configuration.configuration_type || 'Fixed'
@@ -202,7 +210,39 @@ export function ServiceConfigurationPanel({
           contractLineBillingFrequency={contractLineBillingFrequency}
         />
       )}
-      
+
+      {/* Bucket Overlay Section - Only for Hourly and Usage types */}
+      {(configurationType === 'Hourly' || configurationType === 'Usage') && onBucketOverlayChange && (
+        <div className="space-y-3 pt-4 border-t border-dashed border-gray-200">
+          <SwitchWithLabel
+            label={configurationType === 'Hourly' ? 'Recommend bucket of hours' : 'Recommend bucket of consumption'}
+            checked={Boolean(bucketOverlay)}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                onBucketOverlayChange({
+                  total_minutes: undefined,
+                  overage_rate: undefined,
+                  allow_rollover: false,
+                  billing_period: contractLineBillingFrequency as 'weekly' | 'monthly' || 'monthly'
+                });
+              } else {
+                onBucketOverlayChange(null);
+              }
+            }}
+          />
+          {bucketOverlay && (
+            <BucketOverlayFields
+              mode={configurationType === 'Hourly' ? 'hours' : 'usage'}
+              value={bucketOverlay}
+              onChange={(overlay) => onBucketOverlayChange(overlay)}
+              unitLabel={configurationType === 'Usage' ? service?.unit_of_measure : undefined}
+              automationId={`service-config-bucket-overlay`}
+              billingFrequency={contractLineBillingFrequency || 'monthly'}
+            />
+          )}
+        </div>
+      )}
+
       {(onSave || onCancel) && (
         <div className="flex justify-end space-x-2 mt-4">
           {onCancel && (

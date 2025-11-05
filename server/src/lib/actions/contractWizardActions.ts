@@ -22,14 +22,10 @@ import {
   IContractLineServiceHourlyConfig,
   IContractLineServiceUsageConfig,
 } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-
-// Shared bucket overlay input used by both template and client workflows
-export type BucketOverlayInput = {
-  total_minutes?: number;
-  overage_rate?: number;
-  allow_rollover?: boolean;
-  billing_period?: 'monthly' | 'weekly';
-};
+import {
+  BucketOverlayInput,
+  upsertBucketOverlayInTransaction
+} from 'server/src/lib/actions/bucketOverlayActions';
 
 // ---------------------- Template wizard types ----------------------
 
@@ -179,83 +175,6 @@ const isUsageConfig = (
   config: IContractLineServiceBucketConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | null
 ): config is IContractLineServiceUsageConfig =>
   Boolean(config && 'unit_of_measure' in config && 'enable_tiered_pricing' in config);
-
-async function upsertBucketOverlay(
-  trx: Knex.Transaction,
-  tenant: string,
-  contractLineId: string,
-  serviceId: string,
-  overlay: BucketOverlayInput,
-  quantity?: number | null,
-  customRate?: number | null
-) {
-  if (overlay.total_minutes == null || overlay.overage_rate == null) {
-    return;
-  }
-
-  const normalizedTotal = Math.max(0, Math.round(overlay.total_minutes));
-  const normalizedOverage = Math.max(0, Math.round(overlay.overage_rate));
-  const billingPeriod = overlay.billing_period ?? 'monthly';
-
-  const existing = await trx('contract_line_service_configuration')
-    .where({
-      tenant,
-      contract_line_id: contractLineId,
-      service_id: serviceId,
-      configuration_type: 'Bucket',
-    })
-    .first('config_id');
-
-  const configId = existing?.config_id ?? uuidv4();
-
-  await trx('contract_line_services')
-    .insert({
-      tenant,
-      contract_line_id: contractLineId,
-      service_id: serviceId,
-      quantity: quantity ?? null,
-      custom_rate: customRate ?? null,
-    })
-    .onConflict(['tenant', 'contract_line_id', 'service_id'])
-    .merge({
-      quantity: quantity ?? null,
-      custom_rate: customRate ?? null,
-    });
-
-  await trx('contract_line_service_configuration')
-    .insert({
-      tenant,
-      config_id: configId,
-      contract_line_id: contractLineId,
-      service_id: serviceId,
-      configuration_type: 'Bucket',
-      custom_rate: null,
-      quantity: null,
-    })
-    .onConflict(['tenant', 'config_id'])
-    .merge({
-      contract_line_id: contractLineId,
-      service_id: serviceId,
-      configuration_type: 'Bucket',
-    });
-
-  await trx('contract_line_service_bucket_config')
-    .insert({
-      tenant,
-      config_id: configId,
-      billing_period: billingPeriod,
-      total_minutes: normalizedTotal,
-      overage_rate: normalizedOverage,
-      allow_rollover: overlay.allow_rollover ?? false,
-    })
-    .onConflict(['tenant', 'config_id'])
-    .merge({
-      billing_period: billingPeriod,
-      total_minutes: normalizedTotal,
-      overage_rate: normalizedOverage,
-      allow_rollover: overlay.allow_rollover ?? false,
-    });
-}
 
 // ---------------------------------------------------------------------------
 // Template wizard
@@ -588,7 +507,7 @@ export async function createContractTemplateFromWizard(
         });
 
         if (service.bucket_overlay) {
-          await upsertBucketOverlay(
+          await upsertBucketOverlayInTransaction(
             trx,
             tenant,
             hourlyPlanId,
@@ -631,7 +550,7 @@ export async function createContractTemplateFromWizard(
         });
 
         if (service.bucket_overlay) {
-          await upsertBucketOverlay(
+          await upsertBucketOverlayInTransaction(
             trx,
             tenant,
             usagePlanId,
@@ -857,7 +776,7 @@ export async function createClientContractFromWizard(
         });
 
         if (service.bucket_overlay) {
-          await upsertBucketOverlay(
+          await upsertBucketOverlayInTransaction(
             trx,
             tenant,
             hourlyPlanId,
@@ -909,7 +828,7 @@ export async function createClientContractFromWizard(
         });
 
         if (service.bucket_overlay) {
-          await upsertBucketOverlay(
+          await upsertBucketOverlayInTransaction(
             trx,
             tenant,
             usagePlanId,
