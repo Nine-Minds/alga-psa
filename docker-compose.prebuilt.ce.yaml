@@ -42,6 +42,25 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: ./server/migrations
+        target: /app/server/migrations
+        read_only: true
+      - type: bind
+        source: ./server/seeds
+        target: /app/server/seeds
+        read_only: true
+      - type: bind
+        source: ./ee/server/migrations
+        target: /app/ee/server/migrations
+        read_only: true
+      - type: bind
+        source: ./scripts
+        target: /app/scripts
+        read_only: true
+      - type: bind
+        source: ./shared/workflow/workflows
+        target: /app/shared/workflow/workflows
     entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/server && /app/entrypoint.sh"]
     secrets:
       - postgres_password
@@ -118,6 +137,25 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: ./server/migrations
+        target: /app/server/migrations
+        read_only: true
+      - type: bind
+        source: ./server/seeds
+        target: /app/server/seeds
+        read_only: true
+      - type: bind
+        source: ./ee/server/migrations
+        target: /app/ee/server/migrations
+        read_only: true
+      - type: bind
+        source: ./scripts
+        target: /app/scripts
+        read_only: true
+      - type: bind
+        source: ./shared/workflow/workflows
+        target: /app/shared/workflow/workflows
     secrets:
       - postgres_password
       - db_password_server
@@ -212,6 +250,7 @@ services:
     secrets:
       - db_password_hocuspocus
       - redis_password
+      - postgres_password
     networks:
       - app-network
     depends_on:

@@ -13,7 +13,6 @@ import { FormComponent, FormFieldComponent, ButtonComponent } from '../../types/
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import SsoProviderButtons from '@ee/components/auth/SsoProviderButtons';
-import { getLinkedSsoProvidersAction } from '@ee/lib/actions/auth/getLinkedSsoProviders';
 
 interface ClientLoginFormProps {
   callbackUrl: string;
@@ -28,7 +27,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
-  const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
   // Register the form component
@@ -80,41 +78,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       disabled: isLoading 
     });
   }, [email, password, isLoading, updateEmailField, updatePasswordField, updateSignInButton]);
-
-  useEffect(() => {
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      setLinkedProviders([]);
-      setLookupError(null);
-      return;
-    }
-
-    let cancelled = false;
-    const timeoutId = setTimeout(async () => {
-      try {
-        const result = await getLinkedSsoProvidersAction({
-          email: normalizedEmail,
-          userType: 'client',
-          tenantSlug,
-        });
-
-        if (!cancelled) {
-          setLinkedProviders(result.providers ?? []);
-          setLookupError(null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setLinkedProviders([]);
-          setLookupError(t('auth.ssoLookupFailed', 'Unable to check single sign-on availability right now.'));
-        }
-      }
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, [email, tenantSlug, t]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -223,17 +186,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         </Link>
       </div>
 
-      {linkedProviders.length > 0 && (
-        <Alert>
-          <AlertDescription>
-            {t(
-              'auth.ssoAvailableMessage',
-              'This account supports single sign-on. Try one of the providers below to sign in faster.'
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
       {lookupError && (
         <Alert variant="destructive">
           <AlertDescription>{lookupError}</AlertDescription>
@@ -252,7 +204,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       <SsoProviderButtons
         callbackUrl={callbackUrl}
         tenantHint={tenantSlug}
-        linkedProviders={linkedProviders}
       />
     </form>
   )

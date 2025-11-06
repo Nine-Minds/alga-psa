@@ -37,6 +37,16 @@
 - [ ] Add a "Single Sign-On" tab to `SecuritySettingsPage.tsx` navigation, mount the bulk assignment UI, and keep Roles/Permissions/Policies unaffected.
 - [ ] Extend acceptance coverage to include UI-driven dry-run/assign flows and confirm CE/enterprise builds resolve the new components and actions correctly.
 
+#### Decision (2025-11-06): Provider opt-in per user
+- **Summary**: New staff are explicitly classified as `internal` (password/TOTP only) or assigned a specific SSO provider at creation time. Auto-detection on login is disabled unless an admin enabled at least one provider for that user. Phase 3 still delivers the bulk assignment tooling so admins can flip providers for many accounts at once.
+- **Reasoning**: Automatically trusting any matching email introduced takeover risk (e.g., an attacker controlling an external domain or recycled mailbox could satisfy a loose email match). Requiring admins to opt users into a provider maintains least privilege and keeps forensic/audit signals intact.
+- **Intended behavior**:
+  - User creation UI/API exposes a selector: `Internal (password only)` vs `Google` vs `Microsoft` (extendable). Default remains Internal.
+  - Login callbacks accept OAuth responses only when the user record lists that provider; otherwise the attempt is rejected and logged.
+  - Bulk assignment preview/execute flows remain valuable to migrate cohorts (entire domains, departments) into a provider without editing each profile.
+  - Existing auto-link toggle is scoped to future automation that _pre-assigns_ providers; it no longer blindly creates links during login without an admin decision.
+
+
 ### OUT OF BAND – Rollout, Monitoring, and Policy Controls
 - [ ] Introduce feature flags or configuration to enable SSO providers per tenant/portal for controlled rollout.
 - [ ] Instrument telemetry to capture provider usage, OTT handoffs, migration completions, and repeated password fallbacks.

@@ -27,6 +27,7 @@ import {
     upsertOAuthAccountLink,
     findOAuthAccountLink,
 } from "@ee/lib/auth/oauthAccountLinks";
+import { isAutoLinkEnabledForTenant } from "@ee/lib/auth/ssoAutoLink";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
 import { cookies } from "next/headers";
 
@@ -602,8 +603,15 @@ async function ensureOAuthAccountLink(
     });
 
     const existingLink = await findOAuthAccountLink(normalizedProvider, providerAccountId);
+    let autoLinkAuthorized = false;
     if (!linkingAuthorized && (!existingLink || existingLink.user_id !== user.id)) {
-        // Skip linking when not authorized and this is a brand new provider account.
+        autoLinkAuthorized = await isAutoLinkEnabledForTenant(
+            typeof user.tenant === "string" ? user.tenant : undefined,
+            (user.user_type as "internal" | "client") || "internal",
+        );
+    }
+    if (!linkingAuthorized && !autoLinkAuthorized) {
+        // Skip linking when not authorized and auto-linking is disabled.
         return;
     }
 
@@ -611,7 +619,11 @@ async function ensureOAuthAccountLink(
 
     const finalMetadata = {
         ...metadataForStorage,
-        linkMode: linkingAuthorized ? linkMode ?? 'link' : linkMode ?? 'login',
+        linkMode: linkingAuthorized
+            ? linkMode ?? 'link'
+            : autoLinkAuthorized
+            ? 'auto-link'
+            : linkMode ?? 'login',
         linkNonce: linkingAuthorized ? linkNonce : undefined,
     };
 

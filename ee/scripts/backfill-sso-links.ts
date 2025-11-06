@@ -3,11 +3,11 @@
 import { exit } from "process";
 import logger from "@alga-psa/shared/core/logger";
 import { getAdminConnection } from "@shared/db/admin";
+import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
 import {
-  upsertOAuthAccountLink,
-  findOAuthAccountLink,
-  OAuthLinkProvider,
-} from "@ee/lib/auth/oauthAccountLinks";
+  previewBulkSsoAssignment,
+  executeBulkSsoAssignment,
+} from "@ee/lib/actions/ssoActions";
 
 interface CliOptions {
   provider: OAuthLinkProvider;
@@ -84,73 +84,58 @@ async function main() {
   const knex = await getAdminConnection();
 
   try {
-    console.log(`\n🔍 Searching for ${options.userType} users with domains: ${options.domains.join(", ")}`);
+    console.log(
+      `\n🔍 Searching for ${options.userType} users with domains: ${options.domains.join(", ")}`
+    );
 
-    const domainPatterns = options.domains.map((domain) => `%@${domain}`);
+    const payload = {
+      providers: [options.provider],
+      domains: options.domains,
+      userType: options.userType,
+    };
 
-    const users = await knex('users')
-      .select('user_id', 'email', 'tenant', 'user_type', 'is_inactive')
-      .where({ user_type: options.userType })
-      .andWhere((builder) => {
-        domainPatterns.forEach((pattern, index) => {
-          if (index === 0) {
-            builder.whereRaw('lower(email) like ?', [pattern]);
-          } else {
-            builder.orWhereRaw('lower(email) like ?', [pattern]);
-          }
-        });
-      });
+    const result = await (options.dryRun
+      ? previewBulkSsoAssignment(payload, {
+          adminDb: knex,
+          source: 'script',
+          preview: true,
+        })
+      : executeBulkSsoAssignment(payload, {
+          adminDb: knex,
+          source: 'script',
+          preview: false,
+        }));
 
-    if (users.length === 0) {
-      console.log('No matching users found.');
+    if (result.summary.scannedUsers === 0) {
+      console.log("No matching users found.");
       return;
     }
 
-    const summary = {
-      scanned: users.length,
-      skippedInactive: 0,
-      alreadyLinked: 0,
-      linked: 0,
-    };
-
-    for (const user of users) {
-      if (user.is_inactive) {
-        summary.skippedInactive += 1;
-        continue;
-      }
-
-      const providerAccountId = user.email.toLowerCase();
-      const existingLink = await findOAuthAccountLink(options.provider, providerAccountId);
-
-      if (existingLink && existingLink.user_id === user.user_id) {
-        summary.alreadyLinked += 1;
-        continue;
-      }
-
-      if (options.dryRun) {
-        console.log(`DRY RUN: Would link ${user.email} (${user.user_id}) to ${options.provider}`);
-        summary.linked += 1;
-        continue;
-      }
-
-      await upsertOAuthAccountLink({
-        tenant: user.tenant,
-        userId: user.user_id,
-        provider: options.provider,
-        providerAccountId,
-        providerEmail: user.email,
-        metadata: { source: 'backfill-script', domains: options.domains },
-      });
-
-      summary.linked += 1;
-      console.log(`Linked ${user.email} to ${options.provider}`);
+    if (options.dryRun) {
+      result.details
+        .filter((detail) => detail.status === "would_link")
+        .forEach((detail) => {
+          console.log(
+            `DRY RUN: Would link ${detail.email} (${detail.userId}) to ${detail.provider}`
+          );
+        });
+    } else {
+      result.details
+        .filter((detail) => detail.status === "linked")
+        .forEach((detail) => {
+          console.log(`Linked ${detail.email} to ${detail.provider}`);
+        });
     }
 
-    console.log('\nSummary');
-    console.log(`  Scanned users:       ${summary.scanned}`);
-    console.log(`  Skipped (inactive): ${summary.skippedInactive}`);
-    console.log(`  Already linked:     ${summary.alreadyLinked}`);
-    console.log(`  ${options.dryRun ? 'Would link' : 'Linked'}:        ${summary.linked}`);
+    const providerSummary = result.summary.providers[0];
+
+    console.log("\nSummary");
+    console.log(`  Scanned users:       ${result.summary.scannedUsers}`);
+    console.log(`  Skipped (inactive): ${providerSummary.skippedInactive}`);
+    console.log(`  Already linked:     ${providerSummary.alreadyLinked}`);
+    console.log(
+      `  ${options.dryRun ? "Would link" : "Linked"}:        ${providerSummary.linked}`
+    );
   } catch (error) {
     logger.error('[backfill-sso-links] Failed to run migration script', error);
     exit(1);

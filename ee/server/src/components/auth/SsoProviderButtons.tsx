@@ -21,13 +21,11 @@ const MicrosoftMulticolorLogo = () => (
 interface SsoProviderButtonsProps {
   callbackUrl: string;
   tenantHint?: string;
-  linkedProviders?: string[];
 }
 
 export default function SsoProviderButtons({
   callbackUrl,
   tenantHint,
-  linkedProviders = [],
 }: SsoProviderButtonsProps) {
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [providerOptions, setProviderOptions] = useState<SsoProviderOption[]>([]);
