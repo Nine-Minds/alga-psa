@@ -79,6 +79,8 @@
       "@product/settings-extensions/*": ["packages/product-settings-extensions/*"],
       "@product/email-providers/entry": ["packages/product-email-providers/oss/entry"],
       "@product/email-providers/*": ["packages/product-email-providers/*"],
+      "@product/email-domains/entry": ["packages/product-email-domains/oss/entry"],
+      "@product/email-domains/*": ["packages/product-email-domains/*"],
       "@product/client-portal-domain/entry": ["packages/product-client-portal-domain/oss/entry"],
       "@product/client-portal-domain/*": ["packages/product-client-portal-domain/*"],
       "@product/billing/entry": ["packages/product-billing/oss/entry"],

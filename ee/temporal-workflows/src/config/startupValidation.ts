@@ -79,6 +79,7 @@ const OPTIONAL_CONFIGS = {
   // Worker configuration
   MAX_CONCURRENT_ACTIVITIES: { default: '10', description: 'Maximum concurrent activities' },
   MAX_CONCURRENT_WORKFLOWS: { default: '10', description: 'Maximum concurrent workflows' },
+  EMAIL_DOMAIN_TASK_QUEUE: { default: 'email-domain-workflows', description: 'Task queue for managed email domain workflows' },
   
   // Health check
   ENABLE_HEALTH_CHECK: { default: 'true', description: 'Enable health check endpoint' },
@@ -222,6 +223,7 @@ export async function validateOptionalConfiguration(): Promise<void> {
     RESEND_API_KEY: configuredValues.RESEND_API_KEY ? '***' : 'not set',
     MAX_CONCURRENT_ACTIVITIES: configuredValues.MAX_CONCURRENT_ACTIVITIES,
     MAX_CONCURRENT_WORKFLOWS: configuredValues.MAX_CONCURRENT_WORKFLOWS,
+    EMAIL_DOMAIN_TASK_QUEUE: configuredValues.EMAIL_DOMAIN_TASK_QUEUE,
     ENABLE_HEALTH_CHECK: configuredValues.ENABLE_HEALTH_CHECK,
     HEALTH_CHECK_PORT: configuredValues.HEALTH_CHECK_PORT,
   });

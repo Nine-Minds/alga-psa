@@ -107,6 +107,12 @@
       "@product/email-providers/*": [
         "../packages/product-email-providers/*"
       ],
+      "@product/email-domains/entry": [
+        "../packages/product-email-domains/oss/entry"
+      ],
+      "@product/email-domains/*": [
+        "../packages/product-email-domains/*"
+      ],
       "@product/client-portal-domain/entry": [
         "../packages/product-client-portal-domain/oss/entry"
       ],

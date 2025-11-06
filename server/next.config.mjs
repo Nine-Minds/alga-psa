@@ -308,6 +308,9 @@ const nextConfig = {
         '@product/email-providers/entry': isEE
           ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+        '@product/email-domains/entry': isEE
+          ? path.join(__dirname, '../packages/product-email-domains/ee/entry.ts')
+          : path.join(__dirname, '../packages/product-email-domains/oss/entry.ts'),
         '@product/client-portal-domain/entry': isEE
           ? path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
@@ -366,6 +369,10 @@ const nextConfig = {
       config.resolve.alias[pkgClientPortalEntry] = pkgClientPortalEeEntry;
       config.resolve.alias[pkgClientPortalEntryIndex] = pkgClientPortalEeEntry;
 
+      const pkgEmailDomainsEntry = path.join(__dirname, '../packages/product-email-domains/entry.ts');
+      const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/product-email-domains/ee/entry.ts');
+      config.resolve.alias[pkgEmailDomainsEntry] = pkgEmailDomainsEeEntry;
+
       aliasEeEntryVariants(config.resolve.alias, [
         {
           to: pkgExtensionsEeEntry,
@@ -395,6 +402,13 @@ const nextConfig = {
             path.join(__dirname, '../packages/product-email-providers/entry.tsx'),
             path.join(__dirname, '../packages/product-email-providers/oss/entry.ts'),
             path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-email-domains/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-email-domains/entry.ts'),
+            path.join(__dirname, '../packages/product-email-domains/oss/entry.ts'),
           ],
         },
         {

@@ -53,6 +53,7 @@ const createStripeCustomers = (knex) =>
     table.primary(['tenant', 'stripe_customer_id']);
     table.foreign('tenant').references('tenants.tenant');
     table.unique(['tenant', 'stripe_customer_external_id']);
+    table.unique(['stripe_customer_id']);
   });
 
 const createStripeProducts = (knex) =>
@@ -75,6 +76,7 @@ const createStripeProducts = (knex) =>
     table.primary(['tenant', 'stripe_product_id']);
     table.foreign('tenant').references('tenants.tenant');
     table.unique(['tenant', 'stripe_product_external_id']);
+    table.unique(['stripe_product_id']);
   });
 
 const createStripePrices = (knex) =>
@@ -103,6 +105,7 @@ const createStripePrices = (knex) =>
     table.primary(['tenant', 'stripe_price_id']);
     table.foreign('tenant').references('tenants.tenant');
     table.unique(['tenant', 'stripe_price_external_id']);
+    table.unique(['stripe_price_id']);
     table.index(['tenant', 'stripe_product_id'], 'idx_stripe_prices_product');
   });
 
