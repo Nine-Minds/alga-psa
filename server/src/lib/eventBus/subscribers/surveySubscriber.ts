@@ -49,8 +49,10 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
   try {
     const validated = EventSchemas.TICKET_CLOSED.parse(event) as TicketClosedEvent;
     const { tenantId, ticketId } = validated.payload;
+    logger.info('[SurveySubscriber] Handling TICKET_CLOSED', { tenantId, ticketId, event });
 
     const triggers = await getSurveyTriggersForTenant(tenantId);
+    logger.info('[SurveySubscriber] Loaded triggers', { tenantId, triggerCount: triggers.length });
     if (triggers.length === 0) {
       return;
     }
@@ -74,6 +76,11 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
           templateId,
           clientId: ticket.client_id,
           contactId: ticket.contact_name_id,
+        });
+        logger.info('[SurveySubscriber] sendSurveyInvitation dispatched', {
+          tenantId,
+          ticketId,
+          templateId,
         });
       } catch (error) {
         logger.error('[SurveySubscriber] Failed to send survey invitation', {

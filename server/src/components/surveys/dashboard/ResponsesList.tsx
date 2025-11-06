@@ -11,16 +11,25 @@ type ResponsesListProps = {
 
 export default function ResponsesList({ responses }: ResponsesListProps) {
   return (
-    <Card>
+    <Card className="border-border-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base font-semibold">Recent Responses</CardTitle>
-        <MessageCircle className="h-4 w-4 text-primary-500" />
+        <CardTitle className="text-base font-semibold text-text-900">Recent Responses</CardTitle>
+        <div className="rounded-lg bg-primary-50 p-2 shadow-sm">
+          <MessageCircle className="h-4 w-4 text-primary-500" />
+        </div>
       </CardHeader>
       <CardContent className="mt-2">
         {responses.length === 0 ? (
-          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-            No survey responses available yet. Encourage customers to provide feedback to populate this
-            view.
+          <div className="flex h-40 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-primary-50/30 to-transparent p-6">
+            <div className="rounded-full bg-primary-100 p-3">
+              <MessageCircle className="h-6 w-6 text-primary-500" />
+            </div>
+            <p className="text-center text-sm font-medium text-text-600">
+              No survey responses available yet.
+            </p>
+            <p className="text-center text-xs text-text-500">
+              Encourage customers to provide feedback to populate this view.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
