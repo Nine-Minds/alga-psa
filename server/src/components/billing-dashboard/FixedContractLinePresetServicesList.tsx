@@ -1,11 +1,11 @@
 // server/src/components/billing-dashboard/FixedContractLinePresetServicesList.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
-import { Plus, MoreVertical, HelpCircle } from 'lucide-react';
+import { Plus, MoreVertical, HelpCircle, Save } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,8 @@ import {
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { toast } from 'react-hot-toast';
 
 // Define billing method options
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
@@ -49,10 +51,14 @@ interface SimplePresetService {
 
 const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServicesListProps> = ({ planId, onServiceAdded }) => {
   const [presetServices, setPresetServices] = useState<SimplePresetService[]>([]);
+  const [originalServices, setOriginalServices] = useState<SimplePresetService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!planId) return;
@@ -85,6 +91,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       });
 
       setPresetServices(enhancedServices);
+      setOriginalServices(enhancedServices);
       setAvailableServices(allAvailableServices);
       setSelectedServicesToAdd([]);
     } catch (error) {
@@ -99,101 +106,135 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
     fetchData();
   }, [fetchData]);
 
-  const handleAddServices = async () => {
-    if (!planId || selectedServicesToAdd.length === 0) return;
+  // Detect unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (originalServices.length !== presetServices.length) return true;
 
-    try {
-      // Get current services
-      const currentServices = await getContractLinePresetServices(planId);
+    return presetServices.some((service) => {
+      const original = originalServices.find(o => o.service_id === service.service_id);
+      if (!original) return true;
 
-      // Add new services to the list
-      const newServices = selectedServicesToAdd.map(serviceId => ({
+      // Compare quantity
+      if (service.quantity !== original.quantity) return true;
+
+      return false;
+    });
+  }, [presetServices, originalServices]);
+
+  // Navigation warning
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+
+      const target = e.target as HTMLElement;
+      const link = target.closest('a[href]') as HTMLAnchorElement;
+
+      if (link && link.href) {
+        const currentPath = window.location.pathname + window.location.search;
+        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
+
+        if (linkPath !== currentPath && !link.target && !link.download) {
+          e.preventDefault();
+          e.stopPropagation();
+          setPendingNavigation(link.href);
+          setShowNavigateAwayConfirm(true);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [hasUnsavedChanges]);
+
+  const handleNavigateAwayConfirm = () => {
+    if (pendingNavigation) {
+      window.location.href = pendingNavigation;
+    }
+  };
+
+  const handleNavigateAwayDismiss = () => {
+    setShowNavigateAwayConfirm(false);
+    setPendingNavigation(null);
+  };
+
+  const handleAddServices = () => {
+    if (selectedServicesToAdd.length === 0) return;
+
+    const newServices: SimplePresetService[] = selectedServicesToAdd.map(serviceId => {
+      const service = availableServices.find(s => s.service_id === serviceId);
+      return {
         preset_id: planId,
         service_id: serviceId,
+        service_name: service?.service_name || 'Unknown Service',
+        service_type_name: service?.service_type_name || 'N/A',
+        billing_method: service?.billing_method,
+        default_rate: service?.default_rate,
         quantity: 1
-      }));
+      };
+    });
 
-      // Combine current and new services
-      const allServices = [
-        ...currentServices.map(s => ({
-          preset_id: s.preset_id,
-          service_id: s.service_id,
-          quantity: s.quantity || 1
-        })),
-        ...newServices
-      ];
-
-      // Update all services
-      await updateContractLinePresetServices(planId, allServices);
-
-      fetchData();
-      setSelectedServicesToAdd([]);
-
-      if (onServiceAdded) {
-        onServiceAdded();
-      }
-    } catch (error) {
-      console.error('Error adding services to preset:', error);
-      setError('Failed to add services');
-    }
+    setPresetServices([...presetServices, ...newServices]);
+    setSelectedServicesToAdd([]);
   };
 
-  const handleRemoveService = async (serviceId: string) => {
-    if (!planId) return;
-
-    try {
-      // Get current services
-      const currentServices = await getContractLinePresetServices(planId);
-
-      // Remove the service
-      const updatedServices = currentServices
-        .filter(s => s.service_id !== serviceId)
-        .map(s => ({
-          preset_id: s.preset_id,
-          service_id: s.service_id,
-          quantity: s.quantity || 1
-        }));
-
-      // Update services
-      await updateContractLinePresetServices(planId, updatedServices);
-
-      fetchData();
-
-      if (onServiceAdded) {
-        onServiceAdded();
-      }
-    } catch (error) {
-      console.error('Error removing service from preset:', error);
-      setError('Failed to remove service');
-    }
+  const handleRemoveService = (serviceId: string) => {
+    setPresetServices(presetServices.filter(s => s.service_id !== serviceId));
   };
 
-  const handleQuantityChange = async (serviceId: string, newQuantity: number) => {
-    if (!planId) return;
+  const handleQuantityChange = (serviceId: string, newQuantity: number) => {
+    setPresetServices(currentServices => currentServices.map(s => ({
+      ...s,
+      quantity: s.service_id === serviceId ? Math.max(1, newQuantity) : s.quantity
+    })));
+  };
+
+  const handleSave = async () => {
+    if (!planId || isSaving) return;
+
+    setIsSaving(true);
+    setError(null);
 
     try {
-      // Get current services
-      const currentServices = await getContractLinePresetServices(planId);
-
-      // Update the quantity for the specific service
-      const updatedServices = currentServices.map(s => ({
+      const servicesToSave = presetServices.map(s => ({
         preset_id: s.preset_id,
         service_id: s.service_id,
-        quantity: s.service_id === serviceId ? Math.max(1, newQuantity) : (s.quantity || 1)
+        quantity: s.quantity || 1
       }));
 
-      // Update services
-      await updateContractLinePresetServices(planId, updatedServices);
+      await updateContractLinePresetServices(planId, servicesToSave);
+      await fetchData();
 
-      fetchData();
+      toast.success('Contract line preset services saved successfully');
 
       if (onServiceAdded) {
         onServiceAdded();
       }
     } catch (error) {
-      console.error('Error updating service quantity:', error);
-      setError('Failed to update quantity');
+      console.error('Error saving preset services:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save services';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const handleReset = () => {
+    setPresetServices([...originalServices]);
+    setSelectedServicesToAdd([]);
+    setError(null);
   };
 
   const presetServiceColumns: ColumnDefinition<SimplePresetService>[] = [
@@ -283,6 +324,15 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
 
   return (
     <div>
+      {hasUnsavedChanges && (
+        <Alert className="bg-amber-50 border-amber-200 mb-4">
+          <AlertDescription className="text-amber-800 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>You have unsaved changes. Click "Save Changes" to apply them.</span>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -355,8 +405,41 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
               </>
             )}
           </div>
+
+          {/* Save/Reset Button Group */}
+          <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+            <Button
+              id="reset-preset-services"
+              variant="outline"
+              onClick={handleReset}
+              disabled={isSaving || !hasUnsavedChanges}
+            >
+              Reset
+            </Button>
+            <Button
+              id="save-preset-services"
+              onClick={handleSave}
+              disabled={isSaving || !hasUnsavedChanges}
+            >
+              <span className={hasUnsavedChanges ? 'font-bold' : ''}>
+                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+              </span>
+              {!isSaving && <Save className="ml-2 h-4 w-4" />}
+            </Button>
+          </div>
         </>
       )}
+
+      {/* Navigation Warning Dialog */}
+      <ConfirmationDialog
+        isOpen={showNavigateAwayConfirm}
+        onClose={handleNavigateAwayDismiss}
+        onConfirm={handleNavigateAwayConfirm}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
+        confirmLabel="Leave Page"
+        cancelLabel="Stay on Page"
+      />
     </div>
   );
 };

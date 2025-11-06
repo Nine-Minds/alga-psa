@@ -1,11 +1,11 @@
 // server/src/components/billing-dashboard/contract-lines/HourlyContractLinePresetServicesList.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
-import { Plus, MoreVertical, Trash2 } from 'lucide-react';
+import { Plus, MoreVertical, Trash2, Save } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,8 @@ import { AlertCircle } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
 import { BucketOverlayInput } from '../contracts/ContractWizard';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { toast } from 'react-hot-toast';
 
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
   { value: 'fixed', label: 'Fixed Price' },
@@ -46,11 +48,15 @@ interface PresetServiceWithBucket extends IContractLinePresetService {
 
 const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetServicesListProps> = ({ presetId, onServiceAdded }) => {
   const [presetServices, setPresetServices] = useState<PresetServiceWithBucket[]>([]);
+  const [originalServices, setOriginalServices] = useState<PresetServiceWithBucket[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
+  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!presetId) return;
@@ -96,6 +102,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
       });
 
       setPresetServices(enhancedServices);
+      setOriginalServices(enhancedServices);
       setAvailableServices(allAvailableServices);
       setSelectedServicesToAdd([]);
     } catch (error) {
@@ -110,6 +117,81 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
     fetchData();
   }, [fetchData]);
 
+  // Detect unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (originalServices.length !== presetServices.length) return true;
+
+    return presetServices.some((service, index) => {
+      const original = originalServices.find(o => o.service_id === service.service_id);
+      if (!original) return true;
+
+      // Compare custom rate
+      if (service.custom_rate !== original.custom_rate) return true;
+
+      // Compare bucket configuration
+      const serviceHasBucket = Boolean(service.bucket_overlay);
+      const originalHasBucket = Boolean(original.bucket_overlay);
+
+      if (serviceHasBucket !== originalHasBucket) return true;
+
+      if (serviceHasBucket && originalHasBucket) {
+        if (service.bucket_overlay!.total_minutes !== original.bucket_overlay!.total_minutes) return true;
+        if (service.bucket_overlay!.overage_rate !== original.bucket_overlay!.overage_rate) return true;
+        if (service.bucket_overlay!.allow_rollover !== original.bucket_overlay!.allow_rollover) return true;
+      }
+
+      return false;
+    });
+  }, [presetServices, originalServices]);
+
+  // Navigation warning
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+
+      const target = e.target as HTMLElement;
+      const link = target.closest('a[href]') as HTMLAnchorElement;
+
+      if (link && link.href) {
+        const currentPath = window.location.pathname + window.location.search;
+        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
+
+        if (linkPath !== currentPath && !link.target && !link.download) {
+          e.preventDefault();
+          e.stopPropagation();
+          setPendingNavigation(link.href);
+          setShowNavigateAwayConfirm(true);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [hasUnsavedChanges]);
+
+  const handleNavigateAwayConfirm = () => {
+    if (pendingNavigation) {
+      window.location.href = pendingNavigation;
+    }
+  };
+
+  const handleNavigateAwayDismiss = () => {
+    setShowNavigateAwayConfirm(false);
+    setPendingNavigation(null);
+  };
+
   const getDefaultOverlay = useCallback((): BucketOverlayInput => ({
     total_minutes: undefined,
     overage_rate: undefined,
@@ -117,135 +199,119 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
     billing_period: billingFrequency as 'weekly' | 'monthly'
   }), [billingFrequency]);
 
-  const toggleBucketOverlay = async (serviceId: string, enabled: boolean) => {
-    try {
-      const currentServices = await getContractLinePresetServices(presetId);
-      const updatedServices = currentServices.map(s => {
-        if (s.service_id === serviceId) {
-          if (enabled) {
-            const defaultOverlay = getDefaultOverlay();
-            return {
-              ...s,
-              bucket_total_minutes: defaultOverlay.total_minutes,
-              bucket_overage_rate: defaultOverlay.overage_rate,
-              bucket_allow_rollover: defaultOverlay.allow_rollover ?? false
-            };
-          } else {
-            return {
-              ...s,
-              bucket_total_minutes: undefined,
-              bucket_overage_rate: undefined,
-              bucket_allow_rollover: undefined
-            };
-          }
-        }
-        return s;
-      });
-
-      await updateContractLinePresetServices(presetId, updatedServices);
-      fetchData();
-    } catch (error) {
-      console.error('Error toggling bucket overlay:', error);
-      setError('Failed to toggle bucket configuration');
-    }
-  };
-
-  const updateBucketOverlay = async (serviceId: string, overlay: BucketOverlayInput) => {
-    try {
-      const currentServices = await getContractLinePresetServices(presetId);
-      const updatedServices = currentServices.map(s => {
-        if (s.service_id === serviceId) {
+  const toggleBucketOverlay = (serviceId: string, enabled: boolean) => {
+    setPresetServices(currentServices => currentServices.map(s => {
+      if (s.service_id === serviceId) {
+        if (enabled) {
+          const defaultOverlay = getDefaultOverlay();
           return {
             ...s,
-            bucket_total_minutes: overlay.total_minutes,
-            bucket_overage_rate: overlay.overage_rate,
-            bucket_allow_rollover: overlay.allow_rollover ?? false
+            bucket_overlay: defaultOverlay
+          };
+        } else {
+          return {
+            ...s,
+            bucket_overlay: null
           };
         }
-        return s;
-      });
-
-      await updateContractLinePresetServices(presetId, updatedServices);
-      fetchData();
-    } catch (error) {
-      console.error('Error updating bucket overlay:', error);
-      setError('Failed to update bucket configuration');
-    }
+      }
+      return s;
+    }));
   };
 
-  const handleAddServices = async () => {
-    if (!presetId || selectedServicesToAdd.length === 0) return;
-
-    try {
-      const currentServices = await getContractLinePresetServices(presetId);
-      const newServices = selectedServicesToAdd.map(serviceId => {
-        const service = availableServices.find(s => s.service_id === serviceId);
+  const updateBucketOverlay = (serviceId: string, overlay: BucketOverlayInput) => {
+    setPresetServices(currentServices => currentServices.map(s => {
+      if (s.service_id === serviceId) {
         return {
-          preset_id: presetId,
-          service_id: serviceId,
-          custom_rate: service?.default_rate || 0,
-          quantity: undefined,
-          unit_of_measure: undefined,
-          bucket_total_minutes: undefined,
-          bucket_overage_rate: undefined,
-          bucket_allow_rollover: undefined
+          ...s,
+          bucket_overlay: overlay
         };
-      });
-
-      const allServices = [...currentServices, ...newServices];
-
-      await updateContractLinePresetServices(presetId, allServices);
-      fetchData();
-      setSelectedServicesToAdd([]);
-
-      if (onServiceAdded) {
-        onServiceAdded();
       }
-    } catch (error) {
-      console.error('Error adding services to preset:', error);
-      setError('Failed to add services');
-    }
+      return s;
+    }));
   };
 
-  const handleRemoveService = async (serviceId: string) => {
-    if (!presetId) return;
+  const handleAddServices = () => {
+    if (selectedServicesToAdd.length === 0) return;
 
-    try {
-      const currentServices = await getContractLinePresetServices(presetId);
-      const updatedServices = currentServices.filter(s => s.service_id !== serviceId);
+    const newServices: PresetServiceWithBucket[] = selectedServicesToAdd.map(serviceId => {
+      const service = availableServices.find(s => s.service_id === serviceId);
+      return {
+        preset_id: presetId,
+        service_id: serviceId,
+        custom_rate: service?.default_rate || 0,
+        quantity: undefined,
+        unit_of_measure: undefined,
+        bucket_total_minutes: undefined,
+        bucket_overage_rate: undefined,
+        bucket_allow_rollover: undefined,
+        tenant: '',
+        created_at: new Date(),
+        updated_at: new Date(),
+        service_name: service?.service_name || 'Unknown Service',
+        service_type_name: service?.service_type_name || 'N/A',
+        billing_method: service?.billing_method,
+        default_rate: service?.default_rate,
+        bucket_overlay: null
+      };
+    });
 
-      await updateContractLinePresetServices(presetId, updatedServices);
-      fetchData();
-
-      if (onServiceAdded) {
-        onServiceAdded();
-      }
-    } catch (error) {
-      console.error('Error removing service from preset:', error);
-      setError('Failed to remove service');
-    }
+    setPresetServices([...presetServices, ...newServices]);
+    setSelectedServicesToAdd([]);
   };
 
-  const handleRateChange = async (serviceId: string, newRate: number) => {
-    if (!presetId) return;
+  const handleRemoveService = (serviceId: string) => {
+    setPresetServices(presetServices.filter(s => s.service_id !== serviceId));
+  };
+
+  const handleRateChange = (serviceId: string, newRate: number) => {
+    setPresetServices(currentServices => currentServices.map(s => ({
+      ...s,
+      custom_rate: s.service_id === serviceId ? newRate : s.custom_rate
+    })));
+  };
+
+  const handleSave = async () => {
+    if (!presetId || isSaving) return;
+
+    setIsSaving(true);
+    setError(null);
 
     try {
-      const currentServices = await getContractLinePresetServices(presetId);
-      const updatedServices = currentServices.map(s => ({
-        ...s,
-        custom_rate: s.service_id === serviceId ? newRate : s.custom_rate
+      // Convert bucket_overlay back to flat fields for API
+      const servicesToSave = presetServices.map(s => ({
+        preset_id: s.preset_id,
+        service_id: s.service_id,
+        custom_rate: s.custom_rate,
+        quantity: s.quantity,
+        unit_of_measure: s.unit_of_measure,
+        bucket_total_minutes: s.bucket_overlay?.total_minutes,
+        bucket_overage_rate: s.bucket_overlay?.overage_rate,
+        bucket_allow_rollover: s.bucket_overlay?.allow_rollover
       }));
 
-      await updateContractLinePresetServices(presetId, updatedServices);
-      fetchData();
+      await updateContractLinePresetServices(presetId, servicesToSave);
+      await fetchData();
+
+      toast.success('Contract line preset services saved successfully');
 
       if (onServiceAdded) {
         onServiceAdded();
       }
     } catch (error) {
-      console.error('Error updating service rate:', error);
-      setError('Failed to update rate');
+      console.error('Error saving preset services:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save services';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const handleReset = () => {
+    setPresetServices([...originalServices]);
+    setSelectedServicesToAdd([]);
+    setError(null);
   };
 
   const servicesAvailableToAdd = availableServices.filter(
@@ -256,6 +322,15 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
 
   return (
     <div>
+      {hasUnsavedChanges && (
+        <Alert className="bg-amber-50 border-amber-200 mb-4">
+          <AlertDescription className="text-amber-800 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>You have unsaved changes. Click "Save Changes" to apply them.</span>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -398,8 +473,41 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
               </>
             )}
           </div>
+
+          {/* Save/Reset Button Group */}
+          <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+            <Button
+              id="reset-preset-services"
+              variant="outline"
+              onClick={handleReset}
+              disabled={isSaving || !hasUnsavedChanges}
+            >
+              Reset
+            </Button>
+            <Button
+              id="save-preset-services"
+              onClick={handleSave}
+              disabled={isSaving || !hasUnsavedChanges}
+            >
+              <span className={hasUnsavedChanges ? 'font-bold' : ''}>
+                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+              </span>
+              {!isSaving && <Save className="ml-2 h-4 w-4" />}
+            </Button>
+          </div>
         </>
       )}
+
+      {/* Navigation Warning Dialog */}
+      <ConfirmationDialog
+        isOpen={showNavigateAwayConfirm}
+        onClose={handleNavigateAwayDismiss}
+        onConfirm={handleNavigateAwayConfirm}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
+        confirmLabel="Leave Page"
+        cancelLabel="Stay on Page"
+      />
     </div>
   );
 };
