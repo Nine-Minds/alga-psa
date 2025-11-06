@@ -6,11 +6,19 @@ import {
   broadcastNotificationRead,
   broadcastAllNotificationsRead
 } from '../../../lib/realtime/internalNotificationBroadcaster';
+import { randomUUID } from 'crypto';
 
 type Row = Record<string, any>;
 
+// Test UUID constants for notifications
+const NOTIFICATION_UUID_1 = '11111111-1111-1111-1111-111111111111';
+const NOTIFICATION_UUID_2 = '22222222-2222-2222-2222-222222222222';
+const NOTIFICATION_UUID_3 = '33333333-3333-3333-3333-333333333333';
+const NOTIFICATION_UUID_4 = '44444444-4444-4444-4444-444444444444';
+const NOTIFICATION_UUID_5 = '55555555-5555-5555-5555-555555555555';
+
 interface NotificationRow extends Row {
-  internal_notification_id: number;
+  internal_notification_id: string;
   tenant: string;
   user_id: string;
   template_name: string | null;
@@ -247,9 +255,14 @@ class QueryBuilder {
       const newRow = copyRow(record);
 
       if (primaryKey && (newRow[primaryKey] === undefined || newRow[primaryKey] === null)) {
-        const currentSeq = this.db.sequences[this.table] ?? 1;
-        newRow[primaryKey] = currentSeq;
-        this.db.sequences[this.table] = currentSeq + 1;
+        // Use UUID for internal_notification_id, numeric sequence for others
+        if (this.table === 'internal_notifications' && primaryKey === 'internal_notification_id') {
+          newRow[primaryKey] = randomUUID();
+        } else {
+          const currentSeq = this.db.sequences[this.table] ?? 1;
+          newRow[primaryKey] = currentSeq;
+          this.db.sequences[this.table] = currentSeq + 1;
+        }
       }
 
       tableRows.push(newRow);
@@ -355,7 +368,7 @@ function createMockTransaction(db: MockDb): MockTransaction {
 function buildNotification(overrides: Partial<NotificationRow>): NotificationRow {
   const now = new Date().toISOString();
   return {
-    internal_notification_id: overrides.internal_notification_id ?? 0,
+    internal_notification_id: overrides.internal_notification_id ?? randomUUID(),
     tenant: overrides.tenant ?? 'tenant-1',
     user_id: overrides.user_id ?? 'user-1',
     template_name: overrides.template_name ?? 'ticket-assigned',
@@ -408,11 +421,11 @@ const broadcastNotificationReadMock = vi.mocked(broadcastNotificationRead);
 const broadcastAllNotificationsReadMock = vi.mocked(broadcastAllNotificationsRead);
 
 let createNotificationFromTemplateAction: (request: Record<string, any>) => Promise<NotificationRow | null>;
-let getNotificationsAction: (request: { tenant: string; user_id: string; limit?: number; offset?: number; is_read?: boolean; category?: string | null }) => Promise<InternalNotificationListResponse>;
+let getNotificationsAction: (request: { tenant: string; user_id: string; limit?: number; offset?: number; is_read?: boolean; category?: string }) => Promise<InternalNotificationListResponse>;
 let getUnreadCountAction: (tenant: string, userId: string, byCategory?: boolean) => Promise<UnreadCountResponse>;
-let markAsReadAction: (tenant: string, userId: string, notificationId: number) => Promise<NotificationRow>;
+let markAsReadAction: (tenant: string, userId: string, notificationId: string) => Promise<NotificationRow>;
 let markAllAsReadAction: (tenant: string, userId: string) => Promise<{ updated_count: number }>;
-let deleteNotificationAction: (tenant: string, userId: string, notificationId: number) => Promise<void>;
+let deleteNotificationAction: (tenant: string, userId: string, notificationId: string) => Promise<void>;
 
 beforeAll(async () => {
   const module = await import('../../../lib/actions/internal-notification-actions/internalNotificationActions');
@@ -769,15 +782,15 @@ describe('internalNotificationActions data access', () => {
     it('returns notifications sorted by created_at descending and excludes soft-deleted entries', async () => {
       currentDb = createMockDb([
         buildNotification({
-          internal_notification_id: 1,
+          internal_notification_id: NOTIFICATION_UUID_1,
           created_at: '2024-01-01T10:00:00.000Z'
         }),
         buildNotification({
-          internal_notification_id: 2,
+          internal_notification_id: NOTIFICATION_UUID_2,
           created_at: '2024-01-02T10:00:00.000Z'
         }),
         buildNotification({
-          internal_notification_id: 3,
+          internal_notification_id: NOTIFICATION_UUID_3,
           created_at: '2024-01-03T10:00:00.000Z',
           deleted_at: '2024-01-04T00:00:00.000Z'
         })
@@ -788,7 +801,7 @@ describe('internalNotificationActions data access', () => {
         user_id: 'user-1'
       });
 
-      expect(response.notifications.map(n => n.internal_notification_id)).toEqual([2, 1]);
+      expect(response.notifications.map(n => n.internal_notification_id)).toEqual([NOTIFICATION_UUID_2, NOTIFICATION_UUID_1]);
       expect(response.total).toBe(2);
       expect(response.unread_count).toBe(2);
       expect(response.has_more).toBe(false);
@@ -797,17 +810,17 @@ describe('internalNotificationActions data access', () => {
     it('applies read status and category filters', async () => {
       currentDb = createMockDb([
         buildNotification({
-          internal_notification_id: 1,
+          internal_notification_id: NOTIFICATION_UUID_1,
           is_read: false,
           category: 'tickets'
         }),
         buildNotification({
-          internal_notification_id: 2,
+          internal_notification_id: NOTIFICATION_UUID_2,
           is_read: true,
           category: 'tickets'
         }),
         buildNotification({
-          internal_notification_id: 3,
+          internal_notification_id: NOTIFICATION_UUID_3,
           is_read: false,
           category: 'projects'
         })
@@ -832,10 +845,10 @@ describe('internalNotificationActions data access', () => {
 
     it('calculates has_more using total count, limit, and offset', async () => {
       currentDb = createMockDb([
-        buildNotification({ internal_notification_id: 1 }),
-        buildNotification({ internal_notification_id: 2 }),
-        buildNotification({ internal_notification_id: 3 }),
-        buildNotification({ internal_notification_id: 4 })
+        buildNotification({ internal_notification_id: NOTIFICATION_UUID_1 }),
+        buildNotification({ internal_notification_id: NOTIFICATION_UUID_2 }),
+        buildNotification({ internal_notification_id: NOTIFICATION_UUID_3 }),
+        buildNotification({ internal_notification_id: NOTIFICATION_UUID_4 })
       ]);
 
       const firstPage = await getNotificationsAction({
@@ -862,28 +875,28 @@ describe('internalNotificationActions data access', () => {
     it('returns unread totals excluding soft-deleted records', async () => {
       currentDb = createMockDb([
         buildNotification({
-          internal_notification_id: 1,
+          internal_notification_id: NOTIFICATION_UUID_1,
           is_read: false,
           category: 'tickets'
         }),
         buildNotification({
-          internal_notification_id: 2,
+          internal_notification_id: NOTIFICATION_UUID_2,
           is_read: false,
           category: 'tickets'
         }),
         buildNotification({
-          internal_notification_id: 3,
+          internal_notification_id: NOTIFICATION_UUID_3,
           is_read: true,
           category: 'tickets'
         }),
         buildNotification({
-          internal_notification_id: 4,
+          internal_notification_id: NOTIFICATION_UUID_4,
           is_read: false,
           category: 'projects',
           deleted_at: '2024-01-10T00:00:00.000Z'
         }),
         buildNotification({
-          internal_notification_id: 5,
+          internal_notification_id: NOTIFICATION_UUID_5,
           is_read: false,
           category: null
         })
@@ -909,7 +922,7 @@ describe('internalNotificationActions data access', () => {
       const createdAt = '2024-01-01T00:00:00.000Z';
       currentDb = createMockDb([
         buildNotification({
-          internal_notification_id: 1,
+          internal_notification_id: NOTIFICATION_UUID_1,
           created_at: createdAt,
           updated_at: createdAt,
           is_read: false,
@@ -917,7 +930,7 @@ describe('internalNotificationActions data access', () => {
         })
       ]);
 
-      const updated = await markAsReadAction('tenant-1', 'user-1', 1);
+      const updated = await markAsReadAction('tenant-1', 'user-1', NOTIFICATION_UUID_1);
 
       expect(updated.is_read).toBe(true);
       expect(updated.read_at).toBeTruthy();
@@ -927,20 +940,20 @@ describe('internalNotificationActions data access', () => {
     it('throws when notification is not found and does not broadcast', async () => {
       currentDb = createMockDb([]);
 
-      await expect(markAsReadAction('tenant-1', 'user-1', 999)).rejects.toThrow('Notification not found');
+      await expect(markAsReadAction('tenant-1', 'user-1', 'nonexistent-uuid')).rejects.toThrow('Notification not found');
       expect(broadcastNotificationReadMock).not.toHaveBeenCalled();
     });
 
     it('fails when attempting to read a notification owned by another user', async () => {
       currentDb = createMockDb([
         buildNotification({
-          internal_notification_id: 1,
+          internal_notification_id: NOTIFICATION_UUID_1,
           user_id: 'owner-user',
           is_read: false
         })
       ]);
 
-      await expect(markAsReadAction('tenant-1', 'other-user', 1)).rejects.toThrow('Notification not found');
+      await expect(markAsReadAction('tenant-1', 'other-user', NOTIFICATION_UUID_1)).rejects.toThrow('Notification not found');
       expect(broadcastNotificationReadMock).not.toHaveBeenCalled();
       const row = currentDb.tables.internal_notifications[0];
       expect(row.is_read).toBe(false);
@@ -950,10 +963,10 @@ describe('internalNotificationActions data access', () => {
   describe('markAllAsReadAction', () => {
     it('updates only unread and non-deleted notifications', async () => {
       currentDb = createMockDb([
-        buildNotification({ internal_notification_id: 1, is_read: false }),
-        buildNotification({ internal_notification_id: 2, is_read: true }),
+        buildNotification({ internal_notification_id: NOTIFICATION_UUID_1, is_read: false }),
+        buildNotification({ internal_notification_id: NOTIFICATION_UUID_2, is_read: true }),
         buildNotification({
-          internal_notification_id: 3,
+          internal_notification_id: NOTIFICATION_UUID_3,
           is_read: false,
           deleted_at: '2024-01-02T00:00:00.000Z'
         })
@@ -963,11 +976,11 @@ describe('internalNotificationActions data access', () => {
       expect(result.updated_count).toBe(1);
 
       const remaining = currentDb.tables.internal_notifications;
-      const updated = remaining.find(row => row.internal_notification_id === 1);
+      const updated = remaining.find(row => row.internal_notification_id === NOTIFICATION_UUID_1);
       expect(updated?.is_read).toBe(true);
       expect(updated?.read_at).toBeTruthy();
 
-      const deleted = remaining.find(row => row.internal_notification_id === 3);
+      const deleted = remaining.find(row => row.internal_notification_id === NOTIFICATION_UUID_3);
       expect(deleted?.is_read).toBe(false);
 
       expect(broadcastAllNotificationsReadMock).toHaveBeenCalledWith('tenant-1', 'user-1');
@@ -976,7 +989,7 @@ describe('internalNotificationActions data access', () => {
 
     it('returns zero when there are no unread notifications', async () => {
       currentDb = createMockDb([
-        buildNotification({ internal_notification_id: 1, is_read: true })
+        buildNotification({ internal_notification_id: NOTIFICATION_UUID_1, is_read: true })
       ]);
 
       const result = await markAllAsReadAction('tenant-1', 'user-1');
@@ -989,12 +1002,12 @@ describe('internalNotificationActions data access', () => {
     it('soft deletes the notification in the table', async () => {
       currentDb = createMockDb([
         buildNotification({
-          internal_notification_id: 1,
+          internal_notification_id: NOTIFICATION_UUID_1,
           deleted_at: null
         })
       ]);
 
-      await deleteNotificationAction('tenant-1', 'user-1', 1);
+      await deleteNotificationAction('tenant-1', 'user-1', NOTIFICATION_UUID_1);
 
       const deletedRow = currentDb.tables.internal_notifications[0];
       expect(deletedRow.deleted_at).toBeTruthy();
@@ -1003,21 +1016,21 @@ describe('internalNotificationActions data access', () => {
     it('does not delete notifications for a different user or tenant', async () => {
       currentDb = createMockDb([
         buildNotification({
-          internal_notification_id: 1,
+          internal_notification_id: NOTIFICATION_UUID_1,
           user_id: 'owner-user',
           tenant: 'tenant-1',
           deleted_at: null
         }),
         buildNotification({
-          internal_notification_id: 2,
+          internal_notification_id: NOTIFICATION_UUID_2,
           user_id: 'owner-user',
           tenant: 'tenant-2',
           deleted_at: null
         })
       ]);
 
-      await deleteNotificationAction('tenant-1', 'another-user', 1);
-      await deleteNotificationAction('tenant-1', 'owner-user', 2);
+      await deleteNotificationAction('tenant-1', 'another-user', NOTIFICATION_UUID_1);
+      await deleteNotificationAction('tenant-1', 'owner-user', NOTIFICATION_UUID_2);
 
       const [firstRow, secondRow] = currentDb.tables.internal_notifications;
       expect(firstRow.deleted_at).toBeNull();

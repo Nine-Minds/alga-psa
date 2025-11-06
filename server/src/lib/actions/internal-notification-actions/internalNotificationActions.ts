@@ -397,7 +397,7 @@ export async function getNotificationByIdAction(
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const notification = await trx('internal_notifications')
       .where({
-        internal_notification_id: parseInt(internalNotificationId),
+        internal_notification_id: internalNotificationId,
         tenant,
         user_id: userId
       })
@@ -463,7 +463,7 @@ export async function getUnreadCountAction(
 export async function markAsReadAction(
   tenant: string,
   userId: string,
-  notificationId: number
+  notificationId: string
 ): Promise<InternalNotification> {
   const { knex } = await (await import("../../db")).createTenantKnex();
 
@@ -536,7 +536,7 @@ export async function markAllAsReadAction(
 export async function deleteNotificationAction(
   tenant: string,
   userId: string,
-  notificationId: number
+  notificationId: string
 ): Promise<void> {
   const { knex } = await (await import("../../db")).createTenantKnex();
 

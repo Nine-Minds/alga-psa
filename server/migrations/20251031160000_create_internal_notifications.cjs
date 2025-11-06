@@ -53,7 +53,7 @@ exports.up = function(knex) {
 
     // Tenant-specific internal notifications (with RLS)
     .createTable('internal_notifications', table => {
-      table.increments('internal_notification_id');
+      table.uuid('internal_notification_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
       table.uuid('tenant').notNullable();
 
       // Composite primary key including tenant for CitusDB

@@ -45,7 +45,7 @@ export type InternalNotificationType = 'info' | 'success' | 'warning' | 'error';
 export type InternalNotificationDeliveryStatus = 'pending' | 'delivered' | 'failed';
 
 export interface InternalNotification {
-  internal_notification_id: number;
+  internal_notification_id: string;
   tenant: string;
   user_id: string;
   template_name: string;
@@ -93,7 +93,7 @@ export interface GetInternalNotificationsRequest {
 export interface MarkAsReadRequest {
   tenant: string;
   user_id: string;
-  notification_id: number;
+  notification_id: string;
 }
 
 export interface MarkAllAsReadRequest {

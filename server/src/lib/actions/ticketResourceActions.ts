@@ -95,7 +95,8 @@ export async function addTicketResource(
           payload: {
             tenantId: tenant,
             ticketId: ticketId,
-            userId: additionalUserId
+            userId: additionalUserId,
+            isAdditionalAgent: true
           }
         });
 
