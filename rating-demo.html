@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survey Rating Types Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f5f5f5;
+        }
+        .demo-section {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #666;
+            font-size: 20px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .rating-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .rating-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .rating-button:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .rating-button.selected {
+            border-color: #3b82f6;
+            background: #3b82f6;
+            color: white;
+        }
+        .rating-visual {
+            font-size: 28px;
+            line-height: 1;
+        }
+        .rating-visual.stars {
+            color: #fbbf24;
+        }
+        .rating-label {
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+            color: #666;
+        }
+        .rating-button.selected .rating-label {
+            color: white;
+        }
+        .scale-info {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .star {
+            display: inline-block;
+            font-size: 20px;
+        }
+        .star.filled {
+            color: #fbbf24;
+        }
+        .star.empty {
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 Survey Rating Types - Interactive Demo</h1>
+    <p style="color: #666; margin-bottom: 30px;">
+        This demo shows the three rating types (Stars, Numbers, Emojis) with different scales (3, 5, 10).
+        Click any rating button to see the selected state.
+    </p>
+
+    <!-- Stars - 5 Scale -->
+    <div class="demo-section">
+        <h2>⭐ Stars (5-point scale)</h2>
+        <p class="scale-info">Visual representation using star icons</p>
+        <div class="rating-grid">
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual stars">
+                    <span class="star filled">★</span><span class="star empty">★★★★</span>
+                </div>
+                <div class="rating-label">★ Very Poor</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual stars">
+                    <span class="star filled">★★</span><span class="star empty">★★★</span>
+                </div>
+                <div class="rating-label">★★ Poor</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual stars">
+                    <span class="star filled">★★★</span><span class="star empty">★★</span>
+                </div>
+                <div class="rating-label">★★★ Average</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual stars">
+                    <span class="star filled">★★★★</span><span class="star empty">★</span>
+                </div>
+                <div class="rating-label">★★★★ Good</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual stars">
+                    <span class="star filled">★★★★★</span>
+                </div>
+                <div class="rating-label">★★★★★ Excellent</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emojis - 5 Scale -->
+    <div class="demo-section">
+        <h2>😊 Emojis (5-point scale)</h2>
+        <p class="scale-info">Visual representation using emoji faces</p>
+        <div class="rating-grid">
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😞</div>
+                <div class="rating-label">Very Dissatisfied</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😕</div>
+                <div class="rating-label">Dissatisfied</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😐</div>
+                <div class="rating-label">Neutral</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">🙂</div>
+                <div class="rating-label">Satisfied</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😀</div>
+                <div class="rating-label">Very Satisfied</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Numbers - 5 Scale -->
+    <div class="demo-section">
+        <h2>🔢 Numbers (5-point scale)</h2>
+        <p class="scale-info">Simple numeric representation</p>
+        <div class="rating-grid">
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual" style="font-size: 32px; font-weight: bold;">1</div>
+                <div class="rating-label">Very Poor</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual" style="font-size: 32px; font-weight: bold;">2</div>
+                <div class="rating-label">Poor</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual" style="font-size: 32px; font-weight: bold;">3</div>
+                <div class="rating-label">Average</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual" style="font-size: 32px; font-weight: bold;">4</div>
+                <div class="rating-label">Good</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual" style="font-size: 32px; font-weight: bold;">5</div>
+                <div class="rating-label">Excellent</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stars - 3 Scale -->
+    <div class="demo-section">
+        <h2>⭐ Stars (3-point scale)</h2>
+        <p class="scale-info">Simplified 3-option rating</p>
+        <div class="rating-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual stars">
+                    <span class="star filled">★</span><span class="star empty">★★</span>
+                </div>
+                <div class="rating-label">★ Poor</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual stars">
+                    <span class="star filled">★★</span><span class="star empty">★</span>
+                </div>
+                <div class="rating-label">★★ Good</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual stars">
+                    <span class="star filled">★★★</span>
+                </div>
+                <div class="rating-label">★★★ Excellent</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emojis - 10 Scale -->
+    <div class="demo-section">
+        <h2>😊 Emojis (10-point scale)</h2>
+        <p class="scale-info">Detailed 10-option emoji rating</p>
+        <div class="rating-grid">
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😞</div>
+                <div class="rating-label">Terrible</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😕</div>
+                <div class="rating-label">Very Poor</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😐</div>
+                <div class="rating-label">Poor</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">🙂</div>
+                <div class="rating-label">Below Average</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😀</div>
+                <div class="rating-label">Average</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😃</div>
+                <div class="rating-label">Above Average</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😄</div>
+                <div class="rating-label">Good</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😁</div>
+                <div class="rating-label">Very Good</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">😍</div>
+                <div class="rating-label">Excellent</div>
+            </div>
+            <div class="rating-button" onclick="selectRating(this)">
+                <div class="rating-visual">🤩</div>
+                <div class="rating-label">Perfect</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function selectRating(button) {
+            // Remove selected class from siblings
+            const parent = button.parentElement;
+            parent.querySelectorAll('.rating-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            // Add selected class to clicked button
+            button.classList.add('selected');
+        }
+    </script>
+</body>
+</html>

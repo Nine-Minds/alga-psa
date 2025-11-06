@@ -9,6 +9,7 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { submitSurveyResponse } from 'server/src/lib/actions/surveyResponseActions';
 import type { SurveyInvitationView } from 'server/src/lib/actions/surveyResponseActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { RatingButton, RatingDisplay } from 'server/src/components/surveys/shared/RatingDisplay';
 
 interface SurveyResponsePageProps {
   token: string;
@@ -99,11 +100,21 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
         </CardHeader>
         <CardContent className="space-y-4">
           <p>{t('surveys.response.submittedMessage', thankYouMessage, { thankYouText: thankYouMessage })}</p>
-          <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
-            <span className="font-medium">
-              {t('surveys.response.ratingSubmitted', 'Feedback submitted')}
-            </span>{' '}
-            · {selectedRating} / {ratingScale}
+          <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-4">
+            <span className="text-sm font-medium text-gray-600">
+              {t('surveys.response.ratingSubmitted', 'Feedback submitted')}:
+            </span>
+            {selectedRating && (
+              <RatingDisplay
+                rating={selectedRating}
+                type={invitation.template.ratingType}
+                scale={ratingScale}
+                size="md"
+              />
+            )}
+            <span className="text-sm text-gray-500">
+              ({selectedRating} / {ratingScale})
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -136,30 +147,20 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
             <p className="text-sm text-gray-600">
               {t('surveys.response.ratingAssistive', 'Select a score from 1 to {{scale}}', { scale: ratingScale })}
             </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
               {ratingOptions.map(({ rating, label }) => {
                 const isSelected = selectedRating === rating;
                 return (
-                  <Button
+                  <RatingButton
                     key={rating}
-                    id={`survey-response-rating-${rating}`}
-                    type="button"
-                    variant={isSelected ? 'default' : 'outline'}
-                    className="flex flex-col items-center gap-1 py-4 text-base"
-                    onClick={() => handleRatingSelect(rating)}
+                    rating={rating}
+                    type={invitation.template.ratingType}
+                    scale={ratingScale}
+                    label={label}
+                    selected={isSelected}
                     disabled={status === 'submitting'}
-                    aria-pressed={isSelected}
-                    aria-label={
-                      label
-                        ? `${rating} – ${label}`
-                        : t('surveys.response.ratingAssistive', 'Select a score from 1 to {{scale}}', {
-                            scale: ratingScale,
-                          })
-                    }
-                  >
-                    <span className="text-xl font-semibold">{rating}</span>
-                    {label && <span className="text-xs text-gray-600">{label}</span>}
-                  </Button>
+                    onClick={() => handleRatingSelect(rating)}
+                  />
                 );
               })}
             </div>

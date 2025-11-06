@@ -18,10 +18,14 @@ export default async function SurveyDashboard({ filters }: SurveyDashboardProps)
   const data = await getSurveyDashboardData(filters);
 
   return (
-    <div className="space-y-6">
-      <ResponseMetrics metrics={data.metrics} />
+    <div className="space-y-8">
+      {/* Metrics Section */}
+      <section className="animate-in fade-in-50 duration-500">
+        <ResponseMetrics metrics={data.metrics} />
+      </section>
 
-      <div className="grid grid-cols-1 gap-6 2xl:grid-cols-3">
+      {/* Charts Section */}
+      <section className="grid grid-cols-1 gap-6 2xl:grid-cols-3 animate-in fade-in-50 duration-700">
         <Suspense fallback={<ChartSkeleton type="line" />}>
           <ResponseTrendChart trend={data.trend} />
         </Suspense>
@@ -31,9 +35,12 @@ export default async function SurveyDashboard({ filters }: SurveyDashboardProps)
         <Suspense fallback={<LoadingIndicator layout="stacked" text="Loading survey insights..." />}>
           <TopIssuesPanel issues={data.topIssues} />
         </Suspense>
-      </div>
+      </section>
 
-      <ResponsesList responses={data.recentResponses} />
+      {/* Responses List Section */}
+      <section className="animate-in fade-in-50 duration-1000">
+        <ResponsesList responses={data.recentResponses} />
+      </section>
     </div>
   );
 }

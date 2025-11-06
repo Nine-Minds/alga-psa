@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -14,8 +14,11 @@ import {
   updateSurveyTemplate,
 } from 'server/src/lib/actions/surveyActions';
 import type { SurveyTemplate } from 'server/src/lib/actions/surveyActions';
-
-type RatingType = 'stars' | 'numbers' | 'emojis';
+import {
+  getDefaultRatingLabels,
+  RatingButton,
+  type RatingType,
+} from 'server/src/components/surveys/shared/RatingDisplay';
 
 interface TemplateFormProps {
   template?: SurveyTemplate;
@@ -38,6 +41,9 @@ interface FormState {
 
 /**
  * Parse textarea input into rating label mapping
+ * Supports both formats:
+ * 1. Simple format (one label per line): "Poor\nGood\nExcellent"
+ * 2. Legacy format with "=" separator: "1 = Poor\n2 = Good\n3 = Excellent"
  */
 function parseRatingLabels(input: string): Record<string, string> {
   const lines = input
@@ -47,27 +53,36 @@ function parseRatingLabels(input: string): Record<string, string> {
 
   const labels: Record<string, string> = {};
 
-  lines.forEach((line) => {
-    const [rawValue, ...rawLabel] = line.split('=');
-    if (!rawValue || rawLabel.length === 0) {
-      return;
-    }
+  lines.forEach((line, index) => {
+    // Check if line contains "=" separator (legacy format)
+    if (line.includes('=')) {
+      const [rawValue, ...rawLabel] = line.split('=');
+      if (!rawValue || rawLabel.length === 0) {
+        return;
+      }
 
-    const value = rawValue.trim();
-    const label = rawLabel.join('=').trim();
-    if (!value || !label) {
-      return;
-    }
+      const value = rawValue.trim();
+      const label = rawLabel.join('=').trim();
+      if (!value || !label) {
+        return;
+      }
 
-    labels[value] = label;
+      labels[value] = label;
+    } else {
+      // Simple format: just use line index + 1 as the rating value
+      const rating = index + 1;
+      labels[String(rating)] = line;
+    }
   });
 
   return labels;
 }
 
 function formatRatingLabels(labels: Record<string, string>): string {
+  // Sort by numeric key to ensure proper order
   return Object.entries(labels)
-    .map(([value, label]) => `${value} = ${label}`)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([_, label]) => label)
     .join('\n');
 }
 
@@ -115,6 +130,16 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
   const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setFormState((prev) => ({ ...prev, [key]: value }));
   };
+
+  // Auto-generate default labels when rating type or scale changes
+  useEffect(() => {
+    // Always regenerate labels when rating type or scale changes
+    const defaultLabels = getDefaultRatingLabels(formState.ratingType, formState.ratingScale);
+    setFormState((prev) => ({
+      ...prev,
+      ratingLabelsText: formatRatingLabels(defaultLabels),
+    }));
+  }, [formState.ratingType, formState.ratingScale]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -216,10 +241,6 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-semibold" id={`${formInstanceId}-title`}>
-        {title}
-      </h2>
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-name`}>
@@ -268,15 +289,42 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
             className="h-32"
             placeholder={t(
               'surveys.settings.templateForm.placeholders.ratingLabels',
-              'Example:\n1 = Very dissatisfied\n2 = Dissatisfied\n3 = Neutral\n4 = Satisfied\n5 = Very satisfied'
+              'Example:\nVery Poor\nPoor\nAverage\nGood\nExcellent'
             )}
           />
           <p className="text-xs text-gray-500">
             {t(
               'surveys.settings.templateForm.help.ratingLabels',
-              'Provide one label per score using “value = label” on separate lines.'
+              'Provide one label per line, in order from lowest to highest rating.'
             )}
           </p>
+        </div>
+
+        {/* Rating Preview */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 md:col-span-2">
+          <h3 className="mb-3 text-sm font-medium text-gray-700">
+            {t('surveys.settings.templateForm.labels.preview', 'Preview')}
+          </h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+            {Array.from({ length: formState.ratingScale }, (_, index) => {
+              const rating = index + 1;
+              const labels = parseRatingLabels(formState.ratingLabelsText);
+              const label = labels[String(rating)];
+              return (
+                <RatingButton
+                  key={rating}
+                  rating={rating}
+                  type={formState.ratingType}
+                  scale={formState.ratingScale}
+                  label={label}
+                  selected={false}
+                  disabled
+                  onClick={() => {}}
+                  className="cursor-default opacity-100"
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
 

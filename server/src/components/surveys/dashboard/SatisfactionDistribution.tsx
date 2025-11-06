@@ -17,15 +17,25 @@ const percentFormatter = new Intl.NumberFormat(undefined, {
 
 export default function SatisfactionDistribution({ distribution }: SatisfactionDistributionProps) {
   return (
-    <Card className="col-span-1 flex flex-col">
+    <Card className="col-span-1 flex flex-col border-border-200 shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base font-semibold">Satisfaction Distribution</CardTitle>
-        <Gauge className="h-4 w-4 text-emerald-500" />
+        <CardTitle className="text-base font-semibold text-text-900">Satisfaction Distribution</CardTitle>
+        <div className="rounded-lg bg-emerald-50 p-2 shadow-sm">
+          <Gauge className="h-4 w-4 text-emerald-500" />
+        </div>
       </CardHeader>
       <CardContent className="mt-2 flex-1">
         {distribution.length === 0 ? (
-          <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-            No survey ratings recorded yet.
+          <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-emerald-50/30 to-transparent p-6">
+            <div className="rounded-full bg-emerald-100 p-3">
+              <Gauge className="h-6 w-6 text-emerald-500" />
+            </div>
+            <p className="text-center text-sm font-medium text-text-600">
+              No survey ratings recorded yet.
+            </p>
+            <p className="text-center text-xs text-text-500">
+              Distribution will appear after feedback is collected.
+            </p>
           </div>
         ) : (
           <div className="h-64">

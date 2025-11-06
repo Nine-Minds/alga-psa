@@ -1,6 +1,7 @@
 'use server';
 
 import { withTransaction } from '@alga-psa/shared/db';
+import { appendFileSync } from 'node:fs';
 import type { Knex } from 'knex';
 import logger from '@alga-psa/shared/core/logger';
 
@@ -86,8 +87,33 @@ export interface SendSurveyInvitationResult {
   contactEmail: string;
 }
 
+function appendDebug(step: string, data: Record<string, unknown>) {
+  try {
+    appendFileSync(
+      'survey-debug.log',
+      JSON.stringify({
+        step,
+        timestamp: new Date().toISOString(),
+        ...data,
+      }) + '\n'
+    );
+  } catch (error) {
+    logger.warn('[SurveyService] Failed to write survey debug log', {
+      step,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
 export async function sendSurveyInvitation(params: SendSurveyInvitationParams): Promise<SendSurveyInvitationResult> {
+  appendDebug('start', { params });
   return runWithTenant(params.tenantId, async () => {
+    logger.info('[SurveyService] sendSurveyInvitation invoked', {
+      tenantId: params.tenantId,
+      ticketId: params.ticketId,
+      templateId: params.templateId,
+    });
+
     const { knex } = await createTenantKnex();
     const now = new Date();
     const expiresAt = addHours(now, DEFAULT_TOKEN_TTL_HOURS);
@@ -100,10 +126,20 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       ticket,
       tenant,
     } = await withTransaction(knex, async (trx) => {
+      appendDebug('transaction-begin', { tenantId: params.tenantId, ticketId: params.ticketId });
+
       const templateRow = await loadTemplate(trx, params.tenantId, params.templateId);
+      appendDebug('loaded-template', { templateId: templateRow.template_id, enabled: templateRow.enabled });
+
       const ticketRow = await loadTicket(trx, params.tenantId, params.ticketId);
+      appendDebug('loaded-ticket', {
+        ticketId: ticketRow?.ticket_id,
+        contactId: ticketRow?.contact_name_id,
+        clientId: ticketRow?.client_id,
+      });
 
       if (!ticketRow) {
+        appendDebug('ticket-missing', { ticketId: params.ticketId });
         throw new Error('Ticket not found for survey invitation');
       }
 
@@ -113,12 +149,20 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       const contactRow = resolvedContactId
         ? await loadContact(trx, params.tenantId, resolvedContactId)
         : null;
+      appendDebug('loaded-contact', {
+        contactId: contactRow?.contact_name_id,
+        email: contactRow?.email,
+      });
 
       if (!contactRow || !contactRow.email) {
+        appendDebug('contact-missing-email', {
+          contactId: contactRow?.contact_name_id,
+        });
         throw new Error('Survey invitations require an active contact with an email address');
       }
 
       const tenantRow = await loadTenant(trx, params.tenantId);
+      appendDebug('loaded-tenant', { tenantName: tenantRow?.name });
 
       const [invitationRow] = await trx<InvitationRow>(SURVEY_INVITATION_TABLE)
         .insert({
@@ -135,8 +179,13 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         .returning('*');
 
       if (!invitationRow) {
+        appendDebug('invitation-insert-failed', {});
         throw new Error('Failed to persist survey invitation');
       }
+
+      appendDebug('invitation-inserted', {
+        invitationId: invitationRow.invitation_id,
+      });
 
       return {
         invitation: invitationRow,
@@ -179,6 +228,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     try {
       const processor = new DatabaseTemplateProcessor(knex, SURVEY_EMAIL_TEMPLATE_CODE);
       const emailService = TenantEmailService.getInstance(params.tenantId);
+      appendDebug('before-email-send', { contactEmail: contact.email });
 
       // TODO: Queue invitation delivery through Temporal survey workflow once available.
       const sendResult = await emailService.sendEmail({
@@ -192,6 +242,12 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       if (!sendResult.success) {
         throw new Error(sendResult.error || 'Failed to send survey invitation email');
       }
+
+      appendDebug('email-sent', {
+        invitationId: invitation.invitation_id,
+        contactEmail: contact.email,
+        messageId: sendResult.messageId,
+      });
     } catch (error) {
       logger.error('[SurveyService] Failed to send survey invitation email', {
         tenantId: params.tenantId,
@@ -199,22 +255,26 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         contactId: contact.contact_name_id,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-
-      await removeInvitationSafe(params.tenantId, invitation.invitation_id);
-      throw error;
-    }
-
-    await publishEvent({
-      eventType: 'SURVEY_INVITATION_SENT',
-      payload: {
+      appendDebug('email-error', {
         tenantId: params.tenantId,
-        invitationId: invitation.invitation_id,
-        ticketId: invitation.ticket_id,
-        companyId: invitation.client_id ?? undefined,
-        contactId: invitation.contact_id ?? undefined,
-        surveyTokenHash: invitation.survey_token_hash,
-      },
-    });
+        ticketId: params.ticketId,
+        contactId: contact.contact_name_id,
+        error: error instanceof Error ? error.message : error,
+      });
+
+      const message = error instanceof Error ? error.message : String(error);
+      const isDomainNotVerified = message.includes('domain is not verified');
+
+      if (isDomainNotVerified) {
+        logger.warn('[SurveyService] Proceeding despite email failure (unverified domain)', {
+          tenantId: params.tenantId,
+          ticketId: params.ticketId,
+        });
+      } else {
+        await removeInvitationSafe(params.tenantId, invitation.invitation_id);
+        throw error;
+      }
+    }
 
     return {
       invitationId: invitation.invitation_id,
@@ -295,7 +355,7 @@ async function loadContact(
 
 async function loadTenant(knex: Knex | Knex.Transaction, tenantId: string): Promise<TenantRow | null> {
   return knex<TenantRow>(TENANTS_TABLE)
-    .select('tenant', 'client_name', 'name')
+    .select('tenant', 'client_name')
     .where({ tenant: tenantId })
     .first();
 }

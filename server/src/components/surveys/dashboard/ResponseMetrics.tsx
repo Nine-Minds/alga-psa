@@ -64,48 +64,48 @@ export default function ResponseMetrics({ metrics }: ResponseMetricsProps) {
   );
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 2xl:grid-cols-4">
       {cards.map(({ key, label, value, icon: Icon, tone, background }) => (
-        <Card key={key} className="h-full">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-            <span className={`rounded-full p-2 ${background}`}>
-              <Icon className={`h-4 w-4 ${tone}`} />
+        <Card key={key} className="h-full transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-text-600">{label}</CardTitle>
+            <span className={`rounded-lg p-2.5 ${background} shadow-sm`}>
+              <Icon className={`h-5 w-5 ${tone}`} />
             </span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{value}</div>
+            <div className="text-3xl font-bold tracking-tight text-text-900">{value}</div>
           </CardContent>
         </Card>
       ))}
-      <Card className="sm:col-span-2 2xl:col-span-1">
+      <Card className="sm:col-span-2 2xl:col-span-1 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border-200 bg-gradient-to-br from-amber-50/50 to-transparent">
         <CardHeader className="space-y-1 pb-3">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="text-sm font-medium text-text-600">
             Outstanding Invitations
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-between">
-          <div className="text-2xl font-semibold">
+          <div className="text-3xl font-bold tracking-tight text-text-900">
             {integerFormatter.format(metrics.outstandingInvitations)}
           </div>
-          <div className="flex items-center text-sm text-amber-600">
-            <Clock3 className="mr-2 h-4 w-4" />
+          <div className="flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-700">
+            <Clock3 className="h-4 w-4" />
             Awaiting responses
           </div>
         </CardContent>
       </Card>
-      <Card className="sm:col-span-2 2xl:col-span-1">
+      <Card className="sm:col-span-2 2xl:col-span-1 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border-200 bg-gradient-to-br from-rose-50/50 to-transparent">
         <CardHeader className="space-y-1 pb-3">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="text-sm font-medium text-text-600">
             Negative Responses (≤ 2★)
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-between">
-          <div className="text-2xl font-semibold">
+          <div className="text-3xl font-bold tracking-tight text-text-900">
             {integerFormatter.format(metrics.recentNegativeResponses)}
           </div>
-          <div className="flex items-center text-sm text-rose-600">
-            <TrendingDown className="mr-2 h-4 w-4" />
+          <div className="flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1.5 text-sm font-medium text-rose-700">
+            <TrendingDown className="h-4 w-4" />
             Needs review
           </div>
         </CardContent>
