@@ -30,12 +30,20 @@
 - [x] Store schema migrations for the new linking table under `ee/server/migrations` and supply CE no-op stubs.
 - [x] Serve SSO buttons and the “Connect SSO” settings page from `@ee` components/pages with CE stubs in `server/src/empty`.
 
-### Phase 3 – Rollout, Monitoring, and Policy Controls
+### Phase 3 – Built-in SSO Bulk Assignment UI
+- [ ] Extract bulk assignment preview/execute helpers into `ee/server/src/lib/actions/ssoActions.ts` (with CE stubs in `server/src/empty`) so the existing backfill script shares logic and only admins with `settings.update` can run it.
+- [ ] Build `SsoBulkAssignment.tsx` container plus `SsoBulkAssignmentForm.tsx` to render provider toggles, multi-domain input, and an internal/client selector with preview and execute buttons wired to the new actions.
+- [ ] Surface preview results inline (counts for linked, skipped, already linked) and trigger toast/audit events on assignment; ensure preview falls back gracefully when no domains or providers are selected.
+- [ ] Add a "Single Sign-On" tab to `SecuritySettingsPage.tsx` navigation, mount the bulk assignment UI, and keep Roles/Permissions/Policies unaffected.
+- [ ] Extend acceptance coverage to include UI-driven dry-run/assign flows and confirm CE/enterprise builds resolve the new components and actions correctly.
+
+### OUT OF BAND – Rollout, Monitoring, and Policy Controls
 - [ ] Introduce feature flags or configuration to enable SSO providers per tenant/portal for controlled rollout.
 - [ ] Instrument telemetry to capture provider usage, OTT handoffs, migration completions, and repeated password fallbacks.
 - [ ] Add policy controls allowing tenants to require SSO and to determine whether local TOTP remains after OAuth logins.
 - [ ] Publish operational runbooks covering break-glass password resets, tenant onboarding checklists, and SSO troubleshooting.
 - [ ] Update `scripts/build-enterprise.sh`, validate CE Docker builds resolve `@ee` imports to stubs, and gate new OAuth integration tests behind `process.env.EDITION === 'enterprise'`.
+
 
 ### Acceptance Tests
 - [ ] EE Connect SSO flow: verifies password + TOTP gating, sets nonce cookie, and redirects through selected provider; linking renders in Account Management afterwards.
