@@ -59,7 +59,7 @@ export async function broadcastNotification(
 export async function broadcastNotificationRead(
   tenant: string,
   userId: string,
-  notificationId: number
+  notificationId: string
 ): Promise<void> {
   try {
     const client = await getRedisClient();

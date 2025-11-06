@@ -56,6 +56,7 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
     author: z.string(),
     isInternal: z.boolean().optional(),
   }).optional(),
+  isAdditionalAgent: z.boolean().optional(), // True when user is assigned as additional agent
 });
 
 // Project event payload schema
@@ -81,6 +82,7 @@ export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(),
   assignedTo: z.string().uuid(),
   additionalUsers: z.array(z.string().uuid()).optional(),
+  isAdditionalAgent: z.boolean().optional(), // True when user is assigned as additional agent
 });
 
 // Document mention event payload schema

@@ -139,7 +139,7 @@ export interface WorkflowTaskActivity extends ActivityBase {
  */
 export interface NotificationActivity extends ActivityBase {
   sourceType: ActivityType.NOTIFICATION;
-  notificationId: number;
+  notificationId: string;
   templateName: string;
   message: string;
   isRead: boolean;

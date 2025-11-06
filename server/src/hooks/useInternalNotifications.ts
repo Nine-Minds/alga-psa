@@ -53,7 +53,7 @@ interface UseInternalNotificationsReturn {
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
-  markAsRead: (notificationId: number) => Promise<void>;
+  markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -74,6 +74,10 @@ export function useInternalNotifications(
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef<number>(INITIAL_RECONNECT_DELAY);
+
+  // Use refs to store latest callbacks without triggering effect re-runs
+  const fetchNotificationsRef = useRef<() => Promise<void>>();
+  const enablePollingRef = useRef<boolean>(enablePolling);
 
   // Fetch notifications from REST API
   const fetchNotifications = useCallback(async () => {
@@ -103,6 +107,16 @@ export function useInternalNotifications(
       setIsLoading(false);
     }
   }, [tenant, userId, limit]);
+
+  // Keep the ref updated with the latest callback
+  useEffect(() => {
+    fetchNotificationsRef.current = fetchNotifications;
+  }, [fetchNotifications]);
+
+  // Keep the enablePolling ref updated
+  useEffect(() => {
+    enablePollingRef.current = enablePolling;
+  }, [enablePolling]);
 
   // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
@@ -135,17 +149,19 @@ export function useInternalNotifications(
           pollingIntervalRef.current = null;
         }
 
-        // Fetch initial data
-        fetchNotifications();
+        // Fetch initial data using ref to get latest callback
+        fetchNotificationsRef.current?.();
       },
 
       onDisconnect: ({ event }) => {
         console.log('Disconnected from notification stream', event);
         setIsConnected(false);
 
-        // Start polling as fallback when disconnected
-        if (enablePolling && !pollingIntervalRef.current) {
-          pollingIntervalRef.current = setInterval(fetchNotifications, POLLING_INTERVAL);
+        // Start polling as fallback when disconnected (use ref for latest value)
+        if (enablePollingRef.current && !pollingIntervalRef.current) {
+          pollingIntervalRef.current = setInterval(() => {
+            fetchNotificationsRef.current?.();
+          }, POLLING_INTERVAL);
         }
 
         // Attempt reconnection with exponential backoff
@@ -191,12 +207,12 @@ export function useInternalNotifications(
       }
     });
 
-    // Initial load
-    fetchNotifications();
-  }, [tenant, userId, fetchNotifications, enablePolling]);
+    // Initial load using ref to get latest callback
+    fetchNotificationsRef.current?.();
+  }, [tenant, userId]);
 
   // Mark notification as read
-  const markAsRead = useCallback(async (notificationId: number) => {
+  const markAsRead = useCallback(async (notificationId: string) => {
     try {
       await markAsReadAction(tenant, userId, notificationId);
 

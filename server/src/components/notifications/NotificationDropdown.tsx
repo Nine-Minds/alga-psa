@@ -17,7 +17,7 @@ interface NotificationDropdownProps {
   isLoading: boolean;
   error: string | null;
   isConnected: boolean;
-  onMarkAsRead: (notificationId: number) => Promise<void>;
+  onMarkAsRead: (notificationId: string) => Promise<void>;
   onMarkAllAsRead: () => Promise<void>;
   onRefresh: () => Promise<void>;
   onClose: () => void;

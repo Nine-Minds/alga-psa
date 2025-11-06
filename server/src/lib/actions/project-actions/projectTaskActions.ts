@@ -506,7 +506,8 @@ export async function addTaskResourceAction(taskId: string, userId: string, role
                             taskId: taskId,
                             userId: currentUser.user_id,
                             assignedTo: userId,
-                            additionalUsers: [] // This user is being added as a primary resource
+                            additionalUsers: [],
+                            isAdditionalAgent: true // This user is being added as an additional agent
                         }
                     });
                 }
