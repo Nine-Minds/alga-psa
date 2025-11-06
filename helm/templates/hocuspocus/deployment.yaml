@@ -126,7 +126,7 @@ spec:
                 key: DB_PASSWORD_HOCUSPOCUS
           {{- else }}
           - name: DB_HOST
-            value: "{{ .Values.config.db.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+            value: "{{ .Values.config.db.host }}"
           - name: DB_USER_HOCUSPOCUS
             value: "{{ .Values.config.db.hocuspocus_user | default "hocuspocus_user" }}"
           - name: DB_PORT

@@ -15,7 +15,27 @@ import {
   markAllAsReadAction
 } from '../lib/actions/internal-notification-actions/internalNotificationActions';
 
-const HOCUSPOCUS_URL = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL || 'ws://localhost:1234';
+// Construct Hocuspocus URL based on current domain
+// In production, use wss://{current-domain}/hocuspocus
+// In development, use ws://localhost:1234
+const getHocuspocusUrl = () => {
+  if (typeof window === 'undefined') {
+    return 'ws://localhost:1234'; // SSR fallback
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+
+  // In production (not localhost), use /hocuspocus path on same domain
+  if (!host.includes('localhost')) {
+    return `${protocol}//${host}/hocuspocus`;
+  }
+
+  // In development, use local hocuspocus server
+  return process.env.NEXT_PUBLIC_HOCUSPOCUS_URL || 'ws://localhost:1234';
+};
+
+const HOCUSPOCUS_URL = getHocuspocusUrl();
 const POLLING_INTERVAL = 30000; // 30 seconds
 const MAX_RECONNECT_DELAY = 30000; // 30 seconds
 const INITIAL_RECONNECT_DELAY = 1000; // 1 second
