@@ -61,6 +61,9 @@ export function TemplateReviewContractStep({
                     </p>
                     <div className="text-xs text-gray-600 flex flex-wrap gap-3 mt-2">
                       <span>Quantity Guidance: {service.quantity ?? 1}</span>
+                      {service.suggested_rate !== undefined && (
+                        <span>Suggested Rate: ${service.suggested_rate.toFixed(2)}</span>
+                      )}
                       {service.bucket_overlay && (
                         <span>
                           Bucket: {service.bucket_overlay.total_minutes ?? 0} minutes · Overage $
@@ -92,12 +95,17 @@ export function TemplateReviewContractStep({
                     <p className="font-medium text-gray-900">
                       {service.service_name || 'Unnamed Service'}
                     </p>
-                    {service.bucket_overlay && (
-                      <div className="text-xs text-gray-600 mt-2">
-                        Bucket: {service.bucket_overlay.total_minutes ?? 0} minutes · Overage $
-                        {service.bucket_overlay.overage_rate ?? 0}
-                      </div>
-                    )}
+                    <div className="text-xs text-gray-600 flex flex-wrap gap-3 mt-2">
+                      {service.suggested_rate !== undefined && (
+                        <span>Suggested Rate: ${service.suggested_rate.toFixed(2)}/hr</span>
+                      )}
+                      {service.bucket_overlay && (
+                        <span>
+                          Bucket: {service.bucket_overlay.total_minutes ?? 0} minutes · Overage $
+                          {service.bucket_overlay.overage_rate ?? 0}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -118,13 +126,16 @@ export function TemplateReviewContractStep({
                     <p className="font-medium text-gray-900">
                       {service.service_name || 'Unnamed Service'}
                     </p>
-                    <div className="text-xs text-gray-600 mt-2 space-y-1">
-                      <p>Unit: {service.unit_of_measure || 'Not specified'}</p>
+                    <div className="text-xs text-gray-600 flex flex-wrap gap-3 mt-2">
+                      <span>Unit: {service.unit_of_measure || 'Not specified'}</span>
+                      {service.suggested_rate !== undefined && (
+                        <span>Suggested Rate: ${service.suggested_rate.toFixed(2)}/unit</span>
+                      )}
                       {service.bucket_overlay && (
-                        <p>
+                        <span>
                           Bucket: {service.bucket_overlay.total_minutes ?? 0} units · Overage $
                           {service.bucket_overlay.overage_rate ?? 0}
-                        </p>
+                        </span>
                       )}
                     </div>
                   </div>

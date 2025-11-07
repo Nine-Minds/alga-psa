@@ -88,7 +88,7 @@ export function TemplateFixedFeeServicesStep({
     updateData({
       fixed_services: [
         ...data.fixed_services,
-        { service_id: '', service_name: '', quantity: 1 },
+        { service_id: '', service_name: '', quantity: 1, suggested_rate: undefined },
       ],
     });
   };
@@ -220,6 +220,12 @@ export function TemplateFixedFeeServicesStep({
   const handleQuantityChange = (index: number, quantity: number) => {
     const next = [...data.fixed_services];
     next[index] = { ...next[index], quantity };
+    updateData({ fixed_services: next });
+  };
+
+  const handleRateChange = (index: number, rate: number | undefined) => {
+    const next = [...data.fixed_services];
+    next[index] = { ...next[index], suggested_rate: rate };
     updateData({ fixed_services: next });
   };
 
@@ -579,20 +585,41 @@ export function TemplateFixedFeeServicesStep({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor={`template-fixed-quantity-${index}`} className="text-sm">
-                    Quantity Guidance
-                  </Label>
-                  <Input
-                    id={`template-fixed-quantity-${index}`}
-                    type="number"
-                    min="1"
-                    value={service.quantity ?? 1}
-                    onChange={(event) =>
-                      handleQuantityChange(index, Math.max(1, Number(event.target.value) || 1))
-                    }
-                    className="w-28"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`template-fixed-quantity-${index}`} className="text-sm">
+                      Quantity Guidance
+                    </Label>
+                    <Input
+                      id={`template-fixed-quantity-${index}`}
+                      type="number"
+                      min="1"
+                      value={service.quantity ?? 1}
+                      onChange={(event) =>
+                        handleQuantityChange(index, Math.max(1, Number(event.target.value) || 1))
+                      }
+                      className="w-28"
+                    />
+                    <p className="text-xs text-gray-500">Suggested quantity when creating contracts</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`template-fixed-rate-${index}`} className="text-sm">
+                      Suggested Rate ($)
+                    </Label>
+                    <Input
+                      id={`template-fixed-rate-${index}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={service.suggested_rate ?? ''}
+                      onChange={(event) =>
+                        handleRateChange(index, event.target.value ? Number(event.target.value) : undefined)
+                      }
+                      placeholder="Optional - leave blank to set per contract"
+                    />
+                    <p className="text-xs text-gray-500">Suggested rate when creating contracts</p>
+                  </div>
                 </div>
               </div>
 

@@ -216,7 +216,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   <p className="text-xs text-gray-500">
                     {service.unit_rate
                       ? `${formatCurrency(service.unit_rate)}/${service.unit_of_measure || 'unit'}`
-                      : 'Enter the suggested unit rate'}
+                      : 'Enter the unit rate'}
                   </p>
                 </div>
 
@@ -237,7 +237,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                 <SwitchWithLabel
-                  label="Recommend bucket allocation"
+                  label="Set bucket allocation"
                   checked={Boolean(service.bucket_overlay)}
                   onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                 />

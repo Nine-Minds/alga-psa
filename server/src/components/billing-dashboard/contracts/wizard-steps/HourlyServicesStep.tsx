@@ -218,7 +218,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
               <div className="space-y-2">
                 <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
                   <DollarSign className="h-3 w-3" />
-                  Hourly Rate Guidance
+                  Hourly Rate
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
@@ -253,13 +253,13 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 <p className="text-xs text-gray-500">
                   {service.hourly_rate
                     ? `${formatCurrency(service.hourly_rate)}/hour`
-                    : 'Enter the suggested hourly rate'}
+                    : 'Enter the hourly rate'}
                 </p>
               </div>
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                 <SwitchWithLabel
-                  label="Recommend bucket of hours"
+                  label="Set bucket of hours"
                   checked={Boolean(service.bucket_overlay)}
                   onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                 />

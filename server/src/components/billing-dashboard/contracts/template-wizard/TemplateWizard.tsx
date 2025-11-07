@@ -36,6 +36,7 @@ export interface TemplateWizardData {
     service_id: string;
     service_name?: string;
     quantity?: number;
+    suggested_rate?: number;
   }>;
   fixed_presets?: Array<{
     preset_id: string;
@@ -46,6 +47,7 @@ export interface TemplateWizardData {
     service_id: string;
     service_name?: string;
     bucket_overlay?: TemplateBucketOverlayInput | null;
+    suggested_rate?: number;
   }>;
   hourly_presets?: Array<{
     preset_id: string;
@@ -58,6 +60,7 @@ export interface TemplateWizardData {
     service_name?: string;
     unit_of_measure?: string;
     bucket_overlay?: TemplateBucketOverlayInput | null;
+    suggested_rate?: number;
   }>;
   usage_presets?: Array<{
     preset_id: string;
@@ -145,11 +148,14 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       case 4: {
         const hasServices =
           wizardData.fixed_services.length > 0 ||
+          (wizardData.fixed_presets && wizardData.fixed_presets.length > 0) ||
           wizardData.hourly_services.length > 0 ||
-          !!(wizardData.usage_services && wizardData.usage_services.length > 0);
+          (wizardData.hourly_presets && wizardData.hourly_presets.length > 0) ||
+          !!(wizardData.usage_services && wizardData.usage_services.length > 0) ||
+          !!(wizardData.usage_presets && wizardData.usage_presets.length > 0);
 
         if (!hasServices) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'At least one service block is required' }));
+          setErrors((prev) => ({ ...prev, [stepIndex]: 'At least one service or preset is required' }));
           return false;
         }
         return true;
@@ -176,8 +182,10 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   };
 
   const handleSkip = () => {
-    // Template wizard requires each step to be acknowledged, so treat skip as a noop
-    handleNext();
+    if (currentStep < TEMPLATE_STEPS.length - 1 && !REQUIRED_TEMPLATE_STEPS.includes(currentStep)) {
+      setCompletedSteps((prev) => new Set([...prev, currentStep]));
+      setCurrentStep((prev) => prev + 1);
+    }
   };
 
   const handleStepClick = (stepIndex: number) => {
@@ -280,7 +288,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
             onSkip={handleSkip}
             onFinish={handleFinish}
             isNextDisabled={isSaving}
-            isSkipDisabled
+            isSkipDisabled={REQUIRED_TEMPLATE_STEPS.includes(currentStep)}
             isLoading={isSaving}
             nextLabel="Continue"
             finishLabel="Publish Template"

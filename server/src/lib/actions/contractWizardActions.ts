@@ -33,6 +33,7 @@ type TemplateFixedServiceInput = {
   service_id: string;
   service_name?: string;
   quantity?: number;
+  suggested_rate?: number;
 };
 
 type TemplateHourlyServiceInput = {
@@ -40,6 +41,7 @@ type TemplateHourlyServiceInput = {
   service_name?: string;
   hourly_rate?: number | null;
   bucket_overlay?: BucketOverlayInput | null;
+  suggested_rate?: number;
 };
 
 type TemplateUsageServiceInput = {
@@ -47,6 +49,7 @@ type TemplateUsageServiceInput = {
   service_name?: string;
   unit_of_measure?: string;
   bucket_overlay?: BucketOverlayInput | null;
+  suggested_rate?: number;
 };
 
 type TemplatePresetInput = {

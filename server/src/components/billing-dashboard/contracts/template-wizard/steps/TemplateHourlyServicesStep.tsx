@@ -91,7 +91,7 @@ export function TemplateHourlyServicesStep({
     updateData({
       hourly_services: [
         ...data.hourly_services,
-        { service_id: '', service_name: '', bucket_overlay: undefined },
+        { service_id: '', service_name: '', bucket_overlay: undefined, suggested_rate: undefined },
       ],
     });
   };
@@ -250,6 +250,12 @@ export function TemplateHourlyServicesStep({
   const updateBucketOverlay = (index: number, overlay: TemplateBucketOverlayInput) => {
     const next = [...data.hourly_services];
     next[index] = { ...next[index], bucket_overlay: { ...overlay } };
+    updateData({ hourly_services: next });
+  };
+
+  const handleRateChange = (index: number, rate: number | undefined) => {
+    const next = [...data.hourly_services];
+    next[index] = { ...next[index], suggested_rate: rate };
     updateData({ hourly_services: next });
   };
 
@@ -622,8 +628,26 @@ export function TemplateHourlyServicesStep({
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor={`template-hourly-rate-${index}`} className="text-sm">
+                    Suggested Hourly Rate ($/hr)
+                  </Label>
+                  <Input
+                    id={`template-hourly-rate-${index}`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={service.suggested_rate ?? ''}
+                    onChange={(event) =>
+                      handleRateChange(index, event.target.value ? Number(event.target.value) : undefined)
+                    }
+                    placeholder="Optional - leave blank to set per contract"
+                  />
+                  <p className="text-xs text-gray-500">Suggested rate when creating contracts</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor={`template-min-time-${index}`} className="text-sm">
                       Minimum billable minutes
                     </Label>
@@ -640,9 +664,11 @@ export function TemplateHourlyServicesStep({
                           ),
                         })
                       }
+                      placeholder="e.g., 15"
                     />
+                    <p className="text-xs text-gray-500">Suggested minimum when creating contracts</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor={`template-round-up-${index}`} className="text-sm">
                       Round up to nearest (minutes)
                     </Label>
@@ -659,7 +685,9 @@ export function TemplateHourlyServicesStep({
                           ),
                         })
                       }
+                      placeholder="e.g., 15"
                     />
+                    <p className="text-xs text-gray-500">Suggested rounding when creating contracts</p>
                   </div>
                 </div>
 

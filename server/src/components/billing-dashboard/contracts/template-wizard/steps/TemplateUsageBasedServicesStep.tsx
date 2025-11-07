@@ -91,7 +91,7 @@ export function TemplateUsageBasedServicesStep({
     updateData({
       usage_services: [
         ...(data.usage_services ?? []),
-        { service_id: '', service_name: '', unit_of_measure: '', bucket_overlay: undefined },
+        { service_id: '', service_name: '', unit_of_measure: '', bucket_overlay: undefined, suggested_rate: undefined },
       ],
     });
   };
@@ -222,6 +222,12 @@ export function TemplateUsageBasedServicesStep({
   const updateBucketOverlay = (index: number, overlay: TemplateBucketOverlayInput) => {
     const next = [...(data.usage_services ?? [])];
     next[index] = { ...next[index], bucket_overlay: { ...overlay } };
+    updateData({ usage_services: next });
+  };
+
+  const handleRateChange = (index: number, rate: number | undefined) => {
+    const next = [...(data.usage_services ?? [])];
+    next[index] = { ...next[index], suggested_rate: rate };
     updateData({ usage_services: next });
   };
 
@@ -546,16 +552,37 @@ export function TemplateUsageBasedServicesStep({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor={`template-unit-${index}`} className="text-sm">
-                    Unit of measure
-                  </Label>
-                  <Input
-                    id={`template-unit-${index}`}
-                    value={service.unit_of_measure ?? ''}
-                    onChange={(event) => handleUnitChange(index, event.target.value)}
-                    placeholder="e.g., GB, devices, tickets"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`template-unit-${index}`} className="text-sm">
+                      Unit of measure
+                    </Label>
+                    <Input
+                      id={`template-unit-${index}`}
+                      value={service.unit_of_measure ?? ''}
+                      onChange={(event) => handleUnitChange(index, event.target.value)}
+                      placeholder="e.g., GB, devices, tickets"
+                    />
+                    <p className="text-xs text-gray-500">Suggested unit when creating contracts</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`template-usage-rate-${index}`} className="text-sm">
+                      Suggested Rate ($/unit)
+                    </Label>
+                    <Input
+                      id={`template-usage-rate-${index}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={service.suggested_rate ?? ''}
+                      onChange={(event) =>
+                        handleRateChange(index, event.target.value ? Number(event.target.value) : undefined)
+                      }
+                      placeholder="Optional - leave blank to set per contract"
+                    />
+                    <p className="text-xs text-gray-500">Suggested rate when creating contracts</p>
+                  </div>
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-dashed border-secondary-100">
