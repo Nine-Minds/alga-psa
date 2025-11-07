@@ -5,10 +5,23 @@ import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
 import { buildExtUiSrc } from 'server/src/lib/extensions/assets/url.shared';
 
 export const metadata = { title: 'Extension' };
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export default async function Page({ params }: { params: { id: string } }) {
-  const id = params.id;
+type PageParams = { id: string };
+
+export default async function Page({ params }: { params: PageParams | Promise<PageParams> }) {
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
   const runnerBackend = (process.env.RUNNER_BACKEND || 'knative').toLowerCase();
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[extensions] env snapshot', {
+      runnerBackend,
+      extUiHostMode: process.env.EXT_UI_HOST_MODE,
+      runnerPublicBase: process.env.RUNNER_PUBLIC_BASE,
+      runnerDockerPort: process.env.RUNNER_DOCKER_PORT,
+    });
+  }
 
   let error: string | null = null;
   let info: Awaited<ReturnType<typeof getInstallInfo>> = null;
@@ -44,20 +57,38 @@ export default async function Page({ params }: { params: { id: string } }) {
       );
     }
 
-    // Build path-based iframe URL
-    const rawPublicBase = process.env.RUNNER_PUBLIC_BASE?.trim();
-    const dockerBase =
-      rawPublicBase && /^https?:\/\//i.test(rawPublicBase)
-        ? rawPublicBase
-        : `http://localhost:${process.env.RUNNER_DOCKER_PORT || '8085'}`;
+    const uiHostMode = (process.env.EXT_UI_HOST_MODE || '').toLowerCase();
+    const nextJsOverride =
+      uiHostMode === 'nextjs' && process.env.RUNNER_PUBLIC_BASE
+        ? { publicBaseOverride: process.env.RUNNER_PUBLIC_BASE }
+        : undefined;
     const iframeSrc = buildExtUiSrc(id, info.content_hash, '/', {
       tenantId: info.tenant_id,
-      publicBaseOverride: dockerBase,
+      ...(nextJsOverride ?? {}),
     });
+    console.log('[extensions] iframeSrc', { iframeSrc, uiHostMode, runnerBackend });
+
+    const debugBanner = (
+      <pre className="text-xs text-gray-500 p-2 bg-gray-50 border border-gray-200 rounded">
+        docker-mode
+        {' '}
+        {JSON.stringify(
+          {
+            runnerBackend,
+            extUiHostMode: process.env.EXT_UI_HOST_MODE,
+            runnerPublicBase: process.env.RUNNER_PUBLIC_BASE,
+            runnerDockerPort: process.env.RUNNER_DOCKER_PORT,
+          },
+          null,
+          2,
+        )}
+      </pre>
+    );
 
     return (
       <div className="h-full w-full">
         <DockerExtensionIframe src={iframeSrc} />
+        {debugBanner}
       </div>
     );
   }

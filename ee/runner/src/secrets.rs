@@ -97,6 +97,15 @@ pub async fn resolve_secret_material(
     }
 
     let values = decrypt_envelope(envelope).await?;
+    let keys: Vec<String> = values.keys().cloned().collect();
+    tracing::info!(
+        tenant=%tenant_id,
+        extension=%extension_id,
+        install=%install_id.unwrap_or(""),
+        key_count=%values.len(),
+        keys=?keys,
+        "secret envelope decrypted"
+    );
     let material = SecretMaterial {
         values,
         version: envelope.version.clone(),

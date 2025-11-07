@@ -26,6 +26,7 @@ export async function getInstallInfo(registryId: string): Promise<InstallInfo | 
   const result = await adminDb('tenant_extension_install as ti')
     .leftJoin('extension_bundle as eb', 'eb.version_id', 'ti.version_id')
     .where({ 'ti.tenant_id': tenant, 'ti.registry_id': registryId })
+    .orderBy('eb.created_at', 'desc')
     .first([
       'ti.id as install_id',
       'ti.runner_domain',

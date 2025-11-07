@@ -18,8 +18,21 @@ export function buildExtUiSrc(
 
   const mode = (process.env.EXT_UI_HOST_MODE || 'rust').toLowerCase();
   const overrideBase = normalizePublicBase(opts?.publicBaseOverride);
-  const publicBase =
-    overrideBase ?? (mode === 'rust' ? normalizePublicBase(process.env.RUNNER_PUBLIC_BASE) : null);
+  const configuredBase = normalizePublicBase(process.env.RUNNER_PUBLIC_BASE);
+  const defaultRustBase = mode === 'rust' ? '/runner' : null;
+  const publicBase = overrideBase ?? configuredBase ?? defaultRustBase;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[ext-ui][buildExtUiSrc]', {
+      extensionId,
+      mode,
+      clientPath,
+      tenantId: opts?.tenantId,
+      overrideBase,
+      runnerBase: process.env.RUNNER_PUBLIC_BASE,
+      publicBase,
+    });
+  }
 
   const params = new URLSearchParams({ path: clientPath || '/' });
   if (opts?.tenantId) {

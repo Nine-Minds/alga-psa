@@ -203,6 +203,14 @@ async fn execute(
         return Json(resp);
     }
 
+    tracing::info!(
+        request_id=%req_id,
+        tenant=%tenant,
+        extension=%ext,
+        secret_envelope_present=%req.secret_envelope.is_some(),
+        "execute secret envelope check"
+    );
+
     let secret_material = match req.secret_envelope.as_ref() {
         Some(env) => match crate::secrets::resolve_secret_material(
             &req.context.tenant_id,

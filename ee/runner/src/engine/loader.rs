@@ -213,16 +213,22 @@ impl ModuleLoader {
         }
         let bytes = resp.bytes().await?.to_vec();
         tracing::debug!(%key, size=bytes.len(), "fetch_object downloaded bytes");
-        // Hash verification: expect key under sha256/<hash>/...
-        if let Some((_prefix, rest)) = key.split_once("sha256/") {
-            if let Some((hash, _tail)) = rest.split_once('/') {
-                use sha2::{Digest, Sha256};
-                let mut hasher = Sha256::new();
-                hasher.update(&bytes);
-                let digest = hasher.finalize();
-                let got = hex::encode(digest);
-                if got != hash {
-                    anyhow::bail!("hash_mismatch: expected {} got {}", hash, got);
+        // Hash verification: only enforce for archive blobs (bundle.tar.*) where content_hash reflects archive bytes.
+        let is_archive_object = key.ends_with(".tar")
+            || key.ends_with(".tar.gz")
+            || key.ends_with(".tar.zst")
+            || key.ends_with(".tgz");
+        if is_archive_object {
+            if let Some((_prefix, rest)) = key.split_once("sha256/") {
+                if let Some((hash, _tail)) = rest.split_once('/') {
+                    use sha2::{Digest, Sha256};
+                    let mut hasher = Sha256::new();
+                    hasher.update(&bytes);
+                    let digest = hasher.finalize();
+                    let got = hex::encode(digest);
+                    if got != hash {
+                        anyhow::bail!("hash_mismatch: expected {} got {}", hash, got);
+                    }
                 }
             }
         }

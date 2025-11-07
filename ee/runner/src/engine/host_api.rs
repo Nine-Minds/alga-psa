@@ -330,10 +330,12 @@ impl secrets::HostWithStore for HasSelf<HostState> {
             };
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
+            let available_keys: Vec<String> = secrets.values.keys().cloned().collect();
             tracing::info!(
                 tenant=%tenant,
                 extension=%extension,
                 key_redacted=%redact_identifier(&key),
+                available_keys=?available_keys,
                 "secrets capability get attempt"
             );
             match secrets.values.get(&key) {

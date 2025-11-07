@@ -5,6 +5,7 @@ import { getRegistryFacade } from '../../../../../lib/extensions/lib/gateway-reg
 import { loadInstallConfigCached } from '../../../../../lib/extensions/lib/install-config-cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getTenantFromAuth } from 'server/src/lib/extensions/gateway/auth';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from '../../../../../lib/extensions/runner/backend';
 export const dynamic = 'force-dynamic';
 
@@ -34,14 +35,6 @@ function json(status: number, body: any, headers: HeadersInit = {}) {
 // In non-production, return a deterministic tenant for local testing.
 // In production, return null (401 will be returned by caller).
 // Reference: ee/docs/extension-system/api-routing-guide.md
-async function getTenantIdFromAuth(_req: NextRequest): Promise<string | null> {
-  if (process.env.NODE_ENV !== 'production') {
-    return 'tenant-dev';
-  }
-  // TODO: integrate with real auth/session to resolve tenant context
-  return null;
-}
-
 class AccessError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -93,7 +86,7 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
     const pathname = pathnameFromParts(pathParts);
     const url = new URL(req.url);
 
-    const tenantId = await getTenantIdFromAuth(req);
+    const tenantId = await getTenantFromAuth(req);
     if (!tenantId) return json(401, { error: 'Unauthorized' });
 
     await assertAccess(tenantId, method);

@@ -20,9 +20,9 @@ describe('buildExtUiSrc', () => {
     resetEnv();
   });
 
-  it('returns suffix when no public base is set', () => {
+  it('falls back to /runner when no public base is set', () => {
     const src = buildExtUiSrc('ext-1', HASH, '/');
-    expect(src).toBe(`/ext-ui/ext-1/${ENCODED_HASH}/index.html?path=%2F&extensionId=ext-1`);
+    expect(src).toBe(`/runner/ext-ui/ext-1/${ENCODED_HASH}/index.html?path=%2F&extensionId=ext-1`);
   });
 
   it('uses absolute public base when provided', () => {
@@ -39,7 +39,7 @@ describe('buildExtUiSrc', () => {
 
   it('appends tenant when provided', () => {
     const src = buildExtUiSrc('ext-1', HASH, '/', { tenantId: 'tenant-123' });
-    expect(src).toBe(`/ext-ui/ext-1/${ENCODED_HASH}/index.html?path=%2F&tenant=tenant-123&extensionId=ext-1`);
+    expect(src).toBe(`/runner/ext-ui/ext-1/${ENCODED_HASH}/index.html?path=%2F&tenant=tenant-123&extensionId=ext-1`);
   });
 
   it('honors public base override', () => {

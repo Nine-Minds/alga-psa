@@ -93,7 +93,7 @@ async function loadInstallRow(db: Knex, { tenantId, extensionId }: InstallLookup
     .andWhere((builder) => {
       builder.where('install.id', extensionId);
       builder.orWhere('install.registry_id', extensionId);
-      builder.orWhereRaw('lower(concat(registry.publisher, ".", registry.name)) = ?', [slug]);
+      builder.orWhereRaw('lower(concat(registry.publisher, \'.\', registry.name)) = ?', [slug]);
     })
     .select<InstallRow[]>([
       'install.id as install_id',
