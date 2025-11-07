@@ -93,6 +93,14 @@ function getBaseUrl(): string {
 }
 
 /**
+ * Get protocol from NEXTAUTH_URL (http or https)
+ */
+function getProtocol(): string {
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  return baseUrl.startsWith('https://') ? 'https' : 'http';
+}
+
+/**
  * Normalize host by removing protocol and trailing slashes
  */
 function normalizeHost(host: string): string {
@@ -182,15 +190,16 @@ async function resolvePortalUrl(
 
   if (portalHost) {
     const sanitizedHost = normalizeHost(portalHost);
+    const protocol = getProtocol();
 
     if (isActiveVanityDomain) {
       // Active vanity domains don't need tenant parameter (they use OTT/domain-based detection)
-      portalUrl = `https://${sanitizedHost}${clientPortalPath}${input.commentId ? `#comment-${input.commentId}` : ''}`;
+      portalUrl = `${protocol}://${sanitizedHost}${clientPortalPath}${input.commentId ? `#comment-${input.commentId}` : ''}`;
     } else {
       // Canonical host always needs tenant parameter for authentication
       baseParams.set('tenant', tenantSlug);
       const queryString = baseParams.toString();
-      portalUrl = `https://${sanitizedHost}${clientPortalPath}${queryString ? '?' + queryString : ''}${input.commentId ? `#comment-${input.commentId}` : ''}`;
+      portalUrl = `${protocol}://${sanitizedHost}${clientPortalPath}${queryString ? '?' + queryString : ''}${input.commentId ? `#comment-${input.commentId}` : ''}`;
     }
   } else {
     // Fallback to NEXTAUTH_URL with tenant parameter

@@ -841,6 +841,7 @@
     "no": "Nein",
     "search": "Suchen",
     "filter": "Filtern",
+    "resetFilters": "Filter zurücksetzen",
     "sort": "Sortieren",
     "refresh": "Aktualisieren",
     "export": "Exportieren",
@@ -961,6 +962,11 @@
     "noNotifications": "Keine neuen Benachrichtigungen",
     "settings": "Benachrichtigungseinstellungen",
     "viewAll": "Alle Benachrichtigungen anzeigen",
+    "tabs": {
+      "unread": "Ungelesen",
+      "all": "Alle",
+      "read": "Gelesen"
+    },
     "preferences": {
       "title": "Benachrichtigungseinstellungen",
       "description": "Verwalte, welche internen Benachrichtigungen du erhältst",

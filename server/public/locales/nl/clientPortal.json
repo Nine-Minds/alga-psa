@@ -841,6 +841,7 @@
     "no": "Nee",
     "search": "Zoeken",
     "filter": "Filteren",
+    "resetFilters": "Filters resetten",
     "sort": "Sorteren",
     "refresh": "Vernieuwen",
     "export": "Exporteren",
@@ -961,6 +962,11 @@
     "noNotifications": "Geen nieuwe notificaties",
     "settings": "Notificatie-instellingen",
     "viewAll": "Alle notificaties bekijken",
+    "tabs": {
+      "unread": "Ongelezen",
+      "all": "Alle",
+      "read": "Gelezen"
+    },
     "preferences": {
       "title": "Notificatievoorkeuren",
       "description": "Beheer welke interne meldingen je ontvangt",

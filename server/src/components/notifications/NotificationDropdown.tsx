@@ -84,6 +84,24 @@ export function NotificationDropdown({
       await onMarkAsRead(notification.internal_notification_id);
     }
 
+    // Determine how to handle the notification based on its type and link
+    const shouldOpenInNewTab = notification.link && (
+      // Tickets: category='tickets' or link pattern
+      notification.category === 'tickets' ||
+      notification.link.includes('/msp/tickets/') ||
+      notification.link.includes('/client-portal/tickets/') ||
+      // Project tasks: link pattern with /tasks/
+      (notification.link.includes('/msp/projects/') && notification.link.includes('/tasks/'))
+    );
+
+    if (shouldOpenInNewTab && notification.link) {
+      // Open tickets and project tasks directly in a new tab
+      window.open(notification.link, '_blank', 'noopener,noreferrer');
+      onClose();
+      return;
+    }
+
+    // For documents and other notifications, use the drawer
     // Convert InternalNotification to NotificationActivity
     // Map priority based on notification type
     let priority: any;

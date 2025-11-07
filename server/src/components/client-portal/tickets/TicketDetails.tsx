@@ -7,6 +7,7 @@ import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import { Card } from 'server/src/components/ui/Card';
 import TicketDocumentsSection from 'server/src/components/tickets/ticket/TicketDocumentsSection';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { 
   getClientTicketDetails, 
@@ -436,20 +437,12 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
               <div className="flex items-center gap-2">
                 {ticket.assigned_to && ticket.userMap?.[ticket.assigned_to] ? (
                   <>
-                    {ticket.userMap[ticket.assigned_to].avatarUrl ? (
-                      <img
-                        src={ticket.userMap[ticket.assigned_to].avatarUrl ?? undefined}
-                        alt={`${ticket.userMap[ticket.assigned_to].first_name} ${ticket.userMap[ticket.assigned_to].last_name}`}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <AvatarIcon
-                        userId={ticket.userMap[ticket.assigned_to].user_id}
-                        firstName={ticket.userMap[ticket.assigned_to].first_name}
-                        lastName={ticket.userMap[ticket.assigned_to].last_name}
-                        size="sm"
-                      />
-                    )}
+                    <UserAvatar
+                      userId={ticket.userMap[ticket.assigned_to].user_id}
+                      userName={`${ticket.userMap[ticket.assigned_to].first_name} ${ticket.userMap[ticket.assigned_to].last_name}`}
+                      avatarUrl={ticket.userMap[ticket.assigned_to].avatarUrl || null}
+                      size="sm"
+                    />
                     <span className="text-sm text-gray-900">
                       {ticket.userMap[ticket.assigned_to].first_name} {ticket.userMap[ticket.assigned_to].last_name}
                     </span>
@@ -483,19 +476,16 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
               </label>
               <div className="flex-1">
                 <div className="font-bold text-gray-700 break-words">
-                  {(ticket.attributes?.description as string) ? (
+                  {ticket.attributes?.description ? (
                     <RichTextViewer
                       content={(() => {
-                        try {
-                          const parsed = JSON.parse(ticket.attributes?.description as string);
-                          if (Array.isArray(parsed) && parsed.length > 0) {
-                            // Validate that it's valid BlockNote content
-                            return parsed;
-                          }
-                        } catch (error) {
-                          console.error('Failed to parse ticket description:', error);
+                        // JSONB columns are already parsed by PostgreSQL - no need for JSON.parse
+                        const description = ticket.attributes?.description;
+                        if (Array.isArray(description) && description.length > 0) {
+                          // Valid BlockNote content
+                          return description;
                         }
-                        // Fallback to default empty block if parsing fails
+                        // Fallback to default empty block if invalid
                         return [{
                           type: "paragraph",
                           props: {
@@ -555,7 +545,6 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
           {/* Documents Section */}
           {ticket.ticket_id && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('tickets.sections.documents', 'Documents')}</h3>
               <Card>
                 <TicketDocumentsSection ticketId={ticket.ticket_id} />
               </Card>

@@ -934,7 +934,7 @@ describe('internalNotificationActions data access', () => {
 
       expect(updated.is_read).toBe(true);
       expect(updated.read_at).toBeTruthy();
-      expect(broadcastNotificationReadMock).toHaveBeenCalledWith('tenant-1', 'user-1', 1);
+      expect(broadcastNotificationReadMock).toHaveBeenCalledWith('tenant-1', 'user-1', NOTIFICATION_UUID_1);
     });
 
     it('throws when notification is not found and does not broadcast', async () => {

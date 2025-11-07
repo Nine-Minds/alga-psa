@@ -67,12 +67,13 @@ vi.mock('server/src/lib/eventBus', () => {
   };
 });
 
-const createNotificationFromTemplateActionMock = vi.fn().mockResolvedValue({
+const createNotificationFromTemplateInternalMock = vi.fn().mockResolvedValue({
   internal_notification_id: 1
 });
 
 vi.mock('server/src/lib/actions/internal-notification-actions/internalNotificationActions', () => ({
-  createNotificationFromTemplateAction: createNotificationFromTemplateActionMock,
+  createNotificationFromTemplateInternal: createNotificationFromTemplateInternalMock,
+  createNotificationFromTemplateAction: vi.fn(),
   getNotificationsAction: vi.fn(),
   getUnreadCountAction: vi.fn(),
   markAsReadAction: vi.fn(),
@@ -178,7 +179,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   eventBus.__reset();
-  createNotificationFromTemplateActionMock.mockClear();
+  createNotificationFromTemplateInternalMock.mockClear();
   getConnectionMock.mockReset();
 });
 
@@ -260,12 +261,12 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
       }
     });
 
-    const calls = createNotificationFromTemplateActionMock.mock.calls;
+    const calls = createNotificationFromTemplateInternalMock.mock.calls;
     expect(calls.length).toBeGreaterThan(0);
-    const mentionCall = calls.find(([args]) => args.user_id === mentionedUserId && args.template_name === 'user-mentioned-in-comment');
+    const mentionCall = calls.find(([_db, args]) => args.user_id === mentionedUserId && args.template_name === 'user-mentioned-in-comment');
     expect(mentionCall).toBeDefined();
 
-    const authorCall = calls.find(([args]) => args.user_id === authorId);
+    const authorCall = calls.find(([_db, args]) => args.user_id === authorId);
     expect(authorCall).toBeUndefined();
 
     await unregisterInternalNotificationSubscriber();
@@ -344,8 +345,8 @@ describe('Mention notifications via TICKET_COMMENT_ADDED', () => {
       }
     });
 
-    const calls = createNotificationFromTemplateActionMock.mock.calls;
-    const clientPortalCall = calls.find(([args]) => args.template_name === 'ticket-comment-added-client');
+    const calls = createNotificationFromTemplateInternalMock.mock.calls;
+    const clientPortalCall = calls.find(([_db, args]) => args.template_name === 'ticket-comment-added-client');
     expect(clientPortalCall).toBeUndefined();
 
     await unregisterInternalNotificationSubscriber();

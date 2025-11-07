@@ -55,6 +55,7 @@ describe('Internal Notification Preferences (integration)', () => {
     createNotificationFromTemplateAction = actions.createNotificationFromTemplateAction;
 
     testDb = await createTestDbConnection();
+    await testDb.migrate.latest();
     testTenantId = uuidv4();
     testTemplateName = `integration-template-${Date.now()}`;
 

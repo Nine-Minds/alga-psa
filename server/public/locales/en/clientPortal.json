@@ -839,6 +839,7 @@
     "no": "No",
     "search": "Search",
     "filter": "Filter",
+    "resetFilters": "Reset Filters",
     "sort": "Sort",
     "refresh": "Refresh",
     "export": "Export",
@@ -959,6 +960,11 @@
     "noNotifications": "No new notifications",
     "settings": "Notification Settings",
     "viewAll": "View all notifications",
+    "tabs": {
+      "unread": "Unread",
+      "all": "All",
+      "read": "Read"
+    },
     "preferences": {
       "title": "Notification Preferences",
       "description": "Manage which internal notifications you receive",
