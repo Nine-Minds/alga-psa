@@ -14,6 +14,8 @@ const USER_TABLE = 'users';
 const ACCOUNT_TABLE = 'user_auth_accounts';
 const REQUIRED_RESOURCE = 'settings';
 const REQUIRED_ACTION = 'update';
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
 
 export type SsoBulkAssignmentUserType = 'internal' | 'client';
 
@@ -21,7 +23,12 @@ export type SsoBulkAssignmentUserStatus =
   | 'linked'
   | 'would_link'
   | 'already_linked'
-  | 'skipped_inactive';
+  | 'skipped_inactive'
+  | 'unlinked'
+  | 'would_unlink'
+  | 'already_unlinked';
+
+export type SsoBulkAssignmentMode = 'link' | 'unlink';
 
 export interface SsoBulkAssignmentDetail {
   tenant: string;
@@ -48,22 +55,51 @@ export interface SsoBulkAssignmentSummary {
 export interface SsoBulkAssignmentResult {
   summary: SsoBulkAssignmentSummary;
   details: SsoBulkAssignmentDetail[];
-  normalizedDomains: string[];
+  selectedUserIds: string[];
   providers: OAuthLinkProvider[];
   userType: SsoBulkAssignmentUserType;
   preview: boolean;
+  mode: SsoBulkAssignmentMode;
 }
 
 export interface SsoBulkAssignmentRequest {
   providers: OAuthLinkProvider[];
-  domains: string[];
-  userType: SsoBulkAssignmentUserType;
+  userIds: string[];
+  userType?: SsoBulkAssignmentUserType;
+  mode?: SsoBulkAssignmentMode;
 }
 
 export interface SsoBulkAssignmentActionResponse {
   success: boolean;
   error?: string;
   result?: SsoBulkAssignmentResult;
+}
+
+export interface SsoAssignableUser {
+  userId: string;
+  email: string;
+  displayName: string;
+  inactive: boolean;
+  lastLoginAt: string | null;
+  linkedProviders: OAuthLinkProvider[];
+}
+
+export interface ListSsoAssignableUsersRequest {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ListSsoAssignableUsersResponse {
+  success: boolean;
+  error?: string;
+  users?: SsoAssignableUser[];
+  pagination?: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
 }
 
 interface ExecuteOptions {
@@ -76,8 +112,9 @@ interface ExecuteOptions {
 
 interface NormalizedInput {
   providers: OAuthLinkProvider[];
-  domains: string[];
+  userIds: string[];
   userType: SsoBulkAssignmentUserType;
+  mode: SsoBulkAssignmentMode;
 }
 
 function normalizeInput(request: SsoBulkAssignmentRequest): NormalizedInput {
@@ -89,19 +126,23 @@ function normalizeInput(request: SsoBulkAssignmentRequest): NormalizedInput {
     ),
   );
 
-  const domains = Array.from(
+  const userIds = Array.from(
     new Set(
-      (request.domains ?? [])
-        .flatMap((domain) => domain.split(/[,\n]/g))
-        .map((domain) => domain.trim().toLowerCase().replace(/^@/, ''))
-        .filter((domain) => domain.length > 0),
+      (request.userIds ?? [])
+        .map((id) => `${id ?? ''}`.trim())
+        .filter((id) => id.length > 0),
     ),
   );
 
-  const userType: SsoBulkAssignmentUserType = request.userType === 'client' ? 'client' : 'internal';
+  // Force MSP/internal assignments for now; the server action keeps the
+  // userType hook for future client support without exposing it in the UI.
+  const userType: SsoBulkAssignmentUserType = 'internal';
 
-  return { providers, domains, userType };
+  const mode: SsoBulkAssignmentMode = request.mode === 'unlink' ? 'unlink' : 'link';
+
+  return { providers, userIds, userType, mode };
 }
+
 
 interface CandidateUser {
   tenant: string;
@@ -149,10 +190,10 @@ async function performBulkSsoAssignment(
   input: NormalizedInput,
   options: ExecuteOptions,
 ): Promise<SsoBulkAssignmentResult> {
-  const { providers, domains, userType } = input;
+  const { providers, userIds, userType, mode } = input;
   const preview = options.preview ?? false;
 
-  if (providers.length === 0 || domains.length === 0) {
+  if (providers.length === 0 || userIds.length === 0) {
     return {
       summary: {
         scannedUsers: 0,
@@ -166,41 +207,31 @@ async function performBulkSsoAssignment(
         })),
       },
       details: [],
-      normalizedDomains: domains,
+      selectedUserIds: userIds,
       providers,
       userType,
       preview,
+      mode,
     };
   }
 
   const adminDb = options.adminDb ?? (await getAdminConnection());
 
-  const domainPatterns = domains.map((domain) => `%@${domain}`);
-
   const userQuery = adminDb<CandidateUser>(USER_TABLE)
     .select('tenant', 'user_id', 'email', 'is_inactive')
-    .where({ user_type: userType });
+    .where({ user_type: userType })
+    .whereIn('user_id', userIds);
 
   if (options.tenant) {
     userQuery.andWhere({ tenant: options.tenant });
   }
-
-  userQuery.andWhere((builder) => {
-    domainPatterns.forEach((pattern, index) => {
-      if (index === 0) {
-        builder.whereRaw('lower(email) like ?', [pattern]);
-        return;
-      }
-      builder.orWhereRaw('lower(email) like ?', [pattern]);
-    });
-  });
 
   const candidates = await userQuery;
   const candidateUserIds = candidates.map((candidate) => candidate.user_id);
 
   const existingLinks = candidateUserIds.length
     ? await adminDb(ACCOUNT_TABLE)
-        .select('tenant', 'user_id', 'provider')
+        .select('tenant', 'user_id', 'provider', 'provider_email')
         .whereIn('user_id', candidateUserIds)
         .modify((builder) => {
           if (options.tenant) {
@@ -217,12 +248,14 @@ async function performBulkSsoAssignment(
   const providerSummaries = buildProviderSummary(providers);
   const details: SsoBulkAssignmentDetail[] = [];
   const inserts: Record<string, unknown>[] = [];
+  const deleteTuples: Array<[string, string, string]> = [];
   const matchedUserIds = new Set<string>();
 
   const metadataBase = {
     source: options.source ?? (preview ? 'bulk-assignment-preview' : 'bulk-assignment'),
-    domains,
     userType,
+    selectionSize: userIds.length,
+    mode,
   };
 
   for (const candidate of candidates) {
@@ -237,71 +270,106 @@ async function performBulkSsoAssignment(
 
       summary.candidates += 1;
 
-      if (isInactive) {
-        summary.skippedInactive += 1;
+      if (mode === 'link') {
+        if (isInactive) {
+          summary.skippedInactive += 1;
+          details.push({
+            tenant: candidate.tenant,
+            userId: candidate.user_id,
+            email: lowerEmail,
+            provider,
+            status: 'skipped_inactive',
+          });
+          continue;
+        }
+
+        const linkKey = getLinkKey(candidate.tenant, candidate.user_id, provider);
+        if (existingLinkMap.has(linkKey)) {
+          summary.alreadyLinked += 1;
+          matchedUserIds.add(candidate.user_id);
+          details.push({
+            tenant: candidate.tenant,
+            userId: candidate.user_id,
+            email: lowerEmail,
+            provider,
+            status: 'already_linked',
+          });
+          continue;
+        }
+
+        summary.linked += 1;
         details.push({
           tenant: candidate.tenant,
           userId: candidate.user_id,
           email: lowerEmail,
           provider,
-          status: 'skipped_inactive',
+          status: preview ? 'would_link' : 'linked',
         });
-        continue;
-      }
 
-      const linkKey = getLinkKey(candidate.tenant, candidate.user_id, provider);
-      if (existingLinkMap.has(linkKey)) {
-        summary.alreadyLinked += 1;
         matchedUserIds.add(candidate.user_id);
-        details.push({
-          tenant: candidate.tenant,
-          userId: candidate.user_id,
-          email: lowerEmail,
-          provider,
-          status: 'already_linked',
-        });
-        continue;
-      }
 
-      summary.linked += 1;
-      details.push({
-        tenant: candidate.tenant,
-        userId: candidate.user_id,
-        email: lowerEmail,
-        provider,
-        status: preview ? 'would_link' : 'linked',
-      });
+        if (!preview) {
+          inserts.push({
+            tenant: candidate.tenant,
+            user_id: candidate.user_id,
+            provider,
+            provider_account_id: lowerEmail,
+            provider_email: lowerEmail,
+            metadata: {
+              ...metadataBase,
+              executedBy: options.actorUserId ?? null,
+            },
+            last_used_at: adminDb.fn.now(),
+          });
+        }
+      } else {
+        const linkKey = getLinkKey(candidate.tenant, candidate.user_id, provider);
+        if (existingLinkMap.has(linkKey)) {
+          summary.linked += 1;
+          matchedUserIds.add(candidate.user_id);
+          details.push({
+            tenant: candidate.tenant,
+            userId: candidate.user_id,
+            email: lowerEmail,
+            provider,
+            status: preview ? 'would_unlink' : 'unlinked',
+          });
 
-      matchedUserIds.add(candidate.user_id);
-
-      if (!preview) {
-        inserts.push({
-          tenant: candidate.tenant,
-          user_id: candidate.user_id,
-          provider,
-          provider_account_id: lowerEmail,
-          provider_email: lowerEmail,
-          metadata: {
-            ...metadataBase,
-            executedBy: options.actorUserId ?? null,
-          },
-          last_used_at: adminDb.fn.now(),
-        });
+          if (!preview) {
+            deleteTuples.push([candidate.tenant, candidate.user_id, provider]);
+          }
+        } else {
+          summary.alreadyLinked += 1;
+          matchedUserIds.add(candidate.user_id);
+          details.push({
+            tenant: candidate.tenant,
+            userId: candidate.user_id,
+            email: lowerEmail,
+            provider,
+            status: 'already_unlinked',
+          });
+        }
       }
     }
   }
 
-  if (!preview && inserts.length > 0) {
-    await adminDb(ACCOUNT_TABLE)
-      .insert(inserts)
-      .onConflict(['tenant', 'user_id', 'provider'])
-      .merge({
-        provider_account_id: adminDb.raw('excluded.provider_account_id'),
-        provider_email: adminDb.raw('excluded.provider_email'),
-        metadata: adminDb.raw('excluded.metadata'),
-        last_used_at: adminDb.raw('excluded.last_used_at'),
-        updated_at: adminDb.fn.now(),
-      });
+  if (!preview) {
+    if (mode === 'link' && inserts.length > 0) {
+      await adminDb(ACCOUNT_TABLE)
+        .insert(inserts)
+        .onConflict(['tenant', 'user_id', 'provider'])
+        .merge({
+          provider_account_id: adminDb.raw('excluded.provider_account_id'),
+          provider_email: adminDb.raw('excluded.provider_email'),
+          metadata: adminDb.raw('excluded.metadata'),
+          last_used_at: adminDb.raw('excluded.last_used_at'),
+          updated_at: adminDb.fn.now(),
+        });
+    } else if (mode === 'unlink' && deleteTuples.length > 0) {
+      await adminDb(ACCOUNT_TABLE)
+        .whereIn(['tenant', 'user_id', 'provider'], deleteTuples)
+        .delete();
+    }
   }
 
   const summary: SsoBulkAssignmentSummary = {
@@ -313,12 +381,96 @@ async function performBulkSsoAssignment(
   return {
     summary,
     details,
-    normalizedDomains: domains,
+    selectedUserIds: userIds,
     providers,
     userType,
     preview,
+    mode,
   };
 }
+
+interface ListAssignableUsersInternalRequest {
+  tenant: string;
+  search?: string;
+  page: number;
+  pageSize: number;
+}
+
+async function listSsoAssignableUsersForTenant(
+  params: ListAssignableUsersInternalRequest,
+): Promise<{ users: SsoAssignableUser[]; pagination: NonNullable<ListSsoAssignableUsersResponse['pagination']> }> {
+  const adminDb = await getAdminConnection();
+  const pageSize = Math.min(Math.max(params.pageSize, 1), MAX_PAGE_SIZE);
+  const page = Math.max(params.page, 1);
+  const searchTerm = params.search?.trim();
+
+  const baseQuery = adminDb(USER_TABLE)
+    .where({ tenant: params.tenant, user_type: 'internal' });
+
+  if (searchTerm) {
+    const pattern = `%${searchTerm}%`;
+    baseQuery.andWhere((builder) => {
+      builder
+        .whereRaw('lower(email) like ?', [pattern])
+        .orWhereRaw('lower(first_name) like ?', [pattern])
+        .orWhereRaw('lower(last_name) like ?', [pattern]);
+    });
+  }
+
+  const totalResult = await baseQuery.clone().count<{ count: string }[]>({ count: '*' });
+  const totalItems = Number(totalResult?.[0]?.count ?? 0);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);
+  const safePage = Math.min(page, totalPages);
+
+  const rows = await baseQuery
+    .clone()
+    .select('user_id', 'email', 'first_name', 'last_name', 'is_inactive', 'last_login_at')
+    .orderBy('email', 'asc')
+    .limit(pageSize)
+    .offset((safePage - 1) * pageSize);
+
+  const userIds = rows.map((row) => row.user_id);
+  const links = userIds.length
+    ? await adminDb(ACCOUNT_TABLE)
+        .select('user_id', 'provider')
+        .whereIn('user_id', userIds)
+        .andWhere({ tenant: params.tenant })
+    : [];
+
+  const linkMap = new Map<string, OAuthLinkProvider[]>();
+  for (const link of links) {
+    const provider = link.provider as OAuthLinkProvider;
+    if (provider !== 'google' && provider !== 'microsoft') {
+      continue;
+    }
+    const existing = linkMap.get(link.user_id) ?? [];
+    existing.push(provider);
+    linkMap.set(link.user_id, existing);
+  }
+
+  const users: SsoAssignableUser[] = rows.map((row) => {
+    const displayName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
+    return {
+      userId: row.user_id,
+      email: (row.email ?? '').toLowerCase(),
+      displayName: displayName || row.email || row.user_id,
+      inactive: Boolean(row.is_inactive),
+      lastLoginAt: row.last_login_at ? new Date(row.last_login_at).toISOString() : null,
+      linkedProviders: linkMap.get(row.user_id) ?? [],
+    };
+  });
+
+  return {
+    users,
+    pagination: {
+      page: safePage,
+      pageSize,
+      totalItems,
+      totalPages,
+    },
+  };
+}
+
 
 async function ensureSsoPermission(): Promise<{ user: IUser; tenant: string; knex: Knex }> {
   const user = await getCurrentUser();
@@ -337,6 +489,36 @@ async function ensureSsoPermission(): Promise<{ user: IUser; tenant: string; kne
   }
 
   return { user, tenant, knex };
+}
+
+export async function listSsoAssignableUsersAction(
+  params: ListSsoAssignableUsersRequest = {},
+): Promise<ListSsoAssignableUsersResponse> {
+  try {
+    const { tenant } = await ensureSsoPermission();
+    const pageSize = Math.min(Math.max(params.pageSize ?? DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE);
+    const page = Math.max(params.page ?? 1, 1);
+    const search = params.search?.trim();
+    const normalizedSearch = search?.length ? search.toLowerCase() : undefined;
+
+    const { users, pagination } = await listSsoAssignableUsersForTenant({
+      tenant,
+      search: normalizedSearch,
+      page,
+      pageSize,
+    });
+
+    return {
+      success: true,
+      users,
+      pagination,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error?.message ?? 'Unable to load assignable users.',
+    };
+  }
 }
 
 export async function previewBulkSsoAssignmentAction(
@@ -372,12 +554,15 @@ export async function executeBulkSsoAssignmentAction(
       preview: false,
     });
 
+    const affectedCount = result.summary.providers.reduce((total, provider) => total + provider.linked, 0);
+
     analytics.capture('sso.bulk_assignment.executed', {
       tenant_id: tenant,
       user_id: user.user_id,
       providers: result.providers,
-      domains: result.normalizedDomains,
-      linked: result.summary.providers.reduce((total, provider) => total + provider.linked, 0),
+      selection_size: result.selectedUserIds.length,
+      affected_count: affectedCount,
+      mode: result.mode,
     });
 
     return { success: true, result };

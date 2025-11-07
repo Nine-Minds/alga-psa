@@ -41,25 +41,25 @@ describe("previewBulkSsoAssignment", () => {
   it("short-circuits when no providers are selected", async () => {
     const result = await previewBulkSsoAssignment({
       providers: [],
-      domains: ["example.com"],
-      userType: "internal",
+      userIds: ["user-123"],
+      mode: "link",
     });
 
     expect(result.summary.scannedUsers).toBe(0);
     expect(result.summary.providers).toHaveLength(0);
-    expect(result.normalizedDomains).toHaveLength(1);
+    expect(result.selectedUserIds).toEqual(["user-123"]);
     expect(getAdminConnection).not.toHaveBeenCalled();
   });
 
-  it("short-circuits when domains are empty after normalization", async () => {
+  it("short-circuits when no user ids are provided", async () => {
     const result = await previewBulkSsoAssignment({
       providers: ["google"],
-      domains: ["   ", "\n"],
-      userType: "internal",
+      userIds: [],
+      mode: "unlink",
     });
 
     expect(result.summary.scannedUsers).toBe(0);
-    expect(result.normalizedDomains).toHaveLength(0);
+    expect(result.selectedUserIds).toHaveLength(0);
     expect(getAdminConnection).not.toHaveBeenCalled();
   });
 });

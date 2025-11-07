@@ -115,8 +115,8 @@ export default function SsoBulkAssignment() {
         <CardHeader>
           <CardTitle>Bulk Single Sign-On Assignment</CardTitle>
           <CardDescription>
-            Link Google Workspace or Microsoft 365 identities to existing users in bulk.
-            Use the preview mode to validate which accounts will be updated before executing.
+            Select internal users from the list below and link them to a configured Google or Microsoft provider.
+            Use preview to double-check the impact before executing.
           </CardDescription>
         </CardHeader>
         <CardContent>
