@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, File, Upload, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
@@ -18,21 +18,26 @@ import Drawer from 'server/src/components/ui/Drawer';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
 import { IClient } from 'server/src/interfaces';
+import { IDocument } from 'server/src/interfaces/document.interface';
 import {
   getContractById,
   getContractSummary,
   getContractAssignments,
   updateContract,
+  deleteContract,
   IContractSummary
 } from 'server/src/lib/actions/contractActions';
 import { updateClientContract } from 'server/src/lib/actions/client-actions/clientContractActions';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getDocumentsByContractId } from 'server/src/lib/actions/document-actions/documentActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from 'server/src/components/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import PricingSchedules from './PricingSchedules';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
+import Documents from 'server/src/components/documents/Documents';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
@@ -63,10 +68,18 @@ const ContractDetail: React.FC = () => {
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('edit');
+  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'documents', 'invoices']), []);
+  const initialTab = useMemo(() => {
+    const requested = searchParams?.get('contractView');
+    return requested && validTabs.has(requested) ? requested : 'edit';
+  }, [searchParams, validTabs]);
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summary, setSummary] = useState<IContractSummary | null>(null);
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
+  const [documents, setDocuments] = useState<IDocument[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
 
   // Client drawer state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -75,6 +88,7 @@ const ContractDetail: React.FC = () => {
   // Confirmation dialog state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Edit tab state
@@ -83,6 +97,7 @@ const ContractDetail: React.FC = () => {
   const [editStatus, setEditStatus] = useState<string>('draft');
   const [editBillingFrequency, setEditBillingFrequency] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
@@ -98,6 +113,35 @@ const ContractDetail: React.FC = () => {
 
   // PO Amount input state for formatting (stores display value while editing)
   const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const requested = searchParams?.get('contractView');
+    if (requested && validTabs.has(requested) && requested !== activeTab) {
+      setActiveTab(requested);
+    }
+    if (!requested && activeTab !== 'edit') {
+      setActiveTab('edit');
+    }
+  }, [searchParams, activeTab, validTabs]);
+
+  const updateContractViewParam = useCallback((tabValue: string) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (tabValue === 'edit') {
+      params.delete('contractView');
+    } else {
+      params.set('contractView', tabValue);
+    }
+    router.replace(`/msp/billing?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+    updateContractViewParam(value);
+  }, [updateContractViewParam]);
+
+  const contractsListUrl = useMemo(() => {
+    const targetSubtab = contract?.is_template ? 'templates' : 'clients';
+    return `/msp/billing?tab=contracts&subtab=${targetSubtab}`;
+  }, [contract?.is_template]);
 
   // Track if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
@@ -187,10 +231,12 @@ const ContractDetail: React.FC = () => {
     setPoAmountInputs({});
 
     try {
-      const [contractData, summaryData, assignmentData] = await Promise.all([
+      const [contractData, summaryData, assignmentData, documentsData, currentUser] = await Promise.all([
         getContractById(contractId),
         getContractSummary(contractId),
-        getContractAssignments(contractId)
+        getContractAssignments(contractId),
+        getDocumentsByContractId(contractId),
+        getCurrentUser()
       ]);
 
       if (!contractData) {
@@ -198,17 +244,38 @@ const ContractDetail: React.FC = () => {
         setContract(null);
         setSummary(null);
         setAssignments([]);
+        setDocuments([]);
         return;
       }
 
       setContract(contractData);
       setSummary(summaryData);
       setAssignments(assignmentData);
+      setDocuments(documentsData || []);
+      setCurrentUserId(currentUser?.user_id || '');
     } catch (err) {
       console.error('Error loading contract details:', err);
       setError('Failed to load contract');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteContract = async () => {
+    if (!contractId) return;
+    setIsDeleting(true);
+    try {
+      await deleteContract(contractId);
+      const params = new URLSearchParams();
+      params.set('tab', 'contracts');
+      params.set('subtab', 'clients');
+      router.push(`/msp/billing?${params.toString()}`);
+    } catch (err) {
+      console.error('Error deleting contract:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete contract');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -233,6 +300,19 @@ const ContractDetail: React.FC = () => {
     refreshSummary();
   };
 
+  const handleDocumentCreated = async () => {
+    if (!contractId) {
+      return;
+    }
+
+    try {
+      const documentsData = await getDocumentsByContractId(contractId);
+      setDocuments(documentsData || []);
+    } catch (error) {
+      console.error('Error refreshing documents:', error);
+    }
+  };
+
   const handleOpenClientDrawer = async (clientId: string) => {
     try {
       const clientData = await getClientById(clientId);
@@ -249,7 +329,7 @@ const ContractDetail: React.FC = () => {
     if (hasUnsavedChanges) {
       setShowCancelConfirm(true);
     } else {
-      setActiveTab('edit');
+      handleTabChange('edit');
     }
   };
 
@@ -268,7 +348,7 @@ const ContractDetail: React.FC = () => {
     setValidationErrors([]);
     setHasAttemptedSubmit(false);
     setShowCancelConfirm(false);
-    setActiveTab('edit');
+    handleTabChange('edit');
   };
 
   const handleCancelDismiss = () => {
@@ -643,11 +723,12 @@ const ContractDetail: React.FC = () => {
         <ContractHeader contract={contract} summary={summary} />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-4 flex flex-wrap gap-2">
           <TabsTrigger value="edit">Overview</TabsTrigger>
           <TabsTrigger value="lines">Contract Lines</TabsTrigger>
           <TabsTrigger value="pricing">Pricing Schedules</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
 
@@ -1216,17 +1297,29 @@ const ContractDetail: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
-                  <Button id="edit-manage-lines" variant="outline" onClick={() => setActiveTab('lines')}>
+                  <Button id="edit-manage-lines" variant="outline" onClick={() => handleTabChange('lines')}>
                     <Layers3 className="mr-2 h-4 w-4" />
                     Manage Contract Lines
                   </Button>
-                  <Button id="edit-manage-pricing" variant="outline" onClick={() => setActiveTab('pricing')}>
+                  <Button id="edit-manage-pricing" variant="outline" onClick={() => handleTabChange('pricing')}>
                     <CalendarClock className="mr-2 h-4 w-4" />
                     Manage Pricing Schedules
                   </Button>
-                  <Button id="edit-view-invoices" variant="outline" onClick={() => setActiveTab('invoices')}>
+                  <Button id="edit-view-documents" variant="outline" onClick={() => handleTabChange('documents')}>
+                    <File className="mr-2 h-4 w-4" />
+                    View Documents
+                  </Button>
+                  <Button id="edit-view-invoices" variant="outline" onClick={() => handleTabChange('invoices')}>
                     <FileText className="mr-2 h-4 w-4" />
                     View Invoices
+                  </Button>
+                  <Button
+                    id="delete-contract-btn"
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Contract
                   </Button>
                 </CardContent>
               </Card>
@@ -1262,6 +1355,25 @@ const ContractDetail: React.FC = () => {
 
         <TabsContent value="pricing">
           <PricingSchedules contractId={contract.contract_id} />
+        </TabsContent>
+
+        <TabsContent value="documents">
+          {currentUserId ? (
+            <Documents
+              id="contract-documents"
+              documents={documents}
+              userId={currentUserId}
+              entityId={contractId}
+              entityType="contract"
+              onDocumentCreated={handleDocumentCreated}
+            />
+          ) : (
+            <Card>
+              <CardContent className="py-6 text-center text-gray-500">
+                Loading documents...
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="invoices">
@@ -1315,6 +1427,17 @@ const ContractDetail: React.FC = () => {
         message="You have unsaved changes. Are you sure you want to leave this page? All changes will be lost."
         confirmLabel="Leave Page"
         cancelLabel="Stay on Page"
+      />
+
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteContract}
+        title="Delete Contract"
+        message="Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data."
+        confirmLabel={isDeleting ? 'Deleting…' : 'Delete Contract'}
+        cancelLabel="Cancel"
+        isConfirming={isDeleting}
       />
     </div>
   );

@@ -7,7 +7,6 @@
 
 import { Context } from '@temporalio/activity';
 import Stripe from 'stripe';
-import { getSecret } from '@alga-psa/shared/core';
 
 const logger = () => Context.current().log;
 
@@ -16,21 +15,25 @@ let stripeClient: Stripe | null = null;
 /**
  * Get or initialize the Stripe client
  */
-async function getStripeClient(): Promise<Stripe> {
+function getStripeClient(): Stripe {
   if (stripeClient) {
     return stripeClient;
   }
 
   const log = logger();
 
-  // Get Stripe secret key from secrets
-  const secretKey = await getSecret('stripe_secret_key', 'STRIPE_SECRET_KEY');
+  // Get Stripe secret key from environment variables
+  // The temporal worker should have STRIPE_SECRET_KEY configured in its environment
+  const secretKey = process.env.STRIPE_SECRET_KEY;
 
   if (!secretKey) {
-    throw new Error('STRIPE_SECRET_KEY not found in secrets or environment');
+    throw new Error(
+      'STRIPE_SECRET_KEY environment variable is not configured in the temporal worker. ' +
+      'Please add it to the worker deployment configuration.'
+    );
   }
 
-  log.info('Initializing Stripe client');
+  log.info('Initializing Stripe client for temporal worker');
 
   stripeClient = new Stripe(secretKey, {
     apiVersion: '2024-12-18.acacia' as any,
@@ -73,7 +76,7 @@ export async function fetchStripeDetailsFromCheckout(
   });
 
   try {
-    const stripe = await getStripeClient();
+    const stripe = getStripeClient();
 
     // Fetch the checkout session
     const session = await stripe.checkout.sessions.retrieve(input.checkoutSessionId);

@@ -100,6 +100,16 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
@@ -118,6 +128,8 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setExistingClientsCount(0);
       setIsProcessing(false);
       setShowOptionalFields(false);
+      setCurrentPage(1);
+      setPageSize(10);
     }
   }, [isOpen]);
 
@@ -549,6 +561,12 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
               </div>
               <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
+                  id="clients-import-preview-table"
+                  pagination={true}
+                  currentPage={currentPage}
+                  onPageChange={setCurrentPage}
+                  pageSize={pageSize}
+                  onItemsPerPageChange={handlePageSizeChange}
                   data={validationResults.map((result, index): Record<string, any> => ({
                     status: result.isValid,
                     client_name: result.data.client_name,
@@ -620,7 +638,6 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                       },
                     }
                   ] as ColumnDefinition<any>[]}
-                  pagination={true}
                 />
               </div>
               <div className="mt-4">

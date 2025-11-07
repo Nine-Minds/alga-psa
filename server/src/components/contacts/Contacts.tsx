@@ -30,6 +30,10 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+
+const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
+
 interface ContactsProps {
   initialContacts: IContact[];
   clientId?: string;
@@ -39,6 +43,19 @@ interface ContactsProps {
 const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelectedClientId }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['contact']);
+
+  // Use user preference for page size
+  const {
+    value: pageSize,
+    setValue: setPageSize
+  } = useUserPreference<number>(
+    CONTACTS_PAGE_SIZE_SETTING,
+    {
+      defaultValue: 10,
+      localStorageKey: CONTACTS_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
   
   const [contacts, setContacts] = useState<IContact[]>(initialContacts);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -52,6 +69,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isFiltered, setIsFiltered] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('full_name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { openDrawer } = useDrawer();
   const router = useRouter();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
@@ -85,43 +104,59 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     }
   };
 
-  // Fetch contacts and clients when filter status changes
+  const handleSortChange = (newSortBy: string, newSortDirection: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortDirection(newSortDirection);
+    setCurrentPage(1); // Reset to first page when sorting changes
+  };
+
+  // Fetch contacts and clients when filter status or sorting changes
   useEffect(() => {
     const fetchContactsAndClients = async () => {
-      setIsLoading(true);
+      // Only show loading for the first load and major filter changes, not for sorting
+      const isInitialLoad = contacts.length === 0;
+      const isFilterChange = refreshKey > 0;
+
+      if (isInitialLoad || isFilterChange) {
+        setIsLoading(true);
+      }
+
       try {
         let fetchedContacts: IContact[] = [];
 
         // Fetch contacts based on filter status
         if (clientId) {
           if (filterStatus === 'all') {
-            fetchedContacts = await getContactsByClient(clientId, 'all');
+            fetchedContacts = await getContactsByClient(clientId, 'all', sortBy, sortDirection);
           } else if (filterStatus === 'active') {
-            fetchedContacts = await getContactsByClient(clientId, 'active');
+            fetchedContacts = await getContactsByClient(clientId, 'active', sortBy, sortDirection);
           } else { // 'inactive'
-            fetchedContacts = await getContactsByClient(clientId, 'inactive');
+            fetchedContacts = await getContactsByClient(clientId, 'inactive', sortBy, sortDirection);
           }
         } else {
           if (filterStatus === 'all') {
-            fetchedContacts = await getAllContacts('all');
+            fetchedContacts = await getAllContacts('all', sortBy, sortDirection);
           } else if (filterStatus === 'active') {
-            fetchedContacts = await getAllContacts('active');
+            fetchedContacts = await getAllContacts('active', sortBy, sortDirection);
           } else { // 'inactive'
-            fetchedContacts = await getAllContacts('inactive');
+            fetchedContacts = await getAllContacts('inactive', sortBy, sortDirection);
           }
         }
 
-        // Fetch clients and user data
-        const [allClients, userData] = await Promise.all([
-          getAllClients(),
-          getCurrentUser()
-        ]);
+        // Only fetch clients and user data on initial load to avoid unnecessary refetches
+        if (isInitialLoad || clients.length === 0) {
+          const [allClients, userData] = await Promise.all([
+            getAllClients(),
+            getCurrentUser()
+          ]);
+
+          setClients(allClients);
+          if (userData?.user_id) {
+            setCurrentUser(userData.user_id);
+          }
+        }
 
         setContacts(fetchedContacts);
-        setClients(allClients);
-        if (userData?.user_id) {
-          setCurrentUser(userData.user_id);
-        }
       } catch (error) {
         console.error('Error fetching contacts and clients:', error);
       } finally {
@@ -129,7 +164,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       }
     };
     fetchContactsAndClients();
-  }, [clientId, filterStatus, refreshKey]);
+  }, [clientId, filterStatus, refreshKey, sortBy, sortDirection]);
 
   // Fetch tags separately - only fetch contact-specific tags when contacts change
   useEffect(() => {
@@ -401,11 +436,17 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     setCurrentPage(page);
   };
 
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
+
+
   const columns: ColumnDefinition<IContact>[] = [
     {
       title: 'Name',
       dataIndex: 'full_name',
-      width: '25%',
+      width: '20%',
       render: (value, record): React.ReactNode => (
         <div className="flex items-center">
           <ContactAvatar
@@ -433,21 +474,31 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       ),
     },
     {
+      title: 'Created',
+      dataIndex: 'created_at',
+      width: '12%',
+      render: (value, record): React.ReactNode => {
+        if (!record.created_at) return 'N/A';
+        const date = new Date(record.created_at);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      },
+    },
+    {
       title: 'Email',
       dataIndex: 'email',
-      width: '20%',
+      width: '18%',
       render: (value, record): React.ReactNode => record.email || 'N/A',
     },
     {
       title: 'Phone Number',
       dataIndex: 'phone_number',
-      width: '20%',
+      width: '15%',
       render: (value, record): React.ReactNode => record.phone_number || 'N/A',
     },
     {
       title: 'Client',
       dataIndex: 'client_id',
-      width: '17%',
+      width: '13%',
       render: (value, record): React.ReactNode => {
         const clientId = record.client_id;
         if (typeof clientId !== 'string' || !clientId) {
@@ -692,7 +743,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             pagination={true}
             currentPage={currentPage}
             onPageChange={handlePageChange}
-            pageSize={10}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSortChange={handleSortChange}
+            manualSorting={true}
           />
         </div>
         <QuickAddContact

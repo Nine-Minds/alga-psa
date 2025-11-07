@@ -62,6 +62,31 @@ const User = {
     }
   },
 
+  findUserByEmailTenantAndType: async (
+    email: string,
+    tenantId: string,
+    userType: 'internal' | 'client'
+  ): Promise<IUser | undefined> => {
+    const db = await getAdminConnection();
+    try {
+      const user = await db<IUser>('users')
+        .select('*')
+        .where({
+          email: email.toLowerCase(),
+          user_type: userType,
+          tenant: tenantId,
+        })
+        .first();
+      return user;
+    } catch (error) {
+      logger.error(
+        `Error finding user with email ${email}, tenant ${tenantId}, and type ${userType}:`,
+        error
+      );
+      throw error;
+    }
+  },
+
   findUserByUsername: async (knexOrTrx: Knex | Knex.Transaction, username: string): Promise<IUser | undefined> => {
     const tenant = await getCurrentTenantId();
     try {
@@ -331,6 +356,24 @@ const User = {
     } catch (error) {
       logger.error(`Error getting user for registration with id ${user_id}:`, error);
       throw error;
+    }
+  },
+
+  // Update last login information
+  updateLastLogin: async (userId: string, tenant: string, loginMethod: string): Promise<void> => {
+    const db = await getAdminConnection();
+    try {
+      await db<IUser>('users')
+        .where('user_id', userId)
+        .andWhere('tenant', tenant)
+        .update({
+          last_login_at: db.fn.now(),
+          last_login_method: loginMethod
+        });
+      logger.debug(`Updated last login for user ${userId}`);
+    } catch (error) {
+      logger.error(`Error updating last login for user ${userId}:`, error);
+      // Don't throw - login should succeed even if tracking fails
     }
   },
 };

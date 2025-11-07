@@ -19,6 +19,15 @@ import {
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import Pagination from 'server/src/components/ui/Pagination';
+
+// Default pagination options for list/table views
+const DEFAULT_LIST_ITEMS_PER_PAGE_OPTIONS = [
+  { value: '10', label: '10 per page' },
+  { value: '25', label: '25 per page' },
+  { value: '50', label: '50 per page' },
+  { value: '100', label: '100 per page' }
+];
 
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
@@ -170,6 +179,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     rowClassName,
     initialSorting,
     onVisibleRowsChange,
+    onItemsPerPageChange,
+    itemsPerPageOptions,
   } = props;
 
   const { t } = useTranslation('common');
@@ -341,22 +352,23 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     [columns, visibleColumnIds]
   );
 
-  // Keep internal pagination state synced with props
-  React.useEffect(() => {
-    setPagination(prev => ({
-      ...prev,
-      pageIndex: currentPage - 1
-    }));
-  }, [currentPage]);
-
   const [{ pageIndex, pageSize: currentPageSize }, setPagination] = React.useState({
     pageIndex: currentPage - 1,
     pageSize,
   });
 
+  // Keep internal pagination state synced with props
+  React.useEffect(() => {
+    setPagination(prev => ({
+      ...prev,
+      pageIndex: currentPage - 1,
+      pageSize: pageSize
+    }));
+  }, [currentPage, pageSize]);
+
   // Calculate total pages based on totalItems if provided, otherwise use data length
   const total = totalItems ?? data.length;
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = Math.ceil(total / currentPageSize);
 
   // Manage sorting state
   const [sorting, setSorting] = React.useState<SortingState>(() => {
@@ -447,11 +459,26 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     }
   };
 
-  // Notify parent component of page changes
+  // Notify parent component of page changes only when the page actually changes
+  const lastEmittedPageRef = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (onPageChange) {
-      onPageChange(pageIndex + 1);
+    if (!onPageChange) {
+      return;
     }
+
+    const nextPage = pageIndex + 1;
+    if (lastEmittedPageRef.current === nextPage) {
+      return;
+    }
+
+    // Skip emitting on first run; parent already has the initial page data
+    if (lastEmittedPageRef.current === null) {
+      lastEmittedPageRef.current = nextPage;
+      return;
+    }
+
+    lastEmittedPageRef.current = nextPage;
+    onPageChange(nextPage);
   }, [pageIndex, onPageChange]);
 
   // Update reflection metadata with debouncing to prevent loops
@@ -486,14 +513,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     return () => clearTimeout(timeoutId);
   }, [pageIndex, currentPageSize, data.length, totalItems, pagination, updateMetadata, columnConfig]);
 
-  const handlePreviousPage = () => {
-    table.previousPage();
-  };
-
-  const handleNextPage = () => {
-    table.nextPage();
-  };
-
   return (
     <div
       className="datatable-container overflow-hidden bg-white rounded-lg border border-gray-200"
@@ -525,6 +544,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                   return (
                     <th
                       key={`header_${columnId}_${headerIndex}`}
+                      id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
                       onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
                       className={`px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-gray-50' : ''} ${colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left'} ${colDef?.headerClassName ?? ''}`}
                       style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
@@ -594,34 +614,22 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </tbody>
           </table>
         </div>
-        {pagination && data.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-100 bg-white">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handlePreviousPage}
-                disabled={!table.getCanPreviousPage()}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {t('pagination.previous', 'Previous')}
-              </button>
-              <span className="text-sm text-[rgb(var(--color-text-700))]">
-                {(() => {
-                  const translated = t('pagination.pageInfo', { current: pageIndex + 1, total: totalPages, count: total });
-                  // If translation key is returned as-is, use fallback
-                  if (translated === 'pagination.pageInfo') {
-                    return `Page ${pageIndex + 1} of ${totalPages} (${total} total records)`;
-                  }
-                  return translated;
-                })()}
-              </span>
-              <button
-                onClick={handleNextPage}
-                disabled={!table.getCanNextPage()}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {t('pagination.next', 'Next')}
-              </button>
-            </div>
+        {pagination && data.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
+          <div className="border-t border-gray-100">
+            <Pagination
+              id={id ? `${id}-pagination` : 'datatable-pagination'}
+              currentPage={pageIndex + 1}
+              totalItems={total}
+              itemsPerPage={currentPageSize}
+              onPageChange={(page) => {
+                if (onPageChange) {
+                  onPageChange(page);
+                }
+              }}
+              onItemsPerPageChange={onItemsPerPageChange}
+              itemsPerPageOptions={itemsPerPageOptions || DEFAULT_LIST_ITEMS_PER_PAGE_OPTIONS}
+              variant={onItemsPerPageChange ? "clients" : "compact"}
+            />
           </div>
         )}
     </div>

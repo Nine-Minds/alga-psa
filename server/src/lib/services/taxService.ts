@@ -384,6 +384,70 @@ export class TaxService {
     }
   }
 
+  async ensureDefaultTaxSettings(clientId: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for ensuring default tax settings');
+    }
+
+    await knex.transaction(async (trx) => {
+      const existingDefault = await trx('client_tax_rates')
+        .where({ client_id: clientId, tenant, is_default: true })
+        .whereNull('location_id')
+        .first();
+
+      if (existingDefault) {
+        return;
+      }
+
+      const defaultTaxRate = await trx<ITaxRate>('tax_rates')
+        .where('tenant', tenant)
+        .andWhere('is_active', true)
+        .whereNotNull('region_code')
+        .orderBy('created_at', 'asc')
+        .first();
+
+      if (!defaultTaxRate) {
+        throw new Error('No active tax rates found in the system to assign as default.');
+      }
+
+      const existingSettings = await trx<IClientTaxSettings>('client_tax_settings')
+        .where({ client_id: clientId, tenant })
+        .first();
+
+      if (!existingSettings) {
+        await trx<IClientTaxSettings>('client_tax_settings').insert({
+          client_id: clientId,
+          is_reverse_charge_applicable: false,
+          tenant
+        });
+      }
+
+      const association = await trx('client_tax_rates')
+        .where({ client_id: clientId, tenant })
+        .whereNull('location_id')
+        .first();
+
+      if (association) {
+        await trx('client_tax_rates')
+          .where({ client_id: clientId, tenant })
+          .whereNull('location_id')
+          .update({
+            tax_rate_id: defaultTaxRate.tax_rate_id,
+            is_default: true
+          });
+      } else {
+        await trx('client_tax_rates').insert({
+          client_id: clientId,
+          tax_rate_id: defaultTaxRate.tax_rate_id,
+          is_default: true,
+          location_id: null,
+          tenant
+        });
+      }
+    });
+  }
+
   async isReverseChargeApplicable(clientId: string): Promise<boolean> {
     const taxSettings = await this.getClientTaxSettings(clientId);
     return taxSettings.is_reverse_charge_applicable;

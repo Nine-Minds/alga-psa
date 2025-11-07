@@ -11,13 +11,15 @@ interface TagFilterProps {
   selectedTags: string[];
   onTagSelect: (tag: string) => void;
   className?: string;
+  onClear?: () => void;
 }
 
 export const TagFilter: React.FC<TagFilterProps> = ({
   allTags,
   selectedTags,
   onTagSelect,
-  className = ''
+  className = '',
+  onClear
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -44,22 +46,36 @@ export const TagFilter: React.FC<TagFilterProps> = ({
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className="bg-white rounded-lg shadow-lg border border-gray-200 w-72" style={{ backgroundColor: 'white', zIndex: 9999 }}>
+      <Popover.Content className="bg-white rounded-lg shadow-lg border border-gray-200 w-72" style={{ backgroundColor: 'white', zIndex: 9999 }}>
           <div className="p-2 bg-white">
-          <Input
-            type="text"
-            placeholder="Search tags"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="mb-2"
-          />
-          <TagGrid
-            tags={filteredTags}
-            selectedTags={selectedTags}
-            onTagSelect={onTagSelect}
-          />
-        </div>
-      </Popover.Content>
+            <div className="flex items-center gap-2 mb-2">
+              <Input
+                type="text"
+                placeholder="Search tags"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+              {onClear && selectedTags.length > 0 && (
+                <button
+                  type="button"
+                  className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                  onClick={() => {
+                    onClear();
+                    setSearchTerm('');
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <TagGrid
+              tags={filteredTags}
+              selectedTags={selectedTags}
+              onTagSelect={onTagSelect}
+            />
+          </div>
+        </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
   );

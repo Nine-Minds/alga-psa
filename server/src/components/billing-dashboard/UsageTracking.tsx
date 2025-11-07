@@ -16,7 +16,7 @@ import { IService } from 'server/src/interfaces/billing.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from 'server/src/lib/actions/usageActions';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { ClientPicker } from '../clients/ClientPicker';
+import { ClientPicker } from "server/src/components/clients/ClientPicker";
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from 'server/src/types/ui-reflection/types';
@@ -70,6 +70,16 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   type BucketUsageData = RemainingBucketUnitsResult & { plan_id: string; plan_name: string };
   const [bucketData, setBucketData] = useState<BucketUsageData[]>([]);
   const [loadingBuckets, setLoadingBuckets] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
 
   const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
     type: 'container',
@@ -462,9 +472,14 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               />
             ) : (
               <DataTable
+                id="usage-tracking-table"
                 data={usageRecords}
                 columns={columns}
                 pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
                 onRowClick={(record) => {
                   setEditingUsage(record);
                   setNewUsage({

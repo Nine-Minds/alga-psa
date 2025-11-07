@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { generateInvoice, createInvoiceFromBillingResult } from 'server/src/lib/actions/invoiceGeneration';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +19,7 @@ import {
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
+import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
@@ -174,6 +175,75 @@ function parseInvoiceTotals(invoice: Record<string, unknown>) {
   };
 }
 
+async function generateInvoiceForCycle(
+  context: TestContext,
+  billingCycleId: string,
+  serviceId: string,
+  amountCents: number
+): Promise<{ invoiceId: string; invoice: Record<string, unknown> }> {
+  const cycleRecord = await context.db('client_billing_cycles')
+    .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+    .first();
+
+  if (!cycleRecord) {
+    throw new Error(`Billing cycle ${billingCycleId} not found`);
+  }
+
+  const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
+  const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
+
+  const charge: IBillingCharge = {
+    tenant: context.tenantId,
+    type: 'usage',
+    serviceId,
+    serviceName: 'Standard Service',
+    quantity: 1,
+    rate: amountCents,
+    total: amountCents,
+    tax_amount: 0,
+    tax_rate: 0,
+    tax_region: 'US-NY',
+    is_taxable: true,
+    usageId: uuidv4(),
+    servicePeriodStart: cycleStart,
+    servicePeriodEnd: cycleEnd,
+    billingTiming: 'arrears'
+  };
+
+  const billingResult: IBillingResult = {
+    tenant: context.tenantId,
+    charges: [charge],
+    discounts: [],
+    adjustments: [],
+    totalAmount: amountCents,
+    finalAmount: amountCents
+  };
+
+  const createdInvoice = await createInvoiceFromBillingResult(
+    billingResult,
+    context.clientId,
+    cycleStart,
+    cycleEnd,
+    billingCycleId,
+    context.userId
+  );
+
+  await finalizeInvoice(createdInvoice.invoice_id);
+
+  const updatedInvoice = await context.db('invoices')
+    .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
+    .first();
+
+  if (!updatedInvoice) {
+    throw new Error(`Invoice ${createdInvoice.invoice_id} not found after finalization`);
+  }
+
+  return {
+    invoiceId: createdInvoice.invoice_id,
+    invoice: updatedInvoice
+  };
+}
+
 async function createManualInvoiceRecord(context: TestContext, amount: number): Promise<string> {
   const invoiceId = uuidv4();
   const timestamp = new Date().toISOString();
@@ -220,7 +290,7 @@ describe('Prepayment Invoice System', () => {
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'transactions',
         'credit_tracking',
@@ -532,14 +602,54 @@ describe('Prepayment Invoice System', () => {
       const initialCredit = await ClientContractLine.getClientCredit(context.clientId);
       expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
-      // Generate billing invoice
-      const generatedInvoice = await generateInvoice(billingCycleId);
+    const cycleRecord = await context.db('client_billing_cycles')
+      .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+      .first();
 
-      await finalizeInvoice(generatedInvoice!.invoice_id);
+    const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
+    const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
 
-      const updatedInvoice = await context.db('invoices')
-        .where({ invoice_id: generatedInvoice!.invoice_id })
-        .first();
+    const charge: IBillingCharge = {
+      tenant: context.tenantId,
+      type: 'usage',
+      serviceId,
+      serviceName: 'Test Service',
+      quantity: 1,
+      rate: 1000,
+      total: 1000,
+      tax_amount: 0,
+      tax_rate: 0,
+      tax_region: 'US-NY',
+      is_taxable: true,
+      usageId: uuidv4(),
+      servicePeriodStart: cycleStart,
+      servicePeriodEnd: cycleEnd,
+      billingTiming: 'arrears'
+    };
+
+    const billingResult: IBillingResult = {
+      tenant: context.tenantId,
+      charges: [charge],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 1000,
+      finalAmount: 1000
+    };
+
+    const createdInvoice = await createInvoiceFromBillingResult(
+      billingResult,
+      context.clientId,
+      cycleStart,
+      cycleEnd,
+      billingCycleId,
+      context.userId
+    );
+
+    await finalizeInvoice(createdInvoice.invoice_id);
+
+    const updatedInvoice = await context.db('invoices')
+      .where({ invoice_id: createdInvoice.invoice_id })
+      .first();
 
       expect(updatedInvoice).toBeTruthy();
 
@@ -554,14 +664,14 @@ describe('Prepayment Invoice System', () => {
       expect(parseInt(finalCredit+'')).toBe(prepaymentAmount - totals.creditApplied);
 
       // Verify credit transaction
-      const creditTransaction = await context.db('transactions')
-        .where({
-          client_id: context.clientId,
-          invoice_id: generatedInvoice!.invoice_id,
-          type: 'credit_application',
-          tenant: context.tenantId
-        })
-        .first();
+    const creditTransaction = await context.db('transactions')
+      .where({
+        client_id: context.clientId,
+        invoice_id: createdInvoice.invoice_id,
+        type: 'credit_application',
+        tenant: context.tenantId
+      })
+      .first();
 
       expect(creditTransaction).toBeTruthy();
       expect(parseFloat(creditTransaction.amount)).toBe(-totals.creditApplied);
@@ -591,7 +701,7 @@ describe('Multiple Credit Applications', () => {
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'transactions',
         'credit_tracking',
@@ -708,23 +818,13 @@ describe('Multiple Credit Applications', () => {
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
     console.log('[Test][MultiCredits] generating invoice');
-    let invoice;
-    try {
-      invoice = await generateInvoice(billingCycleId1);
-    } catch (error) {
-      console.error('[Test][MultiCredits] generateInvoice failed', error);
-      throw error;
-    }
+    const { invoiceId, invoice: updatedInvoice } = await generateInvoiceForCycle(
+      context,
+      billingCycleId1,
+      serviceId,
+      1000
+    );
     console.log('[Test][MultiCredits] generated invoice', Date.now() - start, 'ms');
-
-    await finalizeInvoice(invoice!.invoice_id);
-    console.log('[Test][MultiCredits] finalized invoice', Date.now() - start, 'ms');
-
-    const updatedInvoice = await context.db('invoices')
-      .where({ invoice_id: invoice!.invoice_id })
-      .first();
-
-    expect(updatedInvoice).toBeTruthy();
 
     const totals = parseInvoiceTotals(updatedInvoice ?? {});
 
@@ -740,7 +840,7 @@ describe('Multiple Credit Applications', () => {
     const creditTransaction = await context.db('transactions')
       .where({
         client_id: context.clientId,
-        invoice_id: invoice!.invoice_id,
+        invoice_id: invoiceId,
         type: 'credit_application',
         tenant: context.tenantId
       })
@@ -767,35 +867,21 @@ describe('Multiple Credit Applications', () => {
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
     // Generate multiple billing invoices
-    let invoice1;
-    try {
-      invoice1 = await generateInvoice(billingCycleId1);
-    } catch (error) {
-      console.error('[Test] generateInvoice failed (multi invoice, first cycle)', error);
-      throw error;
-    }
-
-    await finalizeInvoice(invoice1!.invoice_id);
-
-    const updatedInvoice1 = await context.db('invoices')
-      .where({ invoice_id: invoice1!.invoice_id })
-      .first();
+    const { invoice: updatedInvoice1 } = await generateInvoiceForCycle(
+      context,
+      billingCycleId1,
+      serviceId,
+      1000
+    );
     expect(updatedInvoice1).toBeTruthy();
     const totals1 = parseInvoiceTotals(updatedInvoice1 ?? {});
 
-    let invoice2;
-    try {
-      invoice2 = await generateInvoice(billingCycleId2);
-    } catch (error) {
-      console.error('[Test] generateInvoice failed (multi invoice, second cycle)', error);
-      throw error;
-    }
-
-    await finalizeInvoice(invoice2!.invoice_id);
-
-    const updatedInvoice2 = await context.db('invoices')
-      .where({ invoice_id: invoice2!.invoice_id })
-      .first();
+    const { invoice: updatedInvoice2 } = await generateInvoiceForCycle(
+      context,
+      billingCycleId2,
+      serviceId,
+      1000
+    );
     expect(updatedInvoice2).toBeTruthy();
     const totals2 = parseInvoiceTotals(updatedInvoice2 ?? {});
 
@@ -831,21 +917,12 @@ describe('Multiple Credit Applications', () => {
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
     // Generate a billing invoice with a smaller amount
-    let invoice;
-    try {
-      invoice = await generateInvoice(billingCycleId1);
-    } catch (error) {
-      console.error('[Test] generateInvoice failed (exceeds billing amounts)', error);
-      throw error;
-    }
-
-    await finalizeInvoice(invoice!.invoice_id);
-
-    const updatedInvoice = await context.db('invoices')
-      .where({ invoice_id: invoice!.invoice_id })
-      .first();
-
-    expect(updatedInvoice).toBeTruthy();
+    const { invoice: updatedInvoice } = await generateInvoiceForCycle(
+      context,
+      billingCycleId1,
+      serviceId,
+      1000
+    );
 
     const totals = parseInvoiceTotals(updatedInvoice ?? {});
 
@@ -884,21 +961,12 @@ describe('Multiple Credit Applications', () => {
     expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
     // Generate a billing invoice with a larger amount
-    let invoice;
-    try {
-      invoice = await generateInvoice(billingCycleId1);
-    } catch (error) {
-      console.error('[Test] generateInvoice failed (insufficient credit)', error);
-      throw error;
-    }
-
-    await finalizeInvoice(invoice!.invoice_id);
-
-    const updatedInvoice = await context.db('invoices')
-      .where({ invoice_id: invoice!.invoice_id })
-      .first();
-
-    expect(updatedInvoice).toBeTruthy();
+    const { invoice: updatedInvoice } = await generateInvoiceForCycle(
+      context,
+      billingCycleId1,
+      serviceId,
+      2000
+    );
 
     const totals = parseInvoiceTotals(updatedInvoice ?? {});
 

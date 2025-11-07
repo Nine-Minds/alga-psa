@@ -21,7 +21,9 @@ import {
     DocumentFilters,
     PreviewResponse,
     DocumentInput,
-    PaginatedDocumentsResponse
+    PaginatedDocumentsResponse,
+    IFolderNode,
+    IFolderStats
 } from 'server/src/interfaces/document.interface';
 import { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from 'server/src/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
@@ -32,6 +34,8 @@ import { deleteBlockContent } from './documentBlockContentActions';
 import { DocumentHandlerRegistry } from 'server/src/lib/document-handlers/DocumentHandlerRegistry';
 import { getCurrentUser } from '../user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getEntityTypesForUser } from 'server/src/lib/utils/documentPermissionUtils';
+import { generateDocumentPreviews } from 'server/src/lib/utils/documentPreviewGenerator';
 
 // Add new document
 export async function addDocument(data: DocumentInput) {
@@ -172,13 +176,41 @@ export async function deleteDocument(documentId: string, userId: string) {
       return document;
     });
 
-    // If there's an associated file, delete it from storage (outside transaction)
+    // Delete all associated files from storage (outside transaction)
+    const filesToDelete: string[] = [];
+
+    // Add main file if it exists
     if (result.file_id) {
-      // Delete file from storage and soft delete file record
-      const deleteResult = await deleteFile(result.file_id, userId);
-      if (!deleteResult.success) {
-        throw new Error(deleteResult.error || 'Failed to delete file from storage');
-      }
+      filesToDelete.push(result.file_id);
+    }
+
+    // Add thumbnail file if it exists
+    if (result.thumbnail_file_id) {
+      filesToDelete.push(result.thumbnail_file_id);
+    }
+
+    // Add preview file if it exists
+    if (result.preview_file_id) {
+      filesToDelete.push(result.preview_file_id);
+    }
+
+    // Delete all files
+    if (filesToDelete.length > 0) {
+      console.log(`[deleteDocument] Deleting ${filesToDelete.length} files for document ${documentId}`);
+
+      const deletePromises = filesToDelete.map(async (fileId) => {
+        try {
+          const deleteResult = await deleteFile(fileId, userId);
+          if (!deleteResult.success) {
+            console.error(`[deleteDocument] Failed to delete file ${fileId}:`, deleteResult.error);
+          }
+        } catch (error) {
+          console.error(`[deleteDocument] Error deleting file ${fileId}:`, error);
+          // Don't throw - continue deleting other files
+        }
+      });
+
+      await Promise.all(deletePromises);
 
       // Clear preview cache if it exists
       const cache = CacheFactory.getPreviewCache(tenant);
@@ -301,13 +333,32 @@ export async function getDocumentByTicketId(ticketId: string) {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
         })
+        .leftJoin('users', function() {
+          this.on('documents.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': ticketId,
           'document_associations.entity_type': 'ticket',
           'documents.tenant': tenant,
           'document_associations.tenant': tenant
         })
-        .select('documents.*');
+        .select(
+          'documents.*',
+          'users.first_name',
+          'users.last_name',
+          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `)
+        )
+        .orderBy('documents.updated_at', 'desc');
       return documents;
     });
   } catch (error) {
@@ -339,13 +390,32 @@ export async function getDocumentByClientId(clientId: string) {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
         })
+        .leftJoin('users', function() {
+          this.on('documents.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': clientId,
           'document_associations.entity_type': 'client',
           'documents.tenant': tenant,
           'document_associations.tenant': tenant
         })
-        .select('documents.*');
+        .select(
+          'documents.*',
+          'users.first_name',
+          'users.last_name',
+          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `)
+        )
+        .orderBy('documents.updated_at', 'desc');
       return documents;
     });
   } catch (error) {
@@ -377,18 +447,157 @@ export async function getDocumentByContactNameId(contactNameId: string) {
           this.on('documents.document_id', '=', 'document_associations.document_id')
               .andOn('documents.tenant', '=', 'document_associations.tenant');
         })
+        .leftJoin('users', function() {
+          this.on('documents.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': contactNameId,
           'document_associations.entity_type': 'contact',
           'documents.tenant': tenant,
           'document_associations.tenant': tenant
         })
-        .select('documents.*');
+        .select(
+          'documents.*',
+          'users.first_name',
+          'users.last_name',
+          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `)
+        )
+        .orderBy('documents.updated_at', 'desc');
       return documents;
     });
   } catch (error) {
     console.error(error);
     throw new Error("Failed to get the documents");
+  }
+}
+
+// Get documents by contract ID
+export async function getDocumentsByContractId(contractId: string) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
+    // Check billing permission (required for contract documents)
+    if (!await hasPermission(currentUser, 'billing', 'read')) {
+      throw new Error('Permission denied: Cannot access contract documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const documents = await trx('documents')
+        .join('document_associations', function() {
+          this.on('documents.document_id', '=', 'document_associations.document_id')
+              .andOn('documents.tenant', '=', 'document_associations.tenant');
+        })
+        .where({
+          'document_associations.entity_id': contractId,
+          'document_associations.entity_type': 'contract',
+          'documents.tenant': tenant,
+          'document_associations.tenant': tenant
+        })
+        .select('documents.*', 'document_associations.association_id');
+      return documents;
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to get contract documents");
+  }
+}
+
+// Associate document with contract
+export async function associateDocumentWithContract(input: IDocumentAssociationInput) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document association
+    if (!await hasPermission(currentUser, 'document', 'create')) {
+      throw new Error('Permission denied: Cannot associate documents');
+    }
+
+    // Check billing permission (required for contract documents)
+    if (!await hasPermission(currentUser, 'billing', 'update')) {
+      throw new Error('Permission denied: Cannot modify contract documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const association = await DocumentAssociation.create(trx, {
+        ...input,
+        entity_type: 'contract',
+        tenant
+      });
+
+      return association;
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to associate document with contract");
+  }
+}
+
+// Remove document from contract
+export async function removeDocumentFromContract(associationId: string) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document deletion
+    if (!await hasPermission(currentUser, 'document', 'delete')) {
+      throw new Error('Permission denied: Cannot remove document associations');
+    }
+
+    // Check billing permission (required for contract documents)
+    if (!await hasPermission(currentUser, 'billing', 'update')) {
+      throw new Error('Permission denied: Cannot modify contract documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await trx('document_associations')
+        .where({
+          association_id: associationId,
+          tenant,
+          entity_type: 'contract'
+        })
+        .delete();
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to remove document from contract");
   }
 }
 
@@ -438,6 +647,7 @@ const IN_APP_BLOCKNOTE_TYPE_NAMES = ['blocknote', 'block note', 'blocknote docum
 /**
  * Generates a preview for a document
  * Uses the Strategy pattern with document type handlers to handle different document types
+ * Now with cached preview support - tries cached preview first, then falls back to legacy handler
  *
  * @param identifier The document ID or file ID to generate a preview for
  * @returns A promise that resolves to a PreviewResponse
@@ -486,7 +696,7 @@ export async function getDocumentPreview(
     // If document not found, try to treat identifier as a file ID
     if (!document) {
       console.log(`[getDocumentPreview] Document not found, treating identifier as file ID: ${identifier}`);
-      
+
       // Check cache for file ID
       const cache = CacheFactory.getPreviewCache(tenant);
       const cachedPreview = await cache.get(identifier);
@@ -500,7 +710,7 @@ export async function getDocumentPreview(
           content: 'Cached Preview'
         };
       }
-      
+
       // Try to download the file to get metadata
       try {
         const downloadResult = await StorageService.downloadFile(identifier);
@@ -534,7 +744,27 @@ export async function getDocumentPreview(
       }
     }
 
-    // Use the document handler registry to get the appropriate handler
+    // NEW: Try cached preview first if available
+    if (document.preview_file_id) {
+      console.log(`[getDocumentPreview] Using cached preview: ${document.preview_file_id}`);
+      try {
+        const downloadResult = await StorageService.downloadFile(document.preview_file_id);
+        if (downloadResult) {
+          const base64Image = `data:image/jpeg;base64,${downloadResult.buffer.toString('base64')}`;
+          return {
+            success: true,
+            previewImage: base64Image,
+            content: `Cached Preview (${document.document_name || 'document'})`
+          };
+        }
+      } catch (cacheError) {
+        console.error(`[getDocumentPreview] Failed to load cached preview, falling back to handler:`, cacheError);
+        // Continue to legacy handler fallback
+      }
+    }
+
+    // Fallback to legacy handler if no cached preview or if loading cached preview failed
+    console.log(`[getDocumentPreview] Using legacy handler for document ${identifier}`);
     const handlerRegistry = DocumentHandlerRegistry.getInstance();
     return await handlerRegistry.generatePreview(document, tenant, knex);
   } catch (error) {
@@ -559,6 +789,114 @@ export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
     }
 
     return `/api/documents/download/${file_id}`;
+}
+
+/**
+ * Get thumbnail URL for a document
+ * Returns the cached thumbnail if available, falls back to original file for images
+ *
+ * @param documentId - The document ID
+ * @returns URL to thumbnail or null if not available
+ */
+export async function getDocumentThumbnailUrl(documentId: string): Promise<string | null> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Get document
+    const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('documents')
+        .where({ document_id: documentId, tenant })
+        .first();
+    });
+
+    if (!document) {
+      console.warn(`[getDocumentThumbnailUrl] Document not found: ${documentId}`);
+      return null;
+    }
+
+    // Check if thumbnail exists
+    if (document.thumbnail_file_id) {
+      return `/api/documents/thumbnail/${documentId}`;
+    }
+
+    // Fallback: For images without thumbnails, return original file
+    if (document.file_id && document.mime_type?.startsWith('image/')) {
+      return `/api/documents/view/${document.file_id}`;
+    }
+
+    // No thumbnail available
+    return null;
+  } catch (error) {
+    console.error(`[getDocumentThumbnailUrl] Error for document ${documentId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get preview URL for a document
+ * Returns the cached preview if available, falls back to original file
+ *
+ * @param documentId - The document ID
+ * @returns URL to preview or null if not available
+ */
+export async function getDocumentPreviewUrl(documentId: string): Promise<string | null> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Get document
+    const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('documents')
+        .where({ document_id: documentId, tenant })
+        .first();
+    });
+
+    if (!document) {
+      console.warn(`[getDocumentPreviewUrl] Document not found: ${documentId}`);
+      return null;
+    }
+
+    // Check if preview exists
+    if (document.preview_file_id) {
+      return `/api/documents/preview/${documentId}`;
+    }
+
+    // Fallback: Return original file if available
+    if (document.file_id) {
+      return `/api/documents/view/${document.file_id}`;
+    }
+
+    // No preview available
+    return null;
+  } catch (error) {
+    console.error(`[getDocumentPreviewUrl] Error for document ${documentId}:`, error);
+    return null;
+  }
 }
 
 // Download document
@@ -827,7 +1165,7 @@ export async function getDocumentsByEntity(
         }
         return query;
       };
-      return await buildBaseTrxQuery()
+      let query = buildBaseTrxQuery()
         .select(
           'documents.*',
           'users.first_name',
@@ -836,12 +1174,41 @@ export async function getDocumentsByEntity(
           trx.raw(`
             COALESCE(dt.type_name, sdt.type_name) as type_name,
             COALESCE(dt.icon, sdt.icon) as type_icon
+          `),
+          trx.raw(`
+            CASE
+              WHEN documents.document_name ~ '^[0-9]'
+              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
+              ELSE 0
+            END as document_name_sort_key
           `)
         )
-        .orderBy('documents.updated_at', 'desc')
-        .limit(limit)
-        .offset(offset)
         .distinct('documents.document_id');
+
+      // Apply sorting based on filters (before limit/offset)
+      if (filters?.sortBy) {
+        const sortField = filters.sortBy;
+        const sortOrder = filters.sortOrder || 'desc';
+
+        // Handle special case for created_by_full_name which is a computed field
+        if (sortField === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else if (sortField === 'document_name') {
+          // Natural sort for document_name: sort numerically by leading digits, then alphabetically
+          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        } else {
+          // For other fields, prefix with table name for clarity
+          query = query.orderBy(`documents.${sortField}`, sortOrder);
+        }
+      } else {
+        // Default sort by updated_at desc if no sort specified
+        query = query.orderBy('documents.updated_at', 'desc');
+      }
+
+      // Apply pagination after sorting
+      query = query.limit(limit).offset(offset);
+
+      return await query;
     });
 
     console.log('Raw documents from database:', documents);
@@ -1270,20 +1637,28 @@ export async function getAllDocuments(
           trx.raw(`
             COALESCE(dt.type_name, sdt.type_name) as type_name,
             COALESCE(dt.icon, sdt.icon) as type_icon
+          `),
+          trx.raw(`
+            CASE
+              WHEN documents.document_name ~ '^[0-9]'
+              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
+              ELSE 0
+            END as document_name_sort_key
           `)
         )
-        .limit(limit)
-        .offset(offset)
         .distinct('documents.document_id');
-      
-      // Apply sorting based on filters
+
+      // Apply sorting based on filters (before limit/offset)
       if (filters?.sortBy) {
         const sortField = filters.sortBy;
         const sortOrder = filters.sortOrder || 'desc';
-        
+
         // Handle special case for created_by_full_name which is a computed field
         if (sortField === 'created_by_full_name') {
           query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else if (sortField === 'document_name') {
+          // Natural sort for document_name: sort numerically by leading digits, then alphabetically
+          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
         } else {
           // For other fields, prefix with table name for clarity
           query = query.orderBy(`documents.${sortField}`, sortOrder);
@@ -1292,6 +1667,9 @@ export async function getAllDocuments(
         // Default sort by updated_at desc if no sort specified
         query = query.orderBy('documents.updated_at', 'desc');
       }
+
+      // Apply pagination after sorting
+      query = query.limit(limit).offset(offset);
 
       return await query;
     });
@@ -1433,6 +1811,8 @@ export async function uploadDocument(
     contactNameId?: string;
     assetId?: string;
     projectTaskId?: string;
+    contractId?: string;
+    folder_path?: string | null;
   }
 ): Promise<
   | { success: true; document: IDocument }
@@ -1487,11 +1867,12 @@ export async function uploadDocument(
         file_id: uploadResult.file_id,
         storage_path: uploadResult.storage_path,
         mime_type: fileData.type,
-        file_size: fileData.size
+        file_size: fileData.size,
+        folder_path: options.folder_path || undefined
       };
 
       // Use transaction for document creation and associations
-      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
         await trx('documents').insert(document);
         const documentWithId = document;
 
@@ -1543,6 +1924,15 @@ export async function uploadDocument(
       });
     }
 
+    if (options.contractId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.contractId,
+        entity_type: 'contract',
+        tenant
+      });
+    }
+
         // Create all associations
         if (associations.length > 0) {
           await Promise.all(
@@ -1553,10 +1943,39 @@ export async function uploadDocument(
         }
 
         return {
-          success: true,
+          success: true as const,
           document: documentWithId
         };
       });
+
+      // Generate previews asynchronously (non-blocking)
+      // This happens after the transaction completes and document is returned to user
+      // Preview generation failures won't affect the upload success
+      generateDocumentPreviews(document, buffer)
+        .then(async (previewResult) => {
+          if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
+            try {
+              // Update document with preview file IDs
+              await knex('documents')
+                .where({ document_id: document.document_id, tenant })
+                .update({
+                  thumbnail_file_id: previewResult.thumbnail_file_id,
+                  preview_file_id: previewResult.preview_file_id,
+                  preview_generated_at: previewResult.preview_generated_at,
+                  updated_at: new Date(),
+                });
+              console.log(`[uploadDocument] Preview generation completed for document ${document.document_id}`);
+            } catch (updateError) {
+              console.error(`[uploadDocument] Failed to update document with preview IDs:`, updateError);
+            }
+          }
+        })
+        .catch((error) => {
+          console.error(`[uploadDocument] Preview generation failed for document ${document.document_id}:`, error);
+          // Don't fail the upload - just log the error
+        });
+
+      return result;
   } catch (error) {
     console.error('Error uploading document:', error);
     return {
@@ -1783,4 +2202,512 @@ export async function getDistinctEntityTypes(): Promise<string[]> {
     console.error('Error fetching distinct entity types:', error);
     throw new Error('Failed to fetch distinct entity types');
   }
+}
+
+// ============================================================================
+// FOLDER OPERATIONS
+// ============================================================================
+
+/**
+ * Build a hierarchical folder tree from document folder_paths
+ *
+ * @returns Promise<IFolderNode[]> - Root level folders with nested children
+ */
+export async function getFolderTree(): Promise<IFolderNode[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  // Get explicit folders from document_folders table
+  const explicitFolders = await knex('document_folders')
+    .select('folder_path')
+    .where('tenant', tenant)
+    .orderBy('folder_path', 'asc');
+
+  const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
+
+  // Get implicit folder paths from documents
+  const implicitFolders = await knex('documents')
+    .select('folder_path')
+    .where('tenant', tenant)
+    .whereNotNull('folder_path')
+    .andWhere('folder_path', '!=', '')
+    .groupBy('folder_path');
+
+  const implicitPaths = implicitFolders.map((row: any) => row.folder_path);
+
+  // Merge both lists (remove duplicates)
+  const allPaths = Array.from(new Set([...explicitPaths, ...implicitPaths]));
+
+  // Build tree structure
+  const tree = buildFolderTreeFromPaths(allPaths);
+
+  // Get document counts for each folder (single query)
+  await enrichFolderTreeWithCounts(tree, knex, tenant);
+
+  return tree;
+}
+
+/**
+ * Get list of all folder paths (for folder selector)
+ * @returns Promise<string[]> - Array of folder paths
+ */
+export async function getFolders(): Promise<string[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Get explicit folders from document_folders table
+  const explicitFolders = await knex('document_folders')
+    .select('folder_path')
+    .where('tenant', tenant)
+    .orderBy('folder_path', 'asc');
+
+  const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
+
+  // Get implicit folder paths from documents
+  const implicitFolders = await knex('documents')
+    .select('folder_path')
+    .where('tenant', tenant)
+    .whereNotNull('folder_path')
+    .andWhere('folder_path', '!=', '')
+    .groupBy('folder_path');
+
+  const implicitPaths = implicitFolders.map((row: any) => row.folder_path);
+
+  // Merge both lists (remove duplicates) and sort
+  const allPaths = Array.from(new Set([...explicitPaths, ...implicitPaths]));
+  return allPaths.sort();
+}
+
+/**
+ * Get documents in a specific folder (OPTIMIZED - filters at DB level)
+ *
+ * @param folderPath - Path to folder (e.g., '/Legal/Contracts')
+ * @param includeSubfolders - Whether to include documents from subfolders
+ * @param page - Page number
+ * @param limit - Items per page
+ * @param filters - Optional filters including sorting
+ * @returns Promise with documents and pagination info
+ */
+export async function getDocumentsByFolder(
+  folderPath: string | null,
+  includeSubfolders: boolean = false,
+  page: number = 1,
+  limit: number = 15,
+  filters?: DocumentFilters
+): Promise<{ documents: IDocument[]; total: number }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'read'))) {
+    throw new Error('Permission denied');
+  }
+
+  // Build list of entity types user has permission for
+  const allowedEntityTypes = await getEntityTypesForUser(currentUser);
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Build base query with permission filtering at DB level
+  let query = knex('documents as d')
+    .where('d.tenant', tenant)
+    .where(function() {
+      // Option 1: Document has no associations (tenant-level doc)
+      this.whereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant);
+      })
+      // Option 2: Document has associations user has permission for
+      .orWhereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant)
+          .whereIn('da.entity_type', allowedEntityTypes);
+      });
+    });
+
+  // Add folder filtering
+  if (folderPath) {
+    if (includeSubfolders) {
+      query = query.where(function() {
+        this.where('d.folder_path', folderPath)
+          .orWhere('d.folder_path', 'like', `${folderPath}/%`);
+      });
+    } else {
+      query = query.where('d.folder_path', folderPath);
+    }
+  } else if (!includeSubfolders) {
+    // Root folder - documents with no folder_path
+    // If includeSubfolders is true with null folderPath, show ALL documents (no folder filtering)
+    query = query.whereNull('d.folder_path');
+  }
+  // If folderPath is null and includeSubfolders is true, don't add any folder filtering - show all documents
+
+  // Get total count
+  const countResult = await query.clone().count('* as count');
+  const total = parseInt(countResult[0].count as string);
+
+  // Get paginated results with joins for sorting support
+  const offset = (page - 1) * limit;
+
+  // Add joins for computed fields used in sorting
+  query = query
+    .leftJoin('users', function() {
+      this.on('d.created_by', '=', 'users.user_id')
+          .andOn('users.tenant', '=', knex.raw('?', [tenant]));
+    })
+    .select(
+      'd.*',
+      knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+    );
+
+  // Apply sorting based on filters
+  if (filters?.sortBy) {
+    const sortField = filters.sortBy;
+    const sortOrder = filters.sortOrder || 'desc';
+
+    // Handle special case for created_by_full_name which is a computed field
+    if (sortField === 'created_by_full_name') {
+      query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+    } else if (sortField === 'document_name') {
+      // Natural sort for document_name: sort numerically by leading digits, then alphabetically
+      query = query.orderByRaw(`
+        CASE
+          WHEN d.document_name ~ '^[0-9]'
+          THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+          ELSE 0
+        END ${sortOrder},
+        d.document_name ${sortOrder}
+      `);
+    } else {
+      // For other fields, prefix with table alias
+      query = query.orderBy(`d.${sortField}`, sortOrder);
+    }
+  } else {
+    // Default sort by document_name asc with natural sorting
+    query = query.orderByRaw(`
+      CASE
+        WHEN d.document_name ~ '^[0-9]'
+        THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+        ELSE 0
+      END ASC,
+      d.document_name ASC
+    `);
+  }
+
+  // Apply pagination after sorting
+  query = query.limit(limit).offset(offset);
+
+  const documents = await query;
+
+  return {
+    documents,
+    total,
+  };
+}
+
+/**
+ * Move documents to a different folder
+ *
+ * @param documentIds - Array of document IDs to move
+ * @param newFolderPath - Destination folder path
+ */
+export async function moveDocumentsToFolder(
+  documentIds: string[],
+  newFolderPath: string | null
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'update'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await knex('documents')
+    .whereIn('document_id', documentIds)
+    .andWhere('tenant', tenant)
+    .update({
+      folder_path: newFolderPath,
+      updated_at: new Date(),
+    });
+}
+
+/**
+ * Get folder statistics (document count, total size)
+ *
+ * @param folderPath - Path to folder
+ * @returns Promise<IFolderStats> - Folder statistics
+ */
+export async function getFolderStats(
+  folderPath: string
+): Promise<IFolderStats> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  const result = await knex('documents')
+    .where('tenant', tenant)
+    .where(function() {
+      this.where('folder_path', folderPath)
+        .orWhere('folder_path', 'like', `${folderPath}/%`);
+    })
+    .count('* as count')
+    .sum('file_size as size')
+    .first();
+
+  return {
+    path: folderPath,
+    documentCount: parseInt(result?.count as string) || 0,
+    totalSize: parseInt(result?.size as string) || 0,
+  };
+}
+
+/**
+ * Create a new folder explicitly
+ *
+ * @param folderPath - Full path to the folder (e.g., '/Legal/Contracts')
+ * @returns Promise<void>
+ */
+export async function createFolder(folderPath: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'create'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Validate folder path
+  if (!folderPath || !folderPath.startsWith('/')) {
+    throw new Error('Folder path must start with /');
+  }
+
+  // Extract folder name from path
+  const parts = folderPath.split('/').filter(p => p.length > 0);
+  if (parts.length === 0) {
+    throw new Error('Invalid folder path');
+  }
+  const folderName = parts[parts.length - 1];
+
+  // Get parent folder path
+  const parentPath = parts.length > 1
+    ? '/' + parts.slice(0, -1).join('/')
+    : null;
+
+  // Get parent folder ID if exists
+  let parentFolderId = null;
+  if (parentPath) {
+    const parentFolder = await knex('document_folders')
+      .where('tenant', tenant)
+      .where('folder_path', parentPath)
+      .first();
+
+    if (parentFolder) {
+      parentFolderId = parentFolder.folder_id;
+    }
+  }
+
+  // Check if folder already exists
+  const existingFolder = await knex('document_folders')
+    .where('tenant', tenant)
+    .where('folder_path', folderPath)
+    .first();
+
+  if (existingFolder) {
+    // Folder already exists, that's fine
+    return;
+  }
+
+  // Create folder
+  await knex('document_folders').insert({
+    tenant,
+    folder_path: folderPath,
+    folder_name: folderName,
+    parent_folder_id: parentFolderId,
+    created_by: currentUser.user_id,
+  });
+}
+
+/**
+ * Delete a folder (only if it's empty - no documents and no subfolders)
+ *
+ * @param folderPath - Path to the folder to delete
+ * @returns Promise<void>
+ */
+export async function deleteFolder(folderPath: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
+  if (!(await hasPermission(currentUser, 'document', 'delete'))) {
+    throw new Error('Permission denied');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Check if folder has documents
+  const docCount = await knex('documents')
+    .where('tenant', tenant)
+    .where('folder_path', folderPath)
+    .count('* as count')
+    .first();
+
+  if (parseInt(docCount?.count as string) > 0) {
+    throw new Error('Cannot delete folder: contains documents');
+  }
+
+  // Check if folder has subfolders
+  const subfolderCount = await knex('document_folders')
+    .where('tenant', tenant)
+    .where('folder_path', 'like', `${folderPath}/%`)
+    .count('* as count')
+    .first();
+
+  if (parseInt(subfolderCount?.count as string) > 0) {
+    throw new Error('Cannot delete folder: contains subfolders');
+  }
+
+  // Delete folder
+  await knex('document_folders')
+    .where('tenant', tenant)
+    .where('folder_path', folderPath)
+    .delete();
+}
+
+// Helper functions
+function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
+  const root: IFolderNode[] = [];
+
+  for (const path of paths) {
+    const parts = path.split('/').filter(p => p.length > 0);
+    let currentLevel = root;
+    let currentPath = '';
+
+    for (const part of parts) {
+      currentPath += '/' + part;
+
+      let node = currentLevel.find(n => n.name === part);
+      if (!node) {
+        node = {
+          path: currentPath,
+          name: part,
+          children: [],
+          documentCount: 0,
+        };
+        currentLevel.push(node);
+      }
+
+      currentLevel = node.children;
+    }
+  }
+
+  return root;
+}
+
+async function enrichFolderTreeWithCounts(
+  nodes: IFolderNode[],
+  knex: Knex,
+  tenant: string
+): Promise<void> {
+  // Collect all folder paths in the tree (including nested)
+  const allPaths: string[] = [];
+  function collectPaths(nodeList: IFolderNode[]) {
+    for (const node of nodeList) {
+      allPaths.push(node.path);
+      if (node.children.length > 0) {
+        collectPaths(node.children);
+      }
+    }
+  }
+  collectPaths(nodes);
+
+  if (allPaths.length === 0) {
+    return;
+  }
+
+  // Get current user for permission filtering
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return;
+  }
+
+  // Build list of entity types user has permission for
+  const allowedEntityTypes = await getEntityTypesForUser(currentUser);
+
+  // Single query to get counts for ALL folders at once - with same permission filtering as getDocumentsByFolder
+  const counts = await knex('documents as d')
+    .where('d.tenant', tenant)
+    .whereIn('d.folder_path', allPaths)
+    .where(function() {
+      // Option 1: Document has no associations (tenant-level doc)
+      this.whereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant);
+      })
+      // Option 2: Document has associations user has permission for
+      .orWhereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant)
+          .whereIn('da.entity_type', allowedEntityTypes);
+      });
+    })
+    .groupBy('d.folder_path')
+    .select('d.folder_path')
+    .count('* as count');
+
+  // Build map of path -> count
+  const countMap = new Map<string, number>();
+  for (const row of counts) {
+    const count = typeof row.count === 'string' ? parseInt(row.count) : Number(row.count);
+    countMap.set(String(row.folder_path), count);
+  }
+
+  // Apply counts to nodes recursively
+  function applyCounts(nodeList: IFolderNode[]) {
+    for (const node of nodeList) {
+      node.documentCount = countMap.get(node.path) || 0;
+      if (node.children.length > 0) {
+        applyCounts(node.children);
+      }
+    }
+  }
+  applyCounts(nodes);
 }

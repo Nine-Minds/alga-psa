@@ -3,10 +3,8 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
-import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
+import { IInvoiceCharge, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
-import { WorkflowEventModel, IWorkflowEvent } from '@alga-psa/shared/workflow/persistence';
-import { getRedisStreamClient, toStreamEvent } from '@alga-psa/shared/workflow/streams';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -67,7 +65,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     await trx('invoices').insert(invoice);
 
     // Persist manual invoice items using the dedicated service function
-    const subtotal = await invoiceService.persistManualInvoiceItems(
+    const subtotal = await invoiceService.persistManualInvoiceCharges(
       trx,
       invoiceId,
       items, // Assuming items match ManualInvoiceItemInput structure
@@ -97,7 +95,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     );
 
     // Get updated invoice items with tax
-    const updatedItems = await trx('invoice_items')
+    const updatedItems = await trx('invoice_charges')
       .where({ invoice_id: invoiceId, tenant })
       .orderBy('created_at', 'asc');
 
@@ -135,7 +133,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       tax: Math.ceil(computedTotalTax),
       total: Math.ceil(subtotal + computedTotalTax),
       total_amount: Math.ceil(subtotal + computedTotalTax),
-      invoice_items: updatedItems.map((item: any): IInvoiceItem => ({
+      invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
         item_id: item.item_id,
         invoice_id: invoiceId,
         service_id: item.service_id,
@@ -189,7 +187,7 @@ export async function updateManualInvoice(
   // Delete existing items and insert new ones
   await knex.transaction(async (trx) => {
     // Delete existing items
-    await trx('invoice_items')
+    await trx('invoice_charges')
       .where({
         invoice_id: invoiceId,
         tenant
@@ -197,7 +195,7 @@ export async function updateManualInvoice(
       .delete();
 
     // Insert new items using the dedicated manual service function
-    await invoiceService.persistManualInvoiceItems(
+    await invoiceService.persistManualInvoiceCharges(
       trx,
       invoiceId,
       items, // Assuming items match ManualInvoiceItemInput structure
@@ -229,62 +227,12 @@ export async function updateManualInvoice(
     throw new Error(`Invoice ${invoiceId} not found for tenant ${tenant}`);
   }
 
-  const updatedItems = await knex('invoice_items')
+  const updatedItems = await knex('invoice_charges')
     .where({
       invoice_id: invoiceId,
       tenant
     })
     .orderBy('created_at', 'asc');
-
-  // Emit INVOICE_UPDATED event
-  try {
-    console.log('DEBUG: Session user info before creating event:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email
-    });
-
-    const eventId = uuidv4();
-    const eventData: IWorkflowEvent = {
-      event_id: eventId,
-      event_name: 'INVOICE_UPDATED',
-      event_type: 'INVOICE_UPDATED', // Or 'invoice.lifecycle' if convention
-      tenant: tenant,
-      payload: {
-        invoiceId: invoiceId,
-        tenantId: tenant,
-        userId: session.user.id, // Include user ID if available
-        // Add other relevant details from updatedInvoice if needed
-      },
-      user_id: session.user.id,
-      from_state: existingInvoice.status, // Use existing status
-      to_state: updatedInvoice.status, // Use updated status
-      execution_id: invoiceId, // Use invoiceId for traceability
-      created_at: new Date().toISOString(), // Add created_at
-    };
-
-    console.log('DEBUG: Created workflow event with user context:', {
-      eventId,
-      eventName: 'INVOICE_UPDATED',
-      userId: eventData.user_id,
-      payloadUserId: eventData.payload?.userId
-    });
-
-    // Persist event to DB
-    await WorkflowEventModel.create(knex, tenant, eventData);
-
-    // Publish event to Redis stream
-    const streamEvent = toStreamEvent(eventData);
-    const redisStreamClient = getRedisStreamClient();
-    await redisStreamClient.publishEvent(streamEvent);
-
-    console.log(`Successfully emitted INVOICE_UPDATED event for invoice ${invoiceId}`);
-
-  } catch (error) {
-    console.error(`Failed to emit INVOICE_UPDATED event for invoice ${invoiceId}:`, error);
-    // Do not re-throw, allow the invoice update to succeed
-  }
 
   // Return updated invoice view model
   return {
@@ -307,7 +255,7 @@ export async function updateManualInvoice(
     tax: updatedInvoice.tax,
     total: updatedInvoice.total_amount,
     total_amount: parseInt(updatedInvoice.total_amount.toString()),
-    invoice_items: updatedItems.map((item): IInvoiceItem => ({
+    invoice_charges: updatedItems.map((item): IInvoiceCharge => ({
       item_id: item.item_id,
       invoice_id: invoiceId,
       service_id: item.service_id,

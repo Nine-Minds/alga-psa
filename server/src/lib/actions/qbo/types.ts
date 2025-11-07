@@ -137,7 +137,7 @@ export interface QboInvoice {
   DocNumber?: string; // Maps from Alga invoice_number
   TxnDate?: string; // Maps from Alga invoice_date (YYYY-MM-DD)
   CustomerRef: QboRef; // Maps from Alga client_id via lookup (qbo_customer_id)
-  Line: QboInvoiceLine[]; // Maps from Alga invoice_items
+  Line: QboInvoiceLine[]; // Maps from Alga invoice_charges
   DueDate?: string; // Maps from Alga due_date (YYYY-MM-DD)
   TotalAmt?: number; // Maps from Alga total_amount (converted), QBO calculates
   ApplyTaxAfterDiscount?: boolean;
@@ -148,6 +148,8 @@ export interface QboInvoice {
   SalesTermRef?: QboRef; // Maps from Alga Client payment_terms via lookup
   PrivateNote?: string; // Potential place for billing period info
   MetaData?: QboMetaData;
+  CurrencyRef?: QboRef;
+  ExchangeRate?: number;
   // Add other relevant fields as needed
 }
 

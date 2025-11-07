@@ -9,8 +9,7 @@ Completed rename: Plan Bundles → Contracts and Billing Plans → Contract Line
 - `contract_templates` - Reusable contract blueprints managed by template authoring flows
 - `contracts` - Client-specific contract instances (one row per agreement)
 - `client_contracts` - Assignment table that links contracts to clients and stores lifecycle metadata (start/end dates, PO info)
-- `contract_line_mappings` - Links contract lines to contract instances (includes `custom_rate`)
-- `contract_lines` - Contract line definitions
+- `contract_lines` - Contract line definitions (now store contract association, display order, billing timing, and optional `custom_rate`)
 
 ### Existing Code Patterns to Reuse:
 - Wizard pattern in `OnboardingWizard.tsx`

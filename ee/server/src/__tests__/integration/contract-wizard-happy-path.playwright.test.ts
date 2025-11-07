@@ -266,7 +266,6 @@ async function cleanupContractArtifacts(db: Knex, tenantId: string): Promise<voi
   await db('contract_line_service_bucket_config').where({ tenant: tenantId }).del().catch(() => {});
   await db('contract_line_service_configuration').where({ tenant: tenantId }).del().catch(() => {});
   await db('contract_line_services').where({ tenant: tenantId }).del().catch(() => {});
-  await db('contract_line_mappings').where({ tenant: tenantId }).del().catch(() => {});
   await db('client_contract_lines').where({ tenant: tenantId }).del().catch(() => {});
   await db('client_contracts').where({ tenant: tenantId }).del().catch(() => {});
   await db('contracts').where({ tenant: tenantId }).del().catch(() => {});
@@ -323,16 +322,10 @@ async function getContractLineContext(
     return { contract: null, contractLineIds: [], contractLines: [] };
   }
 
-  const mappings = await db('contract_line_mappings')
-    .where({ tenant: tenantId, contract_id: contract.contract_id })
-    .select('contract_line_id');
+  const contractLines = await db('contract_lines')
+    .where({ tenant: tenantId, contract_id: contract.contract_id });
 
-  const contractLineIds = mappings.map((m: any) => m.contract_line_id);
-  const contractLines = contractLineIds.length
-    ? await db('contract_lines')
-        .whereIn('contract_line_id', contractLineIds)
-        .andWhere({ tenant: tenantId })
-    : [];
+  const contractLineIds = contractLines.map((line: any) => line.contract_line_id);
 
   return { contract, contractLineIds, contractLines };
 }

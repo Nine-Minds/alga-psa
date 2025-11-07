@@ -71,7 +71,7 @@ describe('Credit Expiration Effects Tests', () => {
   let context: TestContext;
 
   async function setupDefaultTax() {
-    await setupyClientTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',
@@ -85,7 +85,7 @@ describe('Credit Expiration Effects Tests', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'transactions',
         'credit_tracking',

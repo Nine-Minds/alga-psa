@@ -52,7 +52,7 @@ import {
 
 import {
   IInvoice,
-  IInvoiceItem,
+  IInvoiceCharge,
   InvoiceViewModel,
   InvoiceStatus,
   DiscountType,
@@ -64,7 +64,7 @@ import { IClient } from '../../../interfaces/client.interfaces';
 import { ISO8601String } from '../../../types/types.d';
 import {
   getClientDetails,
-  persistManualInvoiceItems,
+  persistManualInvoiceCharges,
   calculateAndDistributeTax,
   updateInvoiceTotalsAndRecordTransaction
 } from '../../services/invoiceService';
@@ -230,8 +230,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       query.orderBy(`invoices.${sortField}`, sortOrder);
       query.limit(limit).offset(offset);
 
-      // Get total count
-      const countQuery = this.buildBaseQuery(trx, context);
+      // Get total count - use a separate query without SELECT columns to avoid GROUP BY issues
+      const countQuery = trx('invoices')
+        .where('invoices.tenant', context.tenant);
+
       if (filters) {
         this.applyInvoiceFilters(countQuery, filters);
       }
@@ -292,7 +294,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   
         if (includeItems) {
           result.line_items = lineItems;
-          result.invoice_items = lineItems; // Alias for controller compatibility
+          result.invoice_charges = lineItems; // Alias for controller compatibility
         }
         if (includeClient) {
           result.client = client;
@@ -381,20 +383,6 @@ export class InvoiceService extends BaseService<IInvoice> {
         details: { action: 'invoice.created' }
       });
 
-      // Publish event
-      await publishEvent({
-        eventType: 'INVOICE_CREATED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: invoice.invoice_id,
-          invoiceNumber: invoiceNumber,
-          clientId: data.client_id,
-          totalAmount: invoice.total_amount,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
-      });
-
       return this.getById(invoice.invoice_id, context) as Promise<IInvoice>;
     });
   }
@@ -467,18 +455,6 @@ export class InvoiceService extends BaseService<IInvoice> {
         recordId: id,
         changedData: data,
         details: { action: 'invoice.updated' }
-      });
-
-      // Publish event
-      await publishEvent({
-        eventType: 'INVOICE_UPDATED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: id,
-          changes: data,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
       });
 
       return this.getById(id, context) as Promise<IInvoice>;
@@ -1096,7 +1072,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         is_prepayment: data.isPrepayment ?? false
       });
 
-      await persistManualInvoiceItems(
+      await persistManualInvoiceCharges(
         trx,
         invoiceId,
         data.items.map((item) => ({
@@ -1127,7 +1103,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         .where({ invoice_id: invoiceId, tenant })
         .first();
 
-      const updatedItems = await trx('invoice_items')
+      const updatedItems = await trx('invoice_charges')
         .where({ invoice_id: invoiceId, tenant })
         .orderBy('created_at', 'asc');
 
@@ -1163,7 +1139,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         tax: Number(invoiceRecord.tax ?? 0),
         total: Number(invoiceRecord.total_amount ?? 0),
         total_amount: Number(invoiceRecord.total_amount ?? 0),
-        invoice_items: updatedItems.map((item: any): IInvoiceItem => ({
+        invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
           item_id: item.item_id,
           invoice_id: invoiceId,
           service_id: item.service_id,

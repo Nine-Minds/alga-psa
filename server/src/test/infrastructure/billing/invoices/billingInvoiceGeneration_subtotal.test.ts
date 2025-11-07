@@ -119,7 +119,7 @@ async function ensureBillingDefaults() {
 
 async function getInvoiceItems(invoiceId: string) {
   return context
-    .db('invoice_items')
+    .db('invoice_charges')
     .where({ invoice_id: invoiceId, tenant: context.tenantId })
     .orderBy('created_at', 'asc');
 }
@@ -129,7 +129,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -251,7 +251,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
       planName: 'Subtotal Plan',
       baseRateCents: 22500, // Total of all services: 5000 + 7500 + 10000
       detailBaseRateCents: 5000,
-      startDate: '2025-02-01'
+      startDate: '2025-02-01',
+      billingTiming: 'advance'
     });
 
     await addServiceToFixedPlan(context, planId, serviceB, { detailBaseRateCents: 7500 });
@@ -384,7 +385,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
       planName: 'Credit Plan',
       baseRateCents: -12500,
       detailBaseRateCents: -12500,
-      startDate: '2025-02-01'
+      startDate: '2025-02-01',
+      billingTiming: 'advance'
     });
 
     const billingCycleId = await context.createEntity('client_billing_cycles', {

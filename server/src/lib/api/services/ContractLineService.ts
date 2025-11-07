@@ -16,9 +16,12 @@ import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/template
 // Import existing models and actions for integration
 import ContractLine from 'server/src/lib/models/contractLine';
 import ContractLineFixedConfig from 'server/src/lib/models/contractLineFixedConfig';
-import ContractLineMapping from 'server/src/lib/models/contractLineMapping';
 import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import {
+  addContractLine as repositoryAddContractLine,
+  removeContractLine as repositoryRemoveContractLine,
+} from 'server/src/lib/repositories/contractLineRepository';
 
 // Import schema types for validation
 import {
@@ -267,24 +270,19 @@ export class ContractLineService extends BaseService<IContractLine> {
       return withTransaction(knex, async (trx) => {
         const planData = this.addCreateAuditFields(data, context);
         planData.contract_line_id = uuidv4();
-        
-        // Create the base contract line record
+
+        const baseRate = (data as any).base_rate ?? planData.custom_rate ?? null;
+        const enableProration = (data as any).enable_proration ?? false;
+        const alignment = (data as any).billing_cycle_alignment ?? 'start';
+
+        planData.custom_rate = data.contract_line_type === 'Fixed' ? baseRate : planData.custom_rate ?? null;
+        planData.enable_proration = enableProration;
+        planData.billing_cycle_alignment = alignment;
+
+        delete (planData as any).base_rate;
+
         const [contractLine] = await trx('contract_lines').insert(planData).returning('*');
-        
-        // Create default fixed config if plan type is Fixed (handle base_rate if provided)
-        if (data.contract_line_type === 'Fixed') {
-          const fixedConfig = {
-            contract_line_id: planData.contract_line_id,
-            base_rate: (data as any).base_rate || 0,
-            enable_proration: false,
-            billing_cycle_alignment: 'start' as const,
-            tenant: context.tenant,
-            created_at: new Date(),
-            updated_at: new Date()
-          };
-          await trx('contract_line_fixed_configs').insert(fixedConfig);
-        }
-  
+
         // Publish event
         await publishEvent({
           eventType: 'CONTRACT_LINE_CREATED',
@@ -436,13 +434,8 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext
   ): Promise<IContractLineFixedConfig | null> {
     const { knex } = await this.getKnex();
-    
-    const config = await knex('contract_line_fixed_config')
-      .where('contract_line_id', planId)
-      .where('tenant', context.tenant)
-      .first();
-    
-    return config || null;
+    const model = new ContractLineFixedConfig(knex, context.tenant);
+    return model.getByPlanId(planId);
   }
 
   /**
@@ -461,22 +454,17 @@ export class ContractLineService extends BaseService<IContractLine> {
       if (plan.contract_line_type !== 'Fixed') {
         throw new Error('Can only add fixed configuration to Fixed type plans');
       }
-      
-      // Upsert configuration
-      const configData = {
+
+      const model = new ContractLineFixedConfig(trx, context.tenant);
+      await model.upsert({
         contract_line_id: planId,
-        ...data,
+        base_rate: data.base_rate,
+        enable_proration: data.enable_proration,
+        billing_cycle_alignment: data.billing_cycle_alignment,
         tenant: context.tenant,
-        updated_at: new Date()
-      };
-      
-      const [config] = await trx('contract_line_fixed_config')
-        .insert(configData)
-        .onConflict(['contract_line_id', 'tenant'])
-        .merge(configData)
-        .returning('*');
-      
-      return config;
+      });
+
+      return (await model.getByPlanId(planId))!;
     });
   }
 
@@ -719,30 +707,8 @@ export class ContractLineService extends BaseService<IContractLine> {
     return withTransaction(knex, async (trx) => {
       await this.validateContractExists(contractId, context, trx);
       await this.getExistingPlan(contractLineId, context, trx);
-      
-      const existing = await trx('contract_line_mappings')
-        .where('contract_id', contractId)
-        .where('contract_line_id', contractLineId)
-        .where('tenant', context.tenant)
-        .first();
-      
-      if (existing) {
-        throw new Error('Contract line already associated with this contract');
-      }
-      
-      const contractLineMapping = {
-        contract_id: contractId,
-        contract_line_id: contractLineId,
-        custom_rate: customRate,
-        tenant: context.tenant,
-        created_at: new Date()
-      };
-      
-      const [insertedMapping] = await trx('contract_line_mappings')
-        .insert(contractLineMapping)
-        .returning('*');
-      
-      return insertedMapping;
+
+      return repositoryAddContractLine(trx, context.tenant, contractId, contractLineId, customRate);
     });
   }
 
@@ -757,25 +723,23 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const clientAssignments = await trx('client_contract_lines')
-        .where('contract_line_id', contractLineId)
-        .where('client_contract_id', contractId)
-        .where('tenant', context.tenant)
-        .where('is_active', true);
-      
-      if (clientAssignments.length > 0) {
+      const clientAssignments = await trx('client_contract_lines as ccl')
+        .join('client_contracts as cc', function joinContracts() {
+          this.on('ccl.client_contract_id', '=', 'cc.client_contract_id').andOn('ccl.tenant', '=', 'cc.tenant');
+        })
+        .where('ccl.contract_line_id', contractLineId)
+        .where('ccl.tenant', context.tenant)
+        .where('ccl.is_active', true)
+        .where('cc.contract_id', contractId)
+        .count<{ count: string }[]>({ count: '*' });
+
+      const assignmentCount = parseInt(clientAssignments?.[0]?.count ?? '0', 10);
+
+      if (assignmentCount > 0) {
         throw new Error('Cannot remove contract line: it is currently assigned to clients');
       }
-      
-      const deletedCount = await trx('contract_line_mappings')
-        .where('contract_id', contractId)
-        .where('contract_line_id', contractLineId)
-        .where('tenant', context.tenant)
-        .delete();
-      
-      if (deletedCount === 0) {
-        throw new Error('Contract line not found on contract');
-      }
+
+      await repositoryRemoveContractLine(trx, context.tenant, contractId, contractLineId);
     });
   }
 
@@ -1531,7 +1495,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         reason: `Plan is currently assigned to ${clientCount} ${clientCount === 1 ? 'client' : 'clients'}`
       };
     }
-    
+
     // Check if plan is associated with any contracts and fetch associated clients
     const contractsWithClients = await knex('contract_line_mappings as clm')
       .join('contracts as c', 'clm.contract_id', 'c.contract_id')
@@ -1605,10 +1569,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    await trx('contract_line_mappings')
+    await trx('contract_lines')
       .where('contract_line_id', contractLineId)
       .where('tenant', context.tenant)
-      .delete();
+      .update({ contract_id: null });
   }
 
   private async createFixedPlanConfig(
@@ -1617,19 +1581,16 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<IContractLineFixedConfig> {
-    const configData = {
+    const model = new ContractLineFixedConfig(trx, context.tenant);
+    await model.upsert({
       contract_line_id: planId,
-      ...data,
+      base_rate: data.base_rate,
+      enable_proration: data.enable_proration,
+      billing_cycle_alignment: data.billing_cycle_alignment,
       tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-    
-    const [config] = await trx('contract_line_fixed_config')
-      .insert(configData)
-      .returning('*');
-    
-    return config;
+    });
+
+    return (await model.getByPlanId(planId))!;
   }
 
   private async validateContractExists(
@@ -1773,16 +1734,14 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx: Knex.Transaction
   ): Promise<void> {
     // Copy fixed plan configuration if exists
-    const fixedConfig = await trx('contract_line_fixed_config')
-      .where('contract_line_id', sourcePlanId)
-      .where('tenant', context.tenant)
-      .first();
+    const fixedConfigModel = new ContractLineFixedConfig(trx, context.tenant);
+    const fixedConfig = await fixedConfigModel.getByPlanId(sourcePlanId);
     
     if (fixedConfig) {
       await this.createFixedPlanConfig(targetPlanId, {
-        base_rate: fixedConfig.base_rate,
-        enable_proration: fixedConfig.enable_proration,
-        billing_cycle_alignment: fixedConfig.billing_cycle_alignment
+        base_rate: fixedConfig.base_rate ?? undefined,
+        enable_proration: fixedConfig.enable_proration ?? false,
+        billing_cycle_alignment: fixedConfig.billing_cycle_alignment ?? 'start'
       }, context, trx);
     }
   }

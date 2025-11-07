@@ -183,6 +183,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
             <div>
               <Label>OS Type</Label>
               <Input
+                id="workstation-os-type"
                 value={formData.workstation?.os_type || ''}
                 onChange={(e) => updateWorkstationField('os_type', e.target.value)}
                 placeholder="e.g., Windows 11"
@@ -191,6 +192,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
             <div>
               <Label>CPU Model</Label>
               <Input
+                id="workstation-cpu-model"
                 value={formData.workstation?.cpu_model || ''}
                 onChange={(e) => updateWorkstationField('cpu_model', e.target.value)}
                 placeholder="e.g., Intel Core i7-12700"
@@ -199,6 +201,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
             <div>
               <Label>RAM (GB)</Label>
               <Input
+                id="workstation-ram-gb"
                 type="number"
                 value={formData.workstation?.ram_gb || ''}
                 onChange={(e) => updateWorkstationField('ram_gb', parseInt(e.target.value) || 0)}
@@ -212,6 +215,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
             <div>
               <Label>Device Type</Label>
               <CustomSelect
+                id="network-device-type"
                 options={[
                   { value: 'switch', label: 'Switch' },
                   { value: 'router', label: 'Router' },
@@ -226,6 +230,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
             <div>
               <Label>Management IP</Label>
               <Input
+                id="network-management-ip"
                 value={formData.network_device?.management_ip || ''}
                 onChange={(e) => updateNetworkDeviceField('management_ip', e.target.value)}
                 placeholder="e.g., 192.168.1.100"
@@ -292,6 +297,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
           <Label htmlFor="asset_type">Asset Type *</Label>
           <div className="mt-1">
             <CustomSelect
+              id="asset-type-select"
               options={ASSET_TYPE_OPTIONS}
               value={formData.asset_type}
               onValueChange={(value) => handleChange('asset_type', value)}
@@ -325,6 +331,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
           <Label htmlFor="status">Status</Label>
           <div className="mt-1">
             <CustomSelect
+              id="status-select"
               options={STATUS_OPTIONS}
               value={formData.status}
               onValueChange={(value) => handleChange('status', value)}

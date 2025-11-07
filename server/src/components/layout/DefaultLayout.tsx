@@ -51,6 +51,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [accountId, setAccountId] = useState('');
   const [messages, setMessages] = useState([]);
   const [userRole, setUserRole] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState('');
   const [auth_token, setAuthToken] = useState('');
   const [isTitleLocked] = useState(false);
@@ -65,15 +66,37 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
     window.addEventListener('keydown', handleKeyDown);
 
-    // Fetch or set up the necessary data for Chat component
-    // This is just an example, you'll need to implement the actual data fetching logic
-    setClientUrl('https://example.com');
-    // setHf(/* your hf object */);
-    setAccountId('123');
-    setMessages([]);
-    setUserRole('user');
-    setSelectedAccount('account123');
-    setAuthToken('your_auth_token');
+    const bootstrapChatContext = async () => {
+      // Fetch or set up the necessary data for Chat component
+      setClientUrl('https://example.com');
+      setAccountId('123');
+      setMessages([]);
+      setSelectedAccount('account123');
+      setAuthToken('your_auth_token');
+
+      try {
+        const response = await fetch('/api/auth/session', { cache: 'no-store' });
+        if (response.ok) {
+          const session = await response.json();
+          const sessionUser = session?.user ?? null;
+          setUserId(sessionUser?.id ?? null);
+          if (sessionUser?.user_type) {
+            setUserRole(sessionUser.user_type);
+          } else {
+            setUserRole('user');
+          }
+        } else {
+          setUserRole('user');
+          setUserId(null);
+        }
+      } catch (error) {
+        console.error('[DefaultLayout] Failed to load auth session for chat sidebar', error);
+        setUserRole('user');
+        setUserId(null);
+      }
+    };
+
+    bootstrapChatContext();
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -118,6 +141,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               accountId={accountId}
               messages={messages}
               userRole={userRole}
+              userId={userId}
               selectedAccount={selectedAccount}
               handleSelectAccount={handleSelectAccount}
               auth_token={auth_token}

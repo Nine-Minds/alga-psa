@@ -7,7 +7,9 @@
     "services/workflow-worker",
     "shared",
     "packages/*",
-    "sdk/*"
+    "sdk/*",
+    "sdk/samples/*",
+    "sdk/samples/*/*"
   ],
   "scripts": {
     "install:ignore": "npm ci --ignore-scripts",
@@ -30,7 +32,7 @@
     "create-tenant": "cd server && npm run create-tenant",
     "rollback-tenant": "cd server && npm run rollback-tenant",
     "lint": "eslint \"{server,ee/server,shared,services}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
-    "guard:ext-v2": "git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' || true; test $(git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' | wc -l) -eq 0",
+    "guard:ext-v2": "git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' ':!**/apiRegistry.generated.ts' || true; test $(git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' ':!**/apiRegistry.generated.ts' | wc -l) -eq 0",
     "playwright:bootstrap-db": "node --import tsx/esm scripts/bootstrap-playwright-db.ts"
   },
   "dependencies": {
@@ -173,7 +175,7 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/knex": "^0.16.1",
     "@types/lodash": "^4.17.20",
-    "@types/node": "^20",
+    "@types/node": "^20.19.24",
     "@types/nodemailer": "^6.4.17",
     "@types/parsimmon": "^1.10.9",
     "@types/qrcode": "^1.5.5",

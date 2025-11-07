@@ -14,6 +14,7 @@ import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
+import { getTenantSlugForTenant } from 'server/src/lib/actions/tenant-actions/tenantSlugActions';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -31,8 +32,20 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const { branding } = useBranding();
   
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/auth/client-portal/signin' });
+  const handleSignOut = async () => {
+    // Get tenant slug to include in callback URL
+    let callbackUrl = '/auth/client-portal/signin';
+    if (userData?.tenant) {
+      try {
+        const tenantSlug = await getTenantSlugForTenant(userData.tenant);
+        callbackUrl = `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}`;
+      } catch (error) {
+        console.error('Error getting tenant slug for sign out:', error);
+        // Fallback to signin page without tenant
+      }
+    }
+
+    signOut({ callbackUrl });
     console.log('Signing out...');
   };
 

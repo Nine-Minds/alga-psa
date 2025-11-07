@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
         code: code,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
-        scope: 'https://graph.microsoft.com/.default offline_access'
+        scope: 'https://graph.microsoft.com/Mail.Read offline_access'
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -284,6 +284,10 @@ export async function GET(request: NextRequest) {
 
                 const adapter = new MicrosoftGraphAdapter(providerConfig);
                 try {
+                  // Load credentials and authenticated user email before subscription
+                  // This ensures mailbox path auto-detection works correctly
+                  await adapter.connect();
+
                   // Context logging before attempting subscription
                   const maskedToken = providerConfig.webhook_verification_token
                     ? `${String(providerConfig.webhook_verification_token).slice(0, 4)}...(${String(providerConfig.webhook_verification_token).length})`

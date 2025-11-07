@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { EyeOpenIcon, EyeClosedIcon, CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 import * as Label from '@radix-ui/react-label';
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
 import { registerUser } from 'server/src/lib/actions/useRegister';
@@ -117,7 +117,7 @@ export default function Register() {
 
 
   const CriteriaIcon = ({ met }: { met: boolean }) =>
-    !hasStartedTyping ? null : met ? <CheckCircledIcon className="h-4 w-4 text-green-500" /> : <CrossCircledIcon className="h-4 w-4 text-red-500" />;
+    !hasStartedTyping ? null : met ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-red-500" />;
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -171,6 +171,7 @@ export default function Register() {
                   Client name
                 </Label.Root>
                 <Input
+                  id="register-client-name-input"
                   type="text"
                   name="clientName"
                   value={formData.clientName}
@@ -185,6 +186,7 @@ export default function Register() {
                   User Name
                 </Label.Root>
                 <Input
+                  id="register-user-name-input"
                   type="text"
                   name="userName"
                   value={formData.userName}
@@ -196,9 +198,10 @@ export default function Register() {
               </div>
               <div>
                 <Label.Root className="block text-sm font-medium text-gray-700">
-                  Email
+                  Email <span className="text-red-500">*</span>
                 </Label.Root>
                 <Input
+                  id="register-email-input"
                   type="email"
                   name="email"
                   value={formData.email}
@@ -215,6 +218,7 @@ export default function Register() {
                 </Label.Root>
                 <div className="relative">
                   <Input
+                    id="register-password-input"
                     type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
@@ -229,9 +233,9 @@ export default function Register() {
                       className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     >
                       {showPassword ? (
-                        <EyeOpenIcon className="h-5 w-5 text-gray-400" />
+                        <Eye className="h-5 w-5 text-gray-400" />
                       ) : (
-                        <EyeClosedIcon className="h-5 w-5 text-gray-400" />
+                        <EyeOff className="h-5 w-5 text-gray-400" />
                       )}
                   </button>
                 </div>

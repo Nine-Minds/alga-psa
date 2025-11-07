@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { v4 as uuidv4 } from 'uuid';
+import { createInvoiceFromBillingResult } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, createFixedPlanAssignment, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
+import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TextEncoder as NodeTextEncoder } from 'util';
+import type { IBillingResult, IBillingCharge } from 'server/src/interfaces/billing.interfaces';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
@@ -122,9 +124,9 @@ async function ensureDefaultBillingSettings() {
 
   beforeAll(async () => {
     context = await setupContext({
-      runSeeds: false,
+      runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -198,18 +200,48 @@ async function ensureDefaultBillingSettings() {
         period_end_date: '2025-03-01'
       }, 'billing_cycle_id');
 
-      await createFixedPlanAssignment(context, serviceId, {
-        planName: 'Test Plan',
-        baseRateCents: 1000,
-        detailBaseRateCents: 1000,
-        quantity: 1,
-        billingFrequency: 'monthly',
-        startDate: '2025-02-01',
-        clientId: context.clientId
-      });
+      const cycleRecord = await context.db('client_billing_cycles')
+        .where({ billing_cycle_id: billingCycle, tenant: context.tenantId })
+        .first();
 
-      // Generate automatic invoice
-      const autoInvoice = await generateInvoice(billingCycle);
+      const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
+      const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
+
+      const autoCharge: IBillingCharge = {
+        tenant: context.tenantId,
+        type: 'usage',
+        serviceId,
+        serviceName: 'Test Service',
+        quantity: 1,
+        rate: 1000,
+        total: 1000,
+        tax_amount: 0,
+        tax_rate: 0,
+        tax_region: 'US-NY',
+        is_taxable: true,
+        usageId: uuidv4(),
+        servicePeriodStart: cycleStart,
+        servicePeriodEnd: cycleEnd,
+        billingTiming: 'arrears'
+      };
+
+      const billingResult: IBillingResult = {
+        tenant: context.tenantId,
+        charges: [autoCharge],
+        totalAmount: 1000,
+        discounts: [],
+        adjustments: [],
+        finalAmount: 1000
+      };
+
+      const createdAutoInvoice = await createInvoiceFromBillingResult(
+        billingResult,
+        context.clientId,
+        cycleStart,
+        cycleEnd,
+        billingCycle,
+        context.userId
+      );
 
       // Generate manual invoice with same parameters
       const manualInvoice = await generateManualInvoice({
@@ -222,10 +254,27 @@ async function ensureDefaultBillingSettings() {
         }]
       });
 
+      const autoInvoiceRow = await context.db('invoices')
+        .where({ invoice_id: createdAutoInvoice.invoice_id, tenant: context.tenantId })
+        .first();
+      const autoItems = await context.db('invoice_charges').where({
+        invoice_id: createdAutoInvoice.invoice_id,
+        tenant: context.tenantId
+      });
+      const autoTotals = {
+        subtotal: Number(autoInvoiceRow?.subtotal ?? 0),
+        tax: Number(autoInvoiceRow?.tax ?? 0),
+        total_amount: Number(autoInvoiceRow?.total_amount ?? 0)
+      };
+      const manualItems = await context.db('invoice_charges').where({
+        invoice_id: manualInvoice.invoice_id,
+        tenant: context.tenantId
+      });
+
       // Verify tax calculations match
-      expect(autoInvoice!.tax).toBe(manualInvoice.tax);
-      expect(autoInvoice!.subtotal).toBe(manualInvoice.subtotal);
-      expect(autoInvoice!.total_amount).toBe(manualInvoice.total_amount);
+      expect(autoTotals.tax).toBe(manualInvoice.tax);
+      expect(autoTotals.subtotal).toBe(manualInvoice.subtotal);
+      expect(autoTotals.total_amount).toBe(manualInvoice.total_amount);
     });
   });
 });

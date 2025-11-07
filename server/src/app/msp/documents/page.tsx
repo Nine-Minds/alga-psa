@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { DocumentFilters as DocumentFilterType } from 'server/src/interfaces/document.interface';
 import Documents from 'server/src/components/documents/Documents';
 import { Card } from 'server/src/components/ui/Card';
@@ -9,19 +9,39 @@ import { getDistinctEntityTypes } from 'server/src/lib/actions/document-actions/
 import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/index';
 import { toast } from 'react-hot-toast';
-import DocumentsPagination from 'server/src/components/documents/DocumentsPagination';
 import DocumentFilters from 'server/src/components/documents/DocumentFilters';
 import DocumentsPageSkeleton from 'server/src/components/documents/DocumentsPageSkeleton';
 import { useDocuments } from 'server/src/hooks/useDocuments';
+import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+
+const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
 
 export default function DocumentsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const currentFolder = searchParams.get('folder');
+
+  // Use user preference for filters pane collapsed state
+  const {
+    value: isFiltersPaneCollapsed,
+    setValue: setIsFiltersPaneCollapsed
+  } = useUserPreference<boolean>(
+    FILTERS_PANE_COLLAPSED_SETTING,
+    {
+      defaultValue: false,
+      localStorageKey: FILTERS_PANE_COLLAPSED_SETTING,
+      debounceMs: 300
+    }
+  );
+
   const [initialized, setInitialized] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [allUsersData, setAllUsersData] = useState<IUserWithRoles[]>([]);
   const [entityTypeOptions, setEntityTypeOptions] = useState<SelectOption[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  
+
   const [filterInputs, setFilterInputs] = useState<DocumentFilterType>({
     entityType: '',
     searchTerm: '',
@@ -29,11 +49,10 @@ export default function DocumentsPage() {
     updated_at_start: '',
     updated_at_end: '',
     sortBy: 'updated_at',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    showAllDocuments: false
   });
 
-  const pageSize = 15;
-  
   const {
     documents,
     totalCount,
@@ -42,23 +61,16 @@ export default function DocumentsPage() {
     refetch: refetchDocuments
   } = useDocuments(
     initialized ? filterInputs : {},
-    currentPage,
-    pageSize
+    1,  // Page 1 - Documents component handles its own pagination
+    9   // Default page size for grid view - Documents component handles page size changes
   );
-  
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const capitalizeFirstLetter = (string: string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
   const handleFiltersChange = (newFilters: DocumentFilterType) => {
     setFilterInputs(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
   };
 
   const handleClearFilters = () => {
@@ -69,20 +81,51 @@ export default function DocumentsPage() {
       updated_at_start: '',
       updated_at_end: '',
       sortBy: 'updated_at',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
+      showAllDocuments: false
     };
     setFilterInputs(clearedFilters);
-    setCurrentPage(1); // Reset to first page when filters are cleared
   };
 
   const handleDocumentUpdate = async () => {
     await refetchDocuments();
   };
 
+  const handleFolderNavigate = (folderPath: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (folderPath) {
+      params.set('folder', folderPath);
+    } else {
+      params.delete('folder');
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    router.replace(newUrl);
+  };
+
+  const handleShowAllDocuments = () => {
+    // Navigate to root folder (no folder parameter)
+    handleFolderNavigate(null);
+    // Set showAllDocuments flag to display all documents without folder hierarchy
+    setFilterInputs({
+      ...filterInputs,
+      showAllDocuments: true
+    });
+  };
+
+
+  // Clear showAllDocuments flag when folder changes
+  useEffect(() => {
+    if (currentFolder && filterInputs.showAllDocuments) {
+      setFilterInputs(prev => ({
+        ...prev,
+        showAllDocuments: false
+      }));
+    }
+  }, [currentFolder]);
 
   useEffect(() => {
     let mounted = true;
-    
+
     const initialize = async () => {
       if (initialized) return;
 
@@ -112,12 +155,12 @@ export default function DocumentsPage() {
         }
 
         if (dbEntityTypes && Array.isArray(dbEntityTypes)) {
-          const options = dbEntityTypes.map(et => ({ 
-            value: et, 
-            label: capitalizeFirstLetter(et) 
+          const options = dbEntityTypes.map(et => ({
+            value: et,
+            label: capitalizeFirstLetter(et)
           }));
           setEntityTypeOptions([
-            { value: 'all_entities', label: 'All Entity Types' }, 
+            { value: 'all_entities', label: 'All Entity Types' },
             ...options
           ]);
         } else {
@@ -136,7 +179,7 @@ export default function DocumentsPage() {
     };
 
     initialize();
-    
+
     return () => {
       mounted = false;
     };
@@ -152,20 +195,72 @@ export default function DocumentsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Documents</h1>
+        <div className="flex items-center gap-2 text-2xl font-semibold">
+          <button
+            onClick={() => handleFolderNavigate(null)}
+            className="flex items-center gap-2 hover:text-blue-600 transition-colors"
+          >
+            <span>Documents</span>
+          </button>
+          {currentFolder && (
+            <>
+              {currentFolder.split('/').filter(p => p).map((part, index, parts) => {
+                const path = '/' + parts.slice(0, index + 1).join('/');
+                return (
+                  <React.Fragment key={path}>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <button
+                      onClick={() => handleFolderNavigate(path)}
+                      className="hover:text-blue-600 transition-colors"
+                    >
+                      {part}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-6">
+        {/* Collapsed Filters Button */}
+        {isFiltersPaneCollapsed && (
+          <div className="flex-shrink-0">
+            <button
+              onClick={() => setIsFiltersPaneCollapsed(false)}
+              className="p-2 hover:bg-gray-100 rounded border border-gray-200 flex items-center gap-2"
+              title="Show filters"
+            >
+              <Filter className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Left Column - Filters */}
-        <div className="w-80">
-          <DocumentFilters
-            filters={filterInputs}
-            onFiltersChange={handleFiltersChange}
-            onClearFilters={handleClearFilters}
-            entityTypeOptions={entityTypeOptions}
-            allUsersData={allUsersData}
-          />
-        </div>
+        {!isFiltersPaneCollapsed && (
+          <div className="w-80 relative">
+            <div className="absolute top-2 right-2 z-10">
+              <button
+                onClick={() => setIsFiltersPaneCollapsed(true)}
+                className="p-1 hover:bg-gray-100 rounded"
+                title="Collapse filters"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+            <DocumentFilters
+              filters={filterInputs}
+              onFiltersChange={handleFiltersChange}
+              onClearFilters={handleClearFilters}
+              entityTypeOptions={entityTypeOptions}
+              allUsersData={allUsersData}
+              onShowAllDocuments={handleShowAllDocuments}
+              showAllDocumentsButton={true}
+            />
+          </div>
+        )}
 
         {/* Right Column - Documents */}
         <div className="flex-1">
@@ -183,19 +278,8 @@ export default function DocumentsPage() {
                 isLoading={isLoading}
                 onDocumentCreated={handleDocumentUpdate}
                 searchTermFromParent={filterInputs.searchTerm}
+                filters={filterInputs}
               />
-            )}
-            
-            {/* Pagination controls */}
-            {!isLoading && documents.length > 0 && totalPages > 1 && (
-              <div className="mt-4 flex justify-center">
-                <DocumentsPagination
-                  id="main-documents-pagination"
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                />
-              </div>
             )}
           </Card>
         </div>

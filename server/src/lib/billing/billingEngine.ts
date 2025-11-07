@@ -393,7 +393,7 @@ export class BillingEngine {
           .on(
             'cl.contract_line_id',
             '=',
-            knex.raw('coalesce(ccl.template_contract_line_id, ccl.contract_line_id)')
+            knex.raw('coalesce(ccl.contract_line_id, ccl.template_contract_line_id)')
           )
           .andOn('cl.tenant', '=', 'ccl.tenant');
       })
@@ -428,10 +428,15 @@ export class BillingEngine {
         'cl.contract_line_name as template_contract_line_name',
         'cl.contract_line_type',
         'cl.billing_frequency as template_billing_frequency',
+        'cl.billing_timing as template_billing_timing',
+        'cl.custom_rate as contract_line_custom_rate',
+        'cl.enable_proration as contract_line_enable_proration',
+        'cl.billing_cycle_alignment as contract_line_billing_cycle_alignment',
         'cc.contract_id',
         'c.contract_name',
         'pricing.custom_rate as pricing_custom_rate',
-        'terms.billing_frequency as term_billing_frequency'
+        'terms.billing_frequency as term_billing_frequency',
+        'terms.billing_timing as term_billing_timing'
       );
 
     // Convert dates from the DB into plain ISO strings using our date utilities
@@ -440,15 +445,33 @@ export class BillingEngine {
       plan.end_date = plan.end_date ? toISODate(toPlainDate(plan.end_date)) : null;
       plan.contract_line_name = plan.template_contract_line_name || plan.contract_line_name;
       plan.billing_frequency = plan.term_billing_frequency || plan.template_billing_frequency || plan.billing_frequency;
-      if (plan.pricing_custom_rate !== null && plan.pricing_custom_rate !== undefined) {
-        const parsedRate = typeof plan.pricing_custom_rate === 'string' ? parseFloat(plan.pricing_custom_rate) : Number(plan.pricing_custom_rate);
+      const resolvedTiming = (plan.term_billing_timing ?? plan.template_billing_timing ?? plan.billing_timing ?? 'arrears') as 'arrears' | 'advance';
+      plan.billing_timing = resolvedTiming;
+      delete plan.term_billing_timing;
+      delete plan.template_billing_timing;
+      const pricingRate = plan.pricing_custom_rate;
+      const contractLineRate = plan.contract_line_custom_rate;
+
+      if (pricingRate !== null && pricingRate !== undefined) {
+        const parsedRate = typeof pricingRate === 'string' ? parseFloat(pricingRate) : Number(pricingRate);
         plan.custom_rate = Number.isFinite(parsedRate) ? Math.round(parsedRate * 100) : null;
-      } else if (plan.custom_rate !== null && plan.custom_rate !== undefined) {
-        const parsedRate = typeof plan.custom_rate === 'string' ? parseFloat(plan.custom_rate) : Number(plan.custom_rate);
+      } else if (contractLineRate !== null && contractLineRate !== undefined) {
+        const parsedRate = typeof contractLineRate === 'string' ? parseFloat(contractLineRate) : Number(contractLineRate);
         plan.custom_rate = Number.isFinite(parsedRate) ? Math.round(parsedRate * 100) : null;
       } else {
         plan.custom_rate = null;
       }
+
+      plan.enable_proration = plan.contract_line_enable_proration ?? plan.enable_proration ?? false;
+      plan.billing_cycle_alignment =
+        (plan.contract_line_billing_cycle_alignment as 'start' | 'end' | 'prorated' | undefined) ??
+        plan.billing_cycle_alignment ??
+        'start';
+
+      delete plan.pricing_custom_rate;
+      delete plan.contract_line_custom_rate;
+      delete plan.contract_line_enable_proration;
+      delete plan.contract_line_billing_cycle_alignment;
     });
 
     return { clientContractLines, billingCycle };
@@ -590,6 +613,31 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
+    const lineBillingTiming = (clientContractLine.billing_timing ?? 'arrears') as 'arrears' | 'advance';
+    const servicePeriod = await this.resolveServicePeriod(
+      clientId,
+      billingPeriod,
+      clientContractLine,
+      lineBillingTiming
+    );
+    let { servicePeriodStart, servicePeriodEnd } = servicePeriod;
+    if (lineBillingTiming === 'arrears' && clientContractLine.start_date) {
+      const serviceEndDate = toPlainDate(servicePeriodEnd);
+      const lineStartDate = toPlainDate(clientContractLine.start_date);
+
+      if (Temporal.PlainDate.compare(serviceEndDate, lineStartDate) < 0) {
+        console.log(
+          `[ARREARS] Skipping fixed charge for ${clientContractLine.contract_line_name} (line ${clientContractLine.contract_line_id}) – service period ${servicePeriodStart} to ${servicePeriodEnd} ends before contract start ${clientContractLine.start_date}.`
+        );
+        return [];
+      }
+
+      const serviceStartDate = toPlainDate(servicePeriodStart);
+      if (Temporal.PlainDate.compare(serviceStartDate, lineStartDate) < 0) {
+        servicePeriodStart = toISODate(lineStartDate);
+      }
+    }
+
     // --- Custom Rate Check (Contracts & Pricing Schedules) ---
     // Check if a custom rate is defined for this plan assignment (provided via contract association)
     // or if an active pricing schedule overrides the rate for this billing period.
@@ -597,6 +645,7 @@ export class BillingEngine {
     // Ensure custom_rate is not null and not undefined before using it.
 
     let effectiveCustomRate = clientContractLine.custom_rate;
+    let generatedCharges: IFixedPriceCharge[] | null = null;
 
     // Check for active pricing schedule that applies to this billing period
     if (clientContractLine.contract_id) {
@@ -623,169 +672,235 @@ export class BillingEngine {
       }
     }
 
-    if (effectiveCustomRate !== null && effectiveCustomRate !== undefined) {
-      // Assuming effectiveCustomRate is already in cents. Add logging to confirm.
-      console.log(`Using custom rate ${effectiveCustomRate} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || 'N/A'}`);
-
-      // If a custom rate exists, create a single charge item for the entire plan at that rate.
-      // This charge represents the entire plan when a custom contract-level rate is applied.
-      const customCharge: IFixedPriceCharge = {
-        // Properties from IFixedPriceCharge & IBillingCharge
-        type: 'fixed',
-        serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Contract: ${clientContractLine.contract_name})` : ''}`,
-        quantity: 1, // Represents the single contract-level plan item
-        rate: effectiveCustomRate, // Use the effective custom rate (from schedule or contract) (assumed cents)
-        total: effectiveCustomRate, // Total is the effective custom rate (assumed cents)
-        // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
-        client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
-        client_contract_id: clientContractLine.client_contract_id || undefined, // Use correct property name
-        contract_name: clientContractLine.contract_name || undefined,
-        // Tax properties (defaulting to 0/non-taxable for now, needs review)
-        tax_amount: 0,
-        tax_rate: 0,
-        tax_region: undefined, // Tax region for consolidated fixed item determined later
-        // Note: serviceId is omitted as this charge represents the whole plan.
-        // Other properties like enable_proration might need to be sourced if relevant for custom rates.
-      };
-      // Return only this single charge for the plan
-      return [customCharge];
-    }
-    // --- End Custom Rate Check ---
-
-
-    // If no custom rate, proceed with calculating based on individual services or plan's fixed rate
-    console.log(`No custom rate found for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}). Calculating based on services/plan rate.`);
-    const client = await this.knex('clients')
-      .where({
-        client_id: clientId,
-        tenant: this.tenant
-      })
-      .first() as IClient;
-
-    if (!client) {
-      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
-    }
-
-    // Removed old logic fetching tax region via client_tax_settings (Phase 1.2)
-
-    const tenant = this.tenant; // Capture tenant value for joins
-
-    // Get the contract line details to determine if this is a fixed fee plan
-    const contractLineDetails = await this.knex('contract_lines')
-      .where({
-        'contract_line_id': clientContractLine.contract_line_id,
-        'tenant': client.tenant // Use client.tenant here for consistency
-      })
-      .first();
-
-    const isFixedFeePlan = contractLineDetails?.contract_line_type === 'Fixed';
-
-    // --- Fetch Plan-Level Fixed Config (Base Rate, Proration, Alignment) ---
-    let planLevelBaseRate: number | null = null; // Store plan base rate in dollars
-    let planLevelEnableProration = false;
-    let planLevelBillingCycleAlignment: 'start' | 'end' | 'prorated' = 'start';
-
-    if (isFixedFeePlan) {
-      const pricing = await this.knex('client_contract_line_pricing')
+    if (!generatedCharges) {
+      // If no custom rate, proceed with calculating based on individual services or plan's fixed rate
+      console.log(`No custom rate found for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}). Calculating based on services/plan rate.`);
+      const client = await this.knex('clients')
         .where({
-          client_contract_line_id: clientContractLine.client_contract_line_id,
-          tenant
+          client_id: clientId,
+          tenant: this.tenant
         })
-        .first('custom_rate');
+        .first() as IClient;
 
-      if (pricing?.custom_rate !== undefined && pricing.custom_rate !== null) {
-        const parsedPricingRate = typeof pricing.custom_rate === 'string' ? parseFloat(pricing.custom_rate) : Number(pricing.custom_rate);
-        if (!Number.isNaN(parsedPricingRate)) {
-          planLevelBaseRate = parsedPricingRate;
+      if (!client) {
+        throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
+      }
+
+      // Removed old logic fetching tax region via client_tax_settings (Phase 1.2)
+
+      const tenant = this.tenant; // Capture tenant value for joins
+
+      // Get the contract line details to determine if this is a fixed fee plan
+      const contractLineDetails = await this.knex('contract_lines')
+        .where({
+          contract_line_id: clientContractLine.contract_line_id,
+          tenant: client.tenant
+        })
+        .first();
+
+      const isFixedFeePlan = contractLineDetails?.contract_line_type === 'Fixed';
+
+      // --- Fetch Plan-Level Fixed Config (Base Rate, Proration, Alignment) ---
+      let planLevelBaseRate: number | null = null; // Store plan base rate in dollars
+      let planLevelEnableProration = false;
+      let planLevelBillingCycleAlignment: 'start' | 'end' | 'prorated' = 'start';
+
+      if (isFixedFeePlan && contractLineDetails) {
+        if (contractLineDetails.custom_rate !== undefined && contractLineDetails.custom_rate !== null) {
+          const parsedContractRate =
+            typeof contractLineDetails.custom_rate === 'string'
+              ? parseFloat(contractLineDetails.custom_rate)
+              : Number(contractLineDetails.custom_rate);
+          if (!Number.isNaN(parsedContractRate)) {
+            planLevelBaseRate = parsedContractRate;
+          }
+        }
+
+        if (contractLineDetails.enable_proration !== undefined && contractLineDetails.enable_proration !== null) {
+          planLevelEnableProration = Boolean(contractLineDetails.enable_proration);
+        }
+
+        const alignmentCandidate = contractLineDetails.billing_cycle_alignment;
+        if (
+          typeof alignmentCandidate === 'string' &&
+          (alignmentCandidate === 'start' || alignmentCandidate === 'end' || alignmentCandidate === 'prorated')
+        ) {
+          planLevelBillingCycleAlignment = alignmentCandidate;
         }
       }
-    }
 
-    const planServices = await this.knex('client_contract_services as ccs')
-      .join('client_contract_service_configuration as ccsc', function () {
-        this.on('ccsc.client_contract_service_id', '=', 'ccs.client_contract_service_id')
-          .andOn('ccsc.tenant', '=', 'ccs.tenant');
-      })
-      .leftJoin('client_contract_service_fixed_config as ccsfc', function () {
-        this.on('ccsfc.config_id', '=', 'ccsc.config_id')
-          .andOn('ccsfc.tenant', '=', 'ccsc.tenant');
-      })
-      .join('service_catalog as sc', function () {
-        this.on('sc.service_id', '=', 'ccs.service_id')
-          .andOn('sc.tenant', '=', 'ccs.tenant');
-      })
-      .where({
-        'ccs.client_contract_line_id': clientContractLine.client_contract_line_id,
-        'ccs.tenant': tenant,
-        'ccsc.configuration_type': 'Fixed'
-      })
-      .select(
-        'sc.service_id',
-        'sc.service_name',
-        'sc.default_rate',
-        'sc.tax_rate_id',
-        'ccs.quantity as service_quantity',
-        'ccs.custom_rate as service_line_custom_rate',
-        'ccsc.quantity as configuration_quantity',
-        'ccsc.custom_rate as configuration_custom_rate',
-        'ccsc.config_id',
-        'ccsfc.base_rate as service_base_rate',
-        'ccsfc.enable_proration',
-        'ccsfc.billing_cycle_alignment'
-      );
+      if (isFixedFeePlan) {
+        const pricing = await this.knex('client_contract_line_pricing')
+          .where({
+            client_contract_line_id: clientContractLine.client_contract_line_id,
+            tenant
+          })
+          .first('custom_rate');
 
-    if (planServices.length === 0) {
-      return [];
-    }
-
-    const normalizedPlanServices = planServices.map((service: any) => {
-      const quantityValue =
-        service.configuration_quantity ?? service.service_quantity ?? service.quantity ?? 1;
-      return {
-        ...service,
-        quantity: Number(quantityValue ?? 1) || 1,
-      };
-    });
-
-    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
-      let derivedBaseRate = 0;
-      let hasServiceBaseRate = false;
-
-      for (const service of planServices) {
-        const rawServiceBaseRate = service.service_base_rate;
-        if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
-          const parsedServiceBaseRate = typeof rawServiceBaseRate === 'string' ? parseFloat(rawServiceBaseRate) : Number(rawServiceBaseRate);
-          if (!Number.isNaN(parsedServiceBaseRate)) {
-            const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
-            derivedBaseRate += parsedServiceBaseRate * quantity;
-            hasServiceBaseRate = true;
+        if (pricing?.custom_rate !== undefined && pricing.custom_rate !== null) {
+          const parsedPricingRate =
+            typeof pricing.custom_rate === 'string' ? parseFloat(pricing.custom_rate) : Number(pricing.custom_rate);
+          if (!Number.isNaN(parsedPricingRate)) {
+            planLevelBaseRate = parsedPricingRate;
+          }
+        } else if (planLevelBaseRate === null && clientContractLine.custom_rate != null) {
+          const parsedAssignmentRate =
+            typeof clientContractLine.custom_rate === 'string'
+              ? parseFloat(clientContractLine.custom_rate)
+              : Number(clientContractLine.custom_rate);
+          if (!Number.isNaN(parsedAssignmentRate)) {
+            planLevelBaseRate = parsedAssignmentRate;
           }
         }
       }
 
-      if (hasServiceBaseRate) {
-        planLevelBaseRate = derivedBaseRate;
-        console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`);
+      const planServices = await this.knex('client_contract_services as ccs')
+        .join('client_contract_service_configuration as ccsc', function () {
+          this.on('ccsc.client_contract_service_id', '=', 'ccs.client_contract_service_id')
+            .andOn('ccsc.tenant', '=', 'ccs.tenant');
+        })
+        .leftJoin('client_contract_service_fixed_config as ccsfc', function () {
+          this.on('ccsfc.config_id', '=', 'ccsc.config_id')
+            .andOn('ccsfc.tenant', '=', 'ccsc.tenant');
+        })
+        .join('service_catalog as sc', function () {
+          this.on('sc.service_id', '=', 'ccs.service_id')
+            .andOn('sc.tenant', '=', 'ccs.tenant');
+        })
+        .where({
+          'ccs.client_contract_line_id': clientContractLine.client_contract_line_id,
+          'ccs.tenant': tenant,
+          'ccsc.configuration_type': 'Fixed'
+        })
+        .select(
+          'sc.service_id',
+          'sc.service_name',
+          'sc.default_rate',
+          'sc.tax_rate_id',
+          'ccs.quantity as service_quantity',
+          'ccs.custom_rate as service_line_custom_rate',
+          'ccsc.quantity as configuration_quantity',
+          'ccsc.custom_rate as configuration_custom_rate',
+          'ccsc.config_id',
+          'ccsfc.base_rate as service_base_rate',
+          'ccsfc.enable_proration',
+          'ccsfc.billing_cycle_alignment'
+        );
+
+      if (planServices.length === 0) {
+        return [];
       }
-    }
 
-    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
-      const totalDefaultRateCents = planServices.reduce((sum: number, service: any) => {
-        const rate = Number(service.default_rate ?? 0);
-        const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
-        return sum + rate * quantity;
-      }, 0);
+      const normalizedPlanServices = planServices.map((service: any) => {
+        const quantityValue =
+          service.configuration_quantity ?? service.service_quantity ?? service.quantity ?? 1;
+        return {
+          ...service,
+          quantity: Number(quantityValue ?? 1) || 1,
+        };
+      });
 
-      if (totalDefaultRateCents !== 0) {
-        planLevelBaseRate = totalDefaultRateCents / 100;
-        console.log(`[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`);
+      if (!planLevelEnableProration) {
+        const prorationFromService = planServices.find((service: any) => service.enable_proration);
+        if (prorationFromService?.enable_proration) {
+          planLevelEnableProration = Boolean(prorationFromService.enable_proration);
+        }
       }
-    }
 
-    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
-      console.error(`[DEBUG] Unable to determine base_rate for contract line ${clientContractLine.contract_line_id}.`);
-      return [];
-    }
+      if (planLevelBillingCycleAlignment === 'start') {
+        const alignmentFromService = planServices.find(
+          (service: any) =>
+            typeof service.billing_cycle_alignment === 'string' &&
+            (service.billing_cycle_alignment === 'start' ||
+              service.billing_cycle_alignment === 'end' ||
+              service.billing_cycle_alignment === 'prorated')
+        );
+        if (alignmentFromService) {
+          planLevelBillingCycleAlignment = alignmentFromService.billing_cycle_alignment;
+        }
+      }
+
+      if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+        let derivedBaseRate = 0;
+        let hasServiceBaseRate = false;
+
+        for (const service of planServices) {
+          const rawServiceBaseRate = service.service_base_rate;
+          if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
+            const parsedServiceBaseRate =
+              typeof rawServiceBaseRate === 'string' ? parseFloat(rawServiceBaseRate) : Number(rawServiceBaseRate);
+            if (!Number.isNaN(parsedServiceBaseRate)) {
+              const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
+              derivedBaseRate += parsedServiceBaseRate * quantity;
+              hasServiceBaseRate = true;
+            }
+          }
+        }
+
+        if (hasServiceBaseRate) {
+          planLevelBaseRate = derivedBaseRate;
+          console.log(
+            `[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`
+          );
+        }
+      }
+
+      if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+        const totalDefaultRateCents = planServices.reduce((sum: number, service: any) => {
+          const rate = Number(service.default_rate ?? 0);
+          const quantity = Number(service.configuration_quantity ?? service.service_quantity ?? 1) || 1;
+          return sum + rate * quantity;
+        }, 0);
+        if (totalDefaultRateCents !== 0) {
+          planLevelBaseRate = totalDefaultRateCents / 100;
+          console.log(
+            `[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`
+          );
+        }
+      }
+
+      if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+        console.error(
+          `[DEBUG] Unable to determine base_rate for contract line ${clientContractLine.contract_line_id}.`
+        );
+        return [];
+      }
+
+      const planLevelBaseRateCents =
+        planLevelBaseRate !== null && !Number.isNaN(planLevelBaseRate)
+          ? Math.round(planLevelBaseRate * 100)
+          : null;
+
+      const hasCustomRateOverride =
+        effectiveCustomRate !== null &&
+        effectiveCustomRate !== undefined &&
+        (planLevelBaseRateCents === null || Math.round(Number(effectiveCustomRate)) !== planLevelBaseRateCents);
+
+      if (hasCustomRateOverride) {
+        const resolvedCustomRateCents = Math.round(Number(effectiveCustomRate));
+        console.log(
+          `Using custom rate ${resolvedCustomRateCents} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || 'N/A'}`
+        );
+
+        return [
+          {
+            type: 'fixed',
+            serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Contract: ${clientContractLine.contract_name})` : ''}`,
+            quantity: 1,
+            rate: resolvedCustomRateCents,
+            total: resolvedCustomRateCents,
+            client_contract_line_id: clientContractLine.client_contract_line_id,
+            client_contract_id: clientContractLine.client_contract_id || undefined,
+            contract_name: clientContractLine.contract_name || undefined,
+            tax_amount: 0,
+            tax_rate: 0,
+            tax_region: undefined,
+            servicePeriodStart,
+            servicePeriodEnd,
+            billingTiming: lineBillingTiming,
+          } as IFixedPriceCharge,
+        ];
+      }
 
     if (isFixedFeePlan) {
       // For fixed fee plans, we want to create a single consolidated charge
@@ -821,6 +936,10 @@ export class BillingEngine {
       const taxServiceInstance = new TaxService(); // Corrected instantiation
       // Fetch billing cycle once for proration calculation if needed
       const billingCycle = await this.getBillingCycle(clientId, billingPeriod.startDate);
+      const effectiveProrationPeriod = lineBillingTiming === 'advance'
+        ? { startDate: servicePeriodStart, endDate: servicePeriodEnd }
+        : billingPeriod;
+
       const serviceAllocations = await Promise.all(normalizedPlanServices.map(async (service) => {
         // Calculate the FMV for this service in CENTS
         // Use custom_rate from plan config if available (assume dollars), otherwise fallback to service default_rate (assume cents).
@@ -842,7 +961,7 @@ export class BillingEngine {
         // Use the plan-level proration setting fetched earlier for fixed plans
         if (planLevelEnableProration) {
           prorationFactor = this._calculateProrationFactor(
-            billingPeriod,
+            effectiveProrationPeriod,
             clientContractLine.start_date,
             clientContractLine.end_date,
             billingCycle
@@ -974,7 +1093,7 @@ export class BillingEngine {
       }
 
       console.log(`Detailed fixed price charges for client ${clientId}, plan ${clientContractLine.contract_line_id}:`, detailedCharges);
-      return detailedCharges;
+      generatedCharges = detailedCharges;
     } else {
       // This block handles cases where the plan type isn't 'Fixed', but a service within it
       // is configured as 'Fixed'. This might be legacy or an edge case.
@@ -1037,8 +1156,56 @@ export class BillingEngine {
       }));
 
       console.log(`Fixed price charges for client ${clientId}:`, fixedCharges);
-      return fixedCharges;
+      generatedCharges = fixedCharges;
     }
+  }
+
+    if (!generatedCharges || generatedCharges.length === 0) {
+      return [];
+    }
+
+    const chargesWithMeta = generatedCharges.map((charge) => ({
+      ...charge,
+      servicePeriodStart,
+      servicePeriodEnd,
+      billingTiming: lineBillingTiming
+    }));
+
+    let positiveCharges: IFixedPriceCharge[] = chargesWithMeta;
+
+    if (lineBillingTiming === 'advance') {
+      const endedBeforeAdvance = clientContractLine.end_date
+        ? Temporal.PlainDate.compare(
+            toPlainDate(clientContractLine.end_date),
+            toPlainDate(servicePeriodStart)
+          ) < 0
+        : false;
+
+      let existingAdvance = false;
+      if (!endedBeforeAdvance) {
+        existingAdvance = await this.hasExistingServicePeriodCharge(
+          clientContractLine.client_contract_line_id,
+          servicePeriodStart,
+          servicePeriodEnd,
+          'advance'
+        );
+      }
+
+      if (endedBeforeAdvance || existingAdvance) {
+        console.log(`[BillingEngine] Skipping advance billing for contract line ${clientContractLine.contract_line_id}: ${endedBeforeAdvance ? 'line ends before next period' : 'charge already persisted for service period'}`);
+        positiveCharges = [];
+      }
+    }
+
+    const creditCharges = lineBillingTiming === 'advance'
+      ? this.buildAdvanceTerminationCredits(
+          clientContractLine,
+          billingPeriod,
+          chargesWithMeta
+        )
+      : [];
+
+    return [...positiveCharges, ...creditCharges];
   }
 
   private async calculateTimeBasedCharges(clientId: string, billingPeriod: IBillingPeriod, clientContractLine: IClientContractLine): Promise<ITimeBasedCharge[]> {
@@ -1119,6 +1286,10 @@ export class BillingEngine {
         this.on('time_entries.user_id', '=', 'users.user_id')
           .andOn('users.tenant', '=', 'time_entries.tenant');
       })
+      .leftJoin('service_catalog', function () {
+        this.on('service_catalog.service_id', '=', 'time_entries.service_id')
+          .andOn('service_catalog.tenant', '=', 'time_entries.tenant');
+      })
       .leftJoin('project_ticket_links', function () {
         this.on('time_entries.work_item_id', '=', 'project_ticket_links.ticket_id')
           .andOn('project_ticket_links.tenant', '=', 'time_entries.tenant');
@@ -1138,10 +1309,6 @@ export class BillingEngine {
       .leftJoin('tickets', function () {
         this.on('time_entries.work_item_id', '=', 'tickets.ticket_id')
           .andOn('tickets.tenant', '=', 'time_entries.tenant');
-      })
-      .leftJoin('client_contract_service_bucket_config as ccsbc', function () {
-        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
-          .andOn('service_catalog.tenant', '=', 'time_entries.tenant');
       })
       .where({
         'time_entries.tenant': client.tenant
@@ -1175,7 +1342,7 @@ export class BillingEngine {
         'time_entries.*',
         'service_catalog.service_name',
         'service_catalog.default_rate',
-        'service_catalog.tax_rate_id', // Fetch tax_rate_id
+        'service_catalog.tax_rate_id',
         this.knex.raw('COALESCE(project_tasks.task_name, tickets.title) as work_item_name')
       );
 
@@ -1268,6 +1435,9 @@ export class BillingEngine {
         tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         entryId: entry.entry_id,
         is_taxable: isTaxable, // Use derived value
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: 'arrears',
         // Add contract association information when the plan is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined
@@ -1336,8 +1506,8 @@ export class BillingEngine {
     }
 
     const usageRecordQuery = this.knex('usage_tracking')
-      .leftJoin('client_contract_service_bucket_config as ccsbc', function () {
-        this.on('usage_tracking.service_id', '=', 'service_catalog.service_id')
+      .leftJoin('service_catalog', function () {
+        this.on('service_catalog.service_id', '=', 'usage_tracking.service_id')
           .andOn('service_catalog.tenant', '=', 'usage_tracking.tenant');
       })
       .where({
@@ -1432,6 +1602,9 @@ export class BillingEngine {
         tax_rate: taxRate,     // Set initial tax rate
         usageId: record.usage_id,
         is_taxable: isTaxable, // Use derived value
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: 'arrears',
         // Add contract association information when the plan is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined
@@ -1506,6 +1679,9 @@ export class BillingEngine {
         tax_rate: taxRate,
         tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         is_taxable: isTaxable,
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: 'arrears',
         // Add contract association information when the plan is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined
@@ -1579,6 +1755,9 @@ export class BillingEngine {
         tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         period_start: billingPeriod.startDate,
         period_end: billingPeriod.endDate,
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: 'arrears',
         is_taxable: isTaxable,
         // Add contract association information when the plan is covered by a contract assignment
         client_contract_id: clientContractLine.client_contract_id || undefined,
@@ -1591,7 +1770,7 @@ export class BillingEngine {
     return licenseCharges;
   }
 
-  private async calculateBucketPlanCharges(clientId: string, period: IBillingPeriod, contractLine: IClientContractLine): Promise<IBucketCharge[]> {
+  private async calculateBucketPlanCharges(clientId: string, billingPeriod: IBillingPeriod, contractLine: IClientContractLine): Promise<IBucketCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -1618,8 +1797,8 @@ export class BillingEngine {
           .andOn('ccsbc.tenant', '=', 'ccsc.tenant');
       })
       .join('service_catalog as sc', function () {
-        this.on('ccsc.service_id', '=', 'sc.service_id')
-          .andOn('sc.tenant', '=', 'ccsc.tenant');
+        this.on('ccs.service_id', '=', 'sc.service_id')
+          .andOn('sc.tenant', '=', 'ccs.tenant');
       })
       .where({
         'ccs.client_contract_line_id': contractLine.client_contract_line_id,
@@ -1631,7 +1810,8 @@ export class BillingEngine {
         'ccsbc.*',
         'sc.service_name',
         'sc.default_rate',
-        'sc.tax_rate_id'
+        'sc.tax_rate_id',
+        'ccs.service_id'
       );
 
     if (!bucketConfigs || bucketConfigs.length === 0) {
@@ -1648,8 +1828,8 @@ export class BillingEngine {
           contract_line_id: contractLine.contract_line_id,
           service_catalog_id: bucketConfig.service_id
         })
-        .where('period_start', '>=', period.startDate)
-        .where('period_end', '<=', period.endDate)
+        .where('period_start', '>=', billingPeriod.startDate)
+        .where('period_end', '<=', billingPeriod.endDate)
         .select('*');
 
       if (usageRecords.length === 0) {
@@ -1700,7 +1880,7 @@ export class BillingEngine {
         if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
           try {
             const taxServiceInstance = new TaxService();
-            const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, period.endDate, effectiveTaxRegion);
+            const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
             taxRate = taxResult.taxRate;
             taxAmount = taxResult.taxAmount;
           } catch (error) {
@@ -1722,6 +1902,9 @@ export class BillingEngine {
           serviceId: bucketConfig.service_id, // Common field
           tax_amount: taxAmount,
           is_taxable: isTaxable,
+          servicePeriodStart: billingPeriod.startDate,
+          servicePeriodEnd: billingPeriod.endDate,
+          billingTiming: 'arrears',
           // Add contract association information when the plan is covered by a contract assignment
           client_contract_id: contractLine.client_contract_id || undefined,
           contract_name: contractLine.contract_name || undefined
@@ -1737,6 +1920,136 @@ export class BillingEngine {
     return bucketCharges;
   }
 
+  private async resolveServicePeriod(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    _clientContractLine: IClientContractLine,
+    billingTiming: 'arrears' | 'advance'
+  ): Promise<{ servicePeriodStart: ISO8601String; servicePeriodEnd: ISO8601String }> {
+    const currentStart = toPlainDate(billingPeriod.startDate);
+    const currentEndExclusive = toPlainDate(billingPeriod.endDate);
+
+    if (billingTiming === 'advance') {
+      const currentPeriodEnd = toISODate(currentEndExclusive.subtract({ days: 1 }));
+      return {
+        servicePeriodStart: toISODate(currentStart),
+        servicePeriodEnd: currentPeriodEnd
+      };
+    }
+
+    const cycleDays = Math.max(
+      currentStart.until(currentEndExclusive, { largestUnit: 'days' }).days,
+      1
+    );
+    const previousStart = toISODate(currentStart.subtract({ days: cycleDays }));
+    const previousEnd = toISODate(currentStart.subtract({ days: 1 }));
+
+    return {
+      servicePeriodStart: previousStart,
+      servicePeriodEnd: previousEnd
+    };
+  }
+
+  private async hasExistingServicePeriodCharge(
+    clientContractLineId: string,
+    servicePeriodStart: ISO8601String,
+    servicePeriodEnd: ISO8601String,
+    billingTiming: 'arrears' | 'advance'
+  ): Promise<boolean> {
+    await this.initKnex();
+    if (!this.knex || !this.tenant) {
+      throw new Error('Database connection not initialized');
+    }
+
+    const existing = await this.knex('invoice_charge_details as iid')
+      .join('client_contract_service_configuration as ccsc', function () {
+        this.on('iid.config_id', '=', 'ccsc.config_id')
+          .andOn('iid.tenant', '=', 'ccsc.tenant');
+      })
+      .join('client_contract_services as ccs', function () {
+        this.on('ccsc.client_contract_service_id', '=', 'ccs.client_contract_service_id')
+          .andOn('ccsc.tenant', '=', 'ccs.tenant');
+      })
+      .where('iid.tenant', this.tenant)
+      .andWhere('ccs.client_contract_line_id', clientContractLineId)
+      .andWhere('iid.service_period_start', servicePeriodStart)
+      .andWhere('iid.service_period_end', servicePeriodEnd)
+      .andWhere('iid.billing_timing', billingTiming)
+      .first();
+
+    return Boolean(existing);
+  }
+
+  private buildAdvanceTerminationCredits(
+    clientContractLine: IClientContractLine,
+    billingPeriod: IBillingPeriod,
+    advanceCharges: IFixedPriceCharge[]
+  ): IFixedPriceCharge[] {
+    if (!clientContractLine.end_date || advanceCharges.length === 0) {
+      return [];
+    }
+
+    const periodEnd = toPlainDate(billingPeriod.endDate);
+    const lineEnd = toPlainDate(clientContractLine.end_date);
+
+    if (Temporal.PlainDate.compare(lineEnd, periodEnd) >= 0) {
+      return [];
+    }
+
+    const billingStart = toPlainDate(billingPeriod.startDate);
+    let creditStart = lineEnd.add({ days: 1 });
+    if (Temporal.PlainDate.compare(creditStart, billingStart) < 0) {
+      creditStart = billingStart;
+    }
+
+    if (Temporal.PlainDate.compare(creditStart, periodEnd) > 0) {
+      return [];
+    }
+
+    const periodDays = this.calculateInclusiveDays(billingPeriod.startDate, billingPeriod.endDate);
+    if (periodDays <= 0) {
+      return [];
+    }
+
+    const unusedDays = creditStart.until(periodEnd, { largestUnit: 'days' }).days + 1;
+    if (unusedDays <= 0) {
+      return [];
+    }
+
+    const unusedFactor = Math.min(unusedDays / periodDays, 1);
+    const creditStartIso = toISODate(creditStart);
+
+    return advanceCharges
+      .map((charge) => {
+        const baseTotal = charge.total ?? 0;
+        const baseTax = charge.tax_amount ?? 0;
+        const creditTotal = Math.round(baseTotal * unusedFactor);
+        const creditTax = Math.round(baseTax * unusedFactor);
+
+        if (creditTotal === 0 && creditTax === 0) {
+          return null;
+        }
+
+        return {
+          ...charge,
+          total: -creditTotal,
+          tax_amount: -creditTax,
+          servicePeriodStart: creditStartIso,
+          servicePeriodEnd: billingPeriod.endDate,
+          billingTiming: 'arrears' as const
+        } as IFixedPriceCharge;
+      })
+      .filter((entry): entry is IFixedPriceCharge => entry !== null && Boolean(entry) && entry.servicePeriodStart !== undefined);
+  }
+
+  private calculateInclusiveDays(start: ISO8601String, end: ISO8601String): number {
+    const startPlain = toPlainDate(start);
+    const endPlain = toPlainDate(end);
+    if (Temporal.PlainDate.compare(endPlain, startPlain) < 0) {
+      return 0;
+    }
+    return startPlain.until(endPlain, { largestUnit: 'days' }).days + 1;
+  }
 
   /**
    * Calculates the proration factor based on the plan's active dates within the billing period.

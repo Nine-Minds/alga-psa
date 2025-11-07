@@ -23,6 +23,7 @@ import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
 import { AssetAssociationModel } from 'server/src/models/asset';
 import { getEventBus } from '../../../lib/eventBus';
+import { getEmailEventChannel } from '../../notifications/emailChannel';
 import { 
   TicketCreatedEvent,
   TicketUpdatedEvent,
@@ -47,10 +48,13 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 // Helper function to safely publish events
 async function safePublishEvent(eventType: string, payload: any) {
   try {
-    await getEventBus().publish({
-      eventType,
-      payload
-    });
+    await getEventBus().publish(
+      {
+        eventType,
+        payload
+      },
+      { channel: getEmailEventChannel() }
+    );
   } catch (error) {
     console.error(`Failed to publish ${eventType} event:`, error);
   }
@@ -659,8 +663,12 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
       query = query.where('t.priority_id', validatedFilters.priorityId);
     }
 
-    if (validatedFilters.categoryId && validatedFilters.categoryId !== 'all') {
-      query = query.where('t.category_id', validatedFilters.categoryId);
+    if (validatedFilters.categoryId) {
+      if (validatedFilters.categoryId === 'no-category') {
+        query = query.whereNull('t.category_id');
+      } else if (validatedFilters.categoryId !== 'all') {
+        query = query.where('t.category_id', validatedFilters.categoryId);
+      }
     }
 
     if (validatedFilters.clientId) {
@@ -675,7 +683,46 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
       });
     }
 
-      const tickets = await query.orderBy('t.entered_at', 'desc');
+    if (validatedFilters.tags && validatedFilters.tags.length > 0) {
+      query = query.whereIn('t.ticket_id', function() {
+        this.select('tm.tagged_id')
+          .from('tag_mappings as tm')
+          .join('tag_definitions as td', function() {
+            this.on('tm.tenant', '=', 'td.tenant')
+                .andOn('tm.tag_id', '=', 'td.tag_id');
+          })
+          .where('tm.tagged_type', 'ticket')
+          .andWhere('tm.tenant', tenant)
+          .whereIn('td.tag_text', validatedFilters.tags as string[]);
+      });
+    }
+
+      const sortBy = validatedFilters.sortBy ?? 'entered_at';
+      const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
+      const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
+        ticket_number: { column: 't.ticket_number' },
+        title: { column: 't.title' },
+        status_name: { column: 's.name' },
+        priority_name: { column: 'p.priority_name' },
+        board_name: { column: 'c.board_name' },
+        category_name: { column: 'cat.category_name' },
+        client_name: { column: 'co.client_name' },
+        entered_at: { column: 't.entered_at' },
+        entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" }
+      };
+      const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
+
+      const tickets = await query
+        .modify(queryBuilder => {
+          if (selectedSort.rawExpression) {
+            queryBuilder.orderByRaw(`${selectedSort.rawExpression} ${sortDirection}`);
+          } else if (selectedSort.column) {
+            queryBuilder.orderBy(selectedSort.column, sortDirection);
+          } else {
+            queryBuilder.orderBy('t.entered_at', sortDirection);
+          }
+        })
+        .orderBy('t.ticket_id', 'desc');
 
       // Transform and validate the data
       const ticketListItems = tickets.map((ticket: any): ITicketListItem => {

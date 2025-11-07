@@ -109,13 +109,16 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
   }) {
     const { contractId, clientContractId, contractLineId, clientContractLineId } = params;
 
-    await context.db('contract_line_mappings').insert({
-      tenant: context.tenantId,
-      contract_id: contractId,
-      contract_line_id: contractLineId,
-      display_order: 1,
-      custom_rate: null
-    });
+    await context.db('contract_lines')
+      .where({
+        tenant: context.tenantId,
+        contract_line_id: contractLineId
+      })
+      .update({
+        contract_id: contractId,
+        display_order: 1,
+        custom_rate: null
+      });
 
     if (clientContractLineId) {
       await context.db('client_contract_lines')
@@ -123,7 +126,11 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
           tenant: context.tenantId,
           client_contract_line_id: clientContractLineId
         })
-        .update({ is_active: false });
+        .update({
+          client_contract_id: clientContractId,
+          contract_line_id: contractLineId,
+          is_active: true
+        });
     }
   }
 
@@ -159,7 +166,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -174,7 +181,6 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         'contract_lines',
         'contracts',
         'client_contracts',
-        'contract_line_mappings',
         'contract_pricing_schedules',
         'bucket_plans',
         'tax_rates',
@@ -250,7 +256,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000, // $100 base rate
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create a contract to hold the pricing schedule
@@ -304,7 +311,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(result).not.toBeNull();
       expect(result!.subtotal).toBe(15000);
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
@@ -329,7 +336,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       const contractId = await context.createEntity('contracts', {
@@ -369,7 +377,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(result).not.toBeNull();
       expect(result!.subtotal).toBe(10000); // Should use base rate
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
@@ -392,7 +400,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create contract with two pricing schedules
@@ -468,10 +477,10 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(januaryInvoice!.subtotal).toBe(10000);
       expect(marchInvoice!.subtotal).toBe(15000);
 
-      const januaryItems = await context.db('invoice_items')
+      const januaryItems = await context.db('invoice_charges')
         .where('invoice_id', januaryInvoice!.invoice_id)
         .select('*');
-      const marchItems = await context.db('invoice_items')
+      const marchItems = await context.db('invoice_charges')
         .where('invoice_id', marchInvoice!.invoice_id)
         .select('*');
 
@@ -498,7 +507,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create contract with null rate pricing schedule
@@ -550,7 +560,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(result).not.toBeNull();
       expect(result!.subtotal).toBe(10000); // Falls back to base rate
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         ;
 
@@ -573,7 +583,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         baseRateCents: 10000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create contract with expired pricing schedule
@@ -624,7 +635,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       expect(result).not.toBeNull();
       expect(result!.subtotal).toBe(10000); // Uses base rate, not schedule rate
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         ;
 

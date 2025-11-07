@@ -160,7 +160,7 @@ export function validateWebsiteUrl(url: string): string | null {
 // Email validation - professional SaaS/CRM grade with disposable domain blocking
 export function validateEmailAddress(email: string): string | null {
   if (!email || !email.trim()) {
-    return null; // Email is optional in some contexts
+    return 'Email address is required';
   }
   
   // Check for spaces-only input
@@ -245,67 +245,72 @@ export function validatePhoneNumber(phone: string): string | null {
     return null; // Don't show error until user types more
   }
   
-  // Remove formatting to count actual digits
-  const digitsOnly = trimmedPhone.replace(/[\s\-\(\)\+\.]/g, '');
-  
+  // Extract Unicode digits (supports international number systems)
+  const unicodeDigits = trimmedPhone.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+  const digitCount = unicodeDigits.length;
+
   // If only 1-3 digits (like just country code), don't show error yet
-  if (digitsOnly.length < 4) {
+  if (digitCount < 4) {
     return null; // Wait for more input
   }
-  
-  // No emojis or letters
+
+  // No emojis
   if (EMOJI_REGEX.test(trimmedPhone)) {
     return 'Phone number cannot contain emojis';
   }
-  
-  // Allow only digits with formatting (spaces, dashes, parentheses)
-  if (!/^\+?[\d\s\-\(\)\.]+$/.test(trimmedPhone)) {
+
+  // Allow Unicode digits with international formatting (including extensions with letters)
+  if (!/^[\+\p{N}0-9\s\-\(\)\.,#*a-zA-Z]+$/u.test(trimmedPhone)) {
     return 'Phone number can only contain numbers and formatting characters';
   }
-  
-  // Must be 7-15 digits (international standard) - but only after user has typed enough
-  if (digitsOnly.length >= 4 && digitsOnly.length < 7) {
+
+  // Must be 7-15 digits (ITU-T E.164 international standard)
+  if (digitCount >= 4 && digitCount < 7) {
     return 'Please enter a complete phone number';
   }
-  
-  if (digitsOnly.length > 15) {
+
+  if (digitCount > 15) {
     return 'Phone number is too long';
   }
-  
+
   // Only validate patterns if we have a reasonable length
-  if (digitsOnly.length >= 7) {
+  if (digitCount >= 7) {
+    const unicodeDigitString = unicodeDigits.join('');
+
     // Reject obvious fakes - same digits repeated
-    if (/^(\d)\1+$/.test(digitsOnly)) {
+    if (/^(.)\1+$/u.test(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
-    
-    // Reject sequential patterns (like professional platforms do)
+
+    // Reject sequential patterns (supports Unicode digits)
     const isSequential = (str: string): boolean => {
       for (let i = 0; i < str.length - 2; i++) {
         const current = parseInt(str[i]);
         const next1 = parseInt(str[i + 1]);
         const next2 = parseInt(str[i + 2]);
-        
+
         // Check for ascending sequence (123, 234, etc.)
-        if (next1 === current + 1 && next2 === current + 2) {
-          return true;
-        }
-        
-        // Check for descending sequence (321, 210, etc.)
-        if (next1 === current - 1 && next2 === current - 2) {
-          return true;
+        if (!isNaN(current) && !isNaN(next1) && !isNaN(next2)) {
+          if (next1 === current + 1 && next2 === current + 2) {
+            return true;
+          }
+
+          // Check for descending sequence (321, 210, etc.)
+          if (next1 === current - 1 && next2 === current - 2) {
+            return true;
+          }
         }
       }
       return false;
     };
-    
-    if (isSequential(digitsOnly)) {
+
+    if (isSequential(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
-    
-    // Block common test numbers
+
+    // Block common test numbers (convert to regular digits for comparison)
     const testNumbers = ['1234567890', '0123456789', '1111111111', '0000000000', '5555555555'];
-    if (testNumbers.includes(digitsOnly)) {
+    if (testNumbers.includes(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
   }
@@ -336,11 +341,11 @@ export function validatePostalCode(postalCode: string, countryCode: string = 'US
     case 'US':
       // US ZIP codes: 12345 or 12345-6789
       if (!/^\d{5}(-\d{4})?$/.test(trimmedCode)) {
-        return 'Please enter a valid US ZIP code';
+        return 'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)';
       }
       // Block obvious fake ZIP codes
       if (trimmedCode === '00000' || trimmedCode === '99999' || trimmedCode.startsWith('00000')) {
-        return 'Please enter a valid US ZIP code';
+        return 'Please enter a valid ZIP code';
       }
       break;
       
@@ -561,9 +566,10 @@ export function validateIndustry(industry: string): string | null {
     return 'Industry must be 100 characters or less';
   }
   
-  // No emojis
-  if (EMOJI_REGEX.test(trimmedIndustry)) {
-    return 'Industry cannot contain emojis';
+  // Allow emojis if accompanied by text (like company names)
+  const textWithoutEmojis = trimmedIndustry.replace(EMOJI_REGEX, '').trim();
+  if (EMOJI_REGEX.test(trimmedIndustry) && textWithoutEmojis.length < 2) {
+    return 'Industry must contain at least 2 text characters';
   }
   
   if (trimmedIndustry.length < 2) {
@@ -583,7 +589,33 @@ export function validateIndustry(industry: string): string | null {
   return null;
 }
 
-// Contact name validation - enterprise-level rules  
+// Role validation - enterprise-level rules (matches QuickAddContact validation)
+export function validateRole(role: string): string | null {
+  if (!role || !role.trim()) {
+    return null; // Role is optional
+  }
+
+  const trimmedRole = role.trim();
+
+  // Check for spaces-only input
+  if (/^\s+$/.test(role)) {
+    return 'Role cannot contain only spaces';
+  }
+
+  // Enterprise rule: Max length 100 characters
+  if (trimmedRole.length > 100) {
+    return 'Role must be 100 characters or less';
+  }
+
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(trimmedRole)) {
+    return 'Role must contain letters or numbers';
+  }
+
+  return null;
+}
+
+// Contact name validation - enterprise-level rules
 export function validateContactName(name: string): string | null {
   if (!name || !name.trim()) {
     return null; // Contact name is optional
@@ -641,7 +673,177 @@ export function validateNotes(notes: string): string | null {
 }
 
 
+// Company size validation - professional SaaS/CRM grade (Microsoft/Salesforce standard)
+export function validateCompanySize(companySize: string): string | null {
+  if (!companySize || !companySize.trim()) {
+    return null; // Company size is optional
+  }
+
+  const trimmedSize = companySize.trim();
+
+  // Enterprise rule: Max length 50 characters
+  if (trimmedSize.length > 50) {
+    return 'Company size must be 50 characters or less';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedSize)) {
+    return 'Company size cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Accept both numeric and plain English
+  const lowerSize = trimmedSize.toLowerCase();
+
+  // Common professional ranges (Microsoft/Salesforce patterns)
+  const validRanges = [
+    // Exact numbers
+    /^\d+$/,
+    // Ranges with hyphens or "to"
+    /^\d+-\d+$/,
+    /^\d+\s*to\s*\d+$/,
+    // Plain English numbers
+    /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)(\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*$/,
+    // Mixed formats like "2.5 million", "5K", "10M", "1B"
+    /^\d+(\.\d+)?\s*(k|m|b|thousand|million|billion)$/,
+    // Professional ranges in plain English
+    /^(less than|under|fewer than)\s+\d+$/,
+    /^(more than|over|above)\s+\d+$/,
+    /^\d+\+$/,
+    // Common SaaS categories
+    /^(startup|small|medium|large|enterprise)$/,
+    /^(1-10|11-50|51-200|201-500|501-1000|1001-5000|5001\+)$/,
+    // Professional descriptive words (prevent gibberish while allowing meaningful text)
+    /^(big|huge|large|small|tiny|medium|startup|growing|expanding|established|mature|corporate|enterprise|micro|mini|global|international|local|regional|national|mid-sized|boutique|family|private|public)(\s+(company|business|organization|enterprise|firm|corporation|startup))?$/
+  ];
+
+  const isValid = validRanges.some(pattern => pattern.test(lowerSize));
+
+  if (!isValid) {
+    return 'Please enter a valid company size (e.g., "50", "10-50", "five hundred", "2.5M", "small", "enterprise")';
+  }
+
+  return null;
+}
+
+// Annual revenue validation - professional SaaS/CRM grade (Microsoft/Salesforce standard)
+export function validateAnnualRevenue(revenue: string): string | null {
+  if (!revenue || !revenue.trim()) {
+    return null; // Annual revenue is optional
+  }
+
+  const trimmedRevenue = revenue.trim();
+
+  // Enterprise rule: Max length 50 characters
+  if (trimmedRevenue.length > 50) {
+    return 'Annual revenue must be 50 characters or less';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedRevenue)) {
+    return 'Annual revenue cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Accept both numeric and plain English with currency symbols
+  const lowerRevenue = trimmedRevenue.toLowerCase().replace(/[\s$,£€¥]/g, '');
+
+  // Common professional revenue formats (Microsoft/Salesforce patterns)
+  const validFormats = [
+    // Exact numbers with optional currency symbols and commas
+    /^\d+(,\d{3})*(\.\d{2})?$/,
+    // Ranges
+    /^\d+-\d+$/,
+    /^\d+to\d+$/,
+    // Abbreviations (K, M, B)
+    /^\d+(\.\d+)?[kmb]$/,
+    // Plain English numbers
+    /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)(\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*$/,
+    // Professional ranges in plain English
+    /^(lessthan|under|fewerthan)\d+$/,
+    /^(morethan|over|above)\d+$/,
+    /^\d+\+$/,
+    // Common SaaS revenue categories
+    /^(startup|earlystage|growth|established)$/,
+    /^(under1m|1m-10m|10m-100m|100m-1b|1b\+)$/,
+    // "Not disclosed" or similar professional responses
+    /^(notdisclosed|private|confidential|n\/a|na)$/
+  ];
+
+  const isValid = validFormats.some(pattern => pattern.test(lowerRevenue));
+
+  if (!isValid) {
+    return 'Please enter valid annual revenue (e.g., "$1,000,000", "five million", "2.5M", "10M-50M", "not disclosed")';
+  }
+
+  return null;
+}
+
 // Comprehensive form validation function
+// Password validation with enterprise security standards
+export function validatePassword(password: string): string | null {
+  if (!password) {
+    return 'Password is required';
+  }
+
+  // Check minimum length (8 characters)
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+
+  // Check maximum length (to prevent DoS attacks)
+  if (password.length > 128) {
+    return 'Password must be 128 characters or less';
+  }
+
+  // Check for uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+
+  // Check for lowercase letter
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+
+  // Check for number
+  if (!/\d/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+
+  // Check for special character
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return 'Password must contain at least one special character';
+  }
+
+  // Check for common weak patterns
+  const commonPasswords = [
+    'password', 'Password', 'Password1', 'password1', 'password123',
+    '12345678', 'qwerty', 'abc123', 'admin', 'letmein', 'welcome',
+    'iloveyou', 'monkey', 'dragon', 'sunshine', 'princess'
+  ];
+
+  if (commonPasswords.includes(password)) {
+    return 'Password is too common. Please choose a stronger password';
+  }
+
+  // Check for sequential characters
+  if (/123|abc|qwe|asd|zxc/i.test(password)) {
+    return 'Password cannot contain sequential characters';
+  }
+
+  return null;
+}
+
+// Get password requirements for display
+export function getPasswordRequirements(password: string) {
+  return {
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasLower: /[a-z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+  };
+}
+
 export function validateClientForm(formData: {
   clientName: string;
   websiteUrl?: string;
@@ -657,6 +859,8 @@ export function validateClientForm(formData: {
   contactEmail?: string;
   contactPhone?: string;
   notes?: string;
+  companySize?: string;
+  annualRevenue?: string;
 }): ValidationResult {
   const errors: Record<string, string> = {};
   
@@ -750,7 +954,21 @@ export function validateClientForm(formData: {
       errors.notes = notesError;
     }
   }
-  
+
+  if (formData.companySize) {
+    const companySizeError = validateCompanySize(formData.companySize);
+    if (companySizeError) {
+      errors.company_size = companySizeError;
+    }
+  }
+
+  if (formData.annualRevenue) {
+    const annualRevenueError = validateAnnualRevenue(formData.annualRevenue);
+    if (annualRevenueError) {
+      errors.annual_revenue = annualRevenueError;
+    }
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors

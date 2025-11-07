@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '@shared/core/logger';
-import { getRedisConfig, getEventStream, getConsumerName } from '../../config/redisConfig';
+import { getRedisConfig, getEventStream, getConsumerName, DEFAULT_EVENT_CHANNEL } from '../../config/redisConfig';
 import { getSecret } from '../utils/getSecret';
 import {
   BaseEvent,
@@ -12,6 +12,8 @@ import {
   convertToWorkflowEvent
 } from '@shared/workflow/streams/eventBusSchema';
 import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventSchema';
+
+type EventHandler = (event: Event) => Promise<void>;
 
 // Redis client configuration
 const createRedisClient = async () => {
@@ -51,8 +53,14 @@ const createRedisClient = async () => {
 // Singleton Redis client
 let client: Awaited<ReturnType<typeof createRedisClient>> | null = null;
 let clientPromise: Promise<Awaited<ReturnType<typeof createRedisClient>>> | null = null;
+let eventBusDisabled = false;
+let eventBusDisabledReason: string | null = null;
 
 async function getClient() {
+  if (eventBusDisabled) {
+    throw new Error(eventBusDisabledReason ?? 'Event bus is disabled');
+  }
+
   if (!client) {
     // If another call is already creating the client, wait for it
     if (!clientPromise) {
@@ -72,14 +80,17 @@ async function getClient() {
 export class EventBus {
   private static instance: EventBus;
   private static createdConsumerGroups: Set<string> = new Set<string>();
-  private handlers: Map<EventType, Set<(event: Event) => Promise<void>>>;
+  // Map<EventType, Map<Channel, Handlers>> so channel-specific consumers do not step on each other.
+  private handlers: Map<EventType, Map<string, Set<EventHandler>>>;
   private initialized: boolean = false;
   private consumerName: string;
   private processingEvents: boolean = false;
+  private defaultChannel: string;
 
   private constructor() {
     this.handlers = new Map();
     this.consumerName = getConsumerName();
+    this.defaultChannel = DEFAULT_EVENT_CHANNEL;
   }
 
   public static getInstance(): EventBus {
@@ -87,6 +98,59 @@ export class EventBus {
       EventBus.instance = new EventBus();
     }
     return EventBus.instance;
+  }
+
+  private getStreamKey(eventType: EventType, channel: string): string {
+    return getEventStream(eventType, channel);
+  }
+
+  private getChannelHandlers(
+    eventType: EventType,
+    channel: string,
+    createIfMissing: boolean = false
+  ): Set<EventHandler> | undefined {
+    let channelMap = this.handlers.get(eventType);
+    if (!channelMap) {
+      if (!createIfMissing) {
+        return undefined;
+      }
+      channelMap = new Map<string, Set<EventHandler>>();
+      this.handlers.set(eventType, channelMap);
+    }
+
+    let handlers = channelMap.get(channel);
+    if (!handlers && createIfMissing) {
+      handlers = new Set<EventHandler>();
+      channelMap.set(channel, handlers);
+    }
+    return handlers;
+  }
+
+  private getActiveSubscriptions(): Array<{
+    eventType: EventType;
+    channel: string;
+    stream: string;
+    handlers: Set<EventHandler>;
+  }> {
+    // Redis consumes a flat list of streams, so collapse the nested handler structure here.
+    const subscriptions: Array<{
+      eventType: EventType;
+      channel: string;
+      stream: string;
+      handlers: Set<EventHandler>;
+    }> = [];
+
+    for (const [eventType, channelMap] of this.handlers.entries()) {
+      for (const [channel, handlers] of channelMap.entries()) {
+        if (handlers.size === 0) {
+          continue;
+        }
+        const stream = this.getStreamKey(eventType, channel);
+        subscriptions.push({ eventType, channel, stream, handlers });
+      }
+    }
+
+    return subscriptions;
   }
 
   private async ensureStreamAndGroup(stream: string): Promise<void> {
@@ -99,6 +163,7 @@ export class EventBus {
     const client = await getClient();
     try {
       const config = getRedisConfig();
+      // Lazily create the consumer group; MKSTREAM creates the stream if it does not exist yet.
       await client.xGroupCreate(stream, config.eventBus.consumerGroup, '0', {
         MKSTREAM: true
       });
@@ -119,10 +184,10 @@ export class EventBus {
   public async initialize() {
     if (!this.initialized) {
       console.log('[EventBus] Initializing event bus');
-      const client = await getClient();
+      await getClient();
 
-      for (const eventType of Object.keys(EventSchemas)) {
-        const stream = getEventStream(eventType);
+      for (const eventType of Object.keys(EventSchemas) as EventType[]) {
+        const stream = this.getStreamKey(eventType, this.defaultChannel);
         await this.ensureStreamAndGroup(stream);
       }
 
@@ -158,23 +223,27 @@ export class EventBus {
 
       try {
         const client = await getClient();
-        const streams = Array.from(this.handlers.keys()).map((eventType): string => getEventStream(eventType));
+        const config = getRedisConfig();
+        const subscriptions = this.getActiveSubscriptions();
 
-        if (streams.length === 0) {
+        if (subscriptions.length === 0) {
           setTimeout(processEvents, 1000);
           return;
         }
 
+        // Ensure all subscribed streams exist before attempting to read
+        for (const { stream } of subscriptions) {
+          await this.ensureStreamAndGroup(stream);
+        }
+
+        // xReadGroup expects flat stream descriptors; reuse the subscriptions list we built above.
         const streamEntries = await client.xReadGroup(
-          getRedisConfig().eventBus.consumerGroup,
+          config.eventBus.consumerGroup,
           this.consumerName,
-          streams.map((stream): { key: string; id: string } => ({
-            key: stream,
-            id: '>' // Read only new messages
-          })),
+          subscriptions.map(({ stream }) => ({ key: stream, id: '>' })),
           {
-            COUNT: getRedisConfig().eventBus.batchSize,
-            BLOCK: getRedisConfig().eventBus.blockingTimeout
+            COUNT: config.eventBus.batchSize,
+            BLOCK: config.eventBus.blockingTimeout
           }
         );
 
@@ -184,11 +253,28 @@ export class EventBus {
             totalMessages: streamEntries.reduce((sum, s) => sum + s.messages.length, 0)
           });
 
+          const subscriptionLookup = new Map(subscriptions.map((sub) => [sub.stream, sub]));
+
           for (const { name: stream, messages } of streamEntries) {
+            const subscription = subscriptionLookup.get(stream);
+            if (!subscription) {
+              logger.warn('[EventBus] No subscription found for stream', { stream });
+              continue;
+            }
+
             for (const message of messages) {
               try {
-                const eventType = stream.split(':').pop() as EventType;
-                const rawEvent = JSON.parse(message.message.event);
+                const rawEventPayload = message.message.event;
+                if (!rawEventPayload) {
+                  logger.warn('[EventBus] Missing event payload in message', {
+                    stream,
+                    messageId: message.id
+                  });
+                  await client.xAck(stream, config.eventBus.consumerGroup, message.id);
+                  continue;
+                }
+
+                const rawEvent = JSON.parse(rawEventPayload);
                 const baseEvent = BaseEventSchema.parse(rawEvent);
                 const eventSchema = EventSchemas[baseEvent.eventType];
 
@@ -197,44 +283,45 @@ export class EventBus {
                     eventType: baseEvent.eventType,
                     availableTypes: Object.keys(EventSchemas)
                   });
+                  await client.xAck(stream, config.eventBus.consumerGroup, message.id);
                   continue;
                 }
 
                 const event = eventSchema.parse(rawEvent) as Event;
-                const handlers = this.handlers.get(baseEvent.eventType);
+                const handlers = subscription.handlers;
+                const handler = handlers.values().next().value as EventHandler | undefined;
 
-                if (handlers) {
-                  // Check if event has already been processed
+                if (handler) {
                   const isProcessed = await this.isEventProcessed(event);
                   if (!isProcessed) {
-                    // Process event with first available handler
-                    const handler = handlers.values().next().value;
-                    if (handler) {
-                      try {
-                        await handler(event);
-                        // Mark event as processed after successful handling
-                        await this.markEventProcessed(event);
-                      } catch (error) {
-                        logger.error('[EventBus] Error in event handler:', {
-                          error,
-                          eventType: baseEvent.eventType,
-                          handler: handler.name
-                        });
-                        // Don't acknowledge message on error to allow retry
-                        continue;
-                      }
+                    try {
+                      await handler(event);
+                      await this.markEventProcessed(event);
+                    } catch (error) {
+                      logger.error('[EventBus] Error in event handler:', {
+                        error,
+                        eventType: baseEvent.eventType,
+                        handler: handler.name,
+                        channel: subscription.channel
+                      });
+                      // Don't acknowledge message on error to allow retry
+                      continue;
                     }
                   } else {
                     logger.info('[EventBus] Skipping already processed event:', {
                       eventId: event.id,
-                      eventType: event.eventType
+                      eventType: event.eventType,
+                      channel: subscription.channel
                     });
                   }
+                } else {
+                  logger.warn('[EventBus] No handlers registered when processing message', {
+                    eventType: baseEvent.eventType,
+                    channel: subscription.channel
+                  });
                 }
 
-                // Acknowledge message after successful processing or if already processed
-                await client.xAck(stream, getRedisConfig().eventBus.consumerGroup, message.id);
-
+                await client.xAck(stream, config.eventBus.consumerGroup, message.id);
               } catch (error) {
                 logger.error('[EventBus] Error processing message:', {
                   error,
@@ -260,35 +347,36 @@ export class EventBus {
   private async claimPendingMessages() {
     try {
       const client = await getClient();
-      const streams = Array.from(this.handlers.keys()).map((eventType): string => getEventStream(eventType));
+      const config = getRedisConfig();
+      const subscriptions = this.getActiveSubscriptions();
 
-      for (const stream of streams) {
+      for (const { stream } of subscriptions) {
         const pendingInfo = await client.xPending(
           stream,
-          getRedisConfig().eventBus.consumerGroup
+          config.eventBus.consumerGroup
         );
 
         if (pendingInfo.pending > 0) {
           const pendingMessages = await client.xPendingRange(
             stream,
-            getRedisConfig().eventBus.consumerGroup,
+            config.eventBus.consumerGroup,
             '-',
             '+',
-            getRedisConfig().eventBus.batchSize
+            config.eventBus.batchSize
           );
 
           if (pendingMessages && pendingMessages.length > 0) {
             const now = Date.now();
             const claimIds = pendingMessages
-              .filter(msg => (now - msg.millisecondsSinceLastDelivery) > getRedisConfig().eventBus.claimTimeout)
-              .map((msg): string => msg.id);
+              .filter(msg => (now - msg.millisecondsSinceLastDelivery) > config.eventBus.claimTimeout)
+              .map(msg => msg.id);
 
             if (claimIds.length > 0) {
               await client.xClaim(
                 stream,
-                getRedisConfig().eventBus.consumerGroup,
+                config.eventBus.consumerGroup,
                 this.consumerName,
-                getRedisConfig().eventBus.claimTimeout,
+                config.eventBus.claimTimeout,
                 claimIds
               );
             }
@@ -302,42 +390,68 @@ export class EventBus {
 
   public async subscribe(
     eventType: EventType,
-    handler: (event: Event) => Promise<void>
+    handler: EventHandler,
+    options?: { channel?: string }
   ): Promise<void> {
     await this.initialize();
 
-    const stream = getEventStream(eventType);
-    logger.info('[EventBus] Subscribing to stream:', { stream, eventType });
+    const channel = options?.channel || this.defaultChannel;
+    const handlers = this.getChannelHandlers(eventType, channel, true)!;
+    handlers.add(handler);
 
-    if (!this.handlers.has(eventType)) {
-      logger.info('[EventBus] Creating new handler set for event type:', eventType);
-      this.handlers.set(eventType, new Set());
-    }
-    this.handlers.get(eventType)!.add(handler);
+    const stream = this.getStreamKey(eventType, channel);
+    await this.ensureStreamAndGroup(stream);
+
     logger.info('[EventBus] Added handler:', {
       eventType,
+      channel,
       handlerName: handler.name,
-      handlersCount: this.handlers.get(eventType)!.size
+      handlersCount: handlers.size
     });
   }
 
   public async unsubscribe(
     eventType: EventType,
-    handler: (event: Event) => Promise<void>
+    handler: EventHandler,
+    options?: { channel?: string }
   ): Promise<void> {
-    const handlers = this.handlers.get(eventType);
-    if (handlers) {
-      handlers.delete(handler);
-      if (handlers.size === 0) {
+    const channel = options?.channel || this.defaultChannel;
+    const channelMap = this.handlers.get(eventType);
+    if (!channelMap) {
+      return;
+    }
+
+    const handlers = channelMap.get(channel);
+    if (!handlers) {
+      return;
+    }
+
+    handlers.delete(handler);
+    if (handlers.size === 0) {
+      channelMap.delete(channel);
+      if (channelMap.size === 0) {
         this.handlers.delete(eventType);
       }
     }
   }
 
-  public async publish(event: Omit<Event, 'id' | 'timestamp'>): Promise<void> {
+  public async publish(
+    event: Omit<Event, 'id' | 'timestamp'>,
+    options?: { channel?: string }
+  ): Promise<void> {
+    if (eventBusDisabled) {
+      logger.debug('[EventBus] Skipping publish because the event bus is disabled');
+      return;
+    }
+
     try {
+      // Unless a caller specifies otherwise, publish onto the default channel for this service.
+      const channel = options?.channel || this.defaultChannel;
+      const config = getRedisConfig();
+
       logger.info('[EventBus] Starting to publish event:', {
-        eventType: event.eventType
+        eventType: event.eventType,
+        channel
       });
 
       const fullEvent: Event = {
@@ -359,55 +473,56 @@ export class EventBus {
 
       const client = await getClient();
 
-      // 1. Publish to the global workflow events stream (for workflows)
-      const globalStream = 'workflow:events:global';
-      await this.ensureStreamAndGroup(globalStream);
+      // Publish to the workflow stream only when using the default channel; channel-specific events stay isolated.
+      if (channel === this.defaultChannel) {
+        const globalStream = 'workflow:events:global';
+        await this.ensureStreamAndGroup(globalStream);
 
-      // Convert the event to the format expected by the workflow worker
-      const workflowEvent = WorkflowEventBaseSchema.parse(
-        convertToWorkflowEvent(fullEvent)
-      );
+        const workflowEvent = WorkflowEventBaseSchema.parse(
+          convertToWorkflowEvent(fullEvent)
+        );
 
-      logger.debug('[EventBus] Publishing event in workflow format:', {
-        eventType: workflowEvent.event_type,
-        eventId: workflowEvent.event_id
-      });
+        logger.debug('[EventBus] Publishing event in workflow format:', {
+          eventType: workflowEvent.event_type,
+          eventId: workflowEvent.event_id
+        });
 
-      // Construct the message fields for XADD in the flat format
-      const messageFields: { [key: string]: string } = {
-        event_id: workflowEvent.event_id,
-        execution_id: workflowEvent.execution_id || '',
-        event_name: workflowEvent.event_name,
-        event_type: workflowEvent.event_type,
-        tenant: workflowEvent.tenant,
-        timestamp: workflowEvent.timestamp, // Already a string from Zod schema
-        user_id: workflowEvent.user_id || '',
-        from_state: workflowEvent.from_state || '',
-        to_state: workflowEvent.to_state || '',
-        payload_json: JSON.stringify(workflowEvent.payload || {})
-      };
+        // Construct the message fields for XADD in the flat format
+        const messageFields: { [key: string]: string } = {
+          event_id: workflowEvent.event_id,
+          execution_id: workflowEvent.execution_id || '',
+          event_name: workflowEvent.event_name,
+          event_type: workflowEvent.event_type,
+          tenant: workflowEvent.tenant,
+          timestamp: workflowEvent.timestamp, // Already a string from Zod schema
+          user_id: workflowEvent.user_id || '',
+          from_state: workflowEvent.from_state || '',
+          to_state: workflowEvent.to_state || '',
+          payload_json: JSON.stringify(workflowEvent.payload || {})
+        };
 
-      await client.xAdd(
-        globalStream,
-        '*',
-        messageFields, // Use the flat messageFields object
-        {
-          TRIM: {
-            strategy: 'MAXLEN',
-            threshold: getRedisConfig().eventBus.maxStreamLength,
-            strategyModifier: '~'
+        await client.xAdd(
+          globalStream,
+          '*',
+          messageFields, // Use the flat messageFields object
+          {
+            TRIM: {
+              strategy: 'MAXLEN',
+              threshold: config.eventBus.maxStreamLength,
+              strategyModifier: '~'
+            }
           }
-        }
-      );
+        );
 
-      logger.debug('[EventBus] Event published to workflow stream:', {
-        stream: globalStream,
-        eventType: fullEvent.eventType,
-        eventId: fullEvent.id
-      });
+        logger.debug('[EventBus] Event published to workflow stream:', {
+          stream: globalStream,
+          eventType: fullEvent.eventType,
+          eventId: fullEvent.id
+        });
+      }
 
-      // 2. ALSO publish to individual event stream (for legacy systems like email notifications)
-      const individualStream = getEventStream(fullEvent.eventType);
+      // 2. ALSO publish to individual event stream (channel-scoped legacy consumers such as email notifications).
+      const individualStream = this.getStreamKey(fullEvent.eventType, channel);
       await this.ensureStreamAndGroup(individualStream);
 
       // Publish the original event format for legacy consumers
@@ -415,12 +530,13 @@ export class EventBus {
         individualStream,
         '*',
         {
-          event: JSON.stringify(fullEvent)
+          event: JSON.stringify(fullEvent),
+          channel
         },
         {
           TRIM: {
             strategy: 'MAXLEN',
-            threshold: getRedisConfig().eventBus.maxStreamLength,
+            threshold: config.eventBus.maxStreamLength,
             strategyModifier: '~'
           }
         }
@@ -429,10 +545,17 @@ export class EventBus {
       logger.info('[EventBus] Event published:', {
         eventType: fullEvent.eventType,
         eventId: fullEvent.id,
-        tenant: fullEvent.payload.tenantId
+        tenant: fullEvent.payload.tenantId,
+        channel
       });
     } catch (error) {
       logger.error('Error publishing event:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (!eventBusDisabled && (message.includes('NOAUTH') || message.includes('WRONGPASS'))) {
+        eventBusDisabled = true;
+        eventBusDisabledReason = message;
+        logger.warn('[EventBus] Disabling event publishing due to Redis authentication failure. Events will be skipped until the service is restarted.');
+      }
       // throw error;
     }
   }

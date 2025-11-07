@@ -123,7 +123,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -272,7 +272,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      billingTiming: 'advance'
     });
 
     // Restore original clientId
@@ -301,7 +302,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     expect(invoice2.invoice_number).toBe('INV-000002');
 
     // Verify invoice items were created - should be single consolidated row for fixed plan
-    const invoice2Items = await context.db('invoice_items')
+    const invoice2Items = await context.db('invoice_charges')
       .where({ invoice_id: invoice2.invoice_id, tenant: context.tenantId });
     expect(invoice2Items).toHaveLength(1);
 
@@ -384,7 +385,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         planName: 'Basic Plan',
         billingFrequency: 'monthly',
         baseRateCents: 10000,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Restore original clientId
@@ -416,7 +418,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       expect(invoice.invoice_number).toBe(testCase.expected);
 
       // Verify invoice items were created - should be single consolidated row for fixed plan
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: invoice.invoice_id, tenant: context.tenantId });
       expect(invoiceItems).toHaveLength(1);
     }
@@ -468,7 +470,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      billingTiming: 'advance'
     });
 
     // Generate invoices and verify they increment correctly from initial value
@@ -488,11 +491,11 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     expect(invoice2.invoice_number).toBe('INV-1000001');
 
     // Verify invoice items were created for both invoices - should be single consolidated row per invoice for fixed plans
-    const invoice1Items = await context.db('invoice_items')
+    const invoice1Items = await context.db('invoice_charges')
       .where({ invoice_id: invoice1.invoice_id, tenant: context.tenantId });
     expect(invoice1Items).toHaveLength(1);
 
-    const invoice2Items = await context.db('invoice_items')
+    const invoice2Items = await context.db('invoice_charges')
       .where({ invoice_id: invoice2.invoice_id, tenant: context.tenantId });
     expect(invoice2Items).toHaveLength(1);
   });

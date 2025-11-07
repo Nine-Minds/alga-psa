@@ -25,6 +25,32 @@ const ensureSequentialMode = async (knex) => {
   `);
 };
 
+const isCitusEnabled = async (knex) => {
+  const { rows } = await knex.raw("SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1");
+  return rows.length > 0;
+};
+
+const isTableDistributed = async (knex, tableName) => {
+  const { rows } = await knex.raw(
+    'SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass LIMIT 1',
+    [tableName]
+  );
+  return rows.length > 0;
+};
+
+const ensureDistributed = async (knex, tableName, distributionColumn) => {
+  if (!(await isCitusEnabled(knex))) {
+    return false;
+  }
+
+  if (await isTableDistributed(knex, tableName)) {
+    return false;
+  }
+
+  await knex.raw('SELECT create_distributed_table(?, ?)', [tableName, distributionColumn]);
+  return true;
+};
+
 exports.up = async function up(knex) {
   await ensureSequentialMode(knex);
 
@@ -130,6 +156,10 @@ exports.up = async function up(knex) {
       REFERENCES users (tenant, user_id);
     `);
   }
+
+  if (await hasColumn(knex, 'service_categories', 'tenant')) {
+    await ensureDistributed(knex, 'service_categories', 'tenant');
+  }
 };
 
 exports.down = async function down(knex) {
@@ -176,6 +206,10 @@ exports.down = async function down(knex) {
     await knex.schema.alterTable('service_categories', (table) => {
       table.dropColumn('is_active');
     });
+  }
+
+  if (await hasColumn(knex, 'service_categories', 'tenant')) {
+    await ensureDistributed(knex, 'service_categories', 'tenant');
   }
 };
 

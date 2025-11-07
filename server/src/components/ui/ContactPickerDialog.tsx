@@ -151,6 +151,7 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> 
           </div>
 
           <DataTable
+            id="contact-picker-table"
             data={filteredContacts}
             columns={columns}
             pagination={true}

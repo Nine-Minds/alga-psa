@@ -5,7 +5,7 @@ import { IContractLineFixedConfig } from 'server/src/interfaces/billing.interfac
 export default class ContractLineFixedConfig {
   private knex: Knex;
   private tenant: string;
-  private tableName = 'contract_line_fixed_config';
+  private tableName = 'contract_lines';
 
   constructor(knex?: Knex, tenant?: string) {
     this.knex = knex as Knex;
@@ -31,36 +31,34 @@ export default class ContractLineFixedConfig {
    */
   async getByPlanId(planId: string): Promise<IContractLineFixedConfig | null> {
     await this.initKnex();
-    
-    const config = await this.knex(this.tableName)
+
+    const row = await this.knex(this.tableName)
       .where({
         contract_line_id: planId,
         tenant: this.tenant
       })
-      .first();
-    
-    return config || null;
+      .first(['contract_line_id', 'custom_rate', 'enable_proration', 'billing_cycle_alignment', 'updated_at', 'created_at']);
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      contract_line_id: row.contract_line_id,
+      base_rate: row.custom_rate ?? null,
+      enable_proration: row.enable_proration ?? false,
+      billing_cycle_alignment: row.billing_cycle_alignment ?? 'start',
+      tenant: this.tenant,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
   }
 
   /**
    * Create a new fixed plan configuration
    */
   async create(data: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
-    await this.initKnex();
-    
-    const now = new Date();
-    
-    // Ensure tenant is set correctly, overriding any provided tenant in data
-    const insertData = {
-      ...data,
-      tenant: this.tenant,
-      created_at: now,
-      updated_at: now
-    };
-
-    await this.knex(this.tableName).insert(insertData);
-    
-    return true;
+    return this.upsert(data);
   }
 
   /**
@@ -68,19 +66,28 @@ export default class ContractLineFixedConfig {
    */
   async update(planId: string, data: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at'>>): Promise<boolean> {
     await this.initKnex();
-    
-    const updateData = {
-      ...data,
-      updated_at: new Date()
+
+    const updateData: Record<string, unknown> = {
+      updated_at: new Date(),
     };
-    
+
+    if (data.base_rate !== undefined) {
+      updateData.custom_rate = data.base_rate;
+    }
+    if (data.enable_proration !== undefined) {
+      updateData.enable_proration = data.enable_proration;
+    }
+    if (data.billing_cycle_alignment !== undefined) {
+      updateData.billing_cycle_alignment = data.billing_cycle_alignment;
+    }
+
     const result = await this.knex(this.tableName)
       .where({
         contract_line_id: planId,
-        tenant: this.tenant
+        tenant: this.tenant,
       })
       .update(updateData);
-    
+
     return result > 0;
   }
 
@@ -90,16 +97,21 @@ export default class ContractLineFixedConfig {
   async upsert(data: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
     await this.initKnex();
 
-    const existing = await this.getByPlanId(data.contract_line_id);
+    const { contract_line_id, base_rate, enable_proration, billing_cycle_alignment } = data;
 
-    if (existing) {
-      // Update existing record
-      const { contract_line_id, tenant, ...updateData } = data; // Exclude keys used in where clause
-      return this.update(data.contract_line_id, updateData);
-    } else {
-      // Create new record
-      return this.create(data);
-    }
+    const result = await this.knex(this.tableName)
+      .where({
+        contract_line_id,
+        tenant: this.tenant,
+      })
+      .update({
+        custom_rate: base_rate ?? null,
+        enable_proration: enable_proration ?? false,
+        billing_cycle_alignment: billing_cycle_alignment ?? 'start',
+        updated_at: new Date(),
+      });
+
+    return result > 0;
   }
 
   /**
@@ -107,14 +119,19 @@ export default class ContractLineFixedConfig {
    */
   async delete(planId: string): Promise<boolean> {
     await this.initKnex();
-    
+
     const result = await this.knex(this.tableName)
       .where({
         contract_line_id: planId,
-        tenant: this.tenant
+        tenant: this.tenant,
       })
-      .delete();
-    
+      .update({
+        custom_rate: null,
+        enable_proration: false,
+        billing_cycle_alignment: 'start',
+        updated_at: new Date(),
+      });
+
     return result > 0;
   }
 }

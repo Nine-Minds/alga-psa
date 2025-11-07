@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getSecret } from '../utils/getSecret';
+import { EMAIL_EVENT_CHANNEL, getEmailEventChannel as getEmailChannelConstant } from './emailChannel';
 
 interface EmailConfig {
   // Email server configuration
@@ -258,6 +259,10 @@ class EmailService {
 // Singleton instance
 export function getEmailService(): EmailService {
   return EmailService.getInstance();
+}
+
+export function getEmailEventChannel(): string {
+  return getEmailChannelConstant();
 }
 
 // Re-export the event-based email sending function

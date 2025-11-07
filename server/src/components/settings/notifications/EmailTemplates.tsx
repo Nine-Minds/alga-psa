@@ -248,6 +248,7 @@ export function EmailTemplates() {
               }
             `}</style>
             <DataTable
+              id="email-templates-table"
               data={templates}
               columns={columns}
               pagination={false}

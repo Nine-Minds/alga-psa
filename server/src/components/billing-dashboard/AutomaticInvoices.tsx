@@ -338,6 +338,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
           )}
 
           <DataTable
+            id="automatic-invoices-table"
             data={filteredPeriods}
             // Add onRowClick prop - implementation depends on DataTable component
             // Assuming it takes a function like this:
@@ -474,6 +475,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
           ) : (
             <>
               <DataTable
+                id="already-invoiced-table"
                 data={filteredInvoicedPeriods}
                 columns={[
                   { title: 'Client', dataIndex: 'client_name' },

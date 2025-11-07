@@ -23,7 +23,7 @@ const TimePeriodList: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<ITimePeriodView | null>(null);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const handleTimePeriodCreated = (newPeriod: ITimePeriodView) => {
@@ -60,6 +60,12 @@ const TimePeriodList: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
 
   useEffect(() => {
@@ -157,7 +163,7 @@ const TimePeriodList: React.FC = () => {
           mode={mode}
         />
         <DataTable
-          id="time-periods-table"
+          id="settings-time-periods-table"
           data={timePeriods}
           columns={columns}
           onRowClick={handleRowClick}
@@ -165,6 +171,7 @@ const TimePeriodList: React.FC = () => {
           currentPage={currentPage}
           onPageChange={handlePageChange}
           pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
         />
       </CardContent>
     </Card>

@@ -884,7 +884,7 @@ export class ApiInvoiceController extends ApiBaseController {
             throw new NotFoundError('Invoice not found');
           }
           
-          return createSuccessResponse((invoice as any).invoice_items || []);
+          return createSuccessResponse((invoice as any).invoice_charges || []);
         });
       } catch (error) {
         return handleApiError(error);
@@ -956,7 +956,7 @@ export class ApiInvoiceController extends ApiBaseController {
             credit_applied: 0,
             is_manual: true,
             is_prepayment: false,
-            items: (originalInvoice as any).invoice_items || []
+            items: (originalInvoice as any).invoice_charges || []
           };
           
           const duplicatedInvoice = await this.invoiceService.create(duplicateData, apiRequest.context);

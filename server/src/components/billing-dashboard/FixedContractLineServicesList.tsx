@@ -47,7 +47,8 @@ interface FixedPlanServicesListProps {
 interface SimplePlanService extends IContractLineService {
   service_name?: string;
   service_category?: string; // This will now hold the name
-  billing_method?: 'fixed' | 'hourly' | 'usage' | null; // Allow null to match IService
+  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null; // Allow null and per_unit to match IService
+  unit_of_measure?: string;
   default_rate?: number;
   quantity?: number; // Added quantity field
 }
@@ -289,6 +290,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
         <>
           <div className="mb-4">
             <DataTable
+              id="fixed-contract-line-services-table"
               data={planServices}
               columns={planServiceColumns}
               pagination={false} // Assuming pagination isn't needed for typical plan service lists

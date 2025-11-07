@@ -46,7 +46,6 @@ import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusA
 import { getAllPriorities } from "server/src/lib/actions/priorityActions";
 import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
 import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions";
-import ClientDetails from "server/src/components/clients/ClientDetails";
 import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
@@ -465,14 +464,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             try {
                 const client = await getClientById(ticket.client_id);
                 if (client) {
-                    openDrawer(
-                        <ClientDetails
-                            client={client}
-                            documents={[]}
-                            contacts={[]}
-                            isInDrawer={true}
-                        />
-                    );
+                    // Client details functionality has been moved to contacts
+                    console.log('Client:', client.client_name);
                 } else {
                     console.error('Client not found');
                 }
@@ -517,8 +510,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 return;
             }
             const result = await addTicketResource(ticket.ticket_id!, userId, 'support', currentUser);
-            setAdditionalAgents(prev => [...prev, result]);
-            toast.success('Agent added successfully');
+
+            if (result) {
+                setAdditionalAgents(prev => [...prev, result]);
+                toast.success('Agent added successfully');
+            } else {
+                setTicket(prevTicket => ({
+                    ...prevTicket,
+                    assigned_to: userId
+                }));
+                toast.success('Agent assigned successfully');
+            }
         } catch (error) {
             console.error('Error adding agent:', error);
             toast.error('Failed to add agent');

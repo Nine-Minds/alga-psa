@@ -27,7 +27,7 @@ interface CreateTicketColumnsOptions {
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
   const {
     categories,
-    boards,
+    boards: _boards,
     displaySettings,
     onTicketClick,
     onDeleteClick,
@@ -55,11 +55,6 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
 
   const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle || false;
   const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
-
-  // Helper function to get board for a ticket
-  const getBoardForTicket = (ticket: ITicketListItem): IBoard | undefined => {
-    return boards.find(board => board.board_id === ticket.board_id);
-  };
 
   const columns: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
 
@@ -163,13 +158,13 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       key: 'category',
       col: {
         title: 'Category',
-        dataIndex: 'category_id',
+        dataIndex: 'category_name',
         width: '10%',
-        render: (value: string, record: ITicketListItem) => {
-          const board = getBoardForTicket(record);
+        render: (_value: string, record: ITicketListItem) => {
+          const categoryId = record.category_id || null;
 
           // Use unified category display for all boards (ITIL and custom)
-          if (!value && !record.subcategory_id) return 'No Category';
+          if (!categoryId && !record.subcategory_id) return 'No Category';
 
           // If there's a subcategory, use that for display
           if (record.subcategory_id) {
@@ -181,7 +176,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           }
 
           // Otherwise use the main category
-          const category = categories.find(c => c.category_id === value);
+          const category = categories.find(c => c.category_id === categoryId);
           if (!category) return 'Unknown Category';
           return category.category_name;
         },
@@ -249,6 +244,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: 'Tags',
         dataIndex: 'tags',
         width: '13%',
+        sortable: false,
         render: (_value: string, record: ITicketListItem) => {
           if (!record.ticket_id) return null;
           return (
@@ -274,6 +270,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: 'Actions',
         dataIndex: 'actions',
         width: '3%',
+        sortable: false,
         render: (_value: string, record: ITicketListItem) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

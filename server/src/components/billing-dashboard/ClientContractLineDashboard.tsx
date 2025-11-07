@@ -152,6 +152,34 @@ const [bucketData, setBucketData] = useState<RemainingBucketUnitsResult[]>([]);
 const [loadingUsage, setLoadingUsage] = useState(true);
 const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
 
+  // Pagination state for Invoices
+  const [invoicesCurrentPage, setInvoicesCurrentPage] = useState(1);
+  const [invoicesPageSize, setInvoicesPageSize] = useState(10);
+
+  // Pagination state for Hours by Service
+  const [hoursCurrentPage, setHoursCurrentPage] = useState(1);
+  const [hoursPageSize, setHoursPageSize] = useState(10);
+
+  // Pagination state for Usage Metrics
+  const [usageCurrentPage, setUsageCurrentPage] = useState(1);
+  const [usagePageSize, setUsagePageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handleInvoicesPageSizeChange = (newPageSize: number) => {
+    setInvoicesPageSize(newPageSize);
+    setInvoicesCurrentPage(1);
+  };
+
+  const handleHoursPageSizeChange = (newPageSize: number) => {
+    setHoursPageSize(newPageSize);
+    setHoursCurrentPage(1);
+  };
+
+  const handleUsagePageSizeChange = (newPageSize: number) => {
+    setUsagePageSize(newPageSize);
+    setUsageCurrentPage(1);
+  };
+
   // Fetch recent invoices on mount
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -256,9 +284,14 @@ useEffect(() => {
             </div>
           ) : invoices.length > 0 ? (
             <DataTable
+              id="client-contract-line-dashboard-table"
               columns={invoiceColumns}
               data={invoices}
-              // No pagination needed for a short list of recent items
+              pagination={true}
+              currentPage={invoicesCurrentPage}
+              onPageChange={setInvoicesCurrentPage}
+              pageSize={invoicesPageSize}
+              onItemsPerPageChange={handleInvoicesPageSizeChange}
             />
           ) : (
             <Text>No recent invoices found.</Text>
@@ -279,8 +312,14 @@ useEffect(() => {
            </div>
          ) : hoursData.length > 0 ? (
            <DataTable
+             id="hours-by-service-table"
              columns={hoursColumns}
              data={hoursData}
+             pagination={true}
+             currentPage={hoursCurrentPage}
+             onPageChange={setHoursCurrentPage}
+             pageSize={hoursPageSize}
+             onItemsPerPageChange={handleHoursPageSizeChange}
            />
          ) : (
            <Text>No hours recorded in the selected period.</Text>
@@ -366,9 +405,14 @@ useEffect(() => {
            </div>
          ) : usageData.length > 0 ? (
            <DataTable
+             id="usage-metrics-table"
              columns={usageColumns}
              data={usageData}
-             // No pagination needed for this view yet
+             pagination={true}
+             currentPage={usageCurrentPage}
+             onPageChange={setUsageCurrentPage}
+             pageSize={usagePageSize}
+             onItemsPerPageChange={handleUsagePageSizeChange}
            />
          ) : (
            <Text>No usage data found in the selected period.</Text>

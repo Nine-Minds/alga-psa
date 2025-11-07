@@ -145,7 +145,10 @@ mod tests {
     #[test]
     fn rejects_hidden() {
         assert!(matches!(sanitize(".env"), Err(Error::HiddenFile)));
-        assert!(matches!(sanitize("assets/.secret/file.txt"), Err(Error::HiddenFile)));
+        assert!(matches!(
+            sanitize("assets/.secret/file.txt"),
+            Err(Error::HiddenFile)
+        ));
     }
 
     #[test]
@@ -153,7 +156,10 @@ mod tests {
         assert!(sanitize("index.html").is_ok());
         assert!(sanitize("script.js").is_ok());
         assert!(sanitize("data.json").is_ok());
-        assert!(matches!(sanitize("bad.exe"), Err(Error::DisallowedExtension)));
+        assert!(matches!(
+            sanitize("bad.exe"),
+            Err(Error::DisallowedExtension)
+        ));
         assert!(matches!(sanitize("file."), Err(Error::DisallowedExtension)));
     }
 
@@ -174,6 +180,9 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn rejects_backslashes_on_unix() {
-        assert!(matches!(sanitize("dir\\file.js"), Err(Error::ForbiddenChars)));
+        assert!(matches!(
+            sanitize("dir\\file.js"),
+            Err(Error::ForbiddenChars)
+        ));
     }
 }

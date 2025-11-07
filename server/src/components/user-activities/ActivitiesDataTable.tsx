@@ -22,6 +22,7 @@ interface ActivitiesDataTableProps {
   pageSize?: number;
   totalItems?: number;
   onPageChange?: (page: number) => void;
+  onItemsPerPageChange?: (pageSize: number) => void;
 }
 
 // Format date to a readable format
@@ -100,7 +101,8 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
   currentPage = 1,
   pageSize = 10,
   totalItems,
-  onPageChange
+  onPageChange,
+  onItemsPerPageChange
 }: ActivitiesDataTableProps) {
   const { openActivityDrawer } = useActivityDrawer();
 
@@ -193,7 +195,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
   // Memoize the entire DataTable component to prevent unnecessary re-renders
   const MemoizedDataTable = useMemo(() => (
     <DataTable
-      id="activities-data-table"
+      id="user-activities-table"
       data={activities}
       columns={columns}
       pagination={true}
@@ -202,6 +204,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       onPageChange={onPageChange}
       pageSize={pageSize}
       totalItems={totalItems}
+      onItemsPerPageChange={onItemsPerPageChange}
     />
   ), [
     activities,
@@ -210,7 +213,8 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
     currentPage,
     onPageChange,
     pageSize,
-    totalItems
+    totalItems,
+    onItemsPerPageChange
   ]);
   
   return MemoizedDataTable;

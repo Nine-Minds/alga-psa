@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -109,6 +109,19 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     notes: '',
   };
 
+  // Separate country code state for contact phone (independent from location)
+  const [contactCountryCode, setContactCountryCode] = useState(() => {
+    // Default to same locale detection as other forms
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const parts = locale.split('-');
+      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+      return detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry) ? detectedCountry : 'US';
+    } catch (e) {
+      return 'US';
+    }
+  });
+
   const [formData, setFormData] = useState<CreateClientData>(initialFormData);
   const [locationData, setLocationData] = useState<CreateLocationData>(initialLocationData);
   const [contactData, setContactData] = useState<CreateContactData>(initialContactData);
@@ -162,6 +175,17 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       setFormData(initialFormData);
       setLocationData(initialLocationData);
       setContactData(initialContactData);
+      setContactCountryCode(() => {
+        // Reset to locale detection
+        try {
+          const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+          const parts = locale.split('-');
+          const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+          return detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry) ? detectedCountry : 'US';
+        } catch (e) {
+          return 'US';
+        }
+      });
       setIsSubmitting(false);
       setError(null);
       setHasAttemptedSubmit(false);
@@ -170,14 +194,41 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     }
   }, [open]);
 
-  // Real-time field validation function
-  const validateField = (fieldName: string, value: string, additionalData?: any) => {
+  // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
+  const validateField = (fieldName: string, value: string, additionalData?: any, isSubmitting: boolean = false) => {
     let error: string | null = null;
-    
-    // If field is empty, only validate if it's a required field
-    if (!value || !value.trim()) {
+    const trimmedValue = value.trim();
+
+    // Handle spaces-only input for all fields
+    if (/^\s+$/.test(value)) {
+      const fieldDisplayNames: Record<string, string> = {
+        'company_name': 'Company name',
+        'url': 'Website URL',
+        'industry': 'Industry',
+        'location_email': 'Email address',
+        'location_phone': 'Phone number',
+        'postal_code': 'Postal code',
+        'city': 'City',
+        'state_province': 'State/Province',
+        'address_line1': 'Address',
+        'contact_name': 'Contact name',
+        'contact_email': 'Contact email',
+        'contact_phone': 'Contact phone',
+        'notes': 'Notes'
+      };
+      const displayName = fieldDisplayNames[fieldName] || 'Field';
+      error = `${displayName} cannot contain only spaces`;
+      setFieldErrors(prev => ({
+        ...prev,
+        [fieldName]: error || ''
+      }));
+      return error;
+    }
+
+    // If field is empty, only validate required fields
+    if (!trimmedValue) {
       // Only client name is required, all other fields are optional
-      if (fieldName === 'client_name') {
+      if (fieldName === 'client_name' && isSubmitting) {
         error = 'Client name is required';
       }
       // For optional fields, clear any existing errors when empty
@@ -202,7 +253,67 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         error = validateEmailAddress(value);
         break;
       case 'location_phone':
-        error = validatePhoneNumber(value);
+        // Enterprise phone validation - Unicode international support
+        if (trimmedValue) {
+          // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
+          const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
+          if (countryCodeOnlyPattern.test(trimmedValue)) {
+            // Don't validate if it's just a country code - user hasn't started typing yet
+            break;
+          }
+
+          // Extract all Unicode digits (supports international number systems)
+          const unicodeDigits = trimmedValue.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+          const digitCount = unicodeDigits.length;
+
+          // International phone number validation (ITU-T E.164)
+          if (digitCount > 0 && digitCount < 7) {
+            error = 'Please enter a complete phone number (at least 7 digits)';
+          } else if (digitCount > 15) {
+            error = 'Phone number cannot exceed 15 digits';
+          } else if (digitCount > 0) {
+            // Check for obviously fake patterns using Unicode digits
+            const unicodeDigitString = unicodeDigits.join('');
+            if (/^(.)\1+$/u.test(unicodeDigitString)) {
+              error = 'Please enter a valid phone number';
+            } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
+              error = 'Please enter a valid phone number';
+            } else {
+              // Use the existing validator for more complex validation
+              error = validatePhoneNumber(trimmedValue);
+            }
+          }
+        }
+        break;
+      case 'contact_phone':
+        // Same enterprise phone validation for contact phone - Unicode support
+        if (trimmedValue) {
+          // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
+          const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
+          if (countryCodeOnlyPattern.test(trimmedValue)) {
+            // Don't validate if it's just a country code - user hasn't started typing yet
+            break;
+          }
+
+          // Extract all Unicode digits (supports international number systems)
+          const unicodeDigits = trimmedValue.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+          const digitCount = unicodeDigits.length;
+
+          if (digitCount > 0 && digitCount < 7) {
+            error = 'Please enter a complete phone number (at least 7 digits)';
+          } else if (digitCount > 15) {
+            error = 'Phone number cannot exceed 15 digits';
+          } else if (digitCount > 0) {
+            const unicodeDigitString = unicodeDigits.join('');
+            if (/^(.)\1+$/u.test(unicodeDigitString)) {
+              error = 'Please enter a valid phone number';
+            } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
+              error = 'Please enter a valid phone number';
+            } else {
+              error = validatePhoneNumber(trimmedValue);
+            }
+          }
+        }
         break;
       case 'postal_code':
         error = validatePostalCode(value, additionalData?.countryCode);
@@ -364,10 +475,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     });
     
     // Clear errors when user starts typing
-    if (fieldErrors[field]) {
+    const errorField = field.startsWith('properties.') ? field.split('.')[1] : field;
+    if (fieldErrors[errorField]) {
       setFieldErrors(prev => ({
         ...prev,
-        [field]: ''
+        [errorField]: ''
       }));
     }
   };
@@ -425,6 +537,92 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       country_code: countryCode,
       country_name: countryName
     }));
+  };
+
+  const handleContactCountryChange = (countryCode: string) => {
+    setContactCountryCode(countryCode);
+  };
+
+  // Comprehensive form validation check for submit button state
+  const isFormValid = () => {
+    // Required field: Company name
+    if (!formData.company_name || !formData.company_name.trim()) {
+      return false;
+    }
+
+    // Check for any existing field errors
+    if (Object.values(fieldErrors).some(error => error && error.trim() !== '')) {
+      return false;
+    }
+
+    // Validate all fields real-time without showing errors
+    const companyNameError = validateField('company_name', formData.company_name, undefined, false);
+    if (companyNameError) return false;
+
+    // Optional field validations - only if they have content
+    if (formData.url && formData.url.trim()) {
+      const urlError = validateField('url', formData.url, undefined, false);
+      if (urlError) return false;
+    }
+
+    if (formData.properties?.industry && formData.properties.industry.trim()) {
+      const industryError = validateField('industry', formData.properties.industry, undefined, false);
+      if (industryError) return false;
+    }
+
+    // Location validations - only if they have content
+    if (locationData.email && locationData.email.trim()) {
+      const emailError = validateField('location_email', locationData.email, undefined, false);
+      if (emailError) return false;
+    }
+
+    if (locationData.phone && locationData.phone.trim()) {
+      const phoneError = validateField('location_phone', locationData.phone, undefined, false);
+      if (phoneError) return false;
+    }
+
+    if (locationData.postal_code && locationData.postal_code.trim()) {
+      const postalError = validateField('postal_code', locationData.postal_code, { countryCode: locationData.country_code }, false);
+      if (postalError) return false;
+    }
+
+    if (locationData.city && locationData.city.trim()) {
+      const cityError = validateField('city', locationData.city, undefined, false);
+      if (cityError) return false;
+    }
+
+    if (locationData.state_province && locationData.state_province.trim()) {
+      const stateError = validateField('state_province', locationData.state_province, undefined, false);
+      if (stateError) return false;
+    }
+
+    if (locationData.address_line1 && locationData.address_line1.trim()) {
+      const addressError = validateField('address_line1', locationData.address_line1, undefined, false);
+      if (addressError) return false;
+    }
+
+    // Contact validations - only if they have content
+    if (contactData.full_name && contactData.full_name.trim()) {
+      const nameError = validateField('contact_name', contactData.full_name, undefined, false);
+      if (nameError) return false;
+    }
+
+    if (contactData.email && contactData.email.trim()) {
+      const contactEmailError = validateField('contact_email', contactData.email, undefined, false);
+      if (contactEmailError) return false;
+    }
+
+    if (contactData.phone_number && contactData.phone_number.trim()) {
+      const contactPhoneError = validateField('contact_phone', contactData.phone_number, undefined, false);
+      if (contactPhoneError) return false;
+    }
+
+    if (contactData.notes && contactData.notes.trim()) {
+      const notesError = validateField('notes', contactData.notes, undefined, false);
+      if (notesError) return false;
+    }
+
+    return true;
   };
 
 
@@ -501,7 +699,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     id="client-type-select"
                     data-automation-id="client-type-select"
                     options={[
-                      { value: 'client', label: 'Client' },
+                      { value: 'company', label: 'Company' },
                       { value: 'individual', label: 'Individual' }
                     ]}
                     value={formData.client_type}
@@ -679,12 +877,24 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     id="client-location-phone"
                     label="Phone"
                     value={locationData.phone || ''}
-                    onChange={(value) => handleLocationChange('phone', value)}
+                    onChange={(value) => {
+                      handleLocationChange('phone', value);
+                      // Clear error when user starts typing, clears the field, or has only country code
+                      const trimmedValue = value.trim();
+                      const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
+
+                      if (fieldErrors.location_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+                        setFieldErrors(prev => ({ ...prev, location_phone: '' }));
+                      }
+                    }}
                     onBlur={() => {
                       validateField('location_phone', locationData.phone || '');
                     }}
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                    countries={countries}
+                    onCountryChange={(countryCode) => handleCountryChange(countryCode, countries.find(c => c.code === countryCode)?.name || '')}
+                    allowExtensions={true}
                     disabled={isSubmitting}
                     data-automation-id="client-location-phone"
                   />
@@ -702,7 +912,13 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     data-automation-id="client-location-email"
                     type="email"
                     value={locationData.email || ''}
-                    onChange={(e) => handleLocationChange('email', e.target.value)}
+                    onChange={(e) => {
+                      handleLocationChange('email', e.target.value);
+                      // Immediately validate if user enters only spaces
+                      if (/^\s+$/.test(e.target.value)) {
+                        setFieldErrors(prev => ({ ...prev, location_email: 'Email address cannot contain only spaces' }));
+                      }
+                    }}
                     onBlur={() => {
                       validateField('location_email', locationData.email || '');
                     }}
@@ -753,7 +969,13 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     data-automation-id="client-contact-email"
                     type="email"
                     value={contactData.email}
-                    onChange={(e) => handleContactChange('email', e.target.value)}
+                    onChange={(e) => {
+                      handleContactChange('email', e.target.value);
+                      // Immediately validate if user enters only spaces
+                      if (/^\s+$/.test(e.target.value)) {
+                        setFieldErrors(prev => ({ ...prev, contact_email: 'Email address cannot contain only spaces' }));
+                      }
+                    }}
                     onBlur={() => {
                       validateField('contact_email', contactData.email);
                     }}
@@ -770,12 +992,24 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     id="client-contact-phone"
                     label="Phone"
                     value={contactData.phone_number}
-                    onChange={(value) => handleContactChange('phone_number', value)}
+                    onChange={(value) => {
+                      handleContactChange('phone_number', value);
+                      // Clear error when user starts typing, clears the field, or has only country code
+                      const trimmedValue = value.trim();
+                      const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
+
+                      if (fieldErrors.contact_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+                        setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
+                      }
+                    }}
                     onBlur={() => {
                       validateField('contact_phone', contactData.phone_number);
                     }}
-                    countryCode={locationData.country_code}
-                    phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                    countryCode={contactCountryCode}
+                    phoneCode={countries.find(c => c.code === contactCountryCode)?.phone_code}
+                    countries={countries}
+                    onCountryChange={handleContactCountryChange}
+                    allowExtensions={true}
                     disabled={isSubmitting}
                     data-automation-id="client-contact-phone"
                   />

@@ -38,6 +38,16 @@ const ContractReports: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   // Load report data on component mount
   useEffect(() => {
     const loadReportData = async () => {
@@ -390,8 +400,14 @@ const ContractReports: React.FC = () => {
               <p className="text-sm text-gray-500 py-8 text-center">No contract revenue data available</p>
             ) : (
               <DataTable
+                id="contract-reports-table"
                 data={revenueData}
                 columns={revenueColumns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
               />
             )}
           </Card>
@@ -410,8 +426,14 @@ const ContractReports: React.FC = () => {
               <p className="text-sm text-gray-500 py-8 text-center">No contracts expiring in the near future</p>
             ) : (
               <DataTable
+                id="contract-expiration-table"
                 data={expirationData}
                 columns={expirationColumns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
               />
             )}
           </Card>
@@ -430,8 +452,14 @@ const ContractReports: React.FC = () => {
               <p className="text-sm text-gray-500 py-8 text-center">No bucket-based contracts found</p>
             ) : (
               <DataTable
+                id="bucket-usage-table"
                 data={bucketUsageData}
                 columns={bucketUsageColumns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
               />
             )}
           </Card>
@@ -450,8 +478,14 @@ const ContractReports: React.FC = () => {
               <p className="text-sm text-gray-500 py-8 text-center">No profitability data available</p>
             ) : (
               <DataTable
+                id="profitability-table"
                 data={profitabilityData}
                 columns={profitabilityColumns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
               />
             )}
           </Card>

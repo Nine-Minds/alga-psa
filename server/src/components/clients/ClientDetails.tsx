@@ -15,15 +15,17 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
+import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from 'server/src/lib/utils/clientFormValidation';
 import ClientContactsList from 'server/src/components/contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateClient, uploadClientLogo, deleteClientLogo, getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient } from 'server/src/lib/actions/client-actions/clientActions';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -96,8 +98,10 @@ const TextDetailItem: React.FC<{
   value: string;
   onEdit: (value: string) => void;
   automationId?: string;
-}> = ({ label, value, onEdit, automationId }) => {
+  validate?: (value: string) => string | null;
+}> = ({ label, value, onEdit, automationId, validate }) => {
   const [localValue, setLocalValue] = useState(value);
+  const [error, setError] = useState<string | null>(null);
 
   // Register for UI automation with meaningful label
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -120,6 +124,12 @@ const TextDetailItem: React.FC<{
   }, [localValue, updateMetadata, label]);
 
   const handleBlur = () => {
+    // Professional SaaS validation pattern: validate on blur, not while typing
+    if (validate) {
+      const validationError = validate(localValue);
+      setError(validationError);
+    }
+
     // Always call onEdit to allow parent to determine if changes should be tracked
     onEdit(localValue);
   };
@@ -128,12 +138,26 @@ const TextDetailItem: React.FC<{
     <div className="space-y-2" {...automationIdProps}>
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
+        id={automationId ? `${automationId}-input` : undefined}
         type="text"
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={(e) => {
+          setLocalValue(e.target.value);
+          // Clear error while typing
+          if (error) {
+            setError(null);
+          }
+        }}
         onBlur={handleBlur}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
+          error
+            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+            : 'border-gray-200 focus:ring-purple-500 focus:border-transparent'
+        }`}
       />
+      {error && (
+        <Text size="1" className="text-red-600 mt-1">{error}</Text>
+      )}
     </div>
   );
 };
@@ -174,6 +198,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
@@ -187,6 +214,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { tags: allTags } = useTags();
   const router = useRouter();
   const pathname = usePathname();
@@ -194,6 +223,90 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
 
+
+  const handleDeleteClient = () => {
+    setDeleteError(null);
+    setShowDeactivateOption(false);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const result = await deleteClient(editedClient.client_id);
+
+      if (!result.success) {
+        if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
+          handleDependencyError(result, setDeleteError);
+          setShowDeactivateOption(true);
+          return;
+        }
+        throw new Error(result.message || 'Failed to delete client');
+      }
+
+      setIsDeleteDialogOpen(false);
+
+      toast.success("Client has been deleted successfully.");
+
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
+      } else {
+        router.push('/msp/clients');
+      }
+    } catch (error: any) {
+      console.error('Failed to delete client:', error);
+      setDeleteError(error.message || 'Failed to delete client. Please try again.');
+    }
+  };
+
+  const handleMarkClientInactive = async () => {
+    try {
+      await updateClient(editedClient.client_id, { is_inactive: true });
+
+      setIsDeleteDialogOpen(false);
+
+      toast.success("Client has been marked as inactive successfully.");
+
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
+      } else {
+        router.push('/msp/clients');
+      }
+    } catch (error: any) {
+      console.error('Error marking client as inactive:', error);
+      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+    }
+  };
+
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setDeleteError(null);
+    setShowDeactivateOption(false);
+  };
+
+  // Helper function to handle dependency errors (copied from main Clients page)
+  const handleDependencyError = (result: any, setError: (error: string) => void) => {
+    const dependencies = result.dependencies || {};
+    const dependencyMessages: string[] = [];
+
+    if (dependencies.tickets > 0) {
+      dependencyMessages.push(`${dependencies.tickets} ticket${dependencies.tickets !== 1 ? 's' : ''}`);
+    }
+    if (dependencies.contacts > 0) {
+      dependencyMessages.push(`${dependencies.contacts} contact${dependencies.contacts !== 1 ? 's' : ''}`);
+    }
+    if (dependencies.projects > 0) {
+      dependencyMessages.push(`${dependencies.projects} project${dependencies.projects !== 1 ? 's' : ''}`);
+    }
+
+    if (dependencyMessages.length > 0) {
+      const dependencyText = dependencyMessages.join(', ');
+      setError(`Cannot delete this client because it has associated ${dependencyText}. You can mark the client as inactive instead.`);
+    } else {
+      setError('Cannot delete this client because it has associated data. You can mark the client as inactive instead.');
+    }
+  };
 
   // 1. Implement refreshClientData function
   const refreshClientData = useCallback(async () => {
@@ -392,11 +505,38 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleSave = async () => {
     if (isSaving) return;
-    
+    setHasAttemptedSubmit(true);
+
+    // Professional PSA validation pattern: Check required fields
+    const requiredFields = {
+      client_name: editedClient.client_name?.trim() || ''
+    };
+
+    // Clear previous errors and validate required fields
+    const newErrors: Record<string, string> = {};
+    let hasValidationErrors = false;
+
+    Object.entries(requiredFields).forEach(([field, value]) => {
+      if (field === 'client_name') {
+        const error = validateClientName(value);
+        if (error) {
+          newErrors[field] = error;
+          hasValidationErrors = true;
+        }
+      }
+    });
+
+    setFieldErrors(newErrors);
+
+    if (hasValidationErrors) {
+      setIsSaving(false);
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Prepare data for update, removing computed fields
-      const { 
+      const {
         account_manager_full_name,
         ...restOfEditedClient 
       } = editedClient;
@@ -410,6 +550,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       const updatedClient = updatedClientResult as IClient; // Cast if necessary, or adjust based on actual return type
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
+      setHasAttemptedSubmit(false);
       toast.success("Client details saved successfully.");
     } catch (error) {
       console.error('Error saving client:', error);
@@ -530,6 +671,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 value={editedClient.client_name}
                 onEdit={(value) => handleFieldChange('client_name', value)}
                 automationId="client-name-field"
+                validate={validateClientName}
               />
                            
               <FieldContainer
@@ -555,6 +697,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 value={editedClient.properties?.website || ''}
                 onEdit={(value) => handleFieldChange('properties.website', value)}
                 automationId="website-field"
+                validate={validateWebsiteUrl}
               />
 
               <TextDetailItem
@@ -562,6 +705,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 value={editedClient.properties?.industry || ''}
                 onEdit={(value) => handleFieldChange('properties.industry', value)}
                 automationId="industry-field"
+                validate={validateIndustry}
               />
 
               <TextDetailItem
@@ -569,6 +713,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 value={editedClient.properties?.company_size || ''}
                 onEdit={(value) => handleFieldChange('properties.company_size', value)}
                 automationId="company-size-field"
+                validate={validateCompanySize}
               />
               
               <TextDetailItem
@@ -576,6 +721,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 value={editedClient.properties?.annual_revenue || ''}
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
+                validate={validateAnnualRevenue}
               />
 
               {/* Language Preference */}
@@ -652,10 +798,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           </div>
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
+            {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+              <Text size="2" className="text-red-600 mr-2" role="alert">
+                Please fill in all required fields
+              </Text>
+            )}
             <Button
               id="save-client-changes-btn"
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
+              disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
@@ -701,17 +852,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     // },
     {
       label: "Billing",
-      content: isBillingEnabled ? (
+      content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <BillingConfiguration
             client={editedClient}
             onSave={handleBillingConfigSave}
             contacts={contacts}
           />
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
-          <FeaturePlaceholder />
         </div>
       )
     },
@@ -762,13 +909,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       label: "Tax Settings",
-      content: isBillingEnabled ? (
+      content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <TaxSettingsForm clientId={client.client_id} />
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
-          <FeaturePlaceholder />
         </div>
       )
     },
@@ -817,10 +960,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           </div>
           
           <Flex gap="4" justify="end" align="center">
+            {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+              <Text size="2" className="text-red-600 mr-2" role="alert">
+                Please fill in all required fields
+              </Text>
+            )}
             <Button
               id="save-additional-info-btn"
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
+              disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
@@ -948,12 +1096,23 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               onClick={() => window.open(`/msp/clients/${editedClient.client_id}`, '_blank')}
               variant="soft"
               size="sm"
-              className="flex items-center ml-4 mr-8"
+              className="flex items-center ml-4 mr-2"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Open in new tab
             </Button>
           )}
+
+          <Button
+            id={`${id}-delete-client-button`}
+            onClick={handleDeleteClient}
+            variant="destructive"
+            size="sm"
+            className="flex items-center mr-8"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
         </div>
       </div>
 
@@ -990,6 +1149,23 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             />
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          id="delete-client-dialog"
+          isOpen={isDeleteDialogOpen}
+          onClose={resetDeleteState}
+          onConfirm={confirmDelete}
+          title="Delete Client"
+          message={
+            deleteError
+              ? deleteError
+              : "Are you sure you want to delete this client? This action cannot be undone."
+          }
+          confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
+          cancelLabel={deleteError ? "Close" : "Cancel"}
+          isConfirming={false}
+        />
       </div>
     </ReflectionContainer>
   );

@@ -48,8 +48,18 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [tableKey, setTableKey] = useState(0);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const selectedInvoiceId = searchParams?.get('invoiceId');
   const selectedTemplateId = searchParams?.get('templateId');
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
 
   // Filter for finalized only. Some environments mark finalization via status, not finalized_at.
   const invoices = allInvoices.filter(inv => inv.finalized_at || inv.status !== 'draft');
@@ -262,11 +272,6 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       render: (value) => `$${(Number(value) / 100).toFixed(2)}`,
     },
     {
-      title: 'Invoice Date',
-      dataIndex: 'invoice_date',
-      render: (value) => toPlainDate(value).toLocaleString(),
-    },
-    {
       title: 'Finalized Date',
       dataIndex: 'finalized_at',
       render: (value) => value ? toPlainDate(value).toLocaleString() : '',
@@ -413,15 +418,19 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
           <Panel defaultSize={60} minSize={30} onResize={() => setTableKey(prev => prev + 1)}>
             <div className="pr-2">
               <DataTable
+                id="invoices-finalized-table"
                 key={tableKey}
                 data={filteredInvoices}
                 columns={columns}
                 pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
                 onRowClick={handleInvoiceSelect}
                 rowClassName={(record) =>
                   selectedInvoiceId === record.invoice_id ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"
                 }
-                initialSorting={[{ id: 'invoice_date', desc: true }]}
               />
             </div>
           </Panel>

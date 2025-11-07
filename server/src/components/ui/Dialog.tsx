@@ -214,8 +214,8 @@ export const DialogContent: React.FC<{ children: ReactNode, className?: string }
   <div className={`mt-2 ${className || ''}`}>{children}</div>
 );
 
-export const DialogFooter: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <div className="mt-6 flex justify-end space-x-2">{children}</div>
+export const DialogFooter: React.FC<{ children: ReactNode, className?: string }> = ({ children, className }) => (
+  <div className={`mt-6 flex justify-end space-x-2 ${className || ''}`}>{children}</div>
 );
 
 export const DialogTrigger = RadixDialog.Trigger;

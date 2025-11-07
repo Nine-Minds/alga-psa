@@ -117,7 +117,7 @@
     "currentLanguage": "Aktuelle Sprache",
     "preference": {
       "label": "Sprachpräferenz",
-      "helper": "Wähle deine bevorzugte Sprache für die Oberfläche",
+      "helper": "Wähle deine bevorzugte Sprache für die Oberfläche und E-Mail-Benachrichtigungen",
       "placeholder": "Sprache auswählen",
       "cleared": "Sprachpräferenz entfernt. Standardsprache wird verwendet...",
       "updating": "Sprachpräferenz wird aktualisiert...",
@@ -239,7 +239,210 @@
     "showing": "Zeige {{from}} bis {{to}} von {{total}} Ergebnissen",
     "rowsPerPage": "Zeilen pro Seite",
     "first": "Erste",
-    "last": "Letzte"
+    "last": "Letzte",
+    "itemsLabel": "Einträge",
+    "itemsPerPageOption": "{{count}} Einträge/Seite",
+    "itemsPerPagePlaceholder": "Einträge pro Seite",
+    "reflectionLabel": "Seitennavigation",
+    "range": "{{from}} - {{to}} von {{total}} {{itemLabel}}",
+    "ariaLabel": "Seitennavigation",
+    "totalItems": "{{count}} {{itemLabel}} insgesamt",
+    "totalRecordsInline": "({{count}} Gesamteinträge)",
+    "pageOf": "Seite {{current}} von {{total}}"
+  },
+  "documents": {
+    "title": "Dokumente",
+    "noDocuments": "Keine Dokumente angehängt",
+    "upload": "Dokument hochladen",
+    "download": "Herunterladen",
+    "remove": "Entfernen",
+    "preview": "Vorschau",
+    "linkDocuments": "Dokumente verknüpfen",
+    "editDocument": "Dokument bearbeiten",
+    "viewDocument": "Dokument anzeigen",
+    "downloadToPlay": "Zum Abspielen herunterladen",
+    "delete": "Löschen",
+    "previewUnavailable": "Vorschau nicht verfügbar",
+    "newDocument": "Neues Dokument",
+    "uploadFile": "Datei hochladen",
+    "deleteTitle": "Dokument löschen",
+    "deleteMessage": "Möchtest du \"{{name}}\" wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "deleteVideoTitle": "Video löschen",
+    "deleteVideoMessage": "Möchtest du das Video \"{{name}}\" wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "removeTitle": "Dokument entfernen",
+    "removeMessage": "Möchtest du \"{{name}}\" wirklich von diesem Element entfernen? Das Dokument bleibt in der Dokumentbibliothek verfügbar.",
+    "removeVideoTitle": "Video entfernen",
+    "removeVideoMessage": "Möchtest du das Video \"{{name}}\" wirklich von diesem Element entfernen? Die Datei bleibt in der Dokumentbibliothek verfügbar.",
+    "downloadFile": "Datei herunterladen",
+    "videoUnsupported": "Videoformat ({{mimeType}}) wird für die Wiedergabe im Browser nicht unterstützt",
+    "videoTagUnsupported": "Dein Browser unterstützt das Video-Tag nicht.",
+    "unnamed": "Ohne Titel",
+    "videoDownloadInfo": "Das Video wird heruntergeladen und kann mit dem Standard-Videoplayer deines Systems abgespielt werden.",
+    "previewUnavailableNoId": "Keine Vorschau verfügbar (keine Kennung)",
+    "previewLoadFailed": "Vorschau konnte nicht geladen werden",
+    "videoCodecWarning": "Chrome unterstützt diesen Videocodec möglicherweise nicht. Lade die Datei herunter oder verwende Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Dokumente konnten nicht geladen werden.",
+      "folderCreated": "Ordner \"{{name}}\" wurde erfolgreich erstellt",
+      "folderCreateFailed": "Ordner konnte nicht erstellt werden",
+      "moveDocumentsSuccess_one": "{{count}} Dokument wurde nach {{destination}} verschoben",
+      "moveDocumentsSuccess_other": "{{count}} Dokumente wurden nach {{destination}} verschoben",
+      "moveDocumentsFailed": "Dokumente konnten nicht verschoben werden",
+      "deleteSuccess": "Dokument \"{{name}}\" wurde erfolgreich gelöscht",
+      "deleteFailed": "Dokument konnte nicht gelöscht werden",
+      "removeAssociationFailed": "Dokumentverknüpfung konnte nicht entfernt werden",
+      "moveDocumentSuccess": "Dokument \"{{name}}\" wurde erfolgreich verschoben",
+      "moveDocumentFailed": "Dokument konnte nicht verschoben werden",
+      "createFailed": "Dokument konnte nicht erstellt werden",
+      "saveFailed": "Dokument konnte nicht gespeichert werden",
+      "loadContentFailed": "Dokumentinhalt konnte nicht geladen werden",
+      "downloadFailed": "Dokument konnte nicht heruntergeladen werden",
+      "bulkDeleteFailed": "Einige Dokumente konnten nicht gelöscht werden",
+      "bulkDeleteSuccess_one": "{{count}} Dokument wurde erfolgreich gelöscht",
+      "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht"
+    },
+    "validation": {
+      "nameRequired": "Dokumentname ist erforderlich"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} Dokument ausgewählt",
+      "selected_other": "{{count}} Dokumente ausgewählt",
+      "moveToFolder": "In Ordner verschieben",
+      "deleteSelected": "Ausgewählte löschen",
+      "clearSelection": "Auswahl aufheben"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Möchtest du wirklich {{count}} Dokument löschen?",
+      "confirmBulkDelete_other": "Möchtest du wirklich {{count}} Dokumente löschen?"
+    },
+    "pagination": {
+      "perPage": "{{count}} pro Seite"
+    },
+    "folderSelector": {
+      "defaultTitle": "Zielordner auswählen",
+      "defaultDescription": "Wähle aus, wo dieses Dokument gespeichert werden soll",
+      "singleDescription": "Wo möchtest du \"{{fileName}}\" speichern?",
+      "multipleDescription": "Wo möchtest du diese {{count}} Dateien speichern?",
+      "newDocumentTitle": "Ordner für neues Dokument auswählen",
+      "newDocumentDescription": "Wähle aus, wo dieses neue Dokument gespeichert werden soll",
+      "moveTitle": "Dokument verschieben",
+      "moveDescriptionWithName": "Zielordner für \"{{name}}\" auswählen",
+      "moveDescription": "Zielordner auswählen",
+      "bulkMoveTitle": "Ausgewählte Dokumente verschieben",
+      "bulkMoveDescription_one": "Zielordner für {{count}} Dokument auswählen",
+      "bulkMoveDescription_other": "Zielordner für {{count}} Dokumente auswählen",
+      "errors": {
+        "nameRequired": "Bitte gib einen Ordnernamen ein",
+        "invalidCharacters": "Der Ordnername darf kein \"/\" enthalten",
+        "createFailed": "Ordner konnte nicht erstellt werden"
+      },
+      "creating": "Wird erstellt...",
+      "createButton": "Ordner erstellen",
+      "newFolderButton": "Neuer Ordner",
+      "parentLabel": "Übergeordneter Ordner: {{folder}}",
+      "rootLabel": "/ (Stammverzeichnis)",
+      "namePlaceholder": "Ordnernamen eingeben",
+      "loading": "Ordner werden geladen...",
+      "rootOption": "Stamm (kein Ordner)",
+      "empty": "Keine Ordner vorhanden. Dokumente werden im Stammverzeichnis gespeichert."
+    },
+    "filters": {
+      "searchLabel": "Dokumente suchen",
+      "searchPlaceholder": "Nach Dokumentnamen suchen...",
+      "typeLabel": "Dokumenttyp",
+      "entityTypeLabel": "Verknüpfter Entitätstyp",
+      "uploadedByLabel": "Hochgeladen von",
+      "uploadedByPlaceholder": "Alle Benutzer",
+      "updatedStartLabel": "Änderungsdatum (von)",
+      "updatedEndLabel": "Änderungsdatum (bis)",
+      "startDatePlaceholder": "Startdatum auswählen",
+      "endDatePlaceholder": "Enddatum auswählen",
+      "sortByLabel": "Sortieren nach",
+      "clear": "Filter zurücksetzen",
+      "showAllDocuments": "Alle Dokumente anzeigen",
+      "typeOptions": {
+        "all": "Alle Dokumenttypen",
+        "pdf": "PDF",
+        "image": "Bilder",
+        "text": "Dokumente",
+        "video": "Video",
+        "other": "Andere"
+      },
+      "sortOptions": {
+        "updated_at": "Datum",
+        "document_name": "Dokumentname",
+        "file_size": "Dateigröße",
+        "created_by_full_name": "Erstellt von"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Aufsteigend anzeigen",
+          "desc": "Absteigend anzeigen"
+        },
+        "document_name": {
+          "asc": "A–Z anzeigen",
+          "desc": "Z–A anzeigen"
+        },
+        "updated_at": {
+          "asc": "Älteste zuerst anzeigen",
+          "desc": "Neueste zuerst anzeigen"
+        },
+        "file_size": {
+          "asc": "Kleinste zuerst anzeigen",
+          "desc": "Größte zuerst anzeigen"
+        },
+        "created_by_full_name": {
+          "asc": "A–Z anzeigen",
+          "desc": "Z–A anzeigen"
+        }
+      }
+    },
+    "selector": {
+      "title": "Dokumente auswählen",
+      "reflectionLabel": "Dokumentauswahl",
+      "searchPlaceholder": "Dokumente durchsuchen...",
+      "foldersLabel": "Ordner",
+      "folderHint": "im Ordner \"{{folder}}\"",
+      "saving": "Wird gespeichert...",
+      "selectDocument": "Dokument auswählen",
+      "associateSelected": "Auswahl verknüpfen",
+      "errors": {
+        "configuration": "Konfigurationsfehler: Entitätsinformationen fehlen",
+        "invalidData": "Ungültige Dokumentdaten erhalten",
+        "load": "Dokumente konnten nicht geladen werden",
+        "save": "Dokumentauswahl konnte nicht gespeichert werden"
+      },
+      "configErrorTitle": "Konfigurationsfehler",
+      "configErrorMessage": "Erforderliche Konfiguration fehlt. Bitte wende dich an den Support."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Dokument-Upload",
+      "dragDrop": "Ziehe deine Dateien hierher oder",
+      "browse": "Dateien durchsuchen",
+      "uploading": "Wird hochgeladen...",
+      "uploadingProgress": "{{current}} von {{total}} werden hochgeladen",
+      "pending": "Ausstehend",
+      "error": "Dokument konnte nicht hochgeladen werden",
+      "fileError": "Datei konnte nicht hochgeladen werden"
+    },
+    "folders": {
+      "root": "Stammordner",
+      "loadFailed": "Ordnerbaum konnte nicht geladen werden",
+      "deleteConfirm": "Möchtest du den Ordner \"{{name}}\" wirklich löschen? Dies funktioniert nur, wenn der Ordner leer ist.",
+      "deleteSuccess": "Ordner \"{{name}}\" wurde erfolgreich gelöscht",
+      "deleteFailed": "Ordner konnte nicht gelöscht werden",
+      "deleteAction": "Ordner löschen",
+      "loading": "Ordner werden geladen...",
+      "title": "Ordner",
+      "collapse": "Ordner einklappen",
+      "allDocuments": "Alle Dokumente"
+    },
+    "folderManager": {
+      "title": "Neuen Ordner erstellen",
+      "nameLabel": "Ordnername",
+      "namePlaceholder": "Ordnernamen eingeben",
+      "willCreateIn": "Wird erstellt in: {{folder}}"
+    }
   },
   "fields": {
     "notes": "Notizen"

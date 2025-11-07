@@ -7,6 +7,7 @@ import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getCli
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from 'server/src/lib/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+import { getTenantPortalLoginLink } from 'server/src/lib/actions/portal-actions/clientPortalLinkActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import toast from 'react-hot-toast';
@@ -20,7 +21,7 @@ import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewS
 import { Search, Eye, EyeOff, Info } from 'lucide-react';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
-import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
+import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -59,6 +60,7 @@ const UserManagement = (): JSX.Element => {
     email: []
   });
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
+  const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -87,13 +89,7 @@ const UserManagement = (): JSX.Element => {
   // Show live password requirements feedback when typing
   useEffect(() => {
     const pw = newUser.password || '';
-    setPwdReq({
-      minLength: pw.length >= 8,
-      hasUpper: /[A-Z]/.test(pw),
-      hasLower: /[a-z]/.test(pw),
-      hasNumber: /\d/.test(pw),
-      hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)
-    });
+    setPwdReq(getPasswordRequirements(pw));
   }, [newUser.password]);
 
   // Validation functions
@@ -138,15 +134,20 @@ const UserManagement = (): JSX.Element => {
     // Update the user state using the camelCase property names
     const userFieldMap = {
       first_name: 'firstName',
-      last_name: 'lastName', 
+      last_name: 'lastName',
       email: 'email'
     } as const;
-    
+
     const userField = userFieldMap[fieldName];
     setNewUser(prev => ({ ...prev, [userField]: value }));
-    
-    // Validate the field in real-time
-    validateField(fieldName, value);
+
+    // Clear existing errors when user starts typing (but don't validate yet)
+    if (fieldErrors[fieldName].length > 0) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [fieldName]: []
+      }));
+    }
   };
 
   const fetchLicenseUsage = async (): Promise<void> => {
@@ -159,6 +160,32 @@ const UserManagement = (): JSX.Element => {
       } catch (err) {
         console.error('Error fetching license usage:', err);
       }
+    }
+  };
+
+  const handleCopyPortalLink = async (): Promise<void> => {
+    if (isCopyingPortalLink) {
+      return;
+    }
+
+    try {
+      setIsCopyingPortalLink(true);
+      const linkResult = await getTenantPortalLoginLink();
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(linkResult.url);
+        toast.success(
+          linkResult.source === 'vanity'
+            ? 'Copied vanity portal login link to clipboard'
+            : 'Copied canonical portal login link to clipboard'
+        );
+      } else {
+        toast.error('Clipboard API is not available in this browser.');
+      }
+    } catch (error) {
+      console.error('Failed to copy portal login link', error);
+      toast.error('Failed to copy portal login link');
+    } finally {
+      setIsCopyingPortalLink(false);
     }
   };
 
@@ -298,28 +325,48 @@ const fetchContacts = async (): Promise<void> => {
               toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
             }
           } else {
-            const contact = await addContact({
-              full_name: `${newUser.firstName} ${newUser.lastName}`,
-              email: newUser.email,
-              client_id: newUser.clientId || undefined,
-              is_inactive: false
-            });
             try {
-              const invitationResult = await sendPortalInvitation(contact.contact_name_id);
-              if (invitationResult.success) {
-                toast.success('Portal invitation sent successfully!');
-              } else {
-                toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+              const contact = await addContact({
+                full_name: `${newUser.firstName} ${newUser.lastName}`,
+                email: newUser.email,
+                client_id: newUser.clientId || undefined,
+                is_inactive: false
+              });
+              try {
+                const invitationResult = await sendPortalInvitation(contact.contact_name_id);
+                if (invitationResult.success) {
+                  toast.success('Portal invitation sent successfully!');
+                } else {
+                  toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+                }
+              } catch (inviteError) {
+                toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
               }
-            } catch (inviteError) {
-              toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
+            } catch (contactError: any) {
+              // Handle contact creation errors
+              console.error('Error creating contact:', contactError);
+
+              if (contactError.message?.includes('EMAIL_EXISTS:')) {
+                const errorMsg = contactError.message.replace('EMAIL_EXISTS:', '').trim();
+                toast.error(errorMsg);
+                setError(errorMsg);
+              } else if (contactError.message?.includes('VALIDATION_ERROR:')) {
+                const errorMsg = contactError.message.replace('VALIDATION_ERROR:', '').trim();
+                toast.error(errorMsg);
+                setError(errorMsg);
+              } else {
+                toast.error('Failed to create contact: ' + (contactError.message || 'Unknown error'));
+                setError('Failed to create contact: ' + (contactError.message || 'Unknown error'));
+              }
+              return; // Stop execution to prevent further processing
             }
           }
           await fetchUsers();
         } else {
-          // pwd validation
-          if (!(pwdReq.minLength && pwdReq.hasUpper && pwdReq.hasLower && pwdReq.hasNumber && pwdReq.hasSpecial)) {
-            toast.error('Password must be at least 8 characters and include upper, lower, number, and special character.');
+          // Use unified password validation
+          const passwordError = validatePassword(newUser.password);
+          if (passwordError) {
+            toast.error(passwordError);
             return;
           }
           const result = await createClientPortalUser(
@@ -373,11 +420,25 @@ const fetchContacts = async (): Promise<void> => {
       console.error('Error creating user:', error);
       // Display specific error message if available
       if (error.message === "A user with this email address already exists") {
-        setError('This email address is already in use. Please use a different email address.');
+        const errorMsg = 'This email address is already in use. Please use a different email address.';
+        toast.error(errorMsg);
+        setError(errorMsg);
+      } else if (error.message?.includes('EMAIL_EXISTS:')) {
+        const errorMsg = error.message.replace('EMAIL_EXISTS:', '').trim();
+        toast.error(errorMsg);
+        setError(errorMsg);
+      } else if (error.message?.includes('VALIDATION_ERROR:')) {
+        const errorMsg = error.message.replace('VALIDATION_ERROR:', '').trim();
+        toast.error(errorMsg);
+        setError(errorMsg);
       } else if (error.message.includes("Cannot assign")) {
-        setError('Please select an appropriate role for this user type');
+        const errorMsg = 'Please select an appropriate role for this user type';
+        toast.error(errorMsg);
+        setError(errorMsg);
       } else {
-        setError(error.message || 'Failed to create user');
+        const errorMsg = error.message || 'Failed to create user';
+        toast.error(errorMsg);
+        setError(errorMsg);
       }
     }
   };
@@ -499,20 +560,37 @@ const fetchContacts = async (): Promise<void> => {
               </div>
             )}
           </div>
-          {!showNewUserForm && (
-            <Button
-              id={`create-new-${portalType}-user-btn`}
-              onClick={() => setShowNewUserForm(true)}
-            >
-              Create New {portalType === 'msp' ? 'User' : 'Client User'}
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            {portalType === 'client' && (
+              <Button
+                id="copy-client-portal-link-button"
+                variant="outline"
+                onClick={handleCopyPortalLink}
+                disabled={isCopyingPortalLink}
+              >
+                {isCopyingPortalLink ? 'Copying...' : 'Copy Portal Login Link'}
+              </Button>
+            )}
+            {!showNewUserForm && (
+              <Button
+                id={`create-new-${portalType}-user-btn`}
+                onClick={() => setShowNewUserForm(true)}
+              >
+                Create New {portalType === 'msp' ? 'User' : 'Client User'}
+              </Button>
+            )}
+          </div>
         </div>
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">
             <h3 className="text-lg font-semibold mb-2">
               Create New {portalType === 'msp' ? 'MSP User' : 'Client Portal User'}
             </h3>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
             <div className="space-y-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left column: manual details */}
@@ -522,7 +600,12 @@ const fetchContacts = async (): Promise<void> => {
                     <Input
                       id="first-name"
                       value={newUser.firstName}
-                      onChange={(e) => handleFieldChange('first_name', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('first_name', e.target.value);
+                      }}
+                      onBlur={() => {
+                        validateField('first_name', newUser.firstName);
+                      }}
                       className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.first_name.length > 0 && (
@@ -538,7 +621,12 @@ const fetchContacts = async (): Promise<void> => {
                     <Input
                       id="last-name"
                       value={newUser.lastName}
-                      onChange={(e) => handleFieldChange('last_name', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('last_name', e.target.value);
+                      }}
+                      onBlur={() => {
+                        validateField('last_name', newUser.lastName);
+                      }}
                       className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.last_name.length > 0 && (
@@ -555,7 +643,12 @@ const fetchContacts = async (): Promise<void> => {
                       id="email"
                       type="email"
                       value={newUser.email}
-                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('email', e.target.value);
+                      }}
+                      onBlur={() => {
+                        validateField('email', newUser.email);
+                      }}
                       className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.email.length > 0 && (
@@ -637,11 +730,6 @@ const fetchContacts = async (): Promise<void> => {
                         label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
                         placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
                       />
-                      {contactValidationError && (
-                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
-                          <p className="text-sm text-red-600">{contactValidationError}</p>
-                        </div>
-                      )}
                     </div>
                   )}
                   <div>

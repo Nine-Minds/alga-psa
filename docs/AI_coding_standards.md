@@ -266,6 +266,43 @@ The knexfile is located in the /server/knexfile.cjs file and is used to configur
 
 Use createTenantKnex() from the /server/src/lib/db/index.ts file to create a database connection and return the tenant as a string.
 
+**Correct Usage Pattern:**
+```typescript
+// CORRECT: Destructure both knex and tenant
+const { knex, tenant } = await createTenantKnex();
+
+// Example query
+const documents = await knex('documents')
+  .where('tenant', tenant)
+  .select('*');
+```
+
+**Transaction Pattern:**
+```typescript
+import { withTransaction } from '@shared/db';
+
+// CORRECT: Pass knex as first parameter
+const { knex } = await createTenantKnex();
+
+await withTransaction(knex, async (trx) => {
+  // Use trx for all operations within the transaction
+  await trx('documents').insert({...});
+  await trx('document_associations').insert({...});
+});
+```
+
+**Common Mistakes:**
+```typescript
+// ❌ WRONG: Missing destructuring
+const knex = await createTenantKnex();
+
+// ❌ WRONG: Missing knex parameter
+await withTransaction(async (trx) => {...});
+
+// ❌ WRONG: Don't use getConnection()
+const knex = await getConnection();
+```
+
 Migrations should have a .cjs extension and should be located in the /server/migrations folder.
 
 Run migrations with the migration environment (env) flag.

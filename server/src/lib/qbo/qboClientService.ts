@@ -2,6 +2,10 @@ import axios from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { QboTenantCredentials } from '../actions/qbo/types'; // Correct path for type
 import { AppError } from '../errors'; // Re-applying the seemingly correct path for AppError
+import {
+  ExternalCompanyRecord,
+  NormalizedCompanyPayload
+} from '../services/companySync';
 
 // Define QuickBooksInstance type locally
 interface QuickBooksInstance {
@@ -160,8 +164,9 @@ export class QboClientService {
     const environment = process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'; // Example logic
 
     logger.debug({ tenantId: this.tenantId, realmId: this.realmId, environment }, 'Initializing QBO client');
-    
+
     // Dynamically import node-quickbooks to handle ES module compatibility
+    // @ts-ignore - node-quickbooks lacks type definitions
     const QuickBooks = (await import('node-quickbooks')).default;
     
     this.qbo = new QuickBooks(
@@ -177,7 +182,7 @@ export class QboClientService {
       this.credentials.refreshToken
     );
     
-    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, hasQueryMethod: typeof this.qbo.query, qboInstance: this.qbo }, 'QBO client initialized');
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, hasQueryMethod: typeof this.qbo?.query, qboInstance: this.qbo }, 'QBO client initialized');
   }
 
   private isTokenExpired(): boolean {
@@ -259,44 +264,100 @@ export class QboClientService {
    */
   public async query<T>(selectQuery: string): Promise<T[]> {
     const client = this.getClient();
-    
-    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, query: selectQuery }, 'Executing QBO query');
 
-    // Handle special cases for client info
+    logger.debug(
+      { tenantId: this.tenantId, realmId: this.realmId, query: selectQuery },
+      'Executing QBO query'
+    );
+
     if (selectQuery.toUpperCase().includes('COMPANYINFO')) {
       return this.getClientInfo<T>();
     }
 
-    // For other queries, use the findItems method which is available in node-quickbooks
-    const queryWithMaxResults = selectQuery.toUpperCase().includes('MAXRESULTS')
-      ? selectQuery
-      : `${selectQuery} MAXRESULTS 1000`;
+    return this.executeQueryRequest<T>(client, selectQuery);
+  }
 
-    return new Promise((resolve, reject) => {
-      // Use findItems for general queries
-      (client as any).findItems(queryWithMaxResults, (err: any, result: any) => {
-        if (err) {
-          logger.error({ tenantId: this.tenantId, realmId: this.realmId, error: err, query: queryWithMaxResults }, 'QBO query failed');
-          reject(this.mapQboError(err, 'query'));
-        } else {
-          // The actual entities are usually nested under a key matching the entity type (e.g., result.QueryResponse.Item)
-          const responseData = result?.QueryResponse;
-          if (responseData && typeof responseData === 'object') {
-             // Find the key that holds the array of results (e.g., 'Item', 'Customer')
-             const entityKey = Object.keys(responseData).find(key => Array.isArray(responseData[key]));
-             if (entityKey) {
-                 resolve(responseData[entityKey] as T[]);
-             } else {
-                 // Handle cases where the query might return no results or unexpected structure
-                 resolve([]);
-             }
-          } else {
-             // If QueryResponse is missing or not an object, assume no results
-             resolve([]);
-          }
+  private async executeQueryRequest<T>(
+    client: QuickBooksInstance,
+    selectQuery: string,
+    attempt = 0
+  ): Promise<T[]> {
+    const endpoint =
+      typeof (client as any).endpoint === 'string'
+        ? (client as any).endpoint
+        : 'https://sandbox-quickbooks.api.intuit.com/v3/company/';
+    const minorversion = (client as any).minorversion;
+    const url = `${endpoint}${this.realmId}/query`;
+
+    const params: Record<string, string> = {
+      query: selectQuery
+    };
+
+    if (minorversion) {
+      params.minorversion = String(minorversion);
+    }
+
+    // keep SDK instance aligned with refreshed credentials
+    (client as any).token = this.credentials.accessToken;
+    (client as any).refreshToken = this.credentials.refreshToken;
+
+    try {
+      const response = await axios.get(url, {
+        params,
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${this.credentials.accessToken}`
         }
       });
-    });
+
+      const queryResponse = response.data?.QueryResponse;
+      if (!queryResponse || typeof queryResponse !== 'object') {
+        return [];
+      }
+
+      const entityKey = Object.keys(queryResponse).find((key) =>
+        Array.isArray(queryResponse[key])
+      );
+      if (!entityKey) {
+        return [];
+      }
+
+      const results = Array.isArray(queryResponse[entityKey])
+        ? (queryResponse[entityKey] as T[])
+        : [];
+
+      logger.debug(
+        {
+          tenantId: this.tenantId,
+          realmId: this.realmId,
+          entityKey,
+          count: results.length
+        },
+        'QBO query succeeded'
+      );
+
+      return results;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 401 && attempt === 0) {
+          await this.refreshToken();
+          return this.executeQueryRequest<T>(client, selectQuery, attempt + 1);
+        }
+
+        const payload = error.response?.data ?? error;
+        throw this.mapQboError(payload, 'query');
+      }
+
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      throw new AppError('QBO_API_ERROR', 'QuickBooks query failed.', {
+        originalError: error,
+        qboOperation: 'query'
+      });
+    }
   }
 
   /**
@@ -306,16 +367,14 @@ export class QboClientService {
     const client = this.getClient();
     
     return new Promise((resolve, reject) => {
-      // Use getClientInfo method for client information
-      (client as any).getClientInfo(this.realmId, (err: any, result: any) => {
+      (client as any).getCompanyInfo(this.realmId, (err: any, result: any) => {
         if (err) {
-          logger.error({ tenantId: this.tenantId, realmId: this.realmId, error: err }, 'QBO getClientInfo failed');
-          reject(this.mapQboError(err, 'getClientInfo'));
+          logger.error({ tenantId: this.tenantId, realmId: this.realmId, error: err }, 'QBO getCompanyInfo failed');
+          reject(this.mapQboError(err, 'getCompanyInfo'));
         } else {
-          // Client info usually returns a single object, but we return as array for consistency
-          const clientInfo = result?.ClientInfo || result;
-          if (clientInfo) {
-            resolve([clientInfo] as T[]);
+          const companyInfo = result?.CompanyInfo || result;
+          if (companyInfo) {
+            resolve([companyInfo] as T[]);
           } else {
             resolve([]);
           }
@@ -352,6 +411,95 @@ export class QboClientService {
         }
       });
     });
+  }
+
+  async findCustomerByDisplayName(displayName: string): Promise<ExternalCompanyRecord | null> {
+    const escaped = displayName.replace(/'/g, "''");
+    const results = await this.query<any>(`SELECT Id, DisplayName, SyncToken, PrimaryEmailAddr FROM Customer WHERE DisplayName = '${escaped}'`);
+    const customer = Array.isArray(results) && results.length > 0 ? this.unwrapCustomer(results[0]) : null;
+    return customer ? this.mapCustomerRecord(customer) : null;
+  }
+
+  async createOrUpdateCustomer(payload: NormalizedCompanyPayload): Promise<ExternalCompanyRecord> {
+    const existing = await this.findCustomerByDisplayName(payload.name);
+    const customerPayload = this.buildCustomerPayload(payload);
+
+    if (existing) {
+      const syncToken =
+        existing.syncToken ?? (await this.fetchCustomerSyncToken(existing.externalId));
+      if (!syncToken) {
+        return existing;
+      }
+
+      const updated = await this.update<any>('Customer', {
+        ...customerPayload,
+        Id: existing.externalId,
+        SyncToken: syncToken
+      });
+      return this.mapCustomerRecord(this.unwrapCustomer(updated));
+    }
+
+    const created = await this.create<any>('Customer', customerPayload);
+    return this.mapCustomerRecord(this.unwrapCustomer(created));
+  }
+
+  private buildCustomerPayload(payload: NormalizedCompanyPayload): Record<string, any> {
+    const primaryPhone =
+      payload.primaryPhone ??
+      payload.contacts?.find((contact) => contact.phone)?.phone ??
+      null;
+
+    const customer: Record<string, any> = {
+      DisplayName: payload.name,
+      CompanyName: payload.name
+    };
+
+    if (payload.primaryEmail) {
+      customer.PrimaryEmailAddr = { Address: payload.primaryEmail };
+    }
+
+    if (primaryPhone) {
+      customer.PrimaryPhone = { FreeFormNumber: primaryPhone };
+    }
+
+    if (payload.billingAddress) {
+      customer.BillAddr = {
+        Line1: payload.billingAddress.line1 ?? undefined,
+        Line2: payload.billingAddress.line2 ?? undefined,
+        City: payload.billingAddress.city ?? undefined,
+        Country: payload.billingAddress.country ?? undefined,
+        CountrySubDivisionCode: payload.billingAddress.region ?? undefined,
+        PostalCode: payload.billingAddress.postalCode ?? undefined
+      };
+    }
+
+    if (payload.notes) {
+      customer.Notes = payload.notes;
+    }
+
+    return customer;
+  }
+
+  private async fetchCustomerSyncToken(customerId: string): Promise<string | null> {
+    const customer = await this.read<any>('Customer', customerId);
+    const record = this.unwrapCustomer(customer);
+    return record?.SyncToken ?? null;
+  }
+
+  private unwrapCustomer(record: any): any {
+    if (!record) {
+      return record;
+    }
+    return record.Customer ?? record;
+  }
+
+  private mapCustomerRecord(customer: Record<string, any>): ExternalCompanyRecord {
+    return {
+      externalId: customer.Id ?? '',
+      displayName: customer.DisplayName ?? '',
+      syncToken: customer.SyncToken ?? undefined,
+      raw: customer
+    };
   }
 
   /**

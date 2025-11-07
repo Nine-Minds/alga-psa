@@ -689,7 +689,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     setShowAgentPicker(false);
                   }}
                   users={availableAgents.filter(
-                    agent => !additionalAgents.some(a => a.additional_user_id === agent.user_id)
+                    agent =>
+                      agent.user_id !== ticket.assigned_to &&
+                      !additionalAgents.some(a => a.additional_user_id === agent.user_id)
                   )}
                 />
               </div>

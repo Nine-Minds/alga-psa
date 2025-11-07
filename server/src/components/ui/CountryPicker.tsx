@@ -8,7 +8,36 @@ import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomat
 interface Country {
   code: string;
   name: string;
+  phone_code?: string;
 }
+
+// Common countries pinned at top (enterprise standard)
+const COMMON_COUNTRIES = ['US', 'GB', 'CA', 'AU', 'IN', 'DE', 'FR', 'BR', 'JP', 'CN'];
+
+// Country code to flag emoji mapping
+const getCountryFlag = (countryCode: string): string => {
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+};
+
+// Enterprise locale detection for default country
+const getDefaultCountryFromLocale = (): string => {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+    const parts = locale.split('-');
+    const countryCode = parts[parts.length - 1]?.toUpperCase();
+
+    if (countryCode && countryCode.length === 2 && /^[A-Z]{2}$/.test(countryCode)) {
+      return countryCode;
+    }
+  } catch (e) {
+    // Fallback to US if detection fails
+  }
+  return 'US';
+};
 
 interface CountryPickerProps {
   id?: string;
@@ -54,10 +83,36 @@ const CountryPicker: React.FC<CountryPickerProps & AutomationProps> = ({
   
   const currentCountry = countries.find(country => country.code === value);
   
-  const filteredCountries = countries.filter(country => {
-    return country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           country.code.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // Enterprise-grade country sorting: Common countries first, then alphabetical
+  const getSortedCountries = (countries: Country[]): Country[] => {
+    const commonCountries = countries.filter(c => COMMON_COUNTRIES.includes(c.code));
+    const otherCountries = countries.filter(c => !COMMON_COUNTRIES.includes(c.code));
+
+    // Sort common countries by the order defined in COMMON_COUNTRIES
+    const sortedCommon = commonCountries.sort((a, b) => {
+      const aIndex = COMMON_COUNTRIES.indexOf(a.code);
+      const bIndex = COMMON_COUNTRIES.indexOf(b.code);
+      return aIndex - bIndex;
+    });
+
+    // Sort other countries alphabetically
+    const sortedOthers = otherCountries.sort((a, b) => a.name.localeCompare(b.name));
+
+    return [...sortedCommon, ...sortedOthers];
+  };
+
+  const getFilteredCountries = (countries: Country[], query: string): Country[] => {
+    if (!query.trim()) return getSortedCountries(countries);
+
+    const filtered = countries.filter(country => {
+      return country.name.toLowerCase().includes(query.toLowerCase()) ||
+             country.code.toLowerCase().includes(query.toLowerCase());
+    });
+
+    return getSortedCountries(filtered);
+  };
+
+  const filteredCountries = getFilteredCountries(countries, searchQuery);
 
   // Update metadata when value changes
   useEffect(() => {
@@ -220,22 +275,34 @@ const CountryPicker: React.FC<CountryPickerProps & AutomationProps> = ({
             </div>
             
             {/* Country List */}
-            <div className="overflow-y-auto p-1" style={{ 
-              maxHeight: dropdownPosition === 'bottom' ? '200px' : '250px' 
+            <div className="overflow-y-auto p-1" style={{
+              maxHeight: dropdownPosition === 'bottom' ? '200px' : '250px'
             }}>
-              {filteredCountries.map((country) => (
-                <div
-                  key={country.code}
-                  className="relative flex items-center justify-between px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 text-gray-900"
-                  onClick={(e) => handleSelectCountry(country, e)}
-                >
-                  <span className="flex-1">{country.name}</span>
-                  <span className="text-xs font-mono bg-gray-100 px-1 rounded ml-2">
-                    {country.code}
-                  </span>
-                </div>
-              ))}
-              
+              {filteredCountries.map((country, index) => {
+                const isCommon = COMMON_COUNTRIES.includes(country.code);
+                const isFirstOther = !isCommon && index > 0 && COMMON_COUNTRIES.includes(filteredCountries[index - 1]?.code);
+
+                return (
+                  <div key={country.code}>
+                    {isFirstOther && (
+                      <div className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50 border-t border-gray-200">
+                        Other Countries
+                      </div>
+                    )}
+                    <div
+                      className="relative flex items-center gap-2 px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 text-gray-900"
+                      onClick={(e) => handleSelectCountry(country, e)}
+                    >
+                      <span className="text-base">{getCountryFlag(country.code)}</span>
+                      <span className="flex-1 truncate">{country.name}</span>
+                      <span className="text-xs font-mono bg-gray-100 px-1 rounded ml-2">
+                        {country.code}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
               {filteredCountries.length === 0 && searchQuery && (
                 <div className="px-3 py-2 text-sm text-gray-500">No countries found</div>
               )}

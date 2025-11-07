@@ -6,6 +6,13 @@ import { applyPlaywrightDatabaseEnv } from './src/__tests__/integration/utils/pl
 // Load environment variables from the correct path
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+// Don't set STORAGE_LOCAL_BASE_PATH - we want to use MinIO for tests
+// const storageBasePath = path.resolve(__dirname, 'playwright-storage');
+// if (!fs.existsSync(storageBasePath)) {
+//   fs.mkdirSync(storageBasePath, { recursive: true });
+// }
+// process.env.STORAGE_LOCAL_BASE_PATH = process.env.STORAGE_LOCAL_BASE_PATH || storageBasePath;
+
 // If Postgres runs in Docker and is published to a different host port,
 // override the Playwright DB host/port here. Prefer existing DB_* envs
 // when available, otherwise fall back to common local defaults.
@@ -30,6 +37,9 @@ export default defineConfig({
 
   /* Global setup file */
   globalSetup: './playwright.global-setup.ts',
+
+  /* Global teardown file */
+  globalTeardown: './playwright.global-teardown.ts',
 
   /* Run tests in files in parallel */
   fullyParallel: false, // Disabled for database isolation
@@ -69,7 +79,6 @@ export default defineConfig({
     /* Global test timeout */
     actionTimeout: 15000,
     navigationTimeout: 30000,
-    headless: false
   },
 
   /* Configure projects for major browsers */
@@ -79,6 +88,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
+          headless: false,
           args: [
             '--host-resolver-rules=MAP portal.acme.local 127.0.0.1,MAP canonical.localhost 127.0.0.1,MAP localhost 127.0.0.1'
           ],
@@ -113,17 +123,17 @@ export default defineConfig({
     // Reset DB once per session before starting the dev server.
     command: 'cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: 'http://localhost:3000',
-    // Fresh DB per run by default; allow override for local iteration
-    reuseExistingServer: process.env.PW_REUSE === 'true' ? true : false,
+    // Reuse existing server by default for local development; set PW_REUSE=false to start fresh
+    reuseExistingServer: process.env.PW_REUSE !== 'false',
     timeout: 120000,
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
       ...process.env,
       NEXT_PUBLIC_EDITION: 'enterprise',
+      E2E_AUTH_BYPASS: 'true',
       NEXTAUTH_URL: 'http://localhost:3000',
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'test-nextauth-secret',
-      E2E_AUTH_BYPASS: 'true',
       NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
       DB_HOST: process.env.DB_HOST,
       DB_PORT: process.env.DB_PORT,
@@ -133,7 +143,16 @@ export default defineConfig({
       DB_PASSWORD: process.env.DB_PASSWORD,
       DB_USER_SERVER: process.env.DB_USER_SERVER,
       DB_PASSWORD_SERVER: process.env.DB_PASSWORD_SERVER,
-      DB_PASSWORD_ADMIN: process.env.DB_PASSWORD_ADMIN
+      DB_PASSWORD_ADMIN: process.env.DB_PASSWORD_ADMIN,
+      // Use S3/MinIO for file uploads (not local storage)
+      // MinIO test instance runs on port 9002 (separate from Payload MinIO on 9000)
+      STORAGE_DEFAULT_PROVIDER: 's3', // Use S3/MinIO instead of local storage
+      STORAGE_S3_ENDPOINT: process.env.STORAGE_S3_ENDPOINT || 'http://localhost:9002',
+      STORAGE_S3_ACCESS_KEY: process.env.STORAGE_S3_ACCESS_KEY || 'minioadmin',
+      STORAGE_S3_SECRET_KEY: process.env.STORAGE_S3_SECRET_KEY || 'minioadmin',
+      STORAGE_S3_BUCKET: process.env.STORAGE_S3_BUCKET || 'alga-test',
+      STORAGE_S3_REGION: process.env.STORAGE_S3_REGION || 'us-east-1',
+      STORAGE_S3_FORCE_PATH_STYLE: process.env.STORAGE_S3_FORCE_PATH_STYLE || 'true',
     }
   },
 

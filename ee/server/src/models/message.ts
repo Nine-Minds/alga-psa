@@ -1,5 +1,5 @@
-import { createTenantKnex } from '@/lib/db';
-import { IMessage } from '@ee/interfaces/message.interface';
+import { createTenantKnex } from '../lib/db';
+import { IMessage } from '../interfaces/message.interface';
 
 const Message = {
   getAll: async (): Promise<IMessage[]> => {

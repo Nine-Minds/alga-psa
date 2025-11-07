@@ -113,6 +113,7 @@ const ContractLine = {
       overtime_threshold,
       enable_after_hours_rate,
       after_hours_multiplier,
+      billing_timing,
       ...contractLineCore
     } = plan;
 
@@ -136,12 +137,14 @@ const ContractLine = {
       // Remove tenant from update data to prevent modification
       const { tenant: _, ...dataToUpdate } = updateData;
 
+      const { billing_timing, ...rest } = dataToUpdate;
+
       const [updatedPlan] = await knexOrTrx<IContractLine>('contract_lines')
         .where({
           contract_line_id: planId,
           tenant
         })
-        .update(dataToUpdate)
+        .update(rest)
         .returning('*');
 
       if (!updatedPlan) {

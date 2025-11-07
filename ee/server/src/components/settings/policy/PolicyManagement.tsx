@@ -130,6 +130,7 @@ export default function PolicyManagement() {
         {error && <Text color="red">{error}</Text>}
         
         <DataTable
+          id="policy-management-table"
           data={policies}
           columns={columns}
           pagination={false}

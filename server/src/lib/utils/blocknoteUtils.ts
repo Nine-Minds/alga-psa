@@ -232,7 +232,13 @@ function extractStyledTextFromContent(content: any[]): string {
     .filter((item: any) => item && item.type === 'text')
     .map((item: any) => {
       if (!item.text && item.text !== '') return '';
-      
+
+      // Ensure item.text is a string
+      if (typeof item.text !== 'string') {
+        console.warn('[BlockNoteUtils] item.text is not a string in extractStyledTextFromContent:', typeof item.text, item);
+        return '';
+      }
+
       let result = item.text;
       
       // Apply styling if present
@@ -463,7 +469,13 @@ function extractStyledTextToHTML(content: any[]): string {
     .map((item: any) => {
       if (!item.text && item.text !== '') return '';
 
-      let result = item.text.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>'); 
+      // Ensure item.text is a string
+      if (typeof item.text !== 'string') {
+        console.warn('[BlockNoteUtils] item.text is not a string:', typeof item.text, item);
+        return '';
+      }
+
+      let result = item.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); 
 
       if (item.styles) {
         if (item.styles.code) result = `<code>${result}</code>`; 
@@ -500,13 +512,25 @@ export function convertBlockNoteToHTML(blocks: Block[] | PartialBlock[] | string
   let blockData: Block[] | PartialBlock[];
   if (typeof blocks === 'string') {
     try {
-      blockData = JSON.parse(blocks);
+      const parsed = JSON.parse(blocks);
+      // Ensure parsed data is an array
+      if (!Array.isArray(parsed)) {
+        console.error("[BlockNoteUtils] Parsed BlockNote data is not an array:", typeof parsed);
+        return '<p>[Invalid content format - not an array]</p>';
+      }
+      blockData = parsed;
     } catch (e) {
       console.error("[BlockNoteUtils] Failed to parse BlockNote JSON string for HTML conversion:", e);
       return '<p>[Invalid content format]</p>';
     }
   } else {
     blockData = blocks;
+  }
+
+  // Additional safety check for non-string input
+  if (!Array.isArray(blockData)) {
+    console.error("[BlockNoteUtils] BlockNote data is not an array:", typeof blockData);
+    return '<p>[Invalid content format - not an array]</p>';
   }
 
   const output: string[] = [];

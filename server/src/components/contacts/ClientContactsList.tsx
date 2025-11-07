@@ -36,6 +36,16 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const { openDrawer } = useDrawer();
   const router = useRouter();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     const fetchContacts = async () => {
       setLoading(true);
@@ -287,9 +297,14 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         </Button>
       </div>
       <DataTable
+        id="client-contacts-list"
         data={contacts}
         columns={columns}
         pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
       />
       <QuickAddContact
         isOpen={isQuickAddContactOpen}

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { generateInvoice, createInvoiceFromBillingResult } from 'server/src/lib/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -14,6 +14,7 @@ import {
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 process.env.DB_PORT = '5432';
@@ -120,7 +121,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -291,16 +292,8 @@ describe('Billing Invoice Generation – Error Handling', () => {
       tax_region: 'US-NY'
     });
 
-    const { planId } = await createFixedPlanAssignment(context, serviceId, {
-      planName: 'Standard Fixed Plan',
-      billingFrequency: 'monthly',
-      baseRateCents: 10000,
-      detailBaseRateCents: 10000,
-      quantity: 1,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
-    });
+    await assignServiceTaxRate(context, serviceId, 'US-NY');
 
-    // Create billing cycle
     const billingCycleId = await context.createEntity('client_billing_cycles', {
       client_id: context.clientId,
       billing_cycle: 'monthly',
@@ -309,12 +302,56 @@ describe('Billing Invoice Generation – Error Handling', () => {
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    // Generate first invoice
-    const firstInvoice = await generateInvoice(billingCycleId);
+    const cycleRecord = await context.db('client_billing_cycles')
+      .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+      .first();
+
+    const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
+    const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
+
+    const charge: IBillingCharge = {
+      tenant: context.tenantId,
+      type: 'usage',
+      serviceId,
+      serviceName: 'Monthly Service',
+      quantity: 1,
+      rate: 10000,
+      total: 10000,
+      tax_amount: 0,
+      tax_rate: 0,
+      tax_region: 'US-NY',
+      is_taxable: true,
+      usageId: uuidv4(),
+      servicePeriodStart: cycleStart,
+      servicePeriodEnd: cycleEnd,
+      billingTiming: 'arrears'
+    };
+
+    const billingResult: IBillingResult = {
+      tenant: context.tenantId,
+      charges: [charge],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 10000,
+      finalAmount: 10000
+    };
+
+    await createInvoiceFromBillingResult(
+      billingResult,
+      context.clientId,
+      cycleStart,
+      cycleEnd,
+      billingCycleId,
+      context.userId
+    );
+
+    const firstInvoice = await context.db('invoices')
+      .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+      .first();
 
     // Verify invoice was created with consolidated fixed-fee item
     expect(firstInvoice).not.toBeNull();
-    const invoiceItems = await context.db('invoice_items')
+    const invoiceItems = await context.db('invoice_charges')
       .where({ invoice_id: firstInvoice!.invoice_id, tenant: context.tenantId });
     expect(invoiceItems).toHaveLength(1);
 

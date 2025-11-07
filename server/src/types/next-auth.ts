@@ -5,6 +5,7 @@ declare module "next-auth" {
         username: string;
         proToken: string;
         tenant?: string;
+        tenantSlug?: string;
         user_type: string;
         clientId?: string;
         contactId?: string;
@@ -19,6 +20,7 @@ declare module "next-auth" {
             image?: string;
             proToken: string;
             tenant?: string;
+            tenantSlug?: string;
             user_type: string;
             clientId?: string;
             contactId?: string;
@@ -33,6 +35,7 @@ declare module "next-auth" {
         image: string;
         proToken: string;
         tenant?: string;
+        tenantSlug?: string;
         user_type: string;
         clientId?: string;
         contactId?: string;

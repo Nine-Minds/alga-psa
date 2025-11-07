@@ -493,6 +493,8 @@
       "invite": "Uitnodiging verzenden",
       "resendInvite": "Uitnodiging opnieuw verzenden",
       "lastLogin": "Laatste login",
+      "never": "Nooit",
+      "via": "via",
       "userNotFound": "Gebruiker niet gevonden",
       "failedToLoad": "Gebruikersgegevens laden is mislukt",
       "failedToUpdate": "Gebruiker bijwerken is mislukt",
@@ -653,7 +655,167 @@
     "videoUnsupported": "Videoformaat ({{mimeType}}) wordt niet ondersteund voor weergave in de browser",
     "videoTagUnsupported": "Je browser ondersteunt de video-tag niet.",
     "unnamed": "Zonder titel",
-    "videoDownloadInfo": "De video wordt gedownload en kan worden afgespeeld met de standaardvideospeler van je systeem."
+    "videoDownloadInfo": "De video wordt gedownload en kan worden afgespeeld met de standaardvideospeler van je systeem.",
+    "previewUnavailableNoId": "Voorbeeld niet beschikbaar (geen identificatie)",
+    "previewLoadFailed": "Voorbeeld kon niet worden geladen",
+    "videoCodecWarning": "Chrome ondersteunt deze videocodec mogelijk niet. Download het bestand of gebruik Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Documenten konden niet worden opgehaald.",
+      "folderCreated": "Map \"{{name}}\" is succesvol aangemaakt",
+      "folderCreateFailed": "Map kon niet worden aangemaakt",
+      "moveDocumentsSuccess_one": "{{count}} document is verplaatst naar {{destination}}",
+      "moveDocumentsSuccess_other": "{{count}} documenten zijn verplaatst naar {{destination}}",
+      "moveDocumentsFailed": "Documenten konden niet worden verplaatst",
+      "deleteSuccess": "Document \"{{name}}\" is succesvol verwijderd",
+      "deleteFailed": "Document kon niet worden verwijderd",
+      "removeAssociationFailed": "Documentkoppeling kon niet worden verwijderd",
+      "moveDocumentSuccess": "Document \"{{name}}\" is succesvol verplaatst",
+      "moveDocumentFailed": "Document kon niet worden verplaatst",
+      "createFailed": "Document kon niet worden aangemaakt",
+      "saveFailed": "Document kon niet worden opgeslagen",
+      "loadContentFailed": "Documentinhoud kon niet worden geladen",
+      "downloadFailed": "Document kon niet worden gedownload",
+      "bulkDeleteFailed": "Sommige documenten konden niet worden verwijderd",
+      "bulkDeleteSuccess_one": "{{count}} document is succesvol verwijderd",
+      "bulkDeleteSuccess_other": "{{count}} documenten zijn succesvol verwijderd"
+    },
+    "validation": {
+      "nameRequired": "Documentnaam is verplicht"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} document geselecteerd",
+      "selected_other": "{{count}} documenten geselecteerd",
+      "moveToFolder": "Naar map verplaatsen",
+      "deleteSelected": "Selectie verwijderen",
+      "clearSelection": "Selectie wissen"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Weet je zeker dat je {{count}} document wilt verwijderen?",
+      "confirmBulkDelete_other": "Weet je zeker dat je {{count}} documenten wilt verwijderen?"
+    },
+    "pagination": {
+      "perPage": "{{count}} per pagina"
+    },
+    "folderSelector": {
+      "defaultTitle": "Selecteer doelmap",
+      "defaultDescription": "Kies waar dit document moet worden opgeslagen",
+      "newDocumentTitle": "Selecteer map voor nieuw document",
+      "newDocumentDescription": "Kies waar dit nieuwe document moet worden opgeslagen",
+      "moveTitle": "Document verplaatsen",
+      "moveDescriptionWithName": "Selecteer de doelmap voor \"{{name}}\"",
+      "moveDescription": "Selecteer de doelmap",
+      "bulkMoveTitle": "Geselecteerde documenten verplaatsen",
+      "bulkMoveDescription_one": "Selecteer de doelmap voor {{count}} document",
+      "bulkMoveDescription_other": "Selecteer de doelmap voor {{count}} documenten",
+      "errors": {
+        "nameRequired": "Voer een mapnaam in",
+        "invalidCharacters": "Mapnaam mag geen \"/\" bevatten",
+        "createFailed": "Map kon niet worden aangemaakt"
+      },
+      "creating": "Bezig met maken...",
+      "createButton": "Map maken",
+      "newFolderButton": "Nieuwe map",
+      "parentLabel": "Bovenliggende map: {{folder}}",
+      "rootLabel": "/ (Hoofdmap)",
+      "namePlaceholder": "Voer de mapnaam in",
+      "loading": "Mappen laden...",
+      "rootOption": "Hoofdmap (geen map)",
+      "empty": "Geen mappen beschikbaar. Documenten worden in de hoofdmap opgeslagen."
+    },
+    "filters": {
+      "searchLabel": "Documenten zoeken",
+      "searchPlaceholder": "Zoek op documentnaam...",
+      "typeLabel": "Documenttype",
+      "entityTypeLabel": "Gerelateerd entiteitstype",
+      "uploadedByLabel": "Geüpload door",
+      "uploadedByPlaceholder": "Alle gebruikers",
+      "updatedStartLabel": "Bijwerkdatum (van)",
+      "updatedEndLabel": "Bijwerkdatum (tot)",
+      "startDatePlaceholder": "Selecteer begindatum",
+      "endDatePlaceholder": "Selecteer einddatum",
+      "sortByLabel": "Sorteren op",
+      "clear": "Filters wissen",
+      "typeOptions": {
+        "all": "Alle documenttypen",
+        "pdf": "PDF",
+        "image": "Afbeeldingen",
+        "text": "Documenten",
+        "video": "Video",
+        "other": "Overig"
+      },
+      "sortOptions": {
+        "updated_at": "Datum",
+        "document_name": "Documentnaam",
+        "file_size": "Bestandsgrootte",
+        "created_by_full_name": "Gemaakt door"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Oplopend weergeven",
+          "desc": "Aflopend weergeven"
+        },
+        "document_name": {
+          "asc": "Toon van A tot Z",
+          "desc": "Toon van Z tot A"
+        },
+        "updated_at": {
+          "asc": "Toon oudste eerst",
+          "desc": "Toon nieuwste eerst"
+        },
+        "file_size": {
+          "asc": "Toon kleinste eerst",
+          "desc": "Toon grootste eerst"
+        },
+        "created_by_full_name": {
+          "asc": "Toon van A tot Z",
+          "desc": "Toon van Z tot A"
+        }
+      }
+    },
+    "selector": {
+      "title": "Documenten selecteren",
+      "reflectionLabel": "Documentselector",
+      "searchPlaceholder": "Documenten zoeken...",
+      "foldersLabel": "Mappen",
+      "folderHint": "in map \"{{folder}}\"",
+      "saving": "Bezig met opslaan...",
+      "selectDocument": "Document selecteren",
+      "associateSelected": "Selectie koppelen",
+      "errors": {
+        "configuration": "Configuratiefout: entiteitsinformatie ontbreekt",
+        "invalidData": "Ongeldige documentgegevens ontvangen",
+        "load": "Documenten konden niet worden geladen",
+        "save": "Documentselectie kon niet worden opgeslagen"
+      },
+      "configErrorTitle": "Configuratiefout",
+      "configErrorMessage": "Vereiste configuratie ontbreekt. Neem contact op met support."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Documentupload",
+      "dragDrop": "Sleep je bestand hierheen of",
+      "browse": "Bestanden zoeken",
+      "uploading": "Bezig met uploaden...",
+      "error": "Document kon niet worden geüpload",
+      "fileError": "Bestand kon niet worden geüpload"
+    },
+    "folders": {
+      "root": "Hoofdmap",
+      "loadFailed": "Mappenstructuur kon niet worden geladen",
+      "deleteConfirm": "Weet je zeker dat je de map \"{{name}}\" wilt verwijderen? Dit werkt alleen als de map leeg is.",
+      "deleteSuccess": "Map \"{{name}}\" is succesvol verwijderd",
+      "deleteFailed": "Map kon niet worden verwijderd",
+      "deleteAction": "Map verwijderen",
+      "loading": "Mappen laden...",
+      "title": "Mappen",
+      "collapse": "Mappen samenvouwen",
+      "allDocuments": "Alle documenten"
+    },
+    "folderManager": {
+      "title": "Nieuwe map maken",
+      "nameLabel": "Mapnaam",
+      "namePlaceholder": "Voer de mapnaam in",
+      "willCreateIn": "Wordt aangemaakt in: {{folder}}"
+    }
   },
   "common": {
     "actions": "Acties",
@@ -700,7 +862,17 @@
     "passwordPlaceholder": "Voer je wachtwoord in",
     "signingIn": "Bezig met aanmelden...",
     "rememberMe": "Onthoud mij",
-    "forgotPassword": "Wachtwoord vergeten?",
+    "forgotPasswordLink": "Wachtwoord vergeten?",
+    "forgotPasswordPage": {
+      "title": "Wachtwoord vergeten?",
+      "subtitle": "Geen zorgen, we sturen je resetinstructies.",
+      "logoAlt": "Logo van het klantportaal",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "Voer je e-mailadres in",
+      "sendResetButton": "Verstuur resetlink",
+      "backToLogin": "← Terug naar inloggen",
+      "resetLinkSent": "Als er een account bestaat met dit e-mailadres, is er een link om je wachtwoord te resetten verzonden."
+    },
     "resetPassword": "Wachtwoord opnieuw instellen",
     "backToSignIn": "Terug naar aanmelden",
     "sendResetLink": "Resetlink sturen",
@@ -715,6 +887,44 @@
     "accessDeniedMessage": "Je hebt geen toestemming voor toegang tot het klantenportaal.",
     "registrationSuccessTitle": "Registratie geslaagd",
     "registrationSuccessMessage": "Je account is aangemaakt. Meld je aan.",
+    "portalSetup": {
+      "title": "Portaltoegang instellen",
+      "subtitle": "Rond de setup van je klantportaalaccount af",
+      "loading": "Bezig met laden...",
+      "invalidInvitation": "Ongeldige uitnodiging",
+      "invalidInvitationDescription": "Er is een probleem opgetreden met je portaluitnodiging",
+      "invalidTokenMessage": "De uitnodigingstoken is ongeldig of verlopen. Neem contact op met je dienstverlener voor een nieuwe uitnodiging.",
+      "noTokenProvided": "Geen uitnodigingstoken opgegeven",
+      "invalidOrExpiredToken": "Ongeldige of verlopen uitnodigingstoken",
+      "verificationFailed": "Het verificeren van het uitnodigingstoken is mislukt",
+      "goToPortalSignIn": "Ga naar de portal-inlogpagina",
+      "accountInformation": "Accountgegevens",
+      "name": "Naam:",
+      "email": "E-mailadres:",
+      "client": "Klant:",
+      "password": "Wachtwoord",
+      "passwordPlaceholder": "Voer je wachtwoord in",
+      "confirmPassword": "Wachtwoord bevestigen",
+      "confirmPasswordPlaceholder": "Bevestig je wachtwoord",
+      "passwordRequirements": "Wachtwoordeisen",
+      "requirements": {
+        "minLength": "Minstens 8 tekens",
+        "hasUppercase": "Een hoofdletter",
+        "hasLowercase": "Een kleine letter",
+        "hasNumber": "Een cijfer",
+        "hasSpecialChar": "Een speciaal teken",
+        "passwordsMatch": "Wachtwoorden komen overeen"
+      },
+      "createAccount": "Portalaccount aanmaken",
+      "creatingAccount": "Bezig met account aanmaken...",
+      "alreadyHaveAccount": "Heb je al een account?",
+      "signInToPortal": "Aanmelden bij het portal",
+      "requirementsNotMet": "Zorg dat aan alle wachtwoordeisen wordt voldaan",
+      "accountReady": "Account klaar. Meld je aan.",
+      "accountCreatedSuccess": "Account succesvol aangemaakt. Meld je aan.",
+      "welcome": "Welkom bij het klantportaal!",
+      "createFailed": "Account aanmaken is mislukt"
+    },
     "features": {
       "submitTickets": {
         "title": "Supporttickets indienen",

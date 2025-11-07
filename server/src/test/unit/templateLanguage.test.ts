@@ -1269,7 +1269,7 @@ describe('Invoice Template Parser', () => {
   test('parses a calculation with listReference', () => {
     const input = `
   section summary grid 12 x 4 {
-    calculate total_price as sum total_price from invoice_items
+    calculate total_price as sum total_price from invoice_charges
     field total_price at 10 1 span 3 1
   }`;
 
@@ -1281,16 +1281,16 @@ describe('Invoice Template Parser', () => {
         operation: 'sum',
         field: 'total_price'
       },
-      listReference: 'invoice_items'
+      listReference: 'invoice_charges'
     });
   });
 
   test('parses multiple calculations with different listReferences', () => {
     const input = `
   section summary grid 12 x 4 {
-    calculate total_price as sum total_price from invoice_items
+    calculate total_price as sum total_price from invoice_charges
     calculate total_expenses as sum amount from expenses
-    calculate average_price as avg unit_price from invoice_items
+    calculate average_price as avg unit_price from invoice_charges
     field total_price at 10 1 span 3 1
     field total_expenses at 10 2 span 3 1
     field average_price at 10 3 span 3 1
@@ -1304,7 +1304,7 @@ describe('Invoice Template Parser', () => {
         operation: 'sum',
         field: 'total_price'
       },
-      listReference: 'invoice_items'
+      listReference: 'invoice_charges'
     });
     expect(result.sections[0].content[1]).toMatchObject({
       type: 'calculation',
@@ -1322,7 +1322,7 @@ describe('Invoice Template Parser', () => {
         operation: 'avg',
         field: 'unit_price'
       },
-      listReference: 'invoice_items'
+      listReference: 'invoice_charges'
     });
   });
 
@@ -1347,7 +1347,7 @@ describe('Invoice Template Parser', () => {
   test('parses a mixture of calculations with and without listReference', () => {
     const input = `
   section summary grid 12 x 4 {
-    calculate subtotal as sum total_price from invoice_items
+    calculate subtotal as sum total_price from invoice_charges
     calculate tax as sum tax_amount
     calculate total as sum subtotal
     field subtotal at 10 1 span 3 1
@@ -1363,7 +1363,7 @@ describe('Invoice Template Parser', () => {
         operation: 'sum',
         field: 'total_price'
       },
-      listReference: 'invoice_items'
+      listReference: 'invoice_charges'
     });
     expect(result.sections[0].content[1]).toMatchObject({
       type: 'calculation',
@@ -1386,8 +1386,8 @@ describe('Invoice Template Parser', () => {
   test('parses global calculations with listReference', () => {
     const input = `
   section items grid 12 x 10 {
-    global calculate grand_total as sum total_price from invoice_items
-    list invoice_items {
+    global calculate grand_total as sum total_price from invoice_charges
+    list invoice_charges {
       field item_name at 1 1 span 6 1
       field total_price at 7 1 span 6 1
     }
@@ -1405,7 +1405,7 @@ describe('Invoice Template Parser', () => {
         operation: 'sum',
         field: 'total_price'
       },
-      listReference: 'invoice_items',
+      listReference: 'invoice_charges',
       isGlobal: true
     });
   });

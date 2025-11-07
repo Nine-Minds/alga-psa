@@ -62,6 +62,9 @@ export interface IBillingCharge extends TenantEntity {
   is_taxable?: boolean;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
+  servicePeriodStart?: ISO8601String;
+  servicePeriodEnd?: ISO8601String;
+  billingTiming?: 'arrears' | 'advance';
 }
 
 export interface IDiscount extends TenantEntity {
@@ -90,6 +93,7 @@ export interface IClientContractLine extends TenantEntity {
   client_id: string;
   contract_line_id: string;
   template_contract_line_id?: string;
+  billing_timing?: 'arrears' | 'advance';
   service_category?: string;
   service_category_name?: string; // Added field from join with service_categories
   start_date: ISO8601String;
@@ -155,7 +159,7 @@ export interface IService extends TenantEntity {
   service_id: string;
   service_name: string;
   custom_service_type_id: string;   // FK to service_types (now required)
-  billing_method: 'fixed' | 'hourly' | 'usage'; // Billing method specific to this service instance (Now required)
+  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Billing method specific to this service instance (Now required)
   default_rate: number;
   category_id: string | null;
   unit_of_measure: string;
@@ -168,7 +172,7 @@ export interface IService extends TenantEntity {
 export interface IStandardServiceType {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage'; // Updated to match service billing methods
+  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Updated to match service billing methods
   display_order: number;
   created_at: ISO8601String;
   updated_at: ISO8601String;
@@ -178,7 +182,7 @@ export interface IStandardServiceType {
 export interface IServiceType extends TenantEntity {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage'; // Updated to match service billing methods
+  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Updated to match service billing methods
   // standard_service_type_id removed
   is_active: boolean;
   description?: string | null;
@@ -192,9 +196,13 @@ export interface IContractLine extends TenantEntity {
   contract_line_id?: string;
   contract_line_name: string;
   billing_frequency: string;
-  is_custom: boolean;
+  contract_id?: string | null;
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  billing_timing?: 'arrears' | 'advance';
+  custom_rate?: number | null;
+  display_order?: number;
+  enable_proration?: boolean;
   // Hourly contract line fields (contract-line-level, same for all services)
   hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
   minimum_billable_time?: number | null; // Minimum time to bill for hourly services
@@ -205,6 +213,8 @@ export interface IContractLine extends TenantEntity {
   overtime_threshold?: number | null;
   enable_after_hours_rate?: boolean | null;
   after_hours_multiplier?: number | null;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
 }
 
 /**
@@ -217,29 +227,20 @@ export interface IContractLinePreset extends TenantEntity {
   billing_frequency: string;
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
-  hourly_rate?: number | null;
-  minimum_billable_time?: number | null;
-  round_up_to_nearest?: number | null;
-  enable_overtime?: boolean | null;
-  overtime_rate?: number | null;
-  overtime_threshold?: number | null;
-  enable_after_hours_rate?: boolean | null;
-  after_hours_multiplier?: number | null;
-  created_at?: ISO8601String;
-  updated_at?: ISO8601String;
 }
 
 /**
- * Interface for the new contract_line_fixed_config table
+ * Legacy plan-level fixed configuration shape.
+ * Kept temporarily for compatibility while contract_lines stores the canonical values.
  */
 export interface IContractLineFixedConfig extends TenantEntity {
   contract_line_id: string;
-  base_rate?: number | null; // Add base_rate (optional, numeric)
-  enable_proration: boolean;
-  billing_cycle_alignment: 'start' | 'end' | 'prorated';
-  tenant: string;
-  created_at: Date;
-  updated_at: Date;
+  base_rate?: number | null;
+  enable_proration?: boolean;
+  billing_cycle_alignment?: 'start' | 'end' | 'prorated';
+  tenant?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface IContractLineService extends TenantEntity {

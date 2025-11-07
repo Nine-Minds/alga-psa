@@ -16,6 +16,12 @@ screenshots/
 *.webp
 *.webm
 *.mp4
+ee/server/playwright-storage/
+
+# Playwright utility scripts (for manual MinIO management)
+scripts/minio-test.sh
+scripts/start-playwright-minio.sh
+scripts/stop-playwright-minio.sh
 
 # Next.js
 *.next/
@@ -116,6 +122,7 @@ update-*.sql
 *draft*.txt
 *draft*.doc*
 .vscode
+ee/server/playwright-storage/
 
 
 volumes/

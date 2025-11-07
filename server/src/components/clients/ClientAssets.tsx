@@ -43,8 +43,14 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const router = useRouter();
-  const pageSize = 10;
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
 
   const getAssetTypeIcon = (type: string): JSX.Element => {
     const iconProps = { className: "h-5 w-5 inline-block mr-2" };
@@ -260,13 +266,16 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
 
       {/* Assets Table */}
       <DataTable
+        id="client-assets-table"
         data={assets}
         columns={columns}
+        pagination={true}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
         onRowClick={(asset: Asset) => router.push(`/msp/assets/${asset.asset_id}`)}
         totalItems={totalItems}
         pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
       />
 
       {/* Maintenance Type Breakdown */}

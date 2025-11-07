@@ -5,7 +5,8 @@ use std::path::Path;
 pub fn content_type_for(path: &Path) -> HeaderValue {
     let mime = mime_guess::from_path(path).first_or_octet_stream();
     // It's safe to unwrap since mime types are valid header values
-    HeaderValue::from_str(mime.essence_str()).unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream"))
+    HeaderValue::from_str(mime.essence_str())
+        .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream"))
 }
 
 #[cfg(test)]
@@ -29,7 +30,12 @@ mod tests {
         for (name, expected_prefix) in cases {
             let ct = content_type_for(&PathBuf::from(name));
             let s = ct.to_str().unwrap();
-            assert!(s.starts_with(expected_prefix), "got {} expected prefix {}", s, expected_prefix);
+            assert!(
+                s.starts_with(expected_prefix),
+                "got {} expected prefix {}",
+                s,
+                expected_prefix
+            );
         }
 
         // Unknown extension falls back

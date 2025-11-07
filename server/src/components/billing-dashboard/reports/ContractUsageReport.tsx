@@ -35,6 +35,16 @@ const ContractUsageReport: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -195,9 +205,14 @@ const ContractUsageReport: React.FC = () => {
             </div>
           ) : (
             <DataTable
+              id="contract-usage-report-table"
               data={contractUsage}
               columns={contractUsageColumns}
               pagination={true}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onItemsPerPageChange={handlePageSizeChange}
             />
           )}
         </div>

@@ -1,0 +1,450 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Ticket",
+    "clients": "Clienti",
+    "projects": "Progetti",
+    "billing": "Fatturazione",
+    "reports": "Report",
+    "settings": "Impostazioni",
+    "profile": "Profilo",
+    "logout": "Esci",
+    "help": "Aiuto"
+  },
+  "actions": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "create": "Crea",
+    "update": "Aggiorna",
+    "submit": "Invia",
+    "back": "Indietro",
+    "next": "Avanti",
+    "previous": "Precedente",
+    "search": "Cerca",
+    "filter": "Filtra",
+    "export": "Esporta",
+    "import": "Importa",
+    "download": "Scarica",
+    "upload": "Carica",
+    "refresh": "Aggiorna",
+    "close": "Chiudi",
+    "confirm": "Conferma",
+    "add": "Aggiungi",
+    "remove": "Rimuovi",
+    "clear": "Pulisci",
+    "reset": "Reimposta",
+    "view": "Visualizza",
+    "copy": "Copia",
+    "duplicate": "Duplica",
+    "openMenu": "Apri menu",
+    "confirmDeletion": "Conferma eliminazione"
+  },
+  "status": {
+    "loading": "Caricamento...",
+    "saving": "Salvataggio...",
+    "processing": "Elaborazione...",
+    "success": "Successo",
+    "error": "Errore",
+    "warning": "Avviso",
+    "info": "Informazioni",
+    "pending": "In sospeso",
+    "active": "Attivo",
+    "inactive": "Inattivo",
+    "completed": "Completato",
+    "cancelled": "Annullato"
+  },
+  "messages": {
+    "welcome": "Benvenuto",
+    "confirmDelete": "Sei sicuro di voler eliminare questo elemento?",
+    "confirmDeletion": "Conferma eliminazione",
+    "saveSuccess": "Modifiche salvate correttamente",
+    "saveError": "Impossibile salvare le modifiche",
+    "loadError": "Impossibile caricare i dati",
+    "noData": "Nessun dato disponibile",
+    "required": "Questo campo è obbligatorio",
+    "invalidEmail": "Indirizzo email non valido",
+    "invalidPassword": "Password non valida",
+    "passwordMismatch": "Le password non coincidono"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "Non autenticato",
+      "accessDenied": "Accesso negato",
+      "clientPortalOnly": "Accesso negato: le azioni del portale clienti sono riservate agli utenti cliente",
+      "insufficientPermissions": "Permessi insufficienti",
+      "userIdNotFound": "ID utente non trovato nella sessione",
+      "tenantNotFound": "Tenant non trovato nella sessione. Esci e accedi di nuovo.",
+      "userNotFound": "Utente non trovato",
+      "contactNotFound": "Utente non associato a un contatto",
+      "clientNotFound": "Il contatto non è associato a un cliente"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Permessi insufficienti per visualizzare i ticket",
+        "readDetails": "Permessi insufficienti per visualizzare i dettagli del ticket",
+        "create": "Permessi insufficienti per creare ticket",
+        "update": "Permessi insufficienti per aggiornare i ticket",
+        "updateStatus": "Permessi insufficienti per aggiornare lo stato del ticket",
+        "addComments": "Permessi insufficienti per aggiungere commenti",
+        "updateComments": "Permessi insufficienti per aggiornare i commenti",
+        "deleteComments": "Permessi insufficienti per eliminare i commenti"
+      }
+    }
+  },
+  "fields": {
+    "notes": "Note"
+  },
+  "time": {
+    "today": "Oggi",
+    "yesterday": "Ieri",
+    "tomorrow": "Domani",
+    "thisWeek": "Questa settimana",
+    "lastWeek": "La scorsa settimana",
+    "thisMonth": "Questo mese",
+    "lastMonth": "Il mese scorso",
+    "thisYear": "Quest'anno",
+    "lastYear": "L'anno scorso",
+    "seconds": "secondi",
+    "minutes": "minuti",
+    "hours": "ore",
+    "days": "giorni",
+    "weeks": "settimane",
+    "months": "mesi",
+    "years": "anni"
+  },
+  "language": {
+    "selectLanguage": "Seleziona lingua",
+    "changeLanguage": "Cambia lingua",
+    "currentLanguage": "Lingua corrente",
+    "preference": {
+      "label": "Preferenza lingua",
+      "helper": "Seleziona la lingua preferita per l'interfaccia e le notifiche email",
+      "placeholder": "Seleziona una lingua",
+      "cleared": "Preferenza lingua rimossa. Uso lingua predefinita...",
+      "updating": "Aggiornamento preferenza lingua...",
+      "notSet": "Non impostata",
+      "notSetWithSource": "Non impostata (Usa {{source}}: {{languageName}} - {{locale}})",
+      "source": {
+        "client": "predefinito del cliente",
+        "tenant": "predefinito del tenant",
+        "system": "predefinito del sistema"
+      }
+    }
+  },
+  "yes": "Sì",
+  "no": "No",
+  "clients": {
+    "locations": {
+      "sectionTitle": "Sedi del cliente",
+      "manageButton": "Gestisci sedi",
+      "dialogTitle": "Gestisci sedi - {{client}}",
+      "managerLabel": "Gestore sedi cliente",
+      "listTitle": "Sedi",
+      "buttons": {
+        "add": "Aggiungi sede",
+        "save": "Salva sede"
+      },
+      "card": {
+        "unnamed": "Sede senza nome",
+        "setDefault": "Imposta come predefinita",
+        "edit": "Modifica sede",
+        "delete": "Elimina sede",
+        "addressLabel": "Indirizzo",
+        "addressHelper": "Indirizzo completo per questa sede",
+        "phoneLabel": "Telefono",
+        "phoneHelper": "Numero di telefono per questa sede",
+        "phoneValue": "Telefono: {{phone}}",
+        "emailLabel": "Email",
+        "emailHelper": "Indirizzo email per questa sede",
+        "emailValue": "Email: {{email}}",
+        "billingTag": "Fatturazione",
+        "shippingTag": "Spedizione",
+        "notesLabel": "Note",
+        "notesHelper": "Note aggiuntive per questa sede"
+      },
+      "form": {
+        "locationName": "Nome della sede",
+        "locationNameHelper": "Nome per questa sede (es. Sede principale, Magazzino)",
+        "addressLine1": "Indirizzo riga 1",
+        "addressLine1Helper": "Riga principale dell'indirizzo (obbligatoria)",
+        "addressLine2": "Indirizzo riga 2",
+        "addressLine2Helper": "Informazioni aggiuntive sull'indirizzo (facoltative)",
+        "addressLine3": "Indirizzo riga 3",
+        "city": "Città",
+        "cityHelper": "Nome della città (obbligatorio)",
+        "stateProvince": "Stato/Provincia",
+        "stateProvinceHelper": "Nome dello stato o della provincia",
+        "postalCode": "CAP",
+        "postalCodeHelper": "CAP o codice postale",
+        "country": "Paese",
+        "countryHelper": "Seleziona il paese (obbligatorio)",
+        "phone": "Telefono",
+        "phoneHelper": "Numero di telefono per questa sede",
+        "email": "Email",
+        "emailHelper": "Indirizzo email per questa sede",
+        "taxRegion": "Area fiscale",
+        "taxRegionHelper": "Seleziona l'area fiscale applicabile",
+        "notes": "Note",
+        "notesHelper": "Note aggiuntive su questa sede",
+        "defaultLocation": "Sede predefinita",
+        "defaultLocationHelper": "Imposta questa sede come predefinita per il cliente",
+        "billingAddress": "Indirizzo di fatturazione",
+        "billingAddressHelper": "Usa questa sede come indirizzo di fatturazione",
+        "shippingAddress": "Indirizzo di spedizione",
+        "shippingAddressHelper": "Usa questa sede come indirizzo di spedizione",
+        "placeholder": {
+          "locationName": "es. Sede principale, Magazzino",
+          "addressLine1": "Inserisci indirizzo *",
+          "city": "Inserisci città *",
+          "country": "Seleziona un paese *",
+          "loadingCountries": "Caricamento paesi...",
+          "taxRegionOption": "Seleziona un'area fiscale...",
+          "taxRegion": "Seleziona un'area fiscale..."
+        }
+      },
+      "validation": {
+        "title": "Compila i campi obbligatori:"
+      },
+      "errors": {
+        "loadTaxRegions": "Impossibile caricare le aree fiscali",
+        "loadCountries": "Impossibile caricare i paesi",
+        "loadLocations": "Impossibile caricare le sedi del cliente",
+        "save": "Impossibile salvare la sede",
+        "delete": "Impossibile eliminare la sede",
+        "setDefault": "Impossibile impostare la sede predefinita"
+      },
+      "success": {
+        "create": "Sede creata correttamente",
+        "update": "Sede aggiornata correttamente",
+        "delete": "Sede eliminata correttamente",
+        "setDefault": "Sede predefinita aggiornata"
+      },
+      "dialog": {
+        "addTitle": "Aggiungi nuova sede",
+        "editTitle": "Modifica sede",
+        "deleteTitle": "Elimina sede",
+        "deleteMessage": "Sei sicuro di voler eliminare la sede \"{{name}}\"? Questa azione non può essere annullata."
+      },
+      "empty": {
+        "title": "Nessuna sede aggiunta",
+        "description": "Fai clic su \"Aggiungi sede\" per iniziare"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "Precedente",
+    "next": "Successivo",
+    "pageInfo": "Pagina {{current}} di {{total}} ({{count}} record totali)",
+    "page": "Pagina",
+    "of": "di",
+    "showing": "Visualizzazione da {{from}} a {{to}} di {{total}} risultati",
+    "rowsPerPage": "Righe per pagina",
+    "first": "Prima",
+    "last": "Ultima",
+    "itemsLabel": "elementi",
+    "itemsPerPageOption": "{{count}} elementi/pagina",
+    "itemsPerPagePlaceholder": "Elementi per pagina",
+    "reflectionLabel": "Paginazione",
+    "range": "{{from}} - {{to}} di {{total}} {{itemLabel}}",
+    "ariaLabel": "Paginazione",
+    "totalItems": "{{count}} {{itemLabel}} totali",
+    "totalRecordsInline": "({{count}} record totali)",
+    "pageOf": "Pagina {{current}} di {{total}}"
+  },
+  "documents": {
+    "title": "Documenti",
+    "noDocuments": "Nessun documento allegato",
+    "upload": "Carica documento",
+    "download": "Scarica",
+    "remove": "Rimuovi",
+    "preview": "Anteprima",
+    "linkDocuments": "Collega documenti",
+    "editDocument": "Modifica documento",
+    "viewDocument": "Visualizza documento",
+    "downloadToPlay": "Scarica per riprodurre",
+    "delete": "Elimina",
+    "previewUnavailable": "Anteprima non disponibile",
+    "newDocument": "Nuovo documento",
+    "uploadFile": "Carica file",
+    "deleteTitle": "Elimina documento",
+    "deleteMessage": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata.",
+    "deleteVideoTitle": "Elimina video",
+    "deleteVideoMessage": "Sei sicuro di voler eliminare il video \"{{name}}\"? Questa azione non può essere annullata.",
+    "removeTitle": "Rimuovi documento",
+    "removeMessage": "Sei sicuro di voler rimuovere \"{{name}}\" da questo elemento? Il documento resterà disponibile nella libreria documenti.",
+    "removeVideoTitle": "Rimuovi video",
+    "removeVideoMessage": "Sei sicuro di voler rimuovere il video \"{{name}}\" da questo elemento? Il file resterà disponibile nella libreria documenti.",
+    "downloadFile": "Scarica file",
+    "videoUnsupported": "Formato video ({{mimeType}}) non supportato per la riproduzione nel browser",
+    "videoTagUnsupported": "Il tuo browser non supporta il tag video.",
+    "unnamed": "Senza titolo",
+    "videoDownloadInfo": "Il video verrà scaricato e potrà essere riprodotto con il lettore predefinito del sistema.",
+    "previewUnavailableNoId": "Anteprima non disponibile (nessun identificatore)",
+    "previewLoadFailed": "Impossibile caricare l'anteprima",
+    "videoCodecWarning": "Chrome potrebbe non supportare questo codec video. Prova a scaricarlo o usa Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Impossibile recuperare i documenti.",
+      "folderCreated": "Cartella \"{{name}}\" creata correttamente",
+      "folderCreateFailed": "Impossibile creare la cartella",
+      "moveDocumentsSuccess_one": "{{count}} documento spostato in {{destination}}",
+      "moveDocumentsSuccess_other": "{{count}} documenti spostati in {{destination}}",
+      "moveDocumentsFailed": "Impossibile spostare i documenti",
+      "deleteSuccess": "Documento \"{{name}}\" eliminato correttamente",
+      "deleteFailed": "Impossibile eliminare il documento",
+      "removeAssociationFailed": "Impossibile rimuovere l'associazione del documento",
+      "moveDocumentSuccess": "Documento \"{{name}}\" spostato correttamente",
+      "moveDocumentFailed": "Impossibile spostare il documento",
+      "createFailed": "Impossibile creare il documento",
+      "saveFailed": "Impossibile salvare il documento",
+      "loadContentFailed": "Impossibile caricare il contenuto del documento",
+      "downloadFailed": "Impossibile scaricare il documento",
+      "bulkDeleteFailed": "Impossibile eliminare alcuni documenti",
+      "bulkDeleteSuccess_one": "{{count}} documento eliminato correttamente",
+      "bulkDeleteSuccess_other": "{{count}} documenti eliminati correttamente"
+    },
+    "validation": {
+      "nameRequired": "Il nome del documento è obbligatorio"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} documento selezionato",
+      "selected_other": "{{count}} documenti selezionati",
+      "moveToFolder": "Sposta in cartella",
+      "deleteSelected": "Elimina selezionati",
+      "clearSelection": "Pulisci selezione"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Sei sicuro di voler eliminare {{count}} documento?",
+      "confirmBulkDelete_other": "Sei sicuro di voler eliminare {{count}} documenti?"
+    },
+    "pagination": {
+      "perPage": "{{count}} per pagina"
+    },
+    "folderSelector": {
+      "defaultTitle": "Seleziona cartella di destinazione",
+      "defaultDescription": "Scegli dove salvare questo documento",
+      "singleDescription": "Dove vuoi salvare \"{{fileName}}\"?",
+      "multipleDescription": "Dove vuoi salvare questi {{count}} file?",
+      "newDocumentTitle": "Seleziona cartella per il nuovo documento",
+      "newDocumentDescription": "Scegli dove salvare questo nuovo documento",
+      "moveTitle": "Sposta documento",
+      "moveDescriptionWithName": "Seleziona la cartella di destinazione per \"{{name}}\"",
+      "moveDescription": "Seleziona la cartella di destinazione",
+      "bulkMoveTitle": "Sposta documenti selezionati",
+      "bulkMoveDescription_one": "Seleziona la cartella di destinazione per {{count}} documento",
+      "bulkMoveDescription_other": "Seleziona la cartella di destinazione per {{count}} documenti",
+      "errors": {
+        "nameRequired": "Inserisci un nome per la cartella",
+        "invalidCharacters": "Il nome della cartella non può contenere \"/\"",
+        "createFailed": "Impossibile creare la cartella"
+      },
+      "creating": "Creazione in corso...",
+      "createButton": "Crea cartella",
+      "newFolderButton": "Nuova cartella",
+      "parentLabel": "Cartella padre: {{folder}}",
+      "rootLabel": "/ (Radice)",
+      "namePlaceholder": "Inserisci il nome della cartella",
+      "loading": "Caricamento cartelle...",
+      "rootOption": "Radice (nessuna cartella)",
+      "empty": "Nessuna cartella disponibile. I documenti verranno salvati nella radice."
+    },
+    "filters": {
+      "searchLabel": "Cerca documenti",
+      "searchPlaceholder": "Cerca per nome documento...",
+      "typeLabel": "Tipo di documento",
+      "entityTypeLabel": "Tipo di entità associata",
+      "uploadedByLabel": "Caricato da",
+      "uploadedByPlaceholder": "Tutti gli utenti",
+      "updatedStartLabel": "Data aggiornamento (inizio)",
+      "updatedEndLabel": "Data aggiornamento (fine)",
+      "startDatePlaceholder": "Seleziona data di inizio",
+      "endDatePlaceholder": "Seleziona data di fine",
+      "sortByLabel": "Ordina per",
+      "clear": "Pulisci filtri",
+      "showAllDocuments": "Mostra tutti i documenti",
+      "typeOptions": {
+        "all": "Tutti i tipi di documento",
+        "pdf": "PDF",
+        "image": "Immagini",
+        "text": "Documenti",
+        "video": "Video",
+        "other": "Altro"
+      },
+      "sortOptions": {
+        "updated_at": "Data",
+        "document_name": "Nome documento",
+        "file_size": "Dimensione file",
+        "created_by_full_name": "Creato da"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Mostra in ordine crescente",
+          "desc": "Mostra in ordine decrescente"
+        },
+        "document_name": {
+          "asc": "Mostra dalla A alla Z",
+          "desc": "Mostra dalla Z alla A"
+        },
+        "updated_at": {
+          "asc": "Mostra i più vecchi",
+          "desc": "Mostra i più recenti"
+        },
+        "file_size": {
+          "asc": "Mostra i più piccoli",
+          "desc": "Mostra i più grandi"
+        },
+        "created_by_full_name": {
+          "asc": "Mostra dalla A alla Z",
+          "desc": "Mostra dalla Z alla A"
+        }
+      }
+    },
+    "selector": {
+      "title": "Seleziona documenti",
+      "reflectionLabel": "Selettore documenti",
+      "searchPlaceholder": "Cerca documenti...",
+      "foldersLabel": "Cartelle",
+      "folderHint": "nella cartella \"{{folder}}\"",
+      "saving": "Salvataggio...",
+      "selectDocument": "Seleziona documento",
+      "associateSelected": "Associa selezionati",
+      "errors": {
+        "configuration": "Errore di configurazione: informazioni sull'entità mancanti",
+        "invalidData": "Dati del documento non validi",
+        "load": "Impossibile caricare i documenti",
+        "save": "Impossibile salvare la selezione dei documenti"
+      },
+      "configErrorTitle": "Errore di configurazione",
+      "configErrorMessage": "Configurazione richiesta mancante. Contatta il supporto."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Caricamento documenti",
+      "dragDrop": "Trascina qui i file oppure",
+      "browse": "Sfoglia file",
+      "uploading": "Caricamento...",
+      "uploadingProgress": "Caricamento {{current}} di {{total}}",
+      "pending": "In attesa",
+      "error": "Impossibile caricare il documento",
+      "fileError": "Impossibile caricare il file"
+    },
+    "folders": {
+      "root": "Radice",
+      "loadFailed": "Impossibile caricare la struttura delle cartelle",
+      "deleteConfirm": "Sei sicuro di voler eliminare la cartella \"{{name}}\"? Funzionerà solo se la cartella è vuota.",
+      "deleteSuccess": "Cartella \"{{name}}\" eliminata correttamente",
+      "deleteFailed": "Impossibile eliminare la cartella",
+      "deleteAction": "Elimina cartella",
+      "loading": "Caricamento cartelle...",
+      "title": "Cartelle",
+      "collapse": "Comprimi cartelle",
+      "allDocuments": "Tutti i documenti"
+    },
+    "folderManager": {
+      "title": "Crea nuova cartella",
+      "nameLabel": "Nome cartella",
+      "namePlaceholder": "Inserisci il nome della cartella",
+      "willCreateIn": "Verrà creata in: {{folder}}"
+    }
+  }
+}

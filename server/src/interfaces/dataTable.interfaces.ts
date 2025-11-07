@@ -51,4 +51,12 @@ export interface DataTableProps<T> {
   sortDirection?: 'asc' | 'desc';
   /** Callback invoked when sort configuration changes */
   onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+  /** Callback invoked when items per page changes */
+  onItemsPerPageChange?: (itemsPerPage: number) => void;
+  /**
+   * Options for items per page dropdown.
+   * Defaults to [10, 25, 50, 100] for list/table views if not provided.
+   * Use custom options for grid views (e.g., [9, 18, 27, 36]) or special cases.
+   */
+  itemsPerPageOptions?: Array<{ value: string; label: string }>;
 }

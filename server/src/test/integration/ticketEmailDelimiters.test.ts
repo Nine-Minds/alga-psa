@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { EMAIL_EVENT_CHANNEL } from '../../lib/notifications/emailChannel';
 
 interface TemplateRecord {
   subject: string;
@@ -100,6 +101,13 @@ interface NotificationLogRecord {
   error_message?: string | null;
 }
 
+interface PortalDomainRecord {
+  tenant: string;
+  domain: string | null;
+  canonical_host: string | null;
+  status: string;
+}
+
 const templateStore = new Map<string, TemplateRecord>();
 const tokenStore = new Map<string, TokenRecord>();
 
@@ -107,9 +115,24 @@ let currentTicket: TicketRecord | null = null;
 let currentUser: UserRecord | null = null;
 let currentResources: Array<{ email: string }> = [];
 let currentProject: ProjectRecord | null = null;
+let currentPortalDomain: PortalDomainRecord | null = null;
 
 const sendEmailMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
 const eventHandlers = vi.hoisted(() => new Map<string, (event: any) => Promise<void> | void>());
+const publishMock = vi.hoisted(() =>
+  vi.fn(async (event: any) => {
+    const handler = eventHandlers.get(event.eventType);
+    if (!handler) {
+      return;
+    }
+    await handler({
+      id: randomUUID(),
+      eventType: event.eventType,
+      timestamp: new Date().toISOString(),
+      payload: event.payload,
+    });
+  }),
+);
 
 const notificationSettingsStore = new Map<string, NotificationSettingRecord>();
 const notificationCategoriesStore = new Map<number, NotificationCategoryRecord>();
@@ -405,6 +428,23 @@ function resourceTableBuilder() {
   return builder;
 }
 
+function portalDomainTableBuilder() {
+  let result: PortalDomainRecord[] = currentPortalDomain ? [currentPortalDomain] : [];
+  const builder = createQuery(() => result);
+  builder.where = (conditions: Record<string, any>) => {
+    if (conditions.tenant !== undefined) {
+      result =
+        currentPortalDomain && currentPortalDomain.tenant === conditions.tenant ? [currentPortalDomain] : [];
+    }
+    if (conditions.domain !== undefined) {
+      result =
+        currentPortalDomain && currentPortalDomain.domain === conditions.domain ? [currentPortalDomain] : [];
+    }
+    return builder;
+  };
+  return builder;
+}
+
 function notificationSettingsTableBuilder() {
   let result: NotificationSettingRecord | NotificationSettingRecord[] | null = Array.from(
     notificationSettingsStore.values(),
@@ -651,17 +691,22 @@ function userNotificationPreferencesTableBuilder() {
 }
 
 function notificationLogsTableBuilder() {
-  const builder: any = createQuery(() => notificationLogs);
+  let rowsSnapshot: Array<Record<string, any>> = [...notificationLogs];
+  const builder: any = createQuery(() => rowsSnapshot);
+  const applyCondition = (key: string, value: any) => {
+    rowsSnapshot = rowsSnapshot.filter((row) => matchesCondition(row, key, value));
+  };
   builder.insert = (data: any) => {
-    const rows = Array.isArray(data) ? data : [data];
-    notificationLogs.push(...rows);
+    const newRows = Array.isArray(data) ? data : [data];
+    notificationLogs.push(...newRows);
+    rowsSnapshot = [...notificationLogs];
     return {
       returning: (columns?: string[]) => {
         if (!columns) {
-          return Promise.resolve(rows);
+          return Promise.resolve(newRows);
         }
         return Promise.resolve(
-          rows.map((row) => {
+          newRows.map((row) => {
             const picked: Record<string, any> = {};
             for (const column of columns) {
               picked[column] = (row as any)[column];
@@ -672,7 +717,19 @@ function notificationLogsTableBuilder() {
       },
     };
   };
-  builder.where = () => builder;
+  builder.where = (column: any, value?: any) => {
+    if (typeof column === 'object') {
+      Object.entries(column).forEach(([key, val]) => applyCondition(key, val));
+    } else if (value !== undefined) {
+      applyCondition(column, value);
+    }
+    return builder;
+  };
+  builder.count = (_column?: string) => {
+    const countValue = rowsSnapshot.length;
+    rowsSnapshot = [{ count: countValue }];
+    return builder;
+  };
   builder.orderBy = () => builder;
   return builder;
 }
@@ -694,6 +751,8 @@ function createMockKnex() {
         return userTableBuilder();
       case 'ticket_resources as tr':
         return resourceTableBuilder();
+      case 'portal_domains':
+        return portalDomainTableBuilder();
       case 'notification_settings':
         return notificationSettingsTableBuilder();
       case 'notification_categories':
@@ -730,9 +789,9 @@ vi.mock('../../lib/services/TenantEmailService', () => ({
   },
 }));
 
-vi.mock('../../lib/eventBus/index', () => ({
+vi.mock('../../lib/eventBus', () => ({
   __esModule: true,
-  getEventBus: () => ({ subscribe: subscribeMock, unsubscribe: unsubscribeMock }),
+  getEventBus: () => ({ subscribe: subscribeMock, unsubscribe: unsubscribeMock, publish: publishMock }),
 }));
 
 vi.mock('next/headers', () => ({
@@ -744,11 +803,13 @@ vi.mock('next/headers', () => ({
 let sendEventEmail: typeof import('../../lib/notifications/sendEventEmail').sendEventEmail;
 let registerTicketEmailSubscriber: typeof import('../../lib/eventBus/subscribers/ticketEmailSubscriber').registerTicketEmailSubscriber;
 let registerProjectEmailSubscriber: typeof import('../../lib/eventBus/subscribers/projectEmailSubscriber').registerProjectEmailSubscriber;
+let ServerEventPublisher: typeof import('../../lib/adapters/serverEventPublisher').ServerEventPublisher;
 
 beforeAll(async () => {
   ({ sendEventEmail } = await import('../../lib/notifications/sendEventEmail'));
   ({ registerTicketEmailSubscriber } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber'));
   ({ registerProjectEmailSubscriber } = await import('../../lib/eventBus/subscribers/projectEmailSubscriber'));
+  ({ ServerEventPublisher } = await import('../../lib/adapters/serverEventPublisher'));
 });
 
 beforeEach(() => {
@@ -758,10 +819,12 @@ beforeEach(() => {
   currentUser = null;
   currentResources = [];
   currentProject = null;
+  currentPortalDomain = null;
   resetNotificationState();
   sendEmailMock.mockReset();
   subscribeMock.mockClear();
   unsubscribeMock.mockClear();
+  publishMock.mockClear();
   eventHandlers.clear();
 });
 
@@ -796,6 +859,10 @@ function setUser(row: UserRecord | null) {
 
 function setProject(row: ProjectRecord | null) {
   currentProject = row;
+}
+
+function setPortalDomain(row: PortalDomainRecord | null) {
+  currentPortalDomain = row;
 }
 
 function setResources(rows: Array<{ email: string }>) {
@@ -1024,6 +1091,201 @@ describe('ticket email subscriber reply markers', () => {
   });
 });
 
+describe('ticket email subscriber event publishing', () => {
+  beforeEach(async () => {
+    eventHandlers.clear();
+    await registerTicketEmailSubscriber();
+  });
+
+  it('publishes ticket created events and emails the primary contact', async () => {
+    seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const userId = randomUUID();
+    const contactEmail = 'contact@example.com';
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0300',
+      title: 'Primary contact ticket',
+      contact_email: contactEmail,
+      client_email: 'client@example.com',
+      email_metadata: { threadId: 'thread-contact' },
+    });
+
+    const publisher = new ServerEventPublisher();
+    expect(eventHandlers.has('TICKET_CREATED')).toBe(true);
+    await publisher.publishTicketCreated({
+      tenantId,
+      ticketId,
+      userId,
+    });
+
+    expect(publishMock).toHaveBeenCalledOnce();
+    const [eventArg, optionsArg] = publishMock.mock.calls[0];
+    expect(eventArg).toMatchObject({
+      eventType: 'TICKET_CREATED',
+      payload: expect.objectContaining({
+        tenantId,
+        ticketId,
+        userId,
+      }),
+    });
+    expect(optionsArg).toMatchObject({ channel: EMAIL_EVENT_CHANNEL });
+
+    expect(sendEmailMock).toHaveBeenCalledOnce();
+    expect(sendEmailMock.mock.calls[0][0].to).toBe(contactEmail);
+  });
+});
+
+describe('ticket email subscriber deduplication', () => {
+  beforeEach(async () => {
+    eventHandlers.clear();
+    await registerTicketEmailSubscriber();
+  });
+
+  it('sends only one ticket created email when primary and assigned recipients share address', async () => {
+    seedTemplate('ticket-created', 'Ticket Created: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const assignedUserId = randomUUID();
+    const sharedEmail = 'shared@example.com';
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0301',
+      title: 'Deduped Ticket',
+      contact_email: sharedEmail,
+      client_email: null,
+      assigned_to_email: sharedEmail,
+      assigned_to: assignedUserId,
+      email_metadata: { threadId: 'thread-dedup' },
+    });
+
+    await handlerFor('TICKET_CREATED')({
+      id: randomUUID(),
+      eventType: 'TICKET_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledOnce();
+    expect(sendEmailMock.mock.calls[0][0].to).toBe(sharedEmail);
+  });
+
+  it('sends one internal ticket assigned email when assignee and contact share address', async () => {
+    seedTemplate('ticket-assigned', 'Ticket Assigned: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const userId = randomUUID();
+    const sharedEmail = 'shared-user@example.com';
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0302',
+      title: 'Assigned Ticket',
+      contact_email: sharedEmail,
+      client_email: null,
+      assigned_to_email: sharedEmail,
+      assigned_to: userId,
+      email_metadata: { threadId: 'thread-assigned-dedup' },
+    });
+
+    await handlerFor('TICKET_ASSIGNED')({
+      id: randomUUID(),
+      eventType: 'TICKET_ASSIGNED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId,
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledOnce();
+    expect(sendEmailMock.mock.calls[0][0].to).toBe(sharedEmail);
+  });
+
+  it('sends one ticket assigned email when contact and location share address', async () => {
+    seedTemplate('ticket-assigned', 'Ticket Assigned: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const sharedEmail = 'shared-location@example.com';
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0303',
+      title: 'Location Shared Ticket',
+      contact_email: sharedEmail,
+      client_email: sharedEmail,
+      email_metadata: { threadId: 'thread-location-dedup' },
+    });
+
+    await handlerFor('TICKET_ASSIGNED')({
+      id: randomUUID(),
+      eventType: 'TICKET_ASSIGNED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledOnce();
+    expect(sendEmailMock.mock.calls[0][0].to).toBe(sharedEmail);
+  });
+
+  it('sends one ticket assigned email when additional resource shares email with assignee', async () => {
+    seedTemplate('ticket-assigned', 'Ticket Assigned: {{ticket.title}}', '<p>{{ticket.title}}</p>');
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+    const assignedUserId = randomUUID();
+    const additionalUserId = randomUUID();
+    const sharedEmail = 'shared-resource@example.com';
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-0304',
+      title: 'Resource Dedup Ticket',
+      contact_email: 'contact@example.com',
+      client_email: null,
+      assigned_to_email: sharedEmail,
+      assigned_to: assignedUserId,
+      email_metadata: { threadId: 'thread-resource-dedup' },
+    });
+
+    setResources([
+      { email: sharedEmail, user_id: additionalUserId },
+    ] as any);
+
+    await handlerFor('TICKET_ASSIGNED')({
+      id: randomUUID(),
+      eventType: 'TICKET_ASSIGNED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    const recipients = sendEmailMock.mock.calls.map((call) => call[0].to);
+    const sharedCount = recipients.filter((email) => email === sharedEmail).length;
+    expect(sharedCount).toBe(1);
+  });
+});
+
 describe('ticket email subscriber notification gating (known gap)', () => {
   beforeEach(async () => {
     eventHandlers.clear();
@@ -1137,6 +1399,117 @@ describe('ticket email subscriber notification gating (known gap)', () => {
     });
 
     expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ticket email subscriber link routing', () => {
+  const ORIGINAL_NEXTAUTH_URL = process.env.NEXTAUTH_URL;
+  const BASE_URL = 'https://msp.example.com';
+
+  beforeEach(async () => {
+    process.env.NEXTAUTH_URL = BASE_URL;
+    eventHandlers.clear();
+    await registerTicketEmailSubscriber();
+  });
+
+  afterEach(() => {
+    process.env.NEXTAUTH_URL = ORIGINAL_NEXTAUTH_URL;
+  });
+
+  afterAll(() => {
+    process.env.NEXTAUTH_URL = ORIGINAL_NEXTAUTH_URL;
+  });
+
+  it('uses portal domain for external recipients and MSP URL for internal users', async () => {
+    seedTemplate(
+      'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<a href="{{ticket.url}}">{{ticket.url}}</a>',
+    );
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+
+    setNotificationSettings(tenantId, { is_enabled: true });
+    setPortalDomain({
+      tenant: tenantId,
+      domain: 'portal.acme.test',
+      canonical_host: 'abc123.portal.algapsa.com',
+      status: 'active',
+    });
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-PORTAL',
+      title: 'Portal Routed Ticket',
+      contact_email: 'client@example.com',
+      assigned_to_email: 'tech@example.com',
+      assigned_to: 'tech-user',
+      email_metadata: { threadId: 'thread-portal' },
+    });
+
+    await handlerFor('TICKET_CREATED')({
+      id: randomUUID(),
+      eventType: 'TICKET_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    const externalProcessed = await processedCall(0);
+    const internalProcessed = await processedCall(1);
+
+    expect(externalProcessed.html).toContain('https://portal.acme.test/client-portal/tickets?ticket=T-PORTAL');
+    expect(externalProcessed.html).not.toContain('/msp/tickets/');
+    expect(internalProcessed.html).toContain(`https://msp.example.com/msp/tickets/${ticketId}`);
+    expect(internalProcessed.html).not.toContain('portal.acme.test/client-portal/tickets');
+  });
+
+  it('falls back to the client portal path when no custom domain exists', async () => {
+    seedTemplate(
+      'ticket-created',
+      'Ticket Created: {{ticket.title}}',
+      '<a href="{{ticket.url}}">{{ticket.url}}</a>',
+    );
+
+    const tenantId = randomUUID();
+    const ticketId = randomUUID();
+
+    setNotificationSettings(tenantId, { is_enabled: true });
+    setPortalDomain(null);
+
+    setTicket({
+      ticket_id: ticketId,
+      ticket_number: 'T-FALLBACK',
+      title: 'Fallback Routed Ticket',
+      contact_email: 'client@example.com',
+      assigned_to_email: 'tech@example.com',
+      assigned_to: 'tech-user',
+      email_metadata: { threadId: 'thread-fallback' },
+    });
+
+    await handlerFor('TICKET_CREATED')({
+      id: randomUUID(),
+      eventType: 'TICKET_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: randomUUID(),
+      },
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    const externalProcessed = await processedCall(0);
+    const internalProcessed = await processedCall(1);
+
+    expect(externalProcessed.html).toContain('https://msp.example.com/client-portal/tickets?ticket=T-FALLBACK');
+    expect(externalProcessed.html).not.toContain('/msp/tickets/');
+    expect(internalProcessed.html).toContain(`https://msp.example.com/msp/tickets/${ticketId}`);
   });
 });
 

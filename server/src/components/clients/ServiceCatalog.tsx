@@ -27,6 +27,16 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    // Handle page size change - reset to page 1
+    const handlePageSizeChange = (newPageSize: number) => {
+        setPageSize(newPageSize);
+        setCurrentPage(1);
+    };
+
     const handleStartEdit = (service: IService) => {
         setEditingId(service.service_id);
         setEditingName(service.service_name);
@@ -167,8 +177,14 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
             </div>
             <div className="rounded-lg border border-[rgb(var(--color-border-200))]">
                 <DataTable
+                    id="client-service-catalog-table"
                     data={services}
                     columns={columns}
+                    pagination={true}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                    pageSize={pageSize}
+                    onItemsPerPageChange={handlePageSizeChange}
                 />
             </div>
             <ConfirmationDialog

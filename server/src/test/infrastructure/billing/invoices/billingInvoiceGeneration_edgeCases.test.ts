@@ -107,7 +107,7 @@ describe('Billing Invoice Edge Cases', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -177,7 +177,8 @@ describe('Billing Invoice Edge Cases', () => {
       baseRateCents: -12500,
       detailBaseRateCents: 5000,
       startDate: '2025-02-01',
-      clientId: context.clientId
+      clientId: context.clientId,
+      billingTiming: 'advance'
     });
 
     await addServiceToFixedPlan(context, creditContractLineId, creditServiceB, {
@@ -203,7 +204,7 @@ describe('Billing Invoice Edge Cases', () => {
     expect(invoice!.tax).toBe(0);
     expect(invoice!.total_amount).toBe(-12500);
 
-    const invoiceItems = await context.db('invoice_items')
+    const invoiceItems = await context.db('invoice_charges')
       .where({ invoice_id: invoice!.invoice_id, tenant: context.tenantId })
       .orderBy('net_amount', 'desc');
 
@@ -250,7 +251,7 @@ describe('Billing Invoice Edge Cases', () => {
     expect(invoice!.tax).toBe(0);
     expect(invoice!.total_amount).toBe(0);
 
-    const invoiceItems = await context.db('invoice_items')
+    const invoiceItems = await context.db('invoice_charges')
       .where({ invoice_id: invoice!.invoice_id, tenant: context.tenantId })
       .orderBy('net_amount', 'desc');
 

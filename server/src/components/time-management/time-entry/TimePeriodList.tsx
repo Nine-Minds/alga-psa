@@ -55,6 +55,7 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
         </Button>
       </div>
       <DataTable
+        id="time-periods-list"
         data={timePeriods}
         columns={[
           {

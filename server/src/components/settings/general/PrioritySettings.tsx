@@ -50,6 +50,16 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [priorityToDelete, setPriorityToDelete] = useState<IPriority | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     const initUser = async () => {
       const user = await getCurrentUser();
@@ -245,6 +255,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         </div>
 
         <DataTable
+          id="priorities-table"
           data={priorities
             .filter(p => p.item_type === selectedPriorityType)
             .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))
@@ -301,6 +312,11 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
               );
             },
           }]}
+          pagination={true}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
         />
         
         <div className="mt-4 flex gap-2">

@@ -118,7 +118,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
 // Credits list component with loading state
 async function CreditsList({ clientId, includeExpired = false }: { clientId: string, includeExpired?: boolean }) {
   const response = await listCredits(clientId, includeExpired);
-  
+
   if (!response.success) {
     return (
       <div className="p-4 border border-red-300 rounded-md bg-red-50">
@@ -126,7 +126,7 @@ async function CreditsList({ clientId, includeExpired = false }: { clientId: str
       </div>
     );
   }
-  
+
   if (!response.data) {
     return (
       <div className="p-4 border border-red-300 rounded-md bg-red-50">
@@ -134,9 +134,9 @@ async function CreditsList({ clientId, includeExpired = false }: { clientId: str
       </div>
     );
   }
-  
-  const { credits, total, page, pageSize, totalPages } = response.data;
-  
+
+  const { credits } = response.data;
+
   if (credits.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -144,16 +144,12 @@ async function CreditsList({ clientId, includeExpired = false }: { clientId: str
       </div>
     );
   }
-  
+
   return (
     <DataTable
       id="credits-table"
       columns={columns}
       data={credits}
-      pagination={true}
-      currentPage={page}
-      pageSize={pageSize}
-      totalItems={total}
     />
   );
 }

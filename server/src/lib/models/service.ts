@@ -26,7 +26,7 @@ const baseServiceSchema = z.object({
   tenant: z.string().min(1, 'Tenant is required'),
   service_name: z.string(),
   custom_service_type_id: z.string().uuid(),   // Now required, not nullable
-  billing_method: z.enum(['fixed', 'hourly', 'usage']),
+  billing_method: z.enum(['fixed', 'hourly', 'usage', 'per_unit']),
   default_rate: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ),
@@ -394,7 +394,7 @@ const Service = {
     try {
       // If we're already in a transaction, use it directly
       if (knexOrTrx.isTransaction) {
-        const updatedDetails = await knexOrTrx('invoice_item_details')
+        const updatedDetails = await knexOrTrx('invoice_charge_details')
           .where({
             service_id,
             tenant
@@ -403,7 +403,7 @@ const Service = {
             service_id: null
           });
 
-        log.info(`[Service.delete] Updated ${updatedDetails} invoice_item_details records for service ${service_id}`);
+        log.info(`[Service.delete] Updated ${updatedDetails} invoice_charge_details records for service ${service_id}`);
 
         // Then delete the service
         const deletedCount = await knexOrTrx('service_catalog')
@@ -418,7 +418,7 @@ const Service = {
       } else {
         // Otherwise create a transaction
         return await knexOrTrx.transaction(async (trx) => {
-          const updatedDetails = await trx('invoice_item_details')
+          const updatedDetails = await trx('invoice_charge_details')
             .where({
               service_id,
               tenant
@@ -427,7 +427,7 @@ const Service = {
               service_id: null
             });
 
-          log.info(`[Service.delete] Updated ${updatedDetails} invoice_item_details records for service ${service_id}`);
+          log.info(`[Service.delete] Updated ${updatedDetails} invoice_charge_details records for service ${service_id}`);
 
           // Then delete the service
           const deletedCount = await trx('service_catalog')

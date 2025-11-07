@@ -94,7 +94,7 @@ let context: TestContext;
 const cents = (value: unknown): number => Number.parseInt(value?.toString() ?? '0', 10);
 
 async function getInvoiceItems(invoiceId: string) {
-  return context.db('invoice_items')
+  return context.db('invoice_charges')
     .where({ invoice_id: invoiceId, tenant: context.tenantId })
     .orderBy('created_at', 'asc');
 }
@@ -118,7 +118,7 @@ describe('Billing Invoice Discount Applications', () => {
     context = await setupContext({
       runSeeds: false,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',

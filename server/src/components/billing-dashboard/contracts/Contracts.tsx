@@ -57,6 +57,27 @@ const Contracts: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const pendingViewRef = useRef<'Templates' | 'Client Contracts' | null>(null);
+
+  // Pagination state for templates
+  const [templateCurrentPage, setTemplateCurrentPage] = useState(1);
+  const [templatePageSize, setTemplatePageSize] = useState(10);
+
+  // Pagination state for client contracts
+  const [clientCurrentPage, setClientCurrentPage] = useState(1);
+  const [clientPageSize, setClientPageSize] = useState(10);
+
+  // Handle page size change for templates - reset to page 1
+  const handleTemplatePageSizeChange = (newPageSize: number) => {
+    setTemplatePageSize(newPageSize);
+    setTemplateCurrentPage(1);
+  };
+
+  // Handle page size change for client contracts - reset to page 1
+  const handleClientPageSizeChange = (newPageSize: number) => {
+    setClientPageSize(newPageSize);
+    setClientCurrentPage(1);
+  };
 
   useEffect(() => {
     void fetchContracts();
@@ -78,6 +99,32 @@ const Contracts: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const subtab = searchParams?.get('subtab');
+    const desiredView = subtab === 'clients' ? 'Client Contracts' : 'Templates';
+    if (pendingViewRef.current) {
+      if (desiredView === pendingViewRef.current) {
+        pendingViewRef.current = null;
+      } else {
+        return;
+      }
+    }
+    if (activeView !== desiredView) {
+      setActiveView(desiredView);
+    }
+  }, [searchParams, activeView]);
+
+  const updateUrlForView = (view: 'Templates' | 'Client Contracts') => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    params.set('tab', 'contracts');
+    if (view === 'Client Contracts') {
+      params.set('subtab', 'clients');
+    } else {
+      params.set('subtab', 'templates');
+    }
+    router.replace(`/msp/billing?${params.toString()}`);
   };
 
   const handleDeleteContract = async (contractId: string) => {
@@ -138,9 +185,13 @@ const Contracts: React.FC = () => {
     if (contractId) {
       const params = new URLSearchParams();
       params.set('tab', 'contracts');
-      params.set('contractId', contractId);
       if (clientContractId) {
+        params.set('subtab', 'clients');
+        params.set('contractId', contractId);
         params.set('clientContractId', clientContractId);
+      } else {
+        params.set('subtab', 'templates');
+        params.set('contractId', contractId);
       }
       router.push(`/msp/billing?${params.toString()}`);
     }
@@ -413,9 +464,14 @@ const renderStatusBadge = (status: string) => {
       </div>
 
       <DataTable
+        id="contracts-table"
         data={filteredTemplateContracts}
         columns={templateColumns}
-        pagination
+        pagination={true}
+        currentPage={templateCurrentPage}
+        onPageChange={setTemplateCurrentPage}
+        pageSize={templatePageSize}
+        onItemsPerPageChange={handleTemplatePageSizeChange}
         onRowClick={(record) => navigateToContract(record.contract_id)}
         rowClassName={() => 'cursor-pointer'}
       />
@@ -465,9 +521,14 @@ const renderStatusBadge = (status: string) => {
       </div>
 
       <DataTable
+        id="client-contracts-table"
         data={filteredClientContracts}
         columns={clientContractColumns}
-        pagination
+        pagination={true}
+        currentPage={clientCurrentPage}
+        onPageChange={setClientCurrentPage}
+        pageSize={clientPageSize}
+        onItemsPerPageChange={handleClientPageSizeChange}
         onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
         rowClassName={() => 'cursor-pointer'}
       />

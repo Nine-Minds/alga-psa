@@ -4,6 +4,7 @@ import type {
   SendWelcomeEmailActivityInput,
   SendWelcomeEmailActivityResult,
 } from "../types/workflow-types";
+import { buildTenantPortalSlug } from 'server/src/lib/utils/tenantSlug';
 
 const logger = () => Context.current().log;
 
@@ -80,10 +81,23 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   htmlBody: string;
   textBody: string;
 } {
-  const { tenantName, adminUser, temporaryPassword } = input;
-  const defaultLoginUrl = process.env.APPLICATION_URL;
-  const baseUrl = defaultLoginUrl?.replace(/\/$/, "") || "";
-  const clientPortalLoginUrl = `${baseUrl}/auth/client-portal/signin`;
+  const { tenantId, tenantName, adminUser, temporaryPassword } = input;
+  const tenantSlug = buildTenantPortalSlug(tenantId);
+  const defaultLoginUrl = process.env.APPLICATION_URL || process.env.NEXTAUTH_URL || "";
+  const trimmedBaseUrl = defaultLoginUrl.replace(/\/$/, "");
+  let clientPortalLoginUrl: string;
+
+  if (trimmedBaseUrl) {
+    const loginUrl = new URL(
+      "/auth/client-portal/signin",
+      trimmedBaseUrl.endsWith("/") ? trimmedBaseUrl : `${trimmedBaseUrl}/`
+    );
+    loginUrl.searchParams.set("tenant", tenantSlug);
+    clientPortalLoginUrl = loginUrl.toString();
+  } else {
+    const params = new URLSearchParams({ tenant: tenantSlug });
+    clientPortalLoginUrl = `/auth/client-portal/signin?${params.toString()}`;
+  }
   const currentYear = new Date().getFullYear();
 
   const subject = `Welcome to Alga PSA - Your Account is Ready`;

@@ -82,6 +82,16 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   // Pre-fetch tag permissions
@@ -426,8 +436,14 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
 
       {/* Tickets Table */}
       <DataTable
+        id="client-tickets-table"
         data={ticketsWithIds}
         columns={columns}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
       />
 
       {/* Load More Button */}

@@ -47,6 +47,16 @@ export function UserManagementSettings() {
   const [userRoles, setUserRoles] = useState<{ [key: string]: SharedIRole[] }>({});
   const { openDrawer } = useDrawer();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     loadData();
   }, [router]);
@@ -198,22 +208,22 @@ export function UserManagementSettings() {
     {
       title: t('clientSettings.users.firstName'),
       dataIndex: 'first_name',
-      width: '20%',
+      width: '15%',
     },
     {
       title: t('clientSettings.users.lastName'),
       dataIndex: 'last_name',
-      width: '20%',
+      width: '15%',
     },
     {
       title: t('clientSettings.users.email'),
       dataIndex: 'email',
-      width: '25%',
+      width: '20%',
     },
     {
       title: t('clientSettings.users.phone'),
       dataIndex: 'phone',
-      width: '15%',
+      width: '12%',
       render: (value, record) => (
         <span>{record.phone || 'N/A'}</span>
       ),
@@ -221,15 +231,39 @@ export function UserManagementSettings() {
     {
       title: t('clientSettings.users.roles'),
       dataIndex: 'user_id',
-      width: '20%',
+      width: '13%',
       render: (userId) => {
         const roles = userRoles[userId] || [];
         return (
           <span className="text-sm">
-            {roles.length > 0 
+            {roles.length > 0
               ? roles.map(role => role.role_name).join(', ')
               : 'No roles assigned'}
           </span>
+        );
+      },
+    },
+    {
+      title: t('clientSettings.users.lastLogin', 'Last Login'),
+      dataIndex: 'last_login_at',
+      width: '15%',
+      render: (lastLoginAt: string | null, record: IUser) => {
+        if (!lastLoginAt) {
+          return <span className="text-gray-400 text-sm">{t('clientSettings.users.never', 'Never')}</span>;
+        }
+        const date = new Date(lastLoginAt);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm">{formattedDate}</span>
+            {record.last_login_method && (
+              <span className="text-xs text-gray-500">{t('clientSettings.users.via', 'via')} {record.last_login_method}</span>
+            )}
+          </div>
         );
       },
     },
@@ -344,7 +378,13 @@ export function UserManagementSettings() {
                   id="email"
                   type="email"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  onChange={(e) => {
+                    setNewUser({ ...newUser, email: e.target.value });
+                    // Clear error when user starts typing
+                    if (error) {
+                      setError(null);
+                    }
+                  }}
                 />
               </div>
               <div>
@@ -389,9 +429,14 @@ export function UserManagementSettings() {
 
         <div className="mt-4">
           <DataTable
-            id="client-users-table"
+            id="client-portal-user-management-table"
             data={filteredUsers}
             columns={columns}
+            pagination={true}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
           />
         </div>
       </CardContent>

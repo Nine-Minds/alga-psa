@@ -3,19 +3,19 @@
 
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import TicketResource from 'server/src/lib/models/ticketResource';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { getEventBus } from '../../lib/eventBus';
+import { getEmailEventChannel } from '../notifications/emailChannel';
 
 export async function addTicketResource(
   ticketId: string,
   additionalUserId: string,
   role: string,
   currentUser: IUserWithRoles
-): Promise<ITicketResource> {
+): Promise<ITicketResource | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -35,42 +35,78 @@ export async function addTicketResource(
         throw new Error(`Ticket not found in tenant ${tenant}`);
       }
 
-    // Check if resource already exists
-    const existingResource = await trx('ticket_resources')
-      .where({
-        ticket_id: ticketId,
-        additional_user_id: additionalUserId,
-        tenant: tenant
-      })
-      .first();
+      // If the ticket has no primary assignment yet, promote this user to primary
+      if (!ticket.assigned_to) {
+        const [updatedTicket] = await trx('tickets')
+          .where({
+            ticket_id: ticketId,
+            tenant: tenant
+          })
+          .update({
+            assigned_to: additionalUserId,
+            updated_by: currentUser.user_id,
+            updated_at: new Date()
+          })
+          .returning('*');
 
-    if (existingResource) {
-      throw new Error(`Resource already exists for user ${additionalUserId} in tenant ${tenant}`);
-    }
-
-    // Create the resource with the ticket's assigned_to
-    const [resource] = await trx('ticket_resources')
-      .insert({
-        ticket_id: ticketId,
-        assigned_to: ticket.assigned_to,
-        additional_user_id: additionalUserId,
-        role: role,
-        tenant: tenant,
-        assigned_at: new Date()
-      })
-      .returning('*');
-
-      // Publish TICKET_ASSIGNED event for additional user assignment
-      await getEventBus().publish({
-        eventType: 'TICKET_ASSIGNED',
-        payload: {
-          tenantId: tenant,
-          ticketId: ticketId,
-          userId: additionalUserId
+        if (!updatedTicket) {
+          throw new Error(`Failed to set primary assignment for ticket ${ticketId}`);
         }
-      });
 
-      return resource;
+        await getEventBus().publish(
+          {
+            eventType: 'TICKET_ASSIGNED',
+            payload: {
+              tenantId: tenant,
+              ticketId: ticketId,
+              userId: additionalUserId
+            }
+          },
+          { channel: getEmailEventChannel() }
+        );
+
+        return null;
+      }
+
+      // Check if resource already exists
+      const existingResource = await trx('ticket_resources')
+        .where({
+          ticket_id: ticketId,
+          additional_user_id: additionalUserId,
+          tenant: tenant
+        })
+        .first();
+
+      if (existingResource) {
+        throw new Error(`Resource already exists for user ${additionalUserId} in tenant ${tenant}`);
+      }
+
+      // Create the resource with the ticket's assigned_to
+      const [resource] = await trx('ticket_resources')
+        .insert({
+          ticket_id: ticketId,
+          assigned_to: ticket.assigned_to,
+          additional_user_id: additionalUserId,
+          role: role,
+          tenant: tenant,
+          assigned_at: new Date()
+        })
+        .returning('*');
+
+        // Publish TICKET_ASSIGNED event for additional user assignment
+        await getEventBus().publish(
+          {
+            eventType: 'TICKET_ASSIGNED',
+            payload: {
+              tenantId: tenant,
+              ticketId: ticketId,
+              userId: additionalUserId
+            }
+          },
+          { channel: getEmailEventChannel() }
+        );
+
+        return resource;
     } catch (error) {
       console.error('Failed to add ticket resource:', error);
       if (error instanceof Error) {

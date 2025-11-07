@@ -1,85 +1,179 @@
 'use server';
-// server/src/lib/actions/externalMappingActions.ts
 
-import { getActionRegistry, ActionParameterDefinition, ActionExecutionContext } from '@alga-psa/shared/workflow/core';
-import { createTenantKnex } from 'server/src/lib/db'; // Assuming path based on coding standards
+import logger from '@shared/core/logger';
+import {
+  getActionRegistry,
+  type ActionParameterDefinition,
+  type ActionExecutionContext
+} from '@alga-psa/shared/workflow/core';
+import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/shared/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'; // For tenant context
-import { Knex } from 'knex'; // Import Knex type
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { Knex } from 'knex';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
-// --- Types based on schema from QBO Integration Project Plan.md (Section 6.1) ---
+const MAPPING_CACHE_TTL_MS = 30_000;
+
+type MappingCacheEntry = {
+  value: ExternalEntityMapping[];
+  expiresAt: number;
+};
+
+const mappingCache = new Map<string, MappingCacheEntry>();
 
 export interface ExternalEntityMapping {
-  id: string; // UUID
-  tenant: string; // UUID
-  integration_type: string; // VARCHAR(50)
-  alga_entity_type: string; // VARCHAR(50)
-  alga_entity_id: string; // VARCHAR(255)
-  external_entity_id: string; // VARCHAR(255)
-  external_realm_id?: string | null; // VARCHAR(255)
-  sync_status?: 'synced' | 'pending' | 'error' | 'manual_link' | null; // VARCHAR(20)
-  last_synced_at?: string | null; // TIMESTAMPTZ (ISO8601 String)
-  metadata?: object | null; // JSONB
-  created_at: string; // TIMESTAMPTZ (ISO8601 String)
-  updated_at: string; // TIMESTAMPTZ (ISO8601 String)
-}
-
-interface GetMappingsParams {
-  integrationType?: string;
-  algaEntityType?: string;
-  externalRealmId?: string;
-  // Add other potential filters based on the schema if needed
-  algaEntityId?: string;
-  externalEntityId?: string;
-}
-
-interface CreateMappingData {
+  id: string;
+  tenant: string;
   integration_type: string;
   alga_entity_type: string;
   alga_entity_id: string;
   external_entity_id: string;
   external_realm_id?: string | null;
   sync_status?: 'synced' | 'pending' | 'error' | 'manual_link' | null;
-  metadata?: object | null;
+  last_synced_at?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
 }
 
-interface UpdateMappingData {
+interface GetMappingsParams {
+  integrationType?: string;
+  algaEntityType?: string;
+  externalRealmId?: string | null;
+  algaEntityId?: string;
+  externalEntityId?: string;
+}
+
+export interface CreateMappingData {
+  integration_type: string;
+  alga_entity_type: string;
+  alga_entity_id: string;
+  external_entity_id: string;
+  external_realm_id?: string | null;
+  sync_status?: 'synced' | 'pending' | 'error' | 'manual_link' | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface UpdateMappingData {
   external_entity_id?: string;
   sync_status?: 'synced' | 'pending' | 'error' | 'manual_link' | null;
-  metadata?: object | null;
-  // Add other updatable fields as needed, ensuring they are safe to update
-  // Avoid updating alga_entity_id, integration_type etc. directly, prefer delete/create
+  metadata?: Record<string, unknown> | null;
+  external_realm_id?: string | null;
 }
 
-// --- Helper Function for Tenant Context ---
+function cloneMapping(mapping: ExternalEntityMapping): ExternalEntityMapping {
+  return {
+    ...mapping,
+    metadata:
+      mapping.metadata && typeof mapping.metadata === 'object'
+        ? { ...mapping.metadata }
+        : mapping.metadata ?? null
+  };
+}
 
-async function getTenantContext(): Promise<{ tenantId: string; knex: Knex }> {
+function buildCacheKey(tenantId: string, params: GetMappingsParams): string {
+  const realmSegment =
+    params.externalRealmId === undefined
+      ? '~'
+      : params.externalRealmId === null || params.externalRealmId === ''
+        ? 'null'
+        : params.externalRealmId;
+
+  return [
+    tenantId,
+    params.integrationType ?? '*',
+    params.algaEntityType ?? '*',
+    realmSegment,
+    params.algaEntityId ?? '*',
+    params.externalEntityId ?? '*'
+  ].join('|');
+}
+
+function getCachedMappings(cacheKey: string): ExternalEntityMapping[] | null {
+  const entry = mappingCache.get(cacheKey);
+  if (!entry) {
+    return null;
+  }
+  if (entry.expiresAt <= Date.now()) {
+    mappingCache.delete(cacheKey);
+    return null;
+  }
+  return entry.value.map(cloneMapping);
+}
+
+function setCachedMappings(cacheKey: string, mappings: ExternalEntityMapping[]): void {
+  mappingCache.set(cacheKey, {
+    value: mappings.map(cloneMapping),
+    expiresAt: Date.now() + MAPPING_CACHE_TTL_MS
+  });
+}
+
+function invalidateTenantMappingCache(tenantId: string): void {
+  const prefix = `${tenantId}|`;
+  for (const key of mappingCache.keys()) {
+    if (key.startsWith(prefix)) {
+      mappingCache.delete(key);
+    }
+  }
+}
+
+async function resolveTenantContext(): Promise<{
+  tenantId: string;
+  knex: Knex;
+  user: IUserWithRoles;
+}> {
   const user = await getCurrentUser();
-  // Corrected based on TS error: Use user.tenant
   if (!user?.tenant) {
     throw new Error('User or Tenant ID not found. Unable to perform tenant-scoped operation.');
   }
-  const { knex } = await createTenantKnex(); // Gets Knex instance
-  // Corrected based on TS error: Use user.tenant
-  return { tenantId: user.tenant, knex };
+
+  const { knex } = await createTenantKnex();
+  return { tenantId: user.tenant, knex, user };
 }
 
-// --- CRUD Server Actions ---
+async function ensureBillingAccess(
+  action: 'read' | 'update'
+): Promise<{ tenantId: string; knex: Knex; user: IUserWithRoles }> {
+  const context = await resolveTenantContext();
+  const allowed = await hasPermission(context.user, 'billing_settings', action, context.knex);
+  if (!allowed) {
+    throw new Error(
+      action === 'read'
+        ? 'Forbidden: You do not have permission to view accounting mappings.'
+        : 'Forbidden: You do not have permission to manage accounting mappings.'
+    );
+  }
+  return context;
+}
 
-/**
- * Retrieves a list of external entity mappings for the current user's tenant,
- * with optional filtering.
- */
-export async function getExternalEntityMappings(params: GetMappingsParams): Promise<ExternalEntityMapping[]> {
-  const { tenantId, knex } = await getTenantContext();
+export async function getExternalEntityMappings(
+  params: GetMappingsParams
+): Promise<ExternalEntityMapping[]> {
+  const { tenantId, knex } = await ensureBillingAccess('read');
+  const cacheKey = buildCacheKey(tenantId, params);
+  const cached = getCachedMappings(cacheKey);
+  if (cached) {
+    logger.debug('External mapping cache hit', { tenantId, params });
+    return cached;
+  }
+
   const { integrationType, algaEntityType, externalRealmId, algaEntityId, externalEntityId } = params;
 
-  console.log(`[External Mapping Action - Server] Getting mappings for tenant ${tenantId} with filters:`, params);
+  logger.debug('External mapping lookup requested', {
+    tenantId,
+    integrationType,
+    algaEntityType,
+    externalRealmId,
+    algaEntityId,
+    externalEntityId
+  });
 
   try {
     const mappings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const query = trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ tenant: tenantId }); // **Tenant Isolation**
+      const query = trx<ExternalEntityMapping>('tenant_external_entity_mappings').where({
+        tenant: tenantId
+      });
 
       if (integrationType) {
         query.andWhere({ integration_type: integrationType });
@@ -94,10 +188,9 @@ export async function getExternalEntityMappings(params: GetMappingsParams): Prom
         query.andWhere({ external_entity_id: externalEntityId });
       }
 
-      // Handle external_realm_id filtering (including null/empty cases if needed)
       if (externalRealmId !== undefined) {
         if (externalRealmId === null || externalRealmId === '') {
-          query.andWhere(function() {
+          query.andWhere(function () {
             this.whereNull('external_realm_id').orWhere('external_realm_id', '');
           });
         } else {
@@ -105,69 +198,104 @@ export async function getExternalEntityMappings(params: GetMappingsParams): Prom
         }
       }
 
-      return await query.select('*');
+      return await query.select('*').orderBy('updated_at', 'desc');
     });
-    console.log(`[External Mapping Action - Server] Found ${mappings.length} mappings for tenant ${tenantId}.`);
-    return mappings;
 
-  } catch (error: any) {
-    console.error(`[External Mapping Action - Server] Error getting mappings for tenant ${tenantId}: ${error.message}`, error);
-    throw new Error(`Failed to retrieve external entity mappings: ${error.message}`);
+    logger.debug('External mapping lookup completed', {
+      tenantId,
+      results: mappings.length
+    });
+
+    setCachedMappings(cacheKey, mappings);
+    return mappings.map(cloneMapping);
+  } catch (error: unknown) {
+    logger.error('Failed to retrieve external entity mappings', {
+      tenantId,
+      error
+    });
+    throw new Error('Unable to load mapping data. Please try again.');
   }
 }
 
-/**
- * Creates a new external entity mapping for the current user's tenant.
- */
-export async function createExternalEntityMapping(mappingData: CreateMappingData): Promise<ExternalEntityMapping> {
-  const { tenantId, knex } = await getTenantContext();
-  const { integration_type, alga_entity_type, alga_entity_id, external_entity_id, external_realm_id, sync_status, metadata } = mappingData;
+export async function createExternalEntityMapping(
+  mappingData: CreateMappingData
+): Promise<ExternalEntityMapping> {
+  const { tenantId, knex } = await ensureBillingAccess('update');
+  const {
+    integration_type,
+    alga_entity_type,
+    alga_entity_id,
+    external_entity_id,
+    external_realm_id,
+    sync_status,
+    metadata
+  } = mappingData;
 
-  console.log(`[External Mapping Action - Server] Creating mapping for tenant ${tenantId}:`, mappingData);
+  logger.info('Creating external mapping record', {
+    tenantId,
+    integration_type,
+    alga_entity_type,
+    alga_entity_id,
+    external_entity_id,
+    external_realm_id
+  });
 
   try {
     const [newMapping] = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
         .insert({
-          id: trx.raw('gen_random_uuid()'), // Use DB function for UUID generation
-          tenant: tenantId, // **Tenant Isolation**
+          id: trx.raw('gen_random_uuid()'),
+          tenant: tenantId,
           integration_type,
           alga_entity_type,
           alga_entity_id,
           external_entity_id,
-          external_realm_id: external_realm_id, // Handle null/undefined appropriately
-          sync_status: sync_status ?? 'pending', // Default sync status
-          metadata: metadata ?? null, // Knex handles JSONB serialization
+          external_realm_id: external_realm_id ?? null,
+          sync_status: sync_status ?? 'pending',
+          metadata: metadata ?? null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
-        .returning('*'); // Return the newly created row
+        .returning('*');
     });
 
     if (!newMapping) {
-        throw new Error('Failed to create mapping, insert operation did not return the new record.');
+      throw new Error('Failed to create mapping, insert operation did not return the new record.');
     }
 
-    console.log(`[External Mapping Action - Server] Successfully created mapping with ID ${newMapping.id} for tenant ${tenantId}.`);
-    // Ensure metadata is parsed back if needed, though returning should handle it if Knex is configured correctly.
-    // If metadata comes back as a string: newMapping.metadata = typeof newMapping.metadata === 'string' ? JSON.parse(newMapping.metadata) : newMapping.metadata;
-    return newMapping;
+    logger.info('External mapping created', {
+      tenantId,
+      mappingId: newMapping.id
+    });
 
+    invalidateTenantMappingCache(tenantId);
+    return cloneMapping(newMapping);
   } catch (error: any) {
-    console.error(`[External Mapping Action - Server] Error creating mapping for tenant ${tenantId}: ${error.message}`, error);
-    // Check for unique constraint violation (e.g., PostgreSQL error code 23505)
-    if (error.code === '23505') {
-        throw new Error(`A mapping already exists for this combination (Tenant: ${tenantId}, Integration: ${integration_type}, Alga Type: ${alga_entity_type}, Alga ID: ${alga_entity_id}, External ID: ${external_entity_id}, Realm: ${external_realm_id ?? 'N/A'}).`);
+    logger.error('Failed to create external entity mapping', {
+      tenantId,
+      integration_type,
+      alga_entity_type,
+      alga_entity_id,
+      external_entity_id,
+      external_realm_id,
+      error
+    });
+
+    if (error?.code === '23505') {
+      throw new Error(
+        'A mapping already exists for this entity. Edit the existing mapping instead.'
+      );
     }
-    throw new Error(`Failed to create external entity mapping: ${error.message}`);
+
+    throw new Error('Unable to save mapping. Please try again.');
   }
 }
 
-/**
- * Updates an existing external entity mapping for the current user's tenant.
- */
-export async function updateExternalEntityMapping(mappingId: string, updates: UpdateMappingData): Promise<ExternalEntityMapping> {
-  const { tenantId, knex } = await getTenantContext();
+export async function updateExternalEntityMapping(
+  mappingId: string,
+  updates: UpdateMappingData
+): Promise<ExternalEntityMapping> {
+  const { tenantId, knex } = await ensureBillingAccess('update');
 
   if (!mappingId) {
     throw new Error('Mapping ID is required for update.');
@@ -176,15 +304,17 @@ export async function updateExternalEntityMapping(mappingId: string, updates: Up
     throw new Error('No update data provided.');
   }
 
-  console.log(`[External Mapping Action - Server] Updating mapping ID ${mappingId} for tenant ${tenantId} with updates:`, updates);
+  logger.info('Updating external mapping', {
+    tenantId,
+    mappingId,
+    hasMetadata: updates.metadata !== undefined,
+    hasExternalEntityIdUpdate: updates.external_entity_id !== undefined
+  });
 
-  // Prepare updates. Knex handles JSONB serialization.
   const updatePayload: Partial<ExternalEntityMapping> = { ...updates };
-  // Ensure metadata is passed as an object or null
   if (updatePayload.metadata !== undefined) {
-      updatePayload.metadata = updatePayload.metadata ?? null;
+    updatePayload.metadata = updatePayload.metadata ?? null;
   }
-  // Add updated_at timestamp manually since DB triggers are not supported in Citus
   updatePayload.updated_at = new Date().toISOString();
 
   try {
@@ -192,145 +322,172 @@ export async function updateExternalEntityMapping(mappingId: string, updates: Up
       return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
         .where({
           id: mappingId,
-          tenant: tenantId // **Tenant Isolation**
+          tenant: tenantId
         })
         .update(updatePayload)
-        .returning('*'); // Return the updated row
+        .returning('*');
     });
 
     if (!updatedMapping) {
-      // Attempt to find if the mapping exists at all for this tenant to give a better error
       const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
           .select('id')
           .where({ id: mappingId, tenant: tenantId })
           .first();
       });
+
       if (!exists) {
-          throw new Error(`Mapping with ID ${mappingId} not found for the current tenant (${tenantId}).`);
-      } else {
-          // This case should ideally not happen if the update payload was valid and the record exists
-          throw new Error(`Failed to update mapping ID ${mappingId}. Record exists but update failed.`);
+        throw new Error(
+          `Mapping with ID ${mappingId} not found for the current tenant (${tenantId}).`
+        );
       }
+
+      throw new Error(
+        `Failed to update mapping ID ${mappingId}. Record exists but update failed.`
+      );
     }
 
-    console.log(`[External Mapping Action - Server] Successfully updated mapping ID ${updatedMapping.id} for tenant ${tenantId}.`);
-    // Parse metadata if needed: updatedMapping.metadata = typeof updatedMapping.metadata === 'string' ? JSON.parse(updatedMapping.metadata) : updatedMapping.metadata;
-    return updatedMapping;
+    logger.info('External mapping updated', {
+      tenantId,
+      mappingId: updatedMapping.id
+    });
 
-  } catch (error: any) {
-    console.error(`[External Mapping Action - Server] Error updating mapping ID ${mappingId} for tenant ${tenantId}: ${error.message}`, error);
-    throw new Error(`Failed to update external entity mapping: ${error.message}`);
+    invalidateTenantMappingCache(tenantId);
+    return cloneMapping(updatedMapping);
+  } catch (error: unknown) {
+    logger.error('Failed to update external mapping', {
+      tenantId,
+      mappingId,
+      error
+    });
+    throw new Error('Unable to update mapping. Please try again.');
   }
 }
 
-/**
- * Deletes an external entity mapping for the current user's tenant.
- */
 export async function deleteExternalEntityMapping(mappingId: string): Promise<void> {
-  const { tenantId, knex } = await getTenantContext();
+  const { tenantId, knex } = await ensureBillingAccess('update');
 
   if (!mappingId) {
     throw new Error('Mapping ID is required for deletion.');
   }
 
-  console.log(`[External Mapping Action - Server] Deleting mapping ID ${mappingId} for tenant ${tenantId}.`);
+  logger.info('Deleting external mapping', { tenantId, mappingId });
 
   try {
     const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
         .where({
           id: mappingId,
-          tenant: tenantId // **Tenant Isolation**
+          tenant: tenantId
         })
-        .del(); // Perform the delete operation
+        .del();
     });
 
     if (deletedCount === 0) {
-      // Check if the mapping ID exists at all to differentiate between "not found" and other errors
-       const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
-         return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
-           .select('id')
-           .where({ id: mappingId, tenant: tenantId })
-           .first();
-       });
-       if (!exists) {
-           console.warn(`[External Mapping Action - Server] Mapping ID ${mappingId} not found for tenant ${tenantId}. No deletion occurred.`);
-           // Depending on requirements, might throw an error or just return successfully
-           // throw new Error(`Mapping with ID ${mappingId} not found for the current tenant (${tenantId}).`);
-           return; // Treat as success if not found is acceptable
-       } else {
-           // This case implies the record exists but wasn't deleted, which is unusual for a simple delete
-           throw new Error(`Failed to delete mapping ID ${mappingId}. Record exists but deletion failed.`);
-       }
+      const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .select('id')
+          .where({ id: mappingId, tenant: tenantId })
+          .first();
+      });
+
+      if (!exists) {
+        logger.warn('External mapping delete requested for unknown id', {
+          tenantId,
+          mappingId
+        });
+        return;
+      }
+
+      throw new Error(
+        `Failed to delete mapping ID ${mappingId}. Record exists but deletion failed.`
+      );
     }
 
-    console.log(`[External Mapping Action - Server] Successfully deleted mapping ID ${mappingId} for tenant ${tenantId}.`);
-
-  } catch (error: any) {
-    console.error(`[External Mapping Action - Server] Error deleting mapping ID ${mappingId} for tenant ${tenantId}: ${error.message}`, error);
-    throw new Error(`Failed to delete external entity mapping: ${error.message}`);
+    logger.info('External mapping deleted', { tenantId, mappingId });
+    invalidateTenantMappingCache(tenantId);
+  } catch (error: unknown) {
+    logger.error('Failed to delete external entity mapping', {
+      tenantId,
+      mappingId,
+      error
+    });
+    throw new Error('Unable to delete mapping. Please try again.');
   }
 }
 
-// --- Existing Workflow Action Code Below ---
-
-
-// --- Action Parameters Interface ---
-
 interface LookupExternalEntityIdParams {
-  integration_type: string; // e.g., 'quickbooks_online'
-  alga_entity_type: string; // e.g., 'item', 'tax_code', 'term', 'customer', 'invoice'
-  alga_entity_id: string;   // The ID of the entity in the Alga system
-  external_realm_id?: string; // Optional: e.g., QBO Realm ID
+  integration_type: string;
+  alga_entity_type: string;
+  alga_entity_id: string;
+  external_realm_id?: string;
 }
 
-// --- Action Parameter Definitions ---
-
 const lookupExternalEntityIdParamsDef: ActionParameterDefinition[] = [
-  { name: 'integration_type', type: 'string', required: true, description: 'Identifier for the external system (e.g., quickbooks_online)' },
-  { name: 'alga_entity_type', type: 'string', required: true, description: 'Type of the entity within the Alga system (e.g., item, tax_code, term)' },
-  { name: 'alga_entity_id', type: 'string', required: true, description: 'The unique identifier of the entity within the Alga system' },
-  { name: 'external_realm_id', type: 'string', required: false, description: 'Optional identifier for the external system\'s context (e.g., QBO Realm ID)' },
+  {
+    name: 'integration_type',
+    type: 'string',
+    required: true,
+    description: 'Identifier for the external system (e.g., quickbooks_online)'
+  },
+  {
+    name: 'alga_entity_type',
+    type: 'string',
+    required: true,
+    description: 'Type of the entity within the Alga system (e.g., item, tax_code, term)'
+  },
+  {
+    name: 'alga_entity_id',
+    type: 'string',
+    required: true,
+    description: 'The unique identifier of the entity within the Alga system'
+  },
+  {
+    name: 'external_realm_id',
+    type: 'string',
+    required: false,
+    description: 'QuickBooks realm or other external context identifier'
+  }
 ];
 
-// --- Action Implementation ---
-
-/**
- * Workflow Action: Looks up the external system's entity ID based on the Alga entity ID
- * using the tenant_external_entity_mappings table.
- */
-async function lookupExternalEntityIdAction(params: Record<string, any>, context: ActionExecutionContext): Promise<{ external_entity_id: string | null }> {
-  const validatedParams = params as LookupExternalEntityIdParams;
-  const { integration_type, alga_entity_type, alga_entity_id, external_realm_id } = validatedParams;
+async function lookupExternalEntityIdAction(
+  params: Record<string, unknown>,
+  context: ActionExecutionContext
+): Promise<{ external_entity_id: string | null }> {
+  const { integration_type, alga_entity_type, alga_entity_id, external_realm_id } =
+    params as unknown as LookupExternalEntityIdParams;
   const { tenant } = context;
 
   if (!tenant) {
     throw new Error('Tenant ID not found in action execution context.');
   }
 
-  console.log(`[External Mapping Action] Looking up external ID for tenant ${tenant}, integration ${integration_type}, type ${alga_entity_type}, alga_id ${alga_entity_id}, realm ${external_realm_id || 'N/A'}`);
+  logger.debug('External workflow mapping lookup requested', {
+    tenant,
+    integration_type,
+    alga_entity_type,
+    alga_entity_id,
+    external_realm_id
+  });
 
   try {
-    const { knex } = await createTenantKnex(); // Get tenant-specific Knex instance
+    const { knex } = await createTenantKnex();
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const query = trx('tenant_external_entity_mappings')
         .select('external_entity_id')
         .where({
-          tenant: tenant, // Ensure tenant isolation
-          integration_type: integration_type,
-          alga_entity_type: alga_entity_type,
-          alga_entity_id: alga_entity_id,
+          tenant,
+          integration_type,
+          alga_entity_type,
+          alga_entity_id
         })
-        .first(); // Expecting at most one mapping
+        .first();
 
-      // Add realm ID condition only if it's provided
       if (external_realm_id) {
         query.andWhere('external_realm_id', external_realm_id);
       } else {
-        // Handle cases where realm ID might be NULL in the table if it wasn't provided
-        query.andWhere(function() {
+        query.andWhere(function () {
           this.whereNull('external_realm_id').orWhere('external_realm_id', '');
         });
       }
@@ -338,27 +495,41 @@ async function lookupExternalEntityIdAction(params: Record<string, any>, context
       return await query;
     });
 
-    const externalId = result?.external_entity_id || null;
+    const externalId = result?.external_entity_id ?? null;
 
     if (externalId) {
-      console.log(`[External Mapping Action] Found external ID: ${externalId}`);
+      logger.debug('External workflow mapping lookup succeeded', {
+        tenant,
+        integration_type,
+        alga_entity_type,
+        alga_entity_id,
+        external_realm_id,
+        externalId
+      });
     } else {
-      console.warn(`[External Mapping Action] No external ID found for tenant ${tenant}, integration ${integration_type}, type ${alga_entity_type}, alga_id ${alga_entity_id}, realm ${external_realm_id || 'N/A'}`);
-      // Note: The calling workflow will need to handle the null case (e.g., create human task)
+      logger.warn('External workflow mapping lookup returned no result', {
+        tenant,
+        integration_type,
+        alga_entity_type,
+        alga_entity_id,
+        external_realm_id
+      });
     }
 
     return { external_entity_id: externalId };
-
-  } catch (error: any) {
-    console.error(`[External Mapping Action] Error looking up external ID: ${error.message}`, error);
-    // Depending on policy, might return null or re-throw
-    // Returning null allows workflow to handle missing mapping explicitly
-    // return { external_entity_id: null };
-    throw error; // Re-throw for now
+  } catch (error: unknown) {
+    logger.error('External workflow mapping lookup failed', {
+      tenant,
+      integration_type,
+      alga_entity_type,
+      alga_entity_id,
+      external_realm_id,
+      error
+    });
+    throw error;
   }
 }
 
-// --- Action Registration ---
 async function performActionRegistration() {
   try {
     const registry = getActionRegistry();
@@ -369,8 +540,10 @@ async function performActionRegistration() {
       lookupExternalEntityIdParamsDef,
       lookupExternalEntityIdAction
     );
-    console.log('[External Mapping Action] Action registered successfully.');
+    logger.debug('External mapping workflow action registered');
   } catch (error) {
-    console.error('[External Mapping Action] Error registering action:', error);
+    logger.error('Failed to register external mapping workflow action', { error });
   }
 }
+
+void performActionRegistration();

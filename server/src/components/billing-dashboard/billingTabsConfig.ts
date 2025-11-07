@@ -7,7 +7,8 @@ import {
   Calendar,
   Gauge,
   BarChart3,
-  Package
+  Package,
+  Coins
 } from 'lucide-react';
 
 export interface BillingTabDefinition {
@@ -26,7 +27,8 @@ export type BillingTabValue =
   | 'billing-cycles'
   | 'usage-tracking'
   | 'reports'
-  | 'service-catalog';
+  | 'service-catalog'
+  | 'accounting-exports';
 
 export const billingTabDefinitions: BillingTabDefinition[] = [
   {
@@ -82,5 +84,11 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     label: 'Service Catalog',
     href: '/msp/billing?tab=service-catalog',
     icon: Package
+  },
+  {
+    value: 'accounting-exports',
+    label: 'Accounting Exports',
+    href: '/msp/billing?tab=accounting-exports',
+    icon: Coins
   }
 ];

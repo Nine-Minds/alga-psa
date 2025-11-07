@@ -15,16 +15,24 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 import { IContract, IContractAssignmentSummary } from 'server/src/interfaces/contract.interfaces';
+import { DetailedContractLine } from 'server/src/lib/repositories/contractLineRepository';
 import { IContractLineServiceBucketConfig, IContractLineServiceConfiguration, IContractLineServiceHourlyConfig, IContractLineServiceUsageConfig } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
-import { getContractById, getContractSummary, updateContract, getContractAssignments } from 'server/src/lib/actions/contractActions';
-import { getDetailedContractLines } from 'server/src/lib/actions/contractLineMappingActions';
+import {
+  getContractById,
+  getContractSummary,
+  updateContract,
+  getContractAssignments,
+  getDetailedContractLines,
+  updateContractLineRate,
+} from 'server/src/lib/actions/contractActions';
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
 } from 'server/src/lib/actions/contractLineServiceActions';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import ContractLinesEditor from './ContractLines';
+import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
+import { ContractLineEditDialog } from './ContractLineEditDialog';
 
 type TemplateMetadataService = {
   service_id?: string;
@@ -72,6 +80,8 @@ type TemplateContractLine = {
   contract_line_name: string;
   contract_line_type: string;
   billing_frequency: string;
+  billing_timing: 'arrears' | 'advance';
+  rate?: number | null;
   services: TemplateLineService[];
 };
 
@@ -80,6 +90,7 @@ type DetailedContractLineRow = {
   contract_line_name: string;
   contract_line_type: string;
   billing_frequency: string;
+  billing_timing?: 'arrears' | 'advance';
 };
 
 type RawContractSummary = Awaited<ReturnType<typeof getContractSummary>>;
@@ -320,7 +331,7 @@ const ContractTemplateDetail: React.FC = () => {
           getContractSummary(id),
           getDetailedContractLines(id),
           getContractAssignments(id),
-        ])) as [IContract | null, RawContractSummary, DetailedContractLineRow[], IContractAssignmentSummary[]];
+        ])) as [IContract | null, RawContractSummary, DetailedContractLine[], IContractAssignmentSummary[]];
 
         if (!contractData) {
           setContract(null);
@@ -344,16 +355,18 @@ const ContractTemplateDetail: React.FC = () => {
 
         const linesWithServices = await Promise.all(
           detailedLinesRaw.map(async (line) => {
-            const services = await enrichServices(line.contract_line_id, isTemplateContext);
-            return {
-              contract_line_id: line.contract_line_id,
-              contract_line_name: line.contract_line_name,
-              contract_line_type: line.contract_line_type,
-              billing_frequency: line.billing_frequency,
-              services,
-            } as TemplateContractLine;
-          })
-        );
+        const services = await enrichServices(line.contract_line_id, isTemplateContext);
+        return {
+          contract_line_id: line.contract_line_id,
+          contract_line_name: line.contract_line_name,
+          contract_line_type: line.contract_line_type,
+          billing_frequency: line.billing_frequency,
+          billing_timing: (line.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+          rate: line.rate ?? null,
+          services,
+        } as TemplateContractLine;
+      })
+    );
 
         setContract(contractData);
         setSummary(normalizedSummary);
@@ -1015,9 +1028,10 @@ const ContractTemplateDetail: React.FC = () => {
       )}
 
       {showServicesEditor && contract && (
-        <ContractLinesEditor
-          contract={contract}
-          onContractLinesChanged={() => {
+        <TemplateServicesManager
+          contractId={contract.contract_id}
+          contractLines={templateLines}
+          onServicesChanged={() => {
             if (contract.contract_id) {
               void loadTemplate(contract.contract_id);
             }
@@ -1143,6 +1157,115 @@ const ContractTemplateDetail: React.FC = () => {
         </div>
       </section>
     </div>
+  );
+};
+
+type TemplateServicesManagerProps = {
+  contractId: string;
+  contractLines: TemplateContractLine[];
+  onServicesChanged: () => void;
+};
+
+const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
+  contractId,
+  contractLines,
+  onServicesChanged,
+}) => {
+  const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(null);
+
+  const formatCurrency = (value?: number | null) => {
+    if (value === null || value === undefined) {
+      return 'Not set';
+    }
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  const handleSaveRate = async (
+    contractLineId: string,
+    rate: number,
+    billingTiming: 'arrears' | 'advance'
+  ) => {
+    try {
+      await updateContractLineRate(contractId, contractLineId, rate, billingTiming);
+      setEditingLine(null);
+      onServicesChanged();
+    } catch (error) {
+      console.error('Failed to update template line rate:', error);
+      throw error;
+    }
+  };
+
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle className="text-base font-semibold text-gray-800">
+          Manage Template Services
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {contractLines.length === 0 ? (
+          <p className="text-sm text-gray-600">
+            Add contract lines to this template before managing services.
+          </p>
+        ) : (
+          contractLines.map((line) => (
+            <div key={line.contract_line_id} className="border border-gray-200 rounded-md p-4">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                <div>
+                  <p className="font-medium text-gray-900">{line.contract_line_name}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">
+                    {humanize(line.contract_line_type)} • {humanize(line.billing_frequency)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {line.services.length} service{line.services.length === 1 ? '' : 's'}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    Fixed Fee Rate: {formatCurrency(line.rate)}
+                  </Badge>
+                  {line.contract_line_type === 'Fixed' && (
+                    <Button
+                      id={`edit-rate-${line.contract_line_id}`}
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => setEditingLine(line)}
+                    >
+                      Edit Rate
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4">
+                <GenericPlanServicesList
+                  contractLineId={line.contract_line_id}
+                  onServicesChanged={onServicesChanged}
+                  disableEditing
+                />
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+      {editingLine && (
+        <ContractLineEditDialog
+          line={{
+            contract_line_id: editingLine.contract_line_id,
+            contract_line_name: editingLine.contract_line_name,
+            rate: editingLine.rate ?? undefined,
+            billing_timing: editingLine.billing_timing,
+          }}
+          onClose={() => setEditingLine(null)}
+          onSave={handleSaveRate}
+        />
+      )}
+    </Card>
   );
 };
 

@@ -1,0 +1,108 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/storage/namespaces/{namespace}/records"
+      },
+      "metadata": {
+        "playbooks": [
+          "storage/list-namespace"
+        ],
+        "examples": [
+          {
+            "name": "List records with prefix filter",
+            "request": {
+              "params": {
+                "namespace": "integrations:zendesk"
+              },
+              "query": {
+                "prefix": "tickets/"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/storage/namespaces/{namespace}/records"
+      },
+      "metadata": {
+        "playbooks": [
+          "storage/bulk-upsert-records"
+        ],
+        "examples": [
+          {
+            "name": "Bulk upsert configuration values",
+            "request": {
+              "params": {
+                "namespace": "automation:workflow"
+              },
+              "body": {
+                "records": [
+                  {
+                    "key": "webhook/url",
+                    "value": "https://hooks.example.com/inbound",
+                    "contentType": "text/plain"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/storage/namespaces/{namespace}/records/{key}"
+      },
+      "metadata": {
+        "playbooks": [
+          "storage/get-record"
+        ],
+        "examples": [
+          {
+            "name": "Retrieve a workflow record",
+            "request": {
+              "params": {
+                "namespace": "automation:workflow",
+                "key": "webhook/url"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/storage/namespaces/{namespace}/records/{key}"
+      },
+      "metadata": {
+        "playbooks": [
+          "storage/put-record"
+        ],
+        "examples": [
+          {
+            "name": "Set workflow webhook URL",
+            "request": {
+              "params": {
+                "namespace": "automation:workflow",
+                "key": "webhook/url"
+              },
+              "body": {
+                "value": "https://hooks.example.com/inbound",
+                "contentType": "text/plain"
+              }
+            }
+          }
+        ],
+        "approvalRequired": true
+      }
+    }
+  ]
+}

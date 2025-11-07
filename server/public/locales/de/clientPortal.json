@@ -493,6 +493,8 @@
       "invite": "Einladung senden",
       "resendInvite": "Einladung erneut senden",
       "lastLogin": "Letzte Anmeldung",
+      "never": "Nie",
+      "via": "über",
       "userNotFound": "Benutzer nicht gefunden",
       "failedToLoad": "Benutzerdetails konnten nicht geladen werden",
       "failedToUpdate": "Benutzer konnte nicht aktualisiert werden",
@@ -653,7 +655,167 @@
     "videoUnsupported": "Videoformat ({{mimeType}}) wird für die Wiedergabe im Browser nicht unterstützt",
     "videoTagUnsupported": "Ihr Browser unterstützt das Video-Tag nicht.",
     "unnamed": "Ohne Titel",
-    "videoDownloadInfo": "Das Video wird heruntergeladen und kann mit dem Standard-Videoplayer Ihres Systems abgespielt werden."
+    "videoDownloadInfo": "Das Video wird heruntergeladen und kann mit dem Standard-Videoplayer Ihres Systems abgespielt werden.",
+    "previewUnavailableNoId": "Keine Vorschau verfügbar (keine Kennung)",
+    "previewLoadFailed": "Vorschau konnte nicht geladen werden",
+    "videoCodecWarning": "Chrome unterstützt diesen Videocodec möglicherweise nicht. Lade die Datei herunter oder verwende Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Dokumente konnten nicht geladen werden.",
+      "folderCreated": "Ordner \"{{name}}\" wurde erfolgreich erstellt",
+      "folderCreateFailed": "Ordner konnte nicht erstellt werden",
+      "moveDocumentsSuccess_one": "{{count}} Dokument wurde nach {{destination}} verschoben",
+      "moveDocumentsSuccess_other": "{{count}} Dokumente wurden nach {{destination}} verschoben",
+      "moveDocumentsFailed": "Dokumente konnten nicht verschoben werden",
+      "deleteSuccess": "Dokument \"{{name}}\" wurde erfolgreich gelöscht",
+      "deleteFailed": "Dokument konnte nicht gelöscht werden",
+      "removeAssociationFailed": "Dokumentverknüpfung konnte nicht entfernt werden",
+      "moveDocumentSuccess": "Dokument \"{{name}}\" wurde erfolgreich verschoben",
+      "moveDocumentFailed": "Dokument konnte nicht verschoben werden",
+      "createFailed": "Dokument konnte nicht erstellt werden",
+      "saveFailed": "Dokument konnte nicht gespeichert werden",
+      "loadContentFailed": "Dokumentinhalt konnte nicht geladen werden",
+      "downloadFailed": "Dokument konnte nicht heruntergeladen werden",
+      "bulkDeleteFailed": "Einige Dokumente konnten nicht gelöscht werden",
+      "bulkDeleteSuccess_one": "{{count}} Dokument wurde erfolgreich gelöscht",
+      "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht"
+    },
+    "validation": {
+      "nameRequired": "Dokumentname ist erforderlich"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} Dokument ausgewählt",
+      "selected_other": "{{count}} Dokumente ausgewählt",
+      "moveToFolder": "In Ordner verschieben",
+      "deleteSelected": "Ausgewählte löschen",
+      "clearSelection": "Auswahl aufheben"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Möchtest du wirklich {{count}} Dokument löschen?",
+      "confirmBulkDelete_other": "Möchtest du wirklich {{count}} Dokumente löschen?"
+    },
+    "pagination": {
+      "perPage": "{{count}} pro Seite"
+    },
+    "folderSelector": {
+      "defaultTitle": "Zielordner auswählen",
+      "defaultDescription": "Wähle aus, wo dieses Dokument gespeichert werden soll",
+      "newDocumentTitle": "Ordner für neues Dokument auswählen",
+      "newDocumentDescription": "Wähle aus, wo dieses neue Dokument gespeichert werden soll",
+      "moveTitle": "Dokument verschieben",
+      "moveDescriptionWithName": "Zielordner für \"{{name}}\" auswählen",
+      "moveDescription": "Zielordner auswählen",
+      "bulkMoveTitle": "Ausgewählte Dokumente verschieben",
+      "bulkMoveDescription_one": "Zielordner für {{count}} Dokument auswählen",
+      "bulkMoveDescription_other": "Zielordner für {{count}} Dokumente auswählen",
+      "errors": {
+        "nameRequired": "Bitte gib einen Ordnernamen ein",
+        "invalidCharacters": "Der Ordnername darf kein \"/\" enthalten",
+        "createFailed": "Ordner konnte nicht erstellt werden"
+      },
+      "creating": "Wird erstellt...",
+      "createButton": "Ordner erstellen",
+      "newFolderButton": "Neuer Ordner",
+      "parentLabel": "Übergeordneter Ordner: {{folder}}",
+      "rootLabel": "/ (Stammverzeichnis)",
+      "namePlaceholder": "Ordnernamen eingeben",
+      "loading": "Ordner werden geladen...",
+      "rootOption": "Stamm (kein Ordner)",
+      "empty": "Keine Ordner vorhanden. Dokumente werden im Stammverzeichnis gespeichert."
+    },
+    "filters": {
+      "searchLabel": "Dokumente suchen",
+      "searchPlaceholder": "Nach Dokumentnamen suchen...",
+      "typeLabel": "Dokumenttyp",
+      "entityTypeLabel": "Verknüpfter Entitätstyp",
+      "uploadedByLabel": "Hochgeladen von",
+      "uploadedByPlaceholder": "Alle Benutzer",
+      "updatedStartLabel": "Änderungsdatum (von)",
+      "updatedEndLabel": "Änderungsdatum (bis)",
+      "startDatePlaceholder": "Startdatum auswählen",
+      "endDatePlaceholder": "Enddatum auswählen",
+      "sortByLabel": "Sortieren nach",
+      "clear": "Filter zurücksetzen",
+      "typeOptions": {
+        "all": "Alle Dokumenttypen",
+        "pdf": "PDF",
+        "image": "Bilder",
+        "text": "Dokumente",
+        "video": "Video",
+        "other": "Andere"
+      },
+      "sortOptions": {
+        "updated_at": "Datum",
+        "document_name": "Dokumentname",
+        "file_size": "Dateigröße",
+        "created_by_full_name": "Erstellt von"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Aufsteigend anzeigen",
+          "desc": "Absteigend anzeigen"
+        },
+        "document_name": {
+          "asc": "A–Z anzeigen",
+          "desc": "Z–A anzeigen"
+        },
+        "updated_at": {
+          "asc": "Älteste zuerst anzeigen",
+          "desc": "Neueste zuerst anzeigen"
+        },
+        "file_size": {
+          "asc": "Kleinste zuerst anzeigen",
+          "desc": "Größte zuerst anzeigen"
+        },
+        "created_by_full_name": {
+          "asc": "A–Z anzeigen",
+          "desc": "Z–A anzeigen"
+        }
+      }
+    },
+    "selector": {
+      "title": "Dokumente auswählen",
+      "reflectionLabel": "Dokumentauswahl",
+      "searchPlaceholder": "Dokumente durchsuchen...",
+      "foldersLabel": "Ordner",
+      "folderHint": "im Ordner \"{{folder}}\"",
+      "saving": "Wird gespeichert...",
+      "selectDocument": "Dokument auswählen",
+      "associateSelected": "Auswahl verknüpfen",
+      "errors": {
+        "configuration": "Konfigurationsfehler: Entitätsinformationen fehlen",
+        "invalidData": "Ungültige Dokumentdaten erhalten",
+        "load": "Dokumente konnten nicht geladen werden",
+        "save": "Dokumentauswahl konnte nicht gespeichert werden"
+      },
+      "configErrorTitle": "Konfigurationsfehler",
+      "configErrorMessage": "Erforderliche Konfiguration fehlt. Bitte wende dich an den Support."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Dokument-Upload",
+      "dragDrop": "Ziehe deine Datei hierher oder",
+      "browse": "Dateien durchsuchen",
+      "uploading": "Wird hochgeladen...",
+      "error": "Dokument konnte nicht hochgeladen werden",
+      "fileError": "Datei konnte nicht hochgeladen werden"
+    },
+    "folders": {
+      "root": "Stammordner",
+      "loadFailed": "Ordnerbaum konnte nicht geladen werden",
+      "deleteConfirm": "Möchtest du den Ordner \"{{name}}\" wirklich löschen? Dies funktioniert nur, wenn der Ordner leer ist.",
+      "deleteSuccess": "Ordner \"{{name}}\" wurde erfolgreich gelöscht",
+      "deleteFailed": "Ordner konnte nicht gelöscht werden",
+      "deleteAction": "Ordner löschen",
+      "loading": "Ordner werden geladen...",
+      "title": "Ordner",
+      "collapse": "Ordner einklappen",
+      "allDocuments": "Alle Dokumente"
+    },
+    "folderManager": {
+      "title": "Neuen Ordner erstellen",
+      "nameLabel": "Ordnername",
+      "namePlaceholder": "Ordnernamen eingeben",
+      "willCreateIn": "Wird erstellt in: {{folder}}"
+    }
   },
   "common": {
     "actions": "Aktionen",
@@ -700,7 +862,17 @@
     "passwordPlaceholder": "Passwort eingeben",
     "signingIn": "Anmeldung läuft...",
     "rememberMe": "Angemeldet bleiben",
-    "forgotPassword": "Passwort vergessen?",
+    "forgotPasswordLink": "Passwort vergessen?",
+    "forgotPasswordPage": {
+      "title": "Passwort vergessen?",
+      "subtitle": "Keine Sorge, wir senden Ihnen Anweisungen zum Zurücksetzen.",
+      "logoAlt": "Kundenportal-Logo",
+      "emailLabel": "E-Mail",
+      "emailPlaceholder": "Geben Sie Ihre E-Mail-Adresse ein",
+      "sendResetButton": "Link zum Zurücksetzen senden",
+      "backToLogin": "← Zurück zur Anmeldung",
+      "resetLinkSent": "Wenn ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen des Passworts gesendet."
+    },
     "resetPassword": "Passwort zurücksetzen",
     "backToSignIn": "Zurück zur Anmeldung",
     "sendResetLink": "Reset-Link senden",
@@ -715,6 +887,44 @@
     "accessDeniedMessage": "Du hast keine Berechtigung, auf das Kundenportal zuzugreifen.",
     "registrationSuccessTitle": "Registrierung erfolgreich",
     "registrationSuccessMessage": "Dein Konto wurde erstellt. Bitte melde dich an.",
+    "portalSetup": {
+      "title": "Portalzugang einrichten",
+      "subtitle": "Schließe die Einrichtung deines Kundenportalkontos ab",
+      "loading": "Wird geladen...",
+      "invalidInvitation": "Ungültige Einladung",
+      "invalidInvitationDescription": "Es gab ein Problem mit deiner Portaleinladung",
+      "invalidTokenMessage": "Der Einladungstoken ist ungültig oder abgelaufen. Bitte kontaktiere deinen Dienstleister, um eine neue Einladung zu erhalten.",
+      "noTokenProvided": "Kein Einladungstoken angegeben",
+      "invalidOrExpiredToken": "Ungültiges oder abgelaufenes Einladungstoken",
+      "verificationFailed": "Überprüfung des Einladungstokens fehlgeschlagen",
+      "goToPortalSignIn": "Zum Portal-Login",
+      "accountInformation": "Kontoinformationen",
+      "name": "Name:",
+      "email": "E-Mail:",
+      "client": "Kunde:",
+      "password": "Passwort",
+      "passwordPlaceholder": "Gib dein Passwort ein",
+      "confirmPassword": "Passwort bestätigen",
+      "confirmPasswordPlaceholder": "Bestätige dein Passwort",
+      "passwordRequirements": "Passwortanforderungen",
+      "requirements": {
+        "minLength": "Mindestens 8 Zeichen",
+        "hasUppercase": "Ein Großbuchstabe",
+        "hasLowercase": "Ein Kleinbuchstabe",
+        "hasNumber": "Eine Zahl",
+        "hasSpecialChar": "Ein Sonderzeichen",
+        "passwordsMatch": "Passwörter stimmen überein"
+      },
+      "createAccount": "Portal-Konto erstellen",
+      "creatingAccount": "Konto wird erstellt...",
+      "alreadyHaveAccount": "Du hast bereits ein Konto?",
+      "signInToPortal": "Im Portal anmelden",
+      "requirementsNotMet": "Bitte stelle sicher, dass alle Passwortanforderungen erfüllt sind",
+      "accountReady": "Konto bereit. Bitte melde dich an.",
+      "accountCreatedSuccess": "Konto erfolgreich erstellt. Bitte melde dich an.",
+      "welcome": "Willkommen im Kundenportal!",
+      "createFailed": "Konto konnte nicht erstellt werden"
+    },
     "features": {
       "submitTickets": {
         "title": "Support-Tickets einreichen",

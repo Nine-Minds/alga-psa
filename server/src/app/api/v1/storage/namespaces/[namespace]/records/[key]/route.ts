@@ -24,8 +24,11 @@ export async function GET(
       key: params.key,
       ifRevision: ifRevisionHeader ? Number(ifRevisionHeader) : undefined,
     });
-
-    return NextResponse.json(result, { status: 200 });
+    const headers = {
+      'Cache-Control': 'no-store',
+      Vary: 'authorization,x-api-key,if-revision-match',
+    };
+    return NextResponse.json(result, { status: 200, headers });
   } catch (error) {
     return mapStorageError(error);
   }
@@ -51,7 +54,11 @@ export async function PUT(
       schemaVersion: body.schemaVersion,
     });
 
-    return NextResponse.json(result, { status: 200 });
+    const headers = {
+      'Cache-Control': 'no-store',
+      Vary: 'authorization,x-api-key',
+    };
+    return NextResponse.json(result, { status: 200, headers });
   } catch (error) {
     return mapStorageError(error);
   }
@@ -71,7 +78,13 @@ export async function DELETE(
     await ensureStoragePermission('write', authContext, knex);
 
     await service.delete({ namespace: params.namespace, key: params.key, ifRevision: input.ifRevision });
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Cache-Control': 'no-store',
+        Vary: 'authorization,x-api-key,if-revision-match',
+      },
+    });
   } catch (error) {
     return mapStorageError(error);
   }

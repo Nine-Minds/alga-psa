@@ -9,9 +9,11 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '../ui/Button';
-import { ExternalLink, Pencil } from 'lucide-react';
+import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import CustomTabs from 'server/src/components/ui/CustomTabs';
 import BackNav from 'server/src/components/ui/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -21,7 +23,8 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { updateContact, getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { updateContact, getContactByContactNameId, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from 'server/src/lib/utils/clientFormValidation';
 import Documents from 'server/src/components/documents/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { useToast } from 'server/src/hooks/use-toast';
@@ -37,6 +40,7 @@ import { useTags } from 'server/src/context/TagContext';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/client-actions/countryActions';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 
@@ -68,25 +72,48 @@ const TextDetailItem: React.FC<{
   label: string;
   value: string;
   onEdit: (value: string) => void;
-}> = ({ label, value, onEdit }) => {
+  automationId?: string;
+  validate?: (value: string) => string | null;
+}> = ({ label, value, onEdit, automationId, validate }) => {
   const [localValue, setLocalValue] = useState(value);
+  const [error, setError] = useState<string | null>(null);
 
   const handleBlur = () => {
+    // Professional SaaS validation pattern: validate on blur, not while typing
+    if (validate) {
+      const validationError = validate(localValue);
+      setError(validationError);
+    }
+
     if (localValue !== value) {
       onEdit(localValue);
     }
   };
-  
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+    // Clear error while typing
+    if (error) {
+      setError(null);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
         type="text"
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={handleChange}
         onBlur={handleBlur}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+          error ? 'border-red-500' : 'border-gray-200'
+        }`}
+        data-automation-id={automationId}
       />
+      {error && (
+        <div className="text-red-500 text-xs mt-1">{error}</div>
+      )}
     </div>
   );
 };
@@ -166,6 +193,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<ITag[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   const { tags: allTags } = useTags();
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(contact.client_id || null);
@@ -178,6 +208,22 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     categories: ITicketCategory[];
     tags?: string[];
   } | null>(null);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [countryCode, setCountryCode] = useState(() => {
+    // Enterprise locale detection
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const parts = locale.split('-');
+      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+
+      if (detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry)) {
+        return detectedCountry;
+      }
+    } catch (e) {
+      // Fallback to US if detection fails
+    }
+    return 'US';
+  });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -249,6 +295,20 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     }
   }, [currentUser]);
 
+  // Load countries
+  useEffect(() => {
+    const fetchCountries = async () => {
+      if (countries.length > 0) return; // Don't fetch if already loaded
+      try {
+        const countriesData = await getAllCountries();
+        setCountries(countriesData);
+      } catch (error: any) {
+        console.error("Error fetching countries:", error);
+      }
+    };
+    fetchCountries();
+  }, [countries.length]);
+
   // Fetch contact avatar URL and tags
   useEffect(() => {
     const fetchAvatarAndTags = async () => {
@@ -277,6 +337,80 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setHasUnsavedChanges(true);
   };
 
+  const handleCountryChange = (countryCode: string) => {
+    setCountryCode(countryCode);
+    // When country changes, the PhoneInput will auto-update with the new phone code
+  };
+
+  const handleDeleteContact = () => {
+    setDeleteError(null);
+    setShowDeactivateOption(false);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteContact(editedContact.contact_name_id);
+
+      setIsDeleteDialogOpen(false);
+
+      toast({
+        title: "Contact Deleted",
+        description: "Contact has been deleted successfully.",
+      });
+
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
+      } else {
+        router.push('/msp/contacts');
+      }
+    } catch (error: any) {
+      console.error('Failed to delete contact:', error);
+
+      // Handle dependency errors like the main contacts page
+      if (error.message && error.message.includes('VALIDATION_ERROR: Cannot delete contact because it has associated records:')) {
+        setDeleteError(error.message.replace('VALIDATION_ERROR: ', ''));
+        setShowDeactivateOption(true);
+        return;
+      }
+
+      setDeleteError(error.message || 'Failed to delete contact. Please try again.');
+    }
+  };
+
+  const handleMarkContactInactive = async () => {
+    try {
+      const updatedContact = await updateContact({
+        ...editedContact,
+        is_inactive: true
+      });
+
+      setIsDeleteDialogOpen(false);
+
+      toast({
+        title: "Contact Deactivated",
+        description: "Contact has been marked as inactive successfully.",
+      });
+
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
+      } else {
+        router.push('/msp/contacts');
+      }
+    } catch (error: any) {
+      console.error('Error marking contact as inactive:', error);
+      setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
+    }
+  };
+
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setDeleteError(null);
+    setShowDeactivateOption(false);
+  };
+
   const handleSave = async () => {
     try {
       // Make sure contact_name_id is included in the data being sent
@@ -284,12 +418,12 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         ...editedContact,
         contact_name_id: editedContact.contact_name_id
       };
-      
+
       const updatedContact = await updateContact(dataToUpdate);
       setEditedContact(updatedContact);
       setOriginalContact(updatedContact);
       setHasUnsavedChanges(false);
-      
+
       toast({
         title: "Contact Updated",
         description: "Contact details have been saved successfully.",
@@ -394,6 +528,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               label="Full Name"
               value={editedContact.full_name}
               onEdit={(value) => handleFieldChange('full_name', value)}
+              automationId="full-name-field"
+              validate={validateContactName}
             />
             <div className="space-y-2">
               <Text as="label" size="2" className="text-gray-700 font-medium">Client</Text>
@@ -449,17 +585,30 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               label="Email"
               value={editedContact.email || ''}
               onEdit={(value) => handleFieldChange('email', value)}
+              automationId="email-field"
+              validate={validateEmailAddress}
             />
             <TextDetailItem
               label="Role"
               value={editedContact.role || ''}
               onEdit={(value) => handleFieldChange('role', value)}
+              automationId="role-field"
+              validate={validateRole}
             />
-            <TextDetailItem
-              label="Phone Number"
-              value={editedContact.phone_number || ''}
-              onEdit={(value) => handleFieldChange('phone_number', value)}
-            />
+            <div className="space-y-2">
+              <PhoneInput
+                id="contact-phone-number"
+                label="Phone Number"
+                value={editedContact.phone_number || ''}
+                onChange={(value) => handleFieldChange('phone_number', value)}
+                countryCode={countryCode}
+                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
+                countries={countries}
+                onCountryChange={handleCountryChange}
+                allowExtensions={true}
+                data-automation-id="phone-number-field"
+              />
+            </div>
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
@@ -614,12 +763,23 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             onClick={() => window.open(`/msp/contacts/${editedContact.contact_name_id}`, '_blank')}
             variant="soft"
             size="sm"
-            className="flex items-center ml-4 mr-8"
+            className="flex items-center ml-4 mr-2"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             Go to contact
           </Button>
         )}
+
+        <Button
+          id={`${id}-delete-contact-button`}
+          onClick={handleDeleteContact}
+          variant="destructive"
+          size="sm"
+          className="flex items-center mr-8"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </Button>
       </div>
 
       {/* Content Area */}
@@ -630,6 +790,51 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           onTabChange={handleTabChange}
         />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        id="delete-contact-dialog"
+        isOpen={isDeleteDialogOpen}
+        onClose={resetDeleteState}
+        onConfirm={confirmDelete}
+        title="Delete Contact"
+        message={
+          deleteError
+            ? deleteError
+            : "Are you sure you want to delete this contact? This action cannot be undone."
+        }
+        confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
+        cancelLabel={deleteError ? "Close" : "Cancel"}
+        isConfirming={false}
+      />
+
+      {/* Deactivate Contact Button - shown when delete is blocked by dependencies */}
+      {showDeactivateOption && !deleteError && isDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4">Alternative Action</h3>
+            <p className="text-gray-600 mb-6">
+              Since this contact cannot be deleted, you can mark it as inactive instead.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <Button
+                id="cancel-deactivate-contact-btn"
+                variant="outline"
+                onClick={resetDeleteState}
+              >
+                Cancel
+              </Button>
+              <Button
+                id="confirm-deactivate-contact-btn"
+                variant="default"
+                onClick={handleMarkContactInactive}
+              >
+                Mark as Inactive
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </ReflectionContainer>
   );
 };

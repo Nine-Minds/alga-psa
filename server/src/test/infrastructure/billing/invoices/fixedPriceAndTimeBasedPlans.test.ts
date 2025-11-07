@@ -120,7 +120,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -211,7 +211,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         baseRateCents: 25000,
         detailBaseRateCents: 10000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Add second service to the plan
@@ -234,7 +235,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       // Assert - Fixed plans create a single consolidated invoice item
       expect(result).not.toBeNull();
 
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
@@ -261,7 +262,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         baseRateCents: 50000,
         detailBaseRateCents: 50000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create billing cycle
@@ -379,7 +381,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       expect(result).not.toBeNull();
 
       // Assert - Time entries should be billed
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 

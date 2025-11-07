@@ -317,7 +317,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           <tbody>
             <TableRow label="Full Name" value={contact.full_name} />
             <TableRow label="Email" value={contact.email} />
-            <TableRow label="Phone" value={contact.phone_number} />
+            <TableRow label="Phone" value={contact.phone_number || 'N/A'} />
             <tr>
               <td className="py-2 font-semibold">Client:</td>
               <td className="py-2">

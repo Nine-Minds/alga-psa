@@ -229,6 +229,7 @@ export default function UserRoleAssignment() {
             </div>
           ) : (
             <DataTable
+              id="user-role-assignment-table"
               data={filteredUsers}
               columns={columns}
               pagination={false}

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/projects"
+      },
+      "metadata": {
+        "playbooks": [
+          "projects/list-basic"
+        ],
+        "examples": [
+          {
+            "name": "List active projects",
+            "request": {
+              "query": {
+                "is_inactive": false,
+                "limit": 10
+              }
+            },
+            "notes": "Returns the first 10 active projects ordered by creation date."
+          }
+        ]
+      }
+    }
+  ]
+}

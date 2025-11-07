@@ -17,8 +17,8 @@
     "playwright:install-deps": "playwright install-deps"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.36.3",
     "@huggingface/inference": "^3.3.3",
+    "openai": "^4.59.0",
     "@temporalio/client": "^1.12.3",
     "gm": "^1.25.0",
     "lucide-react": "^0.475.0",

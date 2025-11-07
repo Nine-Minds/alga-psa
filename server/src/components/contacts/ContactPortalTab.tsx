@@ -57,6 +57,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const [selectedRoleId, setSelectedRoleId] = useState<string>('');
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [invitationHistory, setInvitationHistory] = useState<InvitationHistoryItem[]>([]);
+  const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -142,6 +143,39 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       toast.error("Failed to revoke invitation");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleResendInvitation = async (invitationId: string) => {
+    if (!currentUserPermissions.canInvite) {
+      toast.error("You do not have permission to send invitations");
+      return;
+    }
+
+    setResendingInvitationId(invitationId);
+    try {
+      const result = await sendPortalInvitation(contact.contact_name_id);
+
+      if (result.success) {
+        toast.success(result.message || "Portal invitation resent successfully!");
+        await loadData();
+      } else {
+        toast.error(
+          <div>
+            <p>{result.error || "Failed to resend invitation"}</p>
+            {result.error?.includes('default location') && (
+              <p className="text-sm mt-1">
+                Configure a default location with email in Client Settings → Locations
+              </p>
+            )}
+          </div>
+        );
+      }
+    } catch (error) {
+      console.error('Error resending portal invitation:', error);
+      toast.error("Failed to resend invitation");
+    } finally {
+      setResendingInvitationId(null);
     }
   };
 
@@ -378,6 +412,23 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   </div>
                 </div>
 
+                {/* Last Login Info */}
+                {existingUser.last_login_at && (
+                  <div className="p-3 rounded-lg border bg-gray-50">
+                    <Label className="text-sm font-medium">Last Login</Label>
+                    <div className="mt-1 space-y-1">
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(existingUser.last_login_at)}
+                      </p>
+                      {existingUser.last_login_method && (
+                        <p className="text-xs text-muted-foreground">
+                          via {existingUser.last_login_method}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* User Status */}
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
@@ -445,17 +496,32 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                         </div>
                       </div>
                       
-                      {invitation.status === 'pending' && currentUserPermissions.canInvite && (
-                        <Button
-                          id={`revoke-invitation-${invitation.invitation_id}`}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRevokeInvitation(invitation.invitation_id)}
-                          disabled={isUpdating}
-                          className="text-red-500 hover:text-red-600"
-                        >
-                          Revoke
-                        </Button>
+                      {currentUserPermissions.canInvite && (
+                        <div className="flex items-center gap-2">
+                          {(invitation.status === 'pending' || invitation.status === 'expired' || invitation.status === 'revoked') && (
+                            <Button
+                              id={`resend-invitation-${invitation.invitation_id}`}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResendInvitation(invitation.invitation_id)}
+                              disabled={resendingInvitationId === invitation.invitation_id}
+                            >
+                              {resendingInvitationId === invitation.invitation_id ? 'Resending...' : 'Resend'}
+                            </Button>
+                          )}
+                          {invitation.status === 'pending' && (
+                            <Button
+                              id={`revoke-invitation-${invitation.invitation_id}`}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRevokeInvitation(invitation.invitation_id)}
+                              disabled={isUpdating}
+                              className="text-red-500 hover:text-red-600"
+                            >
+                              Revoke
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}

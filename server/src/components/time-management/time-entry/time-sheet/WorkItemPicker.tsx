@@ -458,7 +458,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
             <div className="grid grid-cols-4 gap-4">
               <div className="flex items-center">
                 <ClientPicker
-                  id="work-item-client-picker"
+                  id="client-picker"
                   selectedClientId={clientId}
                   onSelect={(value: string | null) => {
                     setClientId(value || '');

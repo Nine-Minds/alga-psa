@@ -33,6 +33,16 @@ const ContractLinesOverview: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const router = useRouter();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     fetchContractLines();
     fetchAllServiceTypes(); // Fetch service types on mount
@@ -256,6 +266,10 @@ const ContractLinesOverview: React.FC = () => {
             data={filteredContractLines.filter(preset => preset.preset_id !== undefined)}
             columns={contractLineColumns}
             pagination={true}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
             onRowClick={handleContractLineClick}
             rowClassName={() => "cursor-pointer"}
           />

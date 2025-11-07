@@ -40,6 +40,16 @@ const TaxRates: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     fetchTaxRates();
     fetchTaxRegions(); // Added
@@ -276,8 +286,14 @@ const TaxRates: React.FC = () => {
             />
           ) : (
             <DataTable
+              id="tax-rates-table"
               data={taxRates}
               columns={columns}
+              pagination={true}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onItemsPerPageChange={handlePageSizeChange}
               onRowClick={handleEditTaxRate}
             />
           )}

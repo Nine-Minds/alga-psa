@@ -130,7 +130,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'invoice_items',
+        'invoice_charges',
         'invoices',
         'usage_tracking',
         'bucket_usage',
@@ -285,7 +285,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       });
 
       // Verify invoice items
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
@@ -325,7 +325,8 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         baseRateCents: 0,
         detailBaseRateCents: 0,
         billingFrequency: 'monthly',
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       await createBucketOverlayForPlan(context, contractLineId, {
@@ -373,7 +374,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       });
 
       // Verify invoice items for overage
-      const invoiceItems = await context.db('invoice_items')
+      const invoiceItems = await context.db('invoice_charges')
         .where('invoice_id', result!.invoice_id)
         .select('*');
 
@@ -405,7 +406,8 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         baseRateCents: 20000,
         detailBaseRateCents: 20000,
         quantity: 1,
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        billingTiming: 'advance'
       });
 
       // Create billing cycle
@@ -447,7 +449,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       });
 
       // Verify invoice items before finalization
-      const invoiceItemsBeforeFinalization = await context.db('invoice_items')
+      const invoiceItemsBeforeFinalization = await context.db('invoice_charges')
         .where('invoice_id', invoice!.invoice_id)
         .select('*');
 
@@ -475,7 +477,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       expect(Number(invoice!.total_amount)).toBe(expectedTotal);
 
       // Verify invoice items remain consistent after finalization
-      const invoiceItemsAfterFinalization = await context.db('invoice_items')
+      const invoiceItemsAfterFinalization = await context.db('invoice_charges')
         .where('invoice_id', invoice!.invoice_id)
         .select('*');
 

@@ -1,4 +1,6 @@
 // ee/server/src/components/layout/RightSidebar.tsx
+'use client';
+
 import React, { lazy, Suspense } from 'react';
 
 const RightSidebarContent = lazy(() => import('./RightSidebarContent'));
@@ -9,7 +11,7 @@ interface RightSidebarProps {
   clientUrl: string;
   accountId: string;
   messages: any[];
-  userId: string;
+  userId: string | null;
   userRole: string;
   selectedAccount: string;
   handleSelectAccount: any;

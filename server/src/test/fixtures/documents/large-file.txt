@@ -1,0 +1,11 @@
+This is a simulated large file for testing file size validation.
+
+${"Large content padding: " + "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(1000)}
+
+This file is used to test:
+- Maximum file size limits
+- Upload timeout handling
+- Storage capacity checks
+- Error messaging for oversized files
+
+The repeated content simulates a large file without actually creating a huge test fixture.

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
-import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { fetchTicketsWithPagination } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
@@ -11,6 +11,9 @@ import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { IBoard } from 'server/src/interfaces';
 import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+
+const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 
 interface TicketingDashboardContainerProps {
   consolidatedData: {
@@ -25,27 +28,37 @@ interface TicketingDashboardContainerProps {
       tags?: string[];
     };
     tickets: ITicketListItem[];
-    nextCursor: string | null;
+    totalCount: number;
   };
   currentUser: IUser;
   initialFilters?: Partial<ITicketListFilters>;
+  initialPage?: number;
+  initialPageSize?: number;
   displaySettings?: TicketingDisplaySettings;
 }
 
-export default function TicketingDashboardContainer({ 
+export default function TicketingDashboardContainer({
   consolidatedData,
   currentUser,
   initialFilters,
+  initialPage = 1,
+  initialPageSize = 10,
   displaySettings
 }: TicketingDashboardContainerProps) {
+  const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
+  const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
+
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
-  const [nextCursor, setNextCursor] = useState<string | null>(consolidatedData.nextCursor);
+  const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [sortBy, setSortBy] = useState<string>(defaultSortBy);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
   const router = useRouter();
 
   const [activeFilters, setActiveFilters] = useState<Partial<ITicketListFilters>>(() => {
-    // Use initialFilters if provided, otherwise use defaults
-    return initialFilters || {
+    return {
       statusId: 'open',
       priorityId: 'all',
       searchQuery: '',
@@ -54,13 +67,33 @@ export default function TicketingDashboardContainer({
       boardId: undefined,
       categoryId: undefined,
       clientId: undefined,
+      sortBy: defaultSortBy,
+      sortDirection: defaultSortDirection,
+      ...initialFilters,
     };
   });
 
-  // Function to sync filter state to URL
-  const updateURLWithFilters = useCallback((filters: Partial<ITicketListFilters>) => {
+  const {
+    value: storedPageSize,
+    setValue: setStoredPageSize,
+    hasLoadedInitial: hasLoadedPageSizePreference
+  } = useUserPreference<number>(
+    TICKETS_PAGE_SIZE_SETTING,
+    {
+      defaultValue: initialPageSize,
+      localStorageKey: TICKETS_PAGE_SIZE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Function to sync filter state and pagination to URL
+  const updateURLWithFilters = useCallback((filters: Partial<ITicketListFilters>, page?: number, pageSize?: number) => {
     const params = new URLSearchParams();
-    
+
+    // Add pagination params
+    if (page && page !== 1) params.set('page', String(page));
+    if (pageSize && pageSize !== 10) params.set('pageSize', String(pageSize));
+
     // Only add non-default/non-empty values to URL
     if (filters.boardId) params.set('boardId', filters.boardId);
     if (filters.clientId) params.set('clientId', filters.clientId);
@@ -76,19 +109,35 @@ export default function TicketingDashboardContainer({
       const encodedTags = filters.tags.map(tag => encodeURIComponent(String(tag)));
       params.set('tags', encodedTags.join(','));
     }
+    if (filters.sortBy && filters.sortBy !== 'entered_at') {
+      params.set('sortBy', filters.sortBy);
+    }
+    if (filters.sortDirection && filters.sortDirection !== 'desc') {
+      params.set('sortDirection', filters.sortDirection);
+    }
 
     // Update URL without causing a page refresh
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
     router.replace(newURL, { scroll: false });
   }, [router]);
 
-  const fetchTickets = useCallback(async (filters: Partial<ITicketListFilters>, cursor?: string | null) => {
+  const fetchTickets = useCallback(async (
+    filters: Partial<ITicketListFilters>,
+    page: number,
+    pageSize: number,
+    overrides?: { sortBy?: string; sortDirection?: 'asc' | 'desc' }
+  ) => {
+    console.log('[Container] fetchTickets called with:', { filters, page, pageSize });
     if (!currentUser) {
       toast.error('You must be logged in to perform this action');
       return;
     }
     setIsLoading(true);
     try {
+      const effectiveSortBy = overrides?.sortBy ?? filters.sortBy ?? sortBy ?? 'entered_at';
+      const effectiveSortDirection: 'asc' | 'desc' =
+        overrides?.sortDirection ?? filters.sortDirection ?? sortDirection ?? 'desc';
+
       const currentFiltersWithDefaults: ITicketListFilters = {
         boardId: filters.boardId || undefined,
         statusId: filters.statusId || 'all',
@@ -97,47 +146,102 @@ export default function TicketingDashboardContainer({
         clientId: filters.clientId || undefined,
         searchQuery: filters.searchQuery || '',
         boardFilterState: filters.boardFilterState || 'active',
-        showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true) 
+        showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true),
+        tags: filters.tags && filters.tags.length > 0 ? Array.from(new Set(filters.tags)) : undefined,
+        sortBy: effectiveSortBy,
+        sortDirection: effectiveSortDirection
       };
 
-      const result = await loadMoreTickets(
+      console.log('[Container] Fetching with defaults:', currentFiltersWithDefaults);
+      const result = await fetchTicketsWithPagination(
         currentUser,
         currentFiltersWithDefaults,
-        cursor ?? undefined
+        page,
+        pageSize
       );
-      
-      if (cursor) { 
-        setTickets(prev => [...prev, ...result.tickets]);
-      } else { 
-        setTickets(result.tickets);
-      }
-      setNextCursor(result.nextCursor);
-      setActiveFilters(currentFiltersWithDefaults); 
+
+      console.log('[Container] Fetch completed, got tickets:', result.tickets.length);
+      setTickets(result.tickets);
+      setTotalCount(result.totalCount);
+      setActiveFilters(currentFiltersWithDefaults);
+      setSortBy(effectiveSortBy);
+      setSortDirection(effectiveSortDirection);
 
     } catch (error) {
-      console.error('Error fetching tickets:', error);
+      console.error('[Container] Error fetching tickets:', error);
       toast.error('Failed to fetch tickets');
-      if (!cursor) {
-        setTickets([]);
-        setNextCursor(null);
-      }
+      setTickets([]);
+      setTotalCount(0);
     } finally {
+      console.log('[Container] Setting isLoading to false');
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, sortBy, sortDirection]);
 
-  const handleLoadMore = useCallback(async () => {
-    if (nextCursor) {
-      await fetchTickets(activeFilters, nextCursor);
+  useEffect(() => {
+    if (!hasLoadedPageSizePreference) {
+      return;
     }
-  }, [fetchTickets, activeFilters, nextCursor]);
+
+    const normalizedPageSize = storedPageSize ?? initialPageSize;
+    if (normalizedPageSize === pageSize) {
+      return;
+    }
+
+    setCurrentPage(1);
+    setPageSize(normalizedPageSize);
+    updateURLWithFilters(activeFilters, 1, normalizedPageSize);
+    void fetchTickets(activeFilters, 1, normalizedPageSize);
+  }, [
+    hasLoadedPageSizePreference,
+    storedPageSize,
+    pageSize,
+    initialPageSize,
+    activeFilters,
+    updateURLWithFilters,
+    fetchTickets
+  ]);
+
+  const handlePageChange = useCallback(async (newPage: number) => {
+    setCurrentPage(newPage);
+    updateURLWithFilters(activeFilters, newPage, pageSize);
+    await fetchTickets(activeFilters, newPage, pageSize);
+  }, [fetchTickets, activeFilters, pageSize, updateURLWithFilters]);
+
+  const handlePageSizeChange = useCallback(async (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setStoredPageSize(newPageSize);
+    setCurrentPage(1); // Reset to page 1 when page size changes
+    updateURLWithFilters(activeFilters, 1, newPageSize);
+    await fetchTickets(activeFilters, 1, newPageSize);
+  }, [fetchTickets, activeFilters, updateURLWithFilters, setStoredPageSize]);
 
   const handleFiltersChanged = useCallback(async (newFilters: Partial<ITicketListFilters>) => {
-    // Update URL to persist filter state
-    updateURLWithFilters(newFilters);
-    // Fetch new tickets with updated filters
-    await fetchTickets(newFilters, null); // Fetch page 1
-  }, [fetchTickets, updateURLWithFilters]);
+    console.log('[Container] handleFiltersChanged called with:', newFilters);
+    setCurrentPage(1); // Reset to page 1 when filters change
+    const mergedFilters = {
+      ...newFilters,
+      sortBy,
+      sortDirection,
+    };
+    setActiveFilters(mergedFilters);
+    updateURLWithFilters(mergedFilters, 1, pageSize);
+    await fetchTickets(mergedFilters, 1, pageSize);
+  }, [fetchTickets, pageSize, updateURLWithFilters, sortBy, sortDirection]);
+
+  const handleSortChange = useCallback(async (columnId: string, direction: 'asc' | 'desc') => {
+    const updatedFilters = {
+      ...activeFilters,
+      sortBy: columnId,
+      sortDirection: direction,
+    };
+    setActiveFilters(updatedFilters);
+    setSortBy(columnId);
+    setSortDirection(direction);
+    setCurrentPage(1);
+    updateURLWithFilters(updatedFilters, 1, pageSize);
+    await fetchTickets(updatedFilters, 1, pageSize, { sortBy: columnId, sortDirection: direction });
+  }, [activeFilters, fetchTickets, pageSize, updateURLWithFilters]);
 
   const mappedAndFilteredBoards = consolidatedData.options.boardOptions.map(board => ({
     ...board,
@@ -152,20 +256,26 @@ export default function TicketingDashboardContainer({
   return (
     <TicketingDashboard
       id="ticketing-dashboard"
-      initialTickets={tickets} 
+      initialTickets={tickets}
       initialBoards={initialBoardsForDashboard}
       initialStatuses={consolidatedData.options.statusOptions}
       initialPriorities={consolidatedData.options.priorityOptions}
       initialCategories={consolidatedData.options.categories}
       initialClients={consolidatedData.options.clients}
       initialTags={consolidatedData.options.tags || []}
-      nextCursor={nextCursor}
-      onLoadMore={handleLoadMore} 
+      totalCount={totalCount}
+      currentPage={currentPage}
+      pageSize={pageSize}
+      onPageChange={handlePageChange}
+      onPageSizeChange={handlePageSizeChange}
       onFiltersChanged={handleFiltersChanged}
       initialFilterValues={activeFilters}
       isLoadingMore={isLoading}
       user={currentUser}
       displaySettings={displaySettings}
+      sortBy={sortBy}
+      sortDirection={sortDirection}
+      onSortChange={handleSortChange}
     />
   );
 }

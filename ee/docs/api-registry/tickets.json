@@ -1,0 +1,241 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets"
+      },
+      "metadata": {
+        "displayName": "List Tickets",
+        "summary": "List tickets",
+        "description": "Returns a paginated list of tickets for the current tenant. Use this both for reporting and to sample existing board_id, status_id, priority_id, and assigned_to values before creating a new ticket.",
+        "rbacResource": "ticket",
+        "approvalRequired": false,
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Pagination page number (default 1).",
+            "schema": { "type": "integer", "minimum": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of tickets per page (max 100, default 25).",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "board_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter to a specific board.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "status_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ticket status.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "assigned_to",
+            "in": "query",
+            "required": false,
+            "description": "Filter tickets assigned to a specific technician.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by client identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "is_open",
+            "in": "query",
+            "required": false,
+            "description": "When true, only open tickets are returned.",
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responseBodySchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ticket_id": { "type": "string", "format": "uuid" },
+                  "ticket_number": { "type": "string" },
+                  "title": { "type": "string" },
+                  "client_id": { "type": "string", "format": "uuid" },
+                  "board_id": { "type": "string", "format": "uuid" },
+                  "status_id": { "type": "string", "format": "uuid" },
+                  "priority_id": { "type": "string", "format": "uuid" },
+                  "assigned_to": { "type": ["string", "null"], "format": "uuid" },
+                  "entered_at": { "type": "string", "format": "date-time" }
+                },
+                "required": [
+                  "ticket_id",
+                  "ticket_number",
+                  "title",
+                  "client_id",
+                  "board_id",
+                  "status_id",
+                  "priority_id",
+                  "entered_at"
+                ]
+              }
+            },
+            "pagination": {
+              "type": "object",
+              "properties": {
+                "page": { "type": "integer" },
+                "limit": { "type": "integer" },
+                "total": { "type": "integer" },
+                "totalPages": { "type": "integer" },
+                "hasNext": { "type": "boolean" },
+                "hasPrev": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        "examples": [
+          {
+            "name": "Sample recent tickets for reference data",
+            "request": {
+              "query": {
+                "limit": 5,
+                "is_open": true
+              }
+            },
+            "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid. If you only need a single set of identifiers, take the first ticket in the data array that has non-null board_id, status_id, and priority_id and reuse those UUIDs for the new ticket."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets"
+      },
+      "metadata": {
+        "displayName": "Create Ticket",
+        "summary": "Create a new ticket",
+        "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls.",
+        "rbacResource": "ticket",
+        "approvalRequired": true,
+        "requestBodySchema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string", "description": "Ticket subject line." },
+            "board_id": { "type": "string", "format": "uuid", "description": "Ticket board identifier. If you do not already know an active board_id, call GET /api/v1/tickets?limit=5 to sample existing tickets and reuse a board_id that is valid for this tenant. Always provide the UUID, never the board name, slug, or display label." },
+            "client_id": { "type": "string", "format": "uuid", "description": "Owning client identifier. Retrieve clients via GET /api/v1/clients (supporting filters such as name or status) to resolve the correct client_id, and provide that UUID in the payload (do not send the client name)." },
+            "status_id": { "type": "string", "format": "uuid", "description": "Initial ticket status identifier. Sample existing tickets via GET /api/v1/tickets?limit=5 to collect a valid status_id and send that UUID (do not send a status label like \"Open\" or a field named \"status\")." },
+            "priority_id": { "type": "string", "format": "uuid", "description": "Ticket priority identifier. Sample existing tickets with GET /api/v1/tickets?limit=5 to obtain a valid priority_id and include the UUID (never send fields named \"priority\" or the textual priority name)." },
+            "contact_name_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Primary contact for this ticket. Look up contacts through GET /api/v1/contacts (optionally filter by client_id) before supplying this reference." },
+            "location_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Client location identifier. Call GET /api/v1/clients/{client_id}/locations to enumerate valid locations for the chosen client." },
+            "category_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Ticket category identifier. Fetch categories via GET /api/v1/categories/ticket (filter by board_id if necessary) to resolve the correct category_id." },
+            "subcategory_id": { "type": "string", "format": "uuid", "nullable": true, "description": "Ticket subcategory identifier. After retrieving the category list or tree (GET /api/v1/categories/ticket or GET /api/v1/categories/ticket/tree/{board_id}), choose the desired subcategory_id." },
+            "assigned_to": { "type": "string", "format": "uuid", "nullable": true, "description": "Technician assignment. Use GET /api/v1/users (filtering by role, team, or name) to acquire the user_id of the assignee and submit that UUID." },
+            "url": { "type": "string", "format": "uri", "nullable": true },
+            "attributes": { "type": "object", "additionalProperties": true },
+            "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them." }
+          },
+          "required": ["title", "board_id", "client_id", "status_id", "priority_id"]
+        },
+        "responseBodySchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "ticket_id": { "type": "string", "format": "uuid" },
+                "ticket_number": { "type": "string" },
+                "title": { "type": "string" },
+                "status_id": { "type": "string", "format": "uuid" },
+                "priority_id": { "type": "string", "format": "uuid" },
+                "board_id": { "type": "string", "format": "uuid" },
+                "client_id": { "type": "string", "format": "uuid" },
+                "assigned_to": { "type": ["string", "null"], "format": "uuid" }
+              },
+              "required": [
+                "ticket_id",
+                "ticket_number",
+                "title",
+                "status_id",
+                "priority_id",
+                "board_id",
+                "client_id"
+              ]
+            }
+          }
+        },
+        "examples": [
+          {
+            "name": "Create ticket example",
+            "request": {
+              "body": {
+                "title": "Printer offline at HQ",
+                "board_id": "11111111-1111-1111-1111-111111111111",
+                "client_id": "22222222-2222-2222-2222-222222222222",
+                "status_id": "33333333-3333-3333-3333-333333333333",
+                "priority_id": "44444444-4444-4444-4444-444444444444",
+                "contact_name_id": "55555555-5555-5555-5555-555555555555"
+              }
+            },
+            "notes": "Before calling this endpoint, resolve every referenced identifier by invoking the appropriate lookup APIs. For example, call GET /api/v1/clients to choose client_id, GET /api/v1/contacts?client_id=... for contact_name_id, GET /api/v1/clients/{client_id}/locations for location_id, GET /api/v1/categories/ticket for category/subcategory options, GET /api/v1/users to select the assignee, GET /api/v1/tags to reuse tag names, and GET /api/v1/tickets?limit=5 to sample valid board_id, status_id, and priority_id values already in use. Always send the UUID fields exactly as documented—do not substitute human-readable names such as \"High\" or \"In Progress,\" and do not introduce extra fields that are not part of this schema (e.g., project_id or priority). If the user supplies labels, translate them to *_id values and omit the original textual fields. When sampling tickets for IDs, it is acceptable to reuse the first ticket record that contains non-null values for board_id, status_id, and priority_id."
+          }
+        ]
+      }
+    }
+    ,
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/{id}/comments"
+      },
+      "metadata": {
+        "displayName": "Add Ticket Comment",
+        "summary": "Add a comment to a ticket",
+        "description": "Adds a client or internal comment to the specified ticket.",
+        "rbacResource": "ticket",
+        "approvalRequired": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBodySchema": {
+          "type": "object",
+          "properties": {
+            "comment_text": {
+              "type": "string",
+              "description": "Comment body text."
+            },
+            "is_internal": {
+              "type": "boolean",
+              "description": "When true, records the comment as internal only.",
+              "default": false
+            },
+            "time_spent": {
+              "type": "number",
+              "description": "Optional time (in minutes) to log with the comment.",
+              "minimum": 0
+            }
+          },
+          "required": ["comment_text"]
+        }
+      }
+    }
+  ]
+}
