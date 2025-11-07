@@ -749,6 +749,29 @@ export async function createClientContractFromWizard(
 }
 
 // ---------------------------------------------------------------------------
+// Template name validation
+// ---------------------------------------------------------------------------
+
+export async function checkTemplateNameExists(templateName: string): Promise<boolean> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const existingTemplate = await knex('contract_templates')
+    .where({ tenant })
+    .whereRaw('LOWER(template_name) = LOWER(?)', [templateName.trim()])
+    .first();
+
+  return !!existingTemplate;
+}
+
+// ---------------------------------------------------------------------------
 // Template helper queries for client wizard
 // ---------------------------------------------------------------------------
 

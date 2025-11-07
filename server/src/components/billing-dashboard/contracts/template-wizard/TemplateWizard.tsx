@@ -9,7 +9,7 @@ import { TemplateFixedFeeServicesStep } from './steps/TemplateFixedFeeServicesSt
 import { TemplateHourlyServicesStep } from './steps/TemplateHourlyServicesStep';
 import { TemplateUsageBasedServicesStep } from './steps/TemplateUsageBasedServicesStep';
 import { TemplateReviewContractStep } from './steps/TemplateReviewContractStep';
-import { createContractTemplateFromWizard, ContractTemplateWizardSubmission } from 'server/src/lib/actions/contractWizardActions';
+import { createContractTemplateFromWizard, ContractTemplateWizardSubmission, checkTemplateNameExists } from 'server/src/lib/actions/contractWizardActions';
 
 const TEMPLATE_STEPS = [
   'Template Basics',
@@ -67,6 +67,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [templateNameError, setTemplateNameError] = useState<string>('');
 
   const [wizardData, setWizardData] = useState<TemplateWizardData>({
     contract_name: '',
@@ -90,6 +91,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       setErrors({});
       setCompletedSteps(new Set());
       setCurrentStep(0);
+      setTemplateNameError('');
     }
   }, [open]);
 
@@ -106,9 +108,26 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
 
   const updateData = (data: Partial<TemplateWizardData>) => {
     setWizardData((prev) => ({ ...prev, ...data }));
+    // Clear template name error when user modifies the name
+    if (data.contract_name !== undefined) {
+      setTemplateNameError('');
+    }
   };
 
-  const validateStep = (stepIndex: number): boolean => {
+  const checkDuplicateTemplateName = async (name: string): Promise<boolean> => {
+    if (!name?.trim()) {
+      return false;
+    }
+    try {
+      const exists = await checkTemplateNameExists(name);
+      return exists;
+    } catch (error) {
+      console.error('Error checking for duplicate template name:', error);
+      return false;
+    }
+  };
+
+  const validateStep = async (stepIndex: number): Promise<boolean> => {
     setErrors((prev) => ({ ...prev, [stepIndex]: '' }));
 
     switch (stepIndex) {
@@ -119,6 +138,13 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         }
         if (!wizardData.billing_frequency) {
           setErrors((prev) => ({ ...prev, [stepIndex]: 'Billing frequency is required' }));
+          return false;
+        }
+        // Check for duplicate template name
+        const isDuplicate = await checkDuplicateTemplateName(wizardData.contract_name);
+        if (isDuplicate) {
+          setTemplateNameError('A template with this name already exists');
+          setErrors((prev) => ({ ...prev, [stepIndex]: 'Template name is already in use' }));
           return false;
         }
         return true;
@@ -139,8 +165,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     }
   };
 
-  const handleNext = () => {
-    if (!validateStep(currentStep)) {
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    if (!isValid) {
       return;
     }
     if (currentStep < TEMPLATE_STEPS.length - 1) {
@@ -173,7 +200,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   };
 
   const handleFinish = async () => {
-    if (!validateStep(currentStep)) {
+    const isValid = await validateStep(currentStep);
+    if (!isValid) {
       return;
     }
 
@@ -231,7 +259,11 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
 
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
           {currentStep === 0 && (
-            <TemplateContractBasicsStep data={wizardData} updateData={updateData} />
+            <TemplateContractBasicsStep
+              data={wizardData}
+              updateData={updateData}
+              nameError={templateNameError}
+            />
           )}
           {currentStep === 1 && (
             <TemplateFixedFeeServicesStep data={wizardData} updateData={updateData} />
