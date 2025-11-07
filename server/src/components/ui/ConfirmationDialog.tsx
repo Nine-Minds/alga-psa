@@ -10,7 +10,7 @@ interface ConfirmationDialogProps {
   onClose: () => void;
   onConfirm: (selectedValue?: string) => Promise<void> | void;
   title: string;
-  message: string;
+  message: string | React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   isConfirming?: boolean;
@@ -18,6 +18,8 @@ interface ConfirmationDialogProps {
   id?: string;
   className?: string;
   dialogClassName?: string;
+  onCancel?: () => Promise<void> | void;
+  thirdButtonLabel?: string;
 }
 
 export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationProps> = ({
@@ -31,24 +33,37 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
   isConfirming,
   options,
   id,
-  className
+  className,
+  onCancel,
+  thirdButtonLabel
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedValue, setSelectedValue] = useState('');
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
-  
+
   useEffect(() => {
     if (options?.[0]?.value) {
       setSelectedValue(options[0].value);
     }
   }, [isOpen, options]);
-  
+
   const handleConfirm = async () => {
     setIsProcessing(true);
     try {
       await onConfirm(options ? selectedValue : undefined);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (onCancel) {
+      setIsProcessing(true);
+      try {
+        await onCancel();
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -65,7 +80,11 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
       }}
     >
       <DialogContent>
-        <p className="text-gray-600">{message}</p>
+        {typeof message === 'string' ? (
+          <p className="text-gray-600">{message}</p>
+        ) : (
+          <div className="text-gray-600">{message}</div>
+        )}
         {options && (
           <div className="space-y-2 mt-4">
             {options.map((opt) => (
@@ -85,24 +104,36 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
           </div>
         )}
         <DialogFooter>
-          <div className="mt-4 space-x-2">
-          {/* Render Cancel button first */}
-          <Button
-            variant="outline"
-            onClick={onClose}
-            id={`${id}-cancel`}
-          >
-            {cancelLabel}
-          </Button>
-          {/* Render Confirm button second (last focusable element) */}
-          <Button
-            onClick={handleConfirm}
-            disabled={isConfirming || isProcessing}
-            id={`${id}-confirm`}
-            ref={confirmButtonRef}
-          >
-            {confirmLabel}
-          </Button>
+          <div className="mt-4 flex justify-end gap-2">
+            {/* Render Cancel/Close button */}
+            <Button
+              variant="outline"
+              onClick={onClose}
+              id={`${id}-close`}
+              disabled={isProcessing}
+            >
+              {cancelLabel}
+            </Button>
+            {/* Render third button if provided */}
+            {thirdButtonLabel && onCancel && (
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isProcessing}
+                id={`${id}-cancel`}
+              >
+                {thirdButtonLabel}
+              </Button>
+            )}
+            {/* Render Confirm button (last focusable element) */}
+            <Button
+              onClick={handleConfirm}
+              disabled={isConfirming || isProcessing}
+              id={`${id}-confirm`}
+              ref={confirmButtonRef}
+            >
+              {confirmLabel}
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>

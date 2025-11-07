@@ -7,8 +7,8 @@ import { getClientById } from 'server/src/lib/actions/client-actions/clientActio
 import { notFound } from 'next/navigation';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 
-const ClientPage = async ({ params }: { params: { id: string } }) => {
-  const { id } = params;
+const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
 
   try {
     // First check if client exists
