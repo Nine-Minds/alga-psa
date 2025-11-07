@@ -79,11 +79,17 @@ async function fetchTickets(
     headers.push({ name: 'x-request-id', value: requestId });
   }
 
+  await logInfo(`[service-proxy-demo] http.fetch request url=${url.toString()} limit=${limit}`);
+
   const response = await httpFetch({
     method: 'GET',
     url: url.toString(),
     headers,
   });
+
+  await logInfo(
+    `[service-proxy-demo] http.fetch response status=${response.status} bytes=${response.body?.length ?? 0}`,
+  );
 
   const text = decodeBody(response.body);
   if (response.status >= 200 && response.status < 300) {
