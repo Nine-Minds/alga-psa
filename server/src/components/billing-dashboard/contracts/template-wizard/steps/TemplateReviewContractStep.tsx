@@ -67,7 +67,7 @@ export function TemplateReviewContractStep({
                       {service.bucket_overlay && (
                         <span>
                           Bucket: {service.bucket_overlay.total_minutes ?? 0} minutes · Overage $
-                          {service.bucket_overlay.overage_rate ?? 0}
+                          {((service.bucket_overlay.overage_rate ?? 0) / 100).toFixed(2)}
                         </span>
                       )}
                     </div>
@@ -101,8 +101,8 @@ export function TemplateReviewContractStep({
                       )}
                       {service.bucket_overlay && (
                         <span>
-                          Bucket: {service.bucket_overlay.total_minutes ?? 0} minutes · Overage $
-                          {service.bucket_overlay.overage_rate ?? 0}
+                          Bucket: {((service.bucket_overlay.total_minutes ?? 0) / 60).toFixed(2)} hours · Overage $
+                          {((service.bucket_overlay.overage_rate ?? 0) / 100).toFixed(2)}/hr
                         </span>
                       )}
                     </div>
@@ -134,7 +134,7 @@ export function TemplateReviewContractStep({
                       {service.bucket_overlay && (
                         <span>
                           Bucket: {service.bucket_overlay.total_minutes ?? 0} units · Overage $
-                          {service.bucket_overlay.overage_rate ?? 0}
+                          {((service.bucket_overlay.overage_rate ?? 0) / 100).toFixed(2)}/unit
                         </span>
                       )}
                     </div>
