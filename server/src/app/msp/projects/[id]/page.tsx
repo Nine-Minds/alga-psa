@@ -4,6 +4,7 @@ import { getProjectMetadata, updateProject } from 'server/src/lib/actions/projec
 import ProjectInfo from 'server/src/components/projects/ProjectInfo';
 import ProjectDetail from 'server/src/components/projects/ProjectDetail';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
@@ -20,6 +21,8 @@ interface ProjectMetadata {
 }
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const searchParams = useSearchParams();
+  const taskIdFromUrl = searchParams.get('taskId');
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
@@ -117,6 +120,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         users={projectMetadata.users}
         clients={projectMetadata.clients}
         onTagsUpdate={handleTagsUpdate}
+        initialTaskId={taskIdFromUrl}
       />
     </div>
   );

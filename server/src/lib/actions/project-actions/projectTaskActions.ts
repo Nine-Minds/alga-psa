@@ -59,8 +59,8 @@ export async function updateTaskWithChecklist(
 
             const updatedTask = await ProjectTaskModel.updateTask(trx, taskId, validatedTaskData);
 
-            // If assigned_to was updated, publish event
-            if ('assigned_to' in taskData && updatedTask.assigned_to) {
+            // If assigned_to was actually changed, publish event
+            if ('assigned_to' in taskData && updatedTask.assigned_to && existingTask.assigned_to !== updatedTask.assigned_to) {
                 const phase = await ProjectModel.getPhaseById(trx, updatedTask.phase_id);
                 if (phase) {
                     // Ensure tenant exists before publishing event
@@ -1314,9 +1314,36 @@ export async function updateTaskDependency(
     if (!currentUser) {
         throw new Error("user not found");
     }
-    
+
     const {knex: db} = await createTenantKnex();
     await checkPermission(currentUser, 'project', 'update', db);
-    
+
     return await TaskDependencyModel.updateDependency(db, dependencyId, data);
+}
+
+export async function getTaskById(taskId: string): Promise<IProjectTask | null> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error("user not found");
+        }
+        if (!currentUser.tenant) {
+            throw new Error("tenant context not found");
+        }
+
+        const {knex: db} = await createTenantKnex();
+        await checkPermission(currentUser, 'project', 'read', db);
+
+        const task = await db('project_tasks')
+            .where({
+                'project_tasks.task_id': taskId,
+                'project_tasks.tenant': currentUser.tenant
+            })
+            .first();
+
+        return task || null;
+    } catch (error) {
+        console.error('Error fetching task by ID:', error);
+        throw error;
+    }
 }

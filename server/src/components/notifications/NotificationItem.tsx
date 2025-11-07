@@ -56,28 +56,44 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   };
 
   // Format timestamp
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  const formatTimestamp = (timestamp: string | null | undefined): string => {
+    if (!timestamp) {
+      return 'Unknown';
+    }
 
-    if (diffMins < 1) {
-      return 'Just now';
-    } else if (diffMins < 60) {
-      return `${diffMins}m ago`;
-    } else if (diffHours < 24) {
-      return `${diffHours}h ago`;
-    } else if (diffDays < 7) {
-      return `${diffDays}d ago`;
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-      });
+    try {
+      const date = new Date(timestamp);
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date for notification:', timestamp);
+        return 'Unknown';
+      }
+
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 1) {
+        return 'Just now';
+      } else if (diffMins < 60) {
+        return `${diffMins}m ago`;
+      } else if (diffHours < 24) {
+        return `${diffHours}h ago`;
+      } else if (diffDays < 7) {
+        return `${diffDays}d ago`;
+      } else {
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error, timestamp);
+      return 'Unknown';
     }
   };
 
