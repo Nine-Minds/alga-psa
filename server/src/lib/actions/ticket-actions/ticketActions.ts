@@ -202,7 +202,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
           payload: {
             tenantId: tenant,
             ticketId: ticketResult.ticket_id,
-            userId: user.user_id,
+            userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
           }
         });
       }
@@ -509,13 +509,13 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           had_assignment: !!updatedTicket.assigned_to,
         }, user.user_id);
       } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-        // Ticket was assigned
+        // Ticket was assigned - userId should be the user being assigned, not the one making the update
         await publishEvent({
           eventType: 'TICKET_ASSIGNED',
           payload: {
             tenantId: tenant,
             ticketId: id,
-            userId: user.user_id,
+            userId: updateData.assigned_to,  // The user being assigned to the ticket
             changes: structuredChanges
           }
         });

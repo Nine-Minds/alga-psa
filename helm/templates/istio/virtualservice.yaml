@@ -14,6 +14,34 @@ spec:
   - {{ . | quote }}
   {{- end }}
   http:
+  # Route: WebSocket connections for Hocuspocus (real-time notifications)
+  # Must be first to match WebSocket upgrade requests
+  - name: websocket-hocuspocus
+    match:
+    - uri:
+        prefix: "/hocuspocus"
+      headers:
+        upgrade:
+          exact: "websocket"
+    route:
+    - destination:
+        host: hocuspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local
+        port:
+          number: 1234
+    timeout: 3600s  # 1 hour for long-lived WebSocket connections
+    corsPolicy:
+      allowOrigins:
+      - prefix: "https://"
+      allowMethods:
+      - GET
+      - POST
+      - OPTIONS
+      allowHeaders:
+      - upgrade
+      - connection
+      - sec-websocket-key
+      - sec-websocket-version
+      - sec-websocket-protocol
   # Route: explicit green host
   - name: green-direct
     match:

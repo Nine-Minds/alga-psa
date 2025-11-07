@@ -11,6 +11,7 @@ import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions"
 import { Badge } from "server/src/components/ui/Badge";
 import { useInternalNotifications } from "server/src/hooks/useInternalNotifications";
 import { useSession } from 'next-auth/react';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
 
 interface NotificationsSectionProps {
   limit?: number;
@@ -25,6 +26,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
   const { openActivityDrawer } = useActivityDrawer();
   const [error, setError] = useState<string | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("Unread");
   const [notificationFilters, setNotificationFilters] = useState<Partial<ActivityFilters>>({
     isClosed: false // Default: show unread only
   });
@@ -126,6 +128,23 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     setNotificationFilters({ isClosed: false }); // Reset to default filters
   };
 
+  // Handle tab change to update filters
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+
+    if (tab === "Unread") {
+      // Show unread notifications
+      setNotificationFilters(prev => ({ ...prev, isClosed: false }));
+    } else if (tab === "Read") {
+      // Show read notifications
+      setNotificationFilters(prev => ({ ...prev, isClosed: true }));
+    } else if (tab === "All") {
+      // Show all notifications
+      const { isClosed, ...rest } = notificationFilters;
+      setNotificationFilters(rest);
+    }
+  };
+
   const headerContent = (
     <div className="flex flex-row items-center justify-between pb-2 px-6 pt-6">
       <div className="flex items-center gap-2">
@@ -183,32 +202,74 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     </div>
   );
 
-  const bodyContent = (
-    <div className="px-6 pb-6">
-      {loading ? (
+  // Render notifications content
+  const renderNotifications = () => {
+    if (loading) {
+      return (
         <div className="flex justify-center items-center h-40">
           <p className="text-gray-500">Loading notification activities...</p>
         </div>
-      ) : error ? (
+      );
+    }
+
+    if (error) {
+      return (
         <div className="flex justify-center items-center h-40">
           <p className="text-red-500">{error}</p>
         </div>
-      ) : activities.length === 0 ? (
+      );
+    }
+
+    if (activities.length === 0) {
+      return (
         <div className="flex justify-center items-center h-40">
           <p className="text-gray-500">No notification activities found</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {activities.map(activity => (
-            <NotificationCard
-              key={activity.id}
-              activity={activity}
-              onViewDetails={() => openActivityDrawer(activity)}
-              onActionComplete={handleRefresh}
-            />
-          ))}
-        </div>
-      )}
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 gap-4">
+        {activities.map(activity => (
+          <NotificationCard
+            key={activity.id}
+            activity={activity}
+            onViewDetails={() => openActivityDrawer(activity)}
+            onActionComplete={handleRefresh}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const tabContent = [
+    {
+      label: "Unread",
+      content: renderNotifications()
+    },
+    {
+      label: "All",
+      content: renderNotifications()
+    },
+    {
+      label: "Read",
+      content: renderNotifications()
+    }
+  ];
+
+  const tabStyles = {
+    trigger: "px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 border-b-2 border-transparent",
+    activeTrigger: "data-[state=active]:border-blue-500 data-[state=active]:text-blue-600"
+  };
+
+  const bodyContent = (
+    <div className="px-6 pb-6">
+      <CustomTabs
+        tabs={tabContent}
+        defaultTab="Unread"
+        onTabChange={handleTabChange}
+        tabStyles={tabStyles}
+      />
       {isFilterDialogOpen && (
         <NotificationSectionFiltersDialog
           isOpen={isFilterDialogOpen}
@@ -286,30 +347,12 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
         </div>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">Loading notification activities...</p>
-          </div>
-        ) : error ? (
-          <div className="flex justify-center items-center h-40">
-            <p className="text-red-500">{error}</p>
-          </div>
-        ) : activities.length === 0 ? (
-          <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">No notification activities found</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {activities.map(activity => (
-              <NotificationCard
-                key={activity.id}
-                activity={activity}
-                onViewDetails={() => openActivityDrawer(activity)}
-                onActionComplete={handleRefresh}
-              />
-            ))}
-          </div>
-        )}
+        <CustomTabs
+          tabs={tabContent}
+          defaultTab="Unread"
+          onTabChange={handleTabChange}
+          tabStyles={tabStyles}
+        />
       </CardContent>
 
       {isFilterDialogOpen && (

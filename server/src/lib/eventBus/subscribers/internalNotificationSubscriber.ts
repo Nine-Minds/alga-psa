@@ -289,6 +289,16 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       }
     } else {
       // Primary assignment notification
+      // Get the name of the person who performed the assignment
+      const performedBy = await db('users')
+        .select('first_name', 'last_name')
+        .where({ user_id: userId, tenant: tenantId })
+        .first();
+
+      const performedByName = performedBy
+        ? `${performedBy.first_name} ${performedBy.last_name}`
+        : 'Someone';
+
       await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: ticket.assigned_to,
@@ -301,7 +311,8 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
           ticketTitle: ticket.title,
           priority: ticket.priority_name || 'None',
           priorityColor: ticket.priority_color,
-          status: ticket.status_name || 'Unknown'
+          status: ticket.status_name || 'Unknown',
+          performedByName
         }
       });
 

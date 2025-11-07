@@ -68,12 +68,13 @@ vi.mock('server/src/lib/eventBus', () => {
   };
 });
 
-const createNotificationFromTemplateActionMock = vi.fn().mockResolvedValue({
+const createNotificationFromTemplateInternalMock = vi.fn().mockResolvedValue({
   internal_notification_id: 1
 });
 
 vi.mock('server/src/lib/actions/internal-notification-actions/internalNotificationActions', () => ({
-  createNotificationFromTemplateAction: createNotificationFromTemplateActionMock,
+  createNotificationFromTemplateInternal: createNotificationFromTemplateInternalMock,
+  createNotificationFromTemplateAction: vi.fn(),
   getNotificationsAction: vi.fn(),
   getUnreadCountAction: vi.fn(),
   markAsReadAction: vi.fn(),
@@ -195,7 +196,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   eventBus.__reset();
-  createNotificationFromTemplateActionMock.mockClear();
+  createNotificationFromTemplateInternalMock.mockClear();
   getConnectionMock.mockReset();
   createTenantKnexMock.mockReset();
 });
@@ -220,8 +221,10 @@ describe('internal notification event subscriber registration', () => {
 });
 
 describe('internal notification event handling', () => {
-  const getCallByTemplate = (templateName: string) =>
-    createNotificationFromTemplateActionMock.mock.calls.find(([args]) => args.template_name === templateName);
+  const getCallByTemplate = (templateName: string) => {
+    const call = createNotificationFromTemplateInternalMock.mock.calls.find(([, request]) => request.template_name === templateName);
+    return call?.[1];
+  };
 
   it('creates notification for ticket assignment events targeting the assignee', async () => {
     await registerInternalNotificationSubscriber();
@@ -269,13 +272,78 @@ describe('internal notification event handling', () => {
     await eventBus.publish(assignmentEvent, { channel: 'internal-notifications' });
 
     expect(getConnectionMock).toHaveBeenCalledWith(tenantId);
-    expect(createNotificationFromTemplateActionMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tenant: tenantId,
-        user_id: assignedUser,
-        template_name: 'ticket-assigned'
-      })
-    );
+    const ticketAssignmentRequest = getCallByTemplate('ticket-assigned');
+    expect(ticketAssignmentRequest).toMatchObject({
+      tenant: tenantId,
+      user_id: assignedUser,
+      template_name: 'ticket-assigned'
+    });
+
+    await unregisterInternalNotificationSubscriber();
+  });
+
+  it('creates notifications for ticket additional agent assignments (agent, primary assignee, and client)', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const ticketId = uuidv4();
+    const tenantId = uuidv4();
+    const primaryAssigneeId = uuidv4();
+    const additionalAgentId = uuidv4();
+    const contactId = uuidv4();
+    const contactUserId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'tickets as t': [
+        {
+          ticket_id: ticketId,
+          ticket_number: 'T-212',
+          title: 'Firewall change',
+          assigned_to: primaryAssigneeId,
+          contact_name_id: contactId,
+          priority_name: 'High',
+          priority_color: '#f00',
+          status_name: 'In Progress'
+        }
+      ],
+      users: [
+        {
+          user_id: additionalAgentId,
+          first_name: 'Addy',
+          last_name: 'Agent'
+        },
+        {
+          user_id: contactUserId,
+          user_type: 'client',
+          contact_id: contactId
+        },
+        {
+          user_id: additionalAgentId,
+          first_name: 'Addy',
+          last_name: 'Agent'
+        }
+      ]
+    });
+
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
+
+    const event = {
+      id: uuidv4(),
+      eventType: 'TICKET_ASSIGNED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId,
+        userId: additionalAgentId,
+        isAdditionalAgent: true
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('ticket-additional-agent-assigned')?.user_id).toBe(additionalAgentId);
+    expect(getCallByTemplate('ticket-additional-agent-added')?.user_id).toBe(primaryAssigneeId);
+    expect(getCallByTemplate('ticket-additional-agent-added-client')?.user_id).toBe(contactUserId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -295,7 +363,7 @@ describe('internal notification event handling', () => {
     };
 
     await eventBus.publish(unrelatedEvent, { channel: 'internal-notifications' });
-    expect(createNotificationFromTemplateActionMock).not.toHaveBeenCalled();
+    expect(createNotificationFromTemplateInternalMock).not.toHaveBeenCalled();
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -346,8 +414,8 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('ticket-created')?.[0].user_id).toBe(assignedUserId);
-    expect(getCallByTemplate('ticket-created-client')?.[0].user_id).toBe(contactUserId);
+    expect(getCallByTemplate('ticket-created')?.user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('ticket-created-client')?.user_id).toBe(contactUserId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -408,7 +476,7 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('ticket-status-changed')?.[0].user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('ticket-status-changed')?.user_id).toBe(assignedUserId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -457,8 +525,8 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('ticket-closed')?.[0].user_id).toBe(assignedUserId);
-    expect(getCallByTemplate('ticket-closed-client')?.[0].user_id).toBe(contactUserId);
+    expect(getCallByTemplate('ticket-closed')?.user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('ticket-closed-client')?.user_id).toBe(contactUserId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -499,7 +567,7 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('project-created')?.[0].user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('project-created')?.user_id).toBe(assignedUserId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -538,7 +606,7 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('project-assigned')?.[0].user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('project-assigned')?.user_id).toBe(assignedUserId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -578,7 +646,59 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('task-assigned')?.[0].user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('task-assigned')?.user_id).toBe(assignedUserId);
+
+    await unregisterInternalNotificationSubscriber();
+  });
+
+  it('creates project task additional agent notifications for the new agent and the primary assignee', async () => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const projectId = uuidv4();
+    const taskId = uuidv4();
+    const primaryAssigneeId = uuidv4();
+    const additionalAgentId = uuidv4();
+    const assignedById = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'project_tasks as pt': [
+        {
+          task_name: 'Update documentation',
+          primary_assignee: primaryAssigneeId,
+          project_name: 'Client onboarding'
+        }
+      ],
+      users: [
+        {
+          user_id: additionalAgentId,
+          first_name: 'Taylor',
+          last_name: 'Helper'
+        }
+      ]
+    });
+
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
+
+    const event = {
+      id: uuidv4(),
+      eventType: 'PROJECT_TASK_ASSIGNED' as const,
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        projectId,
+        taskId,
+        assignedTo: additionalAgentId,
+        userId: assignedById,
+        isAdditionalAgent: true
+      }
+    };
+
+    await eventBus.publish(event, { channel: 'internal-notifications' });
+
+    expect(getCallByTemplate('task-additional-agent-assigned')?.user_id).toBe(additionalAgentId);
+    expect(getCallByTemplate('task-additional-agent-added')?.user_id).toBe(primaryAssigneeId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -617,7 +737,7 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('invoice-generated')?.[0].user_id).toBe(userId);
+    expect(getCallByTemplate('invoice-generated')?.user_id).toBe(userId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -649,7 +769,7 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('message-sent')?.[0].user_id).toBe(recipientId);
+    expect(getCallByTemplate('message-sent')?.user_id).toBe(recipientId);
 
     await unregisterInternalNotificationSubscriber();
   });
@@ -715,7 +835,7 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('user-mentioned-in-document')?.[0].user_id).toBe(mentionedUserId);
+    expect(getCallByTemplate('user-mentioned-in-document')?.user_id).toBe(mentionedUserId);
 
     await unregisterInternalNotificationSubscriber();
   });

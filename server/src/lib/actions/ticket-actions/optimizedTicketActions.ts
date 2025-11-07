@@ -1096,13 +1096,13 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
         }
       });
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-      // Ticket was assigned
+      // Ticket was assigned - userId should be the user being assigned, not the one making the update
       await publishEvent({
         eventType: 'TICKET_ASSIGNED',
         payload: {
           tenantId: tenant,
           ticketId: id,
-          userId: user.user_id,
+          userId: updateData.assigned_to,  // The user being assigned to the ticket
           changes: structuredChanges
         }
       });

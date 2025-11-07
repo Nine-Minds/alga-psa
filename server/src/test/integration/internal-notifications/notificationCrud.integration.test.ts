@@ -55,6 +55,7 @@ describe('Internal notification CRUD (integration)', () => {
     deleteNotificationAction = actions.deleteNotificationAction;
 
     testDb = await createTestDbConnection();
+    await testDb.migrate.latest();
     testTenantId = uuidv4();
     templateName = `crud-template-${Date.now()}`;
 

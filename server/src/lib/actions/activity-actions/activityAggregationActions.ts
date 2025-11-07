@@ -957,6 +957,40 @@ export async function fetchNotificationActivities(
           priority = ActivityPriority.LOW;
       }
 
+      // Ensure dates are properly formatted
+      let createdAtISO: string;
+      let updatedAtISO: string;
+
+      try {
+        if (notification.created_at) {
+          const createdDate = new Date(notification.created_at);
+          if (isNaN(createdDate.getTime())) {
+            console.warn('Invalid created_at date for notification:', notification.internal_notification_id, notification.created_at);
+            createdAtISO = new Date().toISOString();
+          } else {
+            createdAtISO = createdDate.toISOString();
+          }
+        } else {
+          createdAtISO = new Date().toISOString();
+        }
+
+        if (notification.updated_at) {
+          const updatedDate = new Date(notification.updated_at);
+          if (isNaN(updatedDate.getTime())) {
+            console.warn('Invalid updated_at date for notification:', notification.internal_notification_id, notification.updated_at);
+            updatedAtISO = new Date().toISOString();
+          } else {
+            updatedAtISO = updatedDate.toISOString();
+          }
+        } else {
+          updatedAtISO = new Date().toISOString();
+        }
+      } catch (error) {
+        console.error('Error parsing notification dates:', error, notification);
+        createdAtISO = new Date().toISOString();
+        updatedAtISO = new Date().toISOString();
+      }
+
       return {
         id: notification.internal_notification_id.toString(),
         title: notification.title,
@@ -980,8 +1014,8 @@ export async function fetchNotificationActivities(
           { id: 'mark-read', label: notification.is_read ? 'Mark Unread' : 'Mark Read' }
         ],
         tenant: notification.tenant,
-        createdAt: notification.created_at ? new Date(notification.created_at).toISOString() : new Date().toISOString(),
-        updatedAt: notification.updated_at ? new Date(notification.updated_at).toISOString() : new Date().toISOString()
+        createdAt: createdAtISO,
+        updatedAt: updatedAtISO
       };
     });
 

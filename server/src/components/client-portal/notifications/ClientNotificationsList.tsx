@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityFilters, NotificationActivity } from "server/src/interfaces/activity.interfaces";
 import { Button } from "server/src/components/ui/Button";
+import { Card } from "server/src/components/ui/Card";
 import { NotificationCard } from "server/src/components/user-activities/NotificationCard";
 import { fetchNotificationActivities } from "server/src/lib/actions/activity-actions/activityServerActions";
 import { NotificationSectionFiltersDialog } from "server/src/components/user-activities/filters/NotificationSectionFiltersDialog";
@@ -12,6 +13,7 @@ import { getUnreadCountAction } from "server/src/lib/actions/internal-notificati
 import { getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
 import { Badge } from "server/src/components/ui/Badge";
 import { useTranslation } from 'server/src/lib/i18n/client';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
 
 export function ClientNotificationsList() {
   const { t } = useTranslation('clientPortal');
@@ -20,6 +22,7 @@ export function ClientNotificationsList() {
   const { openActivityDrawer } = useActivityDrawer();
   const [error, setError] = useState<string | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(t('notifications.tabs.unread', 'Unread'));
   const [notificationFilters, setNotificationFilters] = useState<Partial<ActivityFilters>>({
     isClosed: false // Default: show unread only
   });
@@ -101,92 +104,158 @@ export function ClientNotificationsList() {
     setNotificationFilters({ isClosed: false }); // Reset to default filters
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Header with filters */}
-      <div className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{t('notifications.title')}</h3>
-          {unreadCount > 0 && (
-            <Badge variant="default" className="bg-blue-500">
-              {unreadCount}
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            id="refresh-notifications-button"
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-            aria-label={t('common.refresh', 'Refresh')}
-          >
-            {t('common.refresh', 'Refresh')}
-          </Button>
-          {isFiltersActive() ? (
-            <Button
-              id="reset-notification-filters-button"
-              variant="outline"
-              size="sm"
-              onClick={handleResetFilters}
-              disabled={loading}
-              className="gap-1"
-            >
-              <XCircleIcon className="h-4 w-4" />
-              {t('common.resetFilters', 'Reset Filters')}
-            </Button>
-          ) : (
-            <Button
-              id="filter-notifications-button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFilterDialogOpen(true)}
-              disabled={loading}
-              aria-label={t('common.filter', 'Filter')}
-            >
-              <Filter size={16} className="mr-1" /> {t('common.filter', 'Filter')}
-            </Button>
-          )}
-        </div>
-      </div>
+  // Handle tab change to update filters
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const unreadTabLabel = t('notifications.tabs.unread', 'Unread');
+    const allTabLabel = t('notifications.tabs.all', 'All');
+    const readTabLabel = t('notifications.tabs.read', 'Read');
 
-      {/* Notifications list */}
-      <div>
-        {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">{t('common.loading')}</p>
+    if (tab === unreadTabLabel) {
+      // Show unread notifications
+      setNotificationFilters(prev => ({ ...prev, isClosed: false }));
+    } else if (tab === readTabLabel) {
+      // Show read notifications
+      setNotificationFilters(prev => ({ ...prev, isClosed: true }));
+    } else if (tab === allTabLabel) {
+      // Show all notifications
+      const { isClosed, ...rest } = notificationFilters;
+      setNotificationFilters(rest);
+    }
+  };
+
+  // Render notifications content
+  const renderNotifications = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-40">
+          <p className="text-gray-500">{t('common.loading')}</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex justify-center items-center h-40">
+          <p className="text-red-500">{error}</p>
+        </div>
+      );
+    }
+
+    if (activities.length === 0) {
+      return (
+        <div className="flex justify-center items-center h-40">
+          <p className="text-gray-500">{t('notifications.noNotifications')}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 gap-4">
+        {activities.map(activity => (
+          <NotificationCard
+            key={activity.id}
+            activity={activity}
+            onViewDetails={() => openActivityDrawer(activity)}
+            onActionComplete={handleRefresh}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const unreadTabLabel = t('notifications.tabs.unread', 'Unread');
+  const allTabLabel = t('notifications.tabs.all', 'All');
+  const readTabLabel = t('notifications.tabs.read', 'Read');
+
+  const tabContent = [
+    {
+      label: unreadTabLabel,
+      content: renderNotifications()
+    },
+    {
+      label: allTabLabel,
+      content: renderNotifications()
+    },
+    {
+      label: readTabLabel,
+      content: renderNotifications()
+    }
+  ];
+
+  const tabStyles = {
+    trigger: "px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 border-b-2 border-transparent",
+    activeTrigger: "data-[state=active]:border-blue-500 data-[state=active]:text-blue-600"
+  };
+
+  return (
+    <Card className="bg-white">
+      <div className="p-6 space-y-4">
+        {/* Header with filters */}
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{t('notifications.title')}</h3>
+            {unreadCount > 0 && (
+              <Badge variant="default" className="bg-blue-500">
+                {unreadCount}
+              </Badge>
+            )}
           </div>
-        ) : error ? (
-          <div className="flex justify-center items-center h-40">
-            <p className="text-red-500">{error}</p>
+          <div className="flex items-center gap-2">
+            <Button
+              id="refresh-notifications-button"
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              aria-label={t('common.refresh', 'Refresh')}
+            >
+              {t('common.refresh', 'Refresh')}
+            </Button>
+            {isFiltersActive() ? (
+              <Button
+                id="reset-notification-filters-button"
+                variant="outline"
+                size="sm"
+                onClick={handleResetFilters}
+                disabled={loading}
+                className="gap-1"
+              >
+                <XCircleIcon className="h-4 w-4" />
+                {t('common.resetFilters', 'Reset Filters')}
+              </Button>
+            ) : (
+              <Button
+                id="filter-notifications-button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFilterDialogOpen(true)}
+                disabled={loading}
+                aria-label={t('common.filter', 'Filter')}
+              >
+                <Filter size={16} className="mr-1" /> {t('common.filter', 'Filter')}
+              </Button>
+            )}
           </div>
-        ) : activities.length === 0 ? (
-          <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">{t('notifications.noNotifications')}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {activities.map(activity => (
-              <NotificationCard
-                key={activity.id}
-                activity={activity}
-                onViewDetails={() => openActivityDrawer(activity)}
-                onActionComplete={handleRefresh}
-              />
-            ))}
-          </div>
+        </div>
+
+        {/* Tabs for filtering notifications */}
+        <CustomTabs
+          tabs={tabContent}
+          defaultTab={unreadTabLabel}
+          onTabChange={handleTabChange}
+          tabStyles={tabStyles}
+        />
+
+        {isFilterDialogOpen && (
+          <NotificationSectionFiltersDialog
+            isOpen={isFilterDialogOpen}
+            onOpenChange={setIsFilterDialogOpen}
+            initialFilters={notificationFilters}
+            onApplyFilters={handleApplyFilters}
+          />
         )}
       </div>
-
-      {isFilterDialogOpen && (
-        <NotificationSectionFiltersDialog
-          isOpen={isFilterDialogOpen}
-          onOpenChange={setIsFilterDialogOpen}
-          initialFilters={notificationFilters}
-          onApplyFilters={handleApplyFilters}
-        />
-      )}
-    </div>
+    </Card>
   );
 }

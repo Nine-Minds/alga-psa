@@ -841,6 +841,7 @@
     "no": "Non",
     "search": "Rechercher",
     "filter": "Filtrer",
+    "resetFilters": "Réinitialiser les filtres",
     "sort": "Trier",
     "refresh": "Actualiser",
     "export": "Exporter",
@@ -961,6 +962,11 @@
     "noNotifications": "Aucune nouvelle notification",
     "settings": "Paramètres de notification",
     "viewAll": "Voir toutes les notifications",
+    "tabs": {
+      "unread": "Non lues",
+      "all": "Toutes",
+      "read": "Lues"
+    },
     "preferences": {
       "title": "Préférences de notification",
       "description": "Gérez les notifications internes que vous recevez",

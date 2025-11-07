@@ -841,6 +841,7 @@
     "no": "No",
     "search": "Cerca",
     "filter": "Filtra",
+    "resetFilters": "Ripristina filtri",
     "sort": "Ordina",
     "refresh": "Aggiorna",
     "export": "Esporta",
@@ -962,6 +963,11 @@
     "noNotifications": "Nessuna nuova notifica",
     "settings": "Impostazioni notifiche",
     "viewAll": "Visualizza tutte le notifiche",
+    "tabs": {
+      "unread": "Non lette",
+      "all": "Tutte",
+      "read": "Lette"
+    },
     "categories": {
       "tickets": "Ticket",
       "invoices": "Fatture",

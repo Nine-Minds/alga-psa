@@ -12,6 +12,7 @@ import {
 } from '@blocknote/core';
 import { Mention } from './Mention';
 import styles from '../tickets/ticket/TicketDetails.module.css';
+import dynamic from 'next/dynamic';
 
 // Create custom schema with mention support (same as TextEditor)
 const schema = BlockNoteSchema.create({
@@ -28,10 +29,10 @@ interface RichTextViewerProps {
 }
 
 /**
- * RichTextViewer component for displaying BlockNote content with formatting
+ * Internal RichTextViewer component - client-only
  * This component renders BlockNote content in read-only mode, preserving all formatting
  */
-export default function RichTextViewer({ 
+function RichTextViewerInternal({
   id = 'rich-text-viewer',
   content,
   className = '',
@@ -154,7 +155,7 @@ export default function RichTextViewer({
     prevContentKey.current = contentKey;
   }, [contentKey]);
 
-  // Create the editor at the top level with the parsed content and custom schema
+  // Create the editor with the parsed content and custom schema
   const editor = useCreateBlockNote({
     schema,
     initialContent: parsedContent,
@@ -181,11 +182,6 @@ export default function RichTextViewer({
     });
   }
 
-  // Check if we're in the browser environment
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return <div>Loading...</div>;
-  }
-
   return (
     <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>
       <div className="w-full bg-white rounded-lg overflow-auto min-w-0">
@@ -205,3 +201,15 @@ export default function RichTextViewer({
     </div>
   );
 }
+
+// Export the component with dynamic import to prevent SSR
+// This ensures BlockNote only runs in the browser environment
+const RichTextViewer = dynamic(
+  () => Promise.resolve(RichTextViewerInternal),
+  {
+    ssr: false,
+    loading: () => <div>Loading...</div>
+  }
+);
+
+export default RichTextViewer;

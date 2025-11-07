@@ -68,8 +68,23 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
       }
     }
 
-    // Always open the drawer to show notification details first
-    // The drawer will have a button to navigate to the linked entity if needed
+    // Determine how to handle the notification based on its type and link
+    const shouldOpenInNewTab = notification.link && (
+      // Tickets: category='tickets' or link pattern
+      notification.category === 'tickets' ||
+      notification.link.includes('/msp/tickets/') ||
+      notification.link.includes('/client-portal/tickets/') ||
+      // Project tasks: link pattern with /tasks/
+      (notification.link.includes('/msp/projects/') && notification.link.includes('/tasks/'))
+    );
+
+    if (shouldOpenInNewTab && notification.link) {
+      // Open tickets and project tasks directly in a new tab
+      window.open(notification.link, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // For documents and other notifications, open the drawer to show details
     openActivityDrawer(activity);
   };
 
@@ -107,11 +122,24 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
           {notification.category && (
             <Badge variant="default">{notification.category}</Badge>
           )}
-          {notification.createdAt && (
-            <span className="text-gray-500">
-              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-            </span>
-          )}
+          {notification.createdAt && (() => {
+            try {
+              const date = new Date(notification.createdAt);
+              // Check if date is valid
+              if (isNaN(date.getTime())) {
+                console.warn('Invalid date for notification:', notification.createdAt);
+                return null;
+              }
+              return (
+                <span className="text-gray-500">
+                  {formatDistanceToNow(date, { addSuffix: true })}
+                </span>
+              );
+            } catch (error) {
+              console.error('Error formatting date:', error, notification.createdAt);
+              return null;
+            }
+          })()}
         </div>
       </div>
     </div>
