@@ -224,7 +224,10 @@ export function useInternalNotifications(
             : n
         )
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+
+      // Calculate new unread count
+      const newUnreadCount = Math.max(0, unreadCount - 1);
+      setUnreadCount(newUnreadCount);
 
       // Broadcast update via Y.js if connected
       if (providerRef.current && ydocRef.current) {
@@ -237,7 +240,7 @@ export function useInternalNotifications(
         notificationsMap.set('data', updatedNotifications);
 
         const unreadCountMap = ydocRef.current.getMap('unreadCount');
-        unreadCountMap.set('count', unreadCount - 1);
+        unreadCountMap.set('count', newUnreadCount);
       }
     } catch (err) {
       console.error('Failed to mark as read:', err);

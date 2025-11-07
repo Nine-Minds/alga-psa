@@ -125,7 +125,7 @@ function resolveInternalUrl(input: EntityLinkInput): string {
       return `${baseUrl}/msp/projects/${input.projectId}`;
 
     case 'project_task':
-      return `${baseUrl}/msp/projects/${input.projectId}/tasks/${input.taskId}`;
+      return `${baseUrl}/msp/projects/${input.projectId}?taskId=${input.taskId}`;
 
     case 'invoice':
       return `${baseUrl}/msp/invoices/${input.invoiceId}`;
