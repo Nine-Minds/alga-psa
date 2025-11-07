@@ -50,8 +50,8 @@ export function TemplateUsageBasedServicesStep({
   useEffect(() => {
     const inputs: Record<number, string> = {};
     (data.usage_services ?? []).forEach((service, index) => {
-      if (service.suggested_rate !== undefined) {
-        inputs[index] = service.suggested_rate.toFixed(2);
+      if (service.unit_rate !== undefined) {
+        inputs[index] = (service.unit_rate / 100).toFixed(2);
       }
     });
     setRateInputs(inputs);
@@ -66,7 +66,7 @@ export function TemplateUsageBasedServicesStep({
     updateData({
       usage_services: [
         ...(data.usage_services ?? []),
-        { service_id: '', service_name: '', unit_of_measure: '', bucket_overlay: undefined, suggested_rate: undefined },
+        { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: '', bucket_overlay: undefined },
       ],
     });
   };
@@ -122,9 +122,9 @@ export function TemplateUsageBasedServicesStep({
     updateData({ usage_services: next });
   };
 
-  const handleRateChange = (index: number, rate: number | undefined) => {
+  const handleRateChange = (index: number, cents: number | undefined) => {
     const next = [...(data.usage_services ?? [])];
-    next[index] = { ...next[index], suggested_rate: rate };
+    next[index] = { ...next[index], unit_rate: cents };
     updateData({ usage_services: next });
   };
 
@@ -249,8 +249,9 @@ export function TemplateUsageBasedServicesStep({
                             handleRateChange(index, undefined);
                           } else {
                             const dollars = parseFloat(inputValue) || 0;
-                            handleRateChange(index, dollars);
-                            setRateInputs((prev) => ({ ...prev, [index]: dollars.toFixed(2) }));
+                            const cents = Math.round(dollars * 100);
+                            handleRateChange(index, cents);
+                            setRateInputs((prev) => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
                           }
                         }}
                         placeholder="0.00"

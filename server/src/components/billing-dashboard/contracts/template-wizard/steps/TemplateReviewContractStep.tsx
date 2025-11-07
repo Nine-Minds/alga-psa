@@ -54,6 +54,21 @@ export function TemplateReviewContractStep({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
+                {data.fixed_base_rate !== undefined && (
+                  <div className="pb-3 mb-3 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Recurring Base Rate</span>
+                      <span className="font-semibold text-gray-900">${(data.fixed_base_rate / 100).toFixed(2)}</span>
+                    </div>
+                    {data.enable_proration && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                          Proration enabled
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {data.fixed_services.map((service, index) => (
                   <div key={`${service.service_id}-${index}`} className="border border-gray-200 rounded-md p-3 bg-gray-50">
                     <p className="font-medium text-gray-900">
@@ -61,9 +76,6 @@ export function TemplateReviewContractStep({
                     </p>
                     <div className="text-xs text-gray-600 flex flex-wrap gap-3 mt-2">
                       <span>Quantity Guidance: {service.quantity ?? 1}</span>
-                      {service.suggested_rate !== undefined && (
-                        <span>Suggested Rate: ${service.suggested_rate.toFixed(2)}</span>
-                      )}
                       {service.bucket_overlay && (
                         <span>
                           Bucket: {service.bucket_overlay.total_minutes ?? 0} minutes · Overage $
@@ -96,8 +108,8 @@ export function TemplateReviewContractStep({
                       {service.service_name || 'Unnamed Service'}
                     </p>
                     <div className="text-xs text-gray-600 flex flex-wrap gap-3 mt-2">
-                      {service.suggested_rate !== undefined && (
-                        <span>Suggested Rate: ${service.suggested_rate.toFixed(2)}/hr</span>
+                      {service.hourly_rate !== undefined && (
+                        <span>Suggested Rate: ${(service.hourly_rate / 100).toFixed(2)}/hr</span>
                       )}
                       {service.bucket_overlay && (
                         <span>
@@ -128,8 +140,8 @@ export function TemplateReviewContractStep({
                     </p>
                     <div className="text-xs text-gray-600 flex flex-wrap gap-3 mt-2">
                       <span>Unit: {service.unit_of_measure || 'Not specified'}</span>
-                      {service.suggested_rate !== undefined && (
-                        <span>Suggested Rate: ${service.suggested_rate.toFixed(2)}/unit</span>
+                      {service.unit_rate !== undefined && (
+                        <span>Suggested Rate: ${(service.unit_rate / 100).toFixed(2)}/{service.unit_of_measure || 'unit'}</span>
                       )}
                       {service.bucket_overlay && (
                         <span>

@@ -50,8 +50,8 @@ export function TemplateHourlyServicesStep({
   useEffect(() => {
     const inputs: Record<number, string> = {};
     data.hourly_services.forEach((service, index) => {
-      if (service.suggested_rate !== undefined) {
-        inputs[index] = service.suggested_rate.toFixed(2);
+      if (service.hourly_rate !== undefined) {
+        inputs[index] = (service.hourly_rate / 100).toFixed(2);
       }
     });
     setRateInputs(inputs);
@@ -66,7 +66,7 @@ export function TemplateHourlyServicesStep({
     updateData({
       hourly_services: [
         ...data.hourly_services,
-        { service_id: '', service_name: '', bucket_overlay: undefined, suggested_rate: undefined },
+        { service_id: '', service_name: '', hourly_rate: undefined, bucket_overlay: undefined },
       ],
     });
   };
@@ -115,9 +115,9 @@ export function TemplateHourlyServicesStep({
     updateData({ hourly_services: next });
   };
 
-  const handleRateChange = (index: number, rate: number | undefined) => {
+  const handleRateChange = (index: number, cents: number | undefined) => {
     const next = [...data.hourly_services];
-    next[index] = { ...next[index], suggested_rate: rate };
+    next[index] = { ...next[index], hourly_rate: cents };
     updateData({ hourly_services: next });
   };
 
@@ -227,8 +227,9 @@ export function TemplateHourlyServicesStep({
                           handleRateChange(index, undefined);
                         } else {
                           const dollars = parseFloat(inputValue) || 0;
-                          handleRateChange(index, dollars);
-                          setRateInputs((prev) => ({ ...prev, [index]: dollars.toFixed(2) }));
+                          const cents = Math.round(dollars * 100);
+                          handleRateChange(index, cents);
+                          setRateInputs((prev) => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
                         }
                       }}
                       placeholder="0.00"

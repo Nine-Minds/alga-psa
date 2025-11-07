@@ -32,25 +32,26 @@ export interface TemplateWizardData {
   contract_name: string;
   description?: string;
   billing_frequency: string;
+  fixed_base_rate?: number;
+  enable_proration?: boolean;
   fixed_services: Array<{
     service_id: string;
     service_name?: string;
     quantity?: number;
-    suggested_rate?: number;
     bucket_overlay?: TemplateBucketOverlayInput | null;
   }>;
   hourly_services: Array<{
     service_id: string;
     service_name?: string;
+    hourly_rate?: number;
     bucket_overlay?: TemplateBucketOverlayInput | null;
-    suggested_rate?: number;
   }>;
   usage_services?: Array<{
     service_id: string;
     service_name?: string;
+    unit_rate?: number;
     unit_of_measure?: string;
     bucket_overlay?: TemplateBucketOverlayInput | null;
-    suggested_rate?: number;
   }>;
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
