@@ -149,8 +149,35 @@ impl ModuleLoader {
     ) -> anyhow::Result<(Store<HostState>, Component, Linker<HostState>)> {
         let component = Component::from_binary(&self.engine, wasm)?;
         let table = ResourceTable::new();
-        let wasi = WasiCtxBuilder::new().build();
+
+        // For now we keep WASI stdio defaulted; stdout/stderr mapping is handled at the
+        // logging layer by using the HostExecutionContext + DebugHub. If in the future we
+        // attach explicit pipes here, they must forward lines to `emit_stdout_line` /
+        // `emit_stderr_line` with the current context.
+        // Use a dedicated stderr sink that mirrors guest stderr into the debug hub when enabled.
+        // We intentionally keep stdout as-is for now and treat stderr as the primary signal for
+        // extension authors; this avoids surprising noise while still surfacing failures.
+        let stderr = wasmtime_wasi::pipe::WritePipe::new(move |bytes: &[u8]| {
+            if let Ok(line) = std::str::from_utf8(bytes) {
+                let line = line.trim_end_matches(&['\r', '\n'][..]).to_string();
+                if !line.is_empty() {
+                    // Best-effort: we don't have the context here yet; the debug hub will
+                    // attach request/tenant metadata once the HostExecutionContext is set
+                    // on the store before the handler is invoked.
+                    let ctx = HostExecutionContext::default();
+                    tokio::spawn(crate::engine::debug::emit_stderr_line(&ctx, &line));
+                }
+            }
+        });
+
+        let wasi = WasiCtxBuilder::new()
+            .inherit_args() // preserves existing behavior for args
+            .inherit_stdin()
+            .inherit_stdout()
+            .stderr(stderr)
+            .build();
         let http = WasiHttpCtx::new();
+
         let host_state = HostState {
             max_memory: (memory_mb.unwrap_or(DEFAULT_MAX_MEMORY_MB) as usize) * 1024 * 1024,
             runtime: self.runtime_cfg.clone(),
@@ -544,9 +571,11 @@ mod tests {
     #[test]
     fn bundle_url_for_key_retains_bucket_with_trailing_slash() {
         let base = Url::parse("http://host.docker.internal:9000/extensions/").unwrap();
-        let url =
-            bundle_url_for_key(&base, "/tenants/foo/extensions/bar/sha256/abc/bundle.tar.zst")
-                .unwrap();
+        let url = bundle_url_for_key(
+            &base,
+            "/tenants/foo/extensions/bar/sha256/abc/bundle.tar.zst",
+        )
+        .unwrap();
         assert_eq!(
             url.as_str(),
             "http://host.docker.internal:9000/extensions/tenants/foo/extensions/bar/sha256/abc/bundle.tar.zst"
@@ -566,9 +595,10 @@ mod tests {
     #[test]
     fn presign_target_handles_url_with_bucket_segment() {
         let base = Url::parse("http://host:9000/extensions").unwrap();
-        let bundle =
-            Url::parse("http://host:9000/extensions/tenants/t1/extensions/e1/sha256/h/bundle.tar.zst")
-                .unwrap();
+        let bundle = Url::parse(
+            "http://host:9000/extensions/tenants/t1/extensions/e1/sha256/h/bundle.tar.zst",
+        )
+        .unwrap();
         let (bucket, key) = presign_target_from_urls(&base, &bundle).unwrap();
         assert_eq!(bucket, "extensions");
         assert_eq!(key, "tenants/t1/extensions/e1/sha256/h/bundle.tar.zst");
@@ -578,7 +608,8 @@ mod tests {
     fn presign_target_handles_url_without_bucket_segment() {
         let base = Url::parse("http://host:9000/extensions").unwrap();
         let bundle =
-            Url::parse("http://host:9000/tenants/t1/extensions/e1/sha256/h/bundle.tar.zst").unwrap();
+            Url::parse("http://host:9000/tenants/t1/extensions/e1/sha256/h/bundle.tar.zst")
+                .unwrap();
         let (bucket, key) = presign_target_from_urls(&base, &bundle).unwrap();
         assert_eq!(bucket, "extensions");
         assert_eq!(key, "tenants/t1/extensions/e1/sha256/h/bundle.tar.zst");

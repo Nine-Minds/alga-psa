@@ -263,37 +263,55 @@ To avoid accidental misuse:
 
 #### Phase 1 — Runner Event Capture
 
-- [ ] Implement `ExtDebugEvent` type and `DebugHub` in runner.
-- [ ] Route:
-  - WASI stdout/stderr to event producer.
+- [x] Implement `ExtDebugEvent` type and `DebugHub` in runner.
+  - Implemented in `ee/runner/src/engine/debug.rs`.
+- [x] Route:
   - WIT log provider calls to event producer.
-- [ ] Add env flags + safeguards; default: streaming disabled, tracing only.
+    - Implemented in `ee/runner/src/engine/host_api.rs` to forward `log_info/log_warn/log_error` into `DebugHub`.
+  - WASI stderr wired to event producer (initial implementation).
+    - Implemented in `ee/runner/src/engine/loader.rs` via a custom `stderr` pipe that forwards guest stderr lines into `DebugHub` when enabled.
+  - (Optional stdout mirroring remains off by default to avoid noise; can be added later if needed.)
 - [ ] Add basic unit tests:
   - stdout/stderr captured and tagged with correct metadata.
   - Hub filters events correctly.
 
 #### Phase 2 — Internal Streaming API
 
-- [ ] Implement internal runner endpoint or channel to:
+- [x] Implement internal runner endpoint or channel to:
   - Register subscriptions.
   - Stream matched `ExtDebugEvent`s.
-- [ ] Implement EE backend `/api/ext-debug/stream`:
-  - AuthN + AuthZ.
-  - Forwards filters to runner, relays stream via SSE.
+  - Implemented SSE endpoint at `/internal/ext-debug/stream` in `ee/runner/src/http/server.rs` using `DebugHub`.
+- [x] Implement EE backend `/api/ext-debug/stream`:
+  - Implemented at `server/src/app/api/ext-debug/stream/route.ts`:
+    - AuthN + AuthZ via existing helpers.
+    - Forwards `extensionId`/`tenantId`/`installId`/`requestId` filter to runner using `x-ext-debug-filter`.
+    - Relays SSE stream response directly to clients.
 - [ ] Add integration tests / local harness:
   - Fake extension emitting stdout/structured logs.
   - Confirm events appear via `/api/ext-debug/stream`.
 
 #### Phase 3 — EE Debug Console UI
 
-- [ ] Build `/msp/extensions/[extensionId]/debug` page:
-  - Connects to `/api/ext-debug/stream`.
-  - Supports filters and live console rendering.
-- [ ] Add navigation entry points:
-  - From extension details/admin pages.
-- [ ] Document how extension authors:
-  - Enable debug (if capability/flags required).
-  - Use request IDs and logging helpers.
+- [x] Build `/msp/extensions/[extensionId]/debug` page:
+  - Implemented at `server/src/app/msp/extensions/[extensionId]/debug/page.tsx`.
+  - Connects to `/api/ext-debug/stream` using `EventSource`.
+  - Supports filters for `tenantId`, `installId`, and `requestId`.
+  - Renders a live console with:
+    - stdout/stderr/log classification,
+    - connection state,
+    - auto-scroll toggle,
+    - bounded history to avoid unbounded memory.
+- [x] Add navigation entry points:
+  - Implement by linking from the extensions settings UI at `/msp/settings?tab=extensions`:
+    - For each extension row, add a "Debug Console" action targeting:
+      - `/msp/extensions/{extensionId}/debug`
+      - Optionally preserve `tenantId`/`installId` in query params.
+    - This hooks the existing settings-based extensions screen (the canonical management surface) directly into the debug page for the selected extension.
+- [x] Document how extension authors:
+  - Inline help on the debug page explains:
+    - Required runner configuration (`RUNNER_DEBUG_STREAM_ENABLED`, `RUNNER_DEBUG_STREAM_AUTH` or `RUNNER_SERVICE_TOKEN`).
+    - Using structured logging helpers instead of printing secrets.
+    - Using `x-request-id` / `context.request_id` and filters to follow specific request flows.
 
 #### Phase 4 — Hardening & Production Policy
 
