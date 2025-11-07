@@ -203,6 +203,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
             tenantId: tenant,
             ticketId: ticketResult.ticket_id,
             userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
+            isAdditionalAgent: false  // Initial assignment is always primary
           }
         });
       }
@@ -516,6 +517,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
             tenantId: tenant,
             ticketId: id,
             userId: updateData.assigned_to,  // The user being assigned to the ticket
+            isAdditionalAgent: false,  // Primary assignment/reassignment
             changes: structuredChanges
           }
         });

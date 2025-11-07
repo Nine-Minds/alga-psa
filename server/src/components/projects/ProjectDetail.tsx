@@ -115,6 +115,7 @@ export default function ProjectDetail({
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
+  const hasOpenedInitialTask = useRef(false);
   
   // Fetch tags when component mounts
   useEffect(() => {
@@ -360,6 +361,9 @@ export default function ProjectDetail({
   useEffect(() => {
     if (!initialTaskId || projectPhases.length === 0) return;
 
+    // Reset the flag when initialTaskId changes
+    hasOpenedInitialTask.current = false;
+
     const loadTaskAndSelectPhase = async () => {
       try {
         const task = await getTaskById(initialTaskId);
@@ -391,7 +395,7 @@ export default function ProjectDetail({
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
-    if (!initialTaskId || projectTasks.length === 0 || showQuickAdd) return;
+    if (!initialTaskId || projectTasks.length === 0 || showQuickAdd || hasOpenedInitialTask.current) return;
 
     // Find the task in the loaded tasks
     const taskToOpen = projectTasks.find(task => task.task_id === initialTaskId);
@@ -401,6 +405,7 @@ export default function ProjectDetail({
       setSelectedTask(taskToOpen);
       setCurrentPhase(selectedPhase);
       setShowQuickAdd(true);
+      hasOpenedInitialTask.current = true; // Mark that we've opened the task
     }
   }, [initialTaskId, projectTasks, showQuickAdd]);
 
