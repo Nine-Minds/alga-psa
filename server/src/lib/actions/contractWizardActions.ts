@@ -52,24 +52,13 @@ type TemplateUsageServiceInput = {
   suggested_rate?: number;
 };
 
-type TemplatePresetInput = {
-  preset_id: string;
-  preset_name?: string;
-  service_quantities?: Record<string, number>; // For Fixed presets - map of service_id to quantity
-  minimum_billable_time?: number; // For Hourly presets
-  round_up_to_nearest?: number; // For Hourly presets
-};
-
 export type ContractTemplateWizardSubmission = {
   contract_name: string;
   description?: string;
   billing_frequency?: string;
   fixed_services: TemplateFixedServiceInput[];
-  fixed_presets?: TemplatePresetInput[];
   hourly_services?: TemplateHourlyServiceInput[];
-  hourly_presets?: TemplatePresetInput[];
   usage_services?: TemplateUsageServiceInput[];
-  usage_presets?: TemplatePresetInput[];
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
   fixed_base_rate?: number;
@@ -283,125 +272,6 @@ export async function createContractTemplateFromWizard(
 
       nextDisplayOrder += 1;
     };
-
-    // Process contract line presets
-    const allPresets = [
-      ...(submission.fixed_presets || []),
-      ...(submission.hourly_presets || []),
-      ...(submission.usage_presets || []),
-    ];
-
-    for (const presetInput of allPresets) {
-      const preset = await trx('contract_line_presets')
-        .where({ tenant, preset_id: presetInput.preset_id })
-        .first();
-
-      if (!preset) {
-        console.warn(`Preset ${presetInput.preset_id} not found, skipping`);
-        continue;
-      }
-
-      // Create a contract line from the preset
-      const contractLineData = {
-        contract_line_name: preset.preset_name,
-        contract_line_type: preset.contract_line_type,
-        billing_frequency: preset.billing_frequency,
-        service_category: null as any,
-        is_custom: false,
-        is_template: true,
-      };
-
-      const contractLine = await ContractLine.create(trx, contractLineData as any);
-      const contractLineId = contractLine.contract_line_id!;
-      createdContractLineIds.push(contractLineId);
-
-      if (!primaryContractLineId) {
-        primaryContractLineId = contractLineId;
-      }
-
-      // Copy services from preset
-      const presetServices = await trx('contract_line_preset_services')
-        .where({ tenant, preset_id: preset.preset_id })
-        .select('*');
-
-      for (const presetService of presetServices) {
-        // Insert service into contract line
-        await trx('contract_line_services').insert({
-          tenant,
-          contract_line_id: contractLineId,
-          service_id: presetService.service_id,
-        });
-
-        // Determine quantity: use custom quantity if provided (for Fixed presets), otherwise use preset default
-        const customQuantity = presetInput.service_quantities?.[presetService.service_id];
-        const quantity = customQuantity ?? presetService.quantity ?? 1;
-
-        // Create service configuration based on line type
-        // Note: Presets are for guidance only - no rates are copied
-        const baseConfig = {
-          contract_line_id: contractLineId,
-          service_id: presetService.service_id,
-          configuration_type: preset.contract_line_type,
-          custom_rate: undefined, // Presets don't include rates - for guidance only
-          quantity: quantity,
-          instance_name: undefined,
-          tenant,
-        };
-
-        let typeConfig: any = {};
-        if (preset.contract_line_type === 'Hourly') {
-          // Use per-preset configuration if provided, otherwise use preset defaults
-          // Treat 0, null, or undefined as "not set" and use default of 15
-          const minBillableTime = (presetInput.minimum_billable_time && presetInput.minimum_billable_time > 0)
-            ? presetInput.minimum_billable_time
-            : (preset.minimum_billable_time && preset.minimum_billable_time > 0)
-              ? preset.minimum_billable_time
-              : 15;
-
-          const roundUpToNearest = (presetInput.round_up_to_nearest && presetInput.round_up_to_nearest > 0)
-            ? presetInput.round_up_to_nearest
-            : (preset.round_up_to_nearest && preset.round_up_to_nearest > 0)
-              ? preset.round_up_to_nearest
-              : 15;
-
-          typeConfig = {
-            hourly_rate: undefined, // No rate from preset
-            minimum_billable_time: minBillableTime,
-            round_up_to_nearest: roundUpToNearest,
-          };
-        } else if (preset.contract_line_type === 'Usage') {
-          typeConfig = {
-            unit_of_measure: presetService.unit_of_measure || 'unit',
-            base_rate: undefined, // No rate from preset
-            enable_tiered_pricing: false,
-            minimum_usage: undefined,
-          };
-        }
-
-        await planServiceConfigService.createConfiguration(baseConfig, typeConfig);
-      }
-
-      // Copy type-specific config for Fixed presets
-      if (preset.contract_line_type === 'Fixed') {
-        const presetFixedConfig = await trx('contract_line_preset_fixed_config')
-          .where({ tenant, preset_id: preset.preset_id })
-          .first();
-
-        if (presetFixedConfig) {
-          const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
-          await fixedConfigModel.upsert({
-            contract_line_id: contractLineId,
-            base_rate: presetFixedConfig.base_rate,
-            enable_proration: presetFixedConfig.enable_proration,
-            billing_cycle_alignment: presetFixedConfig.billing_cycle_alignment,
-            tenant,
-          });
-        }
-      }
-
-      // Record the mapping to the template
-      await recordTemplateMapping(contractLineId);
-    }
 
     if (filteredFixedServices.length > 0) {
       const createdFixedLine = await ContractLine.create(trx, {

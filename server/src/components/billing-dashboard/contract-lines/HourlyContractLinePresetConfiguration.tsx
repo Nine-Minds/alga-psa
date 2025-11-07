@@ -27,8 +27,8 @@ import {
     upsertUserTypeRatesForConfig // Added import for user type rates action
 } from 'server/src/lib/actions/contractLineServiceConfigurationActions';
 import {
-    IContractLinePresetServiceHourlyConfig,
-    IContractLinePresetServiceConfiguration,
+    IContractLineServiceHourlyConfig,
+    IContractLineServiceConfiguration,
     IUserTypeRate
 } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 // Removed incorrect import: import { IService } from 'server/src/interfaces/service.interfaces';
@@ -77,7 +77,7 @@ interface IPlanServiceWithHourlyConfig {
     config_id: string;       // ID of the specific configuration record
     service_id: string;      // ID of the service itself
     service?: IBillingService; // Use imported IService from billing.interfaces
-    hourly_config: IContractLinePresetServiceHourlyConfig | null; // Nullable initially - Null means not hourly configurable
+    hourly_config: IContractLineServiceHourlyConfig | null; // Nullable initially - Null means not hourly configurable
     user_type_rates?: IUserTypeRate[]; // Add user type rates here
     isHourlyConfigurable: boolean; // Flag to indicate if the service *should* be hourly
 }
@@ -217,13 +217,13 @@ export function HourlyPresetConfiguration({
           (item.service.billing_method === 'usage' &&
             item.service.unit_of_measure?.toLowerCase().includes('hour'));
 
-        let hourlyConfig: IContractLinePresetServiceHourlyConfig | null = null;
+        let hourlyConfig: IContractLineServiceHourlyConfig | null = null;
         let userTypeRatesForConfig: IUserTypeRate[] = []; // Initialize as empty array
 
         if (isHourlyService) {
           // If the service is hourly, check if existing config is hourly type
           if (item.configuration.configuration_type === 'Hourly' && item.typeConfig) {
-            hourlyConfig = item.typeConfig as IContractLinePresetServiceHourlyConfig;
+            hourlyConfig = item.typeConfig as IContractLineServiceHourlyConfig;
             // IMPORTANT: Assuming getPlanServicesWithConfigurations now returns userTypeRates
             // nested within the item or typeConfig when type is Hourly. Adjust access as needed.
             // Example: userTypeRatesForConfig = item.userTypeRates || [];
@@ -297,7 +297,7 @@ export function HourlyPresetConfiguration({
   // --- Updated Handlers for Service Config State ---
 
   // Handler for changes to hourly fields (rate, min time, rounding)
-  const handleHourlyFieldChange = useCallback((configId: string, field: keyof IContractLinePresetServiceHourlyConfig, value: any) => {
+  const handleHourlyFieldChange = useCallback((configId: string, field: keyof IContractLineServiceHourlyConfig, value: any) => {
     setServiceConfigs(prevConfigs =>
       prevConfigs.map(config => {
         if (config.config_id === configId && config.hourly_config) { // Ensure hourly_config exists

@@ -19,7 +19,7 @@ import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 import { getContractLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions'; // Get list of services
 import { getContractLineConfigurationForService } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
-import { IContractLinePresetServiceConfiguration, IContractLinePresetServiceUsageConfig, IContractLinePresetServiceRateTier, IService, IContractLinePreset } from 'server/src/interfaces';
+import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLinePreset } from 'server/src/interfaces';
 import { getContractLinePresetById, updateContractLinePreset } from 'server/src/lib/actions/contractLinePresetActions'; // Added action to get base plan details
 import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/contractLineServiceConfigurationActions'; // Import the upsert action
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
@@ -37,7 +37,7 @@ interface UsagePresetConfigurationProps {
 // Based on its usage in GenericPlanServicesList.tsx and the action definition
 type PlanServiceWithConfig = {
   service: IService & { service_type_name?: string };
-  configuration: IContractLinePresetServiceConfiguration;
+  configuration: IContractLineServiceConfiguration;
   // typeConfig might also be present, but we primarily need service_id and service_name
 };
 
@@ -54,8 +54,8 @@ type AllServiceValidationErrors = {
 
 // Define the expected result type for getContractLineConfigurationForService
 // Combining relevant fields from the interfaces file
-type FetchedServiceConfig = IContractLinePresetServiceConfiguration & IContractLinePresetServiceUsageConfig & {
-    tiers?: IContractLinePresetServiceRateTier[];
+type FetchedServiceConfig = IContractLineServiceConfiguration & IContractLineServiceUsageConfig & {
+    tiers?: IContractLineServiceRateTier[];
 };
 
 export function UsagePresetConfiguration({
@@ -413,7 +413,7 @@ export function UsagePresetConfiguration({
           }));
 
         const payload = {
-          presetId: presetId,
+          contractLineId: presetId,
           serviceId: serviceId,
           // tenantId is handled by the backend action
           base_rate: config.enable_tiered_pricing ? undefined : config.base_rate,

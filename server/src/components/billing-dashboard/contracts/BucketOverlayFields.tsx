@@ -75,7 +75,7 @@ export function BucketOverlayFields({
     onChange({
       ...value,
       total_minutes: totalMinutes,
-      billing_period: value.billing_period ?? billingFrequency
+      billing_period: value.billing_period ?? (billingFrequency as 'monthly' | 'weekly')
     });
   };
 
@@ -83,7 +83,7 @@ export function BucketOverlayFields({
     onChange({
       ...value,
       overage_rate: cents,
-      billing_period: value.billing_period ?? billingFrequency
+      billing_period: value.billing_period ?? (billingFrequency as 'monthly' | 'weekly')
     });
   };
 
@@ -91,7 +91,7 @@ export function BucketOverlayFields({
     onChange({
       ...value,
       allow_rollover: checked,
-      billing_period: value.billing_period ?? billingFrequency
+      billing_period: value.billing_period ?? (billingFrequency as 'monthly' | 'weekly')
     });
   };
 

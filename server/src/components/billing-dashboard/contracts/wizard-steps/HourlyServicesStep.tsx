@@ -94,7 +94,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     total_minutes: undefined,
     overage_rate: undefined,
     allow_rollover: false,
-    billing_period: billingFrequency,
+    billing_period: billingFrequency as 'monthly' | 'weekly',
   });
 
   const toggleBucketOverlay = (index: number, enabled: boolean) => {

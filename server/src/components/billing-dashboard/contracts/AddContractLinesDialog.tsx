@@ -379,6 +379,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
             {/* Clear filters button */}
             {(searchTerm || typeFilter !== 'all') && (
               <Button
+                id="clear-contract-line-filters"
                 variant="outline"
                 size="sm"
                 onClick={() => {
@@ -898,6 +899,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
 
       <DialogFooter>
         <Button
+          id="cancel-add-contract-lines"
           variant="outline"
           onClick={onClose}
           disabled={isAdding}
@@ -905,6 +907,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           Cancel
         </Button>
         <Button
+          id="confirm-add-contract-lines"
           onClick={handleAdd}
           disabled={selectedPresetIds.size === 0 || isAdding}
         >

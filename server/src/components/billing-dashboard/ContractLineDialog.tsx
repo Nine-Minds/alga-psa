@@ -965,10 +965,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         <div
           onClick={() => {
             if (editingPlan) {
-              setPlanName(editingPlan.contract_line_name);
+              setPlanName(editingPlan.preset_name);
               setBillingFrequency(editingPlan.billing_frequency);
               setPlanType(editingPlan.contract_line_type as PlanType);
-              setIsCustom(editingPlan.is_custom);
               setIsDirty(false);
             }
             setOpen(true);

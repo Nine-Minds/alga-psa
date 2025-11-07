@@ -359,7 +359,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                     }
                   });
                 }}
-                editingPlan={editingPlan}
+                editingPlan={null}
                 onClose={() => setEditingPlan(null)}
                 allServiceTypes={allServiceTypes} // Pass service types down
                 triggerButton={
