@@ -1,0 +1,10 @@
+{
+  "name": "@product/email-settings",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./entry": "./entry.ts",
+    "./ee/entry": "./ee/entry.tsx",
+    "./oss/entry": "./oss/entry.tsx"
+  }
+}

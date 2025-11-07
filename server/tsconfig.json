@@ -113,6 +113,12 @@
       "@product/email-domains/*": [
         "../packages/product-email-domains/*"
       ],
+      "@product/email-settings/entry": [
+        "../packages/product-email-settings/oss/entry"
+      ],
+      "@product/email-settings/*": [
+        "../packages/product-email-settings/*"
+      ],
       "@product/client-portal-domain/entry": [
         "../packages/product-client-portal-domain/oss/entry"
       ],

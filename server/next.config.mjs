@@ -186,6 +186,9 @@ const nextConfig = {
       '@product/email-providers/entry': isEE
         ? '@product/email-providers/ee/entry'
         : '@product/email-providers/oss/entry',
+      '@product/email-settings/entry': isEE
+        ? '@product/email-settings/ee/entry'
+        : '@product/email-settings/oss/entry',
       '@product/client-portal-domain/entry': isEE
         ? '@product/client-portal-domain/ee/entry'
         : '@product/client-portal-domain/oss/entry',
@@ -231,6 +234,7 @@ const nextConfig = {
     '@product/extensions',
     '@product/settings-extensions',
     '@product/email-providers',
+    '@product/email-settings',
     '@product/client-portal-domain',
     '@product/billing',
     // New aliasing packages
@@ -308,6 +312,9 @@ const nextConfig = {
         '@product/email-providers/entry': isEE
           ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+        '@product/email-settings/entry': isEE
+          ? path.join(__dirname, '../packages/product-email-settings/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-email-settings/oss/entry.tsx'),
         '@product/email-domains/entry': isEE
           ? path.join(__dirname, '../packages/product-email-domains/ee/entry.ts')
           : path.join(__dirname, '../packages/product-email-domains/oss/entry.ts'),
@@ -402,6 +409,15 @@ const nextConfig = {
             path.join(__dirname, '../packages/product-email-providers/entry.tsx'),
             path.join(__dirname, '../packages/product-email-providers/oss/entry.ts'),
             path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-email-settings/ee/entry.tsx'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-email-settings/entry.ts'),
+            path.join(__dirname, '../packages/product-email-settings/entry.tsx'),
+            path.join(__dirname, '../packages/product-email-settings/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-email-settings/oss/entry.tsx'),
           ],
         },
         {

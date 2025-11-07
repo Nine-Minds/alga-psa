@@ -13,29 +13,29 @@ Deliver an enterprise-only managed email domain orchestration system that lets h
 
 ## 3. Phased To-Do List
 ### Phase 1 – Foundations (Services & Workflows)
-1. Scaffold `ee/server/src/services/email/ManagedDomainService.ts` with `createDomain`, `checkDnsAndProviderStatus`, `activateDomain`, `deleteDomain`.  
-2. Add provider factory hook in `ee/server/src/services/email/ManagedDomainService.ts` that instantiates `ResendEmailProvider` via `server/src/services/email/EmailProviderManager.ts` utilities.  
-3. Create DNS lookup helper (`ee/server/src/services/email/dnsLookup.ts`) to query TXT/MX/CNAME records using `dns.promises`.  
-4. Register EE-only workflow actions by exporting the service through `packages/product-email-domains/ee/entry.ts` and wiring `shared/workflow/init/registerWorkflowActions.ts`.  
-5. Implement Temporal workflow file `ee/temporal-workflows/src/workflows/managed-email-domain-workflow.ts` with states/signals described in Section 7.  
-6. Add supporting activities in `ee/temporal-workflows/src/activities/email-domain-activities.ts` (provision, dnsCheck, activate, cleanup) and register them in `ee/temporal-workflows/src/activities/index.ts`.  
-7. Update `ee/temporal-workflows/src/workflows/index.ts` to export the new workflow and configure the worker task queue.  
-8. Extend `ee/temporal-workflows/src/config/startupValidation.ts` to require queue/env vars (`EMAIL_DOMAIN_TASK_QUEUE`, etc.).
+1. ✅ Scaffold `ee/server/src/services/email/ManagedDomainService.ts` with `createDomain`, `checkDnsAndProviderStatus`, `activateDomain`, `deleteDomain`.  
+2. ✅ Add provider factory hook in `ee/server/src/services/email/ManagedDomainService.ts` that instantiates `ResendEmailProvider` via `server/src/services/email/EmailProviderManager.ts` utilities.  
+3. ✅ Create DNS lookup helper (`ee/server/src/services/email/dnsLookup.ts`) to query TXT/MX/CNAME records using `dns.promises`.  
+4. ✅ Register EE-only workflow actions by exporting the service through `packages/product-email-domains/ee/entry.ts` and wiring `shared/workflow/init/registerWorkflowActions.ts`.  
+5. ✅ Implement Temporal workflow file `ee/temporal-workflows/src/workflows/managed-email-domain-workflow.ts` with states/signals described in Section 7.  
+6. ✅ Add supporting activities in `ee/temporal-workflows/src/activities/email-domain-activities.ts` (provision, dnsCheck, activate, cleanup) and register them in `ee/temporal-workflows/src/activities/index.ts`.  
+7. ✅ Update `ee/temporal-workflows/src/workflows/index.ts` to export the new workflow and configure the worker task queue.  
+8. ✅ Extend `ee/temporal-workflows/src/config/startupValidation.ts` to require queue/env vars (`EMAIL_DOMAIN_TASK_QUEUE`, etc.).
 
 ### Phase 2 – Application Surface (Server Actions & UI)
-1. Add workflow client wrapper `ee/server/src/lib/email-domains/workflowClient.ts` (Temporal enqueue + signals).  
-2. Create EE server actions file `ee/server/src/lib/actions/email-actions/managedDomainActions.ts` exposing add/verify/delete operations.  
-3. Update `packages/product-email-settings/ee/entry.tsx` to point at a new EE component.  
-4. Build EE UI components:  
+1. ✅ Add workflow client wrapper `ee/server/src/lib/email-domains/workflowClient.ts` (Temporal enqueue + signals).  
+2. ✅ Create EE server actions file `ee/server/src/lib/actions/email-actions/managedDomainActions.ts` exposing add/verify/delete operations.  
+3. ✅ Update `packages/product-email-settings/ee/entry.tsx` to point at a new EE component.  
+4. ✅ Build EE UI components:  
    - `ee/server/src/components/settings/email/ManagedEmailSettings.tsx` (top-level tab content).  
    - `ee/server/src/components/settings/email/ManagedDomainList.tsx` (status table).  
    - `ee/server/src/components/settings/email/DnsRecordInstructions.tsx` (copyable DNS cards).  
-5. Modify `server/src/components/settings/general/SettingsPage.tsx` to load the EE package entry (ensure CE build untouched).  
-6. Update feature-flag usage or edition guards so only Enterprise tenants see the managed tab.
+5. ✅ Modify `server/src/components/settings/general/SettingsPage.tsx` to load the EE package entry (ensure CE build untouched).  
+6. ✅ Update feature-flag usage or edition guards so only Enterprise tenants see the managed tab (done 2025-11-06 – outbound email UI now always renders the managed-domain card).
 
 ### Phase 3 – Verification & Activation (Business Logic)
-1. Implement DNS propagation checks in `ManagedDomainService.checkDnsAndProviderStatus` using the helper from Phase 1.  
-2. Extend `shared/workflow/init/registerWorkflowActions.ts` to call ManagedDomainService (via package import) for create/verify/activate actions.  
+1. ✅ Implement DNS propagation checks in `ManagedDomainService.checkDnsAndProviderStatus` using the helper from Phase 1.  
+2. ✅ Extend `shared/workflow/init/registerWorkflowActions.ts` to call ManagedDomainService (via package import) for create/verify/activate actions.  
 3. Update `ee/server/src/lib/services/TenantEmailService.ts` to prioritize `default_from_domain` from verified managed domains when building the `from` header.  
 4. Persist analytics events (e.g., `email_domain.verified`) in `ee/server/src/lib/analytics/posthog.ts`.  
 5. Ensure `tenant_email_settings.provider_configs` gets a managed provider entry by default (update `server/src/lib/actions/email-actions/emailSettingsActions.ts` and EE override if needed).

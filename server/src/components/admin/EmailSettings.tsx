@@ -30,8 +30,6 @@ import {
 } from '../../lib/actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
 import { useTenant } from '../TenantProvider';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
-import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 interface EmailSettingsProps {
   // Remove tenantId prop since we'll use the tenant context
@@ -53,8 +51,6 @@ interface DomainStatus {
 
 export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const tenantId = useTenant();
-  const outboundFlag = useFeatureFlag('email-configuration');
-  const isOutboundEnabled = typeof outboundFlag === 'boolean' ? outboundFlag : outboundFlag?.enabled;
   const [settings, setSettings] = useState<TenantEmailSettings | null>(null);
   const [domains, setDomains] = useState<DomainStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -385,8 +381,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       </TabsList>
 
       <TabsContent value="outbound" className="space-y-6">
-        {isOutboundEnabled ? (
-          <>
+        <>
             <div className="text-sm text-muted-foreground mb-4">
               Configure SMTP or API settings for sending emails from your application
             </div>
@@ -513,9 +508,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
               </Button>
             </div>
           </>
-        ) : (
-          <FeaturePlaceholder />
-        )}
       </TabsContent>
 
       <TabsContent value="inbound" className="space-y-6">
