@@ -35,6 +35,7 @@ export function TemplateFixedFeeServicesStep({
   const [expandedPresets, setExpandedPresets] = useState<Set<string>>(new Set());
   const [previewPresetData, setPreviewPresetData] = useState<PresetWithServices | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -55,6 +56,16 @@ export function TemplateFixedFeeServicesStep({
 
     void load();
   }, []);
+
+  useEffect(() => {
+    const inputs: Record<number, string> = {};
+    data.fixed_services.forEach((service, index) => {
+      if (service.suggested_rate !== undefined) {
+        inputs[index] = service.suggested_rate.toFixed(2);
+      }
+    });
+    setRateInputs(inputs);
+  }, [data.fixed_services]);
 
   useEffect(() => {
     const loadPresets = async () => {
@@ -588,7 +599,7 @@ export function TemplateFixedFeeServicesStep({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor={`template-fixed-quantity-${index}`} className="text-sm">
-                      Quantity Guidance
+                      Quantity (Optional)
                     </Label>
                     <Input
                       id={`template-fixed-quantity-${index}`}
@@ -598,26 +609,44 @@ export function TemplateFixedFeeServicesStep({
                       onChange={(event) =>
                         handleQuantityChange(index, Math.max(1, Number(event.target.value) || 1))
                       }
-                      className="w-28"
+                      className="w-24"
                     />
                     <p className="text-xs text-gray-500">Suggested quantity when creating contracts</p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor={`template-fixed-rate-${index}`} className="text-sm">
-                      Suggested Rate ($)
+                      Rate (Optional)
                     </Label>
-                    <Input
-                      id={`template-fixed-rate-${index}`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={service.suggested_rate ?? ''}
-                      onChange={(event) =>
-                        handleRateChange(index, event.target.value ? Number(event.target.value) : undefined)
-                      }
-                      placeholder="Optional - leave blank to set per contract"
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <Input
+                        id={`template-fixed-rate-${index}`}
+                        type="text"
+                        inputMode="decimal"
+                        value={rateInputs[index] ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value.replace(/[^0-9.]/g, '');
+                          const decimalCount = (value.match(/\./g) || []).length;
+                          if (decimalCount <= 1) {
+                            setRateInputs((prev) => ({ ...prev, [index]: value }));
+                          }
+                        }}
+                        onBlur={() => {
+                          const inputValue = rateInputs[index] ?? '';
+                          if (inputValue.trim() === '' || inputValue === '.') {
+                            setRateInputs((prev) => ({ ...prev, [index]: '' }));
+                            handleRateChange(index, undefined);
+                          } else {
+                            const dollars = parseFloat(inputValue) || 0;
+                            handleRateChange(index, dollars);
+                            setRateInputs((prev) => ({ ...prev, [index]: dollars.toFixed(2) }));
+                          }
+                        }}
+                        placeholder="0.00"
+                        className="pl-7"
+                      />
+                    </div>
                     <p className="text-xs text-gray-500">Suggested rate when creating contracts</p>
                   </div>
                 </div>

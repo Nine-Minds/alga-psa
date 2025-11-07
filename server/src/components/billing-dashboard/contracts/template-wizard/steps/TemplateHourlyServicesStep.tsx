@@ -38,6 +38,7 @@ export function TemplateHourlyServicesStep({
   const [expandedPresets, setExpandedPresets] = useState<Set<string>>(new Set());
   const [previewPresetData, setPreviewPresetData] = useState<PresetWithServices | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -58,6 +59,16 @@ export function TemplateHourlyServicesStep({
 
     void load();
   }, []);
+
+  useEffect(() => {
+    const inputs: Record<number, string> = {};
+    data.hourly_services.forEach((service, index) => {
+      if (service.suggested_rate !== undefined) {
+        inputs[index] = service.suggested_rate.toFixed(2);
+      }
+    });
+    setRateInputs(inputs);
+  }, [data.hourly_services]);
 
   useEffect(() => {
     const loadPresets = async () => {
@@ -229,7 +240,7 @@ export function TemplateHourlyServicesStep({
     total_minutes: undefined,
     overage_rate: undefined,
     allow_rollover: false,
-    billing_period: billingFrequency,
+    billing_period: billingFrequency as 'monthly' | 'weekly',
   });
 
   const toggleBucketOverlay = (index: number, enabled: boolean) => {
@@ -406,13 +417,13 @@ export function TemplateHourlyServicesStep({
                   <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <span className="font-medium text-gray-700">Minimum billable minutes:</span>
+                        <span className="font-medium text-gray-700">Minimum Billable Time (minutes):</span>
                         <span className="ml-2 text-gray-900">
                           {previewPresetData.preset.minimum_billable_time ?? 'Not set'}
                         </span>
                       </div>
                       <div>
-                        <span className="font-medium text-gray-700">Round up to nearest:</span>
+                        <span className="font-medium text-gray-700">Round Up To Nearest (minutes):</span>
                         <span className="ml-2 text-gray-900">
                           {previewPresetData.preset.round_up_to_nearest ?? 'Not set'}
                         </span>
@@ -498,7 +509,7 @@ export function TemplateHourlyServicesStep({
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-2">
                             <Label htmlFor={`preset-${index}-min-billable`} className="text-sm">
-                              Minimum billable minutes
+                              Minimum Billable Time (minutes) (Optional)
                             </Label>
                             <Input
                               id={`preset-${index}-min-billable`}
@@ -516,7 +527,7 @@ export function TemplateHourlyServicesStep({
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor={`preset-${index}-round-up`} className="text-sm">
-                              Round up to nearest (minutes)
+                              Round Up To Nearest (minutes) (Optional)
                             </Label>
                             <Input
                               id={`preset-${index}-round-up`}
@@ -630,26 +641,44 @@ export function TemplateHourlyServicesStep({
 
                 <div className="space-y-2">
                   <Label htmlFor={`template-hourly-rate-${index}`} className="text-sm">
-                    Suggested Hourly Rate ($/hr)
+                    Hourly Rate (Optional)
                   </Label>
-                  <Input
-                    id={`template-hourly-rate-${index}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={service.suggested_rate ?? ''}
-                    onChange={(event) =>
-                      handleRateChange(index, event.target.value ? Number(event.target.value) : undefined)
-                    }
-                    placeholder="Optional - leave blank to set per contract"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <Input
+                      id={`template-hourly-rate-${index}`}
+                      type="text"
+                      inputMode="decimal"
+                      value={rateInputs[index] ?? ''}
+                      onChange={(event) => {
+                        const value = event.target.value.replace(/[^0-9.]/g, '');
+                        const decimalCount = (value.match(/\./g) || []).length;
+                        if (decimalCount <= 1) {
+                          setRateInputs((prev) => ({ ...prev, [index]: value }));
+                        }
+                      }}
+                      onBlur={() => {
+                        const inputValue = rateInputs[index] ?? '';
+                        if (inputValue.trim() === '' || inputValue === '.') {
+                          setRateInputs((prev) => ({ ...prev, [index]: '' }));
+                          handleRateChange(index, undefined);
+                        } else {
+                          const dollars = parseFloat(inputValue) || 0;
+                          handleRateChange(index, dollars);
+                          setRateInputs((prev) => ({ ...prev, [index]: dollars.toFixed(2) }));
+                        }
+                      }}
+                      placeholder="0.00"
+                      className="pl-7"
+                    />
+                  </div>
                   <p className="text-xs text-gray-500">Suggested rate when creating contracts</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor={`template-min-time-${index}`} className="text-sm">
-                      Minimum billable minutes
+                      Minimum Billable Time (minutes) (Optional)
                     </Label>
                     <Input
                       id={`template-min-time-${index}`}
@@ -664,13 +693,13 @@ export function TemplateHourlyServicesStep({
                           ),
                         })
                       }
-                      placeholder="e.g., 15"
+                      placeholder="15"
                     />
-                    <p className="text-xs text-gray-500">Suggested minimum when creating contracts</p>
+                    <p className="text-xs text-gray-500">e.g., 15 minutes - any time entry less than this will be rounded up</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={`template-round-up-${index}`} className="text-sm">
-                      Round up to nearest (minutes)
+                      Round Up To Nearest (minutes) (Optional)
                     </Label>
                     <Input
                       id={`template-round-up-${index}`}
@@ -685,9 +714,9 @@ export function TemplateHourlyServicesStep({
                           ),
                         })
                       }
-                      placeholder="e.g., 15"
+                      placeholder="15"
                     />
-                    <p className="text-xs text-gray-500">Suggested rounding when creating contracts</p>
+                    <p className="text-xs text-gray-500">e.g., 15 minutes - time entries will be rounded up to the nearest interval</p>
                   </div>
                 </div>
 
