@@ -59,8 +59,8 @@ export async function updateTaskWithChecklist(
 
             const updatedTask = await ProjectTaskModel.updateTask(trx, taskId, validatedTaskData);
 
-            // If assigned_to was actually changed, publish event
-            if ('assigned_to' in taskData && updatedTask.assigned_to && existingTask.assigned_to !== updatedTask.assigned_to) {
+            // If assigned_to was updated, publish event
+            if ('assigned_to' in taskData && updatedTask.assigned_to) {
                 const phase = await ProjectModel.getPhaseById(trx, updatedTask.phase_id);
                 if (phase) {
                     // Ensure tenant exists before publishing event
@@ -77,6 +77,7 @@ export async function updateTaskWithChecklist(
                             userId: currentUser.user_id,
                             assignedTo: updatedTask.assigned_to,
                             additionalUsers: [], // No additional users in this case
+                            isAdditionalAgent: false, // Primary assignment/reassignment
                             timestamp: new Date().toISOString()
                         }
                     });
@@ -137,6 +138,7 @@ export async function addTaskToPhase(
                             userId: currentUser.user_id,
                             assignedTo: taskData.assigned_to,
                             additionalUsers: [], // No additional users in initial creation
+                            isAdditionalAgent: false, // Initial assignment is always primary
                             timestamp: new Date().toISOString()
                         }
                     });
