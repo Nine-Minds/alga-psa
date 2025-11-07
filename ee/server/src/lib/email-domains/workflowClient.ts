@@ -10,6 +10,7 @@ const DEFAULT_TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS || 'temporal-front
 const DEFAULT_TEMPORAL_NAMESPACE = process.env.TEMPORAL_NAMESPACE || 'default';
 const DEFAULT_TASK_QUEUE = process.env.EMAIL_DOMAIN_TASK_QUEUE || 'email-domain-workflows';
 const WORKFLOW_NAME = 'managedEmailDomainWorkflow';
+const REFRESH_SIGNAL = 'refreshManagedEmailDomain';
 
 type EnqueueResult = {
   enqueued: boolean;
@@ -48,11 +49,16 @@ export async function enqueueManagedEmailDomainWorkflow(
         error?.name === 'WorkflowExecutionAlreadyStartedError' ||
         error?.message?.includes('WorkflowExecutionAlreadyStartedError');
 
-      if (alreadyStarted) {
-        return { enqueued: true, alreadyRunning: true };
+      if (!alreadyStarted) {
+        return { enqueued: false, error: error?.message ?? 'unknown_error' };
       }
 
-      return { enqueued: false, error: error?.message ?? 'unknown_error' };
+      try {
+        await client.workflow.signal(workflowId, REFRESH_SIGNAL, params);
+        return { enqueued: true, alreadyRunning: true };
+      } catch (signalError: any) {
+        return { enqueued: false, error: signalError?.message ?? 'signal_failed' };
+      }
     }
   } catch (error: any) {
     return { enqueued: false, error: error?.message ?? 'unknown_error' };
