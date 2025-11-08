@@ -6,3 +6,6 @@ services:
       SSL_KEY_PATH: "/etc/ssl/my_certs/server.key"
     volumes:
       - ssl_data:/etc/ssl/my_certs
+
+volumes:
+  ssl_data:

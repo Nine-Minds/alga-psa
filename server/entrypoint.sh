@@ -270,7 +270,7 @@ start_app() {
     cd /app/server
     if [ "$NODE_ENV" = "development" ]; then
         log "Starting server in development mode..."
-        if [ "${ENABLE_SSL}" = "true" ]; then
+        if [ "${ENABLE_SSL:-false}" = "true" ]; then
             log "SSL is enabled - starting development HTTPS server..."
             npm run dev:https
         else
@@ -281,7 +281,7 @@ start_app() {
 
         # Try to start, but don't exit on failure - keep container running for debug
         local wait=false
-        if [ "${ENABLE_SSL}" = "true" ]; then
+        if [ "${ENABLE_SSL:-false}" = "true" ]; then
             log "SSL is enabled - starting HTTPS server in $(pwd)..."
             if ! npm run start:https; then
                 wait=true
