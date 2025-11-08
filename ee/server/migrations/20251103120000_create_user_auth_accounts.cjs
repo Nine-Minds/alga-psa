@@ -29,7 +29,7 @@ const createUserAuthAccountsTable = (knex) =>
 
     table.primary(['tenant', 'user_id', 'provider']);
 
-    table
+        table
       .foreign('tenant')
       .references('tenants.tenant');
 
@@ -37,10 +37,8 @@ const createUserAuthAccountsTable = (knex) =>
       .foreign(['tenant', 'user_id'])
       .references(['tenant', 'user_id'])
       .inTable('users');
-
-    table.unique(['provider', 'provider_account_id'], 'uq_user_auth_accounts_provider_account');
     table.index(['tenant', 'provider'], 'idx_user_auth_accounts_tenant_provider');
-    table.index(['user_id', 'provider'], 'idx_user_auth_accounts_user_provider');
+    table.index(['tenant', 'user_id', 'provider'], 'idx_user_auth_accounts_tenant_user_provider');
   });
 
 exports.up = async function up(knex) {

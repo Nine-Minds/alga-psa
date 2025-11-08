@@ -7,6 +7,7 @@ import { verifyAuthenticator } from "server/src/utils/authenticator/authenticato
 import logger from "@alga-psa/shared/core/logger";
 import { getNextAuthSecret } from "server/src/lib/auth/sessionCookies";
 import { cookies } from "next/headers";
+import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
 
 interface AuthorizeSsoLinkingInput {
   password: string;
@@ -79,6 +80,19 @@ export async function authorizeSsoLinkingAction(
     return {
       success: false,
       error: "You must be signed in to link single sign-on providers.",
+    };
+  }
+
+  const { user: currentUser } = await ensureSsoSettingsPermission();
+
+  if (currentUser.user_id !== session.user.id) {
+    logger.warn("[connect-sso] Session user mismatch during SSO linking", {
+      sessionUserId: session.user.id,
+      currentUserId: currentUser.user_id,
+    });
+    return {
+      success: false,
+      error: "Your session is out of date. Please sign in again.",
     };
   }
 

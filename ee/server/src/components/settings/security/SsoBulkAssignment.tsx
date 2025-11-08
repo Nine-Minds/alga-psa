@@ -23,7 +23,7 @@ export default function SsoBulkAssignment() {
     async function loadProviderOptions() {
       try {
         const [optionsResult, prefsResult] = await Promise.all([
-          getSsoProviderOptionsAction(),
+          getSsoProviderOptionsAction({ scope: "settings" }),
           getSsoPreferencesAction(),
         ]);
         if (!cancelled) {

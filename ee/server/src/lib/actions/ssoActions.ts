@@ -2,18 +2,13 @@
 
 import type { Knex } from 'knex';
 
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { hasPermission } from '@/lib/auth/rbac';
 import { analytics } from '@/lib/analytics/posthog';
 import { getAdminConnection } from '@shared/db/admin';
-import type { IUser } from 'server/src/interfaces/auth.interfaces';
+import { ensureSsoSettingsPermission } from '@ee/lib/actions/auth/ssoPermissions';
 import type { OAuthLinkProvider } from '@ee/lib/auth/oauthAccountLinks';
 
 const USER_TABLE = 'users';
 const ACCOUNT_TABLE = 'user_auth_accounts';
-const REQUIRED_RESOURCE = 'settings';
-const REQUIRED_ACTION = 'update';
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 
@@ -134,9 +129,8 @@ function normalizeInput(request: SsoBulkAssignmentRequest): NormalizedInput {
     ),
   );
 
-  // Force MSP/internal assignments for now; the server action keeps the
-  // userType hook for future client support without exposing it in the UI.
-  const userType: SsoBulkAssignmentUserType = 'internal';
+  const userType: SsoBulkAssignmentUserType =
+    request.userType === 'client' ? 'client' : 'internal';
 
   const mode: SsoBulkAssignmentMode = request.mode === 'unlink' ? 'unlink' : 'link';
 
@@ -215,16 +209,17 @@ async function performBulkSsoAssignment(
     };
   }
 
+  if (!options.tenant) {
+    throw new Error('Tenant context is required for bulk SSO assignments.');
+  }
+
   const adminDb = options.adminDb ?? (await getAdminConnection());
 
   const userQuery = adminDb<CandidateUser>(USER_TABLE)
     .select('tenant', 'user_id', 'email', 'is_inactive')
     .where({ user_type: userType })
     .whereIn('user_id', userIds);
-
-  if (options.tenant) {
-    userQuery.andWhere({ tenant: options.tenant });
-  }
+  userQuery.andWhere({ tenant: options.tenant });
 
   const candidates = await userQuery;
   const candidateUserIds = candidates.map((candidate) => candidate.user_id);
@@ -233,11 +228,7 @@ async function performBulkSsoAssignment(
     ? await adminDb(ACCOUNT_TABLE)
         .select('tenant', 'user_id', 'provider', 'provider_email')
         .whereIn('user_id', candidateUserIds)
-        .modify((builder) => {
-          if (options.tenant) {
-            builder.andWhere({ tenant: options.tenant });
-          }
-        })
+        .andWhere({ tenant: options.tenant })
         .whereIn('provider', providers)
     : [];
 
@@ -472,30 +463,11 @@ async function listSsoAssignableUsersForTenant(
 }
 
 
-async function ensureSsoPermission(): Promise<{ user: IUser; tenant: string; knex: Knex }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Authentication is required to manage SSO assignments.');
-  }
-
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant context is required.');
-  }
-
-  const allowed = await hasPermission(user, REQUIRED_RESOURCE, REQUIRED_ACTION, knex);
-  if (!allowed) {
-    throw new Error('You do not have permission to manage security settings.');
-  }
-
-  return { user, tenant, knex };
-}
-
 export async function listSsoAssignableUsersAction(
   params: ListSsoAssignableUsersRequest = {},
 ): Promise<ListSsoAssignableUsersResponse> {
   try {
-    const { tenant } = await ensureSsoPermission();
+    const { tenant } = await ensureSsoSettingsPermission();
     const pageSize = Math.min(Math.max(params.pageSize ?? DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE);
     const page = Math.max(params.page ?? 1, 1);
     const search = params.search?.trim();
@@ -525,7 +497,7 @@ export async function previewBulkSsoAssignmentAction(
   request: SsoBulkAssignmentRequest,
 ): Promise<SsoBulkAssignmentActionResponse> {
   try {
-    const { user, tenant } = await ensureSsoPermission();
+    const { user, tenant } = await ensureSsoSettingsPermission();
     const result = await previewBulkSsoAssignment(request, {
       tenant,
       actorUserId: user.user_id,
@@ -546,7 +518,7 @@ export async function executeBulkSsoAssignmentAction(
   request: SsoBulkAssignmentRequest,
 ): Promise<SsoBulkAssignmentActionResponse> {
   try {
-    const { user, tenant } = await ensureSsoPermission();
+    const { user, tenant } = await ensureSsoSettingsPermission();
     const result = await executeBulkSsoAssignment(request, {
       tenant,
       actorUserId: user.user_id,

@@ -51,10 +51,6 @@ services:
         target: /app/server/seeds
         read_only: true
       - type: bind
-        source: ./ee/server/migrations
-        target: /app/ee/server/migrations
-        read_only: true
-      - type: bind
         source: ./scripts
         target: /app/scripts
         read_only: true
@@ -144,10 +140,6 @@ services:
       - type: bind
         source: ./server/seeds
         target: /app/server/seeds
-        read_only: true
-      - type: bind
-        source: ./ee/server/migrations
-        target: /app/ee/server/migrations
         read_only: true
       - type: bind
         source: ./scripts

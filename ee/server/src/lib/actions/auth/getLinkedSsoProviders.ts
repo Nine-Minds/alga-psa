@@ -3,6 +3,7 @@
 import { getAdminConnection } from "@shared/db/admin";
 import { getTenantIdBySlug } from "server/src/lib/actions/tenant-actions/tenantSlugActions";
 import logger from "@alga-psa/shared/core/logger";
+import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
 
 interface GetLinkedSsoProvidersInput {
   email: string;
@@ -16,8 +17,15 @@ interface GetLinkedSsoProvidersResult {
   twoFactorEnabled: boolean;
 }
 
+type LinkedProviderScope = "public" | "settings";
+
+interface GetLinkedSsoProvidersOptions {
+  scope?: LinkedProviderScope;
+}
+
 export async function getLinkedSsoProvidersAction(
-  input: GetLinkedSsoProvidersInput
+  input: GetLinkedSsoProvidersInput,
+  options: GetLinkedSsoProvidersOptions = {}
 ): Promise<GetLinkedSsoProvidersResult> {
   const email = input.email?.trim().toLowerCase();
   if (!email) {
@@ -25,6 +33,10 @@ export async function getLinkedSsoProvidersAction(
   }
 
   try {
+    const scope = options.scope ?? "public";
+    if (scope === "settings") {
+      await ensureSsoSettingsPermission();
+    }
     const knex = await getAdminConnection();
 
     let tenantId: string | undefined;
