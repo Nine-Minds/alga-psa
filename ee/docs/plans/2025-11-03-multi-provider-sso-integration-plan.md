@@ -1,0 +1,97 @@
+# Multi-Provider SSO Integration Plan
+
+## Overview
+- Deliver Google Workspace and Microsoft 365 SSO that fits the existing multi-tenant NextAuth.js stack without disrupting current credential flows.
+- Normalize identity data across providers so tenant routing, OTT vanity handoff, and user_type logic continue to function uniformly.
+- Provide a guided migration path that lets password-based users link SSO identities safely and allows ops to monitor and enforce adoption by tenant.
+
+## Phased Technical Plan
+
+### Phase 0 – Foundations and Provider Enablement
+- [ ] Provision Azure AD enterprise app, confirm Google OAuth project, and capture client IDs, secrets, tenant IDs, and redirect URIs.
+- [x] Update secret loader so Microsoft OAuth values (client ID, secret, authority/tenant) are available alongside Google via `getNextAuthSecret`.
+- [x] Add Microsoft provider configuration (e.g., `AzureADProvider`) and refresh Google provider options to share the common claim extractor.
+- [x] Refresh `.env.example`, devbox/dev compose templates, and developer docs to include both providers for local testing.
+- [x] Document OAuth secrets and redirect URIs in EE configuration guides while leaving CE `.env.example` entries absent or commented.
+- [x] Wrap provider registration in `server/src/app/api/auth/[...nextauth]/options.ts` with the existing `isEnterprise` guard so CE builds resolve to stubs.
+
+### Phase 1 – Provider Integration and Claim Normalization
+- [x] Implement a shared profile mapper that converts Google and Microsoft payloads into the `ExtendedUser` schema.
+- [x] Extend `signIn` and `jwt` callbacks to apply tenant resolution from query `tenant_hint`, vanity-domain headers, or email-domain heuristics when provider data is incomplete.
+- [x] Invoke existing user validation (active status, tenant membership, user_type) within the OAuth callback before token issuance.
+- [x] Confirm `session` and `redirect` callbacks read normalized claims so OTT and redirect flows behave consistently across providers.
+- [x] Place provider adapters, claim mappers, and account-link helpers in `ee/server/src/lib/auth/ssoProviders.ts` with matching stubs in `server/src/empty/lib/auth/ssoProviders.ts`.
+
+### Phase 2 – Account Linking and Migration Path
+- [x] Create or extend a `user_auth_accounts` table keyed by user ID and provider (google|microsoft) with provider subject IDs and metadata.
+- [x] Deliver an authenticated “Connect SSO” flow that revalidates password and TOTP before capturing OAuth provider details.
+- [x] Update credential login surfaces to detect linked providers, display SSO prompts, and steer users toward OAuth flows (local 2FA suppression to follow policy controls).
+- [ ] Build a batch backfill script for federated email domains and log unresolved accounts for manual review.
+- [x] Store schema migrations for the new linking table under `ee/server/migrations` and supply CE no-op stubs.
+- [x] Serve SSO buttons and the “Connect SSO” settings page from `@ee` components/pages with CE stubs in `server/src/empty`.
+
+### Phase 3 – Built-in SSO Bulk Assignment UI
+- [ ] Extract bulk assignment preview/execute helpers into `ee/server/src/lib/actions/ssoActions.ts` (with CE stubs in `server/src/empty`) so the existing backfill script shares logic and only admins with `settings.update` can run it.
+- [ ] Build `SsoBulkAssignment.tsx` container plus `SsoBulkAssignmentForm.tsx` to render provider toggles, multi-domain input, and an internal/client selector with preview and execute buttons wired to the new actions.
+- [ ] Surface preview results inline (counts for linked, skipped, already linked) and trigger toast/audit events on assignment; ensure preview falls back gracefully when no domains or providers are selected.
+- [ ] Add a "Single Sign-On" tab to `SecuritySettingsPage.tsx` navigation, mount the bulk assignment UI, and keep Roles/Permissions/Policies unaffected.
+- [ ] Extend acceptance coverage to include UI-driven dry-run/assign flows and confirm CE/enterprise builds resolve the new components and actions correctly.
+
+#### Decision (2025-11-06): Provider opt-in per user
+- **Summary**: New staff are explicitly classified as `internal` (password/TOTP only) or assigned a specific SSO provider at creation time. Auto-detection on login is disabled unless an admin enabled at least one provider for that user. Phase 3 still delivers the bulk assignment tooling so admins can flip providers for many accounts at once.
+- **Reasoning**: Automatically trusting any matching email introduced takeover risk (e.g., an attacker controlling an external domain or recycled mailbox could satisfy a loose email match). Requiring admins to opt users into a provider maintains least privilege and keeps forensic/audit signals intact.
+- **Intended behavior**:
+  - User creation UI/API exposes a selector: `Internal (password only)` vs `Google` vs `Microsoft` (extendable). Default remains Internal.
+  - Login callbacks accept OAuth responses only when the user record lists that provider; otherwise the attempt is rejected and logged.
+  - Bulk assignment preview/execute flows remain valuable to migrate cohorts (entire domains, departments) into a provider without editing each profile.
+  - Existing auto-link toggle is scoped to future automation that _pre-assigns_ providers; it no longer blindly creates links during login without an admin decision.
+
+
+### OUT OF BAND – Rollout, Monitoring, and Policy Controls
+- [ ] Introduce feature flags or configuration to enable SSO providers per tenant/portal for controlled rollout.
+- [ ] Instrument telemetry to capture provider usage, OTT handoffs, migration completions, and repeated password fallbacks.
+- [ ] Add policy controls allowing tenants to require SSO and to determine whether local TOTP remains after OAuth logins.
+- [ ] Publish operational runbooks covering break-glass password resets, tenant onboarding checklists, and SSO troubleshooting.
+- [ ] Update `scripts/build-enterprise.sh`, validate CE Docker builds resolve `@ee` imports to stubs, and gate new OAuth integration tests behind `process.env.EDITION === 'enterprise'`.
+
+
+### Acceptance Tests
+- [ ] EE Connect SSO flow: verifies password + TOTP gating, sets nonce cookie, and redirects through selected provider; linking renders in Account Management afterwards.
+- [ ] Migration banner journey: credential user with new SSO link sees call-to-action on next password login, completes OAuth sign-in, and subsequent logins default to provider without local 2FA prompts.
+- [ ] MSP credential form: with linked provider returns SSO prompt, `Sign in with <provider>` launches OAuth and lands on dashboard.
+- [ ] Client portal credential form: with tenant slug + linked provider displays SSO banner and respects vanity domain callback handling.
+- [ ] JWT/session callbacks: ensure tenant slug and contact/client data persist across logins for both Google and Microsoft profiles.
+- [ ] Backfill script dry-run/live modes: process sample users without creating duplicates; verify CE builds skip EE scripts/components and migration prompts respect pre-linked accounts.
+
+## Background and Investigational Notes
+
+### Existing Authentication Architecture
+- **Tech stack**: NextAuth.js with JWT strategy (configurable `SESSION_MAX_AGE`), custom session cookies, on-demand user validation per request.
+- **Providers in place**: Google OAuth using `GoogleProvider`; Keycloak integration via `KeycloakProvider`; custom credentials provider with password + 2FA.
+- **User portals**: Internal MSP staff sign in at `/auth/msp/signin` (`user_type: internal`); client users sign in at `/auth/client-portal/signin` (`user_type: client`, with `clientId` and `contactId` requirements).
+- **Core files**: NextAuth handler (`server/src/app/api/auth/[...nextauth]/route.ts`), options (`.../options.ts`), credential logic (`server/src/lib/actions/auth.tsx`), registration/reset, session cookies, and portal-specific forms.
+- **JWT/session callbacks**: `signIn` tracks last login and client redirects; `jwt` populates claims (id, email, tenant, user_type); `session` turns tokens into session objects; `redirect` routes users by `user_type`.
+- **Client portal handoff**: Vanity domain redirect uses OTT tokens via `computeVanityRedirect` and `PortalSessionHandoff.tsx`.
+
+### Credentials Flow Snapshot
+- Email/password checked against database hashed password.
+- 2FA enforced when `two_factor_enabled` using TOTP codes (passed as `twoFactorCode`).
+- JWT issued with tenant and user metadata; session callback mirrors data; redirect logic handles portal selection.
+
+### OAuth Flow Snapshot
+- User triggers provider button; profile callback runs.
+- **Google**: Currently requires existing DB user by email and verifies active status; assigns default `user_type` (internal).
+- **Keycloak**: Accepts profile data with tenant/user_type claims.
+- Once profile is accepted, standard JWT/session callbacks run.
+
+### Investigation Takeaways Relevant to Plan
+- Need consistent claim normalization so OTT and redirect logic remain unchanged across providers.
+- Tenant determination for OAuth logins is currently limited; must combine query hints, vanity headers, or email-domain mapping.
+- 2FA bypass expectations differ by provider; policy controls will decide whether to trust external 2FA or enforce local TOTP post-login.
+- Account linking is required to prevent duplicate user records and to let existing credential users migrate smoothly.
+- Future enhancements may include auto-provisioning (SCIM/Azure AD) and Google auto-provisioning; plan leaves hooks for these but focuses on core SSO enablement.
+
+### SSO Migration Tooling
+- Use `pnpm tsx ee/scripts/backfill-sso-links.ts --provider=<google|microsoft> --domain=example.com[,domain2.com] [--dry-run]` to seed `user_auth_accounts` rows for federated domains.
+- The script skips inactive users, records metadata indicating the backfill source, and treats email addresses as provisional provider IDs until real OAuth logins occur.
+- Run in `--dry-run` mode first to review counts, then execute without the flag to persist links; reruns are idempotent and update only matching tenant/user combinations.
