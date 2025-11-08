@@ -78,13 +78,19 @@
       ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
       "@ee": [
-        "src/empty"
+        "../ee/server/src"
       ],
       "@ee/*": [
-        "src/empty/*"
+        "../ee/server/src/*"
       ],
       "@product/chat/entry": [
         "src/services/chatStreamService"
+      ],
+      "@product/ext-proxy/handler": [
+        "../packages/product-ext-proxy/oss/handler"
+      ],
+      "@product/ext-proxy/*": [
+        "../packages/product-ext-proxy/*"
       ],
       "@product/workflows/entry": [
         "src/empty/components/flow/DnDFlow"

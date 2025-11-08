@@ -3,7 +3,7 @@ export interface CreateUiProjectOptions {
   directory?: string;
 }
 
-import { createNewProject } from './create-new-project';
+import { createNewProject } from './create-new-project.js';
 
 export async function createUiProject(options: CreateUiProjectOptions): Promise<void> {
   const { name, directory } = options;

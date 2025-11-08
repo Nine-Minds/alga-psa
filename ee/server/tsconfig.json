@@ -75,6 +75,8 @@
       "@product/workflows/entry": ["server/src/empty/components/flow/DnDFlow"],
       "@product/extensions/entry": ["packages/product-extensions/oss/entry"],
       "@product/extensions/*": ["packages/product-extensions/*"],
+      "@product/ext-proxy/handler": ["../packages/product-ext-proxy/ee/handler"],
+      "@product/ext-proxy/*": ["../packages/product-ext-proxy/*"],
       "@product/settings-extensions/entry": ["packages/product-settings-extensions/oss/entry"],
       "@product/settings-extensions/*": ["packages/product-settings-extensions/*"],
       "@product/email-providers/entry": ["packages/product-email-providers/oss/entry"],
