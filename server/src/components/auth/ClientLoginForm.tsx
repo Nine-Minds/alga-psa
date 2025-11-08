@@ -12,6 +12,7 @@ import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIC
 import { FormComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import SsoProviderButtons from '@ee/components/auth/SsoProviderButtons';
 
 interface ClientLoginFormProps {
   callbackUrl: string;
@@ -26,6 +27,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
@@ -184,6 +186,12 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         </Link>
       </div>
 
+      {lookupError && (
+        <Alert variant="destructive">
+          <AlertDescription>{lookupError}</AlertDescription>
+        </Alert>
+      )}
+
       <Button
         id="client-sign-in-button"
         type="submit"
@@ -192,6 +200,11 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       >
         {isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In')}
       </Button>
+
+      <SsoProviderButtons
+        callbackUrl={callbackUrl}
+        tenantHint={tenantSlug}
+      />
     </form>
   )
 }
