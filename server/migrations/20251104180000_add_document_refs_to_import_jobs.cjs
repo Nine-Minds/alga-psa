@@ -10,23 +10,6 @@ exports.up = async function up(knex) {
     }
   };
 
-  // Ensure document_associations has a composite unique constraint so the FK below is valid
-  await knex.raw(`
-    DO $$
-    BEGIN
-      IF NOT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints
-        WHERE constraint_name = 'document_associations_tenant_assoc_unique'
-          AND table_name = 'document_associations'
-      ) THEN
-        ALTER TABLE document_associations
-          ADD CONSTRAINT document_associations_tenant_assoc_unique
-          UNIQUE (tenant, association_id);
-      END IF;
-    END
-    $$;
-  `);
-
   await addColumnIfMissing('source_file_id', (table) => {
     table.uuid('source_file_id').nullable();
   });
@@ -85,8 +68,8 @@ exports.up = async function up(knex) {
       ) THEN
         ALTER TABLE import_jobs
           ADD CONSTRAINT import_jobs_source_doc_assoc_foreign
-          FOREIGN KEY (tenant, source_document_association_id)
-          REFERENCES document_associations (tenant, association_id)
+          FOREIGN KEY (source_document_association_id)
+          REFERENCES document_associations (association_id)
           ON DELETE SET NULL;
       END IF;
     END

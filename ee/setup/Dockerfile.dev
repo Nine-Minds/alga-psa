@@ -18,13 +18,20 @@ COPY ee/setup/entrypoint.sh ./ee-entrypoint.sh
 COPY ee/setup/config.ini ./ee-config.ini
 
 # Copy server files
+COPY package.json package-lock.json /app/
 COPY server/package.json /app/server/
+COPY shared/package.json /app/shared/
+COPY ee/server/package.json /app/ee/server/
+
+# Copy source code needed for migrations/seeds
+COPY shared /app/shared
+COPY packages /app/packages
 COPY server/setup/create_database.js /app/server/setup/
 COPY server/knexfile.cjs /app/server/
 COPY server/migrations /app/server/migrations
 COPY server/seeds /app/server/seeds
 
-# Copy EE server files and overlay them
+# Copy EE-specific migrations/seeds on top
 COPY ee/server/migrations /app/server/migrations
 COPY ee/server/seeds /app/server/seeds
 
@@ -36,6 +43,8 @@ WORKDIR /app
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
 # Install dependencies (including dev dependencies for development)
+WORKDIR /app
+RUN npm config set legacy-peer-deps true
 WORKDIR /app/server
 RUN npm install --no-optional
 RUN npm install -g knex nodemon

@@ -84,7 +84,13 @@
         "src/empty/*"
       ],
       "@product/chat/entry": [
-        "src/services/chatStreamService"
+        "../packages/product-chat/oss/entry"
+      ],
+      "@product/chat/ee/entry": [
+        "../packages/product-chat/ee/entry"
+      ],
+      "@product/chat/ee/*": [
+        "../packages/product-chat/ee/*"
       ],
       "@product/workflows/entry": [
         "src/empty/components/flow/DnDFlow"
@@ -130,6 +136,9 @@
       ],
       "@product/billing/*": [
         "../packages/product-billing/*"
+      ],
+      "@alga-psa/product-extension-actions": [
+        "../packages/product-extension-actions/src/index.ts"
       ]
     }
   },

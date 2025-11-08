@@ -6,6 +6,12 @@
 import type { Knex } from 'knex';
 import { createRequire } from 'module';
 
+declare global {
+  // Track whether we've already patched Module.require
+  // eslint-disable-next-line no-var
+  var __knexDialectPatched: boolean | undefined;
+}
+
 // Get the database client from environment or config
 function getActiveDialect(): string {
   // Check environment variables for database type
