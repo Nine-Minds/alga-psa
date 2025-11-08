@@ -33,7 +33,11 @@ function StatusBadge({ status }: { status: string }) {
   }
 
   return (
-    <Badge variant={variant} className="flex items-center gap-1">
+    <Badge
+      variant={variant}
+      className="flex items-center gap-1"
+      data-automation-id="managed-domain-status"
+    >
       {statusIcon[normalized ?? 'pending']}
       {status}
     </Badge>
@@ -63,7 +67,12 @@ export default function ManagedDomainList({
         const showDelete = normalizedStatus !== 'verified' || Boolean(domain.failureReason);
 
         return (
-          <Card key={domain.domain} className="border border-gray-200">
+          <Card
+            key={domain.domain}
+            className="border border-gray-200"
+            data-automation-id="managed-domain-card"
+            data-domain={domain.domain}
+          >
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -87,6 +96,8 @@ export default function ManagedDomainList({
                     variant="outline"
                     disabled={busyDomain === domain.domain}
                     onClick={() => onRefresh(domain.domain)}
+                    data-automation-id="managed-domain-refresh"
+                    data-domain={domain.domain}
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Re-check DNS
@@ -98,6 +109,8 @@ export default function ManagedDomainList({
                     variant="ghost"
                     disabled={busyDomain === domain.domain}
                     onClick={() => onDelete(domain.domain)}
+                    data-automation-id="managed-domain-remove"
+                    data-domain={domain.domain}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Remove

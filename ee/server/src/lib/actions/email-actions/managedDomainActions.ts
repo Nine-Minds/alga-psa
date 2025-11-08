@@ -8,8 +8,8 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { DnsRecord } from 'server/src/types/email.types';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
+import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
 
-const DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$/;
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
 
 export interface ManagedDomainStatus {
@@ -64,11 +64,11 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
   });
 }
 
-export async function requestManagedEmailDomain(domainName: string, region?: string) {
+export async function requestManagedEmailDomain(domainName: string) {
   const { knex, tenantId } = await ensureTenantContext();
 
   const normalizedDomain = domainName.trim().toLowerCase();
-  if (!DOMAIN_REGEX.test(normalizedDomain)) {
+  if (!isValidDomain(normalizedDomain)) {
     throw new Error('Invalid domain format');
   }
 
@@ -92,7 +92,7 @@ export async function requestManagedEmailDomain(domainName: string, region?: str
   const result = await enqueueManagedEmailDomainWorkflow({
     tenantId,
     domain: normalizedDomain,
-    region: region || DEFAULT_REGION,
+    region: DEFAULT_REGION,
     trigger: 'register',
   });
 

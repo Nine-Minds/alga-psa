@@ -10,6 +10,23 @@ exports.up = async function up(knex) {
     }
   };
 
+  // Ensure document_associations has a composite unique constraint so the FK below is valid
+  await knex.raw(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'document_associations_tenant_assoc_unique'
+          AND table_name = 'document_associations'
+      ) THEN
+        ALTER TABLE document_associations
+          ADD CONSTRAINT document_associations_tenant_assoc_unique
+          UNIQUE (tenant, association_id);
+      END IF;
+    END
+    $$;
+  `);
+
   await addColumnIfMissing('source_file_id', (table) => {
     table.uuid('source_file_id').nullable();
   });
@@ -93,6 +110,7 @@ exports.down = async function down(knex) {
   await knex.raw('ALTER TABLE import_jobs DROP CONSTRAINT IF EXISTS import_jobs_source_file_foreign');
   await knex.raw('ALTER TABLE import_jobs DROP CONSTRAINT IF EXISTS import_jobs_source_document_foreign');
   await knex.raw('ALTER TABLE import_jobs DROP CONSTRAINT IF EXISTS import_jobs_source_doc_assoc_foreign');
+  await knex.raw('ALTER TABLE document_associations DROP CONSTRAINT IF EXISTS document_associations_tenant_assoc_unique');
 
   const dropColumnIfExists = async (column) => {
     const exists = await knex.schema.hasColumn('import_jobs', column);

@@ -32,7 +32,12 @@ export default function DnsRecordInstructions({ records, emptyMessage }: DnsReco
   return (
     <div className="space-y-3">
       {records.map((record, index) => (
-        <Card key={`${record.type}-${record.name}-${index}`} className="border border-gray-200">
+        <Card
+          key={`${record.type}-${record.name}-${index}`}
+          className="border border-gray-200"
+          data-automation-id="managed-domain-dns-record"
+          data-record-type={record.type}
+        >
           <CardContent className="py-4 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-3">
@@ -44,6 +49,7 @@ export default function DnsRecordInstructions({ records, emptyMessage }: DnsReco
                 size="sm"
                 onClick={() => handleCopy(record.value)}
                 aria-label="Copy DNS value"
+                data-automation-id="managed-domain-copy-dns"
               >
                 <Copy className="h-4 w-4 mr-2" />
                 Copy

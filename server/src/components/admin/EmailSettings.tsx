@@ -19,13 +19,13 @@ import {
   TenantEmailSettings,
   EmailProviderConfig
 } from '../../types/email.types';
-import { 
-  getEmailSettings, 
-  updateEmailSettings 
+import {
+  getEmailSettings,
+  updateEmailSettings
 } from '../../lib/actions/email-actions/emailSettingsActions';
-import { 
-  getEmailDomains, 
-  addEmailDomain, 
+import {
+  getEmailDomains,
+  addEmailDomain,
   verifyEmailDomain
 } from '../../lib/actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
@@ -96,7 +96,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
   const saveSettings = async () => {
     if (!settings) return;
-    
+
     setSaving(true);
     try {
       await updateEmailSettings(settings);
@@ -111,7 +111,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
   const addDomain = async () => {
     if (!newDomain.trim()) return;
-    
+
     try {
       await addEmailDomain(newDomain.trim());
       setNewDomain('');
@@ -134,7 +134,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     if (!settings) return;
 
     setSelectedProvider(providerType);
-    
+
     // Update the settings to use the selected provider
     const updatedSettings = {
       ...settings,
@@ -182,7 +182,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
   const getCurrentProviderConfig = () => {
-    return settings?.providerConfigs.find(config => 
+    return settings?.providerConfigs.find(config =>
       config.providerType === selectedProvider && config.isEnabled
     );
   };
@@ -342,7 +342,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             )}
           </div>
         </div>
-        
+
         {domain.dnsRecords && domain.status !== 'verified' && (
           <div className="mt-3">
             <p className="text-sm text-gray-600 mb-2">Required DNS Records:</p>
@@ -385,7 +385,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             <div className="text-sm text-muted-foreground mb-4">
               Configure SMTP or API settings for sending emails from your application
             </div>
-            
+
             {/* Provider Configuration Section */}
             <Card>
             <CardHeader>
@@ -409,7 +409,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                   placeholder="Select email provider"
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  {selectedProvider === 'smtp' 
+                  {selectedProvider === 'smtp'
                     ? 'Configure traditional SMTP email server settings'
                     : 'Configure Resend API for modern email delivery'
                   }
@@ -455,9 +455,9 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                       value={settings?.maxDailyEmails || 1000}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         if (settings) {
-                          setSettings({ 
-                            ...settings, 
-                            maxDailyEmails: parseInt(e.target.value) || undefined 
+                          setSettings({
+                            ...settings,
+                            maxDailyEmails: parseInt(e.target.value) || undefined
                           });
                         }
                       }}
@@ -468,38 +468,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             </CardContent>
           </Card>
 
-          {/* Custom Domains Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Custom Domains
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="example.com"
-                  value={newDomain}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDomain(e.target.value)}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                    if (e.key === 'Enter') {
-                      addDomain();
-                    }
-                  }}
-                />
-                <Button 
-                  id="add-domain-button"
-                  onClick={addDomain} 
-                  disabled={!newDomain.trim()}
-                >
-                  Add Domain
-                </Button>
-              </div>
-              
-              {domains.map(renderDomainStatus)}
-            </CardContent>
-          </Card>
+
 
             {/* Save Button */}
             <div className="flex justify-end">
@@ -514,7 +483,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
         <div className="text-sm text-muted-foreground mb-4">
           Configure email providers to receive and process emails as tickets
         </div>
-        <EmailProviderConfiguration 
+        <EmailProviderConfiguration
           onProviderAdded={(provider) => {
             // Optional: Handle provider added event
             console.log('Provider added:', provider);
