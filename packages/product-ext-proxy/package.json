@@ -1,0 +1,10 @@
+{
+  "name": "@product/ext-proxy",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./handler": "./oss/handler.ts",
+    "./oss/handler": "./oss/handler.ts",
+    "./ee/handler": "./ee/handler.ts"
+  }
+}

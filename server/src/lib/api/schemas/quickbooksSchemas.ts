@@ -78,14 +78,23 @@ const qboDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 // Connection Management Schemas
 // ============================================================================
 
-// OAuth connection status enum
-const qboConnectionStatusSchema = z.enum([
-  'Connected',
-  'Not Connected', 
-  'Error',
-  'Expired',
-  'Authenticating'
-]);
+// OAuth connection status schema
+const qboConnectionSummaryStatusSchema = z.enum(['active', 'expired', 'error']);
+
+const qboConnectionSummarySchema = z.object({
+  realmId: z.string().min(1),
+  displayName: z.string().min(1),
+  status: qboConnectionSummaryStatusSchema,
+  lastValidatedAt: z.string().datetime().nullable().optional(),
+  error: z.string().nullable().optional()
+});
+
+const qboConnectionStatusSchema = z.object({
+  connected: z.boolean(),
+  connections: z.array(qboConnectionSummarySchema),
+  defaultRealmId: z.string().nullable().optional(),
+  error: z.string().optional()
+});
 
 // QBO Credentials schema
 const qboCredentialsSchema = z.object({
@@ -113,15 +122,7 @@ const qboOAuthCallbackSchema = z.object({
 });
 
 // Connection status response schema
-const qboConnectionStatusResponseSchema = z.object({
-  connected: z.boolean(),
-  status: qboConnectionStatusSchema,
-  clientName: z.string().optional(),
-  realmId: z.string().optional(),
-  errorMessage: z.string().optional(),
-  connectionDate: z.string().datetime().optional(),
-  lastSyncDate: z.string().datetime().optional()
-});
+const qboConnectionStatusResponseSchema = qboConnectionStatusSchema;
 
 // Connection test schema
 const qboConnectionTestSchema = z.object({

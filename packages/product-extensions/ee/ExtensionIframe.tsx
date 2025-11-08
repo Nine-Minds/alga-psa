@@ -57,6 +57,14 @@ export default function ExtensionIframe({ domain }: Props) {
     setHasError(false);
   }, [src]);
 
+  useEffect(() => {
+    if (!isLoading) return;
+    const fallback = window.setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+    return () => window.clearTimeout(fallback);
+  }, [isLoading]);
+
   return (
     <div className="relative h-full w-full" aria-busy={isLoading}>
       {isLoading && !hasError && (
@@ -96,4 +104,3 @@ export default function ExtensionIframe({ domain }: Props) {
     </div>
   );
 }
-

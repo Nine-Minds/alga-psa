@@ -1,0 +1,16 @@
+{
+  "name": "@alga-samples/service-proxy-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@alga/extension-runtime": "^0.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.7"
+  }
+}

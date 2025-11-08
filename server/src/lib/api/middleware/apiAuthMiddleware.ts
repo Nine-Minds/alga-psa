@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
-import { findUserById } from '../../actions/user-actions/userActions';
+import { findUserByIdForApi } from '../../actions/user-actions/findUserByIdForApi';
 import { runWithTenant } from '../../db';
 import { 
   ApiRequest, 
@@ -51,10 +51,7 @@ export async function withApiKeyAuth(
         throw new UnauthorizedError('Tenant ID not found');
       }
       
-      let user;
-      await runWithTenant(tenantId, async () => {
-        user = await findUserById(keyRecord.user_id);
-      });
+      const user = await findUserByIdForApi(keyRecord.user_id, tenantId);
 
       if (!user) {
         throw new UnauthorizedError('User not found');

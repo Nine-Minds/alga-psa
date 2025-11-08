@@ -8,6 +8,12 @@ import { ExtensionStorageService } from '../extensions/storage/storageService'
 import logger from '@shared/core/logger'
 import { Extension, ExtensionManifest } from '../extensions/types'
 import { Knex } from 'knex'
+import {
+  deleteInstallSecretsRecord,
+  getInstallConfig,
+  upsertInstallConfigRecord,
+  upsertInstallSecretsRecord,
+} from '../extensions/installConfig'
 
 /**
  * Server actions for extension management
@@ -196,6 +202,11 @@ export async function getExtensionSettings(extensionId: string): Promise<Record<
   if (!tenant) {
     throw new Error('Tenant not found')
   }
+
+  const installConfig = await lookupInstallConfig(tenant, extensionId)
+  if (installConfig) {
+    return installConfig.config
+  }
   
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -220,6 +231,23 @@ export async function updateExtensionSettings(
   
   if (!tenant) {
     throw new Error('Tenant not found')
+  }
+
+  const installConfig = await lookupInstallConfig(tenant, extensionId)
+  if (installConfig) {
+    try {
+      await upsertInstallConfigRecord({
+        installId: installConfig.installId,
+        tenantId: tenant,
+        config: settings,
+        providers: installConfig.providers,
+      })
+      revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
+      return { success: true, message: 'Settings updated successfully' }
+    } catch (error) {
+      logger.error('Failed to update extension install config', { extensionId, error })
+      return { success: false, message: 'Failed to update settings' }
+    }
   }
   
   try {
@@ -256,6 +284,23 @@ export async function resetExtensionSettings(extensionId: string): Promise<{ suc
   if (!tenant) {
     throw new Error('Tenant not found')
   }
+
+  const installConfig = await lookupInstallConfig(tenant, extensionId)
+  if (installConfig) {
+    try {
+      await upsertInstallConfigRecord({
+        installId: installConfig.installId,
+        tenantId: tenant,
+        config: {},
+        providers: installConfig.providers,
+      })
+      revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
+      return { success: true, message: 'Settings reset to default' }
+    } catch (error) {
+      logger.error('Failed to reset extension install config', { extensionId, error })
+      return { success: false, message: 'Failed to reset settings' }
+    }
+  }
   
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -279,5 +324,86 @@ export async function resetExtensionSettings(extensionId: string): Promise<{ suc
   } catch (error) {
     logger.error('Failed to reset extension settings', { extensionId, error })
     return { success: false, message: 'Failed to reset settings' }
+  }
+}
+
+export interface ExtensionSecretsMetadata {
+  installId: string
+  secretsVersion?: string | null
+  hasEnvelope: boolean
+}
+
+export async function getExtensionSecretsMetadata(extensionId: string): Promise<ExtensionSecretsMetadata | null> {
+  const { tenant } = await createTenantKnex()
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
+
+  const installConfig = await lookupInstallConfig(tenant, extensionId)
+  if (!installConfig) {
+    return null
+  }
+
+  return {
+    installId: installConfig.installId,
+    secretsVersion: installConfig.secretsVersion ?? null,
+    hasEnvelope: Boolean(installConfig.secretEnvelope),
+  }
+}
+
+export async function updateExtensionSecrets(
+  extensionId: string,
+  secrets: Record<string, string>,
+  options?: { clear?: boolean; expiresAt?: Date | string | null }
+): Promise<{ success: boolean; message: string }> {
+  const { tenant } = await createTenantKnex()
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
+
+  const installConfig = await lookupInstallConfig(tenant, extensionId)
+  if (!installConfig) {
+    return { success: false, message: 'Extension install not found' }
+  }
+
+  try {
+    if (options?.clear) {
+      await deleteInstallSecretsRecord({ installId: installConfig.installId })
+      revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
+      return { success: true, message: 'Secrets cleared successfully' }
+    }
+
+    const entries = Object.entries(secrets).reduce<Record<string, string>>((acc, [key, value]) => {
+      if (typeof value === 'string' && value.length > 0) {
+        acc[key] = value
+      }
+      return acc
+    }, {})
+
+    if (Object.keys(entries).length === 0) {
+      return { success: true, message: 'No secret changes detected' }
+    }
+
+    await upsertInstallSecretsRecord({
+      installId: installConfig.installId,
+      tenantId: tenant,
+      secrets: entries,
+      expiresAt: options?.expiresAt ?? null,
+    })
+
+    revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
+    return { success: true, message: 'Secrets updated successfully' }
+  } catch (error) {
+    logger.error('Failed to update extension secrets', { extensionId, error })
+    return { success: false, message: 'Failed to update secrets' }
+  }
+}
+
+async function lookupInstallConfig(tenantId: string, extensionId: string) {
+  try {
+    return await getInstallConfig({ tenantId, extensionId })
+  } catch (error) {
+    logger.error('Failed to load install config', { extensionId, tenantId, error })
+    return null
   }
 }

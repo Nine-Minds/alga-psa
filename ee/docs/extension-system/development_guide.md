@@ -131,7 +131,10 @@ Reference route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/rou
 
 ## Local Development Tips
 
-- Use a local Runner or mock responses while iterating on UI
+- Use the new pluggable runner backend to switch between Knative (`RUNNER_BACKEND=knative`) and the local Docker runner (`RUNNER_BACKEND=docker`).
+  - Start the runner container: `npm run runner:up` (stops with `npm run runner:down`).
+  - Launch the app with Docker backend defaults: `npm run dev:runner` (sets `RUNNER_DOCKER_HOST=http://localhost:${RUNNER_DOCKER_PORT:-8085}` and proxies UI assets through `/runner/*`).
+  - Override runner URLs via `.env.runner` (see `.env.runner.example`) if you are using alternative S3 or registry endpoints.
 - Keep UI bundles small; leverage code splitting where appropriate
 - Use the iframe SDK’s theme APIs to adapt to host styling
 - Validate endpoint inputs/outputs and include clear error responses

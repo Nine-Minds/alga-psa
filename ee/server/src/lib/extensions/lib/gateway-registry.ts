@@ -15,6 +15,8 @@
  *  - ee/server/src/lib/extensions/registry-v2.ts
  */
 
+import { getAdminConnection } from '@shared/db/admin';
+import { getInstallConfig } from '../installConfig';
 import type { Method } from './gateway-utils';
 
 export interface ApiEndpointDef {
@@ -40,18 +42,31 @@ export interface RegistryFacade {
   getManifest(versionId: string): Promise<ManifestV2 | null>;
 }
 
-/**
- * Default (production) facade – placeholders returning null until DB wiring is ready.
- */
-class NullRegistryFacade implements RegistryFacade {
-  async getTenantInstall(_tenantId: string, _extensionId: string): Promise<TenantInstall | null> {
-    // TODO: Implement with real DB/registry once available
-    return null;
+class DbRegistryFacade implements RegistryFacade {
+  async getTenantInstall(tenantId: string, extensionId: string): Promise<TenantInstall | null> {
+    const config = await getInstallConfig({ tenantId, extensionId });
+    if (!config || !config.contentHash) {
+      return null;
+    }
+    return {
+      install_id: config.installId,
+      version_id: config.versionId,
+      content_hash: config.contentHash,
+    };
   }
 
-  async getManifest(_versionId: string): Promise<ManifestV2 | null> {
-    // TODO: Implement with real manifest loading (bundle metadata/registry)
-    return null;
+  async getManifest(versionId: string): Promise<ManifestV2 | null> {
+    const db = await getAdminConnection();
+    const row = await db('extension_version').where({ id: versionId }).first(['api']);
+    if (!row) return null;
+    const apiValue = typeof row.api === 'string' ? JSON.parse(row.api) : row.api ?? {};
+    const rawEndpoints = Array.isArray(apiValue?.endpoints) ? apiValue.endpoints : [];
+    const endpoints: ApiEndpointDef[] = rawEndpoints.map((endpoint: any) => ({
+      method: endpoint.method,
+      path: endpoint.path,
+      handler: endpoint.handler,
+    }));
+    return { api: { endpoints } };
   }
 }
 
@@ -96,9 +111,15 @@ function sanitize(s: string): string {
  * - production: NullRegistryFacade (returns nulls)
  * - non-production: DevRegistryFacade (functional stub)
  */
+const devFacade = new DevRegistryFacade();
+const dbFacade = new DbRegistryFacade();
+
 export function getRegistryFacade(): RegistryFacade {
   if (process.env.NODE_ENV !== 'production') {
-    return new DevRegistryFacade();
+    if (process.env.EXT_GATEWAY_USE_DB === 'true') {
+      return dbFacade;
+    }
+    return devFacade;
   }
-  return new NullRegistryFacade();
+  return dbFacade;
 }

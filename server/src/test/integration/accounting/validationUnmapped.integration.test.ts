@@ -44,11 +44,12 @@ describe('Accounting export validation – unmapped services', () => {
     await ctx.db('service_catalog').where({ tenant: ctx.tenantId }).del();
   }, HOOK_TIMEOUT);
 
-  afterEach(async () => {
+afterEach(async () => {
+    vi.restoreAllMocks();
     await helpers.afterEach();
   }, HOOK_TIMEOUT);
 
-  async function seedInvoiceWithoutMapping() {
+  async function seedInvoice(options: { taxRegion?: string; invoiceNumber?: string } = {}) {
     const serviceId = await createTestService(ctx, {
       service_name: 'Managed Endpoint',
       billing_method: 'fixed',
@@ -84,6 +85,7 @@ describe('Accounting export validation – unmapped services', () => {
       net_amount: 5000,
       total_price: 5000,
       tax_amount: 0,
+      tax_region: options.taxRegion ?? null,
       is_manual: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -92,55 +94,11 @@ describe('Accounting export validation – unmapped services', () => {
     return { serviceId, invoiceId, chargeId };
   }
 
-  it('marks batch as needs_attention when services lack mappings and clears once mapped', async () => {
-    const financeUser = createMockUser('internal', {
-      user_id: ctx.user.user_id,
-      tenant: ctx.tenantId,
-      roles: ctx.user.roles && ctx.user.roles.length > 0 ? ctx.user.roles : [
-        {
-          role_id: 'finance-admin-role',
-          tenant: ctx.tenantId,
-          role_name: 'Finance Admin',
-          permissions: []
-        }
-      ]
-    });
-    setupCommonMocks({
-      tenantId: ctx.tenantId,
-      userId: financeUser.user_id,
-      user: financeUser,
-      permissionCheck: () => true
-    });
-    mockGetCurrentUser(financeUser);
+  async function insertServiceMapping(serviceId: string) {
+    await insertServiceMapping(serviceId);
+  }
 
-    const { serviceId, invoiceId, chargeId } = await seedInvoiceWithoutMapping();
-    const batchId = uuidv4();
-
-    await ctx.db('accounting_export_batches').insert({
-      batch_id: batchId,
-      tenant: ctx.tenantId,
-      adapter_type: 'quickbooks_online',
-      export_type: 'invoice',
-      status: 'pending',
-      queued_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
-
-    await ctx.db('accounting_export_lines').insert({
-      line_id: uuidv4(),
-      batch_id: batchId,
-      tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
-      client_id: ctx.clientId,
-      amount_cents: 5000,
-      currency_code: 'USD',
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
-
+  async function stubValidationDependencies(): Promise<AccountingExportRepository> {
     const repoModule = await import('server/src/lib/repositories/accountingExportRepository');
     vi.spyOn(repoModule.AccountingExportRepository, 'create').mockResolvedValue({
       getBatch: async (id: string) =>
@@ -172,8 +130,6 @@ describe('Accounting export validation – unmapped services', () => {
       }
     } as unknown as AccountingExportRepository);
 
-    const repo = await AccountingExportRepository.create();
-
     const serviceModule = await import('server/src/lib/services/accountingExportService');
     vi.spyOn(serviceModule.AccountingExportService, 'create').mockResolvedValue({
       updateBatchStatus: async (id: string, updates: any) => {
@@ -182,6 +138,60 @@ describe('Accounting export validation – unmapped services', () => {
           .update({ ...updates, updated_at: new Date().toISOString() });
       }
     } as unknown as AccountingExportService);
+
+    return AccountingExportRepository.create();
+  }
+
+  it('marks batch as needs_attention when services lack mappings and clears once mapped', async () => {
+    const financeUser = createMockUser('internal', {
+      user_id: ctx.user.user_id,
+      tenant: ctx.tenantId,
+      roles: ctx.user.roles && ctx.user.roles.length > 0 ? ctx.user.roles : [
+        {
+          role_id: 'finance-admin-role',
+          tenant: ctx.tenantId,
+          role_name: 'Finance Admin',
+          permissions: []
+        }
+      ]
+    });
+    setupCommonMocks({
+      tenantId: ctx.tenantId,
+      userId: financeUser.user_id,
+      user: financeUser,
+      permissionCheck: () => true
+    });
+    mockGetCurrentUser(financeUser);
+
+    const { serviceId, invoiceId, chargeId } = await seedInvoice();
+    const batchId = uuidv4();
+
+    await ctx.db('accounting_export_batches').insert({
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      adapter_type: 'quickbooks_online',
+      export_type: 'invoice',
+      status: 'pending',
+      queued_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    await ctx.db('accounting_export_lines').insert({
+      line_id: uuidv4(),
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      invoice_id: invoiceId,
+      invoice_charge_id: chargeId,
+      client_id: ctx.clientId,
+      amount_cents: 5000,
+      currency_code: 'USD',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    const repo = await stubValidationDependencies();
 
     await AccountingExportValidation.ensureMappingsForBatch(batchId);
 
@@ -192,17 +202,7 @@ describe('Accounting export validation – unmapped services', () => {
     const batchAfterValidation = await repo.getBatch(batchId);
     expect(batchAfterValidation?.status).toBe('needs_attention');
 
-    await ctx.db('tenant_external_entity_mappings').insert({
-      id: uuidv4(),
-      tenant: ctx.tenantId,
-      integration_type: 'quickbooks_online',
-      alga_entity_type: 'service',
-      alga_entity_id: serviceId,
-      external_entity_id: 'QBO-ITEM-100',
-      sync_status: 'synced',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
+    await insertServiceMapping(serviceId);
 
     await ctx.db('accounting_export_errors').where({ batch_id: batchId }).del();
 
@@ -213,5 +213,195 @@ describe('Accounting export validation – unmapped services', () => {
 
     const finalBatch = await repo.getBatch(batchId);
     expect(finalBatch?.status).toBe('ready');
+  it('flags missing tax mappings for QuickBooks exports', async () => {
+    const financeUser = createMockUser('internal', {
+      user_id: ctx.user.user_id,
+      tenant: ctx.tenantId,
+      roles: ctx.user.roles && ctx.user.roles.length > 0 ? ctx.user.roles : [
+        {
+          role_id: 'finance-admin-role',
+          tenant: ctx.tenantId,
+          role_name: 'Finance Admin',
+          permissions: []
+        }
+      ]
+    });
+    setupCommonMocks({
+      tenantId: ctx.tenantId,
+      userId: financeUser.user_id,
+      user: financeUser,
+      permissionCheck: () => true
+    });
+    mockGetCurrentUser(financeUser);
+
+    const { serviceId, invoiceId, chargeId } = await seedInvoice({ taxRegion: 'CA' });
+    await insertServiceMapping(serviceId);
+
+    const batchId = uuidv4();
+    await ctx.db('accounting_export_batches').insert({
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      adapter_type: 'quickbooks_online',
+      export_type: 'invoice',
+      status: 'pending',
+      target_realm: 'realm-1',
+      queued_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    await ctx.db('accounting_export_lines').insert({
+      line_id: uuidv4(),
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      invoice_id: invoiceId,
+      invoice_charge_id: chargeId,
+      client_id: ctx.clientId,
+      amount_cents: 5000,
+      currency_code: 'USD',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    const repo = await stubValidationDependencies();
+
+    await AccountingExportValidation.ensureMappingsForBatch(batchId);
+
+    const errorsAfterValidation = await repo.listErrors(batchId);
+    expect(errorsAfterValidation.some((error) => error.code === 'missing_tax_mapping')).toBe(true);
+
+    const batchAfterValidation = await repo.getBatch(batchId);
+    expect(batchAfterValidation?.status).toBe('needs_attention');
+  });
+
+  it('flags missing payment term mappings for QuickBooks exports', async () => {
+    const financeUser = createMockUser('internal', {
+      user_id: ctx.user.user_id,
+      tenant: ctx.tenantId,
+      roles: ctx.user.roles && ctx.user.roles.length > 0 ? ctx.user.roles : [
+        {
+          role_id: 'finance-admin-role',
+          tenant: ctx.tenantId,
+          role_name: 'Finance Admin',
+          permissions: []
+        }
+      ]
+    });
+    setupCommonMocks({
+      tenantId: ctx.tenantId,
+      userId: financeUser.user_id,
+      user: financeUser,
+      permissionCheck: () => true
+    });
+    mockGetCurrentUser(financeUser);
+
+    await ctx.db('clients')
+      .where({ client_id: ctx.clientId, tenant: ctx.tenantId })
+      .update({ payment_terms: 'NET30' });
+
+    const { serviceId, invoiceId, chargeId } = await seedInvoice();
+    await insertServiceMapping(serviceId);
+
+    const batchId = uuidv4();
+    await ctx.db('accounting_export_batches').insert({
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      adapter_type: 'quickbooks_online',
+      export_type: 'invoice',
+      status: 'pending',
+      target_realm: 'realm-1',
+      queued_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    await ctx.db('accounting_export_lines').insert({
+      line_id: uuidv4(),
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      invoice_id: invoiceId,
+      invoice_charge_id: chargeId,
+      client_id: ctx.clientId,
+      amount_cents: 5000,
+      currency_code: 'USD',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    const repo = await stubValidationDependencies();
+
+    await AccountingExportValidation.ensureMappingsForBatch(batchId);
+
+    const errorsAfterValidation = await repo.listErrors(batchId);
+    expect(errorsAfterValidation.some((error) => error.code === 'missing_payment_term_mapping')).toBe(true);
+
+    const batchAfterValidation = await repo.getBatch(batchId);
+    expect(batchAfterValidation?.status).toBe('needs_attention');
+  });
+
+  it('flags missing target realm for QuickBooks batches', async () => {
+    const financeUser = createMockUser('internal', {
+      user_id: ctx.user.user_id,
+      tenant: ctx.tenantId,
+      roles: ctx.user.roles && ctx.user.roles.length > 0 ? ctx.user.roles : [
+        {
+          role_id: 'finance-admin-role',
+          tenant: ctx.tenantId,
+          role_name: 'Finance Admin',
+          permissions: []
+        }
+      ]
+    });
+    setupCommonMocks({
+      tenantId: ctx.tenantId,
+      userId: financeUser.user_id,
+      user: financeUser,
+      permissionCheck: () => true
+    });
+    mockGetCurrentUser(financeUser);
+
+    const { serviceId, invoiceId, chargeId } = await seedInvoice();
+    await insertServiceMapping(serviceId);
+
+    const batchId = uuidv4();
+    await ctx.db('accounting_export_batches').insert({
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      adapter_type: 'quickbooks_online',
+      export_type: 'invoice',
+      status: 'pending',
+      target_realm: null,
+      queued_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    await ctx.db('accounting_export_lines').insert({
+      line_id: uuidv4(),
+      batch_id: batchId,
+      tenant: ctx.tenantId,
+      invoice_id: invoiceId,
+      invoice_charge_id: chargeId,
+      client_id: ctx.clientId,
+      amount_cents: 5000,
+      currency_code: 'USD',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    const repo = await stubValidationDependencies();
+
+    await AccountingExportValidation.ensureMappingsForBatch(batchId);
+
+    const errorsAfterValidation = await repo.listErrors(batchId);
+    expect(errorsAfterValidation.some((error) => error.code === 'missing_target_realm')).toBe(true);
+
+    const batchAfterValidation = await repo.getBatch(batchId);
+    expect(batchAfterValidation?.status).toBe('needs_attention');
+  });
+
   });
 });

@@ -1,8 +1,8 @@
 import { mkdtempSync, cpSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
-import { ensureDir } from './fs';
-import { pack } from './pack';
+import { ensureDir } from './fs.js';
+import { pack } from './pack.js';
 
 export interface PackProjectOptions {
   /** Project root. Defaults to `process.cwd()` */
@@ -35,6 +35,32 @@ export async function packProject(opts: PackProjectOptions = {}): Promise<string
       cpSync(src, dest, { recursive: true });
       opts.logger?.info?.(`[pack-project] staged: ${rel}`);
     }
+  }
+
+  const componentWasm = join(project, 'dist', 'component.wasm');
+  if (!existsSync(componentWasm)) {
+    throw new Error(`dist/component.wasm not found in project: ${project}`);
+  }
+  const componentMeta = join(project, 'dist', 'component.json');
+  const componentDestDir = join(stage, 'artifacts', 'component');
+  ensureDir(componentDestDir);
+  cpSync(componentWasm, join(componentDestDir, 'component.wasm'));
+  if (existsSync(componentMeta)) {
+    cpSync(componentMeta, join(componentDestDir, 'component.json'));
+  }
+
+  const distDir = join(stage, 'dist');
+  ensureDir(distDir);
+  cpSync(componentWasm, join(distDir, 'main.wasm'));
+  if (existsSync(componentMeta)) {
+    cpSync(componentMeta, join(distDir, 'component.json'));
+  }
+
+  const witDir = join(project, 'wit');
+  if (existsSync(witDir)) {
+    const witDest = join(stage, 'wit');
+    cpSync(witDir, witDest, { recursive: true });
+    opts.logger?.info?.('[pack-project] staged: wit');
   }
 
   ensureDir(dirname(outFile));

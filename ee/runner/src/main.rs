@@ -1,10 +1,11 @@
+mod cache;
+mod engine;
 mod http;
 mod models;
-mod engine;
-mod cache;
-mod util;
+mod providers;
 mod registry;
 mod secrets;
+mod util;
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -12,9 +13,14 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 async fn main() -> anyhow::Result<()> {
     // init tracing
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    // Initialize extension debug hub (no-op unless RUNNER_DEBUG_STREAM_ENABLED=true)
+    crate::engine::debug::DebugHub::init_global();
 
     // Build banner for visibility
     let build_sha = option_env!("ALGA_BUILD_GIT_SHA").unwrap_or("unknown");
@@ -26,7 +32,8 @@ async fn main() -> anyhow::Result<()> {
     let bundle_base = std::env::var("BUNDLE_STORE_BASE").unwrap_or_else(|_| "<unset>".into());
     let strict = std::env::var("EXT_STATIC_STRICT_VALIDATION").unwrap_or_else(|_| "<unset>".into());
     // Note: static file size limit env is EXT_STATIC_MAX_FILE_BYTES
-    let cache_bytes = std::env::var("EXT_STATIC_MAX_FILE_BYTES").unwrap_or_else(|_| "<unset>".into());
+    let cache_bytes =
+        std::env::var("EXT_STATIC_MAX_FILE_BYTES").unwrap_or_else(|_| "<unset>".into());
     tracing::info!(
         REGISTRY_BASE_URL=%reg_base,
         BUNDLE_STORE_BASE=%bundle_base,

@@ -362,6 +362,26 @@ npm run test:watch         # Run tests in watch mode
 
 # Local with config
 npm run test:local         # Run with local config
+
+### Runner backend smoke tests
+
+```bash
+# Validate runner backend selection logic (Knative vs Docker)
+npx vitest run ee/server/src/lib/extensions/__tests__/runner/backend.test.ts
+
+# Spin up the local Docker runner (requires Docker)
+npm run runner:up
+
+# Check runner health and bundle-store wiring
+curl http://localhost:${RUNNER_DOCKER_PORT:-8085}/healthz
+# Fetch a static asset once a bundle is staged
+curl -I "http://localhost:${RUNNER_DOCKER_PORT:-8085}/ext-ui/<extensionId>/<contentHash>/index.html"
+
+# Tear down the runner stack
+npm run runner:down
+```
+
+Use `.env.runner` (see `.env.runner.example`) to point the runner container at your bundle storage (MinIO/S3) and registry endpoints when validating the compose stack.
 ```
 
 ### Vitest Configuration

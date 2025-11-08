@@ -16,10 +16,6 @@ import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoic
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
 // import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
-import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
-import { EventType as BusEventType } from '@alga-psa/shared/workflow/streams'; // For type safety
-import { EventSubmissionOptions } from '@alga-psa/shared/workflow/core'; // Import type directly via package export
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { getSession } from 'server/src/lib/auth/getSession';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
@@ -553,77 +549,6 @@ async function updateManualInvoiceItemsInternal(
   // Recalculate totals after modifications
   await billingEngine.recalculateInvoice(invoiceId);
 
-  // Emit INVOICE_UPDATED event after recalculation is complete
-  try {
-    // Re-fetch the updated invoice details to include in the payload
-    const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant })
-        .first();
-    });
-
-    if (!updatedInvoice) {
-      // This shouldn't happen if recalculate succeeded, but good to check
-      console.error(`[updateManualInvoiceItemsInternal] Failed to fetch updated invoice ${invoiceId} for event emission.`);
-      return; // Exit if invoice somehow disappeared
-    }
-
-    // Fetch realmId from qbo_credentials secret
-    let realmId: string | null = null;
-    try {
-      const secretProvider = await getSecretProviderInstance();
-      const secretString = await secretProvider.getTenantSecret(tenant, 'qbo_credentials'); // Read the whole secret
-
-      if (secretString) {
-        const allCredentials: Record<string, any> = JSON.parse(secretString); // Parse the multi-realm object
-
-        // Find the first valid realmId
-        for (const currentRealmId in allCredentials) {
-          if (Object.prototype.hasOwnProperty.call(allCredentials, currentRealmId)) {
-            const creds = allCredentials[currentRealmId];
-            // Basic validation and check expiry
-            if (creds && creds.accessToken && creds.accessTokenExpiresAt && new Date(creds.accessTokenExpiresAt) > new Date()) {
-              realmId = currentRealmId; // Found a valid realm
-              console.log(`[updateManualInvoiceItemsInternal] Found valid realmId in multi-realm secrets for tenant ${tenant}: ${realmId}`);
-              break; // Use the first valid one found
-            }
-          }
-        }
-      }
-
-      if (!realmId) {
-         console.warn(`[updateManualInvoiceItemsInternal] No valid QBO realmId found in multi-realm secrets for tenant ${tenant}. realmId will be null for INVOICE_UPDATED event. This may cause issues in qboInvoiceSyncWorkflow.`);
-      }
-
-    } catch (error: any) {
-      console.error(`[updateManualInvoiceItemsInternal] Error fetching/parsing multi-realm secrets for tenant ${tenant}:`, error.message);
-      // realmId remains null.
-    }
-
-    const eventBus = getEventBus();
-    const eventForBus = {
-      eventType: 'INVOICE_UPDATED' as BusEventType, // Cast to ensure it's a valid EventType
-      payload: {
-        tenantId: tenant,
-        userId: session.user.id,
-        eventName: 'INVOICE_UPDATED', // This will be used by convertToWorkflowEvent
-        // Original payload content:
-        invoiceId: invoiceId,
-        clientId: updatedInvoice.client_id,
-        status: updatedInvoice.status,
-        totalAmount: updatedInvoice.total_amount,
-        invoiceNumber: updatedInvoice.invoice_number,
-        realmId: realmId, // realmId for QBO sync
-      }
-    };
-    console.log(`[updateManualInvoiceItemsInternal] Publishing INVOICE_UPDATED event for invoice ${invoiceId} in tenant ${tenant}. Event structure:`, JSON.stringify(eventForBus, null, 2)); // Added logging
-    await eventBus.publish(eventForBus);
-    console.log(`[updateManualInvoiceItemsInternal] Successfully published INVOICE_UPDATED event for invoice ${invoiceId} in tenant ${tenant}`);
-
-  } catch (eventError) {
-    console.error(`[updateManualInvoiceItemsInternal] Failed to enqueue INVOICE_UPDATED event for invoice ${invoiceId}:`, eventError);
-    // Decide if this error should be propagated or just logged
-  }
 }
 
 

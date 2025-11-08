@@ -39,6 +39,9 @@ export interface AccountingExportPreviewFilters {
   invoiceStatuses?: string[] | string;
   clientIds?: string[] | string;
   clientSearch?: string;
+  adapterType?: string;
+  targetRealm?: string;
+  excludeSyncedInvoices?: boolean;
 }
 
 export interface AccountingExportPreviewLine {
@@ -207,7 +210,10 @@ export async function previewAccountingExport(
       endDate: toOptionalString(filters.endDate),
       invoiceStatuses: toStringArray(filters.invoiceStatuses),
       clientIds: toStringArray(filters.clientIds),
-      clientSearch: toOptionalString(filters.clientSearch)
+      clientSearch: toOptionalString(filters.clientSearch),
+      adapterType: toOptionalString(filters.adapterType),
+      targetRealm: toOptionalString(filters.targetRealm) ?? null,
+      excludeSyncedInvoices: filters.excludeSyncedInvoices !== false
     };
 
     const lines = await selector.previewInvoiceLines(normalizedFilters);
@@ -314,6 +320,16 @@ function normalizeCreateBatchFilters(
   const clientSearch = toFilterString(filters.client_search ?? filters.clientSearch);
   if (clientSearch) {
     result.clientSearch = clientSearch;
+  }
+
+  const excludeSyncedRaw =
+    typeof filters.exclude_synced_invoices === 'boolean'
+      ? (filters.exclude_synced_invoices as boolean)
+      : typeof filters.excludeSyncedInvoices === 'boolean'
+        ? (filters.excludeSyncedInvoices as boolean)
+        : undefined;
+  if (excludeSyncedRaw !== undefined) {
+    result.excludeSyncedInvoices = excludeSyncedRaw;
   }
 
   return result;

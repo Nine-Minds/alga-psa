@@ -2,7 +2,7 @@ import { statSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync, spawn } from 'node:child_process';
-import { ensureDir } from './fs';
+import { ensureDir } from './fs.js';
 
 export type PackOptions = {
   /** Directory to archive. Defaults to `process.cwd()` */
