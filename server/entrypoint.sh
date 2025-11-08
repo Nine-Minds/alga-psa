@@ -266,19 +266,35 @@ start_app() {
     ls -la /app/server/.next/ || log ".next directory not found"
     log "Checking for dist directory:"
     ls -la /app/server/dist/ || log "dist directory not found"
-    
+
+    cd /app/server
     if [ "$NODE_ENV" = "development" ]; then
         log "Starting server in development mode..."
-        npm run dev
+        if [ "${ENABLE_SSL}" = "true" ]; then
+            log "SSL is enabled - starting development HTTPS server..."
+            npm run dev:https
+        else
+            npm run dev
+        fi
     else
         log "Starting server in production mode..."
-        pwd
-        cd /app/server
-        log "About to run npm start in directory: $(pwd)"
-        
+
         # Try to start, but don't exit on failure - keep container running for debug
-        if ! npm start; then
-            log "ERROR: npm start failed, but keeping container alive for debugging"
+        local wait=false
+        if [ "${ENABLE_SSL}" = "true" ]; then
+            log "SSL is enabled - starting HTTPS server in $(pwd)..."
+            if ! npm run start:https; then
+                wait=true
+            fi
+        else
+            log "About to run npm start in directory: $(pwd)"
+            if ! npm start; then
+                wait=true
+            fi
+        fi
+
+        if [ "$wait" = "true" ]; then
+            log "ERROR: start failed, but keeping container alive for debugging"
             log "Sleeping indefinitely - you can exec into the container to troubleshoot"
             while true; do
                 sleep 3600
