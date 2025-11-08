@@ -99,6 +99,7 @@ export default function SsoProviderButtons({
         return (
           <Button
             key={provider.id}
+            id={`sso-provider-${provider.id}-button`}
             type="button"
             variant="outline"
             size="lg"

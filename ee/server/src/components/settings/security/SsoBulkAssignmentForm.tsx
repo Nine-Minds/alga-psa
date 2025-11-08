@@ -104,7 +104,13 @@ function ActionButtons({
   const previewLabel = mode === "unlink" ? "Preview unlink" : "Preview assignment";
   return (
     <div className="flex flex-wrap gap-3" aria-label={`Bulk SSO actions ${location}`}>
-      <Button type="button" variant={isTop ? "secondary" : "outline"} onClick={onPreview} disabled={disableActions}>
+      <Button
+        id={`sso-bulk-${location}-preview-${mode}-button`}
+        type="button"
+        variant={isTop ? "secondary" : "outline"}
+        onClick={onPreview}
+        disabled={disableActions}
+      >
         {isPending && lastMode === "preview" ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing preview…
@@ -113,7 +119,12 @@ function ActionButtons({
           previewLabel
         )}
       </Button>
-      <Button type="button" onClick={onExecute} disabled={disableActions}>
+      <Button
+        id={`sso-bulk-${location}-execute-${mode}-button`}
+        type="button"
+        onClick={onExecute}
+        disabled={disableActions}
+      >
         {isPending && lastMode === "execute" ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -399,6 +410,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                 return (
                   <Button
                     key={provider}
+                    id={`bulk-sso-provider-${provider}-button`}
                     type="button"
                     variant={selected ? "default" : "outline"}
                     onClick={() => {
@@ -472,7 +484,13 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                   : `${selectionCount} user${selectionCount === 1 ? '' : 's'} selected.`}
               </span>
               {selectionCount > 0 && (
-                <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
+                <Button
+                  id="bulk-sso-clear-selection-button"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                >
                   Clear selection
                 </Button>
               )}
@@ -577,6 +595,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
               <div className="flex gap-2">
                 <Button
                   type="button"
+                  id="bulk-sso-pagination-previous-button"
                   variant="outline"
                   size="sm"
                   onClick={handlePreviousPage}
@@ -586,6 +605,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                 </Button>
                 <Button
                   type="button"
+                  id="bulk-sso-pagination-next-button"
                   variant="outline"
                   size="sm"
                   onClick={handleNextPage}

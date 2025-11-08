@@ -299,7 +299,7 @@ export default function AccountManagement() {
             Link Google Workspace or Microsoft 365 so your team can authenticate with their existing organization accounts.
           </p>
         </div>
-        <Button asChild>
+        <Button asChild id="account-management-sso-manage-button">
           <Link href="/msp/account/sso">Manage SSO Connections</Link>
         </Button>
       </Card>
