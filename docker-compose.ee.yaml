@@ -8,7 +8,9 @@ services:
     container_name: ${APP_NAME:-sebastian}_server_ee
     build:
       context: .
-      dockerfile: ee/server/Dockerfile.build
+      dockerfile: Dockerfile.dev
+      args:
+        INCLUDE_EE: "true"
     environment:
       EDITION: enterprise
       DB_NAME: server
@@ -49,7 +51,6 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
-    entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/server && /app/entrypoint.sh"]
     secrets:
       - postgres_password
       - db_password_server
@@ -79,10 +80,7 @@ services:
   setup:
     build:
       context: .
-      dockerfile: ee/setup/Dockerfile
-      args:
-        SERVER_IMAGE_REPO: ${ALGA_SETUP_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ee}
-        ALGA_IMAGE_TAG: ${ALGA_IMAGE_TAG:-latest}
+      dockerfile: ee/setup/Dockerfile.dev
     container_name: ${APP_NAME:-sebastian}_setup_ee
     environment:
       EDITION: enterprise

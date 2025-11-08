@@ -2,11 +2,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
-import webpack from 'webpack';
-// import CopyPlugin from 'copy-webpack-plugin';
-
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+let webpackLib = null;
+try {
+  webpackLib = require('next/dist/compiled/webpack/webpack');
+} catch (error) {
+  console.warn('[next.config] Webpack runtime not available (likely running Turbopack dev server); skipping NormalModuleReplacementPlugin wiring.', error.message);
+}
 
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -561,35 +565,43 @@ const nextConfig = {
     // This also catches relative paths like ../../../ee/server/src/lib/storage/providers/S3StorageProvider
     // and @ee alias imports like @ee/lib/storage/providers/S3StorageProvider
     if (!isEE) {
-      config.plugins = config.plugins || [];
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(
-          /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
-          path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
-        )
-      );
+      if (!webpackLib) {
+        console.warn('[next.config] Skipping CE S3 storage provider replacement because webpack is unavailable in the current runtime.');
+      } else {
+        config.plugins = config.plugins || [];
+        config.plugins.push(
+          new webpackLib.NormalModuleReplacementPlugin(
+            /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
+            path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
+          )
+        );
+      }
     }
     
     // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
     // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
     if (isEE) {
-      const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
-      const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-      const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
-      config.plugins = config.plugins || [];
-      config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
-        try {
-          const req = resource.request || '';
-          if (ceEmptyRegex.test(req)) {
-            const rel = req.substring(ceEmptyPrefix.length);
-            const mapped = path.join(eeSrcRoot, rel);
-            if (process.env.LOG_MODULE_RESOLUTION === '1') {
-              console.log('[replace:EE]', { from: req, to: mapped });
+      if (!webpackLib) {
+        console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
+      } else {
+        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
+        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
+        config.plugins = config.plugins || [];
+        config.plugins.push(new webpackLib.NormalModuleReplacementPlugin(/.*/, (resource) => {
+          try {
+            const req = resource.request || '';
+            if (ceEmptyRegex.test(req)) {
+              const rel = req.substring(ceEmptyPrefix.length);
+              const mapped = path.join(eeSrcRoot, rel);
+              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+                console.log('[replace:EE]', { from: req, to: mapped });
+              }
+              resource.request = mapped;
             }
-            resource.request = mapped;
-          }
-        } catch {}
-      }));
+          } catch {}
+        }));
+      }
     }
 
   // Conditionally enable verbose resolution logging for EE/CE module paths
