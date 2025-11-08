@@ -1,3 +1,5 @@
+import type { NextRequest, NextResponse } from 'next/server';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -6,7 +8,7 @@ const isEnterpriseEdition =
   (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
 
 type EeRouteModule = {
-  POST: (req: Request) => Promise<Response> | Response;
+  POST: (req: NextRequest) => Promise<NextResponse> | NextResponse;
 };
 
 let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
@@ -40,11 +42,10 @@ function eeUnavailable(): Response {
   );
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
   const eeRoute = await loadEeRoute();
   if (!eeRoute?.POST) {
     return eeUnavailable();
   }
   return eeRoute.POST(request);
 }
-
