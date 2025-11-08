@@ -4,6 +4,7 @@ import { appendFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 import * as handler from '@product/ext-proxy/handler';
+export { dynamic } from '@product/ext-proxy/handler';
 
 const LOG_PATH = path.resolve('/tmp/ext-proxy.log');
 
@@ -21,8 +22,6 @@ function log(event: string, req: NextRequest) {
     // ignore
   }
 }
-
-export const dynamic = handler.dynamic;
 
 export async function GET(req: NextRequest, ctx: any) {
   log('GET', req);
