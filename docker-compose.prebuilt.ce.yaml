@@ -17,7 +17,7 @@ services:
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
       APP_ENV: ${APP_ENV:-production}
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
       HOST: ${HOST}
       VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
       REDIS_HOST: ${REDIS_HOST:-redis}
@@ -171,7 +171,7 @@ services:
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
       APP_ENV: ${APP_ENV:-production}
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
       HOST: ${HOST}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
