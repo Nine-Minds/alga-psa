@@ -53,6 +53,11 @@ vi.mock('@alga-psa/shared/core/logger', () => ({
 
 vi.mock('@/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+  getTenantContext: vi.fn(async () => tenantId),
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
 }));
 
 type ManagedDomainActionsModule = typeof import('@/lib/actions/email-actions/managedDomainActions');

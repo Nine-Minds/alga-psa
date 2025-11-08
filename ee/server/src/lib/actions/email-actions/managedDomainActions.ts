@@ -4,13 +4,16 @@
 
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, getTenantContext } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { DnsRecord } from 'server/src/types/email.types';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
+const EMAIL_DOMAIN_RESOURCE = 'emailDomains';
+type EmailDomainPermissionAction = 'read' | 'create' | 'update' | 'delete';
 
 export interface ManagedDomainStatus {
   domain: string;
@@ -23,22 +26,28 @@ export interface ManagedDomainStatus {
   updatedAt?: string | null;
 }
 
-async function ensureTenantContext() {
+async function ensureTenantContext(action: EmailDomainPermissionAction) {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
   }
 
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
+  const tenantFromContext = await getTenantContext();
+  if (!tenantFromContext) {
     throw new Error('Tenant context not found');
   }
 
-  return { knex, tenantId: tenant };
+  const { knex } = await createTenantKnex();
+  const allowed = await hasPermission(user, EMAIL_DOMAIN_RESOURCE, action, knex);
+  if (!allowed) {
+    throw new Error('You do not have permission to manage managed email domains.');
+  }
+
+  return { knex, tenantId: tenantFromContext };
 }
 
 export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
-  const { knex, tenantId } = await ensureTenantContext();
+  const { knex, tenantId } = await ensureTenantContext('read');
 
   const rows = await knex('email_domains')
     .where({ tenant_id: tenantId })
@@ -65,7 +74,7 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
 }
 
 export async function requestManagedEmailDomain(domainName: string) {
-  const { knex, tenantId } = await ensureTenantContext();
+  const { knex, tenantId } = await ensureTenantContext('create');
 
   const normalizedDomain = domainName.trim().toLowerCase();
   if (!isValidDomain(normalizedDomain)) {
@@ -104,7 +113,7 @@ export async function requestManagedEmailDomain(domainName: string) {
 }
 
 export async function refreshManagedEmailDomain(domainName: string) {
-  const { knex, tenantId } = await ensureTenantContext();
+  const { knex, tenantId } = await ensureTenantContext('update');
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
@@ -130,7 +139,7 @@ export async function refreshManagedEmailDomain(domainName: string) {
 }
 
 export async function deleteManagedEmailDomain(domainName: string) {
-  const { knex, tenantId } = await ensureTenantContext();
+  const { knex, tenantId } = await ensureTenantContext('delete');
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
