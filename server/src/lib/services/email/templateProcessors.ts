@@ -96,9 +96,30 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     let template: any = null;
 
     if (tenantId) {
+      logger.debug(`[DatabaseTemplateProcessor] Looking for tenant template '${this.templateName}' with locale '${locale}' for tenant '${tenantId}'`);
       template = await this.knex('tenant_email_templates')
-        .where({ tenant: tenantId, name: this.templateName })
+        .where({ tenant: tenantId, name: this.templateName, language_code: locale })
         .first();
+
+      logger.debug(`[DatabaseTemplateProcessor] Tenant template found:`, template ? {
+        name: template.name,
+        language_code: template.language_code,
+        subject: template.subject
+      } : 'null');
+
+      // If requested language not found, fall back to English for tenant templates
+      if (!template && locale !== 'en') {
+        logger.debug(`[DatabaseTemplateProcessor] Tenant template not found for locale '${locale}', trying English`);
+        template = await this.knex('tenant_email_templates')
+          .where({ tenant: tenantId, name: this.templateName, language_code: 'en' })
+          .first();
+
+        logger.debug(`[DatabaseTemplateProcessor] English tenant template:`, template ? {
+          name: template.name,
+          language_code: template.language_code,
+          subject: template.subject
+        } : 'null');
+      }
     }
 
     // Fall back to system template if no tenant template

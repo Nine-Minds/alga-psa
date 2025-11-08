@@ -598,7 +598,12 @@ export async function sendCancellationFeedbackAction(
       reasonCategory,
       licenseCount: subscription.quantity,
       monthlyCost,
-      cancelAt: new Date(subscription.current_period_end).toLocaleDateString(),
+      cancelAt: (() => {
+        const periodEnd = subscription.current_period_end;
+        return periodEnd
+          ? new Date(periodEnd).toLocaleDateString()
+          : 'unknown';
+      })(),
     });
 
     logger.info(

@@ -5,7 +5,8 @@ import {
   AccountingExportBatch,
   AccountingExportLine,
   AccountingExportError,
-  AccountingExportStatus
+  AccountingExportStatus,
+  AccountingExportLineStatus
 } from 'server/src/interfaces/accountingExport.interfaces';
 import {
   InvoiceStatus,
@@ -34,6 +35,11 @@ import {
   getXeroConnectionStatus,
   type XeroConnectionStatus
 } from 'server/src/lib/actions/integrations/xeroActions';
+import {
+  getQboConnectionStatus,
+  type QboConnectionStatus
+} from 'server/src/lib/actions/integrations/qboActions';
+import { useUsers } from 'server/src/hooks/useUsers';
 
 type BatchDetail = {
   batch: AccountingExportBatch | null;
@@ -141,6 +147,17 @@ function statusLabel(status: AccountingExportStatus): string {
   }
 }
 
+const EXPORT_LINE_STATUS_LABELS: Record<AccountingExportLineStatus, string> = {
+  pending: 'Pending',
+  ready: 'Ready',
+  delivered: 'Delivered',
+  posted: 'Posted',
+  failed: 'Failed'
+};
+
+const formatExportLineStatus = (status: AccountingExportLineStatus) =>
+  EXPORT_LINE_STATUS_LABELS[status] ?? status;
+
 const localDateString = (value: string | null | undefined) => {
   if (!value) {
     return '';
@@ -152,6 +169,21 @@ const amountFromCents = (amountCents: number, currency?: string | null) => {
   const safeCurrency = currency ?? 'USD';
   return formatCurrency(amountCents / 100, undefined, safeCurrency);
 };
+
+const formatInvoiceStatusLabel = (status?: string | null) => {
+  if (!status) {
+    return '—';
+  }
+  const normalized = status.toLowerCase() as InvoiceStatus;
+  const meta = INVOICE_STATUS_METADATA[normalized];
+  return meta?.label ?? status;
+};
+
+const formatSnakeToTitle = (value: string) =>
+  value
+    .split('_')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
 
 const formatServicePeriod = (start: string | null, end: string | null) => {
   if (!start && !end) {
@@ -170,6 +202,18 @@ const formatTotalsSummary = (totals: Record<string, number>) => {
   return entries
     .map(([currency, cents]) => `${formatCurrency(cents / 100, undefined, currency)} (${currency})`)
     .join(', ');
+};
+
+const getLineMetadata = (line: AccountingExportLine | null | undefined) => {
+  const payload = (line?.payload ?? {}) as Record<string, unknown>;
+  const invoiceNumber =
+    typeof payload.invoice_number === 'string' ? (payload.invoice_number as string) : undefined;
+  const invoiceStatus =
+    typeof payload.invoice_status === 'string' ? (payload.invoice_status as string) : undefined;
+  const clientName =
+    typeof payload.client_name === 'string' ? (payload.client_name as string) : undefined;
+
+  return { invoiceNumber, invoiceStatus, clientName };
 };
 
 const normalizeInvoiceStatuses = (statuses: InvoiceStatus[]): InvoiceStatus[] =>
@@ -196,10 +240,34 @@ const AccountingExportsTab: React.FC = () => {
   const [creating, setCreating] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [detailActionError, setDetailActionError] = useState<string | null>(null);
+  const { users: allUsers } = useUsers();
+
+  const userNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    allUsers.forEach((user) => {
+      const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+      const fallback = user.email ?? user.username ?? user.user_id;
+      map.set(user.user_id, fullName || fallback);
+    });
+    return map;
+  }, [allUsers]);
+
+  const resolveUserName = useCallback(
+    (userId?: string | null) => {
+      if (!userId) {
+        return 'System';
+      }
+      return userNameById.get(userId) ?? `User ${truncateId(userId)}`;
+    },
+    [userNameById]
+  );
   const [createError, setCreateError] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<AccountingExportPreviewResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [qboStatus, setQboStatus] = useState<QboConnectionStatus | null>(null);
+  const [qboStatusError, setQboStatusError] = useState<string | null>(null);
+  const [qboStatusLoading, setQboStatusLoading] = useState<boolean>(false);
   const [xeroStatus, setXeroStatus] = useState<XeroConnectionStatus | null>(null);
   const [xeroStatusError, setXeroStatusError] = useState<string | null>(null);
   const [xeroStatusLoading, setXeroStatusLoading] = useState<boolean>(false);
@@ -219,8 +287,33 @@ const AccountingExportsTab: React.FC = () => {
     setPreviewError(null);
   };
 
-  const updateCreateFormField = (field: Exclude<keyof CreateFormState, 'invoiceStatuses'>, value: string) => {
-    setCreateForm((prev) => ({ ...prev, [field]: value }));
+  const updateCreateFormField = (
+    field: Exclude<keyof CreateFormState, 'invoiceStatuses'>,
+    value: string
+  ) => {
+    setCreateForm((prev) => {
+      if (field === 'adapterType') {
+        const nextAdapter = value as AdapterType;
+        let nextRealm = '';
+        if (nextAdapter === 'xero') {
+          nextRealm =
+            xeroStatus?.defaultConnectionId ??
+            xeroStatus?.connections?.[0]?.connectionId ??
+            '';
+        } else if (nextAdapter === 'quickbooks_online') {
+          nextRealm =
+            qboStatus?.defaultRealmId ??
+            qboStatus?.connections?.[0]?.realmId ??
+            '';
+        }
+        return {
+          ...prev,
+          adapterType: nextAdapter,
+          targetRealm: nextRealm
+        };
+      }
+      return { ...prev, [field]: value };
+    });
     resetPreviewState();
   };
 
@@ -427,7 +520,13 @@ const AccountingExportsTab: React.FC = () => {
       const data = await previewAccountingExport({
         startDate: createForm.startDate || undefined,
         endDate: createForm.endDate || undefined,
-        invoiceStatuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined
+        invoiceStatuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined,
+        adapterType: createForm.adapterType,
+        targetRealm:
+          createForm.adapterType === 'quickbooks_online' || createForm.adapterType === 'xero'
+            ? createForm.targetRealm || undefined
+            : undefined,
+        excludeSyncedInvoices: true
       });
       setPreviewData(data);
     } catch (err: any) {
@@ -444,8 +543,15 @@ const AccountingExportsTab: React.FC = () => {
     setCreateError(null);
     try {
       const invoiceStatuses = normalizeInvoiceStatuses(createForm.invoiceStatuses);
-      if (createForm.adapterType === 'xero' && !createForm.targetRealm.trim()) {
-        throw new Error('Select a Xero connection before creating an export batch.');
+      if (
+        (createForm.adapterType === 'xero' || createForm.adapterType === 'quickbooks_online') &&
+        !createForm.targetRealm.trim()
+      ) {
+        throw new Error(
+          createForm.adapterType === 'xero'
+            ? 'Select a Xero connection before creating an export batch.'
+            : 'Select a QuickBooks Online realm before creating an export batch.'
+        );
       }
       const body = {
         adapter_type: createForm.adapterType,
@@ -454,7 +560,8 @@ const AccountingExportsTab: React.FC = () => {
         filters: {
           start_date: createForm.startDate || undefined,
           end_date: createForm.endDate || undefined,
-          invoice_statuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined
+          invoice_statuses: invoiceStatuses.length > 0 ? invoiceStatuses : undefined,
+          exclude_synced_invoices: true
         },
         notes: createForm.notes || undefined
       };
@@ -518,8 +625,53 @@ const AccountingExportsTab: React.FC = () => {
     if (!batchDetail?.lines) return 0;
     return batchDetail.lines.reduce((sum, line) => sum + line.amount_cents, 0);
   }, [batchDetail]);
+  const linesById = useMemo(() => {
+    const map = new Map<string, AccountingExportLine>();
+    filteredLines.forEach((line) => {
+      map.set(line.line_id, line);
+    });
+    return map;
+  }, [filteredLines]);
 
   const currencyFromLines = batchDetail?.lines?.[0]?.currency_code ?? 'USD';
+
+  const ensureXeroConnections = useCallback(() => {
+    if (xeroStatus || xeroStatusLoading) {
+      return;
+    }
+    setXeroStatusLoading(true);
+    void getXeroConnectionStatus()
+      .then((status) => {
+        setXeroStatus(status);
+        setXeroStatusError(status.error ?? null);
+      })
+      .catch((err: any) => {
+        console.error('Error loading Xero connection status:', err);
+        setXeroStatusError(err?.message ?? 'Unable to load Xero connections.');
+      })
+      .finally(() => {
+        setXeroStatusLoading(false);
+      });
+  }, [xeroStatus, xeroStatusLoading]);
+
+  const ensureQboConnections = useCallback(() => {
+    if (qboStatus || qboStatusLoading) {
+      return;
+    }
+    setQboStatusLoading(true);
+    void getQboConnectionStatus()
+      .then((status) => {
+        setQboStatus(status);
+        setQboStatusError(status.error ?? null);
+      })
+      .catch((err: any) => {
+        console.error('Error loading QuickBooks connection status:', err);
+        setQboStatusError(err?.message ?? 'Unable to load QuickBooks connections.');
+      })
+      .finally(() => {
+        setQboStatusLoading(false);
+      });
+  }, [qboStatus, qboStatusLoading]);
 
   useEffect(() => {
     if (!createDialogOpen || createForm.adapterType !== 'xero') {
@@ -527,19 +679,7 @@ const AccountingExportsTab: React.FC = () => {
     }
 
     if (!xeroStatus && !xeroStatusLoading) {
-      setXeroStatusLoading(true);
-      void getXeroConnectionStatus()
-        .then((status) => {
-          setXeroStatus(status);
-          setXeroStatusError(status.error ?? null);
-        })
-        .catch((err: any) => {
-          console.error('Error loading Xero connection status:', err);
-          setXeroStatusError(err?.message ?? 'Unable to load Xero connections.');
-        })
-        .finally(() => {
-          setXeroStatusLoading(false);
-        });
+      ensureXeroConnections();
       return;
     }
 
@@ -555,8 +695,75 @@ const AccountingExportsTab: React.FC = () => {
     createForm.adapterType,
     createForm.targetRealm,
     xeroStatus,
-    xeroStatusLoading
+    xeroStatusLoading,
+    ensureXeroConnections
   ]);
+
+  useEffect(() => {
+    if (!createDialogOpen || createForm.adapterType !== 'quickbooks_online') {
+      return;
+    }
+
+    if (!qboStatus && !qboStatusLoading) {
+      ensureQboConnections();
+      return;
+    }
+
+    if (!createForm.targetRealm && qboStatus && qboStatus.connections?.length) {
+      const defaultRealm = qboStatus.defaultRealmId ?? qboStatus.connections[0]?.realmId ?? '';
+      if (defaultRealm) {
+        setCreateForm((prev) =>
+          prev.targetRealm ? prev : { ...prev, targetRealm: defaultRealm }
+        );
+      }
+    }
+  }, [
+    createDialogOpen,
+    createForm.adapterType,
+    createForm.targetRealm,
+    qboStatus,
+    qboStatusLoading,
+    ensureQboConnections
+  ]);
+
+  useEffect(() => {
+    if (!selectedRow) {
+      return;
+    }
+    if (selectedRow.adapter_type === 'quickbooks_online') {
+      ensureQboConnections();
+    } else if (selectedRow.adapter_type === 'xero') {
+      ensureXeroConnections();
+    }
+  }, [selectedRow, ensureQboConnections, ensureXeroConnections]);
+
+  const resolveRealmLabel = useCallback(
+    (adapterType: string, realm?: string | null) => {
+      if (!realm) {
+        return '—';
+      }
+      if (adapterType === 'quickbooks_online') {
+        const match = qboStatus?.connections?.find((connection) => connection.realmId === realm);
+        return match?.displayName ?? realm;
+      }
+      if (adapterType === 'xero') {
+        const match = xeroStatus?.connections?.find((connection) => connection.connectionId === realm);
+        return match?.xeroTenantId ?? realm;
+      }
+      return realm;
+    },
+    [qboStatus, xeroStatus]
+  );
+
+  const realmRequired =
+    createForm.adapterType === 'quickbooks_online' || createForm.adapterType === 'xero';
+  const realmMissing = realmRequired && !createForm.targetRealm.trim();
+  const realmUnavailable =
+    createForm.adapterType === 'quickbooks_online'
+      ? !qboStatusLoading && (qboStatus?.connections?.length ?? 0) === 0
+      : createForm.adapterType === 'xero'
+        ? !xeroStatusLoading && (xeroStatus?.connections?.length ?? 0) === 0
+        : false;
 
   return (
     <div className="space-y-4">
@@ -736,11 +943,25 @@ const AccountingExportsTab: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-gray-50">
                   <div>
                     <div className="text-xs uppercase text-gray-500 mb-1">Target Realm</div>
-                    <div className="text-sm text-gray-900">{batchDetail.batch.target_realm || '—'}</div>
+                    <div className="text-sm text-gray-900">
+                      {resolveRealmLabel(selectedRow.adapter_type, batchDetail.batch.target_realm)}
+                      {batchDetail.batch.target_realm ? (
+                        <div className="text-xs text-gray-500">
+                          {batchDetail.batch.target_realm}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs uppercase text-gray-500 mb-1">Created By</div>
-                    <div className="text-sm text-gray-900">{batchDetail.batch.created_by || 'System'}</div>
+                    <div className="text-sm text-gray-900">
+                      {resolveUserName(batchDetail.batch.created_by)}
+                      {batchDetail.batch.created_by ? (
+                        <div className="text-xs text-gray-500">
+                          {truncateId(batchDetail.batch.created_by)}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs uppercase text-gray-500 mb-1">Notes</div>
@@ -753,6 +974,25 @@ const AccountingExportsTab: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {selectedRow.adapter_type === 'quickbooks_online' ? (
+                  <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                    Verify QuickBooks realm mappings (services, tax codes, payment terms) are complete for{' '}
+                    <span className="font-semibold">
+                      {(() => {
+                        const realmDisplay = resolveRealmLabel(
+                          selectedRow.adapter_type,
+                          batchDetail.batch.target_realm
+                        );
+                        if (realmDisplay === '—') {
+                          return batchDetail.batch.target_realm || 'the selected realm';
+                        }
+                        return realmDisplay;
+                      })()}
+                    </span>{' '}
+                    before executing this export.
+                  </div>
+                ) : null}
 
                 <div>
                   <h3 className="text-sm font-medium text-gray-900 mb-2">Lines</h3>
@@ -775,21 +1015,41 @@ const AccountingExportsTab: React.FC = () => {
                             </td>
                           </tr>
                         ) : (
-                          filteredLines.map((line) => (
-                            <tr key={line.line_id}>
-                              <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{line.invoice_id}</td>
-                              <td className="px-3 py-2 text-sm text-gray-900">
-                                {amountFromCents(line.amount_cents, line.currency_code)}
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-900">{line.status}</td>
-                              <td className="px-3 py-2 text-sm text-gray-900">{line.external_document_ref || '—'}</td>
-                              <td className="px-3 py-2 text-sm text-gray-900">
-                                {line.service_period_start || line.service_period_end
-                                  ? `${line.service_period_start ?? '—'} → ${line.service_period_end ?? '—'}`
-                                  : '—'}
-                              </td>
-                            </tr>
-                          ))
+                          filteredLines.map((line) => {
+                            const { invoiceNumber, invoiceStatus, clientName } = getLineMetadata(line);
+                            const invoiceDisplay = invoiceNumber ?? line.invoice_id;
+                            const subtitleParts: string[] = [];
+                            if (clientName) {
+                              subtitleParts.push(clientName);
+                            }
+                            subtitleParts.push(truncateId(line.invoice_id));
+                            const invoiceStatusLabel = formatInvoiceStatusLabel(invoiceStatus);
+                            const exportStatusLabel = formatExportLineStatus(line.status);
+                            return (
+                              <tr key={line.line_id}>
+                                <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                                  <div className="font-medium">{invoiceDisplay}</div>
+                                  <div className="text-xs text-gray-500">{subtitleParts.join(' · ')}</div>
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-900">
+                                  {amountFromCents(line.amount_cents, line.currency_code)}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-900">
+                                  <div className="font-medium">{invoiceStatusLabel}</div>
+                                  <div className="text-xs text-gray-500">Export line: {exportStatusLabel}</div>
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-900">
+                                  {line.external_document_ref || '—'}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-900">
+                                  {formatServicePeriod(
+                                    line.service_period_start ?? null,
+                                    line.service_period_end ?? null
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -802,7 +1062,7 @@ const AccountingExportsTab: React.FC = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
@@ -816,16 +1076,43 @@ const AccountingExportsTab: React.FC = () => {
                             </td>
                           </tr>
                         ) : (
-                          batchDetail.errors.map((error) => (
-                            <tr key={error.error_id}>
-                              <td className="px-3 py-2 text-sm text-gray-900">{error.line_id || '—'}</td>
-                              <td className="px-3 py-2 text-sm text-gray-900">{error.code}</td>
-                              <td className="px-3 py-2 text-sm text-gray-900">
-                                <span className="block max-w-lg whitespace-normal">{error.message}</span>
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-900">{error.resolution_state}</td>
-                            </tr>
-                          ))
+                          batchDetail.errors.map((error) => {
+                            const relatedLine = error.line_id ? linesById.get(error.line_id) : undefined;
+                            const { invoiceNumber, clientName } = getLineMetadata(relatedLine);
+                            const invoiceDisplay =
+                              invoiceNumber ?? (relatedLine ? relatedLine.invoice_id : error.line_id ?? '—');
+                            const subtitleParts: string[] = [];
+                            if (clientName) {
+                              subtitleParts.push(clientName);
+                            }
+                            if (relatedLine?.invoice_id) {
+                              subtitleParts.push(`Invoice ${truncateId(relatedLine.invoice_id)}`);
+                            }
+                            if (error.line_id) {
+                              subtitleParts.push(`Line ${truncateId(error.line_id)}`);
+                            }
+                            return (
+                              <tr key={error.error_id}>
+                                <td className="px-3 py-2 text-sm text-gray-900">
+                                  <div className="font-medium">{invoiceDisplay}</div>
+                                  {subtitleParts.length > 0 ? (
+                                    <div className="text-xs text-gray-500">{subtitleParts.join(' · ')}</div>
+                                  ) : null}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-900">
+                                  {error.code ? formatSnakeToTitle(error.code) : '—'}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-900">
+                                  <span className="block max-w-lg whitespace-normal">{error.message}</span>
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-900">
+                                  {error.resolution_state
+                                    ? formatSnakeToTitle(error.resolution_state)
+                                    : '—'}
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -861,24 +1148,72 @@ const AccountingExportsTab: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Target Realm / Connection</label>
-              <input
-                type="text"
-                value={createForm.targetRealm}
-                onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
-                className="border rounded-md w-full px-3 py-2 text-sm"
-                placeholder="Optional target identifier"
-              />
-              {createForm.adapterType === 'xero' ? (
-                <p className="mt-1 text-xs text-gray-500">
-                  {xeroStatusLoading
-                    ? 'Loading Xero connections…'
-                    : xeroStatusError
-                      ? xeroStatusError
-                      : xeroStatus?.connections?.length
-                        ? `Using Xero connection ${createForm.targetRealm || xeroStatus.defaultConnectionId || xeroStatus.connections[0]?.connectionId}.`
-                        : 'No Xero connections detected. Connect in Xero integration settings first.'}
-                </p>
-              ) : null}
+              {createForm.adapterType === 'quickbooks_online' ? (
+                <>
+                  <select
+                    value={createForm.targetRealm}
+                    onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
+                    className="border rounded-md w-full px-3 py-2 text-sm"
+                    disabled={qboStatusLoading || (qboStatus?.connections?.length ?? 0) === 0}
+                  >
+                    <option value="">Select QuickBooks realm…</option>
+                    {(qboStatus?.connections ?? []).map((connection) => (
+                      <option key={connection.realmId} value={connection.realmId}>
+                        {connection.displayName}
+                        {connection.status !== 'active' ? ' (reauthorisation required)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {qboStatusLoading
+                      ? 'Loading QuickBooks realms…'
+                      : qboStatusError
+                        ? qboStatusError
+                        : qboStatus?.connections?.length
+                          ? 'Exports use the selected QuickBooks realm. Confirm service, tax code, and payment term mappings before delivery.'
+                          : 'No QuickBooks realms detected. Connect QuickBooks Online in integration settings first.'}
+                  </p>
+                </>
+              ) : createForm.adapterType === 'xero' ? (
+                <>
+                  <select
+                    value={createForm.targetRealm}
+                    onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
+                    className="border rounded-md w-full px-3 py-2 text-sm"
+                    disabled={xeroStatusLoading || (xeroStatus?.connections?.length ?? 0) === 0}
+                  >
+                    <option value="">Select Xero connection…</option>
+                    {(xeroStatus?.connections ?? []).map((connection) => (
+                      <option key={connection.connectionId} value={connection.connectionId}>
+                        {connection.xeroTenantId}
+                        {connection.status === 'expired' ? ' (reauthorisation required)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {xeroStatusLoading
+                      ? 'Loading Xero connections…'
+                      : xeroStatusError
+                        ? xeroStatusError
+                        : xeroStatus?.connections?.length
+                          ? 'Exports use the selected Xero connection. Ensure mappings are complete before delivery.'
+                          : 'No Xero connections detected. Connect Xero in integration settings first.'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={createForm.targetRealm}
+                    onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
+                    className="border rounded-md w-full px-3 py-2 text-sm"
+                    placeholder="Optional target identifier"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Provide a QuickBooks Desktop target company if required.
+                  </p>
+                </>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
@@ -1067,7 +1402,11 @@ const AccountingExportsTab: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button id="accounting-export-create-submit" onClick={handleCreate} disabled={creating}>
+            <Button
+              id="accounting-export-create-submit"
+              onClick={handleCreate}
+              disabled={creating || realmMissing || realmUnavailable}
+            >
               {creating ? 'Creating…' : 'Create Export'}
             </Button>
           </div>

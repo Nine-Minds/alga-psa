@@ -10,6 +10,7 @@ pub struct LruCache {
 }
 
 impl LruCache {
-    pub fn new(cfg: LruCacheConfig) -> Self { Self { cfg } }
+    pub fn new(cfg: LruCacheConfig) -> Self {
+        Self { cfg }
+    }
 }
-

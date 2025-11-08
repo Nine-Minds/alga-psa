@@ -10,8 +10,8 @@ export async function getTenantForCurrentRequest(fallbackTenant?: string): Promi
 
         const { auth } = await import('../app/api/auth/[...nextauth]/edge-auth');
         const session = await auth();
-        if (session?.user?.tenant) {
-            return session.user.tenant;
+        if (session?.user && 'tenant' in session.user && session.user.tenant) {
+            return (session.user as any).tenant;
         }
 
         if (fallbackTenant) {

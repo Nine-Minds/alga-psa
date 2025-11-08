@@ -183,6 +183,9 @@ const nextConfig = {
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
         : './src/services/chatStreamService',
+      '@product/ext-proxy/handler': isEE
+        ? '@product/ext-proxy/ee/handler'
+        : '@product/ext-proxy/oss/handler',
       '@product/email-providers/entry': isEE
         ? '@product/email-providers/ee/entry'
         : '@product/email-providers/oss/entry',

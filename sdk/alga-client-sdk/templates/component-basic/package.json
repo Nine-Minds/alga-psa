@@ -1,0 +1,22 @@
+{
+  "name": "__PACKAGE_NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build:js": "tsup src/index.ts --format esm --dts --out-dir dist/js --clean",
+    "build:component": "jco componentize dist/js/index.js --wit ./wit/extension-runner.wit --world runner --component-name __PACKAGE_NAME__ --out dist/component.wasm",
+    "build": "npm run clean && npm run build:js && npm run build:component",
+    "postbuild": "node ./scripts/postbuild.mjs"
+  },
+  "dependencies": {
+    "@alga/extension-runtime": "^0.1.0"
+  },
+  "devDependencies": {
+    "@bytecodealliance/componentize-js": "^0.19.3",
+    "rimraf": "^5.0.0",
+    "tsup": "^7.2.0",
+    "typescript": "^5.4.0"
+  }
+}

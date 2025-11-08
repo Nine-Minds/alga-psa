@@ -1,2 +1,2 @@
-pub mod server;
 pub mod ext_ui;
+pub mod server;
