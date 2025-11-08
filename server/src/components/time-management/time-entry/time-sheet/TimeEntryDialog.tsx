@@ -404,25 +404,22 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         </div>
       )}
 
-      {/* Only show the dialog buttons if not in a drawer, since the drawer will have its own close button */}
-      {!inDrawer && (
-        <DialogFooter>
-          <Button
-            id={`${id}-cancel-dialog-btn`}
-            onClick={handleCancel}
-            variant="outline"
-          >
-            Cancel
-          </Button>
-          <Button
-            id={`${id}-save-dialog-btn`}
-            onClick={handleSaveAll}
-            variant="default"
-          >
-            Save
-          </Button>
-        </DialogFooter>
-      )}
+      <DialogFooter>
+        <Button
+          id={`${id}-cancel-dialog-btn`}
+          onClick={handleCancel}
+          variant="outline"
+        >
+          Cancel
+        </Button>
+        <Button
+          id={`${id}-save-dialog-btn`}
+          onClick={handleSaveAll}
+          variant="default"
+        >
+          Save
+        </Button>
+      </DialogFooter>
     </ReflectionContainer>
   );
 

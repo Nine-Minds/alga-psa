@@ -1,4 +1,4 @@
-import { createTenantKnex } from 'server/src/lib/db';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
 export interface TenantInstallInfo {
   version_id: string;
@@ -7,12 +7,12 @@ export interface TenantInstallInfo {
 export async function getTenantInstall(tenantId: string, extensionId: string): Promise<TenantInstallInfo | null> {
   // Attempts to read from EE registry tables. If tables are absent, returns null gracefully.
   try {
-    const { knex } = await createTenantKnex();
+    const knex = await getAdminConnection();
     const row = await knex
       .select({ version_id: 'ti.version_id' })
       .from({ ti: 'tenant_extension_install' })
       .where({ 'ti.tenant_id': tenantId, 'ti.registry_id': extensionId })
-      .andWhere({ 'ti.enabled': true })
+      .andWhere({ 'ti.is_enabled': true })
       .first();
     if (!row) return null;
     return { version_id: row.version_id };
@@ -24,7 +24,7 @@ export async function getTenantInstall(tenantId: string, extensionId: string): P
 export async function resolveVersion(install: TenantInstallInfo): Promise<{ content_hash: string; version_id: string }> {
   // Given a version_id, resolve the active content_hash from extension_bundle.
   try {
-    const { knex } = await createTenantKnex();
+    const knex = await getAdminConnection();
     const row = await knex
       .select({ content_hash: 'eb.content_hash' })
       .from({ eb: 'extension_bundle' })

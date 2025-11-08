@@ -7,7 +7,13 @@ fn main() {
         .args(["rev-parse", "--short=12", "HEAD"])
         .output()
         .ok()
-        .and_then(|o| if o.status.success() { Some(String::from_utf8_lossy(&o.stdout).trim().to_string()) } else { None })
+        .and_then(|o| {
+            if o.status.success() {
+                Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+            } else {
+                None
+            }
+        })
         .unwrap_or_else(|| "unknown".to_string());
 
     // Best-effort: build timestamp (unix seconds)
@@ -19,4 +25,3 @@ fn main() {
     println!("cargo:rustc-env=ALGA_BUILD_GIT_SHA={}", git_sha);
     println!("cargo:rustc-env=ALGA_BUILD_UNIX_SECS={}", build_unix);
 }
-

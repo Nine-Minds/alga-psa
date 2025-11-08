@@ -7,7 +7,9 @@
     "services/workflow-worker",
     "shared",
     "packages/*",
-    "sdk/*"
+    "sdk/*",
+    "sdk/samples/*",
+    "sdk/samples/*/*"
   ],
   "scripts": {
     "install:ignore": "npm ci --ignore-scripts",
@@ -21,6 +23,10 @@
     "build:ee": "npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise",
     "build:assemblyscript": "cd server/src/invoice-templates/assemblyscript && npm install && npm run build",
     "start": "cd server && npm start",
+    "runner:up": "./scripts/dev-runner.sh up -d",
+    "runner:down": "./scripts/dev-runner.sh down",
+    "runner:logs": "./scripts/dev-runner.sh logs -f",
+    "dev:runner": "RUNNER_BACKEND=docker RUNNER_DOCKER_HOST=${RUNNER_DOCKER_HOST:-http://localhost:${RUNNER_DOCKER_PORT:-8085}} RUNNER_PUBLIC_BASE=/runner npm run dev",
     "build:shared": "cd shared && npm run build",
     "build:workflow-worker": "cd services/workflow-worker && npm run build",
     "build:sdk": "npm -w sdk/alga-client-sdk run build",

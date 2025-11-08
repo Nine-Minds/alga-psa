@@ -1,8 +1,8 @@
 use anyhow::Result;
 use sha2::{Digest, Sha256};
+use std::path::Path;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, BufReader};
-use std::path::Path;
 
 /// Compute a strong ETag for the file using SHA-256 hex, formatted as:
 /// "sha256-<hex>"
@@ -28,9 +28,9 @@ pub async fn etag_for_file(path: &Path) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::AsyncWriteExt;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
+    use tokio::io::AsyncWriteExt;
 
     #[tokio::test]
     async fn deterministic() {

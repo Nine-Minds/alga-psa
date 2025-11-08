@@ -1,0 +1,28 @@
+# Extension Runner local development stack
+# Usage: docker compose -f docker-compose.runner-dev.yml up --build
+
+services:
+  extension-runner:
+    build:
+      context: ./ee/runner
+      dockerfile: Dockerfile
+    image: alga-psa/extension-runner:dev-local
+    container_name: ${APP_NAME:-alga}_extension_runner
+    env_file:
+      - .env.runner
+    environment:
+      PORT: 8080
+      REGISTRY_BASE_URL: ${RUNNER_REGISTRY_BASE_URL:-http://host.docker.internal:3000/api/internal/ext-runner}
+      BUNDLE_STORE_BASE: ${RUNNER_BUNDLE_STORE_BASE:-http://host.docker.internal:4569/extensions}
+      EXT_STATIC_STRICT_VALIDATION: ${RUNNER_STATIC_STRICT_VALIDATION:-false}
+      ALGA_AUTH_KEY: ${RUNNER_ALGA_AUTH_KEY:-dev-runner-key}
+    ports:
+      - "${RUNNER_DOCKER_PORT:-8085}:8080"
+    volumes:
+      - ./tmp-ext:/app/tmp-ext:rw
+    networks:
+      - runner-dev
+
+networks:
+  runner-dev:
+    name: ${APP_NAME:-alga}_runner_dev

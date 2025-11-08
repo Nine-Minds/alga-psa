@@ -1,0 +1,137 @@
+/// Alga extension runner component interfaces.
+/// Inspired by wasmCloud's capability providers, each interface here
+/// represents a host-provided capability that extensions can import.
+
+package alga:extension;
+
+/// Shared type definitions ---------------------------------------------------
+
+record context-data {
+    request-id: option<string>,
+    tenant-id: string,
+    extension-id: string,
+    install-id: option<string>,
+    version-id: option<string>,
+}
+
+enum secret-error {
+    missing,
+    denied,
+    expired,
+    internal,
+}
+
+record http-header {
+    name: string,
+    value: string,
+}
+
+record http-request {
+    method: string,
+    url: string,
+    headers: list<http-header>,
+    body: option<list<u8>>,
+}
+
+record http-response {
+    status: u16,
+    headers: list<http-header>,
+    body: option<list<u8>>,
+}
+
+enum http-error {
+    invalid-url,
+    not-allowed,
+    transport,
+    internal,
+}
+
+enum storage-error {
+    missing,
+    conflict,
+    denied,
+    internal,
+}
+
+record storage-entry {
+    namespace: string,
+    key: string,
+    value: list<u8>,
+    revision: option<u64>,
+}
+
+enum proxy-error {
+    route-not-found,
+    denied,
+    bad-request,
+    internal,
+}
+
+/// Capability provider interfaces -------------------------------------------
+
+/// Access execution context metadata.
+/// @requires(cap:context.read)
+interface context {
+    get-context: func() -> context-data;
+}
+
+/// Retrieve install-scoped secrets.
+/// @requires(cap:secrets.get)
+interface secrets {
+    get: func(key: string) -> result<string, secret-error>;
+    list: func() -> list<string>;
+}
+
+/// Perform outbound HTTP requests with host enforced allowlists.
+/// @requires(cap:http.fetch)
+interface http {
+    fetch: func(request: http-request) -> result<http-response, http-error>;
+}
+
+/// Work with host-backed key/value storage.
+/// @requires(cap:storage.kv)
+interface storage {
+    get: func(namespace: string, key: string) -> result<storage-entry, storage-error>;
+    put: func(entry: storage-entry) -> result<storage-entry, storage-error>;
+    delete: func(namespace: string, key: string) -> result<(), storage-error>;
+    list: func(namespace: string, cursor: option<string>) -> result<list<storage-entry>, storage-error>;
+}
+
+/// Emit structured log messages.
+/// @requires(cap:log.emit)
+interface logging {
+    info: func(message: string);
+    warn: func(message: string);
+    error: func(message: string);
+}
+
+/// Invoke host-mediated proxy routes for UI flows.
+/// @requires(cap:ui.proxy)
+interface ui-proxy {
+    call: func(route: string, payload: option<list<u8>>) -> result<list<u8>, proxy-error>;
+}
+
+/// Guest exported HTTP-style handler entrypoint (initial contract).
+record execute-request {
+    context: context-data,
+    http: http-request,
+}
+
+record execute-response {
+    status: u16,
+    headers: list<http-header>,
+    body: option<list<u8>>,
+}
+
+/// World describing the Alga extension runtime contract.
+world runner {
+    import context: interface context;
+    import secrets: interface secrets;
+    import http: interface http;
+    import storage: interface storage;
+    import logging: interface logging;
+    import ui-proxy: interface ui-proxy;
+
+    export handler: func(request: execute-request) -> execute-response;
+}
+

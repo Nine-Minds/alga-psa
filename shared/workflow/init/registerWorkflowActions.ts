@@ -5,7 +5,7 @@
  */
 
 import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index';
-import { logger } from '@alga-psa/shared/core';
+import { logger, getSecretProviderInstance } from '@alga-psa/shared/core';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 import axios from 'axios'; // For QBO API calls
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
@@ -712,27 +712,6 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
-
-  // Retired legacy lookup action
-  actionRegistry.registerSimpleAction(
-    'lookup_qbo_item_id',
-    'Lookup QBO item ID by Alga product ID (retired)',
-    [
-      { name: 'algaProductId', type: 'string', required: true },
-      { name: 'realmId', type: 'string', required: true },
-      { name: 'qboCredentials', type: 'object', required: false }
-    ],
-    async (_params: Record<string, any>, context: ActionExecutionContext) => {
-      const message = 'lookup_qbo_item_id has been retired. Use accounting_export.create_batch + accounting_export.execute_batch for new QuickBooks exports.';
-      logger.warn(`[ACTION] lookup_qbo_item_id (deprecated) invoked for tenant: ${context.tenant}. Returning failure notice.`);
-      return {
-        success: false,
-        deprecated: true,
-        message
-      };
-    }
-  );
-
   // Placeholder for trigger_workflow
   actionRegistry.registerSimpleAction(
     'trigger_workflow',
@@ -819,480 +798,124 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Placeholder for update_qbo_invoice
+  // Retired QBO invoice update action
   actionRegistry.registerSimpleAction(
     'update_qbo_invoice',
-    'Update an existing QBO invoice (placeholder)',
+    'Legacy QBO invoice update action (retired)',
     [
-      { name: 'qboInvoiceData', type: 'object', required: true },
-      { name: 'qboInvoiceId', type: 'string', required: true },
-      { name: 'qboSyncToken', type: 'string', required: true },
-      { name: 'realmId', type: 'string', required: true },
-      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
-    ],
-    async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] update_qbo_invoice called for qboInvoiceId: ${params.qboInvoiceId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
-      try {
-        const qboCredentials = params.qboCredentials as QboCredentials;
-
-        if (!qboCredentials) {
-          logger.error(`[ACTION] update_qbo_invoice: QBO credentials not provided for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, message: 'QBO credentials not provided.' };
-        }
-
-        const { accessToken, accessTokenExpiresAt } = qboCredentials;
-
-        if (!accessToken || !accessTokenExpiresAt) {
-          logger.error(`[ACTION] update_qbo_invoice: Missing QBO accessToken or accessTokenExpiresAt in provided credentials for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing in provided credentials).' };
-        }
-
-        if (new Date(accessTokenExpiresAt) < new Date()) {
-          logger.warn(`[ACTION] update_qbo_invoice: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
-          return { success: false, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
-        }
-
-        const invoiceToUpdatePayload = {
-          ...params.qboInvoiceData,
-          Id: params.qboInvoiceId,
-          SyncToken: params.qboSyncToken,
-          sparse: true, // Important for QBO updates
-        };
-
-        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/invoice?operation=update&minorversion=69`;
-        logger.debug(`[ACTION] update_qbo_invoice: Posting to QBO: ${apiUrl}`, invoiceToUpdatePayload);
-
-        const response = await axios.post(apiUrl, invoiceToUpdatePayload, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`, // Using accessToken from params.qboCredentials
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000, // Longer timeout for create/update operations
-        });
-
-        const qboResponseData = response.data?.Invoice;
-        if (!qboResponseData || !qboResponseData.Id) {
-            logger.error(`[ACTION] update_qbo_invoice: QBO API response did not contain expected Invoice data. Tenant: ${context.tenant}, QBO Invoice ID: ${params.qboInvoiceId}`, response.data);
-            return { success: false, message: 'QBO API response malformed or missing Invoice data after update.', qboRawResponse: response.data };
-        }
-
-        logger.info(`[ACTION] update_qbo_invoice: Successfully updated QBO invoice ${qboResponseData.Id}. New SyncToken: ${qboResponseData.SyncToken}`);
-        return { success: true, qboResponse: qboResponseData };
-
-      } catch (error: any) {
-        logger.error(`[ACTION] update_qbo_invoice: Error updating QBO invoice ${params.qboInvoiceId}, realmId: ${params.realmId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
-        const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
-        return { success: false, message: `QBO API Error: ${errorMessage}`, errorDetails: error.response?.data || error };
-      }
-    }
-  );
-
-  // Retired legacy QBO invoice creation action
-  actionRegistry.registerSimpleAction(
-    'create_qbo_invoice',
-    'Create a new QBO invoice (retired)',
-    [
-      { name: 'qboInvoiceData', type: 'object', required: false },
-      { name: 'realmId', type: 'string', required: false },
-      { name: 'qboCredentials', type: 'object', required: false }
+      { name: 'payload', type: 'object', required: false }
     ],
     async (_params: Record<string, any>, context: ActionExecutionContext) => {
-      const message = 'create_qbo_invoice has been retired. Use accounting_export.create_batch + accounting_export.execute_batch to push invoices to QuickBooks.';
-      logger.warn(`[ACTION] create_qbo_invoice (deprecated) invoked for tenant: ${context.tenant}. Returning failure notice.`);
+      logger.warn(`[ACTION] update_qbo_invoice invoked after QBO workflow retirement for tenant ${context.tenant}. Returning deprecation notice.`);
       return {
         success: false,
         deprecated: true,
-        message
+        message: 'update_qbo_invoice is no longer available; use AccountingExportService-driven exports for QuickBooks.'
       };
     }
   );
 
-  // Create QBO Customer
+  // Retired QBO invoice creation action
+  actionRegistry.registerSimpleAction(
+    'create_qbo_invoice',
+    'Legacy QBO invoice creation action (retired)',
+    [
+      { name: 'payload', type: 'object', required: false }
+    ],
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.warn(`[ACTION] create_qbo_invoice invoked after QBO workflow retirement for tenant ${context.tenant}. Returning deprecation notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        message: 'create_qbo_invoice is no longer available; use AccountingExportService-driven exports for QuickBooks.'
+      };
+    }
+  );
+
+  // Retired QBO customer creation action
   actionRegistry.registerSimpleAction(
     'create_qbo_customer',
-    'Create a new QBO Customer',
+    'Legacy QBO customer creation action (retired)',
     [
-      { name: 'qboCustomerData', type: 'object', required: true }, // This should be the QBO Customer object
-      { name: 'realmId', type: 'string', required: true },
-      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
-      // tenantId is implicitly available in ActionExecutionContext
+      { name: 'payload', type: 'object', required: false }
     ],
-    async (params: Record<string, any>, context: ActionExecutionContext) => {
-      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      logger.info(`${logPrefix} create_qbo_customer called for realmId: ${params.realmId}, tenant: ${context.tenant}`);
-
-      try {
-        const qboCredentials = params.qboCredentials as QboCredentials;
-
-        if (!qboCredentials) {
-          logger.error(`${logPrefix} create_qbo_customer: QBO credentials not provided for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, Customer: null, message: 'QBO credentials not provided.' };
-        }
-
-        const { accessToken, accessTokenExpiresAt } = qboCredentials;
-
-        if (!accessToken || !accessTokenExpiresAt) {
-          logger.error(`${logPrefix} create_qbo_customer: Missing QBO accessToken or accessTokenExpiresAt in provided credentials for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, Customer: null, message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing in provided credentials).' };
-        }
-
-        if (new Date(accessTokenExpiresAt) < new Date()) {
-          logger.warn(`${logPrefix} create_qbo_customer: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
-          return { success: false, Customer: null, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
-        }
-
-        const customerToCreatePayload = { ...params.qboCustomerData };
-
-        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/customer?minorversion=69`;
-        logger.debug(`${logPrefix} create_qbo_customer: Posting to QBO: ${apiUrl}`, customerToCreatePayload);
-
-        const response = await axios.post(apiUrl, customerToCreatePayload, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`, // Using accessToken from params.qboCredentials
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000,
-        });
-
-        const qboResponseData = response.data?.Customer; // QBO typically returns the created object under a 'Customer' key
-        if (!qboResponseData || !qboResponseData.Id) {
-            logger.error(`${logPrefix} create_qbo_customer: QBO API response did not contain expected Customer data. Tenant: ${context.tenant}`, response.data);
-            return { success: false, Customer: null, message: 'QBO API response malformed or missing Customer data after creation.', qboRawResponse: response.data };
-        }
-
-        logger.info(`${logPrefix} create_qbo_customer: Successfully created QBO Customer. New ID: ${qboResponseData.Id}, SyncToken: ${qboResponseData.SyncToken}`);
-        // Return a structure that includes the Customer object, similar to QBO's API response structure
-        return { success: true, Customer: qboResponseData };
-
-      } catch (error: any) {
-        logger.error(`${logPrefix} create_qbo_customer: Error creating QBO Customer, realmId: ${params.realmId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
-        const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
-        // Return a structure indicating failure, including the error message
-        return { success: false, Customer: null, message: `QBO API Error: ${errorMessage}`, errorDetails: error.response?.data || error };
-      }
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.warn(`[ACTION] create_qbo_customer invoked after QBO workflow retirement for tenant ${context.tenant}. Returning deprecation notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        message: 'create_qbo_customer is no longer available; use AccountingExportService-driven exports for QuickBooks.'
+      };
     }
   );
 
-  // Update QBO Customer
+  // Retired QBO customer update action
   actionRegistry.registerSimpleAction(
     'update_qbo_customer',
-    'Update an existing QBO Customer',
+    'Legacy QBO customer update action (retired)',
     [
-      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
-      { name: 'qboCustomerId', type: 'string', required: true, description: 'The ID of the QBO customer to update.' },
-      { name: 'qboSyncToken', type: 'string', required: true, description: 'The SyncToken for the QBO customer update.' },
-      { name: 'qboCustomerData', type: 'object', required: true, description: 'The QBO customer data object containing fields to update (excluding Id and SyncToken).' },
-      { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID.' },
-      // tenantId is implicitly available in ActionExecutionContext
+      { name: 'payload', type: 'object', required: false }
     ],
-    async (params: Record<string, any>, context: ActionExecutionContext) => {
-      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      logger.info(`${logPrefix} update_qbo_customer called for qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
-
-      try {
-        const qboCredentials = params.qboCredentials as QboCredentials;
-
-        if (!qboCredentials) {
-          logger.error(`${logPrefix} update_qbo_customer: QBO credentials not provided for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, Customer: null, message: 'QBO credentials not provided.' };
-        }
-
-        const { accessToken, accessTokenExpiresAt } = qboCredentials;
-
-        if (!accessToken || !accessTokenExpiresAt) {
-          logger.error(`${logPrefix} update_qbo_customer: Missing QBO accessToken or accessTokenExpiresAt in provided credentials for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, Customer: null, message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing in provided credentials).' };
-        }
-
-        if (new Date(accessTokenExpiresAt) < new Date()) {
-          logger.warn(`${logPrefix} update_qbo_customer: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
-          return { success: false, Customer: null, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
-        }
-
-        const customerToUpdatePayload = {
-          ...params.qboCustomerData, // Spread the customer data first
-          Id: params.qboCustomerId,    // Add/override Id
-          SyncToken: params.qboSyncToken, // Add/override SyncToken
-          sparse: true,                // Ensure sparse update is true
-        };
-
-        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/customer?operation=update&minorversion=69`;
-        logger.debug(`${logPrefix} update_qbo_customer: Posting to QBO: ${apiUrl}`, JSON.stringify(customerToUpdatePayload));
-
-        const response = await axios.post(apiUrl, customerToUpdatePayload, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000, // Standard timeout for update operations
-        });
-
-        const qboResponseData = response.data?.Customer;
-        if (!qboResponseData || !qboResponseData.Id || !qboResponseData.SyncToken) {
-            logger.error(`${logPrefix} update_qbo_customer: QBO API response did not contain expected Customer data (Id, SyncToken). Tenant: ${context.tenant}, QBO Customer ID: ${params.qboCustomerId}`, response.data);
-            return { success: false, Customer: null, message: 'QBO API response malformed or missing Customer Id/SyncToken after update.', qboRawResponse: response.data };
-        }
-
-        logger.info(`${logPrefix} update_qbo_customer: Successfully updated QBO Customer. ID: ${qboResponseData.Id}, New SyncToken: ${qboResponseData.SyncToken}`);
-        return { success: true, Customer: { Id: qboResponseData.Id, SyncToken: qboResponseData.SyncToken } }; // Return only Id and SyncToken as specified
-
-      } catch (error: any) {
-        logger.error(`${logPrefix} update_qbo_customer: Error updating QBO Customer ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
-        const faultError = error.response?.data?.Fault?.Error?.[0];
-        let errorMessage = 'An unexpected error occurred during QBO customer update.';
-        if (faultError) {
-          errorMessage = `QBO API Error: ${faultError.Message || 'Unknown QBO Error'}. Detail: ${faultError.Detail || 'No additional details.'} Code: ${faultError.code || 'N/A'}`;
-        } else if (axios.isAxiosError(error) && error.message) {
-            errorMessage = `Network/Request Error: ${error.message}`;
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        return { success: false, Customer: null, message: errorMessage, errorDetails: error.response?.data || error.toString() };
-      }
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.warn(`[ACTION] update_qbo_customer invoked after QBO workflow retirement for tenant ${context.tenant}. Returning deprecation notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        message: 'update_qbo_customer is no longer available; use AccountingExportService-driven exports for QuickBooks.'
+      };
     }
   );
 
-  // Get QBO Customer by DisplayName or Email
+  // Retired QBO customer lookup action
   actionRegistry.registerSimpleAction(
     'get_qbo_customer_by_display_or_email',
-    'Get QBO Customer(s) by DisplayName or Email Address',
+    'Legacy QBO customer lookup action (retired)',
     [
-      { name: 'displayName', type: 'string', required: false },
-      { name: 'email', type: 'string', required: false },
-      { name: 'realmId', type: 'string', required: true },
-      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
-      // tenantId is implicitly available in ActionExecutionContext
+      { name: 'payload', type: 'object', required: false }
     ],
-    async (params: Record<string, any>, context: ActionExecutionContext) => {
-      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      logger.info(`${logPrefix} get_qbo_customer_by_display_or_email called for realmId: ${params.realmId}, tenant: ${context.tenant}`, { displayName: params.displayName, email: params.email });
-
-      if (!params.displayName && !params.email) {
-        logger.warn(`${logPrefix} get_qbo_customer_by_display_or_email: Either displayName or email must be provided.`);
-        return { success: false, found: false, customers: [], message: 'Either displayName or email must be provided.' };
-      }
-
-      try {
-        const qboCredentials = params.qboCredentials as QboCredentials;
-
-        if (!qboCredentials) {
-          logger.error(`${logPrefix} get_qbo_customer_by_display_or_email: QBO credentials not provided for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, found: false, customers: [], message: 'QBO credentials not provided.' };
-        }
-
-        const { accessToken, accessTokenExpiresAt } = qboCredentials;
-
-        if (!accessToken || !accessTokenExpiresAt) {
-          logger.error(`${logPrefix} get_qbo_customer_by_display_or_email: Missing QBO accessToken or accessTokenExpiresAt in provided credentials for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, found: false, customers: [], message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing in provided credentials).' };
-        }
-
-        if (new Date(accessTokenExpiresAt) < new Date()) {
-          logger.warn(`${logPrefix} get_qbo_customer_by_display_or_email: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
-          return { success: false, found: false, customers: [], message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
-        }
-
-        let queryConditions: string[] = [];
-        if (params.displayName) {
-          queryConditions.push(`DisplayName = '${params.displayName.replace(/'/g, "\\'")}'`);
-        }
-        if (params.email) {
-          // QBO stores email in PrimaryEmailAddr.Address
-          queryConditions.push(`PrimaryEmailAddr.Address = '${params.email.replace(/'/g, "\\'")}'`);
-        }
-
-        const query = `SELECT Id, DisplayName, PrimaryEmailAddr, SyncToken FROM Customer WHERE ${queryConditions.join(' OR ')} MAXRESULTS 10`;
-        const queryUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/query?query=${encodeURIComponent(query)}&minorversion=69`;
-
-        logger.debug(`${logPrefix} get_qbo_customer_by_display_or_email: Querying QBO: ${queryUrl}`);
-
-        const response = await axios.get(queryUrl, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`, // Using accessToken from params.qboCredentials
-            'Accept': 'application/json',
-          },
-          timeout: 15000,
-        });
-
-        const qboApiCustomers = response.data?.QueryResponse?.Customer;
-        if (qboApiCustomers && qboApiCustomers.length > 0) {
-          logger.info(`${logPrefix} get_qbo_customer_by_display_or_email: Found ${qboApiCustomers.length} QBO Customer(s) via API.`);
-          return { success: true, found: true, customers: qboApiCustomers };
-        }
-
-        logger.info(`${logPrefix} get_qbo_customer_by_display_or_email: No QBO Customer found via API for the given criteria.`);
-        return { success: true, found: false, customers: [] };
-
-      } catch (error: any) {
-        logger.error(`${logPrefix} get_qbo_customer_by_display_or_email: Error looking up QBO Customer for tenant: ${context.tenant}`, error.response?.data || error.message || error);
-        const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
-        return { success: false, found: false, customers: [], message: `QBO API Error: ${errorMessage}`, errorDetails: error.response?.data || error };
-      }
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.warn(`[ACTION] get_qbo_customer_by_display_or_email invoked after QBO workflow retirement for tenant ${context.tenant}. Returning deprecation notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        customers: [],
+        message: 'get_qbo_customer_by_display_or_email is no longer available; use AccountingExportService-driven exports for QuickBooks.'
+      };
     }
   );
 
-  // Get QBO Customer by ID
+  // Retired QBO customer fetch by ID action
   actionRegistry.registerSimpleAction(
     'get_qbo_customer_by_id',
-    'Get a QBO Customer by its ID.',
+    'Legacy QBO customer fetch by ID action (retired)',
     [
-      { name: 'qboCustomerId', type: 'string', required: true, description: 'The ID of the QBO customer to fetch.' },
-      { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID.' },
-      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
-      // tenantId will be implicitly available via ActionExecutionContext
+      { name: 'payload', type: 'object', required: false }
     ],
-    async (params: Record<string, any>, context: ActionExecutionContext): Promise<QboCustomerByIdResult> => {
-      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})] get_qbo_customer_by_id:`;
-      logger.info(`${logPrefix} Called for QBO Customer ID: ${params.qboCustomerId}, Realm ID: ${params.realmId}, Tenant: ${context.tenant}`);
-
-      try {
-        const qboCredentials = params.qboCredentials as QboCredentials;
-
-        if (!qboCredentials) {
-          logger.error(`${logPrefix} QBO credentials not provided. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
-          return { success: false, message: 'QBO credentials not provided.' };
-        }
-
-        const { accessToken, accessTokenExpiresAt } = qboCredentials;
-
-        if (!accessToken || !accessTokenExpiresAt) {
-          logger.error(`${logPrefix} Missing QBO accessToken or accessTokenExpiresAt in provided credentials. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
-          return { success: false, message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing).' };
-        }
-
-        if (new Date(accessTokenExpiresAt) < new Date()) {
-          logger.warn(`${logPrefix} QBO access token expired (using provided credentials). RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
-          return { success: false, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
-        }
-
-        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/customer/${params.qboCustomerId}?minorversion=69`;
-        logger.debug(`${logPrefix} Querying QBO: ${apiUrl}`);
-
-        const response = await axios.get(apiUrl, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/json',
-          },
-          timeout: 15000, // Standard timeout for GET requests
-        });
-
-        const qboCustomer = response.data?.Customer;
-
-        if (qboCustomer && qboCustomer.Id) {
-          logger.info(`${logPrefix} Successfully fetched QBO Customer ${qboCustomer.Id}. RealmId: ${params.realmId}`);
-          return {
-            success: true,
-            customer: qboCustomer as QuickBooksClientInfo,
-            qboRawResponse: response.data,
-          };
-        } else {
-          // This case handles if QBO API returns 200 OK but no Customer object, or Customer object is malformed.
-          logger.warn(`${logPrefix} QBO API call successful but customer data is missing or malformed. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}. Response: ${JSON.stringify(response.data)}`);
-          return {
-            success: false,
-            message: 'QBO API call successful, but customer data is missing or malformed in the response.',
-            qboRawResponse: response.data,
-            errorDetails: response.data, // Provide the raw response as error details
-          };
-        }
-      } catch (error: any) {
-        logger.error(`${logPrefix} Error fetching QBO Customer by ID ${params.qboCustomerId}, RealmId: ${params.realmId}, Tenant: ${context.tenant}`, error.response?.data || error.message || error);
-        const faultError = error.response?.data?.Fault?.Error?.[0];
-        let errorMessage = 'An unexpected error occurred while fetching QBO customer.';
-        if (faultError) {
-          errorMessage = `QBO API Error: ${faultError.Message || 'Unknown QBO Error'}. Detail: ${faultError.Detail || 'No additional details.'} Code: ${faultError.code || 'N/A'}`;
-        } else if (axios.isAxiosError(error) && error.message) {
-            errorMessage = `Network/Request Error: ${error.message}`;
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        // Specifically check for "Object Not Found" type errors from QBO.
-        // QBO error code for "Object Not Found" is often 6240 in the detail.
-        // Also check if the status code is 404, which QBO might return for a non-existent resource.
-        if (error.response?.status === 404 || faultError?.Detail?.includes("Object Not Found") || faultError?.code === "6240" || (error.response?.status === 400 && faultError?.Message?.toLowerCase().includes("not found"))) {
-            logger.info(`${logPrefix} QBO Customer ID ${params.qboCustomerId} not found in Realm ID ${params.realmId}. Status: ${error.response?.status}`);
-            return {
-                success: false,
-                message: `QBO Customer with ID ${params.qboCustomerId} not found. Detail: ${faultError?.Detail || 'Not found.'}`,
-                errorDetails: error.response?.data || error.toString(),
-                qboRawResponse: error.response?.data
-            };
-        }
-
-        return {
-            success: false,
-            message: errorMessage,
-            errorDetails: error.response?.data || error.toString(),
-            qboRawResponse: error.response?.data
-        };
-      }
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.warn(`[ACTION] get_qbo_customer_by_id invoked after QBO workflow retirement for tenant ${context.tenant}. Returning deprecation notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        customer: null,
+        message: 'get_qbo_customer_by_id is no longer available; use AccountingExportService-driven exports for QuickBooks.'
+      };
     }
   );
 
-  // Update Alga client QBO mapping details
+  // Retired QBO client mapping update action
   actionRegistry.registerSimpleAction(
     'update_client_qbo_details',
-    'Update Alga client QBO mapping in tenant_external_entity_mappings with QBO customer ID and sync token.',
+    'Legacy QBO client mapping update action (retired)',
     [
-      { name: 'clientId', type: 'string', required: true, description: 'The ID of the Alga client to update.' },
-      { name: 'qboCustomerId', type: 'string', required: true, description: 'The QBO customer ID.' },
-      { name: 'qboSyncToken', type: 'string', required: true, description: 'The QBO sync token for the customer.' },
-      { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID.' },
+      { name: 'payload', type: 'object', required: false }
     ],
-    async (params: Record<string, any>, context: ActionExecutionContext) => {
-      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      logger.info(`${logPrefix} update_client_qbo_details called for clientId: ${params.clientId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
-
-      try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
-        const knex = await getAdminConnection();
-
-        const mappingData = {
-          tenant: context.tenant,
-          integration_type: 'quickbooks_online',
-          alga_entity_type: 'client', // Assuming 'client' is the Alga entity type mapping to QBO Customer
-          alga_entity_id: params.clientId,
-          external_entity_id: params.qboCustomerId,
-          external_realm_id: params.realmId,
-          sync_status: 'SYNCED', // Or a more appropriate status
-          metadata: { qboSyncToken: params.qboSyncToken }, // Store sync token in metadata
-          updated_at: new Date(),
-        };
-
-        // Perform an upsert operation
-        // The conflict target should be the unique key identifying a mapping
-        // Adjust conflict target columns as per your actual table schema's unique constraints for a mapping
-        const conflictTarget = ['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'];
-
-        const [updatedMapping] = await knex('tenant_external_entity_mappings')
-          .insert(mappingData)
-          .onConflict(conflictTarget)
-          .merge({
-            external_entity_id: params.qboCustomerId, // Ensure external_entity_id is updated on conflict
-            sync_status: 'SYNCED',
-            metadata: { qboSyncToken: params.qboSyncToken },
-            updated_at: new Date(),
-          })
-          .returning('*');
-
-        if (!updatedMapping) {
-          logger.warn(`${logPrefix} update_client_qbo_details: Mapping not created or updated for clientId: ${params.clientId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
-          // This case might be unlikely with upsert unless there's a fundamental DB issue not caught by try/catch
-          return { success: false, updated: false, message: 'Mapping not created or updated.' };
-        }
-
-        logger.info(`${logPrefix} update_client_qbo_details: Successfully created/updated mapping for client ${params.clientId} with QBO customer ${params.qboCustomerId}.`);
-        return { success: true, updated: true, updatedMapping };
-
-      } catch (error: any) {
-        logger.error(`${logPrefix} update_client_qbo_details: Error creating/updating mapping for client ${params.clientId}, tenant: ${context.tenant}`, error);
-        return { success: false, message: error.message, error };
-      }
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.warn(`[ACTION] update_client_qbo_details invoked after QBO workflow retirement for tenant ${context.tenant}. Returning deprecation notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        message: 'update_client_qbo_details is no longer available; use AccountingExportService-driven exports for QuickBooks.'
+      };
     }
   );
 
@@ -1527,60 +1150,20 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Placeholder for update_invoice_qbo_details
+  // Retired QBO invoice detail update action
   actionRegistry.registerSimpleAction(
     'update_invoice_qbo_details',
-    'Update Alga invoice QBO details (placeholder)',
+    'Legacy QBO invoice detail update action (retired)',
     [
-      { name: 'invoiceId', type: 'string', required: true },
-      { name: 'qboInvoiceId', type: 'string', required: false },
-      { name: 'qboSyncToken', type: 'string', required: false },
+      { name: 'payload', type: 'object', required: false }
     ],
-    async (params: Record<string, any>, context: ActionExecutionContext) => {
-      // Removed status from log as it's no longer a direct parameter for this action's core responsibility
-      logger.info(`[ACTION] update_invoice_qbo_details called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
-      try {
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
-        const knex = await getAdminConnection();
-
-        const updateData: Record<string, any> = {};
-        let hasUpdates = false;
-
-        // Only include QBO fields in the update if they are provided
-        if (params.qboInvoiceId !== undefined) {
-          updateData.qbo_invoice_id = params.qboInvoiceId;
-          hasUpdates = true;
-        }
-        if (params.qboSyncToken !== undefined) {
-          updateData.qbo_sync_token = params.qboSyncToken;
-          hasUpdates = true;
-        }
-
-        // If neither qboInvoiceId nor qboSyncToken is provided, there's nothing to update on the invoice itself.
-        if (!hasUpdates) {
-            logger.info(`[ACTION] update_invoice_qbo_details: No QBO ID or SyncToken provided for invoiceId: ${params.invoiceId}. No update performed on 'invoices' table.`);
-            // Returning success: true because the action didn't fail, it just had nothing to do based on input.
-            // The workflow might still need to update the mapping table status separately.
-            return { success: true, updated: false, message: "No QBO ID or SyncToken provided; no update needed on invoice record." };
-        }
-
-        const [updatedInvoice] = await knex('invoices')
-          .where({ invoice_id: params.invoiceId, tenant: context.tenant }) // Assumes invoice_id is the correct column name
-          .update(updateData)
-          .returning('*'); // Or adjust if you only need a success/failure indication
-
-        if (!updatedInvoice) {
-            logger.warn(`[ACTION] update_invoice_qbo_details: Invoice not found or not updated for id: ${params.invoiceId}, tenant: ${context.tenant} with data: ${JSON.stringify(updateData)}`);
-            // Throw an error here, as if we had data to update but didn't find the record, it's an issue.
-            throw new Error(`Invoice with id ${params.invoiceId} not found for tenant ${context.tenant}.`);
-        }
-
-        logger.info(`[ACTION] update_invoice_qbo_details: Successfully updated QBO ID/Token for invoiceId: ${params.invoiceId}`);
-        return { success: true, updated: true, updatedInvoice };
-      } catch (error: any) {
-        logger.error(`[ACTION] update_invoice_qbo_details: Error updating QBO details for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`, error);
-        return { success: false, message: error.message, error };
-      }
+    async (_params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.warn(`[ACTION] update_invoice_qbo_details invoked after QBO workflow retirement for tenant ${context.tenant}. Returning deprecation notice.`);
+      return {
+        success: false,
+        deprecated: true,
+        message: 'update_invoice_qbo_details is no longer available; use AccountingExportService-driven exports for QuickBooks.'
+      };
     }
   );
 

@@ -306,7 +306,7 @@ function ExtensionsTable({
     {
       title: 'Actions',
       dataIndex: 'id',
-      width: '320px',
+      width: '380px',
       headerClassName: 'text-right sticky right-0 bg-white z-20',
       cellClassName: 'sticky right-0 bg-white z-10',
       render: (_v, extension) => (
@@ -361,6 +361,17 @@ function ExtensionsTable({
           >
             Remove
           </button>
+          {/* Per-extension debug console entrypoint.
+              Uses only the extension id; tenant scoping is enforced server-side
+              based on the authenticated session in /api/ext-debug/stream. */}
+          <Link
+            href={`/msp/extensions/${extension.id}/debug`}
+            className="inline-flex items-center justify-center px-3 py-1 border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 text-[10px] font-medium transition-colors"
+            data-automation-id={`extension-debug-${extension.id}`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            Debug
+          </Link>
         </div>
       )
     }

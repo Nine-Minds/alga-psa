@@ -261,14 +261,15 @@ test.describe('Accounting Settings – QuickBooks Mapping CRUD', () => {
           quickbooks_online: {
             'qbo-service-mappings': qbOverrides,
             'qbo-tax-code-mappings': qbTaxOverrides,
-            'qbo-term-mappings': qbTermOverrides,
+            'qbo-term-mappings': qbTermOverrides
           },
           xero: {
             'xero-service-mappings': xeroServiceOverrides,
-            'xero-tax-rate-mappings': xeroTaxOverrides,
+            'xero-tax-rate-mappings': xeroTaxOverrides
           },
           status: {
-            xero: mocks.xeroStatus,
+            qbo: qbStore.status,
+            xero: mocks.xeroStatus
           },
           tenantId: tenantId ?? null
         };
@@ -282,9 +283,16 @@ test.describe('Accounting Settings – QuickBooks Mapping CRUD', () => {
         mocks: {
           qboStatus: {
             connected: true,
-            status: 'Connected',
-            clientName: 'Acme MSP',
-            realmId: 'realm-playwright',
+            connections: [
+              {
+                realmId: 'realm-playwright',
+                displayName: 'Acme MSP',
+                status: 'active',
+                lastValidatedAt: new Date().toISOString(),
+                error: null
+              }
+            ],
+            defaultRealmId: 'realm-playwright'
           },
           qboServices: [
             {
@@ -375,6 +383,9 @@ test.describe('Accounting Settings – QuickBooks Mapping CRUD', () => {
       await expect(integrationsTab).toHaveAttribute('aria-selected', 'true');
 
       await expect(page.locator('#qbo-mapping-card')).toBeVisible();
+      const realmSelect = page.locator('#qbo-realm-select');
+      await expect(realmSelect).toHaveValue('realm-playwright');
+      await realmSelect.selectOption('realm-playwright');
 
       await page.click('#add-qbo-item-mapping-button');
       const serviceSelect = page.locator('button[aria-label="Select Alga Service..."]');
@@ -408,6 +419,58 @@ test.describe('Accounting Settings – QuickBooks Mapping CRUD', () => {
       await confirmButton.click();
 
       await expect(table).toContainText('No mappings found.');
+
+      await page.getByRole('tab', { name: 'Tax Codes' }).click();
+      const qboTaxTable = page.locator('#qbo-taxcode-mappings-table');
+      await expect(qboTaxTable).toContainText('No mappings found.');
+
+      await page.click('#add-qbo-taxcode-mapping-button');
+      await page.locator('button[aria-label="Select Alga Tax Region..."]').click();
+      await page.getByRole('option', { name: 'North America', exact: true }).click();
+      await page.locator('button[aria-label="Select QuickBooks Tax Code..."]').click();
+      await page.getByRole('option', { name: 'Standard Tax', exact: true }).click();
+      await page.click('#qbo-taxcode-mapping-dialog-save-button');
+
+      await expect(qboTaxTable).toContainText('North America');
+      await expect(qboTaxTable).toContainText('Standard Tax');
+
+      await page.click('#qbo-tax-code-mappings-actions-qb-tax-001');
+      await page.click('#edit-qbo-taxcode-mapping-menu-item-qb-tax-001');
+      await page.locator('button[aria-label="Select QuickBooks Tax Code..."]').last().click();
+      await page.getByRole('option', { name: 'Zero Tax', exact: true }).click();
+      await page.click('#qbo-taxcode-mapping-dialog-save-button');
+      await expect(qboTaxTable).toContainText('Zero Tax');
+
+      await page.click('#qbo-tax-code-mappings-actions-qb-tax-001');
+      await page.click('#delete-qbo-taxcode-mapping-menu-item-qb-tax-001');
+      await page.click('#confirm-delete-qbo-taxcode-mapping-dialog-qb-tax-001-confirm');
+      await expect(qboTaxTable).toContainText('No mappings found.');
+
+      await page.getByRole('tab', { name: 'Payment Terms' }).click();
+      const qboTermTable = page.locator('#qbo-term-mappings-table');
+      await expect(qboTermTable).toContainText('No mappings found.');
+
+      await page.click('#add-qbo-term-mapping-button');
+      await page.locator('button[aria-label="Select Alga Payment Term..."]').click();
+      await page.getByRole('option', { name: 'Net 15', exact: true }).click();
+      await page.locator('button[aria-label="Select QuickBooks Term..."]').click();
+      await page.getByRole('option', { name: 'Net 30 (QBO)', exact: true }).click();
+      await page.click('#qbo-term-mapping-dialog-save-button');
+
+      await expect(qboTermTable).toContainText('Net 15');
+      await expect(qboTermTable).toContainText('Net 30 (QBO)');
+
+      await page.click('#qbo-term-mappings-actions-qb-term-001');
+      await page.click('#edit-qbo-term-mapping-menu-item-qb-term-001');
+      await page.locator('button[aria-label="Select QuickBooks Term..."]').last().click();
+      await page.getByRole('option', { name: 'Net 15 (QBO)', exact: true }).click();
+      await page.click('#qbo-term-mapping-dialog-save-button');
+      await expect(qboTermTable).toContainText('Net 15 (QBO)');
+
+      await page.click('#qbo-term-mappings-actions-qb-term-001');
+      await page.click('#delete-qbo-term-mapping-menu-item-qb-term-001');
+      await page.click('#confirm-delete-qbo-term-mapping-dialog-qb-term-001-confirm');
+      await expect(qboTermTable).toContainText('No mappings found.');
 
       const xeroCard = page.locator('#xero-mapping-card');
       await expect(xeroCard).toBeVisible();

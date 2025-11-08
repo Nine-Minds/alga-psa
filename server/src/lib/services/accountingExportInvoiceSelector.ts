@@ -12,6 +12,9 @@ export interface InvoiceSelectionFilters {
   invoiceStatuses?: string[];
   clientIds?: string[];
   clientSearch?: string;
+  adapterType?: string;
+  targetRealm?: Nullable<string>;
+  excludeSyncedInvoices?: boolean;
 }
 
 export interface InvoicePreviewLine {
@@ -54,6 +57,7 @@ export class AccountingExportInvoiceSelector {
   }
 
   async previewInvoiceLines(filters: InvoiceSelectionFilters): Promise<InvoicePreviewLine[]> {
+    const tenantId = this.tenantId;
     const query = this.knex('invoices as inv')
       .join('invoice_charges as ch', function joinCharges() {
         this.on('inv.invoice_id', '=', 'ch.invoice_id').andOn('inv.tenant', '=', 'ch.tenant');
@@ -99,6 +103,30 @@ export class AccountingExportInvoiceSelector {
       query.andWhereRaw('LOWER(cli.client_name) LIKE ?', [searchValue]);
     }
 
+    const adapterType = filters.adapterType?.trim() ?? '';
+    const targetRealm = filters.targetRealm ? String(filters.targetRealm).trim() : null;
+    const shouldExcludeSynced = Boolean(filters.excludeSyncedInvoices !== false && adapterType);
+
+    if (shouldExcludeSynced) {
+      const knex = this.knex;
+      query.whereNotExists(function () {
+        this.select(knex.raw('1'))
+          .from('tenant_external_entity_mappings as map')
+          .where('map.tenant', tenantId)
+          .andWhere('map.integration_type', adapterType)
+          .andWhere('map.alga_entity_type', 'invoice')
+          .andWhereRaw('map.alga_entity_id = inv.invoice_id::text');
+
+        if (targetRealm) {
+          this.andWhere(function () {
+            this.where('map.external_realm_id', targetRealm).orWhereNull('map.external_realm_id');
+          });
+        } else {
+          this.whereNull('map.external_realm_id');
+        }
+      });
+    }
+
     const rows = await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc');
 
     if (rows.length === 0) {
@@ -138,7 +166,12 @@ export class AccountingExportInvoiceSelector {
   }
 
   async createBatchFromFilters(options: CreateBatchOptions): Promise<{ batch: AccountingExportBatch; lines: InvoicePreviewLine[] }> {
-    const preview = await this.previewInvoiceLines(options.filters);
+    const preview = await this.previewInvoiceLines({
+      ...options.filters,
+      adapterType: options.adapterType,
+      targetRealm: options.targetRealm ?? null,
+      excludeSyncedInvoices: options.filters.excludeSyncedInvoices ?? true
+    });
 
     const exportService = await AccountingExportService.create();
     const batch = await exportService.createBatch({

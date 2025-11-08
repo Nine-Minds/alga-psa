@@ -6,9 +6,8 @@
 import type { Knex } from 'knex';
 import { createRequire } from 'module';
 
+// Extend globalThis type to support __knexDialectPatched
 declare global {
-  // Track whether we've already patched Module.require
-  // eslint-disable-next-line no-var
   var __knexDialectPatched: boolean | undefined;
 }
 

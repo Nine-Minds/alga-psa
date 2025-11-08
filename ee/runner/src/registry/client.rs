@@ -9,7 +9,12 @@ use url::Url;
 /// Registry validation client trait. Validates a tenant/extension/content-hash mapping.
 #[async_trait]
 pub trait RegistryClient: Send + Sync {
-    async fn validate_install(&self, tenant_id: &str, extension_id: &str, content_hash: &str) -> Result<bool>;
+    async fn validate_install(
+        &self,
+        tenant_id: &str,
+        extension_id: &str,
+        content_hash: &str,
+    ) -> Result<bool>;
 }
 
 /// HTTP-backed client with a short TTL cache. When strict validation is disabled (EXT_STATIC_STRICT_VALIDATION != "true"),
@@ -28,7 +33,9 @@ impl HttpRegistryClient {
             .map(|v| v.trim().eq_ignore_ascii_case("true"))
             .unwrap_or(true);
 
-        let base_url = std::env::var("REGISTRY_BASE_URL").ok().and_then(|s| Url::parse(&s).ok());
+        let base_url = std::env::var("REGISTRY_BASE_URL")
+            .ok()
+            .and_then(|s| Url::parse(&s).ok());
 
         let cache = Cache::builder()
             .max_capacity(10_000)
@@ -41,7 +48,11 @@ impl HttpRegistryClient {
         let api_key = api_key.or_else(|| {
             std::env::var("ALGA_AUTH_KEY").ok().and_then(|s| {
                 let t = s.trim().to_string();
-                if t.is_empty() { None } else { Some(t) }
+                if t.is_empty() {
+                    None
+                } else {
+                    Some(t)
+                }
             })
         });
 
@@ -68,7 +79,12 @@ impl HttpRegistryClient {
 
 #[async_trait]
 impl RegistryClient for HttpRegistryClient {
-    async fn validate_install(&self, tenant_id: &str, extension_id: &str, content_hash: &str) -> Result<bool> {
+    async fn validate_install(
+        &self,
+        tenant_id: &str,
+        extension_id: &str,
+        content_hash: &str,
+    ) -> Result<bool> {
         // Short-circuit if strict validation disabled.
         if !self.strict {
             return Ok(true);
@@ -89,7 +105,10 @@ impl RegistryClient for HttpRegistryClient {
         // Minimal stub endpoint path - subject to change when real registry is wired
         let path = "api/installs/validate";
         url.set_path(path);
-        let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
         url.query_pairs_mut()
             .append_pair("tenant", tenant_id)
             .append_pair("extension", extension_id)
@@ -120,11 +139,16 @@ impl RegistryClient for HttpRegistryClient {
             match resp.text().await {
                 Ok(txt) => {
                     tracing::info!(tenant=%tenant_id, extension=%extension_id, hash=%content_hash, status=200u16, body_len=%txt.len(), body_sample=%txt.chars().take(200).collect::<String>(), "validate response body");
-                    serde_json::from_str::<serde_json::Value>(&txt).ok().and_then(|v| v.get("valid").and_then(|b| b.as_bool())).unwrap_or(false)
+                    serde_json::from_str::<serde_json::Value>(&txt)
+                        .ok()
+                        .and_then(|v| v.get("valid").and_then(|b| b.as_bool()))
+                        .unwrap_or(false)
                 }
                 Err(_) => false,
             }
-        } else { false };
+        } else {
+            false
+        };
 
         self.cache.insert(key, valid).await;
         Ok(valid)
@@ -137,7 +161,12 @@ mod tests {
     struct AllowAll;
     #[async_trait]
     impl RegistryClient for AllowAll {
-        async fn validate_install(&self, _tenant_id: &str, _extension_id: &str, _content_hash: &str) -> Result<bool> {
+        async fn validate_install(
+            &self,
+            _tenant_id: &str,
+            _extension_id: &str,
+            _content_hash: &str,
+        ) -> Result<bool> {
             Ok(true)
         }
     }

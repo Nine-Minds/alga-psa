@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { matchEndpoint, pathnameFromParts, filterRequestHeaders, filterResponseHeaders, getTimeoutMs } from '../../../../../lib/extensions/lib/gateway-utils';
+import { matchEndpoint, pathnameFromParts, filterRequestHeaders, getTimeoutMs } from '../../../../../lib/extensions/lib/gateway-utils';
 import { getRegistryFacade } from '../../../../../lib/extensions/lib/gateway-registry';
+import { loadInstallConfigCached } from '../../../../../lib/extensions/lib/install-config-cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getTenantFromAuth } from 'server/src/lib/extensions/gateway/auth';
+import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from '../../../../../lib/extensions/runner/backend';
 export const dynamic = 'force-dynamic';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -32,14 +35,6 @@ function json(status: number, body: any, headers: HeadersInit = {}) {
 // In non-production, return a deterministic tenant for local testing.
 // In production, return null (401 will be returned by caller).
 // Reference: ee/docs/extension-system/api-routing-guide.md
-async function getTenantIdFromAuth(_req: NextRequest): Promise<string | null> {
-  if (process.env.NODE_ENV !== 'production') {
-    return 'tenant-dev';
-  }
-  // TODO: integrate with real auth/session to resolve tenant context
-  return null;
-}
-
 class AccessError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -68,22 +63,6 @@ async function assertAccess(tenantId: string, method: Method): Promise<void> {
   }
 }
 
-// Resolve tenant install via the Registry V2 facade seam
-// Returns active version_id and content_hash
-async function resolveInstall(
-  tenantId: string,
-  extensionId: string
-): Promise<{ install_id: string; version_id: string; content_hash: string } | null> {
-  const facade = getRegistryFacade();
-  const install = await facade.getTenantInstall(tenantId, extensionId);
-  if (!install) return null;
-  return {
-    install_id: install.install_id,
-    version_id: install.version_id,
-    content_hash: install.content_hash,
-  };
-}
-
 // Load manifest v2 for version_id and match endpoint (method + path)
 async function resolveEndpoint(
   versionId: string,
@@ -107,15 +86,19 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
     const pathname = pathnameFromParts(pathParts);
     const url = new URL(req.url);
 
-    const tenantId = await getTenantIdFromAuth(req);
+    const tenantId = await getTenantFromAuth(req);
     if (!tenantId) return json(401, { error: 'Unauthorized' });
 
     await assertAccess(tenantId, method);
 
-    const install = await resolveInstall(tenantId, extensionId);
-    if (!install) return json(404, { error: 'Extension not installed' });
+    const installConfig = await loadInstallConfigCached(tenantId, extensionId);
+    if (!installConfig) return json(404, { error: 'Extension not installed' });
+    if (!installConfig.contentHash) {
+      console.error('[ext-gateway] Missing content hash for install', { tenantId, extensionId });
+      return json(502, { error: 'Extension bundle unavailable' });
+    }
 
-    const endpoint = await resolveEndpoint(install.version_id, method, pathname);
+    const endpoint = await resolveEndpoint(installConfig.versionId, method, pathname);
     if (!endpoint) return json(404, { error: 'Endpoint not found' });
 
     const timeoutMs = getTimeoutMs();
@@ -127,9 +110,10 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
         request_id: requestId,
         tenant_id: tenantId,
         extension_id: extensionId,
-        install_id: install.install_id,
-        version_id: install.version_id,
-        content_hash: install.content_hash,
+        install_id: installConfig.installId,
+        version_id: installConfig.versionId,
+        content_hash: installConfig.contentHash,
+        config: installConfig.config,
       },
       http: {
         method,
@@ -140,48 +124,40 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
       },
       limits: { timeout_ms: timeoutMs },
       endpoint: endpoint.handler, // handler id/path inside the bundle
+      providers: installConfig.providers,
+      secret_envelope: installConfig.secretEnvelope ?? undefined,
     };
 
-    const runnerBase = process.env.RUNNER_BASE_URL;
-    if (!runnerBase) {
-      console.error('[ext-gateway] RUNNER_BASE_URL is not configured');
-      return json(500, { error: 'Runner not configured' });
+    const backend = getRunnerBackend();
+
+    const runnerHeaders: Record<string, string> = {};
+    if (installConfig.configVersion) {
+      runnerHeaders['x-ext-config-version'] = installConfig.configVersion;
     }
-
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-
-    const resp = await fetch(`${runnerBase.replace(/\/$/, '')}/v1/execute`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-request-id': requestId,
-        // TODO: add short-lived service token for Runner auth
-        // 'authorization': `Bearer ${await getRunnerServiceToken()}`
-      },
-      body: JSON.stringify(execReq),
-      signal: controller.signal,
-    }).catch((err) => {
-      console.error('[ext-gateway] Runner fetch error:', err);
-      throw err;
-    }).finally(() => {
-      clearTimeout(id);
+    if (installConfig.secretsVersion) {
+      runnerHeaders['x-ext-secrets-version'] = installConfig.secretsVersion;
+    }
+    const runnerResp = await backend.execute(execReq, {
+      requestId,
+      timeoutMs,
+      headers: runnerHeaders,
     });
 
-    if (!resp.ok) {
-      console.error('[ext-gateway] Runner non-ok status:', resp.status);
-      return json(502, { error: 'Runner error' });
-    }
-
-    const payload = await resp.json().catch(() => ({}));
-    const status = typeof payload.status === 'number' ? payload.status : 200;
-    const headers = filterResponseHeaders(payload.headers);
-    const body = payload.body_b64 ? Buffer.from(payload.body_b64, 'base64') : undefined;
-
-    return new NextResponse(body as any, { status, headers });
+    return new NextResponse(runnerResp.body as any, {
+      status: runnerResp.status,
+      headers: runnerResp.headers,
+    });
   } catch (err: any) {
     if (err instanceof AccessError) {
       return json(err.status, { error: err.message });
+    }
+    if (err instanceof RunnerConfigError) {
+      console.error('[ext-gateway] Runner configuration error:', err.message);
+      return json(500, { error: 'Runner not configured' });
+    }
+    if (err instanceof RunnerRequestError) {
+      console.error('[ext-gateway] Runner request error:', err.message, { backend: err.backend, status: err.status });
+      return json(502, { error: 'Runner error' });
     }
     if (err?.name === 'AbortError') {
       return json(504, { error: 'Gateway timeout' });

@@ -42,6 +42,7 @@ import { EmailSettings } from '@product/email-settings/entry';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from 'server/src/components/calendar/CalendarIntegrationsSettings';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import Link from 'next/link';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
@@ -311,7 +312,9 @@ const SettingsPage = (): JSX.Element =>  {
         <Card>
           <CardHeader>
             <CardTitle>Extension Management</CardTitle>
-            <CardDescription>Install, configure, and manage extensions to extend Alga PSA functionality</CardDescription>
+            <CardDescription>
+              Install, configure, and manage extensions to extend Alga PSA functionality.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isEEAvailable ? (
@@ -321,8 +324,22 @@ const SettingsPage = (): JSX.Element =>  {
                     {
                       label: "Manage",
                       content: (
-                        <div className="py-2">
+                        <div className="py-2 space-y-3">
+                          {/* Primary extensions management grid */}
                           <DynamicExtensionsComponent />
+                          {/* Global debug console link for the Service Proxy Demo extension */}
+                          <div className="flex items-center justify-end gap-2 text-[10px]">
+                            <span className="text-slate-500">
+                              Need extension logs?
+                            </span>
+                            <Link
+                              href="/msp/extensions/d773f8f7-c46d-4c9d-a79b-b55903dd5074/debug"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              Open Service Proxy Demo Debug Console
+                            </Link>
+                          </div>
                         </div>
                       )
                     },

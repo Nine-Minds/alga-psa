@@ -286,20 +286,20 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     }
     
     // If we have user type in session, use it for more accurate lookup
-    if (sessionUser.user_type) {
+    if (sessionUser.user_type && session.user?.email) {
       logger.debug(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}, tenant: ${tenant}`);
-      
+
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Explicit query with tenant filter for Citus
         const user = await trx<IUser>('users')
           .select('*')
-          .where('email', session.user.email.toLowerCase())
+          .where('email', session.user!.email!.toLowerCase())
           .where('user_type', sessionUser.user_type)
           .where('tenant', tenant) // Explicit tenant filter for Citus
           .first();
-        
+
         if (!user) {
-          logger.debug(`User not found for email: ${session.user.email}, type: ${sessionUser.user_type}, tenant: ${tenant}`);
+          logger.debug(`User not found for email: ${session.user!.email}, type: ${sessionUser.user_type}, tenant: ${tenant}`);
           return null;
         }
         
@@ -322,17 +322,22 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     }
     
     // Last resort: email-only lookup (development only)
+    if (!session.user?.email) {
+      logger.error('Session user email is missing');
+      return null;
+    }
+
     logger.warn(`DEVELOPMENT ONLY: Email-only lookup for: ${session.user.email} in tenant: ${tenant}`);
-    
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const user = await trx<IUser>('users')
         .select('*')
-        .where('email', session.user.email.toLowerCase())
+        .where('email', session.user!.email!.toLowerCase())
         .where('tenant', tenant) // Explicit tenant filter for Citus
         .first();
 
       if (!user) {
-        logger.debug(`User not found for email: ${session.user.email} in tenant: ${tenant}`);
+        logger.debug(`User not found for email: ${session.user!.email} in tenant: ${tenant}`);
         return null;
       }
       
