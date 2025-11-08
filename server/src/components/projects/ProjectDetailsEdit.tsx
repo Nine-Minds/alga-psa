@@ -42,11 +42,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   
   // Debug logs
   useEffect(() => {
-    console.log('ProjectDetailsEdit:', {
-      initialProject,
-      clientsLength: clients?.length,
-      clients
-    });
+    // Component mounted with initial project data
   }, [initialProject, clients]);
 
   const [project, setProject] = useState<IProject>(initialProject);
@@ -148,7 +144,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       });
       
       // Log for debugging
-      console.log('Updated project with budgeted hours:', budgetedHours);
 
       toast.success('Project updated successfully');
       onSave(updatedProject);
@@ -370,7 +365,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               entityType="project"
               initialTags={projectTags}
               onTagsChange={(tags) => {
-                console.log('Tags changed in ProjectDetailsEdit:', tags);
                 setProjectTags(tags);
                 setHasChanges(true);
               }}

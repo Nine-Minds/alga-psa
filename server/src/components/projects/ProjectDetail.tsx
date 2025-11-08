@@ -637,32 +637,21 @@ export default function ProjectDetail({
     setPhaseDropTarget(null);
     setTaskDraggingOverPhaseId(null); // Clear highlight on drop
     
-    // Debug logging
-    console.log('handlePhaseDropZone called:', {
-      targetPhase: targetPhase.phase_name,
-      beforePhaseId,
-      afterPhaseId,
-      dataTransferTypes: e.dataTransfer.types
-    });
     
     // Check if it's a phase being dropped
     const dropData = e.dataTransfer.getData('application/json');
     const plainData = e.dataTransfer.getData('text/plain');
     
-    console.log('Drop data:', { dropData, plainData });
     
     if (dropData) {
       try {
         const parsed = JSON.parse(dropData);
-        console.log('Parsed drop data:', parsed);
         if (parsed.type === 'phase' && parsed.phaseId) {
           // Handle phase reordering with the provided before/after IDs
-          console.log('Calling handlePhaseReorder with:', { draggedId: parsed.phaseId, beforePhaseId, afterPhaseId });
           await handlePhaseReorder(parsed.phaseId, beforePhaseId, afterPhaseId);
           return;
         }
       } catch (err) {
-        console.log('Error parsing drop data:', err);
         // Not JSON data, continue with task drop logic
       }
     }
@@ -755,14 +744,9 @@ export default function ProjectDetail({
   }, []);
 
   const handleAddCard = useCallback((status: ProjectStatus) => {
-    if (!selectedPhase) {
-      toast.error('Please select a phase before adding a card.');
-      return;
-    }
-    
     setIsAddingTask(true);
     setDefaultStatus(status);
-    setCurrentPhase(selectedPhase);
+    setCurrentPhase(selectedPhase); // This can be null, TaskForm will handle phase selection
     setSelectedTask(null);
     setShowQuickAdd(true);
   }, [selectedPhase]);
@@ -802,7 +786,6 @@ export default function ProjectDetail({
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
-    console.log('Using cached project tree data for edit task dialog');
     
     setSelectedTask(task);
     setCurrentPhase(phases.find(phase => phase.phase_id === task.phase_id) || null);
@@ -962,13 +945,11 @@ export default function ProjectDetail({
   };
 
   const handleMoveTaskClick = (task: IProjectTask) => {
-    console.log("Move Task action clicked in ProjectDetail:", task);
     setTaskToMove(task);
     setIsMoveTaskDialogOpen(true);
   };
 
   const handleDuplicateTaskClick = async (task: IProjectTask) => {
-    console.log("Duplicate clicked in ProjectDetail:", task);
 
     const placeholderTargetPhase = projectPhases.find(p => p.phase_id !== task.phase_id) || projectPhases[0]; // Just picking another phase for demo
     if (!placeholderTargetPhase) {
@@ -1001,7 +982,6 @@ export default function ProjectDetail({
 
   // Placeholder for delete handler (will add later)
   const handleDeleteTaskClick = (task: IProjectTask) => {
-    console.log("Delete clicked in ProjectDetail:", task);
     setTaskToDelete(task);
   };
  
@@ -1009,7 +989,6 @@ export default function ProjectDetail({
   const handleDialogMoveConfirm = async (targetPhaseId: string, targetStatusId: string | undefined) => {
     if (!taskToMove) return;
  
-    console.log(`Moving task ${taskToMove.task_id} to phase ${targetPhaseId} with status ${targetStatusId}`);
     try {
       const movedTask = await moveTaskToPhase(
         taskToMove.task_id,
@@ -1210,7 +1189,7 @@ export default function ProjectDetail({
         </div>
       </div>
 
-      {(showQuickAdd && (currentPhase || selectedPhase)) && (
+      {showQuickAdd && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-3xl">
             <button
@@ -1233,7 +1212,7 @@ export default function ProjectDetail({
               />
             ) : (
               <TaskQuickAdd
-                phase={currentPhase || selectedPhase!}
+                phase={currentPhase || selectedPhase || undefined}
                 onClose={handleCloseQuickAdd}
                 onTaskAdded={handleAddTask}
                 onTaskUpdated={handleEmptyTaskUpdate}

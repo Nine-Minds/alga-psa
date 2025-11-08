@@ -96,14 +96,13 @@ export function getConsumerName(processId: string = process.pid.toString()): str
 export async function getRedisClient() {
   const config = getRedisConfig();
   const password = await getSecret('redis_password', 'REDIS_PASSWORD');
-  
+
   if (!password) {
     logger.warn('[Redis] No Redis password configured - this is not recommended for production');
   }
-  
-  const client = createClient({
+
+  const clientConfig: any = {
     url: config.url,
-    password,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > 20) {
@@ -112,7 +111,14 @@ export async function getRedisClient() {
         return Math.min(500 * Math.pow(2, retries), 5000);
       }
     }
-  });
+  };
+
+  // Only set password if it's a non-empty string
+  if (password && password.trim()) {
+    clientConfig.password = password;
+  }
+
+  const client = createClient(clientConfig);
 
   await client.connect();
   return client;

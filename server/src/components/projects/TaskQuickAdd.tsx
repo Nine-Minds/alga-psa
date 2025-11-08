@@ -13,7 +13,7 @@ const TaskForm = dynamic(() => import('./TaskForm'), {
 });
 
 interface TaskQuickAddProps {
-  phase: IProjectPhase;
+  phase?: IProjectPhase; // Make phase optional
   onClose: () => void;
   onTaskAdded: (newTask: IProjectTask | null) => void;
   onTaskUpdated: (updatedTask: IProjectTask | null) => Promise<void>;

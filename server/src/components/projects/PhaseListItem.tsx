@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
+import { IProjectPhaseComment } from 'server/src/interfaces';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { TextArea } from '../ui/TextArea';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import styles from './ProjectDetail.module.css';
+import PhaseComments from './PhaseComments';
+import { getPhaseComments, addPhaseComment, updatePhaseComment, deletePhaseComment, getCommentUserMap } from 'server/src/lib/actions/project-actions/projectCommentActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { toast } from 'react-hot-toast';
 
 interface PhaseListItemProps {
   phase: IProjectPhase;
@@ -63,6 +68,38 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
+  const [phaseComments, setPhaseComments] = useState<IProjectPhaseComment[]>([]);
+  const [commentUserMap, setCommentUserMap] = useState<Record<string, any>>({});
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [deletedCommentIds, setDeletedCommentIds] = useState<string[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+
+  // Load comments when phase editing starts
+  useEffect(() => {
+    const loadComments = async () => {
+      if (isEditing && phase.phase_id) {
+        setIsLoadingComments(true);
+        try {
+          const [comments, user] = await Promise.all([
+            getPhaseComments(phase.phase_id),
+            getCurrentUser()
+          ]);
+          setPhaseComments(comments);
+          const userMap = await getCommentUserMap(comments);
+          setCommentUserMap(userMap);
+          if (user) {
+            setCurrentUserId(user.user_id);
+          }
+        } catch (error) {
+          console.error('Error loading phase comments:', error);
+        } finally {
+          setIsLoadingComments(false);
+        }
+      }
+    };
+
+    loadComments();
+  }, [isEditing, phase.phase_id]);
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -115,15 +152,12 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('PhaseListItem handleDrop called for phase:', phase.phase_name);
     
     const draggedPhaseId = e.dataTransfer.getData('text/plain');
     const dropData = e.dataTransfer.getData('application/json');
     
-    console.log('PhaseListItem drop data:', { draggedPhaseId, dropData });
     
     if (draggedPhaseId === phase.phase_id) {
-      console.log('Cannot drop phase on itself');
       return; // Can't drop on itself
     }
     
@@ -277,6 +311,49 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               />
             </div>
           </div>
+
+          {/* Comments section - only show in edit mode */}
+          {isEditing && (
+            <div className="mt-6">
+              <PhaseComments
+                phaseId={phase.phase_id}
+                comments={phaseComments}
+                userMap={commentUserMap}
+                currentUser={{ id: currentUserId, name: null, email: null, avatarUrl: null }}
+                onAddComment={async (content) => {
+                  // For edit mode, just add to local state - will be saved when phase is saved
+                  const newComment = {
+                    project_phase_comment_id: `temp-${Date.now()}`,
+                    tenant: '',
+                    project_phase_id: phase.phase_id,
+                    user_id: currentUserId,
+                    note: content,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  };
+                  setPhaseComments([newComment, ...phaseComments]);
+                  return true;
+                }}
+                onEditComment={async (commentId, content) => {
+                  // For edit mode, update local state - will be saved when phase is saved
+                  setPhaseComments(phaseComments.map(c =>
+                    c.project_phase_comment_id === commentId ? { ...c, note: content } : c
+                  ));
+                }}
+                onDeleteComment={async (commentId) => {
+                  // For edit mode, remove from local state - will be saved when phase is saved
+                  // Track deleted comments that need to be removed from database
+                  if (!commentId.startsWith('temp-')) {
+                    setDeletedCommentIds([...deletedCommentIds, commentId]);
+                  }
+                  setPhaseComments(phaseComments.filter(c => c.project_phase_comment_id !== commentId));
+                }}
+                isSubmitting={false}
+                className="mb-6"
+              />
+            </div>
+          )}
+
           {/* Action Buttons  */}
           <div className="flex justify-end gap-2 mt-3">
             <Button
@@ -295,8 +372,30 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               id={`save-edit-phase-${phase.phase_id}`}
               variant="default"
               size="sm"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
+                // Save comments first before saving phase
+                try {
+                  // Handle deleted comments
+                  for (const deletedId of deletedCommentIds) {
+                    await deletePhaseComment(deletedId);
+                  }
+
+                  // Handle existing and new comments
+                  for (const comment of phaseComments) {
+                    if (comment.project_phase_comment_id.startsWith('temp-')) {
+                      // New comment - create it
+                      await addPhaseComment(phase.phase_id, comment.note);
+                    } else {
+                      // Existing comment - update it
+                      await updatePhaseComment(comment.project_phase_comment_id!, comment.note);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error saving comments:', error);
+                  toast.error('Failed to save comments');
+                  return;
+                }
                 onSave(phase);
               }}
               title="Save changes"
@@ -333,6 +432,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
           {/* Hover Action Buttons */}
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
+              id={`edit-phase-button-${phase.phase_id}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(phase);
@@ -343,6 +443,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               <Pencil className="w-4 h-4 text-gray-500 hover:text-gray-700" />
             </button>
             <button
+              id={`delete-phase-button-${phase.phase_id}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(phase);
