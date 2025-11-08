@@ -8,7 +8,6 @@ import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } f
 import { logger, getSecretProviderInstance } from '@alga-psa/shared/core';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 import axios from 'axios'; // For QBO API calls
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import type { Knex } from 'knex';
 import { ManagedDomainService as ManagedDomainServiceExport } from '@product/email-domains/entry';
 
