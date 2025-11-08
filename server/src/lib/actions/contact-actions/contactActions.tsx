@@ -776,6 +776,13 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
         .update(updateData)
         .returning('*');
 
+      // If the contact is being set to inactive, also deactivate the associated user
+      if (updateData.is_inactive === true) {
+        await trx('users')
+          .where({ contact_id: contactData.contact_name_id, tenant, user_type: 'client' })
+          .update({ is_inactive: true });
+      }
+
       return updated;
     });
 
