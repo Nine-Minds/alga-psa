@@ -57,7 +57,8 @@ export async function addTicketResource(
           payload: {
             tenantId: tenant,
             ticketId: ticketId,
-            userId: additionalUserId
+            userId: additionalUserId,
+            isAdditionalAgent: false  // Promoted to primary since no primary exists
           }
         });
 
@@ -90,14 +91,16 @@ export async function addTicketResource(
         .returning('*');
 
         // Publish TICKET_ASSIGNED event for additional user assignment
+        const eventPayload = {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: additionalUserId,
+          isAdditionalAgent: true
+        };
+        console.log('[ticketResourceActions] Publishing TICKET_ASSIGNED event for additional agent:', JSON.stringify(eventPayload));
         await publishEvent({
           eventType: 'TICKET_ASSIGNED',
-          payload: {
-            tenantId: tenant,
-            ticketId: ticketId,
-            userId: additionalUserId,
-            isAdditionalAgent: true
-          }
+          payload: eventPayload
         });
 
         return resource;

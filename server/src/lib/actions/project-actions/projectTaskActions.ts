@@ -500,17 +500,19 @@ export async function addTaskResourceAction(taskId: string, userId: string, role
             if (task) {
                 const phase = await ProjectModel.getPhaseById(trx, task.phase_id);
                 if (phase) {
+                    const eventPayload = {
+                        tenantId: currentUser.tenant,
+                        projectId: phase.project_id,
+                        taskId: taskId,
+                        userId: currentUser.user_id,
+                        assignedTo: userId,
+                        additionalUsers: [],
+                        isAdditionalAgent: true // This user is being added as an additional agent
+                    };
+                    console.log('[projectTaskActions] Publishing PROJECT_TASK_ASSIGNED event for additional agent:', JSON.stringify(eventPayload));
                     await publishEvent({
                         eventType: 'PROJECT_TASK_ASSIGNED',
-                        payload: {
-                            tenantId: currentUser.tenant,
-                            projectId: phase.project_id,
-                            taskId: taskId,
-                            userId: currentUser.user_id,
-                            assignedTo: userId,
-                            additionalUsers: [],
-                            isAdditionalAgent: true // This user is being added as an additional agent
-                        }
+                        payload: eventPayload
                     });
                 }
             }

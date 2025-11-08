@@ -137,6 +137,16 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId, isAdditionalAgent } = payload;
 
+  // DEBUG: Log the full payload to see what we're receiving
+  logger.info('[InternalNotificationSubscriber] Received TICKET_ASSIGNED event', {
+    eventId: event.id,
+    tenantId,
+    ticketId,
+    userId,
+    isAdditionalAgent,
+    fullPayload: JSON.stringify(payload)
+  });
+
   try {
     const db = await getConnection(tenantId);
 
@@ -302,7 +312,8 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
           ticketTitle: ticket.title,
           priority: ticket.priority_name || 'None',
           priorityColor: ticket.priority_color,
-          status: ticket.status_name || 'Unknown'
+          status: ticket.status_name || 'Unknown',
+          performedByName: 'System'  // Default since event doesn't track who performed the assignment
         }
       });
 
