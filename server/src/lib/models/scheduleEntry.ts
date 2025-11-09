@@ -7,6 +7,7 @@ import { publishEvent } from '../eventBus/publishers';
 
 interface CreateScheduleEntryOptions {
   assignedUserIds: string[];  // Make required since it's the only way to assign users now
+  assignedByUserId?: string;  // Optional: the user who is creating/assigning the schedule entry
 }
 
 class ScheduleEntry {
@@ -333,14 +334,17 @@ class ScheduleEntry {
                   });
 
                   // Publish additional agent assignment event
+                  const additionalAgentPayload = {
+                    tenantId: tenant,
+                    ticketId: entry.work_item_id,
+                    primaryAgentId: ticket.assigned_to,
+                    additionalAgentId: userId,
+                    assignedByUserId: userId  // Self-assignment via dispatch
+                  };
+                  console.log('[scheduleEntry] Publishing TICKET_ADDITIONAL_AGENT_ASSIGNED:', JSON.stringify(additionalAgentPayload));
                   await publishEvent({
-                    eventType: 'TICKET_ASSIGNED',
-                    payload: {
-                      tenantId: tenant,
-                      ticketId: entry.work_item_id,
-                      userId: userId,
-                      isAdditionalAgent: true
-                    }
+                    eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
+                    payload: additionalAgentPayload
                   });
                 } else if (!ticket.assigned_to) {
                   // If ticket has no assignee, update the ticket and add user as assigned_to
@@ -355,14 +359,16 @@ class ScheduleEntry {
                     });
 
                   // Publish primary assignment event
+                  const primaryPayload = {
+                    tenantId: tenant,
+                    ticketId: entry.work_item_id,
+                    userId: userId,
+                    assignedByUserId: options.assignedByUserId
+                  };
+                  console.log('[scheduleEntry] Publishing TICKET_ASSIGNED for PRIMARY agent:', JSON.stringify(primaryPayload));
                   await publishEvent({
                     eventType: 'TICKET_ASSIGNED',
-                    payload: {
-                      tenantId: tenant,
-                      ticketId: entry.work_item_id,
-                      userId: userId,
-                      isAdditionalAgent: false
-                    }
+                    payload: primaryPayload
                   });
                 }
               }
@@ -447,15 +453,14 @@ class ScheduleEntry {
                   // Publish additional agent assignment event
                   if (phase) {
                     await publishEvent({
-                      eventType: 'PROJECT_TASK_ASSIGNED',
+                      eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
                       payload: {
                         tenantId: tenant,
                         projectId: phase.project_id,
                         taskId: entry.work_item_id,
-                        userId: userId,
-                        assignedTo: userId,
-                        additionalUsers: [],
-                        isAdditionalAgent: true
+                        primaryAgentId: task.assigned_to,
+                        additionalAgentId: userId,
+                        assignedByUserId: userId  // Self-assignment via dispatch
                       }
                     });
                   }
@@ -481,8 +486,8 @@ class ScheduleEntry {
                         taskId: entry.work_item_id,
                         userId: userId,
                         assignedTo: userId,
-                        additionalUsers: [],
-                        isAdditionalAgent: false
+                        assignedByUserId: options.assignedByUserId,
+                        additionalUsers: []
                       }
                     });
                   }

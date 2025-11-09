@@ -6,6 +6,7 @@ export const EventTypeEnum = z.enum([
   'TICKET_UPDATED',
   'TICKET_CLOSED',
   'TICKET_ASSIGNED',
+  'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
   'TICKET_DELETED',
   'PROJECT_CREATED',
@@ -13,6 +14,7 @@ export const EventTypeEnum = z.enum([
   'PROJECT_CLOSED',
   'PROJECT_ASSIGNED',
   'PROJECT_TASK_ASSIGNED',
+  'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
   'TIME_ENTRY_SUBMITTED',
   'TIME_ENTRY_APPROVED',
   'INVOICE_GENERATED',
@@ -60,6 +62,14 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   }).optional(),
 });
 
+// Ticket additional agent event payload schema
+export const TicketAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  primaryAgentId: z.string().uuid(),      // Existing primary agent
+  additionalAgentId: z.string().uuid(),   // New additional agent
+  assignedByUserId: z.string().uuid(),    // Who performed the action
+});
+
 // Project event payload schema
 export const ProjectEventPayloadSchema = BasePayloadSchema.extend({
   projectId: z.string().uuid(),
@@ -83,6 +93,15 @@ export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(),
   assignedTo: z.string().uuid(),
   additionalUsers: z.array(z.string().uuid()).optional(),
+});
+
+// Project task additional agent event payload schema
+export const ProjectTaskAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  taskId: z.string().uuid(),
+  primaryAgentId: z.string().uuid(),      // Existing primary agent
+  additionalAgentId: z.string().uuid(),   // New additional agent
+  assignedByUserId: z.string().uuid(),    // Who performed the action
 });
 
 // Time entry event payload schema
@@ -218,12 +237,14 @@ export const EventPayloadSchemas = {
   TICKET_CLOSED: TicketEventPayloadSchema,
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketEventPayloadSchema,
+  TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
   TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
   PROJECT_CREATED: ProjectEventPayloadSchema,
   PROJECT_UPDATED: ProjectEventPayloadSchema,
   PROJECT_CLOSED: ProjectClosedPayloadSchema,
   PROJECT_ASSIGNED: ProjectEventPayloadSchema,
   PROJECT_TASK_ASSIGNED: ProjectTaskEventPayloadSchema,
+  PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED: ProjectTaskAdditionalAgentPayloadSchema,
   TIME_ENTRY_SUBMITTED: TimeEntryEventPayloadSchema,
   TIME_ENTRY_APPROVED: TimeEntryEventPayloadSchema,
   INVOICE_GENERATED: InvoiceEventPayloadSchema,
@@ -261,17 +282,19 @@ export type TicketCreatedEvent = z.infer<typeof EventSchemas.TICKET_CREATED>;
 export type TicketUpdatedEvent = z.infer<typeof EventSchemas.TICKET_UPDATED>;
 export type TicketClosedEvent = z.infer<typeof EventSchemas.TICKET_CLOSED>;
 export type TicketDeletedEvent = z.infer<typeof EventSchemas.TICKET_DELETED>;
+export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
+export type TicketAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED>;
+export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
 export type ProjectCreatedEvent = z.infer<typeof EventSchemas.PROJECT_CREATED>;
 export type ProjectUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_UPDATED>;
 export type ProjectClosedEvent = z.infer<typeof EventSchemas.PROJECT_CLOSED>;
+export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>;
+export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
+export type ProjectTaskAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED>;
 export type TimeEntrySubmittedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_SUBMITTED>;
 export type TimeEntryApprovedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_APPROVED>;
 export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATED>;
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
-export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
-export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
-export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>;
-export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;
@@ -290,18 +313,20 @@ export type Event =
   | TicketCreatedEvent
   | TicketUpdatedEvent
   | TicketClosedEvent
+  | TicketDeletedEvent
   | TicketAssignedEvent
+  | TicketAdditionalAgentAssignedEvent
   | TicketCommentAddedEvent
   | ProjectCreatedEvent
   | ProjectUpdatedEvent
   | ProjectClosedEvent
   | ProjectAssignedEvent
   | ProjectTaskAssignedEvent
+  | ProjectTaskAdditionalAgentAssignedEvent
   | TimeEntrySubmittedEvent
   | TimeEntryApprovedEvent
   | InvoiceGeneratedEvent
   | InvoiceFinalizedEvent
-  | TicketDeletedEvent
   | CustomEvent
   | InboundEmailReceivedEvent
   | AccountingExportCompletedEvent

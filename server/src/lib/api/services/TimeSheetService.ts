@@ -872,32 +872,34 @@ export class TimeSheetService extends BaseService<any> {
 
   async createScheduleEntry(data: CreateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
+      const ScheduleEntry = (await import('../../models/scheduleEntry')).default;
+
       return withTransaction(knex, async (trx) => {
-        const entryData = {
-          ...data,
-          created_by: context.userId,
-          status: 'scheduled',
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
-        };
-  
-        const [entry] = await trx('schedule_entries')
-          .insert(entryData)
-          .returning('*');
-  
-        // Add assignees
-        if (data.assigned_user_ids && data.assigned_user_ids.length > 0) {
-          const assigneeData = data.assigned_user_ids.map((userId: string) => ({
-            entry_id: entry.entry_id,
-            user_id: userId,
-            tenant: context.tenant
-          }));
-  
-          await trx('schedule_entry_assignees').insert(assigneeData);
+        // Map work_item_type to valid WorkItemType or default
+        let workItemType: 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction';
+        if (data.work_item_type === 'ticket' || data.work_item_type === 'project_task') {
+          workItemType = data.work_item_type;
+        } else {
+          // Map other types to non_billable_category or ad_hoc
+          workItemType = 'ad_hoc';
         }
-  
+
+        // Use ScheduleEntry.create() which handles ticket/task assignment notifications
+        const entry = await ScheduleEntry.create(trx, {
+          title: data.title,
+          scheduled_start: new Date(data.scheduled_start),
+          scheduled_end: new Date(data.scheduled_end),
+          work_item_id: data.work_item_id ?? null,
+          work_item_type: workItemType,
+          notes: data.notes,
+          is_private: data.is_private,
+          recurrence_pattern: data.recurrence_pattern ? JSON.parse(data.recurrence_pattern) : null,
+          assigned_user_ids: data.assigned_user_ids || [],
+          status: 'scheduled'
+        }, {
+          assignedUserIds: data.assigned_user_ids || []
+        });
+
         return this.getScheduleEntry(entry.entry_id, context);
       });
     }
