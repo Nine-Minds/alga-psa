@@ -1,4 +1,5 @@
 // Wasmtime engine configuration, module fetch/cache, and instantiation
+use crate::engine::stderr_pipe::StderrPipe;
 use crate::models::{
     ExecuteRequest as ModelExecuteRequest, ExecuteResponse as ModelExecuteResponse,
 };
@@ -157,15 +158,17 @@ impl ModuleLoader {
         // Use a dedicated stderr sink that mirrors guest stderr into the debug hub when enabled.
         // We intentionally keep stdout as-is for now and treat stderr as the primary signal for
         // extension authors; this avoids surprising noise while still surfacing failures.
-        let stderr = wasmtime_wasi::pipe::WritePipe::new(move |bytes: &[u8]| {
-            if let Ok(line) = std::str::from_utf8(bytes) {
+        let stderr = StderrPipe::new(move |bytes: Vec<u8>| {
+            if let Ok(line) = std::str::from_utf8(&bytes) {
                 let line = line.trim_end_matches(&['\r', '\n'][..]).to_string();
                 if !line.is_empty() {
                     // Best-effort: we don't have the context here yet; the debug hub will
                     // attach request/tenant metadata once the HostExecutionContext is set
                     // on the store before the handler is invoked.
                     let ctx = HostExecutionContext::default();
-                    tokio::spawn(crate::engine::debug::emit_stderr_line(&ctx, &line));
+                    tokio::spawn(async move {
+                        crate::engine::debug::emit_stderr_line(&ctx, &line).await;
+                    });
                 }
             }
         });

@@ -6,10 +6,14 @@ use axum::{
     Json, Router,
 };
 use std::collections::{HashMap, HashSet};
+use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
+use tokio_stream::wrappers::BroadcastStream;
+#[allow(unused_imports)]
+use tokio_stream::StreamExt;
 use tower_http::{set_header::SetResponseHeaderLayer, trace::TraceLayer};
 use url::Url;
 
@@ -197,15 +201,14 @@ async fn ext_debug_stream(
     };
 
     // Convert broadcast::Receiver into SSE-style text/event-stream.
-    let stream = tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(|item| async move {
-        match item {
-            Ok(ev) => match serde_json::to_string(&ev) {
-                Ok(json) => Some(format!("data: {json}\n\n")),
-                Err(_) => None,
-            },
+    let stream = BroadcastStream::new(rx)
+        .filter_map(|item| match item {
+            Ok(ev) => serde_json::to_string(&ev)
+                .ok()
+                .map(|json| format!("data: {json}\n\n")),
             Err(_) => None,
-        }
-    });
+        })
+        .map(Ok::<_, Infallible>);
 
     let body = axum::body::Body::from_stream(stream);
 
@@ -251,7 +254,7 @@ async fn execute(
     tracing::info!(request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext, "execute start");
 
     if !idem.is_empty() {
-        let mut map = state.idempotency.lock().await;
+        let map = state.idempotency.lock().await;
         if let Some(prev) = map.get(&idem) {
             return Json(prev.clone());
         }

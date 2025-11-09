@@ -206,15 +206,16 @@ impl DebugHub {
             return None;
         }
         let rx = self.tx.subscribe();
-        let filtered_rx = Self::wrap_filtered(rx, filter);
+        let filtered_rx = Self::wrap_filtered(rx, filter, self.max_buffered_events);
         Some(filtered_rx)
     }
 
     fn wrap_filtered(
         mut rx: broadcast::Receiver<ExtDebugEvent>,
         filter: DebugFilter,
+        channel_capacity: usize,
     ) -> broadcast::Receiver<ExtDebugEvent> {
-        let (tx_out, rx_out) = broadcast::channel::<ExtDebugEvent>(rx.capacity());
+        let (tx_out, rx_out) = broadcast::channel::<ExtDebugEvent>(channel_capacity);
         tokio::spawn(async move {
             while let Ok(event) = rx.recv().await {
                 if filter.matches(&event) {
