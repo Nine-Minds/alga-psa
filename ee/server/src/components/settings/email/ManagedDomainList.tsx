@@ -92,6 +92,7 @@ export default function ManagedDomainList({
               <div className="flex flex-wrap gap-2">
                 {showRetry ? (
                   <Button
+                    id={`managed-domain-${domain.domain}-refresh-button`}
                     size="sm"
                     variant="outline"
                     disabled={busyDomain === domain.domain}
@@ -105,6 +106,7 @@ export default function ManagedDomainList({
                 ) : null}
                 {showDelete ? (
                   <Button
+                    id={`managed-domain-${domain.domain}-remove-button`}
                     size="sm"
                     variant="ghost"
                     disabled={busyDomain === domain.domain}

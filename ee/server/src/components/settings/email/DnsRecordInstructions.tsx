@@ -45,6 +45,7 @@ export default function DnsRecordInstructions({ records, emptyMessage }: DnsReco
                 <span className="text-sm text-gray-700">{record.name}</span>
               </div>
               <Button
+                id={`managed-domain-dns-copy-${record.type}-${index}`}
                 variant="ghost"
                 size="sm"
                 onClick={() => handleCopy(record.value)}
