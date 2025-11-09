@@ -238,12 +238,12 @@ runner:
     name: ""   # e.g., alga-psa-shared
     key: ""    # e.g., ALGA_AUTH_KEY
   debugStream:
-    enabled: false
-    # Optional literal auth token; prefer using authSecret in production.
-    authToken: ""
-    authSecret:
+    redisUrl: ""
+    redisUrlSecret:
       name: ""
       key: ""
+    streamPrefix: "ext-debug:"
+    maxLen: 2000
 
 
 redis:

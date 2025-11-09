@@ -415,19 +415,23 @@ spec:
             value: "{{ .serviceToken }}"
           {{- end }}
           {{- if .debugStream }}
-          {{- if .debugStream.enabled }}
-          - name: RUNNER_DEBUG_STREAM_ENABLED
-            value: "true"
-          {{- if and .debugStream.authSecret (hasKey .debugStream.authSecret "name") (hasKey .debugStream.authSecret "key") (.debugStream.authSecret.name) (.debugStream.authSecret.key) }}
-          - name: RUNNER_DEBUG_STREAM_AUTH
+          {{- if and .debugStream.redisUrlSecret (hasKey .debugStream.redisUrlSecret "name") (hasKey .debugStream.redisUrlSecret "key") (.debugStream.redisUrlSecret.name) (.debugStream.redisUrlSecret.key) }}
+          - name: RUNNER_DEBUG_REDIS_URL
             valueFrom:
               secretKeyRef:
-                name: {{ .debugStream.authSecret.name | quote }}
-                key: {{ .debugStream.authSecret.key | quote }}
-          {{- else if .debugStream.authToken }}
-          - name: RUNNER_DEBUG_STREAM_AUTH
-            value: "{{ .debugStream.authToken }}"
+                name: {{ .debugStream.redisUrlSecret.name | quote }}
+                key: {{ .debugStream.redisUrlSecret.key | quote }}
+          {{- else if .debugStream.redisUrl }}
+          - name: RUNNER_DEBUG_REDIS_URL
+            value: "{{ .debugStream.redisUrl }}"
           {{- end }}
+          {{- if .debugStream.streamPrefix }}
+          - name: RUNNER_DEBUG_REDIS_STREAM_PREFIX
+            value: "{{ .debugStream.streamPrefix }}"
+          {{- end }}
+          {{- if .debugStream.maxLen }}
+          - name: RUNNER_DEBUG_REDIS_MAXLEN
+            value: "{{ .debugStream.maxLen }}"
           {{- end }}
           {{- end }}
           {{- end }}
