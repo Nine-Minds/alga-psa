@@ -227,6 +227,24 @@ config:
         days: 30
         copies: 7
 
+# Runner/extension execution service configuration
+runner:
+  # Internal URL for the Knative runner service (used for execute + debug stream)
+  baseUrl: ""
+  # Optional literal token for authenticating runner calls. Prefer using an existing
+  # Kubernetes secret via serviceTokenSecret when running in production.
+  serviceToken: ""
+  serviceTokenSecret:
+    name: ""   # e.g., alga-psa-shared
+    key: ""    # e.g., ALGA_AUTH_KEY
+  debugStream:
+    enabled: false
+    # Optional literal auth token; prefer using authSecret in production.
+    authToken: ""
+    authSecret:
+      name: ""
+      key: ""
+
 
 redis:
   enabled: true

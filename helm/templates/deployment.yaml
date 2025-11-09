@@ -398,6 +398,40 @@ spec:
             value: "{{ . }}"
           {{- end }}
 
+          # ----------- RUNNER / EXTENSION EXECUTION -----------
+          {{- with .Values.runner }}
+          {{- if .baseUrl }}
+          - name: RUNNER_BASE_URL
+            value: "{{ .baseUrl }}"
+          {{- end }}
+          {{- if and .serviceTokenSecret (hasKey .serviceTokenSecret "name") (hasKey .serviceTokenSecret "key") (.serviceTokenSecret.name) (.serviceTokenSecret.key) }}
+          - name: RUNNER_SERVICE_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .serviceTokenSecret.name | quote }}
+                key: {{ .serviceTokenSecret.key | quote }}
+          {{- else if .serviceToken }}
+          - name: RUNNER_SERVICE_TOKEN
+            value: "{{ .serviceToken }}"
+          {{- end }}
+          {{- if .debugStream }}
+          {{- if .debugStream.enabled }}
+          - name: RUNNER_DEBUG_STREAM_ENABLED
+            value: "true"
+          {{- if and .debugStream.authSecret (hasKey .debugStream.authSecret "name") (hasKey .debugStream.authSecret "key") (.debugStream.authSecret.name) (.debugStream.authSecret.key) }}
+          - name: RUNNER_DEBUG_STREAM_AUTH
+            valueFrom:
+              secretKeyRef:
+                name: {{ .debugStream.authSecret.name | quote }}
+                key: {{ .debugStream.authSecret.key | quote }}
+          {{- else if .debugStream.authToken }}
+          - name: RUNNER_DEBUG_STREAM_AUTH
+            value: "{{ .debugStream.authToken }}"
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+
           # ----------- GOOGLE AUTH ----------------
           {{- if .Values.google_auth.enabled }}
           - name: GOOGLE_OAUTH_CLIENT_ID
