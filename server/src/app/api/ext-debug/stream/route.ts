@@ -52,7 +52,16 @@ async function assertAccess(
     throw json(401, { error: 'Unauthorized' });
   }
 
-  const tenantFromAuth = await getTenantFromAuth(req);
+    let tenantFromAuth: string | null = null;
+    try {
+      tenantFromAuth = await getTenantFromAuth(req);
+    } catch (err: any) {
+      // For end-user initiated requests we often won't have x-alga-tenant headers.
+      // Treat missing tenant header as null and fall back to the session tenant.
+      if (!(err instanceof Error && err.message === 'unauthenticated')) {
+        throw err;
+      }
+    }
   const effectiveTenant =
     tenantIdFromQuery || tenantFromAuth || currentUser.tenant || null;
 
