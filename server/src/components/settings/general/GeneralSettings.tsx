@@ -29,8 +29,9 @@ const GeneralSettings = () => {
   const loadTenantData = async () => {
     try {
       const tenant = await getTenantDetails();
-      setTenantName(tenant.client_name);
-      setClients(tenant.clients.map(c => ({
+      const safeTenantName = typeof tenant?.client_name === 'string' ? tenant.client_name : '';
+      setTenantName(safeTenantName);
+      setClients((tenant.clients ?? []).map(c => ({
         id: c.client_id,
         name: c.client_name,
         isDefault: c.is_default
@@ -124,7 +125,7 @@ const GeneralSettings = () => {
               <Label htmlFor="tenantName">Organization Name</Label>
               <Input
                 id="tenantName"
-                value={tenantName}
+                value={tenantName ?? ''}
                 onChange={(e) => setTenantName(e.target.value)}
               />
             </div>

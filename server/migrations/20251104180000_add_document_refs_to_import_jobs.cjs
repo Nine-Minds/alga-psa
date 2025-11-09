@@ -68,8 +68,8 @@ exports.up = async function up(knex) {
       ) THEN
         ALTER TABLE import_jobs
           ADD CONSTRAINT import_jobs_source_doc_assoc_foreign
-          FOREIGN KEY (tenant, source_document_association_id)
-          REFERENCES document_associations (tenant, association_id)
+          FOREIGN KEY (source_document_association_id)
+          REFERENCES document_associations (association_id)
           ON DELETE SET NULL;
       END IF;
     END
@@ -93,6 +93,7 @@ exports.down = async function down(knex) {
   await knex.raw('ALTER TABLE import_jobs DROP CONSTRAINT IF EXISTS import_jobs_source_file_foreign');
   await knex.raw('ALTER TABLE import_jobs DROP CONSTRAINT IF EXISTS import_jobs_source_document_foreign');
   await knex.raw('ALTER TABLE import_jobs DROP CONSTRAINT IF EXISTS import_jobs_source_doc_assoc_foreign');
+  await knex.raw('ALTER TABLE document_associations DROP CONSTRAINT IF EXISTS document_associations_tenant_assoc_unique');
 
   const dropColumnIfExists = async (column) => {
     const exists = await knex.schema.hasColumn('import_jobs', column);

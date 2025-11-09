@@ -85,7 +85,7 @@ export default function SsoProviderButtons({
     if (providerId === "google") {
       return <SiGoogle className="h-8 w-8" style={{ color: "#34A853" }} aria-hidden />;
     }
-    if (providerId === "azure-ad" || providerId === "microsoft") {
+    if (providerId === "azure-ad") {
       return <MicrosoftMulticolorLogo />;
     }
     return null;
@@ -108,7 +108,7 @@ export default function SsoProviderButtons({
             className={clsx(
               "flex items-center gap-2 px-6 py-2 h-auto",
               provider.id === "google" && "border-[#34A853] hover:bg-[#34A853]/5",
-              (provider.id === "azure-ad" || provider.id === "microsoft") && "border-[#0078D4] hover:bg-[#0078D4]/5"
+              provider.id === "azure-ad" && "border-[#0078D4] hover:bg-[#0078D4]/5"
             )}
           >
             {isPending ? (

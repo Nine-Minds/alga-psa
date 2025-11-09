@@ -117,7 +117,6 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
-    entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/server && /app/entrypoint.sh"]
     secrets:
       - postgres_password
       - db_password_server
@@ -135,7 +134,7 @@ services:
         condition: service_started
       pgbouncer:
         condition: service_started
-      redis-base:
+      redis:
         condition: service_started
       hocuspocus:
         condition: service_started
@@ -187,7 +186,7 @@ services:
       - db_password_hocuspocus
       - redis_password
     depends_on:
-      redis-base:
+      redis:
         condition: service_started
 
   postgres:
@@ -203,8 +202,8 @@ services:
     ports:
       - "${EXPOSE_DB_PORT:-5432}:5432"
 
-  redis-base:
-    image: 'redis:latest'
+  redis:
+    image: 'resend-custom-domains-redis:latest'
     container_name: ${APP_NAME:-sebastian}_redis
     entrypoint: ["/app/redis/entrypoint.sh"]
     networks:

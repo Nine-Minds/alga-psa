@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
+import { spawnSync } from 'node:child_process';
 import path from 'path';
 import { applyPlaywrightDatabaseEnv } from './src/__tests__/integration/utils/playwrightDatabaseConfig';
 
@@ -13,18 +14,126 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 // }
 // process.env.STORAGE_LOCAL_BASE_PATH = process.env.STORAGE_LOCAL_BASE_PATH || storageBasePath;
 
-// If Postgres runs in Docker and is published to a different host port,
-// override the Playwright DB host/port here. Prefer existing DB_* envs
-// when available, otherwise fall back to common local defaults.
-process.env.PLAYWRIGHT_DB_HOST =
-  process.env.PLAYWRIGHT_DB_HOST || process.env.DB_HOST || 'localhost';
-process.env.PLAYWRIGHT_DB_PORT =
-  process.env.PLAYWRIGHT_DB_PORT || process.env.DB_DIRECT_PORT || process.env.DB_PORT || '5432';
+// If Postgres runs in Docker and is published to a different host/port,
+// override the Playwright DB connection to hit the direct Postgres port instead
+// of PgBouncer. Prefer explicit overrides, then DB_DIRECT_*, then exposed host/port,
+// and finally fallback to DB_HOST/DB_PORT.
+const directDbHost =
+  process.env.DB_DIRECT_HOST ||
+  process.env.EXPOSE_DB_HOST ||
+  process.env.DB_HOST ||
+  'localhost';
+const directDbPort =
+  process.env.DB_DIRECT_PORT ||
+  process.env.EXPOSE_DB_PORT ||
+  process.env.DB_PORT ||
+  '5432';
+
+process.env.DB_DIRECT_HOST = process.env.DB_DIRECT_HOST || directDbHost;
+process.env.DB_DIRECT_PORT = process.env.DB_DIRECT_PORT || directDbPort;
+
+process.env.PLAYWRIGHT_DB_HOST = process.env.PLAYWRIGHT_DB_HOST || directDbHost;
+process.env.PLAYWRIGHT_DB_PORT = process.env.PLAYWRIGHT_DB_PORT || directDbPort;
 
 // Apply Playwright-specific database configuration
 applyPlaywrightDatabaseEnv();
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+
+function runPortProbe(start: number, span: number, strict: boolean): { success: boolean; port?: number; error?: string } {
+const script = `const net = require('net');
+const start = Number(process.argv[1]);
+const attempts = Number(process.argv[2]);
+const strictMode = process.argv[3] === 'strict';
+if (!Number.isFinite(start)) {
+  console.error('invalid-port');
+  process.exit(2);
+}
+function tryPort(port, attemptsLeft) {
+  const server = net.createServer();
+  server.unref();
+  server.once('error', (err) => {
+    if (strictMode || attemptsLeft <= 0) {
+      console.error(err && err.code ? err.code : 'EADDRINUSE');
+      process.exit(1);
+    }
+    tryPort(port + 1, attemptsLeft - 1);
+  });
+  server.listen(port, () => {
+    server.close(() => {
+      process.stdout.write(String(port));
+      process.exit(0);
+    });
+  });
+}
+tryPort(start, attempts);
+`;
+
+  const result = spawnSync(process.execPath, ['--input-type=commonjs', '-e', script, String(start), String(span), strict ? 'strict' : 'flex'], {
+    encoding: 'utf-8',
+  });
+
+  if (result.status === 0 && result.stdout) {
+    return { success: true, port: Number(result.stdout.trim()) };
+  }
+
+  const error = (result.stderr || result.error?.message || '').trim();
+  return { success: false, error: error || 'port-probe-failed' };
+}
+
+function resolveWebPortSync(): number {
+  const preferred = Number(process.env.PLAYWRIGHT_APP_PORT || process.env.APP_PORT || 3300);
+  if (process.env.PLAYWRIGHT_APP_PORT) {
+    if (!Number.isFinite(preferred)) {
+      throw new Error(`Invalid PLAYWRIGHT_APP_PORT value: ${process.env.PLAYWRIGHT_APP_PORT}`);
+    }
+    if (process.env.PLAYWRIGHT_APP_PORT_LOCKED === 'true') {
+      return preferred;
+    }
+    const check = runPortProbe(preferred, 0, true);
+    if (!check.success || typeof check.port !== 'number') {
+      throw new Error(`PLAYWRIGHT_APP_PORT=${preferred} is unavailable (${check.error || 'unknown error'}).`);
+    }
+    return check.port;
+  }
+
+  const probe = runPortProbe(preferred, 25, false);
+  if (!probe.success || typeof probe.port !== 'number') {
+    throw new Error(`Unable to find an available port for the Playwright dev server (${probe.error || 'probe failed'}).`);
+  }
+  return probe.port;
+}
+
+const PORT_CACHE_KEY = Symbol.for('__ALGA_PLAYWRIGHT_PORT__');
+
+function getCachedWebPort(): number {
+  const cached = globalThis[PORT_CACHE_KEY];
+  if (typeof cached === 'number' && Number.isFinite(cached)) {
+    return cached;
+  }
+  console.log('[Playwright] env before port detection', {
+    PLAYWRIGHT_APP_PORT: process.env.PLAYWRIGHT_APP_PORT,
+    APP_PORT: process.env.APP_PORT,
+    PORT: process.env.PORT,
+  });
+  const resolved = resolveWebPortSync();
+  globalThis[PORT_CACHE_KEY] = resolved;
+  console.log(`[Playwright] using dev server port ${resolved}`);
+  return resolved;
+}
+
+const resolvedWebPort = getCachedWebPort();
+const webHost = process.env.PLAYWRIGHT_APP_HOST || 'localhost';
+const resolvedBaseUrl = process.env.PLAYWRIGHT_BASE_URL || `http://${webHost}:${resolvedWebPort}`;
+
+process.env.PLAYWRIGHT_APP_PORT = String(resolvedWebPort);
+process.env.PLAYWRIGHT_APP_PORT_LOCKED = 'true';
+process.env.EE_BASE_URL = process.env.EE_BASE_URL || resolvedBaseUrl;
+process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || resolvedBaseUrl;
+process.env.HOST = process.env.HOST || resolvedBaseUrl;
+process.env.APP_PORT = process.env.APP_PORT || String(resolvedWebPort);
+process.env.EXPOSE_SERVER_PORT = process.env.EXPOSE_SERVER_PORT || String(resolvedWebPort);
+process.env.PORT = process.env.PORT || String(resolvedWebPort);
 
 /**
  * Playwright configuration for EE server integration tests
@@ -65,7 +174,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    baseURL: resolvedBaseUrl,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -122,7 +231,7 @@ export default defineConfig({
   webServer: process.env.CI ? undefined : {
     // Reset DB once per session before starting the dev server.
     command: 'cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev',
-    url: 'http://localhost:3000',
+    url: resolvedBaseUrl,
     // Reuse existing server by default for local development; set PW_REUSE=false to start fresh
     reuseExistingServer: process.env.PW_REUSE !== 'false',
     timeout: 120000,
@@ -132,7 +241,16 @@ export default defineConfig({
       ...process.env,
       NEXT_PUBLIC_EDITION: 'enterprise',
       E2E_AUTH_BYPASS: 'true',
-      NEXTAUTH_URL: 'http://localhost:3000',
+      EE_BASE_URL: resolvedBaseUrl,
+      NEXTAUTH_URL: resolvedBaseUrl,
+      HOST: resolvedBaseUrl,
+      PORT: String(resolvedWebPort),
+      APP_PORT: String(resolvedWebPort),
+      EXPOSE_SERVER_PORT: String(resolvedWebPort),
+      NEXT_PUBLIC_APP_URL: resolvedBaseUrl,
+      NEXT_PUBLIC_SITE_URL: resolvedBaseUrl,
+      NEXT_PUBLIC_API_BASE_URL: resolvedBaseUrl,
+      NEXT_PUBLIC_EXTERNAL_APP_URL: resolvedBaseUrl,
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'test-nextauth-secret',
       NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
       DB_HOST: process.env.DB_HOST,

@@ -22,6 +22,7 @@ import {
     decodeOAuthJwtPayload,
     mapOAuthProfileToExtendedUser,
 } from "@ee/lib/auth/ssoProviders";
+import type { OAuthProfileMappingResult } from "@ee/lib/auth/ssoProviders";
 import {
     OAuthAccountLinkConflictError,
     upsertOAuthAccountLink,
@@ -213,6 +214,22 @@ interface ExtendedUser {
     contactId?: string;
 }
 
+function toOAuthProfileMappingResult(user: ExtendedUser): OAuthProfileMappingResult {
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        image: user.image,
+        proToken: user.proToken,
+        tenant: user.tenant,
+        tenantSlug: user.tenantSlug,
+        user_type: user.user_type === 'client' ? 'client' : 'internal',
+        clientId: user.clientId,
+        contactId: user.contactId,
+    };
+}
+
 const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
     google: 'google',
     'azure-ad': 'microsoft',
@@ -376,9 +393,21 @@ function validateLinkSignature(
     }
 }
 
+interface OAuthAccountMetadata {
+    scope?: string;
+    linkMode?: string;
+    linkNonce?: string;
+    linkNonceIssuedAt?: string | number;
+    linkNonceSignature?: string;
+    tenantHint?: string;
+    vanityHostHint?: string;
+    sessionState?: string;
+    idTokenClaims?: Record<string, unknown>;
+}
+
 function extractOAuthAccountMetadata(
     account: Record<string, unknown> | null | undefined,
-): Record<string, unknown> {
+): OAuthAccountMetadata {
     if (!account) {
         return {};
     }
@@ -389,7 +418,7 @@ function extractOAuthAccountMetadata(
         rawParams: account.params,
     });
 
-    const metadata: Record<string, unknown> = {};
+    const metadata: OAuthAccountMetadata = {};
     const params = getSafeRecord(account.params);
     const rawState = account.state ?? params?.state;
     console.log('[oauth] raw state candidates', {
@@ -523,7 +552,7 @@ async function consumeLinkStateCookie(
 
 function extractProviderAccountId(
     account: Record<string, unknown> | null | undefined,
-    metadata: Record<string, unknown>,
+    metadata: OAuthAccountMetadata,
 ): string | undefined {
     const direct = toOptionalString(account?.providerAccountId);
     if (direct) {
@@ -742,7 +771,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 AzureADProvider({
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
-                    tenantId: secrets.microsoftTenantId || 'common',
+                    issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
                     checks: ['pkce', 'state'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
@@ -1045,7 +1074,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 const accountRecord = account as unknown as Record<string, unknown> | null;
                 try {
                     const enrichedUser = await applyOAuthAccountHints(
-                        extendedUser,
+                        toOAuthProfileMappingResult(extendedUser),
                         accountRecord,
                     );
                     Object.assign(extendedUser, enrichedUser);
@@ -1336,7 +1365,7 @@ export const options: NextAuthConfig = {
                 AzureADProvider({
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
-                    tenantId: process.env.MICROSOFT_OAUTH_TENANT_ID || 'common',
+                    issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??
@@ -1642,7 +1671,7 @@ export const options: NextAuthConfig = {
             if (extendedUser && providerId && providerId !== 'credentials') {
                 try {
                     const enrichedUser = await applyOAuthAccountHints(
-                        extendedUser,
+                        toOAuthProfileMappingResult(extendedUser),
                         account as unknown as Record<string, unknown>,
                     );
                     Object.assign(extendedUser, enrichedUser);
@@ -1672,7 +1701,7 @@ export const options: NextAuthConfig = {
                 const accountRecord = account as unknown as Record<string, unknown> | null;
                 try {
                     const enrichedUser = await applyOAuthAccountHints(
-                        extendedUser,
+                        toOAuthProfileMappingResult(extendedUser),
                         accountRecord,
                     );
                     Object.assign(extendedUser, enrichedUser);

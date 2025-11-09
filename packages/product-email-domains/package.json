@@ -1,0 +1,9 @@
+{
+  "name": "@product/email-domains",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./ee/entry": "./ee/entry.ts",
+    "./oss/entry": "./oss/entry.ts"
+  }
+}

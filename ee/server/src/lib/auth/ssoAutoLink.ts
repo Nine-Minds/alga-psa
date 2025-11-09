@@ -16,7 +16,7 @@ export async function isAutoLinkEnabledForTenant(
   tenantId: string | undefined,
   userType: "internal" | "client"
 ): Promise<boolean> {
-  if (!tenantId || userType !== "internal") {
+  if (!tenantId) {
     return false;
   }
 

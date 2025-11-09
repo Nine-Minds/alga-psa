@@ -38,7 +38,7 @@ import XeroIntegrationSettings from '../integrations/XeroIntegrationSettings';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
-import { EmailSettings } from 'server/src/components/admin/EmailSettings';
+import { EmailSettings } from '@product/email-settings/entry';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from 'server/src/components/calendar/CalendarIntegrationsSettings';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';

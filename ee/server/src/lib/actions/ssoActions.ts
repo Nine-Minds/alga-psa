@@ -143,6 +143,7 @@ interface CandidateUser {
   user_id: string;
   email: string;
   is_inactive: boolean;
+  user_type: SsoBulkAssignmentUserType;
 }
 
 function buildProviderSummary(providers: OAuthLinkProvider[]): Map<OAuthLinkProvider, SsoBulkAssignmentProviderSummary> {

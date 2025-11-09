@@ -1,80 +1,35 @@
-FROM node:alpine AS server
+FROM node:alpine
 
-# Build arguments to control edition and provide build-only auth secret fallback
-ARG INCLUDE_EE=false
-ARG NEXTAUTH_SECRET_BUILD="dev-placeholder-nextauth-secret-32"
-
-# Install required system dependencies (rarely changes)
 RUN apk add --no-cache \
+    bash \
+    curl \
+    ghostscript \
     graphicsmagick \
     imagemagick \
-    ghostscript \
     postgresql-client \
-    redis \
-    curl \
-    bash
+    redis
 
 WORKDIR /app
 
-# Copy only package files first for npm install
+# Copy manifests first for better layer caching
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY shared/package.json ./shared/
+COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY ee/server/package.json ./ee/server/
-COPY scripts/ ./scripts/
+COPY packages ./packages
+COPY sdk ./sdk
 
-# Install dependencies (cached unless package files change)
+RUN npm config set legacy-peer-deps true && npm install
 
-COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
+# Bring in source (server, shared, ee, etc.)
+COPY . .
 
-RUN npm install && \
-    cd server/src/invoice-templates/assemblyscript && \
-    npm install && \
-    cd /app
-
-COPY tsconfig.base.json ./
-
-WORKDIR /app
-COPY shared/ ./shared/
-COPY services/ ./services/
-
-# Copy EE features conditionally
-COPY ee/ ./ee/
-# Handle edition-specific setup
-RUN if [ "$INCLUDE_EE" = "true" ]; then \
-        echo "Including EE features..."; \
-        ./scripts/build-enterprise.sh; \
-    else \
-        echo "Building CE edition - excluding EE features..."; \
-        rm -rf ./ee; \
-    fi
-
-WORKDIR /app/server
-
-# Copy server source code
-COPY server/ ./
-COPY scripts/ ./scripts/
-
-# Clean any existing build artifacts and build the Next.js application with conditional env var
-RUN rm -rf .next && \
-    if [ "$INCLUDE_EE" = "true" ]; then \
-        NEXTAUTH_SECRET="$NEXTAUTH_SECRET_BUILD" AUTH_SECRET="$NEXTAUTH_SECRET_BUILD" npm run build:enterprise; \
-    else \
-        NEXTAUTH_SECRET="$NEXTAUTH_SECRET_BUILD" AUTH_SECRET="$NEXTAUTH_SECRET_BUILD" npm run build; \
-    fi
-
-# Copy and make entrypoint executable (rarely changes)
-COPY server/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+COPY server/dev-entrypoint.sh /app/server-dev-entrypoint.sh
+RUN chmod +x /app/server-dev-entrypoint.sh
 
 EXPOSE 3000
+ENV NODE_ENV=development
 
-# Environment configuration
-ENV NODE_ENV=production
-
-# Secret provider configuration
-# Default configuration for composite secret system
-# Can be overridden in docker-compose or deployment environments
-ENV SECRET_READ_CHAIN="env,filesystem"
-ENV SECRET_WRITE_PROVIDER="filesystem"
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/server-dev-entrypoint.sh"]

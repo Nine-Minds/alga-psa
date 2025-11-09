@@ -2,11 +2,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
-import webpack from 'webpack';
-// import CopyPlugin from 'copy-webpack-plugin';
-
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+let webpackLib = null;
+try {
+  webpackLib = require('next/dist/compiled/webpack/webpack');
+} catch (error) {
+  console.warn('[next.config] Webpack runtime not available (likely running Turbopack dev server); skipping NormalModuleReplacementPlugin wiring.', error.message);
+}
 
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -189,6 +193,9 @@ const nextConfig = {
       '@product/email-providers/entry': isEE
         ? '@product/email-providers/ee/entry'
         : '@product/email-providers/oss/entry',
+      '@product/email-settings/entry': isEE
+        ? '@product/email-settings/ee/entry'
+        : '@product/email-settings/oss/entry',
       '@product/client-portal-domain/entry': isEE
         ? '@product/client-portal-domain/ee/entry'
         : '@product/client-portal-domain/oss/entry',
@@ -234,6 +241,7 @@ const nextConfig = {
     '@product/extensions',
     '@product/settings-extensions',
     '@product/email-providers',
+    '@product/email-settings',
     '@product/client-portal-domain',
     '@product/billing',
     // New aliasing packages
@@ -311,6 +319,12 @@ const nextConfig = {
         '@product/email-providers/entry': isEE
           ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+        '@product/email-settings/entry': isEE
+          ? path.join(__dirname, '../packages/product-email-settings/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-email-settings/oss/entry.tsx'),
+        '@product/email-domains/entry': isEE
+          ? path.join(__dirname, '../packages/product-email-domains/ee/entry.ts')
+          : path.join(__dirname, '../packages/product-email-domains/oss/entry.ts'),
         '@product/client-portal-domain/entry': isEE
           ? path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
@@ -369,6 +383,10 @@ const nextConfig = {
       config.resolve.alias[pkgClientPortalEntry] = pkgClientPortalEeEntry;
       config.resolve.alias[pkgClientPortalEntryIndex] = pkgClientPortalEeEntry;
 
+      const pkgEmailDomainsEntry = path.join(__dirname, '../packages/product-email-domains/entry.ts');
+      const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/product-email-domains/ee/entry.ts');
+      config.resolve.alias[pkgEmailDomainsEntry] = pkgEmailDomainsEeEntry;
+
       aliasEeEntryVariants(config.resolve.alias, [
         {
           to: pkgExtensionsEeEntry,
@@ -398,6 +416,22 @@ const nextConfig = {
             path.join(__dirname, '../packages/product-email-providers/entry.tsx'),
             path.join(__dirname, '../packages/product-email-providers/oss/entry.ts'),
             path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-email-settings/ee/entry.tsx'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-email-settings/entry.ts'),
+            path.join(__dirname, '../packages/product-email-settings/entry.tsx'),
+            path.join(__dirname, '../packages/product-email-settings/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-email-settings/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-email-domains/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-email-domains/entry.ts'),
+            path.join(__dirname, '../packages/product-email-domains/oss/entry.ts'),
           ],
         },
         {
@@ -534,35 +568,43 @@ const nextConfig = {
     // This also catches relative paths like ../../../ee/server/src/lib/storage/providers/S3StorageProvider
     // and @ee alias imports like @ee/lib/storage/providers/S3StorageProvider
     if (!isEE) {
-      config.plugins = config.plugins || [];
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(
-          /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
-          path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
-        )
-      );
+      if (!webpackLib) {
+        console.warn('[next.config] Skipping CE S3 storage provider replacement because webpack is unavailable in the current runtime.');
+      } else {
+        config.plugins = config.plugins || [];
+        config.plugins.push(
+          new webpackLib.NormalModuleReplacementPlugin(
+            /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
+            path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
+          )
+        );
+      }
     }
     
     // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
     // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
     if (isEE) {
-      const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
-      const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-      const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
-      config.plugins = config.plugins || [];
-      config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
-        try {
-          const req = resource.request || '';
-          if (ceEmptyRegex.test(req)) {
-            const rel = req.substring(ceEmptyPrefix.length);
-            const mapped = path.join(eeSrcRoot, rel);
-            if (process.env.LOG_MODULE_RESOLUTION === '1') {
-              console.log('[replace:EE]', { from: req, to: mapped });
+      if (!webpackLib) {
+        console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
+      } else {
+        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
+        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
+        config.plugins = config.plugins || [];
+        config.plugins.push(new webpackLib.NormalModuleReplacementPlugin(/.*/, (resource) => {
+          try {
+            const req = resource.request || '';
+            if (ceEmptyRegex.test(req)) {
+              const rel = req.substring(ceEmptyPrefix.length);
+              const mapped = path.join(eeSrcRoot, rel);
+              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+                console.log('[replace:EE]', { from: req, to: mapped });
+              }
+              resource.request = mapped;
             }
-            resource.request = mapped;
-          }
-        } catch {}
-      }));
+          } catch {}
+        }));
+      }
     }
 
   // Conditionally enable verbose resolution logging for EE/CE module paths

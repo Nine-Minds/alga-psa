@@ -312,6 +312,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
     if (request.providers.length === 0) {
       toast({
+        title: "Provider required",
         variant: "destructive",
         description: "Select a configured provider before continuing.",
       });
@@ -320,6 +321,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
     if (request.userIds.length === 0) {
       toast({
+        title: "No users selected",
         variant: "destructive",
         description: "Select at least one user from the table.",
       });
@@ -337,6 +339,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
       if (!response.success || !response.result) {
         toast({
+          title: "Bulk assignment failed",
           variant: "destructive",
           description: response.error ?? "Unable to process SSO bulk assignment.",
         });
@@ -352,6 +355,11 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
       );
 
       toast({
+        title: mode === "execute"
+          ? request.mode === "unlink"
+            ? "Unlink complete"
+            : "Link complete"
+          : "Preview ready",
         description:
           mode === "execute"
             ? request.mode === "unlink"
@@ -560,7 +568,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                           <TableCell>
                             <div className="flex flex-wrap gap-2">
                               {user.inactive ? (
-                                <Badge variant="destructive">Inactive</Badge>
+                                <Badge variant="error">Inactive</Badge>
                               ) : (
                                 <Badge variant="secondary">Active</Badge>
                               )}
