@@ -74,10 +74,10 @@ export async function updateTaskWithChecklist(
                             tenantId: currentUser.tenant,
                             projectId: phase.project_id,
                             taskId: taskId,
-                            userId: currentUser.user_id,
-                            assignedTo: updatedTask.assigned_to,
+                            userId: updatedTask.assigned_to,  // The user being assigned
+                            assignedTo: updatedTask.assigned_to,  // For backward compatibility
+                            assignedByUserId: currentUser.user_id,  // The user who performed the action
                             additionalUsers: [], // No additional users in this case
-                            isAdditionalAgent: false, // Primary assignment/reassignment
                             timestamp: new Date().toISOString()
                         }
                     });
@@ -135,10 +135,10 @@ export async function addTaskToPhase(
                             tenantId: currentUser.tenant,
                             projectId: phase.project_id,
                             taskId: newTask.task_id,
-                            userId: currentUser.user_id,
-                            assignedTo: taskData.assigned_to,
+                            userId: taskData.assigned_to,  // The user being assigned
+                            assignedTo: taskData.assigned_to,  // For backward compatibility
+                            assignedByUserId: currentUser.user_id,  // The user who performed the action
                             additionalUsers: [], // No additional users in initial creation
-                            isAdditionalAgent: false, // Initial assignment is always primary
                             timestamp: new Date().toISOString()
                         }
                     });
@@ -495,7 +495,7 @@ export async function addTaskResourceAction(taskId: string, userId: string, role
             await checkPermission(currentUser, 'project', 'update', trx);
             await ProjectTaskModel.addTaskResource(trx, taskId, userId, role);
 
-            // When adding additional resource, publish task assigned event
+            // When adding additional resource, publish task additional agent assigned event
             const task = await ProjectTaskModel.getTaskById(trx, taskId);
             if (task) {
                 const phase = await ProjectModel.getPhaseById(trx, task.phase_id);
@@ -504,14 +504,13 @@ export async function addTaskResourceAction(taskId: string, userId: string, role
                         tenantId: currentUser.tenant,
                         projectId: phase.project_id,
                         taskId: taskId,
-                        userId: currentUser.user_id,
-                        assignedTo: userId,
-                        additionalUsers: [],
-                        isAdditionalAgent: true // This user is being added as an additional agent
+                        primaryAgentId: task.assigned_to,
+                        additionalAgentId: userId,
+                        assignedByUserId: currentUser.user_id
                     };
-                    console.log('[projectTaskActions] Publishing PROJECT_TASK_ASSIGNED event for additional agent:', JSON.stringify(eventPayload));
+                    console.log('[projectTaskActions] Publishing PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED event:', JSON.stringify(eventPayload));
                     await publishEvent({
-                        eventType: 'PROJECT_TASK_ASSIGNED',
+                        eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
                         payload: eventPayload
                     });
                 }
