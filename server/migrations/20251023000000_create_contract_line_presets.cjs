@@ -40,7 +40,7 @@ exports.up = async function up(knex) {
       .defaultTo(knex.fn.now());
 
     // Primary key includes tenant for CitusDB compatibility
-    table.primary(['preset_id', 'tenant']);
+    table.primary(['tenant', 'preset_id']);
 
     // Indexes
     table.index(['tenant', 'contract_line_type'], 'idx_contract_line_presets_type');
