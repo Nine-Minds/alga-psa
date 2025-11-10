@@ -131,7 +131,6 @@ pub async fn handle_get(
                     .append_pair("ts", &now_ms.to_string());
                 if let Ok(http) = HttpClient::builder().build() {
                     let mut rb = http.get(u.clone());
-                    rb = rb.header("x-canary", "robert");
                     if let Ok(k) = std::env::var("ALGA_AUTH_KEY") {
                         if !k.is_empty() {
                             rb = rb.header("x-api-key", k);
