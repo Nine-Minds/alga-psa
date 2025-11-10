@@ -210,9 +210,18 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     const db = await getConnection(tenantId);
 
     // Get ticket details including priority
-    const ticket = await db('tickets')
-      .select('ticket_number', 'title', 'assigned_to', 'priority')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+    const ticket = await db('tickets as t')
+      .select(
+        't.ticket_number',
+        't.title',
+        't.assigned_to',
+        'p.priority_name as priority'
+      )
+      .leftJoin('priorities as p', function() {
+        this.on('t.priority_id', 'p.priority_id')
+            .andOn('t.tenant', 'p.tenant');
+      })
+      .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
       .first();
 
     if (!ticket) {
@@ -252,7 +261,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         ticketId: ticket.ticket_number,
         ticketNumber: ticket.ticket_number,
         ticketTitle: ticket.title,
-        priority: ticket.priority || 'Normal',
+        priority: ticket.priority,
         performedByName
       }
     });
@@ -278,10 +287,19 @@ async function handleTicketAdditionalAgentAssigned(
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket details
-    const ticket = await db('tickets')
-      .select('ticket_number', 'title', 'contact_name_id')
-      .where({ ticket_id: ticketId, tenant: tenantId })
+    // Get ticket details including priority
+    const ticket = await db('tickets as t')
+      .select(
+        't.ticket_number',
+        't.title',
+        't.contact_name_id',
+        'p.priority_name as priority'
+      )
+      .leftJoin('priorities as p', function() {
+        this.on('t.priority_id', 'p.priority_id')
+            .andOn('t.tenant', 'p.tenant');
+      })
+      .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
       .first();
 
     if (!ticket) {
@@ -321,6 +339,7 @@ async function handleTicketAdditionalAgentAssigned(
         ticketId: ticket.ticket_number,
         ticketNumber: ticket.ticket_number,
         ticketTitle: ticket.title,
+        priority: ticket.priority,
         assignedByName: assignerName
       }
     });
@@ -331,8 +350,8 @@ async function handleTicketAdditionalAgentAssigned(
       tenantId
     });
 
-    // 2. Notify the primary agent (if they didn't perform the action)
-    if (primaryAgentId !== assignedByUserId) {
+    // 2. Notify the primary agent (if they exist and didn't perform the action)
+    if (primaryAgentId && primaryAgentId !== assignedByUserId) {
       const additionalAgent = await db('users')
         .select('first_name', 'last_name')
         .where({ user_id: additionalAgentId, tenant: tenantId })
@@ -362,13 +381,20 @@ async function handleTicketAdditionalAgentAssigned(
         primaryAgentId,
         tenantId
       });
+    } else {
+      logger.debug('[InternalNotificationSubscriber] Skipping primary agent notification', {
+        ticketId,
+        primaryAgentId,
+        assignedByUserId,
+        reason: !primaryAgentId ? 'No primary agent' : 'Primary agent performed the action'
+      });
     }
 
     // 3. Notify client (if they have portal access)
     if (ticket.contact_name_id) {
       const contactUser = await db('users')
         .select('user_id', 'first_name', 'last_name')
-        .where({ contact_name_id: ticket.contact_name_id, tenant: tenantId })
+        .where({ contact_id: ticket.contact_name_id, tenant: tenantId })
         .first();
 
       if (contactUser) {
