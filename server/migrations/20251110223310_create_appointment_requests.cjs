@@ -44,10 +44,14 @@ exports.up = async function(knex) {
 
     // Primary key
     table.primary(['tenant', 'appointment_request_id']);
-
-    // Check constraint for status
-    table.check('??', ['status'], 'IN', ['pending', 'approved', 'declined', 'cancelled']);
   });
+
+  // Add check constraint for status
+  await knex.schema.raw(`
+    ALTER TABLE appointment_requests
+    ADD CONSTRAINT appointment_requests_status_check
+    CHECK (status IN ('pending', 'approved', 'declined', 'cancelled'))
+  `);
 
   // Create indexes for common query patterns
   await knex.schema.raw(`

@@ -39,14 +39,20 @@ exports.up = async function(knex) {
 
     // Primary key
     table.primary(['tenant', 'availability_setting_id']);
-
-    // Check constraint for setting_type
-    table.check('??', ['setting_type'], 'IN', ['user_hours', 'service_rules', 'general_settings']);
-
-    // Check constraint for day_of_week range
-    table.check('??', ['day_of_week'], '>=', 0);
-    table.check('??', ['day_of_week'], '<=', 6);
   });
+
+  // Add check constraints
+  await knex.schema.raw(`
+    ALTER TABLE availability_settings
+    ADD CONSTRAINT availability_settings_setting_type_check
+    CHECK (setting_type IN ('user_hours', 'service_rules', 'general_settings'))
+  `);
+
+  await knex.schema.raw(`
+    ALTER TABLE availability_settings
+    ADD CONSTRAINT availability_settings_day_of_week_check
+    CHECK (day_of_week IS NULL OR (day_of_week >= 0 AND day_of_week <= 6))
+  `);
 
   // Create indexes for common query patterns
   await knex.schema.raw(`
