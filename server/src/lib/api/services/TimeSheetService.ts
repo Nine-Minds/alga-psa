@@ -897,7 +897,8 @@ export class TimeSheetService extends BaseService<any> {
           assigned_user_ids: data.assigned_user_ids || [],
           status: 'scheduled'
         }, {
-          assignedUserIds: data.assigned_user_ids || []
+          assignedUserIds: data.assigned_user_ids || [],
+          assignedByUserId: context.userId
         });
 
         return this.getScheduleEntry(entry.entry_id, context);
