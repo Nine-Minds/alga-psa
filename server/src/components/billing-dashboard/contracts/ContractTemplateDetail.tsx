@@ -266,10 +266,6 @@ const ContractTemplateDetail: React.FC = () => {
     });
   }, [templateMetadata, templateTags]);
 
-  const handleNavigateBack = () => {
-    router.push('/msp/billing?tab=contracts');
-  };
-
   const enrichServices = useCallback(
     async (contractLineId: string, isTemplateContext: boolean): Promise<TemplateLineService[]> => {
       try {
@@ -563,10 +559,10 @@ const ContractTemplateDetail: React.FC = () => {
       <div className="p-6 space-y-4">
         <Button
           id="back-to-contracts-error"
-          variant="ghost"
+          variant="outline"
           size="sm"
-          onClick={handleNavigateBack}
-          className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800"
+          onClick={() => router.push('/msp/billing?tab=contracts&subtab=client-contracts')}
+          className="gap-2 hover:bg-gray-50"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Contracts
@@ -585,10 +581,10 @@ const ContractTemplateDetail: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               id="back-to-contracts"
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={handleNavigateBack}
-              className="gap-2 px-0 text-sm text-blue-600 hover:text-blue-800"
+              onClick={() => router.push('/msp/billing?tab=contracts&subtab=client-contracts')}
+              className="gap-2 hover:bg-gray-50"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Contracts

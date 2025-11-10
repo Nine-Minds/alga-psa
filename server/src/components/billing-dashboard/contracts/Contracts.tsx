@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
-import { MoreVertical, Wand2, Search, Sparkles } from 'lucide-react';
+import { MoreVertical, Wand2, Search, Sparkles, Plus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,20 +27,36 @@ import {
 } from 'server/src/lib/actions/contractActions';
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
+import { ContractDialog } from './ContractDialog';
+
+type ContractSubTab = 'templates' | 'client-contracts';
 
 const Contracts: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Get active sub-tab from URL or default to 'templates'
+  const activeSubTab = (searchParams?.get('subtab') as ContractSubTab) || 'templates';
+
+  // Map URL subtab values to CustomTabs label values
+  const subtabToLabel: Record<ContractSubTab, string> = {
+    'templates': 'Templates',
+    'client-contracts': 'Client Contracts'
+  };
+
+  const labelToSubtab: Record<string, ContractSubTab> = {
+    'Templates': 'templates',
+    'Client Contracts': 'client-contracts'
+  };
+
   const [templateContracts, setTemplateContracts] = useState<IContract[]>([]);
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
   const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'Templates' | 'Client Contracts'>('Templates');
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const pendingViewRef = useRef<'Templates' | 'Client Contracts' | null>(null);
 
   // Pagination state for templates
   const [templateCurrentPage, setTemplateCurrentPage] = useState(1);
@@ -83,21 +99,6 @@ const Contracts: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    const subtab = searchParams?.get('subtab');
-    const desiredView = subtab === 'clients' ? 'Client Contracts' : 'Templates';
-    if (pendingViewRef.current) {
-      if (desiredView === pendingViewRef.current) {
-        pendingViewRef.current = null;
-      } else {
-        return;
-      }
-    }
-    if (activeView !== desiredView) {
-      setActiveView(desiredView);
-    }
-  }, [searchParams, activeView]);
 
   const updateUrlForView = (view: 'Templates' | 'Client Contracts') => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -266,12 +267,8 @@ const renderStatusBadge = (status: string) => {
     {
       title: 'Contract Template',
       dataIndex: 'template_contract_name',
-      render: (_value: string | null, record) =>
-        record.template_contract_name && record.template_contract_name.trim().length > 0
-          ? record.template_contract_name
-          : record.contract_name && record.contract_name.trim().length > 0
-            ? record.contract_name
-            : '—',
+      render: (value: string | null) =>
+        value && value.trim().length > 0 ? value : '—',
     },
     {
       title: 'Contract Name',
@@ -282,29 +279,119 @@ const renderStatusBadge = (status: string) => {
     {
       title: 'Start Date',
       dataIndex: 'start_date',
-      render: (value: string | null) => {
-        if (typeof value !== 'string' || value.length === 0) {
+      render: (value: any) => {
+        if (!value) return '—';
+        try {
+          const date = new Date(value);
+          return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+        } catch {
           return '—';
         }
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
       },
     },
     {
       title: 'End Date',
       dataIndex: 'end_date',
-      render: (value: string | null) => {
-        if (typeof value !== 'string' || value.length === 0) {
+      render: (value: any) => {
+        if (!value) return '—';
+        try {
+          const date = new Date(value);
+          return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+        } catch {
           return '—';
         }
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
       },
     },
     {
       title: 'Status',
       dataIndex: 'status',
       render: renderStatusBadge,
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'contract_id',
+      render: (value, record) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="contract-actions-menu"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id="edit-contract-menu-item"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (record.contract_id) {
+                  router.push(`/msp/billing?tab=contracts&contractId=${record.contract_id}${record.client_contract_id ? `&clientContractId=${record.client_contract_id}` : ''}`);
+                }
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            {record.status === 'active' && (
+              <DropdownMenuItem
+                id="terminate-contract-menu-item"
+                className="text-orange-600 focus:text-orange-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    void handleTerminateContract(record.contract_id);
+                  }
+                }}
+              >
+                Terminate
+              </DropdownMenuItem>
+            )}
+            {record.status === 'terminated' && (
+              <DropdownMenuItem
+                id="restore-contract-menu-item"
+                className="text-green-600 focus:text-green-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    void handleRestoreContract(record.contract_id, record.client_id);
+                  }
+                }}
+              >
+                Restore
+              </DropdownMenuItem>
+            )}
+            {record.status === 'draft' && (
+              <DropdownMenuItem
+                id="set-to-active-menu-item"
+                className="text-green-600 focus:text-green-600"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (record.contract_id) {
+                    void handleSetToActive(record.contract_id, record.client_id);
+                  }
+                }}
+              >
+                Set to Active
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              id="delete-contract-menu-item"
+              className="text-red-600 focus:text-red-600"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (record.contract_id) {
+                  void handleDeleteContract(record.contract_id);
+                }
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ];
 
@@ -393,6 +480,19 @@ const renderStatusBadge = (status: string) => {
           />
         </div>
         <div className="flex flex-wrap gap-2">
+          <ContractDialog
+            onContractSaved={fetchContracts}
+            triggerButton={
+              <Button
+                id="quick-add-contract-button"
+                variant="outline"
+                className="inline-flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Quick Add
+              </Button>
+            }
+          />
           <Button
             id="client-wizard-button"
             onClick={() => setShowClientWizard(true)}
@@ -451,12 +551,18 @@ const renderStatusBadge = (status: string) => {
           ) : (
             <CustomTabs
               tabs={tabs}
-              defaultTab={activeView}
+              defaultTab={subtabToLabel[activeSubTab]}
               onTabChange={(tab) => {
-                const view = tab === 'Client Contracts' ? 'Client Contracts' : 'Templates';
-                pendingViewRef.current = view;
-                setActiveView(view);
-                updateUrlForView(view);
+                const targetSubtab = labelToSubtab[tab] || tab.toLowerCase();
+
+                if (targetSubtab === activeSubTab) {
+                  return;
+                }
+
+                const params = new URLSearchParams(searchParams?.toString() ?? '');
+                params.set('tab', 'contracts');
+                params.set('subtab', targetSubtab);
+                router.push(`/msp/billing?${params.toString()}`);
               }}
             />
           )}

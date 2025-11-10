@@ -137,7 +137,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             bg-white cursor-pointer
             border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
             hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
             disabled:pointer-events-none
             ${className}
             ${customStyles?.trigger || ''}
