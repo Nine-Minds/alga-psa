@@ -137,4 +137,4 @@ See [LICENSE.md](LICENSE.md) for details.
 We welcome contributions! Please see our [Contributing Guide](docs/contributing.md) for details on how to get started.
 
 ---
-Copyright (c) 2024 Nine Minds LLC
+Copyright (c) 2025 Nine Minds LLC

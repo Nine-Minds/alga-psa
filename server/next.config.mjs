@@ -5,9 +5,9 @@ import fs from 'fs';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-let webpackLib = null;
+let webpack = null;
 try {
-  webpackLib = require('next/dist/compiled/webpack/webpack');
+  webpack = require('next/dist/compiled/webpack/webpack').webpack;
 } catch (error) {
   console.warn('[next.config] Webpack runtime not available (likely running Turbopack dev server); skipping NormalModuleReplacementPlugin wiring.', error.message);
 }
@@ -568,12 +568,12 @@ const nextConfig = {
     // This also catches relative paths like ../../../ee/server/src/lib/storage/providers/S3StorageProvider
     // and @ee alias imports like @ee/lib/storage/providers/S3StorageProvider
     if (!isEE) {
-      if (!webpackLib) {
+      if (!webpack) {
         console.warn('[next.config] Skipping CE S3 storage provider replacement because webpack is unavailable in the current runtime.');
       } else {
         config.plugins = config.plugins || [];
         config.plugins.push(
-          new webpackLib.NormalModuleReplacementPlugin(
+          new webpack.NormalModuleReplacementPlugin(
             /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
             path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
           )
@@ -584,14 +584,14 @@ const nextConfig = {
     // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
     // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
     if (isEE) {
-      if (!webpackLib) {
+      if (!webpack) {
         console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
       } else {
         const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
         const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         config.plugins = config.plugins || [];
-        config.plugins.push(new webpackLib.NormalModuleReplacementPlugin(/.*/, (resource) => {
+        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
           try {
             const req = resource.request || '';
             if (ceEmptyRegex.test(req)) {
