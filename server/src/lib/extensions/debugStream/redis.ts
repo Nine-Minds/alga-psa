@@ -22,7 +22,7 @@ export async function createDebugStreamClient(): Promise<RedisClientType> {
   const url = resolveRedisUrl();
   const { username, password } = resolveRedisAuth();
 
-  const client = createClient({ url, username, password });
+  const client = createClient({ url, username, password }) as RedisClientType;
   client.on('error', (err) => {
     console.error('[ext-debug] redis error', err);
   });
