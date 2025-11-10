@@ -6,17 +6,33 @@ import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/
 import { Button } from 'server/src/components/ui/Button';
 import { getDashboardMetrics, getRecentActivity, type RecentActivity } from 'server/src/lib/actions/client-portal-actions/dashboard';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
+import { RequestAppointmentModal } from 'server/src/components/client-portal/appointments/RequestAppointmentModal';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { Badge } from 'server/src/components/ui/Badge';
+import { Calendar, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 
 // Flag to control visibility of the recent activity section
 const SHOW_RECENT_ACTIVITY = false;
+
+interface AppointmentRequest {
+  appointment_request_id: string;
+  service_name: string;
+  requested_date: string;
+  requested_time: string;
+  requested_duration: number;
+  status: 'pending' | 'approved' | 'declined' | 'cancelled';
+  preferred_assigned_user_name?: string;
+}
 
 export function ClientDashboard() {
   const router = useRouter();
   const { t } = useTranslation('clientPortal');
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [metrics, setMetrics] = useState<any>(null);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentRequest[]>([]);
   const [error, setError] = useState<boolean>(false);
 
   const fetchDashboardData = useCallback(async () => {
@@ -28,6 +44,32 @@ export function ClientDashboard() {
         ]);
         setMetrics(metricsData);
       setActivities(activitiesData);
+
+      // TODO: Replace with actual action
+      // const appointmentsData = await getUpcomingAppointments();
+      // setUpcomingAppointments(appointmentsData);
+
+      // Mock data for now
+      const mockAppointments: AppointmentRequest[] = [
+        {
+          appointment_request_id: '1',
+          service_name: 'IT Support - On-site',
+          requested_date: '2025-11-15',
+          requested_time: '10:00',
+          requested_duration: 60,
+          status: 'approved',
+          preferred_assigned_user_name: 'John Smith'
+        },
+        {
+          appointment_request_id: '2',
+          service_name: 'Network Maintenance',
+          requested_date: '2025-11-20',
+          requested_time: '14:00',
+          requested_duration: 120,
+          status: 'pending'
+        }
+      ];
+      setUpcomingAppointments(mockAppointments);
     } catch (error) {
       console.error('Error loading dashboard:', error);
       setError(true);
@@ -190,6 +232,78 @@ export function ClientDashboard() {
         </Card>
       )}
 
+      {/* Upcoming Appointments */}
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>{t('dashboard.appointments.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {upcomingAppointments.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-sm text-gray-600 mb-4">
+                {t('dashboard.appointments.noUpcoming')}
+              </p>
+              <Button
+                id="dashboard-request-appointment-button"
+                variant="default"
+                size="sm"
+                onClick={() => setIsAppointmentModalOpen(true)}
+              >
+                {t('dashboard.appointments.requestButton')}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {upcomingAppointments.map((appointment) => (
+                <div
+                  key={appointment.appointment_request_id}
+                  className="p-4 border border-gray-200 rounded-lg hover:border-[rgb(var(--color-primary-300))] transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium text-gray-900">{appointment.service_name}</h4>
+                        {appointment.status === 'approved' ? (
+                          <Badge variant="success">{t('appointments.status.approved')}</Badge>
+                        ) : appointment.status === 'pending' ? (
+                          <Badge variant="warning">{t('appointments.status.pending')}</Badge>
+                        ) : (
+                          <Badge variant="default">{t(`appointments.status.${appointment.status}`)}</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {format(new Date(appointment.requested_date), 'MMM d, yyyy')}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {appointment.requested_time}
+                        </div>
+                      </div>
+                      {appointment.preferred_assigned_user_name && (
+                        <div className="text-sm text-gray-500 mt-1">
+                          {t('dashboard.appointments.technician')}: {appointment.preferred_assigned_user_name}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="pt-2">
+                <a
+                  href="/client-portal/appointments"
+                  className="text-sm text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] font-medium"
+                >
+                  {t('dashboard.appointments.viewAll')}
+                </a>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Quick Actions */}
       <Card className="bg-white">
         <CardHeader>
@@ -204,10 +318,22 @@ export function ClientDashboard() {
             >
               {t('dashboard.quickActions.createTicket')}
             </Button>
-            <ClientAddTicket 
-              open={isTicketDialogOpen} 
+            <ClientAddTicket
+              open={isTicketDialogOpen}
               onOpenChange={setIsTicketDialogOpen}
               onTicketAdded={fetchDashboardData}
+            />
+            <Button
+              id="request-appointment-button"
+              variant="default"
+              onClick={() => setIsAppointmentModalOpen(true)}
+            >
+              {t('dashboard.quickActions.requestAppointment')}
+            </Button>
+            <RequestAppointmentModal
+              open={isAppointmentModalOpen}
+              onOpenChange={setIsAppointmentModalOpen}
+              onAppointmentRequested={fetchDashboardData}
             />
             <Button
               id="view-invoice-button"

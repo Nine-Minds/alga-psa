@@ -72,3 +72,75 @@ export interface PortalInvitationData {
   clientLocationEmail: string;
   clientLocationPhone: string;
 }
+
+// Appointment request email template data interfaces
+export interface AppointmentRequestReceivedData {
+  requesterName?: string;
+  requesterEmail: string;
+  referenceNumber: string;
+  serviceName: string;
+  requestedDate: string;
+  requestedTime: string;
+  duration: number;
+  preferredTechnician?: string;
+  responseTime: string;
+  contactEmail: string;
+  contactPhone?: string;
+  tenantName: string;
+  currentYear: number;
+}
+
+export interface AppointmentRequestApprovedData {
+  requesterName?: string;
+  requesterEmail: string;
+  serviceName: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  duration: number;
+  technicianName?: string;
+  technicianEmail?: string;
+  technicianPhone?: string;
+  calendarLink?: string;
+  cancellationPolicy?: string;
+  minimumNoticeHours: number;
+  contactEmail: string;
+  contactPhone?: string;
+  tenantName: string;
+  currentYear: number;
+}
+
+export interface AppointmentRequestDeclinedData {
+  requesterName?: string;
+  requesterEmail: string;
+  serviceName: string;
+  requestedDate: string;
+  requestedTime: string;
+  referenceNumber: string;
+  declineReason?: string;
+  requestNewAppointmentLink?: string;
+  contactEmail: string;
+  contactPhone?: string;
+  tenantName: string;
+  currentYear: number;
+}
+
+export interface NewAppointmentRequestData {
+  requesterName: string;
+  requesterEmail: string;
+  requesterPhone?: string;
+  companyName?: string;
+  clientName?: string;
+  referenceNumber: string;
+  submittedAt: string;
+  linkedTicket?: string;
+  isAuthenticated: boolean;
+  serviceName: string;
+  requestedDate: string;
+  requestedTime: string;
+  duration: number;
+  preferredTechnician?: string;
+  description?: string;
+  approvalLink?: string;
+  tenantName: string;
+  currentYear: number;
+}

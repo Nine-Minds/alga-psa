@@ -460,5 +460,125 @@
         "Time Entries": "Time Entries"
       }
     }
+  },
+  "availability": {
+    "settings": {
+      "title": "Availability Settings",
+      "description": "Configure appointment availability rules and schedules"
+    },
+    "tabs": {
+      "general": "General Settings",
+      "userHours": "User Hours",
+      "serviceRules": "Service Rules",
+      "exceptions": "Exceptions"
+    },
+    "general": {
+      "advanceBookingDays": "Advance Booking Days",
+      "advanceBookingDaysHelper": "How far in advance clients can book appointments",
+      "minimumNoticeHours": "Minimum Notice Hours",
+      "minimumNoticeHoursHelper": "Minimum time required before an appointment",
+      "defaultBufferBefore": "Default Buffer Before (minutes)",
+      "defaultBufferAfter": "Default Buffer After (minutes)",
+      "bufferHelper": "Time buffer between appointments"
+    },
+    "userHours": {
+      "selectUser": "Select User",
+      "dayOfWeek": "Day of Week",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "available": "Available",
+      "cloneSettings": "Clone to Other Users",
+      "maxAppointmentsPerDay": "Max Appointments Per Day"
+    },
+    "serviceRules": {
+      "selectService": "Select Service",
+      "allowWithoutContract": "Allow Without Contract",
+      "advanceBooking": "Advance Booking Days",
+      "maxAppointments": "Max Appointments Per Day"
+    },
+    "exceptions": {
+      "addException": "Add Exception",
+      "date": "Date",
+      "reason": "Reason",
+      "userSpecific": "User Specific",
+      "companyWide": "Company Wide"
+    },
+    "messages": {
+      "saveSuccess": "Availability settings saved successfully",
+      "saveFailed": "Failed to save availability settings",
+      "loadFailed": "Failed to load availability settings"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Appointment Requests",
+      "viewAll": "View All Requests",
+      "approve": "Approve & Schedule",
+      "decline": "Decline",
+      "assignTech": "Assign Technician",
+      "internalNotes": "Internal Notes",
+      "pendingCount": "{{count}} pending requests",
+      "filterByStatus": "Filter by Status",
+      "filterByService": "Filter by Service",
+      "filterByDate": "Filter by Date"
+    },
+    "panel": {
+      "title": "Appointment Requests",
+      "description": "Review and manage appointment requests from clients",
+      "noRequests": "No appointment requests found",
+      "loadingRequests": "Loading requests..."
+    },
+    "card": {
+      "requesterName": "Requester",
+      "companyName": "Company",
+      "service": "Service",
+      "requestedDateTime": "Requested Date & Time",
+      "duration": "Duration",
+      "preferredTechnician": "Preferred Technician",
+      "linkedTicket": "Linked Ticket",
+      "actions": "Actions"
+    },
+    "approvalModal": {
+      "title": "Approve Appointment Request",
+      "confirmDateTime": "Confirm Date & Time",
+      "modifyDateTime": "Modify Date & Time",
+      "assignedUser": "Assigned Technician",
+      "linkToTicket": "Link to Ticket",
+      "internalNotes": "Internal Notes",
+      "approve": "Approve & Create Schedule Entry",
+      "approving": "Approving..."
+    },
+    "declineModal": {
+      "title": "Decline Appointment Request",
+      "reason": "Reason for Declining",
+      "reasonRequired": "Please provide a reason",
+      "reasonPlaceholder": "Explain why this request is being declined...",
+      "decline": "Decline Request",
+      "declining": "Declining..."
+    },
+    "detailsModal": {
+      "title": "Request Details",
+      "requesterInfo": "Requester Information",
+      "requestInfo": "Request Information",
+      "status": "Status",
+      "createdAt": "Requested At",
+      "approvedAt": "Approved At",
+      "approvedBy": "Approved By",
+      "declinedReason": "Decline Reason"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "declined": "Declined",
+      "cancelled": "Cancelled"
+    },
+    "messages": {
+      "approveSuccess": "Appointment request approved successfully",
+      "approveFailed": "Failed to approve appointment request",
+      "declineSuccess": "Appointment request declined",
+      "declineFailed": "Failed to decline appointment request",
+      "loadFailed": "Failed to load appointment requests",
+      "scheduleEntryCreated": "Schedule entry created successfully"
+    }
   }
 }

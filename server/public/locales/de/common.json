@@ -461,6 +461,126 @@
   "fields": {
     "notes": "Notizen"
   },
+  "availability": {
+    "settings": {
+      "title": "Verfügbarkeitseinstellungen",
+      "description": "Verfügbarkeitsregeln und Zeitpläne für Termine konfigurieren"
+    },
+    "tabs": {
+      "general": "Allgemeine Einstellungen",
+      "userHours": "Benutzerzeiten",
+      "serviceRules": "Serviceregeln",
+      "exceptions": "Ausnahmen"
+    },
+    "general": {
+      "advanceBookingDays": "Vorlaufzeit für Buchungen (Tage)",
+      "advanceBookingDaysHelper": "Wie weit im Voraus Kunden Termine buchen können",
+      "minimumNoticeHours": "Mindestvorlaufzeit (Stunden)",
+      "minimumNoticeHoursHelper": "Erforderliche Mindestzeit vor einem Termin",
+      "defaultBufferBefore": "Standardpuffer davor (Minuten)",
+      "defaultBufferAfter": "Standardpuffer danach (Minuten)",
+      "bufferHelper": "Zeitpuffer zwischen Terminen"
+    },
+    "userHours": {
+      "selectUser": "Benutzer auswählen",
+      "dayOfWeek": "Wochentag",
+      "startTime": "Startzeit",
+      "endTime": "Endzeit",
+      "available": "Verfügbar",
+      "cloneSettings": "Auf andere Benutzer übertragen",
+      "maxAppointmentsPerDay": "Maximale Termine pro Tag"
+    },
+    "serviceRules": {
+      "selectService": "Service auswählen",
+      "allowWithoutContract": "Ohne Vertrag zulassen",
+      "advanceBooking": "Vorlaufzeit für Buchungen (Tage)",
+      "maxAppointments": "Maximale Termine pro Tag"
+    },
+    "exceptions": {
+      "addException": "Ausnahme hinzufügen",
+      "date": "Datum",
+      "reason": "Grund",
+      "userSpecific": "Benutzerspezifisch",
+      "companyWide": "Unternehmenweit"
+    },
+    "messages": {
+      "saveSuccess": "Verfügbarkeitseinstellungen erfolgreich gespeichert",
+      "saveFailed": "Fehler beim Speichern der Verfügbarkeitseinstellungen",
+      "loadFailed": "Fehler beim Laden der Verfügbarkeitseinstellungen"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Terminanfragen",
+      "viewAll": "Alle Anfragen anzeigen",
+      "approve": "Genehmigen und planen",
+      "decline": "Ablehnen",
+      "assignTech": "Techniker zuweisen",
+      "internalNotes": "Interne Notizen",
+      "pendingCount": "{{count}} ausstehende Anfragen",
+      "filterByStatus": "Nach Status filtern",
+      "filterByService": "Nach Service filtern",
+      "filterByDate": "Nach Datum filtern"
+    },
+    "panel": {
+      "title": "Terminanfragen",
+      "description": "Terminanfragen von Kunden prüfen und verwalten",
+      "noRequests": "Keine Terminanfragen gefunden",
+      "loadingRequests": "Anfragen werden geladen..."
+    },
+    "card": {
+      "requesterName": "Anfragender",
+      "companyName": "Unternehmen",
+      "service": "Service",
+      "requestedDateTime": "Angefragtes Datum & Uhrzeit",
+      "duration": "Dauer",
+      "preferredTechnician": "Bevorzugter Techniker",
+      "linkedTicket": "Verknüpftes Ticket",
+      "actions": "Aktionen"
+    },
+    "approvalModal": {
+      "title": "Terminanfrage genehmigen",
+      "confirmDateTime": "Datum & Uhrzeit bestätigen",
+      "modifyDateTime": "Datum & Uhrzeit ändern",
+      "assignedUser": "Zugewiesener Techniker",
+      "linkToTicket": "Mit Ticket verknüpfen",
+      "internalNotes": "Interne Notizen",
+      "approve": "Genehmigen und Termineintrag erstellen",
+      "approving": "Wird genehmigt..."
+    },
+    "declineModal": {
+      "title": "Terminanfrage ablehnen",
+      "reason": "Grund für Ablehnung",
+      "reasonRequired": "Bitte geben Sie einen Grund an",
+      "reasonPlaceholder": "Erklären Sie, warum diese Anfrage abgelehnt wird...",
+      "decline": "Anfrage ablehnen",
+      "declining": "Wird abgelehnt..."
+    },
+    "detailsModal": {
+      "title": "Anfragedetails",
+      "requesterInfo": "Informationen zum Anfragenden",
+      "requestInfo": "Anfrageinformationen",
+      "status": "Status",
+      "createdAt": "Angefragt am",
+      "approvedAt": "Genehmigt am",
+      "approvedBy": "Genehmigt von",
+      "declinedReason": "Ablehnungsgrund"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "declined": "Abgelehnt",
+      "cancelled": "Storniert"
+    },
+    "messages": {
+      "approveSuccess": "Terminanfrage erfolgreich genehmigt",
+      "approveFailed": "Fehler beim Genehmigen der Terminanfrage",
+      "declineSuccess": "Terminanfrage abgelehnt",
+      "declineFailed": "Fehler beim Ablehnen der Terminanfrage",
+      "loadFailed": "Fehler beim Laden der Terminanfragen",
+      "scheduleEntryCreated": "Termineintrag erfolgreich erstellt"
+    }
+  },
   "notifications": {
     "viewAll": "Alle Benachrichtigungen anzeigen",
     "categories": {

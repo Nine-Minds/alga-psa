@@ -26,7 +26,15 @@
     "quickActions": {
       "title": "Quick Actions",
       "createTicket": "Create Support Ticket",
+      "requestAppointment": "Request Appointment",
       "viewLatestInvoice": "View Latest Invoice"
+    },
+    "appointments": {
+      "title": "Upcoming Appointments",
+      "noUpcoming": "No upcoming appointments. Request one now!",
+      "requestButton": "Request Appointment",
+      "viewAll": "View all appointments →",
+      "technician": "Technician"
     },
     "recentActivity": {
       "title": "Recent Activity"
@@ -853,6 +861,7 @@
     "next": "Next",
     "previous": "Previous",
     "submit": "Submit",
+    "submitting": "Submitting...",
     "reset": "Reset",
     "noData": "No data available",
     "required": "Required",
@@ -1006,5 +1015,116 @@
     "seconds": "Seconds",
     "ago": "{{time}} ago",
     "in": "in {{time}}"
+  },
+  "appointments": {
+    "modal": {
+      "title": "Request Appointment",
+      "step": "Step",
+      "of": "of"
+    },
+    "step1": {
+      "title": "Select Service",
+      "description": "Choose the service you need assistance with",
+      "selectService": "Select a service",
+      "serviceLabel": "Service",
+      "ticketLabel": "Link to Existing Ticket (Optional)",
+      "selectTicket": "Select a ticket",
+      "noTicket": "No ticket",
+      "ticketHint": "Optionally link this appointment to an existing support ticket"
+    },
+    "step2": {
+      "title": "Choose Date",
+      "description": "Select your preferred appointment date",
+      "selectDate": "Select an available date",
+      "selectedDate": "Selected date"
+    },
+    "step3": {
+      "title": "Select Time & Technician",
+      "description": "Choose your preferred time slot and optionally select a technician",
+      "selectTime": "Available Time Slots",
+      "minutes": "min",
+      "technicianLabel": "Preferred Technician",
+      "selectTechnician": "Select a technician",
+      "noPreference": "No preference",
+      "technicianHint": "This is a preference and may be adjusted based on availability"
+    },
+    "step4": {
+      "title": "Review & Confirm",
+      "description": "Add any additional details and review your appointment request",
+      "descriptionPlaceholder": "Please provide any additional details about your request...",
+      "summaryTitle": "Appointment Summary",
+      "service": "Service",
+      "dateTime": "Date & Time",
+      "at": "at",
+      "duration": "Duration",
+      "technician": "Preferred Technician",
+      "linkedTicket": "Linked Ticket",
+      "approvalNote": "Your appointment request will be submitted for approval. You'll receive an email confirmation once approved.",
+      "submit": "Request Appointment"
+    },
+    "status": {
+      "pending": "Pending Approval",
+      "approved": "Confirmed",
+      "declined": "Declined",
+      "cancelled": "Cancelled"
+    },
+    "errors": {
+      "loadServicesFailed": "Failed to load available services. Please try again.",
+      "loadDatesFailed": "Failed to load available dates. Please try again.",
+      "loadSlotsFailed": "Failed to load available time slots. Please try again.",
+      "createFailed": "Failed to create appointment request. Please try again.",
+      "loadFailed": "Failed to load appointments. Please try again."
+    },
+    "messages": {
+      "requestSuccess": "Appointment request submitted successfully!",
+      "requestSuccessDetail": "We'll review your request and send you a confirmation email once approved.",
+      "cancelSuccess": "Appointment cancelled successfully.",
+      "cancelFailed": "Failed to cancel appointment. Please try again."
+    },
+    "page": {
+      "title": "My Appointments",
+      "subtitle": "View and manage your appointment requests",
+      "requestButton": "Request New Appointment",
+      "noAppointments": "No appointments found",
+      "noAppointmentsDescription": "You haven't requested any appointments yet. Request one now to get started!"
+    },
+    "filters": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "declined": "Declined"
+    },
+    "table": {
+      "service": "Service",
+      "dateTime": "Date & Time",
+      "status": "Status",
+      "technician": "Technician",
+      "actions": "Actions",
+      "minutes": "min",
+      "notAssigned": "Not assigned",
+      "viewDetails": "View Details",
+      "cancel": "Cancel"
+    },
+    "details": {
+      "title": "Appointment Details",
+      "statusApproved": "This appointment has been confirmed",
+      "statusPending": "This appointment is pending approval",
+      "statusDeclined": "This appointment request was declined",
+      "statusCancelled": "This appointment was cancelled",
+      "reason": "Reason",
+      "service": "Service",
+      "dateTime": "Date & Time",
+      "technician": "Assigned Technician",
+      "linkedTicket": "Linked Ticket",
+      "description": "Description",
+      "created": "Requested",
+      "approved": "Approved",
+      "cancelButton": "Cancel Appointment"
+    },
+    "cancel": {
+      "title": "Cancel Appointment",
+      "message": "Are you sure you want to cancel this appointment request? This action cannot be undone.",
+      "confirm": "Yes, Cancel"
+    }
   }
 }

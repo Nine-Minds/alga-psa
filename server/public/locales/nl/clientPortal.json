@@ -1010,5 +1010,116 @@
     "seconds": "Seconden",
     "ago": "{{time}} geleden",
     "in": "over {{time}}"
+  },
+  "appointments": {
+    "modal": {
+      "title": "Afspraak aanvragen",
+      "step": "Stap",
+      "of": "van"
+    },
+    "step1": {
+      "title": "Selecteer service",
+      "description": "Kies de service waarmee u hulp nodig heeft",
+      "selectService": "Selecteer een service",
+      "serviceLabel": "Service",
+      "ticketLabel": "Koppelen aan bestaand ticket (Optioneel)",
+      "selectTicket": "Selecteer een ticket",
+      "noTicket": "Geen ticket",
+      "ticketHint": "Koppel deze afspraak optioneel aan een bestaand supportticket"
+    },
+    "step2": {
+      "title": "Kies datum",
+      "description": "Selecteer uw voorkeursdatum voor de afspraak",
+      "selectDate": "Selecteer een beschikbare datum",
+      "selectedDate": "Geselecteerde datum"
+    },
+    "step3": {
+      "title": "Selecteer tijd en technicus",
+      "description": "Kies uw voorkeurtijdslot en selecteer optioneel een technicus",
+      "selectTime": "Beschikbare tijdsloten",
+      "minutes": "min",
+      "technicianLabel": "Voorkeurstechnicus",
+      "selectTechnician": "Selecteer een technicus",
+      "noPreference": "Geen voorkeur",
+      "technicianHint": "Dit is een voorkeur en kan worden aangepast op basis van beschikbaarheid"
+    },
+    "step4": {
+      "title": "Controleren en bevestigen",
+      "description": "Voeg aanvullende details toe en controleer uw afspraakverzoek",
+      "descriptionPlaceholder": "Geef aanvullende details over uw verzoek...",
+      "summaryTitle": "Afspraaksamenvatting",
+      "service": "Service",
+      "dateTime": "Datum en tijd",
+      "at": "om",
+      "duration": "Duur",
+      "technician": "Voorkeurstechnicus",
+      "linkedTicket": "Gekoppeld ticket",
+      "approvalNote": "Uw afspraakverzoek wordt ter goedkeuring ingediend. U ontvangt een bevestigingsmail zodra deze is goedgekeurd.",
+      "submit": "Afspraak aanvragen"
+    },
+    "status": {
+      "pending": "In afwachting van goedkeuring",
+      "approved": "Bevestigd",
+      "declined": "Afgewezen",
+      "cancelled": "Geannuleerd"
+    },
+    "errors": {
+      "loadServicesFailed": "Kan beschikbare services niet laden. Probeer het opnieuw.",
+      "loadDatesFailed": "Kan beschikbare datums niet laden. Probeer het opnieuw.",
+      "loadSlotsFailed": "Kan beschikbare tijdsloten niet laden. Probeer het opnieuw.",
+      "createFailed": "Kan afspraakverzoek niet maken. Probeer het opnieuw.",
+      "loadFailed": "Kan afspraken niet laden. Probeer het opnieuw."
+    },
+    "messages": {
+      "requestSuccess": "Afspraakverzoek succesvol ingediend!",
+      "requestSuccessDetail": "We zullen uw verzoek beoordelen en u een bevestigingsmail sturen zodra het is goedgekeurd.",
+      "cancelSuccess": "Afspraak succesvol geannuleerd.",
+      "cancelFailed": "Kan afspraak niet annuleren. Probeer het opnieuw."
+    },
+    "page": {
+      "title": "Mijn afspraken",
+      "subtitle": "Bekijk en beheer uw afspraakverzoeken",
+      "requestButton": "Nieuwe afspraak aanvragen",
+      "noAppointments": "Geen afspraken gevonden",
+      "noAppointmentsDescription": "U heeft nog geen afspraken aangevraagd. Vraag er nu een aan om te beginnen!"
+    },
+    "filters": {
+      "all": "Alle",
+      "pending": "In behandeling",
+      "approved": "Goedgekeurd",
+      "declined": "Afgewezen"
+    },
+    "table": {
+      "service": "Service",
+      "dateTime": "Datum en tijd",
+      "status": "Status",
+      "technician": "Technicus",
+      "actions": "Acties",
+      "minutes": "min",
+      "notAssigned": "Niet toegewezen",
+      "viewDetails": "Bekijk details",
+      "cancel": "Annuleren"
+    },
+    "details": {
+      "title": "Afspraakdetails",
+      "statusApproved": "Deze afspraak is bevestigd",
+      "statusPending": "Deze afspraak wacht op goedkeuring",
+      "statusDeclined": "Dit afspraakverzoek is afgewezen",
+      "statusCancelled": "Deze afspraak is geannuleerd",
+      "reason": "Reden",
+      "service": "Service",
+      "dateTime": "Datum en tijd",
+      "technician": "Toegewezen technicus",
+      "linkedTicket": "Gekoppeld ticket",
+      "description": "Beschrijving",
+      "created": "Aangevraagd",
+      "approved": "Goedgekeurd",
+      "cancelButton": "Afspraak annuleren"
+    },
+    "cancel": {
+      "title": "Afspraak annuleren",
+      "message": "Weet u zeker dat u dit afspraakverzoek wilt annuleren? Deze actie kan niet ongedaan worden gemaakt.",
+      "confirm": "Ja, annuleren"
+    }
   }
 }

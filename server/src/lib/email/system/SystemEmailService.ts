@@ -7,7 +7,11 @@ import {
   SystemEmailTemplate,
   EmailVerificationData,
   PasswordResetData,
-  SystemNotificationData
+  SystemNotificationData,
+  AppointmentRequestReceivedData,
+  AppointmentRequestApprovedData,
+  AppointmentRequestDeclinedData,
+  NewAppointmentRequestData
 } from './types';
 import { IEmailProvider } from '../../../types/email.types';
 import { SystemEmailProviderFactory } from './SystemEmailProviderFactory';
@@ -319,12 +323,162 @@ export class SystemEmailService extends BaseEmailService {
    */
   public async sendSystemNotification(to: string | string[], data: SystemNotificationData): Promise<EmailSendResult> {
     const template = this.getSystemNotificationTemplate(data);
-    
+
     return this.sendEmail({
       to,
       subject: template.subject,
       html: template.html,
       text: template.text
+    });
+  }
+
+  /**
+   * Send appointment request received confirmation
+   */
+  public async sendAppointmentRequestReceived(
+    data: AppointmentRequestReceivedData,
+    options?: { locale?: SupportedLocale; tenantId?: string }
+  ): Promise<EmailSendResult> {
+    const locale = await this.determineLocale(data.requesterEmail, options);
+
+    // Try to fetch template from database
+    const dbTemplate = await this.fetchTemplate('appointment-request-received', locale, options?.tenantId);
+
+    let template: SystemEmailTemplate;
+
+    if (dbTemplate) {
+      // Use database template and replace variables
+      template = {
+        subject: this.replaceVariables(dbTemplate.subject, data),
+        html: this.replaceVariables(dbTemplate.html, data),
+        text: this.replaceVariables(dbTemplate.text || '', data)
+      };
+    } else {
+      // Fall back to basic template
+      console.warn('[SystemEmailService] Using emergency fallback template for appointment-request-received');
+      template = this.getAppointmentRequestReceivedFallback(data);
+    }
+
+    return this.sendEmail({
+      to: data.requesterEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      locale,
+      tenantId: options?.tenantId
+    });
+  }
+
+  /**
+   * Send appointment request approved notification
+   */
+  public async sendAppointmentRequestApproved(
+    data: AppointmentRequestApprovedData,
+    options?: { locale?: SupportedLocale; tenantId?: string }
+  ): Promise<EmailSendResult> {
+    const locale = await this.determineLocale(data.requesterEmail, options);
+
+    // Try to fetch template from database
+    const dbTemplate = await this.fetchTemplate('appointment-request-approved', locale, options?.tenantId);
+
+    let template: SystemEmailTemplate;
+
+    if (dbTemplate) {
+      // Use database template and replace variables
+      template = {
+        subject: this.replaceVariables(dbTemplate.subject, data),
+        html: this.replaceVariables(dbTemplate.html, data),
+        text: this.replaceVariables(dbTemplate.text || '', data)
+      };
+    } else {
+      // Fall back to basic template
+      console.warn('[SystemEmailService] Using emergency fallback template for appointment-request-approved');
+      template = this.getAppointmentRequestApprovedFallback(data);
+    }
+
+    return this.sendEmail({
+      to: data.requesterEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      locale,
+      tenantId: options?.tenantId
+    });
+  }
+
+  /**
+   * Send appointment request declined notification
+   */
+  public async sendAppointmentRequestDeclined(
+    data: AppointmentRequestDeclinedData,
+    options?: { locale?: SupportedLocale; tenantId?: string }
+  ): Promise<EmailSendResult> {
+    const locale = await this.determineLocale(data.requesterEmail, options);
+
+    // Try to fetch template from database
+    const dbTemplate = await this.fetchTemplate('appointment-request-declined', locale, options?.tenantId);
+
+    let template: SystemEmailTemplate;
+
+    if (dbTemplate) {
+      // Use database template and replace variables
+      template = {
+        subject: this.replaceVariables(dbTemplate.subject, data),
+        html: this.replaceVariables(dbTemplate.html, data),
+        text: this.replaceVariables(dbTemplate.text || '', data)
+      };
+    } else {
+      // Fall back to basic template
+      console.warn('[SystemEmailService] Using emergency fallback template for appointment-request-declined');
+      template = this.getAppointmentRequestDeclinedFallback(data);
+    }
+
+    return this.sendEmail({
+      to: data.requesterEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      locale,
+      tenantId: options?.tenantId
+    });
+  }
+
+  /**
+   * Send new appointment request notification to MSP staff
+   */
+  public async sendNewAppointmentRequest(
+    to: string | string[],
+    data: NewAppointmentRequestData,
+    options?: { locale?: SupportedLocale; tenantId?: string }
+  ): Promise<EmailSendResult> {
+    // For MSP staff, use default locale unless specified
+    const locale = options?.locale || LOCALE_CONFIG.defaultLocale as SupportedLocale;
+
+    // Try to fetch template from database
+    const dbTemplate = await this.fetchTemplate('new-appointment-request', locale, options?.tenantId);
+
+    let template: SystemEmailTemplate;
+
+    if (dbTemplate) {
+      // Use database template and replace variables
+      template = {
+        subject: this.replaceVariables(dbTemplate.subject, data),
+        html: this.replaceVariables(dbTemplate.html, data),
+        text: this.replaceVariables(dbTemplate.text || '', data)
+      };
+    } else {
+      // Fall back to basic template
+      console.warn('[SystemEmailService] Using emergency fallback template for new-appointment-request');
+      template = this.getNewAppointmentRequestFallback(data);
+    }
+
+    return this.sendEmail({
+      to,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      locale,
+      tenantId: options?.tenantId
     });
   }
 
@@ -395,7 +549,7 @@ If you didn't request this password reset, please ignore this email.
 
   private getSystemNotificationTemplate(data: SystemNotificationData): SystemEmailTemplate {
     const subject = data.title;
-    
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>${data.title}</h2>
@@ -416,6 +570,211 @@ ${data.message}
 ${data.actionUrl ? `${data.actionText || 'View Details'}: ${data.actionUrl}` : ''}
 
 This is an automated system notification.
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  // Appointment email fallback templates (used only if database template is not available)
+  private getAppointmentRequestReceivedFallback(data: AppointmentRequestReceivedData): SystemEmailTemplate {
+    const subject = `Appointment Request Received - ${data.serviceName}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Request Received</h2>
+        <p>Hello${data.requesterName ? ` ${data.requesterName}` : ''},</p>
+        <p>Thank you for submitting your appointment request. We have received your request and our team will review it shortly.</p>
+        <p><strong>Reference Number:</strong> ${data.referenceNumber}</p>
+        <h3>Request Details</h3>
+        <p><strong>Service:</strong> ${data.serviceName}</p>
+        <p><strong>Requested Date:</strong> ${data.requestedDate}</p>
+        <p><strong>Requested Time:</strong> ${data.requestedTime}</p>
+        <p><strong>Duration:</strong> ${data.duration} minutes</p>
+        ${data.preferredTechnician ? `<p><strong>Preferred Technician:</strong> ${data.preferredTechnician}</p>` : ''}
+        <hr style="margin-top: 30px;">
+        <p style="color: #666; font-size: 12px;">We typically respond within ${data.responseTime}. If you have questions, contact us at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.</p>
+      </div>
+    `;
+
+    const text = `
+Appointment Request Received
+
+Hello${data.requesterName ? ` ${data.requesterName}` : ''},
+
+Thank you for submitting your appointment request. We have received your request and our team will review it shortly.
+
+Reference Number: ${data.referenceNumber}
+
+REQUEST DETAILS:
+Service: ${data.serviceName}
+Requested Date: ${data.requestedDate}
+Requested Time: ${data.requestedTime}
+Duration: ${data.duration} minutes
+${data.preferredTechnician ? `Preferred Technician: ${data.preferredTechnician}` : ''}
+
+We typically respond within ${data.responseTime}. If you have questions, contact us at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.
+
+© ${data.currentYear} ${data.tenantName}
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  private getAppointmentRequestApprovedFallback(data: AppointmentRequestApprovedData): SystemEmailTemplate {
+    const subject = `Appointment Confirmed - ${data.serviceName} on ${data.appointmentDate}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Appointment Confirmed</h2>
+        <p>Hello${data.requesterName ? ` ${data.requesterName}` : ''},</p>
+        <p>Great news! Your appointment request has been approved and confirmed.</p>
+        <h3>Your Appointment</h3>
+        <p><strong>Service:</strong> ${data.serviceName}</p>
+        <p><strong>Date:</strong> ${data.appointmentDate}</p>
+        <p><strong>Time:</strong> ${data.appointmentTime}</p>
+        <p><strong>Duration:</strong> ${data.duration} minutes</p>
+        ${data.technicianName ? `<p><strong>Assigned Technician:</strong> ${data.technicianName}</p>` : ''}
+        ${data.calendarLink ? `<p><a href="${data.calendarLink}" style="display: inline-block; padding: 10px 20px; background-color: #8a4dea; color: white; text-decoration: none; border-radius: 5px;">Add to Calendar</a></p>` : ''}
+        <hr style="margin-top: 30px;">
+        <p style="color: #666; font-size: 12px;">If you need to reschedule or cancel, please contact us at least ${data.minimumNoticeHours} hours in advance at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.</p>
+      </div>
+    `;
+
+    const text = `
+Appointment Confirmed
+
+Hello${data.requesterName ? ` ${data.requesterName}` : ''},
+
+Great news! Your appointment request has been approved and confirmed.
+
+YOUR APPOINTMENT:
+Service: ${data.serviceName}
+Date: ${data.appointmentDate}
+Time: ${data.appointmentTime}
+Duration: ${data.duration} minutes
+${data.technicianName ? `Assigned Technician: ${data.technicianName}` : ''}
+
+${data.calendarLink ? `Add to Calendar: ${data.calendarLink}` : ''}
+
+If you need to reschedule or cancel, please contact us at least ${data.minimumNoticeHours} hours in advance at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.
+
+© ${data.currentYear} ${data.tenantName}
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  private getAppointmentRequestDeclinedFallback(data: AppointmentRequestDeclinedData): SystemEmailTemplate {
+    const subject = `Appointment Request Update - ${data.serviceName}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Appointment Request Update</h2>
+        <p>Hello${data.requesterName ? ` ${data.requesterName}` : ''},</p>
+        <p>Thank you for your interest in scheduling an appointment with us. Unfortunately, we are unable to accommodate your request at the requested time.</p>
+        <h3>Original Request</h3>
+        <p><strong>Service:</strong> ${data.serviceName}</p>
+        <p><strong>Requested Date:</strong> ${data.requestedDate}</p>
+        <p><strong>Requested Time:</strong> ${data.requestedTime}</p>
+        <p><strong>Reference:</strong> ${data.referenceNumber}</p>
+        ${data.declineReason ? `<p><strong>Reason:</strong> ${data.declineReason}</p>` : ''}
+        <p>We encourage you to submit a new request for an alternative date and time.</p>
+        ${data.requestNewAppointmentLink ? `<p><a href="${data.requestNewAppointmentLink}" style="display: inline-block; padding: 10px 20px; background-color: #8a4dea; color: white; text-decoration: none; border-radius: 5px;">Request Another Time</a></p>` : ''}
+        <hr style="margin-top: 30px;">
+        <p style="color: #666; font-size: 12px;">If you have questions or need assistance, please contact us at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.</p>
+      </div>
+    `;
+
+    const text = `
+Appointment Request Update
+
+Hello${data.requesterName ? ` ${data.requesterName}` : ''},
+
+Thank you for your interest in scheduling an appointment with us. Unfortunately, we are unable to accommodate your request at the requested time.
+
+ORIGINAL REQUEST:
+Service: ${data.serviceName}
+Requested Date: ${data.requestedDate}
+Requested Time: ${data.requestedTime}
+Reference: ${data.referenceNumber}
+
+${data.declineReason ? `Reason: ${data.declineReason}` : ''}
+
+We encourage you to submit a new request for an alternative date and time.
+
+${data.requestNewAppointmentLink ? `Request Another Time: ${data.requestNewAppointmentLink}` : ''}
+
+If you have questions or need assistance, please contact us at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.
+
+© ${data.currentYear} ${data.tenantName}
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  private getNewAppointmentRequestFallback(data: NewAppointmentRequestData): SystemEmailTemplate {
+    const subject = `New Appointment Request - ${data.clientName || data.requesterName}${data.serviceName ? ` - ${data.serviceName}` : ''}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>New Appointment Request</h2>
+        <p>Team,</p>
+        <p>A new appointment request has been submitted and requires your review and approval.</p>
+        <h3>Requester Information</h3>
+        <p><strong>Name:</strong> ${data.requesterName}</p>
+        <p><strong>Email:</strong> ${data.requesterEmail}</p>
+        ${data.requesterPhone ? `<p><strong>Phone:</strong> ${data.requesterPhone}</p>` : ''}
+        ${data.companyName ? `<p><strong>Company:</strong> ${data.companyName}</p>` : ''}
+        ${data.clientName ? `<p><strong>Client:</strong> ${data.clientName}</p>` : ''}
+        <p><strong>Type:</strong> ${data.isAuthenticated ? 'Client Portal Request' : 'Public Request'}</p>
+        <h3>Appointment Details</h3>
+        <p><strong>Service:</strong> ${data.serviceName}</p>
+        <p><strong>Requested Date:</strong> ${data.requestedDate}</p>
+        <p><strong>Requested Time:</strong> ${data.requestedTime}</p>
+        <p><strong>Duration:</strong> ${data.duration} minutes</p>
+        ${data.preferredTechnician ? `<p><strong>Preferred Technician:</strong> ${data.preferredTechnician}</p>` : ''}
+        <p><strong>Reference:</strong> ${data.referenceNumber}</p>
+        <p><strong>Submitted:</strong> ${data.submittedAt}</p>
+        ${data.linkedTicket ? `<p><strong>Linked Ticket:</strong> #${data.linkedTicket}</p>` : ''}
+        ${data.description ? `<p><strong>Notes:</strong> "${data.description}"</p>` : ''}
+        ${data.approvalLink ? `<p><a href="${data.approvalLink}" style="display: inline-block; padding: 10px 20px; background-color: #8a4dea; color: white; text-decoration: none; border-radius: 5px;">Review & Approve</a></p>` : ''}
+        <hr style="margin-top: 30px;">
+        <p style="color: #666; font-size: 12px;">Please review this request and take appropriate action.</p>
+      </div>
+    `;
+
+    const text = `
+New Appointment Request - Action Required
+
+Team,
+
+A new appointment request has been submitted and requires your review and approval.
+
+REQUESTER INFORMATION:
+Name: ${data.requesterName}
+Email: ${data.requesterEmail}
+${data.requesterPhone ? `Phone: ${data.requesterPhone}` : ''}
+${data.companyName ? `Company: ${data.companyName}` : ''}
+${data.clientName ? `Client: ${data.clientName}` : ''}
+Type: ${data.isAuthenticated ? 'Client Portal Request' : 'Public Request'}
+
+APPOINTMENT DETAILS:
+Service: ${data.serviceName}
+Requested Date: ${data.requestedDate}
+Requested Time: ${data.requestedTime}
+Duration: ${data.duration} minutes
+${data.preferredTechnician ? `Preferred Technician: ${data.preferredTechnician}` : ''}
+Reference: ${data.referenceNumber}
+Submitted: ${data.submittedAt}
+${data.linkedTicket ? `Linked Ticket: #${data.linkedTicket}` : ''}
+
+${data.description ? `NOTES:\n"${data.description}"` : ''}
+
+${data.approvalLink ? `REVIEW & APPROVE:\n${data.approvalLink}` : ''}
+
+Please review this request and take appropriate action.
+
+© ${data.currentYear} ${data.tenantName}
     `.trim();
 
     return { subject, html, text };
