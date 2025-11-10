@@ -96,11 +96,11 @@ exports.up = function(knex) {
       WHERE deleted_at IS NULL;
 
       CREATE INDEX idx_internal_notifications_cleanup
-      ON internal_notifications(deleted_at)
+      ON internal_notifications(tenant, deleted_at)
       WHERE deleted_at IS NOT NULL;
 
       CREATE INDEX idx_internal_notifications_delivery
-      ON internal_notifications(delivery_status, delivery_attempts)
+      ON internal_notifications(tenant, delivery_status, delivery_attempts)
       WHERE delivery_status = 'pending' AND delivery_attempts < 3;
     `);
 };
