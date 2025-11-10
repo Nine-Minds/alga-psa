@@ -58,8 +58,7 @@ export async function addTicketResource(
             tenantId: tenant,
             ticketId: ticketId,
             userId: additionalUserId,
-            assignedByUserId: currentUser.user_id,
-            isAdditionalAgent: false  // Promoted to primary since no primary exists
+            assignedByUserId: currentUser.user_id
           }
         });
 

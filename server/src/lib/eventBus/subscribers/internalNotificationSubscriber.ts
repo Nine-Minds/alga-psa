@@ -204,14 +204,14 @@ async function getAllTaskAssignees(
  * Handle ticket assigned events (primary assignment only)
  */
 async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
-  const { tenantId, ticketId, userId } = event.payload;
+  const { tenantId, ticketId, userId, assignedByUserId } = event.payload;
 
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket details
+    // Get ticket details including priority
     const ticket = await db('tickets')
-      .select('ticket_number', 'title', 'assigned_to')
+      .select('ticket_number', 'title', 'assigned_to', 'priority')
       .where({ ticket_id: ticketId, tenant: tenantId })
       .first();
 
@@ -222,6 +222,16 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       });
       return;
     }
+
+    // Get the user who performed the assignment
+    const assignedByUser = assignedByUserId ? await db('users')
+      .select('first_name', 'last_name')
+      .where({ user_id: assignedByUserId, tenant: tenantId })
+      .first() : null;
+
+    const performedByName = assignedByUser
+      ? `${assignedByUser.first_name} ${assignedByUser.last_name}`
+      : 'Someone';
 
     // Resolve notification link
     const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -239,8 +249,11 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       category: 'tickets',
       link: internalUrl,
       data: {
+        ticketId: ticket.ticket_number,
         ticketNumber: ticket.ticket_number,
-        ticketTitle: ticket.title
+        ticketTitle: ticket.title,
+        priority: ticket.priority || 'Normal',
+        performedByName
       }
     });
 
@@ -305,6 +318,7 @@ async function handleTicketAdditionalAgentAssigned(
       category: 'tickets',
       link: internalUrl,
       data: {
+        ticketId: ticket.ticket_number,
         ticketNumber: ticket.ticket_number,
         ticketTitle: ticket.title,
         assignedByName: assignerName
@@ -336,6 +350,7 @@ async function handleTicketAdditionalAgentAssigned(
         category: 'tickets',
         link: internalUrl,
         data: {
+          ticketId: ticket.ticket_number,
           ticketNumber: ticket.ticket_number,
           ticketTitle: ticket.title,
           additionalAgentName: additionalAgentName
@@ -374,6 +389,7 @@ async function handleTicketAdditionalAgentAssigned(
           category: 'tickets',
           link: internalUrl,
           data: {
+            ticketId: ticket.ticket_number,
             ticketNumber: ticket.ticket_number,
             ticketTitle: ticket.title,
             additionalAgentName: additionalAgentName
@@ -1398,16 +1414,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
  */
 async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void> {
   const { payload } = event;
-  const { tenantId, projectId, taskId, userId, assignedByUserId, isAdditionalAgent } = payload;
-
-  console.log('[InternalNotificationSubscriber] handleTaskAssigned called with payload:', JSON.stringify({
-    tenantId,
-    projectId,
-    taskId,
-    userId,
-    assignedByUserId,
-    isAdditionalAgent
-  }));
+  const { tenantId, projectId, taskId, userId, assignedByUserId } = payload;
 
   try {
     const db = await getConnection(tenantId);
@@ -1416,7 +1423,6 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
     const task = await db('project_tasks as pt')
       .select(
         'pt.task_name',
-        'pt.assigned_to as primary_assignee',
         'p.project_name'
       )
       .leftJoin('project_phases as ph', function() {
@@ -1459,91 +1465,27 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
       taskId
     });
 
-    if (isAdditionalAgent) {
-      // When adding an additional agent, notify both users
-
-      // 1. Notify the additional agent (userId) that they were added
-      await createNotificationFromTemplateInternal(db, {
-        tenant: tenantId,
-        user_id: userId,
-        template_name: 'task-additional-agent-assigned',
-        type: 'info',
-        category: 'projects',
-        link: internalUrl,
-        data: {
-          taskName: task.task_name,
-          projectName: task.project_name,
-          performedByName
-        }
-      });
-
-      logger.info('[InternalNotificationSubscriber] Created notification for additional agent assigned to task', {
-        taskId,
-        projectId,
-        additionalAgentId: userId,
-        tenantId
-      });
-
-      // 2. Notify the primary assignee that an additional agent was added
-      if (task.primary_assignee && task.primary_assignee !== userId) {
-        // Get the additional agent's name
-        const additionalAgent = await db('users')
-          .select('first_name', 'last_name')
-          .where({ user_id: userId, tenant: tenantId })
-          .first();
-
-        const additionalAgentName = additionalAgent
-          ? `${additionalAgent.first_name} ${additionalAgent.last_name}`
-          : 'Someone';
-
-        await createNotificationFromTemplateInternal(db, {
-          tenant: tenantId,
-          user_id: task.primary_assignee,
-          template_name: 'task-additional-agent-added',
-          type: 'info',
-          category: 'projects',
-          link: internalUrl,
-          data: {
-            taskName: task.task_name,
-            projectName: task.project_name,
-            additionalAgentName,
-            performedByName
-          }
-        });
-
-        logger.info('[InternalNotificationSubscriber] Created notification for primary assignee about additional agent on task', {
-          taskId,
-          projectId,
-          primaryAssigneeId: task.primary_assignee,
-          additionalAgentId: userId,
-          tenantId
-        });
+    // Primary assignment notification
+    await createNotificationFromTemplateInternal(db, {
+      tenant: tenantId,
+      user_id: userId,
+      template_name: 'task-assigned',
+      type: 'info',
+      category: 'projects',
+      link: internalUrl,
+      data: {
+        taskName: task.task_name,
+        projectName: task.project_name,
+        performedByName
       }
-    } else {
-      // Primary assignment notification
-      await createNotificationFromTemplateInternal(db, {
-        tenant: tenantId,
-        user_id: userId,
-        template_name: 'task-assigned',
-        type: 'info',
-        category: 'projects',
-        link: internalUrl,
-        data: {
-          taskId,
-          projectId,
-          taskName: task.task_name,
-          projectName: task.project_name,
-          performedByName
-        }
-      });
+    });
 
-      logger.info('[InternalNotificationSubscriber] Created notification for task assigned', {
-        taskId,
-        projectId,
-        userId: userId,
-        tenantId
-      });
-    }
+    logger.info('[InternalNotificationSubscriber] Created notification for task assigned', {
+      taskId,
+      projectId,
+      userId: userId,
+      tenantId
+    });
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling task assigned', {
       error,
