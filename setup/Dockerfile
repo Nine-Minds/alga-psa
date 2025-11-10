@@ -12,9 +12,15 @@ RUN apk add --no-cache \
 
 WORKDIR /opt/setup
 
+RUN mkdir -p \
+    /opt/image-assets/server/migrations \
+    /opt/image-assets/server/seeds
+
 COPY setup/entrypoint.sh ./entrypoint.sh
 COPY setup/config.ini ./config.ini
 COPY server/setup/create_database.js /app/server/setup/create_database.js
+COPY server/migrations/ /opt/image-assets/server/migrations/
+COPY server/seeds/ /opt/image-assets/server/seeds/
 RUN mkdir -p /app/scripts \
     /app/shared/workflow/workflows \
     /app/server/migrations \

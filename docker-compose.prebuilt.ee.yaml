@@ -5,7 +5,6 @@ services:
     extends:
       file: ./server/docker-compose.prebuilt.yaml
       service: server
-    container_name: ${APP_NAME:-sebastian}_server_ee
     image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
     environment:
@@ -80,7 +79,6 @@ services:
   setup:
     image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
-    container_name: ${APP_NAME:-sebastian}_setup_ee
     restart: "no"
     environment:
       EDITION: enterprise
@@ -218,7 +216,6 @@ services:
     extends:
       file: ./hocuspocus/docker-compose.yaml
       service: hocuspocus
-    container_name: ${APP_NAME:-sebastian}_hocuspocus_ee
     build:
       context: .
       dockerfile: hocuspocus/Dockerfile

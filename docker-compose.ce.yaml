@@ -47,6 +47,14 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: ./server/migrations
+        target: /app/server/migrations-host
+        read_only: true
+      - type: bind
+        source: ./server/seeds
+        target: /app/server/seeds-host
+        read_only: true
     entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/server && /app/entrypoint.sh"]
     secrets:
       - postgres_password
@@ -111,6 +119,12 @@ services:
       # Secret provider configuration for setup (CE edition)
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
+      CE_MIGRATIONS_HOST: /app/server/migrations-host
+      CE_MIGRATIONS_FALLBACK: /opt/image-assets/server/migrations
+      CE_SEEDS_HOST: /app/server/seeds-host
+      CE_SEEDS_FALLBACK: /opt/image-assets/server/seeds
+      MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/app/server/migrations}
+      SEEDS_DIR: ${SEEDS_DIR:-/app/server/seeds}
     volumes:
       - type: bind
         source: ./setup/config.ini
@@ -128,6 +142,12 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: ./server/migrations
+        target: /app/server/migrations-host
+      - type: bind
+        source: ./server/seeds
+        target: /app/server/seeds-host
     secrets:
       - postgres_password
       - db_password_server

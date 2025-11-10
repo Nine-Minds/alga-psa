@@ -54,6 +54,39 @@ wait_for_postgres() {
     log "PostgreSQL is up and running!"
 }
 
+# Stage migrations and seeds from host or fallback image copies
+stage_ce_assets() {
+    local host_migrations="${CE_MIGRATIONS_HOST:-/app/server/migrations-host}"
+    local fallback_migrations="${CE_MIGRATIONS_FALLBACK:-/opt/image-assets/server/migrations}"
+    local active_migrations="${MIGRATIONS_DIR:-/app/server/migrations}"
+
+    local host_seeds="${CE_SEEDS_HOST:-/app/server/seeds-host}"
+    local fallback_seeds="${CE_SEEDS_FALLBACK:-/opt/image-assets/server/seeds}"
+    local active_seeds="${SEEDS_DIR:-/app/server/seeds}"
+
+    mkdir -p "$active_migrations" "$active_seeds"
+
+    if find "$host_migrations" -maxdepth 1 -name '*.cjs' -print -quit | grep -q .; then
+        log "Using CE migrations from host bind mount ($host_migrations)"
+        cp "$host_migrations"/*.cjs "$active_migrations"/
+    else
+        log "Host CE migrations empty; copying baked-in migrations"
+        cp "$fallback_migrations"/*.cjs "$active_migrations"/ 2>/dev/null || true
+        mkdir -p "$host_migrations"
+        cp "$fallback_migrations"/*.cjs "$host_migrations"/ 2>/dev/null || true
+    fi
+
+    if find "$host_seeds" -maxdepth 1 -name '*.cjs' -print -quit | grep -q .; then
+        log "Using CE seeds from host bind mount ($host_seeds)"
+        cp "$host_seeds"/*.cjs "$active_seeds"/
+    else
+        log "Host CE seeds empty; copying baked-in seeds"
+        cp "$fallback_seeds"/*.cjs "$active_seeds"/ 2>/dev/null || true
+        mkdir -p "$host_seeds"
+        cp "$fallback_seeds"/*.cjs "$host_seeds"/ 2>/dev/null || true
+    fi
+}
+
 # Function to check if seeds have been run
 check_seeds_status() {
     local has_seeds
