@@ -351,9 +351,9 @@ impl ModuleLoader {
         request: &ModelExecuteRequest,
         mut context: HostExecutionContext,
     ) -> anyhow::Result<ModelExecuteResponse> {
-        let request_id = request.context.request_id.as_deref().unwrap_or("unknown");
-        let tenant_id = request.context.tenant_id.as_deref().unwrap_or("unknown");
-        let extension_id = request.context.extension_id.as_deref().unwrap_or("unknown");
+        let request_id = request.context.request_id.as_ref().map(|s| s.as_str()).unwrap_or("unknown");
+        let tenant_id = &request.context.tenant_id;
+        let extension_id = &request.context.extension_id;
 
         tracing::info!(request_id=%request_id, tenant=%tenant_id, extension=%extension_id, "Extension execution started");
         tracing::info!(request_id=%request_id, timeout_ms=?timeout_ms, memory_mb=?memory_mb, "Execution parameters");

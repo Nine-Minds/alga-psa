@@ -470,7 +470,7 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
         }
     };
     tracing::info!(host=%host, body_len=%text.len(), body_sample=%text.chars().take(200).collect::<String>(), "Registry response body content");
-    let body: LookupResp = match serde_json::from_str(&text) {
+    let body: LookupResp = match serde_json::from_str::<LookupResp>(&text) {
         Ok(b) => {
             tracing::info!(host=%host, tenant_id=%b.tenant_id, extension_id=%b.extension_id, content_hash=%b.content_hash, "Registry response parsed successfully");
             b

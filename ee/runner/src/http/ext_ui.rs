@@ -494,12 +494,13 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
             // Read entry contents fully (sync) and stage write
             let mut contents = Vec::with_capacity(16 * 1024);
             entry.read_to_end(&mut contents).context("read entry")?;
+            let contents_size = contents.len();
             ops.push(Op::Write {
                 path: out_path,
                 contents,
             });
             files += 1;
-            total_size += contents.len();
+            total_size += contents_size;
         } else {
             // Skip symlinks or other types for safety
             skipped += 1;

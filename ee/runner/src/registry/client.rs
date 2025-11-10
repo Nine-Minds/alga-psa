@@ -1,8 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use moka::future::Cache;
-use serde::Deserialize;
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use tokio::time::timeout;
 use url::Url;
 
@@ -152,7 +151,7 @@ impl RegistryClient for HttpRegistryClient {
                 self.cache.insert(key, false).await;
                 return Ok(false);
             }
-            Err(e) => {
+            Err(_e) => {
                 tracing::error!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, timeout_ms=750u64, "Registry validation request timed out");
                 tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "On timeout in strict mode - denying validation");
                 self.cache.insert(key, false).await;
@@ -161,7 +160,8 @@ impl RegistryClient for HttpRegistryClient {
         };
 
         // Interpret JSON { valid: bool } or truthy status 200
-        let valid = if resp.status().is_success() {
+        let status = resp.status();
+        let valid = if status.is_success() {
             match resp.text().await {
                 Ok(txt) => {
                     let valid_val = serde_json::from_str::<serde_json::Value>(&txt)
@@ -169,20 +169,20 @@ impl RegistryClient for HttpRegistryClient {
                         .and_then(|v| v.get("valid").and_then(|b| b.as_bool()))
                         .unwrap_or(false);
 
-                    tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, status=%resp.status().as_u16(), body_len=%txt.len(), valid=%valid_val, "Registry validation response parsed");
+                    tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, status=%status.as_u16(), body_len=%txt.len(), valid=%valid_val, "Registry validation response parsed");
                     if txt.len() > 0 {
                         tracing::debug!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, body_sample=%txt.chars().take(200).collect::<String>(), "Registry response body");
                     }
 
                     valid_val
                 }
-                Err(e) => {
-                    tracing::error!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, err=%e.to_string(), "Failed to parse registry validation response body");
+                Err(_e) => {
+                    tracing::error!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Failed to parse registry validation response body");
                     false
                 }
             }
         } else {
-            tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, status=%resp.status().as_u16(), "Registry returned non-success status");
+            tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, status=%status.as_u16(), "Registry returned non-success status");
             false
         };
 

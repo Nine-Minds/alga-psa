@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
         build_unix_secs=%build_unix,
         "Extension Runner Service - Build Information"
     );
-    tracing::info!("Build: {} (commit {}) at Unix timestamp {}", build_sha, build_unix);
+    tracing::info!("Build: {} (commit {}) at Unix timestamp {}", build_sha, build_sha, build_unix);
 
     // Log key environment configuration for easier diagnostics
     let reg_base = std::env::var("REGISTRY_BASE_URL").unwrap_or_else(|_| "<unset>".into());
