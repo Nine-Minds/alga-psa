@@ -1,0 +1,13 @@
+{
+  "name": "com.alga.sample.secrets-demo",
+  "publisher": "Alga",
+  "version": "0.1.0",
+  "runtime": "wasm-js@1",
+  "capabilities": ["secrets.get"],
+  "api": {
+    "endpoints": [
+      { "method": "GET", "path": "/", "handler": "dist/main" }
+    ]
+  },
+  "assets": []
+}
