@@ -298,19 +298,22 @@ export async function createContractTemplateFromWizard(
         primaryContractLineId = planId;
       }
 
-      const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
+      // Create template line mapping FIRST before inserting fixed config
+      const templateLineId = await recordTemplateMapping(planId, null);
+
       const fixedBaseRateCents = submission.fixed_base_rate ?? 0;
       const enableProrationFlag = Boolean(submission.enable_proration);
-      await fixedConfigModel.upsert({
-        contract_line_id: planId,
+
+      // Insert into contract_template_line_fixed_config (not contract_line_fixed_config)
+      await trx('contract_template_line_fixed_config').insert({
+        tenant,
+        template_line_id: templateLineId,
         base_rate: fixedBaseRateCents / 100,
         enable_proration: enableProrationFlag,
         billing_cycle_alignment: enableProrationFlag ? 'prorated' : 'start',
-        tenant,
+        created_at: nowIso,
+        updated_at: nowIso,
       });
-
-      // Create template line mapping FIRST before inserting services
-      const templateLineId = await recordTemplateMapping(planId, null);
 
       const totalQuantity = filteredFixedServices.reduce((sum, svc) => sum + (svc.quantity ?? 1), 0) || filteredFixedServices.length;
       let allocated = 0;
@@ -923,18 +926,16 @@ export async function getContractTemplateSnapshotForClientWizard(
       fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue * 100) : undefined;
       enableProration = line.enable_proration ?? false;
 
-      servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
+      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const quantity =
           configuration?.quantity != null ? Number(configuration.quantity) : 1;
-        const bucketConfig =
-          configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig) ? typeConfig : null;
 
         fixedServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
           quantity,
           bucket_overlay:
-            bucketConfig
+            bucketConfig && isBucketConfig(bucketConfig)
               ? {
                   total_minutes: bucketConfig.total_minutes ?? undefined,
                   overage_rate:
@@ -946,7 +947,7 @@ export async function getContractTemplateSnapshotForClientWizard(
         });
       });
     } else if (line.contract_line_type === 'Hourly') {
-      servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
+      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const hourlyConfig = isHourlyConfig(typeConfig) ? typeConfig : null;
         const hourlyRateSource =
           (hourlyConfig && hourlyConfig.hourly_rate != null ? hourlyConfig.hourly_rate : configuration?.custom_rate) ??
@@ -965,35 +966,29 @@ export async function getContractTemplateSnapshotForClientWizard(
         minimumBillableTime = minimumBillable;
         roundUpToNearest = roundUp;
 
-        const hourlyBucket =
-          configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig) ? typeConfig : null;
-
         hourlyServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
           hourly_rate: hourlyRateCents,
           bucket_overlay:
-            hourlyBucket
+            bucketConfig && isBucketConfig(bucketConfig)
               ? {
-                  total_minutes: hourlyBucket.total_minutes ?? undefined,
+                  total_minutes: bucketConfig.total_minutes ?? undefined,
                   overage_rate:
-                    hourlyBucket.overage_rate != null ? Math.round(Number(hourlyBucket.overage_rate)) : undefined,
-                  allow_rollover: Boolean(hourlyBucket.allow_rollover),
-                  billing_period: hourlyBucket.billing_period === 'weekly' ? 'weekly' : 'monthly',
+                    bucketConfig.overage_rate != null ? Math.round(Number(bucketConfig.overage_rate)) : undefined,
+                  allow_rollover: Boolean(bucketConfig.allow_rollover),
+                  billing_period: bucketConfig.billing_period === 'weekly' ? 'weekly' : 'monthly',
                 }
               : undefined,
         });
       });
     } else if (line.contract_line_type === 'Usage') {
-      servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
+      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const usageConfig = isUsageConfig(typeConfig) ? typeConfig : null;
         const unitRateSource =
           (usageConfig && usageConfig.base_rate != null ? usageConfig.base_rate : configuration?.custom_rate) ?? null;
         const unitRateCents =
           unitRateSource != null ? Math.round(Number(unitRateSource)) : undefined;
-
-        const usageBucket =
-          configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig) ? typeConfig : null;
 
         usageServices?.push({
           service_id: service.service_id,
@@ -1004,13 +999,13 @@ export async function getContractTemplateSnapshotForClientWizard(
             service.unit_of_measure ||
             'unit',
           bucket_overlay:
-            usageBucket
+            bucketConfig && isBucketConfig(bucketConfig)
               ? {
-                  total_minutes: usageBucket.total_minutes ?? undefined,
+                  total_minutes: bucketConfig.total_minutes ?? undefined,
                   overage_rate:
-                    usageBucket.overage_rate != null ? Math.round(Number(usageBucket.overage_rate)) : undefined,
-                  allow_rollover: Boolean(usageBucket.allow_rollover),
-                  billing_period: usageBucket.billing_period === 'weekly' ? 'weekly' : 'monthly',
+                    bucketConfig.overage_rate != null ? Math.round(Number(bucketConfig.overage_rate)) : undefined,
+                  allow_rollover: Boolean(bucketConfig.allow_rollover),
+                  billing_period: bucketConfig.billing_period === 'weekly' ? 'weekly' : 'monthly',
                 }
               : undefined,
         });
