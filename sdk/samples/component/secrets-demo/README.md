@@ -1,6 +1,6 @@
 # Secrets Demo Component
 
-A minimal Alga PSA extension component demonstrating how to retrieve secrets from the Runner using the `secrets.get` capability.
+A minimal Alga PSA extension component demonstrating how to retrieve secrets from the Runner and stream debug logs using the `cap:secrets.get` and `cap:log.emit` capabilities.
 
 ## What it does
 
@@ -9,19 +9,36 @@ This sample component:
 2. Retrieves a secret named `greeting` from the Runner's secrets store
 3. Falls back to the string `'hello'` if the secret is missing
 4. Returns a JSON response containing the message, request path, and install config
+5. Emits structured log events (`log-info` / `log-warn`) so the EE Debug Console can capture them via the Redis stream
 
 ## How it works
 
 ```typescript
 import { get as getSecret } from 'alga:extension/secrets';
+import { logInfo, logWarn } from 'alga:extension/logging';
 
 export async function handler(request: ExecuteRequest): Promise<ExecuteResponse> {
-  const message = await getSecret('greeting').catch(() => 'hello');
-  return jsonResponse({ message, path: request.http.url, config: request.context.config ?? {} });
+  const method = request.http.method || 'GET';
+  const url = request.http.url || '/';
+  const requestId = request.context.requestId ?? 'n/a';
+
+  logInfo(`[secrets-demo] request start requestId=${requestId} method=${method} url=${url}`);
+
+  let message: string;
+  try {
+    message = await getSecret('greeting');
+    logInfo('[secrets-demo] greeting secret resolved');
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    logWarn(`[secrets-demo] greeting secret missing; falling back. reason=${reason}`);
+    message = 'hello';
+  }
+
+  return jsonResponse({ message, path: url, config: request.context.config ?? {} });
 }
 ```
 
-The handler imports the `secrets.get` function directly from the WIT interface, which is bound at runtime by the component runner.
+The handler imports the `secrets` interface directly from the WIT bindings while also calling the `logging` interface so every request generates debug events that the Runner forwards to Redis/the EE Debug Console.
 
 ## Building
 
@@ -56,7 +73,7 @@ The `manifest.json` declares the extension metadata and handler endpoint:
   "publisher": "Alga",
   "version": "0.1.0",
   "runtime": "wasm-js@1",
-  "capabilities": ["secrets.get"],
+  "capabilities": ["cap:secrets.get", "cap:log.emit"],
   "api": {
     "endpoints": [
       { "method": "GET", "path": "/", "handler": "dist/main" }
@@ -112,7 +129,7 @@ Runs the handler tests using Vitest.
 
 ### Capabilities
 
-This sample declares the `secrets.get` capability in its manifest, requesting permission to retrieve install-scoped secrets at runtime.
+This sample declares `cap:secrets.get` (to read install-scoped secrets) and `cap:log.emit` (to stream structured logs into the EE Debug Console).
 
 ### WIT Interfaces
 
@@ -121,6 +138,10 @@ The component imports the `secrets` interface from `alga:extension/secrets`, whi
 ### Error Handling
 
 The handler gracefully falls back to `'hello'` if the secret is missing or retrieval fails. In production, you'd typically return an error response instead.
+
+### Live Debug Logging
+
+When this component runs inside the EE environment, each `log-info` / `log-warn` call is forwarded to the Runner's Redis-backed debug stream. Use the **Debug Console** link on `/msp/settings?tab=extensions` (or go directly to `/msp/extensions/<registryId>/debug`) to confirm that the `[secrets-demo] …` messages appear in real time. Avoid logging raw secret values—this sample only logs request metadata and fallback reasons.
 
 ## Next Steps
 

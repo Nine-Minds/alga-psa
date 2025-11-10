@@ -4,14 +4,14 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf dist",
-    "build:js": "tsup src/handler.ts --format esm --out-dir dist/js --clean --external alga:extension/secrets --external alga:extension/http --external alga:extension/logging",
+    "build:js": "tsup src/handler.ts --format esm --out-dir dist/js --clean",
     "build:component": "jco componentize dist/js/handler.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/component.wasm",
     "build": "npm run clean && npm run build:js && npm run build:component",
     "postbuild": "node ./scripts/postbuild.mjs",
     "test": "vitest"
   },
   "dependencies": {
-    "@alga/extension-runtime": "file:../../../../extension-runtime"
+    "@alga/extension-runtime": "file:../../extension-runtime"
   },
   "devDependencies": {
     "@bytecodealliance/componentize-js": "^0.19.3",

@@ -53,14 +53,24 @@ impl FromRef<RootState> for crate::http::ext_ui::AppState {
 
 // Build and run the HTTP server
 pub async fn run() -> anyhow::Result<()> {
+    tracing::info!("═══════════════════════════════════════════════════════");
+    tracing::info!("HTTP Server Initialization");
+    tracing::info!("═══════════════════════════════════════════════════════");
+
+    // Initialize core state
+    tracing::info!("Initializing core execution state...");
     let core = CoreState {
         idempotency: Arc::new(Mutex::new(HashMap::new())),
     };
+    tracing::info!("✓ Core state initialized (idempotency cache ready)");
 
     // Load ALGA_AUTH_KEY from env or Vault at startup
+    tracing::info!("Loading ALGA_AUTH_KEY from environment...");
     let api_key = crate::secrets::load_alga_auth_key().await;
     if api_key.is_none() {
         let default_path = "/vault/secrets/alga_auth_key";
+        tracing::error!("CRITICAL: ALGA_AUTH_KEY not available");
+        tracing::error!("Please provide ALGA_AUTH_KEY environment variable or mount a file at ALGA_AUTH_KEY_FILE (default: {})", default_path);
         return Err(anyhow::anyhow!(
             format!(
                 "ALGA_AUTH_KEY unavailable. Provide ALGA_AUTH_KEY or mount a file at ALGA_AUTH_KEY_FILE (default: {})",
@@ -68,19 +78,33 @@ pub async fn run() -> anyhow::Result<()> {
             )
         ));
     }
+    tracing::info!("✓ ALGA_AUTH_KEY loaded successfully");
 
     // Validate required registry base URL exists and parses
+    tracing::info!("Validating REGISTRY_BASE_URL configuration...");
     let reg_base = std::env::var("REGISTRY_BASE_URL")
         .map_err(|_| anyhow::anyhow!("REGISTRY_BASE_URL not set"))?;
     Url::parse(&reg_base).map_err(|e| anyhow::anyhow!("Invalid REGISTRY_BASE_URL: {}", e))?;
+    tracing::info!("✓ Registry base URL validated: {}", reg_base);
 
+    // Initialize registry client
+    tracing::info!("Initializing registry client...");
     let registry = Arc::new(HttpRegistryClient::new(api_key.clone())?);
+    tracing::info!("✓ Registry client initialized");
+
+    // Initialize cache and bundle store
+    tracing::info!("Initializing cache and bundle store configuration...");
     let cache_root = cache_fs::ext_cache_root_from_env();
+    tracing::info!("  ✓ Cache root: {}", cache_root.display());
+
     let bundle_store_base = Url::parse(
         &std::env::var("BUNDLE_STORE_BASE")
             .unwrap_or_else(|_| "http://localhost:9000/alga-ext/".into()),
     )?;
+    tracing::info!("  ✓ Bundle store base: {}", bundle_store_base);
+
     let max_file_bytes = crate::util::limits::max_file_bytes_from_env();
+    tracing::info!("  ✓ Max file bytes limit: {:?}", max_file_bytes);
 
     let ext = crate::http::ext_ui::AppState {
         registry,
@@ -88,10 +112,13 @@ pub async fn run() -> anyhow::Result<()> {
         bundle_store_base,
         max_file_bytes,
     };
+    tracing::info!("✓ Extension UI state initialized");
 
     let state = RootState { core, ext, api_key };
+    tracing::info!("✓ Root state assembled");
 
-    // Single router with routes for both APIs; state extracted via FromRef
+    // Build router with all routes
+    tracing::info!("Configuring HTTP routes...");
     let app = Router::new()
         .route("/v1/execute", post(execute))
         .route("/healthz", get(healthz))
@@ -107,13 +134,26 @@ pub async fn run() -> anyhow::Result<()> {
             axum::http::header::CACHE_CONTROL,
             HeaderValue::from_static("public, max-age=31536000, immutable"),
         ));
+    tracing::info!("✓ HTTP routes configured:");
+    tracing::info!("  - POST /v1/execute (extension execution)");
+    tracing::info!("  - GET  /healthz (health check)");
+    tracing::info!("  - GET  / (root dispatcher)");
+    tracing::info!("  - GET  /ext-ui/:extensionId/:contentHash/*path (UI file serving)");
+    tracing::info!("  - POST /warmup (cache warmup)");
 
+    // Configure server address
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(8080);
     let addr: SocketAddr = ([0, 0, 0, 0], port).into();
-    tracing::info!("listening on {}", addr);
+    tracing::info!("═══════════════════════════════════════════════════════");
+    tracing::info!("HTTP Server Ready");
+    tracing::info!("  Address: {}", addr);
+    tracing::info!("  Protocol: HTTP");
+    tracing::info!("═══════════════════════════════════════════════════════");
+    tracing::info!("Server startup complete - listening for requests");
+
     axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
     Ok(())
 }
@@ -156,9 +196,15 @@ async fn execute(
         .strip_prefix("sha256:")
         .unwrap_or(&content_hash);
     let key = format!("sha256/{}/dist/main.wasm", hash);
+    tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, wasm_key=%key, "Initializing Wasmtime ModuleLoader for extension execution");
     let loader = match ModuleLoader::new() {
-        Ok(l) => l,
+        Ok(l) => {
+            tracing::info!(request_id=%req_id, "✓ ModuleLoader initialized successfully");
+            l
+        }
         Err(e) => {
+            tracing::error!(request_id=%req_id, err=%e.to_string(), "FAILED: ModuleLoader initialization failed");
+            tracing::error!(request_id=%req_id, "This error indicates Wasmtime engine configuration failure");
             let resp = ExecuteResponse {
                 status: 500,
                 headers: Default::default(),
@@ -168,9 +214,17 @@ async fn execute(
             return Json(resp);
         }
     };
+
+    tracing::info!(request_id=%req_id, wasm_key=%key, "Fetching WASM binary from MinIO/bundle store");
     let wasm = match loader.fetch_object(&key).await {
-        Ok(b) => b,
+        Ok(b) => {
+            tracing::info!(request_id=%req_id, wasm_size=%b.len(), "✓ WASM binary downloaded from bundle store");
+            tracing::info!(request_id=%req_id, "WASM binary ready for Wasmtime instantiation");
+            b
+        }
         Err(e) => {
+            tracing::error!(request_id=%req_id, wasm_key=%key, err=%e.to_string(), "FAILED: WASM binary download failed");
+            tracing::error!(request_id=%req_id, "This error indicates the extension bundle could not be retrieved from MinIO");
             let resp = ExecuteResponse {
                 status: 502,
                 headers: Default::default(),
@@ -312,24 +366,35 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
         .unwrap_or("")
         .to_string();
 
+    tracing::info!(host=%host, "Root dispatch request received - resolving extension by host");
+
     if host.is_empty() {
-        tracing::warn!("host header missing on root request");
+        tracing::warn!(host=%host, "Root dispatch failed: missing host header");
         return StatusCode::BAD_REQUEST.into_response();
     }
 
+    tracing::info!(host=%host, "Host header validated - querying registry for extension");
+
     // Build registry URL: {REGISTRY_BASE_URL}/api/installs/lookup-by-host?host=...
     let base = match std::env::var("REGISTRY_BASE_URL") {
-        Ok(v) => v,
+        Ok(v) => {
+            tracing::info!(host=%host, REGISTRY_BASE_URL=%v, "Registry base URL loaded from environment");
+            v
+        }
         Err(e) => {
-            tracing::error!(err=%e.to_string(), host=%host, "REGISTRY_BASE_URL not set");
+            tracing::error!(host=%host, err=%e.to_string(), "CRITICAL: REGISTRY_BASE_URL not set");
+            tracing::error!(host=%host, "Cannot perform extension lookup without registry base URL");
             return StatusCode::SERVICE_UNAVAILABLE.into_response();
         }
     };
 
     let mut url = match Url::parse(&base) {
-        Ok(u) => u,
+        Ok(u) => {
+            tracing::info!(host=%host, registry_base=%base, "Registry base URL parsed successfully");
+            u
+        }
         Err(e) => {
-            tracing::error!(base=%base, err=%e.to_string(), "REGISTRY_BASE_URL parse failed");
+            tracing::error!(host=%host, base=%base, err=%e.to_string(), "REGISTRY_BASE_URL parse failed - invalid URL format");
             return StatusCode::SERVICE_UNAVAILABLE.into_response();
         }
     };
@@ -338,14 +403,20 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or(0);
+    let clean_host = host.split(':').next().unwrap_or("");
     url.query_pairs_mut()
-        .append_pair("host", host.split(':').next().unwrap_or(""))
+        .append_pair("host", clean_host)
         .append_pair("ts", &now_ms.to_string());
 
+    tracing::info!(host=%host, lookup_url=%url.to_string(), "Registry lookup URL constructed");
+
     let http = match reqwest::Client::builder().build() {
-        Ok(c) => c,
+        Ok(c) => {
+            tracing::info!(host=%host, "HTTP client initialized for registry communication");
+            c
+        }
         Err(e) => {
-            tracing::error!(err=%e.to_string(), "failed to build reqwest client");
+            tracing::error!(host=%host, err=%e.to_string(), "CRITICAL: Failed to build HTTP client for registry requests");
             return StatusCode::SERVICE_UNAVAILABLE.into_response();
         }
     };
@@ -356,20 +427,25 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
         Some(key) if !key.is_empty() => {
             let prefix: String = key.chars().take(4).collect();
             let len = key.len();
-            tracing::info!(key_len = len, key_prefix = %prefix, "ALGA_AUTH_KEY present; sending x-api-key header");
+            tracing::info!(host=%host, key_len=len, key_prefix=%prefix, "ALGA_AUTH_KEY present - attaching to registry request");
             rb = rb.header("x-api-key", key);
         }
         _ => {
-            tracing::warn!("ALGA_AUTH_KEY not set; registry call may be unauthorized");
+            tracing::warn!(host=%host, "ALGA_AUTH_KEY not configured - registry request may be unauthorized");
         }
     }
 
-    tracing::info!(host=%host, url=%url.to_string(), "lookup-by-host request start");
+    tracing::info!(host=%host, lookup_url=%url.to_string(), "Sending extension lookup request to registry");
+    tracing::info!(host=%host, "Waiting for registry response (request timeout: default)");
 
     let resp = match rb.send().await {
-        Ok(r) => r,
+        Ok(r) => {
+            tracing::info!(host=%host, status=%r.status().as_u16(), "Registry response received");
+            r
+        }
         Err(e) => {
-            tracing::error!(host=%host, url=%url.to_string(), err=%e.to_string(), "registry request failed");
+            tracing::error!(host=%host, lookup_url=%url.to_string(), err=%e.to_string(), "FAILED: Registry request failed - network or server error");
+            tracing::error!(host=%host, "This indicates registry service is unavailable or unreachable");
             return StatusCode::BAD_GATEWAY.into_response();
         }
     };
@@ -377,23 +453,31 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
     if !resp.status().is_success() {
         let code = resp.status().as_u16();
         let path = url.path().to_string();
-        tracing::info!(host=%host, status=%code, url_path=%path, "registry returned non-success for lookup-by-host");
+        tracing::warn!(host=%host, status=%code, url_path=%path, "Registry returned non-success status for host lookup");
+        tracing::warn!(host=%host, "No extension found for this host or extension is not available");
         return StatusCode::NOT_FOUND.into_response();
     }
 
-    tracing::info!(host=%host, status=%resp.status().as_u16(), "lookup-by-host response ok; reading body");
+    tracing::info!(host=%host, status=%resp.status().as_u16(), "Registry lookup successful - parsing response body");
     let text = match resp.text().await {
-        Ok(t) => t,
+        Ok(t) => {
+            tracing::info!(host=%host, response_bytes=%t.len(), "Registry response body received");
+            t
+        }
         Err(e) => {
-            tracing::error!(host=%host, err=%e.to_string(), "failed to read registry response body");
+            tracing::error!(host=%host, err=%e.to_string(), "FAILED: Could not read registry response body");
             return StatusCode::BAD_GATEWAY.into_response();
         }
     };
-    tracing::info!(host=%host, body_len=%text.len(), body_sample=%text.chars().take(200).collect::<String>(), "lookup-by-host response body");
+    tracing::info!(host=%host, body_len=%text.len(), body_sample=%text.chars().take(200).collect::<String>(), "Registry response body content");
     let body: LookupResp = match serde_json::from_str(&text) {
-        Ok(b) => b,
+        Ok(b) => {
+            tracing::info!(host=%host, tenant_id=%b.tenant_id, extension_id=%b.extension_id, content_hash=%b.content_hash, "Registry response parsed successfully");
+            b
+        }
         Err(e) => {
-            tracing::error!(host=%host, err=%e.to_string(), "failed to parse registry response json");
+            tracing::error!(host=%host, err=%e.to_string(), "FAILED: Could not parse registry response JSON");
+            tracing::error!(host=%host, "Registry response may be malformed or in unexpected format");
             return StatusCode::BAD_GATEWAY.into_response();
         }
     };
@@ -403,7 +487,16 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
         "/ext-ui/{}/{}/index.html?tenant={}",
         body.extension_id, body.content_hash, body.tenant_id
     );
-    tracing::info!(host=%host, target=%target, "redirecting to ext-ui");
+    tracing::info!("═══════════════════════════════════════════════════════");
+    tracing::info!("HOST DISPATCH COMPLETE");
+    tracing::info!("Host: {}", host);
+    tracing::info!("Tenant: {}", body.tenant_id);
+    tracing::info!("Extension: {}", body.extension_id);
+    tracing::info!("Content Hash: {}", body.content_hash);
+    tracing::info!("Redirect Target: {}", target);
+    tracing::info!("═══════════════════════════════════════════════════════");
+    tracing::info!(host=%host, target=%target, "Redirecting to extension UI");
+
     Redirect::temporary(&target).into_response()
 }
 

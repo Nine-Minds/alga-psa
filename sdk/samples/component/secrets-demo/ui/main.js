@@ -32,7 +32,7 @@ bootstrapIframe({
 
       if (response.ok) {
         renderSecret('Runner Status', 'Connected ✓');
-        renderSecret('Capability', 'secrets.get');
+        renderSecret('Capability', 'cap:secrets.get');
         renderSecret('Tenant ID', ctx.tenantId || 'Not available');
         renderSecret('Extension ID', ctx.extensionId || 'Not available');
       } else {

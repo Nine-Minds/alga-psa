@@ -3,7 +3,7 @@
   "publisher": "Alga",
   "version": "0.1.1",
   "runtime": "wasm-js@1",
-  "capabilities": ["secrets.get"],
+  "capabilities": ["cap:secrets.get", "cap:log.emit"],
   "ui": {
     "type": "iframe",
     "entry": "ui/index.html",

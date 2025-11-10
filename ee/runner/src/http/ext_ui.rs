@@ -432,10 +432,14 @@ fn rand_suffix() -> String {
 /// Uses write_atomic for files and sets read-only perms.
 /// Important: Do not hold non-Send tar iterators across .await points. Collect ops first, then perform async IO.
 async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Result<()> {
+    tracing::info!(archive_path=%tgz_path.to_string_lossy(), extract_path=%ui_root.to_string_lossy(), "UI archive extraction started");
+
     // Read file into memory, then iterate tar synchronously
     let mut f = fs::File::open(tgz_path).await?;
     let mut buf = Vec::new();
     f.read_to_end(&mut buf).await?;
+    tracing::info!(archive_path=%tgz_path.to_string_lossy(), archive_size=%buf.len(), "Archive loaded into memory");
+
     let z = ZstdDecoder::new(&buf[..])?;
     let mut ar = Archive::new(z);
 
@@ -448,6 +452,11 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
 
     let mut files = 0usize;
     let mut dirs = 0usize;
+    let mut skipped = 0usize;
+    let mut total_size = 0usize;
+
+    tracing::info!(extract_path=%ui_root.to_string_lossy(), "Scanning archive for UI files");
+
     for entry in ar.entries().context("tar entries")? {
         let mut entry = entry.context("tar entry")?;
         let path = entry.path().context("entry path")?;
@@ -469,6 +478,7 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
 
         // Disallow hidden dot files or dirs in archive
         if rel.split('/').any(|seg| seg.starts_with('.')) {
+            skipped += 1;
             continue;
         }
 
@@ -489,25 +499,40 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
                 contents,
             });
             files += 1;
+            total_size += contents.len();
         } else {
             // Skip symlinks or other types for safety
+            skipped += 1;
             continue;
         }
     }
 
+    tracing::info!(extract_path=%ui_root.to_string_lossy(), files=%files, dirs=%dirs, skipped=%skipped, bytes=%total_size, "Archive scan complete - writing files");
+
     // Perform async filesystem ops
+    let mut written_files = 0usize;
+    let mut written_dirs = 0usize;
     for op in ops {
         match op {
             Op::Mkdir(p) => {
                 cache_fs::ensure_dir(&p).await?;
+                written_dirs += 1;
             }
             Op::Write { path, contents } => {
                 cache_fs::write_atomic(&path, &contents).await?;
+                written_files += 1;
             }
         }
     }
 
-    tracing::info!(ui_root=%ui_root.to_string_lossy(), files=%files, dirs=%dirs, "ui subtree extracted");
+    tracing::info!("═══════════════════════════════════════════════════════");
+    tracing::info!("UI ARCHIVE EXTRACTION COMPLETE");
+    tracing::info!("Archive: {}", tgz_path.to_string_lossy());
+    tracing::info!("Target: {}", ui_root.to_string_lossy());
+    tracing::info!("Directories created: {}", written_dirs);
+    tracing::info!("Files extracted: {}", written_files);
+    tracing::info!("Total size: {} bytes", total_size);
+    tracing::info!("═══════════════════════════════════════════════════════");
 
     Ok(())
 }

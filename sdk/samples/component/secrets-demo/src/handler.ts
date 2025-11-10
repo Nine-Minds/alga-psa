@@ -1,7 +1,29 @@
-import { ExecuteRequest, ExecuteResponse, jsonResponse } from './runtime.js';
-import { get as getSecret } from 'alga:extension/secrets';
+import { ExecuteRequest, ExecuteResponse, HostBindings, jsonResponse } from '@alga/extension-runtime';
 
-export async function handler(request: ExecuteRequest): Promise<ExecuteResponse> {
-  const message = await getSecret('greeting').catch(() => 'hello');
-  return jsonResponse({ message, path: request.http.url, config: request.context.config ?? {} });
+export async function handler(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
+  const method = request.http.method || 'GET';
+  const url = request.http.url || '/';
+  const requestId = request.context.requestId ?? 'n/a';
+  const tenantId = request.context.tenantId;
+  const configKeys = Object.keys(request.context.config ?? {});
+
+  await host.logging.info(
+    `[secrets-demo] request start tenant=${tenantId} requestId=${requestId} method=${method} url=${url} configKeys=${configKeys.length}`
+  );
+
+  let message: string;
+  try {
+    message = await host.secrets.get('greeting');
+    await host.logging.info('[secrets-demo] greeting secret resolved; emitting response');
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    await host.logging.warn(
+      `[secrets-demo] greeting secret missing, using fallback. requestId=${requestId} reason=${reason}`
+    );
+    message = 'hello';
+  }
+
+  const response = jsonResponse({ message, path: url, config: request.context.config ?? {} });
+  await host.logging.info(`[secrets-demo] request complete requestId=${requestId} status=${response.status}`);
+  return response;
 }
