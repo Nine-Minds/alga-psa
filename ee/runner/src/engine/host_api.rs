@@ -330,10 +330,12 @@ impl secrets::HostWithStore for HasSelf<HostState> {
             };
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
+            let available_keys: Vec<String> = secrets.values.keys().cloned().collect();
             tracing::info!(
                 tenant=%tenant,
                 extension=%extension,
                 key_redacted=%redact_identifier(&key),
+                available_keys=?available_keys,
                 "secrets capability get attempt"
             );
             match secrets.values.get(&key) {
@@ -470,10 +472,20 @@ impl logging::HostWithStore for HasSelf<HostState> {
         accessor: &Accessor<T, Self>,
         message: String,
     ) -> impl std::future::Future<Output = ()> + Send {
-        let providers = accessor.with(|mut access| access.get().context.providers.clone());
+        let (providers, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (state.context.providers.clone(), state.context.clone())
+        });
         async move {
             if has_capability(&providers, CAP_LOG_EMIT) {
-                tracing::info!(target: "ext", "{message}");
+                tracing::info!(
+                    target: "ext",
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "{message}"
+                );
+                crate::engine::debug::emit_log(&ctx, tracing::Level::INFO, &message).await;
             }
         }
     }
@@ -482,10 +494,20 @@ impl logging::HostWithStore for HasSelf<HostState> {
         accessor: &Accessor<T, Self>,
         message: String,
     ) -> impl std::future::Future<Output = ()> + Send {
-        let providers = accessor.with(|mut access| access.get().context.providers.clone());
+        let (providers, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (state.context.providers.clone(), state.context.clone())
+        });
         async move {
             if has_capability(&providers, CAP_LOG_EMIT) {
-                tracing::warn!(target: "ext", "{message}");
+                tracing::warn!(
+                    target: "ext",
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "{message}"
+                );
+                crate::engine::debug::emit_log(&ctx, tracing::Level::WARN, &message).await;
             }
         }
     }
@@ -494,10 +516,20 @@ impl logging::HostWithStore for HasSelf<HostState> {
         accessor: &Accessor<T, Self>,
         message: String,
     ) -> impl std::future::Future<Output = ()> + Send {
-        let providers = accessor.with(|mut access| access.get().context.providers.clone());
+        let (providers, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (state.context.providers.clone(), state.context.clone())
+        });
         async move {
             if has_capability(&providers, CAP_LOG_EMIT) {
-                tracing::error!(target: "ext", "{message}");
+                tracing::error!(
+                    target: "ext",
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "{message}"
+                );
+                crate::engine::debug::emit_log(&ctx, tracing::Level::ERROR, &message).await;
             }
         }
     }

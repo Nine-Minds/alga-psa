@@ -19,6 +19,9 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    // Initialize extension debug hub (no-op unless RUNNER_DEBUG_STREAM_ENABLED=true)
+    crate::engine::debug::DebugHub::init_global();
+
     // Build banner for visibility
     let build_sha = option_env!("ALGA_BUILD_GIT_SHA").unwrap_or("unknown");
     let build_unix = option_env!("ALGA_BUILD_UNIX_SECS").unwrap_or("0");

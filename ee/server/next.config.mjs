@@ -42,6 +42,9 @@ const nextConfig = {
       '@product/extensions/pages/settings': isEE
         ? '../packages/product-extensions-pages/ee/settings'
         : '../packages/product-extensions-pages/oss/settings',
+      '@product/ext-proxy/handler': isEE
+        ? '../packages/product-ext-proxy/ee/handler'
+        : '../packages/product-ext-proxy/oss/handler',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -99,6 +102,9 @@ const nextConfig = {
         '@product/extensions/pages/settings': isEE
           ? path.join(__dirname, '../packages/product-extensions-pages/ee/settings.tsx')
           : path.join(__dirname, '../packages/product-extensions-pages/oss/settings.tsx'),
+        '@product/ext-proxy/handler': isEE
+          ? path.join(__dirname, '../packages/product-ext-proxy/ee/handler.ts')
+          : path.join(__dirname, '../packages/product-ext-proxy/oss/handler.ts'),
         // Stub native sharp during local dev to avoid platform build issues
         sharp: path.join(__dirname, 'src/empty/sharp.ts'),
       },

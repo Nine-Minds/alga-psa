@@ -101,6 +101,9 @@ pub async fn run() -> anyhow::Result<()> {
             get(crate::http::ext_ui::handle_get),
         )
         .route("/warmup", post(crate::http::ext_ui::warmup))
+        // Internal-only: stream extension debug events (SSE)
+        // NOTE: This endpoint is gated by RUNNER_DEBUG_STREAM_ENABLED and an auth token.
+        .route("/internal/ext-debug/stream", get(ext_debug_stream))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(SetResponseHeaderLayer::overriding(
@@ -116,6 +119,110 @@ pub async fn run() -> anyhow::Result<()> {
     tracing::info!("listening on {}", addr);
     axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
     Ok(())
+}
+
+async fn ext_debug_stream(
+    State(_state): State<CoreState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    use axum::response::IntoResponse;
+    use tokio_stream::StreamExt;
+
+    // Feature gate
+    let hub = match crate::engine::debug::DebugHub::global() {
+        Some(h) => h,
+        None => {
+            return (StatusCode::SERVICE_UNAVAILABLE, "debug stream disabled").into_response();
+        }
+    };
+
+    // Simple internal auth: require matching x-runner-auth if configured.
+    if let Ok(expected) = std::env::var("RUNNER_DEBUG_STREAM_AUTH") {
+        if !expected.is_empty() {
+            let provided = headers
+                .get("x-runner-auth")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            if provided != expected {
+                return (StatusCode::UNAUTHORIZED, "unauthorized").into_response();
+            }
+        }
+    }
+
+    // Build filter from query params
+    let query = headers
+        .get("x-ext-debug-filter")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let mut ext_ids = std::collections::HashSet::new();
+    let mut tenant_ids = std::collections::HashSet::new();
+    let mut install_ids = std::collections::HashSet::new();
+    let mut request_ids = std::collections::HashSet::new();
+
+    // Very small, structured filter format (comma-separated segments: key:value)
+    // Example: "extension:abc,tenant:xyz,request:req-123"
+    for part in query.split(',').map(|p| p.trim()).filter(|p| !p.is_empty()) {
+        if let Some(rest) = part.strip_prefix("extension:") {
+            ext_ids.insert(rest.to_ascii_lowercase());
+        } else if let Some(rest) = part.strip_prefix("tenant:") {
+            tenant_ids.insert(rest.to_ascii_lowercase());
+        } else if let Some(rest) = part.strip_prefix("install:") {
+            install_ids.insert(rest.to_ascii_lowercase());
+        } else if let Some(rest) = part.strip_prefix("request:") {
+            request_ids.insert(rest.to_ascii_lowercase());
+        }
+    }
+
+    // Require at least an extension filter to avoid accidental global tap
+    if ext_ids.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            "missing extension filter in x-ext-debug-filter",
+        )
+            .into_response();
+    }
+
+    let filter = crate::engine::debug::DebugFilter {
+        extension_ids: ext_ids,
+        tenant_ids,
+        install_ids,
+        request_ids,
+    };
+
+    let rx = match hub.subscribe(filter) {
+        Some(rx) => rx,
+        None => {
+            return (StatusCode::SERVICE_UNAVAILABLE, "no debug stream capacity").into_response();
+        }
+    };
+
+    // Convert broadcast::Receiver into SSE-style text/event-stream.
+    let stream = tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(|item| async move {
+        match item {
+            Ok(ev) => match serde_json::to_string(&ev) {
+                Ok(json) => Some(format!("data: {json}\n\n")),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        }
+    });
+
+    let body = axum::body::Body::from_stream(stream);
+
+    let mut resp = Response::new(body);
+    resp.headers_mut().insert(
+        axum::http::header::CONTENT_TYPE,
+        HeaderValue::from_static("text/event-stream"),
+    );
+    resp.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        HeaderValue::from_static("no-cache, no-transform"),
+    );
+    resp.headers_mut().insert(
+        axum::http::header::CONNECTION,
+        HeaderValue::from_static("keep-alive"),
+    );
+    resp
 }
 
 async fn execute(
@@ -202,6 +309,14 @@ async fn execute(
         };
         return Json(resp);
     }
+
+    tracing::info!(
+        request_id=%req_id,
+        tenant=%tenant,
+        extension=%ext,
+        secret_envelope_present=%req.secret_envelope.is_some(),
+        "execute secret envelope check"
+    );
 
     let secret_material = match req.secret_envelope.as_ref() {
         Some(env) => match crate::secrets::resolve_secret_material(

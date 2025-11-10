@@ -108,7 +108,7 @@ export async function uninstallExtensionV2(registryId: string): Promise<{ succes
   return { success: true, message: 'Uninstalled' };
 }
 
-export async function installExtensionForCurrentTenantV2(params: { registryId: string; version: string }): Promise<{ success: boolean }>{
+export async function installExtensionForCurrentTenantV2(params: { registryId: string; version: string }): Promise<{ success: boolean; installId?: string }>{
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant not found');
 
@@ -182,7 +182,7 @@ export async function installExtensionForCurrentTenantV2(params: { registryId: s
   // Best-effort Temporal provisioning kickoff
   await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId }).catch(() => {});
 
-  return { success: true };
+  return { success: true, installId };
 }
 
 /**

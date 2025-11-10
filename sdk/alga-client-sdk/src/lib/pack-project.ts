@@ -1,8 +1,8 @@
 import { mkdtempSync, cpSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
-import { ensureDir } from './fs';
-import { pack } from './pack';
+import { ensureDir } from './fs.js';
+import { pack } from './pack.js';
 
 export interface PackProjectOptions {
   /** Project root. Defaults to `process.cwd()` */

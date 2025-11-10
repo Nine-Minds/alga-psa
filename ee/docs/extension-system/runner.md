@@ -118,8 +118,10 @@ References:
 
 ## Configuration (env)
 
+- `RUNNER_BACKEND`: Selects `knative` (default) or `docker` backend for the gateway.
 - `RUNNER_BASE_URL`: Gateway’s internal URL to call Runner (e.g., `http://runner:8080`).
-- `RUNNER_PUBLIC_BASE`: Absolute public origin used in iframe src for UI assets.
+- `RUNNER_DOCKER_HOST`: Override Runner base URL when using the Docker backend (e.g., `http://localhost:8085`).
+- `RUNNER_PUBLIC_BASE`: Public base used in iframe src for UI assets. Accepts absolute URLs or relative paths (e.g., `/runner`) when the gateway proxies Runner assets.
 - `EXT_GATEWAY_TIMEOUT_MS`: Gateway-side invocation timeout (Runner should also have server-side timeouts).
 - `SIGNING_TRUST_BUNDLE`: Path or value for trusted publisher certificates/keys.
 - `BUNDLE_STORAGE_*`: Object storage configuration for content-addressed bundle retrieval (S3 or equivalent, if used).
