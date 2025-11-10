@@ -9,6 +9,11 @@ node_modules
 **/dist
 npm-debug.log
 
+!server/.next
+!server/.next/**
+!shared/dist
+!shared/dist/**
+
 # Build outputs
 dist
 build
