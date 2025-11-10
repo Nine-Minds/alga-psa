@@ -6,10 +6,31 @@ const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let webpackLib = null;
+const hasNormalModuleReplacementPlugin = (lib) => {
+  if (!lib) return false;
+  return Boolean(lib.NormalModuleReplacementPlugin ?? lib.default?.NormalModuleReplacementPlugin);
+};
+
 try {
-  webpackLib = require('next/dist/compiled/webpack/webpack');
+  const nextWebpack = require('next/dist/compiled/webpack/webpack');
+  if (typeof nextWebpack?.init === 'function') {
+    nextWebpack.init();
+  }
+  webpackLib = nextWebpack;
 } catch (error) {
   console.warn('[next.config] Webpack runtime not available (likely running Turbopack dev server); skipping NormalModuleReplacementPlugin wiring.', error.message);
+}
+
+if (!hasNormalModuleReplacementPlugin(webpackLib)) {
+  try {
+    const nativeWebpack = require('webpack');
+    if (hasNormalModuleReplacementPlugin(nativeWebpack)) {
+      webpackLib = nativeWebpack;
+      console.warn('[next.config] Falling back to the installed webpack package for module replacement.');
+    }
+  } catch (error) {
+    console.warn('[next.config] Failed to load fallback webpack package for NormalModuleReplacementPlugin.', error.message);
+  }
 }
 
 // Determine if this is an EE build
