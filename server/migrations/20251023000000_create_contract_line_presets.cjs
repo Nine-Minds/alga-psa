@@ -14,8 +14,7 @@ exports.up = async function up(knex) {
     table
       .uuid('preset_id')
       .notNullable()
-      .defaultTo(knex.raw('gen_random_uuid()'))
-      .primary();
+      .defaultTo(knex.raw('gen_random_uuid()'));
     table.string('preset_name', 255).notNullable();
     table.string('billing_frequency', 50).notNullable().defaultTo('monthly');
     table.string('service_category', 100);
@@ -40,9 +39,10 @@ exports.up = async function up(knex) {
       .notNullable()
       .defaultTo(knex.fn.now());
 
+    // Primary key includes tenant for CitusDB compatibility
+    table.primary(['preset_id', 'tenant']);
+
     // Indexes
-    table.unique(['preset_id'], 'contract_line_presets_preset_id_unique');
-    table.index(['tenant'], 'idx_contract_line_presets_tenant');
     table.index(['tenant', 'contract_line_type'], 'idx_contract_line_presets_type');
   });
 

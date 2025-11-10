@@ -46,7 +46,7 @@ exports.up = async function up(knex) {
     await knex.raw(`
       ALTER TABLE contract_line_preset_services
       ADD CONSTRAINT contract_line_preset_services_preset_fk
-      FOREIGN KEY (preset_id) REFERENCES contract_line_presets(preset_id) ON DELETE CASCADE
+      FOREIGN KEY (tenant, preset_id) REFERENCES contract_line_presets(tenant, preset_id) ON DELETE CASCADE
     `);
   }
 
@@ -86,7 +86,7 @@ exports.up = async function up(knex) {
     await knex.raw(`
       ALTER TABLE contract_line_preset_fixed_config
       ADD CONSTRAINT contract_line_preset_fixed_config_preset_fk
-      FOREIGN KEY (preset_id) REFERENCES contract_line_presets(preset_id) ON DELETE CASCADE
+      FOREIGN KEY (tenant, preset_id) REFERENCES contract_line_presets(tenant, preset_id) ON DELETE CASCADE
     `);
   }
 };

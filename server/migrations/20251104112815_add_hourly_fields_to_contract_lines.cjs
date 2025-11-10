@@ -15,36 +15,50 @@ exports.up = async function(knex) {
   console.log('Added minimum_billable_time and round_up_to_nearest columns to contract_lines');
 
   // Backfill data for existing hourly contract lines from their first service config
-  const result = await knex.raw(`
-    UPDATE contract_lines cl
-    SET
-      minimum_billable_time = COALESCE(
+  // CitusDB requires select-then-update pattern instead of column references in UPDATE
+  const contractLinesToUpdate = await knex.raw(`
+    SELECT
+      cl.contract_line_id,
+      cl.tenant,
+      COALESCE(
         (
           SELECT hc.minimum_billable_time
           FROM contract_line_service_configuration clsc
-          JOIN contract_line_service_hourly_configs hc ON clsc.config_id = hc.config_id
+          JOIN contract_line_service_hourly_configs hc ON clsc.config_id = hc.config_id AND clsc.tenant = hc.tenant
           WHERE clsc.contract_line_id = cl.contract_line_id
             AND clsc.tenant = cl.tenant
           LIMIT 1
         ),
         15
-      ),
-      round_up_to_nearest = COALESCE(
+      ) as minimum_billable_time,
+      COALESCE(
         (
           SELECT hc.round_up_to_nearest
           FROM contract_line_service_configuration clsc
-          JOIN contract_line_service_hourly_configs hc ON clsc.config_id = hc.config_id
+          JOIN contract_line_service_hourly_configs hc ON clsc.config_id = hc.config_id AND clsc.tenant = hc.tenant
           WHERE clsc.contract_line_id = cl.contract_line_id
             AND clsc.tenant = cl.tenant
           LIMIT 1
         ),
         15
-      )
+      ) as round_up_to_nearest
+    FROM contract_lines cl
     WHERE cl.contract_line_type = 'Hourly'
-      AND (cl.minimum_billable_time IS NULL OR cl.round_up_to_nearest IS NULL);
+      AND (cl.minimum_billable_time IS NULL OR cl.round_up_to_nearest IS NULL)
   `);
 
-  console.log('Backfilled hourly contract lines with values from service configs');
+  // Update each contract line with parameterized values
+  for (const record of contractLinesToUpdate.rows) {
+    await knex('contract_lines')
+      .where('contract_line_id', record.contract_line_id)
+      .andWhere('tenant', record.tenant)
+      .update({
+        minimum_billable_time: record.minimum_billable_time,
+        round_up_to_nearest: record.round_up_to_nearest
+      });
+  }
+
+  console.log(`Backfilled ${contractLinesToUpdate.rows.length} hourly contract lines with values from service configs`);
 };
 
 exports.down = async function(knex) {
