@@ -37,7 +37,7 @@ export default function ClientPortalSettingsPage() {
       content: <ClientDetailsSettings />
     }
   ];
-  
+
   // Only add User Management tab if user has permission
   if (hasUserManagementAccess) {
     tabs.push({

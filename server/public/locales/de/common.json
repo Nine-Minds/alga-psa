@@ -301,6 +301,10 @@
       "bulkDeleteSuccess_one": "{{count}} Dokument wurde erfolgreich gelöscht",
       "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht"
     },
+    "empty": {
+      "default": "Keine Dokumente gefunden",
+      "folder": "In diesem Ordner wurden keine Dokumente gefunden"
+    },
     "validation": {
       "nameRequired": "Dokumentname ist erforderlich"
     },
@@ -442,9 +446,29 @@
       "nameLabel": "Ordnername",
       "namePlaceholder": "Ordnernamen eingeben",
       "willCreateIn": "Wird erstellt in: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Alle Benachrichtigungen anzeigen",
+      "categories": {
+        "Authentication": "Authentifizierung",
+        "Invoices": "Rechnungen",
+        "Projects": "Projekte",
+        "Tickets": "Tickets",
+        "Time Entries": "Zeiteinträge"
+      }
     }
   },
   "fields": {
     "notes": "Notizen"
+  },
+  "notifications": {
+    "viewAll": "Alle Benachrichtigungen anzeigen",
+    "categories": {
+      "Authentication": "Authentifizierung",
+      "Invoices": "Rechnungen",
+      "Projects": "Projekte",
+      "Tickets": "Tickets",
+      "Time Entries": "Zeiteinträge"
+    }
   }
 }

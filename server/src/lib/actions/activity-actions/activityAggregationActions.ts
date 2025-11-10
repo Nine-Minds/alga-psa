@@ -2,11 +2,12 @@ import { createTenantKnex } from "../../db";
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { 
-  Activity, 
-  ActivityFilters, 
-  ActivityResponse, 
+  Activity,
+  ActivityFilters,
+  ActivityResponse,
   ActivityType,
   ActivityPriority,
+  NotificationActivity,
   scheduleEntryToActivity,
   projectTaskToActivity,
   timeEntryToActivity,
@@ -110,6 +111,10 @@ export async function fetchUserActivities(
 
   if (typesToFetch.includes(ActivityType.WORKFLOW_TASK)) {
     promises.push(fetchWorkflowTaskActivities(user.user_id, filters));
+  }
+
+  if (typesToFetch.includes(ActivityType.NOTIFICATION)) {
+    promises.push(fetchNotificationActivities(user.user_id, filters));
   }
 
   // Wait for all fetches to complete
@@ -889,4 +894,140 @@ function processActivities(
   });
 
   return filteredActivities;
+}
+
+/**
+ * Fetch notification activities for a user
+ */
+export async function fetchNotificationActivities(
+  userId: string,
+  filters: ActivityFilters
+): Promise<Activity[]> {
+  try {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error("Tenant is required");
+    }
+
+    // Query for notifications for the user
+    const notifications = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx("internal_notifications")
+        .where("internal_notifications.tenant", tenant)
+        .where("internal_notifications.user_id", userId)
+        .whereNull("internal_notifications.deleted_at")
+        .modify(function(queryBuilder) {
+          // Apply read/unread filter
+          if (filters.isClosed === false) {
+            // Show unread only (default)
+            queryBuilder.where("internal_notifications.is_read", false);
+          } else if (filters.isClosed === true) {
+            // Show read only
+            queryBuilder.where("internal_notifications.is_read", true);
+          }
+          // If isClosed is undefined, show all
+
+          // Apply category filter (using search field as category)
+          if (filters.search) {
+            queryBuilder.where("internal_notifications.category", filters.search);
+          }
+
+          // Apply date range filter
+          if (filters.dateRangeStart) {
+            queryBuilder.where("internal_notifications.created_at", ">=", filters.dateRangeStart);
+          }
+          if (filters.dateRangeEnd) {
+            queryBuilder.where("internal_notifications.created_at", "<=", filters.dateRangeEnd);
+          }
+        })
+        .orderBy("internal_notifications.created_at", "desc");
+    });
+
+    // Convert to activities
+    const activities: NotificationActivity[] = notifications.map((notification: any) => {
+      // Map notification type to activity priority
+      let priority: ActivityPriority;
+      switch (notification.type) {
+        case 'error':
+          priority = ActivityPriority.HIGH;
+          break;
+        case 'warning':
+          priority = ActivityPriority.MEDIUM;
+          break;
+        default:
+          priority = ActivityPriority.LOW;
+      }
+
+      // Ensure dates are properly formatted
+      let createdAtISO: string;
+      let updatedAtISO: string;
+
+      try {
+        if (notification.created_at) {
+          const createdDate = new Date(notification.created_at);
+          if (isNaN(createdDate.getTime())) {
+            console.warn('Invalid created_at date for notification:', notification.internal_notification_id, notification.created_at);
+            createdAtISO = new Date().toISOString();
+          } else {
+            createdAtISO = createdDate.toISOString();
+          }
+        } else {
+          createdAtISO = new Date().toISOString();
+        }
+
+        if (notification.updated_at) {
+          const updatedDate = new Date(notification.updated_at);
+          if (isNaN(updatedDate.getTime())) {
+            console.warn('Invalid updated_at date for notification:', notification.internal_notification_id, notification.updated_at);
+            updatedAtISO = new Date().toISOString();
+          } else {
+            updatedAtISO = updatedDate.toISOString();
+          }
+        } else {
+          updatedAtISO = new Date().toISOString();
+        }
+      } catch (error) {
+        console.error('Error parsing notification dates:', error, notification);
+        createdAtISO = new Date().toISOString();
+        updatedAtISO = new Date().toISOString();
+      }
+
+      return {
+        id: notification.internal_notification_id.toString(),
+        title: notification.title,
+        description: notification.message,
+        type: ActivityType.NOTIFICATION,
+        status: notification.type || 'info',
+        priority,
+        assignedTo: [notification.user_id],
+        sourceId: notification.internal_notification_id.toString(),
+        sourceType: ActivityType.NOTIFICATION,
+        notificationId: notification.internal_notification_id,
+        templateName: notification.template_name,
+        message: notification.message,
+        isRead: notification.is_read,
+        readAt: notification.read_at,
+        link: notification.link,
+        metadata: notification.metadata,
+        category: notification.category,
+        actions: [
+          { id: 'view', label: 'View Details' },
+          { id: 'mark-read', label: notification.is_read ? 'Mark Unread' : 'Mark Read' }
+        ],
+        tenant: notification.tenant,
+        createdAt: createdAtISO,
+        updatedAt: updatedAtISO
+      };
+    });
+
+    // Cache individual activity type results
+    if (notifications.length > 0) {
+      const cacheKey = `notification-activities:${userId}:${JSON.stringify(filters)}`;
+      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.NOTIFICATION}`]);
+    }
+
+    return activities;
+  } catch (error) {
+    console.error("Error fetching notification activities:", error);
+    return [];
+  }
 }

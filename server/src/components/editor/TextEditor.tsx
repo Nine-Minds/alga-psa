@@ -3,14 +3,21 @@
 import { useEffect, useState, MutableRefObject } from 'react';
 import {
   useCreateBlockNote,
+  SuggestionMenuController,
+  DefaultReactSuggestionItem,
 } from "@blocknote/react";
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
-import { 
-  BlockNoteEditor, 
+import {
+  BlockNoteEditor,
   PartialBlock,
+  BlockNoteSchema,
+  defaultInlineContentSpecs,
+  filterSuggestionItems,
 } from '@blocknote/core';
+import { Mention } from './Mention';
+import { searchUsersForMentions, MentionUser } from '../../lib/actions/user-actions/searchUsersForMentions';
 
 // Debug flag
 const DEBUG = true;
@@ -21,7 +28,7 @@ interface TextEditorProps {
   initialContent?: string | PartialBlock[];
   onContentChange?: (blocks: PartialBlock[]) => void;
   children?: React.ReactNode;
-  editorRef?: MutableRefObject<BlockNoteEditor | null>;
+  editorRef?: MutableRefObject<BlockNoteEditor<any, any, any> | null>;
   documentId?: string;
 }
 
@@ -38,6 +45,14 @@ export const DEFAULT_BLOCK: PartialBlock[] = [{
     styles: {}
   }]
 }];
+
+// Create custom schema with mention support
+const schema = BlockNoteSchema.create({
+  inlineContentSpecs: {
+    ...defaultInlineContentSpecs,
+    mention: Mention,
+  },
+});
 
 export default function TextEditor({ 
   id = 'text-editor',
@@ -116,8 +131,9 @@ export default function TextEditor({
     return i >= 0 ? blocks.slice(0, i + 1) : DEFAULT_BLOCK;
   })();
 
-  // Create editor instance with initial content
+  // Create editor instance with custom schema and initial content
   const editor = useCreateBlockNote({
+    schema,
     initialContent,
     domAttributes: {
       editor: {
@@ -126,6 +142,41 @@ export default function TextEditor({
       }
     }
   });
+
+  // Get mention menu items based on search query
+  const getMentionMenuItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
+    console.log('[TextEditor] getMentionMenuItems called with query:', query);
+
+    try {
+      const users = await searchUsersForMentions(query);
+      console.log('[TextEditor] Received users:', users.length);
+
+      const items = users.map((user) => ({
+        title: user.display_name,
+        subtext: user.username ? `@${user.username}` : user.email,
+        onItemClick: () => {
+          console.log('[TextEditor] User selected:', user);
+          editor.insertInlineContent([
+            {
+              type: "mention",
+              props: {
+                userId: user.user_id,
+                username: user.username,
+                displayName: user.display_name
+              }
+            },
+            " ", // Add space after mention
+          ]);
+        },
+      }));
+
+      console.log('[TextEditor] Returning items:', items.length);
+      return items;
+    } catch (error) {
+      console.error('[TextEditor] Error fetching mention users:', error);
+      return [];
+    }
+  };
 
   // Update editorRef when editor is created
   useEffect(() => {
@@ -150,7 +201,7 @@ export default function TextEditor({
         console.log('TextEditor: Editor content changed:', editor.topLevelBlocks);
       }
       if (onContentChange) {
-        onContentChange(editor.topLevelBlocks);
+        onContentChange(editor.topLevelBlocks as any);
       }
     };
 
@@ -170,7 +221,12 @@ export default function TextEditor({
             overflowWrap: 'break-word',
             minWidth: 0
           }}
-        />
+        >
+          <SuggestionMenuController
+            triggerCharacter="@"
+            getItems={async (query) => getMentionMenuItems(query)}
+          />
+        </BlockNoteView>
       </div>
     </div>
   );

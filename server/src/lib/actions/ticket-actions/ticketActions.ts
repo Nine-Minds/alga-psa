@@ -22,9 +22,8 @@ import {
 import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
 import { AssetAssociationModel } from 'server/src/models/asset';
-import { getEventBus } from '../../../lib/eventBus';
-import { getEmailEventChannel } from '../../notifications/emailChannel';
-import { 
+import { publishEvent } from '../../../lib/eventBus/publishers';
+import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
   TicketClosedEvent
@@ -43,21 +42,6 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
     updated_at: record.updated_at instanceof Date ? record.updated_at.toISOString() : record.updated_at,
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
   };
-}
-
-// Helper function to safely publish events
-async function safePublishEvent(eventType: string, payload: any) {
-  try {
-    await getEventBus().publish(
-      {
-        eventType,
-        payload
-      },
-      { channel: getEmailEventChannel() }
-    );
-  } catch (error) {
-    console.error(`Failed to publish ${eventType} event:`, error);
-  }
 }
 
 interface CreateTicketFromAssetData {
@@ -213,10 +197,14 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
 
       // Server-specific: Handle assigned ticket event
       if (createTicketInput.assigned_to) {
-        await safePublishEvent('TICKET_ASSIGNED', {
-          tenantId: tenant,
-          ticketId: ticketResult.ticket_id,
-          userId: user.user_id,
+        await publishEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            tenantId: tenant,
+            ticketId: ticketResult.ticket_id,
+            userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
+            assignedByUserId: user.user_id  // The user who created and assigned the ticket
+          }
         });
       }
 
@@ -476,46 +464,80 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           .first() :
         oldStatus;
 
+      // Build structured changes object with old/new values
+      const structuredChanges: Record<string, any> = {};
+
+      if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
+        structuredChanges.status_id = {
+          old: currentTicket.status_id,
+          new: updateData.status_id
+        };
+      }
+
+      if (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id) {
+        structuredChanges.priority_id = {
+          old: currentTicket.priority_id,
+          new: updateData.priority_id
+        };
+      }
+
+      if (updateData.assigned_to !== undefined && updateData.assigned_to !== currentTicket.assigned_to) {
+        structuredChanges.assigned_to = {
+          old: currentTicket.assigned_to,
+          new: updateData.assigned_to
+        };
+      }
+
       // Publish appropriate event based on the update
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
         // Ticket was closed
-        await safePublishEvent('TICKET_CLOSED', {
-          tenantId: tenant,
-          ticketId: id,
-          userId: user.user_id,
-          changes: updateData
+        await publishEvent({
+          eventType: 'TICKET_CLOSED',
+          payload: {
+            tenantId: tenant,
+            ticketId: id,
+            userId: user.user_id,
+            changes: structuredChanges
+          }
         });
-        
+
         // Track ticket resolved analytics
         analytics.capture(AnalyticsEvents.TICKET_RESOLVED, {
-          time_to_resolution: currentTicket.entered_at ? 
+          time_to_resolution: currentTicket.entered_at ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
           priority_id: updatedTicket.priority_id,
           category_id: updatedTicket.category_id,
           had_assignment: !!updatedTicket.assigned_to,
         }, user.user_id);
       } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-        // Ticket was assigned
-        await safePublishEvent('TICKET_ASSIGNED', {
-          tenantId: tenant,
-          ticketId: id,
-          userId: user.user_id,
-          changes: updateData
+        // Ticket was assigned - userId should be the user being assigned, not the one making the update
+        await publishEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: {
+            tenantId: tenant,
+            ticketId: id,
+            userId: updateData.assigned_to,  // The user being assigned to the ticket
+            assignedByUserId: user.user_id,  // The user who performed the assignment
+            changes: structuredChanges
+          }
         });
-        
+
         // Track ticket assignment analytics
         analytics.capture(AnalyticsEvents.TICKET_ASSIGNED, {
           was_reassignment: !!currentTicket.assigned_to,
-          time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ? 
+          time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
         }, user.user_id);
       } else {
         // Regular update
-        await safePublishEvent('TICKET_UPDATED', {
-          tenantId: tenant,
-          ticketId: id,
-          userId: user.user_id,
-          changes: updateData
+        await publishEvent({
+          eventType: 'TICKET_UPDATED',
+          payload: {
+            tenantId: tenant,
+            ticketId: id,
+            userId: user.user_id,
+            changes: structuredChanges
+          }
         });
       }
       
@@ -809,15 +831,18 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
     }).returning('*');
 
       // Publish comment added event
-      await safePublishEvent('TICKET_COMMENT_ADDED', {
-        tenantId: tenant,
-        ticketId: ticketId,
-        userId: user.user_id,
-        comment: {
-          id: newComment.id,
-          content: comment,
-          author: `${user.first_name} ${user.last_name}`,
-          isInternal
+      await publishEvent({
+        eventType: 'TICKET_COMMENT_ADDED',
+        payload: {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: user.user_id,
+          comment: {
+            id: newComment.id,
+            content: comment,
+            author: `${user.first_name} ${user.last_name}`,
+            isInternal
+          }
         }
       });
     });
@@ -864,10 +889,13 @@ async function deleteTicketTransactional(
     })
     .delete();
 
-  await safePublishEvent('TICKET_DELETED', {
-    tenantId: tenant,
-    ticketId: ticketId,
-    userId: user.user_id
+  await publishEvent({
+    eventType: 'TICKET_DELETED',
+    payload: {
+      tenantId: tenant,
+      ticketId: ticketId,
+      userId: user.user_id
+    }
   });
 
   analytics.capture('ticket_deleted', {

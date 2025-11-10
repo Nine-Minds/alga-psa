@@ -478,8 +478,8 @@ export class TicketService extends BaseService<ITicket> {
    * Add comment to ticket
    */
   async addComment(
-    ticketId: string, 
-    data: CreateTicketCommentData, 
+    ticketId: string,
+    data: CreateTicketCommentData,
     context: ServiceContext
   ): Promise<any> {
     const { knex } = await this.getKnex();
@@ -515,6 +515,27 @@ export class TicketService extends BaseService<ITicket> {
           updated_by: context.userId,
           updated_at: knex.raw('now()')
         });
+
+      // Get user details for event
+      const user = await trx('users')
+        .select('first_name', 'last_name')
+        .where({ user_id: context.userId, tenant: context.tenant })
+        .first();
+
+      const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+
+      // Publish TICKET_COMMENT_ADDED event for mention notifications
+      await this.safePublishEvent('TICKET_COMMENT_ADDED', {
+        tenantId: context.tenant,
+        ticketId: ticketId,
+        userId: context.userId,
+        comment: {
+          id: comment.comment_id,
+          content: comment.note,
+          author: authorName,
+          isInternal: comment.is_internal
+        }
+      });
 
       // Map database fields to API response format
       return {

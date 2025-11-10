@@ -3,9 +3,11 @@ import { IEditScope, IScheduleEntry, IRecurrencePattern } from 'server/src/inter
 import { v4 as uuidv4 } from 'uuid';
 import { generateOccurrences } from '../utils/recurrenceUtils';
 import { Knex } from 'knex';
+import { publishEvent } from '../eventBus/publishers';
 
 interface CreateScheduleEntryOptions {
   assignedUserIds: string[];  // Make required since it's the only way to assign users now
+  assignedByUserId?: string;  // Optional: the user who is creating/assigning the schedule entry
 }
 
 class ScheduleEntry {
@@ -330,6 +332,20 @@ class ScheduleEntry {
                     assigned_at: new Date(),
                     tenant
                   });
+
+                  // Publish additional agent assignment event
+                  const additionalAgentPayload = {
+                    tenantId: tenant,
+                    ticketId: entry.work_item_id,
+                    primaryAgentId: ticket.assigned_to,
+                    additionalAgentId: userId,
+                    assignedByUserId: userId  // Self-assignment via dispatch
+                  };
+                  console.log('[scheduleEntry] Publishing TICKET_ADDITIONAL_AGENT_ASSIGNED:', JSON.stringify(additionalAgentPayload));
+                  await publishEvent({
+                    eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
+                    payload: additionalAgentPayload
+                  });
                 } else if (!ticket.assigned_to) {
                   // If ticket has no assignee, update the ticket and add user as assigned_to
                   await trx('tickets')
@@ -341,6 +357,19 @@ class ScheduleEntry {
                       assigned_to: userId,
                       updated_at: new Date().toISOString()
                     });
+
+                  // Publish primary assignment event
+                  const primaryPayload = {
+                    tenantId: tenant,
+                    ticketId: entry.work_item_id,
+                    userId: userId,
+                    assignedByUserId: options.assignedByUserId
+                  };
+                  console.log('[scheduleEntry] Publishing TICKET_ASSIGNED for PRIMARY agent:', JSON.stringify(primaryPayload));
+                  await publishEvent({
+                    eventType: 'TICKET_ASSIGNED',
+                    payload: primaryPayload
+                  });
                 }
               }
             }
@@ -403,6 +432,14 @@ class ScheduleEntry {
                 .first();
 
               if (task) {
+                // Get phase to obtain project_id for event
+                const phase = await trx('project_phases')
+                  .where({
+                    phase_id: task.phase_id,
+                    tenant
+                  })
+                  .first();
+
                 // If task already has an assignee and it's not the current user, add as additional_user_id
                 if (task.assigned_to && task.assigned_to !== userId) {
                   await trx('task_resources').insert({
@@ -412,6 +449,21 @@ class ScheduleEntry {
                     assigned_at: new Date(),
                     tenant
                   });
+
+                  // Publish additional agent assignment event
+                  if (phase) {
+                    await publishEvent({
+                      eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+                      payload: {
+                        tenantId: tenant,
+                        projectId: phase.project_id,
+                        taskId: entry.work_item_id,
+                        primaryAgentId: task.assigned_to,
+                        additionalAgentId: userId,
+                        assignedByUserId: userId  // Self-assignment via dispatch
+                      }
+                    });
+                  }
                 } else if (!task.assigned_to) {
                   // If task has no assignee, only update the task's assigned_to field
                   await trx('project_tasks')
@@ -423,6 +475,22 @@ class ScheduleEntry {
                       assigned_to: userId,
                       updated_at: new Date()
                     });
+
+                  // Publish primary assignment event
+                  if (phase) {
+                    await publishEvent({
+                      eventType: 'PROJECT_TASK_ASSIGNED',
+                      payload: {
+                        tenantId: tenant,
+                        projectId: phase.project_id,
+                        taskId: entry.work_item_id,
+                        userId: userId,
+                        assignedTo: userId,
+                        assignedByUserId: options.assignedByUserId,
+                        additionalUsers: []
+                      }
+                    });
+                  }
                   // No task_resources record is created when there's no additional user
                 }
               }

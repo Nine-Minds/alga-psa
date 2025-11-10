@@ -2,7 +2,6 @@
 
 import type { ElementType } from 'react';
 import {
-  Activity,
   AlertTriangle,
   BarChart3,
   Bell,
@@ -19,13 +18,14 @@ import {
   Layout,
   LayoutDashboard,
   MapPin,
+  MessageSquare,
   Monitor,
-  PlusCircle,
   Rocket,
   Settings,
   Shield,
   SlidersHorizontal,
   UploadCloud,
+  User,
   Users,
   Workflow
 } from 'lucide-react';
@@ -74,7 +74,7 @@ export const navigationSections: NavigationSection[] = [
     items: [
       {
         name: 'Tickets',
-        icon: Activity,
+        icon: MessageSquare,
         href: '/msp/tickets'
       },
       {
@@ -224,7 +224,7 @@ export const bottomMenuItems: MenuItem[] = [
     icon: Settings,
     subItems: [
       { name: 'General', icon: SlidersHorizontal, href: '/msp/settings' },
-      { name: 'Profile', icon: PlusCircle, href: '/msp/profile' },
+      { name: 'Profile', icon: User, href: '/msp/profile' },
       {
         name: 'Security',
         href: '/msp/security-settings',

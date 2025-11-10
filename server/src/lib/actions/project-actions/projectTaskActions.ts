@@ -74,8 +74,9 @@ export async function updateTaskWithChecklist(
                             tenantId: currentUser.tenant,
                             projectId: phase.project_id,
                             taskId: taskId,
-                            userId: currentUser.user_id,
-                            assignedTo: updatedTask.assigned_to,
+                            userId: updatedTask.assigned_to,  // The user being assigned
+                            assignedTo: updatedTask.assigned_to,  // For backward compatibility
+                            assignedByUserId: currentUser.user_id,  // The user who performed the action
                             additionalUsers: [], // No additional users in this case
                             timestamp: new Date().toISOString()
                         }
@@ -134,8 +135,9 @@ export async function addTaskToPhase(
                             tenantId: currentUser.tenant,
                             projectId: phase.project_id,
                             taskId: newTask.task_id,
-                            userId: currentUser.user_id,
-                            assignedTo: taskData.assigned_to,
+                            userId: taskData.assigned_to,  // The user being assigned
+                            assignedTo: taskData.assigned_to,  // For backward compatibility
+                            assignedByUserId: currentUser.user_id,  // The user who performed the action
                             additionalUsers: [], // No additional users in initial creation
                             timestamp: new Date().toISOString()
                         }
@@ -493,21 +495,23 @@ export async function addTaskResourceAction(taskId: string, userId: string, role
             await checkPermission(currentUser, 'project', 'update', trx);
             await ProjectTaskModel.addTaskResource(trx, taskId, userId, role);
 
-            // When adding additional resource, publish task assigned event
+            // When adding additional resource, publish task additional agent assigned event
             const task = await ProjectTaskModel.getTaskById(trx, taskId);
             if (task) {
                 const phase = await ProjectModel.getPhaseById(trx, task.phase_id);
                 if (phase) {
+                    const eventPayload = {
+                        tenantId: currentUser.tenant,
+                        projectId: phase.project_id,
+                        taskId: taskId,
+                        primaryAgentId: task.assigned_to,
+                        additionalAgentId: userId,
+                        assignedByUserId: currentUser.user_id
+                    };
+                    console.log('[projectTaskActions] Publishing PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED event:', JSON.stringify(eventPayload));
                     await publishEvent({
-                        eventType: 'PROJECT_TASK_ASSIGNED',
-                        payload: {
-                            tenantId: currentUser.tenant,
-                            projectId: phase.project_id,
-                            taskId: taskId,
-                            userId: currentUser.user_id,
-                            assignedTo: userId,
-                            additionalUsers: [] // This user is being added as a primary resource
-                        }
+                        eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+                        payload: eventPayload
                     });
                 }
             }
@@ -1313,9 +1317,36 @@ export async function updateTaskDependency(
     if (!currentUser) {
         throw new Error("user not found");
     }
-    
+
     const {knex: db} = await createTenantKnex();
     await checkPermission(currentUser, 'project', 'update', db);
-    
+
     return await TaskDependencyModel.updateDependency(db, dependencyId, data);
+}
+
+export async function getTaskById(taskId: string): Promise<IProjectTask | null> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error("user not found");
+        }
+        if (!currentUser.tenant) {
+            throw new Error("tenant context not found");
+        }
+
+        const {knex: db} = await createTenantKnex();
+        await checkPermission(currentUser, 'project', 'read', db);
+
+        const task = await db('project_tasks')
+            .where({
+                'project_tasks.task_id': taskId,
+                'project_tasks.tenant': currentUser.tenant
+            })
+            .first();
+
+        return task || null;
+    } catch (error) {
+        console.error('Error fetching task by ID:', error);
+        throw error;
+    }
 }

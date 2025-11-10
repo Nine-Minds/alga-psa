@@ -122,7 +122,7 @@ export class AccountingExportInvoiceSelector {
             this.where('map.external_realm_id', targetRealm).orWhereNull('map.external_realm_id');
           });
         } else {
-          this.whereNull('map.external_realm_id');
+          this.andWhereNull('map.external_realm_id');
         }
       });
     }
