@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { withTransaction } from '@alga-psa/shared/db';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 // Bucket overlay input type - matches the structure used in wizard
 export type BucketOverlayInput = {
@@ -32,13 +33,21 @@ export async function upsertBucketOverlay(
   quantity?: number | null,
   customRate?: number | null
 ): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) throw new Error('Not authenticated');
-  const tenant = user.tenant;
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
 
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
 
   await withTransaction(knex, async (trx) => {
+    if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
+      throw new Error('Permission denied: Cannot update bucket overlays');
+    }
+
     await upsertBucketOverlayInTransaction(
       trx,
       tenant,
@@ -147,13 +156,21 @@ export async function deleteBucketOverlay(
   contractLineId: string,
   serviceId: string
 ): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) throw new Error('Not authenticated');
-  const tenant = user.tenant;
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
 
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
 
   await withTransaction(knex, async (trx) => {
+    if (!await hasPermission(currentUser, 'billing', 'delete', trx)) {
+      throw new Error('Permission denied: Cannot delete bucket overlays');
+    }
+
     await deleteBucketOverlayInTransaction(trx, tenant, contractLineId, serviceId);
   });
 }
@@ -210,39 +227,49 @@ export async function getBucketOverlay(
   contractLineId: string,
   serviceId: string
 ): Promise<BucketOverlayInput | null> {
-  const user = await getCurrentUser();
-  if (!user) throw new Error('Not authenticated');
-  const tenant = user.tenant;
-
-  const { knex } = await createTenantKnex();
-
-  const result = await knex('contract_line_service_configuration')
-    .join(
-      'contract_line_service_bucket_config',
-      'contract_line_service_configuration.config_id',
-      'contract_line_service_bucket_config.config_id'
-    )
-    .where({
-      'contract_line_service_configuration.tenant': tenant,
-      'contract_line_service_configuration.contract_line_id': contractLineId,
-      'contract_line_service_configuration.service_id': serviceId,
-      'contract_line_service_configuration.configuration_type': 'Bucket',
-    })
-    .first(
-      'contract_line_service_bucket_config.total_minutes',
-      'contract_line_service_bucket_config.overage_rate',
-      'contract_line_service_bucket_config.allow_rollover',
-      'contract_line_service_bucket_config.billing_period'
-    );
-
-  if (!result) {
-    return null;
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
   }
 
-  return {
-    total_minutes: result.total_minutes,
-    overage_rate: result.overage_rate,
-    allow_rollover: result.allow_rollover ?? false,
-    billing_period: result.billing_period as 'weekly' | 'monthly',
-  };
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('tenant context not found');
+  }
+
+  return await withTransaction(knex, async (trx) => {
+    if (!await hasPermission(currentUser, 'billing', 'read', trx)) {
+      throw new Error('Permission denied: Cannot read bucket overlays');
+    }
+
+    const result = await trx('contract_line_service_configuration')
+      .join(
+        'contract_line_service_bucket_config',
+        'contract_line_service_configuration.config_id',
+        'contract_line_service_bucket_config.config_id'
+      )
+      .where({
+        'contract_line_service_configuration.tenant': tenant,
+        'contract_line_service_configuration.contract_line_id': contractLineId,
+        'contract_line_service_configuration.service_id': serviceId,
+        'contract_line_service_configuration.configuration_type': 'Bucket',
+      })
+      .first(
+        'contract_line_service_bucket_config.total_minutes',
+        'contract_line_service_bucket_config.overage_rate',
+        'contract_line_service_bucket_config.allow_rollover',
+        'contract_line_service_bucket_config.billing_period'
+      );
+
+    if (!result) {
+      return null;
+    }
+
+    return {
+      total_minutes: result.total_minutes,
+      overage_rate: result.overage_rate,
+      allow_rollover: result.allow_rollover ?? false,
+      billing_period: result.billing_period as 'weekly' | 'monthly',
+    };
+  });
 }

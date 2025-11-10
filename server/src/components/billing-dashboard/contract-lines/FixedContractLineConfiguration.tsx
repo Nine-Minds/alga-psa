@@ -82,7 +82,7 @@ export function FixedPlanConfiguration({
         setPlanName(fetchedPlan.contract_line_name);
         setBillingFrequency(fetchedPlan.billing_frequency);
         setPlanType(fetchedPlan.contract_line_type as PlanType);
-        setIsCustom(fetchedPlan.is_custom);
+        setIsCustom(fetchedPlan.is_custom ?? false);
         setBillingTiming((fetchedPlan.billing_timing ?? 'arrears') as 'arrears' | 'advance');
 
         // Fetch fixed config

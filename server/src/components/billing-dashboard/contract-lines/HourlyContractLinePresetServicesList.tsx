@@ -41,7 +41,7 @@ interface HourlyContractLinePresetServicesListProps {
 interface PresetServiceWithBucket extends IContractLinePresetService {
   service_name?: string;
   service_type_name?: string;
-  billing_method?: 'fixed' | 'hourly' | 'usage' | null;
+  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   default_rate?: number;
   bucket_overlay?: BucketOverlayInput | null;
 }

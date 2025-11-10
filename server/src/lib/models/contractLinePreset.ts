@@ -88,10 +88,7 @@ const ContractLinePreset = {
           preset_id: presetId,
           tenant
         })
-        .update({
-          ...dataToUpdate,
-          updated_at: knexOrTrx.fn.now()
-        })
+        .update(dataToUpdate)
         .returning('*');
 
       if (!updatedPreset) {

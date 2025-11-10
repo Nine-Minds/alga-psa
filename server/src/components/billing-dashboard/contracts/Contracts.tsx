@@ -57,7 +57,6 @@ const Contracts: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const pendingViewRef = useRef<'Templates' | 'Client Contracts' | null>(null);
 
   // Pagination state for templates
   const [templateCurrentPage, setTemplateCurrentPage] = useState(1);
@@ -100,21 +99,6 @@ const Contracts: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    const subtab = searchParams?.get('subtab');
-    const desiredView = subtab === 'clients' ? 'Client Contracts' : 'Templates';
-    if (pendingViewRef.current) {
-      if (desiredView === pendingViewRef.current) {
-        pendingViewRef.current = null;
-      } else {
-        return;
-      }
-    }
-    if (activeView !== desiredView) {
-      setActiveView(desiredView);
-    }
-  }, [searchParams, activeView]);
 
   const updateUrlForView = (view: 'Templates' | 'Client Contracts') => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');

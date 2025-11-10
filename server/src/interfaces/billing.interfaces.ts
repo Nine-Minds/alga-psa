@@ -203,6 +203,7 @@ export interface IContractLine extends TenantEntity {
   custom_rate?: number | null;
   display_order?: number;
   enable_proration?: boolean;
+  is_custom?: boolean; // Whether this is a custom contract line (not from preset)
   // Hourly contract line fields (contract-line-level, same for all services)
   hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
   minimum_billable_time?: number | null; // Minimum time to bill for hourly services
@@ -227,6 +228,18 @@ export interface IContractLinePreset extends TenantEntity {
   billing_frequency: string;
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  billing_timing?: 'arrears' | 'advance';
+  // Hourly-specific fields
+  hourly_rate?: number | null;
+  minimum_billable_time?: number | null;
+  round_up_to_nearest?: number | null;
+  enable_overtime?: boolean | null;
+  overtime_rate?: number | null;
+  overtime_threshold?: number | null;
+  enable_after_hours_rate?: boolean | null;
+  after_hours_multiplier?: number | null;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
 }
 
 /**
