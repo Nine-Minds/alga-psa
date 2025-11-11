@@ -11,6 +11,80 @@ export const dynamic = 'force-dynamic';
 const ALLOWED_METHODS = 'GET,POST,PUT,PATCH,DELETE,OPTIONS';
 const ALLOWED_HEADERS = 'content-type,x-request-id,x-idempotency-key,x-alga-tenant';
 
+const isEnterpriseEdition =
+  (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+  (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+
+type EeInstallConfigModule = {
+  getInstallConfig: (params: { tenantId: string; extensionId: string }) => Promise<{
+    versionId: string;
+    contentHash: string;
+    providers?: string[];
+    secretEnvelope?: unknown;
+    config?: Record<string, string>;
+  } | null>;
+};
+
+type InstallContext = {
+  versionId: string;
+  contentHash: string;
+  providers: string[];
+  secretEnvelope?: unknown;
+  config: Record<string, string>;
+};
+
+let eeInstallConfigPromise: Promise<EeInstallConfigModule | null> | null = null;
+
+async function loadEeInstallConfigModule(): Promise<EeInstallConfigModule | null> {
+  if (!isEnterpriseEdition) {
+    return null;
+  }
+  if (!eeInstallConfigPromise) {
+    eeInstallConfigPromise = import('@ee/lib/extensions/installConfig')
+      .then((mod) => mod as EeInstallConfigModule)
+      .catch((error) => {
+        console.error('[api/ext] failed to load EE installConfig module', error);
+        return null;
+      });
+  }
+  return eeInstallConfigPromise;
+}
+
+async function resolveInstallContext(tenantId: string, extensionId: string): Promise<InstallContext | null> {
+  const eeModule = await loadEeInstallConfigModule();
+  if (eeModule?.getInstallConfig) {
+    try {
+      const config = await eeModule.getInstallConfig({ tenantId, extensionId });
+      if (config?.contentHash) {
+        return {
+          versionId: config.versionId,
+          contentHash: config.contentHash,
+          providers: config.providers ?? [],
+          secretEnvelope: config.secretEnvelope,
+          config: config.config ?? {},
+        };
+      }
+    } catch (error) {
+      console.error('[api/ext] failed to read install config via EE module', error);
+    }
+  }
+
+  const install = await getTenantInstall(tenantId, extensionId);
+  if (!install) {
+    return null;
+  }
+  const { content_hash, version_id } = await resolveVersion(install);
+  if (!content_hash) {
+    return null;
+  }
+  return {
+    versionId: version_id,
+    contentHash: content_hash,
+    providers: [],
+    config: {},
+  };
+}
+
 function normalizeOrigin(value: string | null): string | null {
   if (!value) return null;
   try {
@@ -103,11 +177,11 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     console.log('[api/ext] tenant resolved', { tenantId, extensionId, method });
     await assertAccess(tenantId, extensionId, method, path);
 
-    const install = await getTenantInstall(tenantId, extensionId);
+    const install = await resolveInstallContext(tenantId, extensionId);
     if (!install) {
       return applyCorsHeaders(NextResponse.json({ error: 'not_installed' }, { status: 404 }), corsOrigin);
     }
-    const { content_hash, version_id } = await resolveVersion(install);
+    const { contentHash: content_hash, versionId: version_id, providers, secretEnvelope, config } = install;
 
     const headers = filterRequestHeaders(req.headers);
     headers['x-alga-tenant'] = tenantId;
@@ -143,9 +217,18 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           ...(idempotencyKey ? { 'x-idempotency-key': idempotencyKey } : {}),
         },
         body: JSON.stringify({
-          context: { request_id: requestId, tenant_id: tenantId, extension_id: extensionId, content_hash, version_id },
+          context: {
+            request_id: requestId,
+            tenant_id: tenantId,
+            extension_id: extensionId,
+            content_hash,
+            version_id,
+            config,
+          },
           http: { method, path, query: Object.fromEntries(req.nextUrl.searchParams.entries()), headers, body_b64: bodyB64 },
           limits: { timeout_ms: timeoutMs },
+          ...(providers?.length ? { providers } : {}),
+          ...(secretEnvelope ? { secret_envelope: secretEnvelope } : {}),
         }),
         signal: controller.signal,
       });

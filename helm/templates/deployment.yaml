@@ -400,10 +400,9 @@ spec:
 
           # ----------- RUNNER / EXTENSION EXECUTION -----------
           {{- with .Values.runner }}
-          {{- if .baseUrl }}
+          {{- $runnerBaseUrl := .baseUrl | default (printf "http://runner-exec.%s.svc.cluster.local" $.Release.Namespace) }}
           - name: RUNNER_BASE_URL
-            value: "{{ .baseUrl }}"
-          {{- end }}
+            value: "{{ $runnerBaseUrl }}"
           {{- if and .serviceTokenSecret (hasKey .serviceTokenSecret "name") (hasKey .serviceTokenSecret "key") (.serviceTokenSecret.name) (.serviceTokenSecret.key) }}
           - name: RUNNER_SERVICE_TOKEN
             valueFrom:
