@@ -83,32 +83,6 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/projects'
       },
       {
-        name: 'Schedule',
-        icon: Calendar,
-        href: '/msp/schedule'
-      },
-      {
-        name: 'Technician Dispatch',
-        icon: MapPin,
-        href: '/msp/technician-dispatch'
-      }
-    ]
-  },
-  {
-    title: 'Asset Platform',
-    items: [
-      {
-        name: 'Assets',
-        icon: Monitor,
-        href: '/msp/assets',
-        subItems: [
-          { name: 'Workspace', icon: Layout, href: '/msp/assets' },
-          { name: 'Maintenance Plans', icon: Clock, href: '/msp/assets/maintenance' },
-          { name: 'Lifecycle Policies', icon: Shield, href: '/msp/assets/policies' },
-          { name: 'Automation Rules', icon: Workflow, href: '/msp/assets/automation' },
-        ]
-      },
-      {
         name: 'Clients',
         icon: Building2,
         href: '/msp/clients'
@@ -122,6 +96,17 @@ export const navigationSections: NavigationSection[] = [
         name: 'Documents',
         icon: FileText,
         href: '/msp/documents'
+      },
+      {
+        name: 'Assets',
+        icon: Monitor,
+        href: '/msp/assets',
+        subItems: [
+          { name: 'Workspace', icon: Layout, href: '/msp/assets' },
+          { name: 'Maintenance Plans', icon: Clock, href: '/msp/assets/maintenance' },
+          { name: 'Lifecycle Policies', icon: Shield, href: '/msp/assets/policies' },
+          { name: 'Automation Rules', icon: Workflow, href: '/msp/assets/automation' },
+        ]
       }
     ]
   },
@@ -144,6 +129,16 @@ export const navigationSections: NavigationSection[] = [
           icon,
           href
         }))
+      },
+      {
+        name: 'Schedule',
+        icon: Calendar,
+        href: '/msp/schedule'
+      },
+      {
+        name: 'Technician Dispatch',
+        icon: MapPin,
+        href: '/msp/technician-dispatch'
       },
       {
         name: 'Automation Hub',
