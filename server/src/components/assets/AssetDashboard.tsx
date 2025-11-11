@@ -267,12 +267,6 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     void loadMaintenanceSummaries();
   }, [assetsByClient]);
 
-  useEffect(() => {
-    if (shouldAutoOpenQuickAdd) {
-      router.replace('/msp/assets');
-    }
-  }, [shouldAutoOpenQuickAdd, router]);
-
   const maintenanceStats = useMemo(() => {
     return Object.values(maintenanceSummaries).reduce(
       (acc, summary) => {
