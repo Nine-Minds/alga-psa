@@ -40,6 +40,23 @@ export const createAppointmentRequestSchema = z.object({
 export type CreateAppointmentRequestInput = z.infer<typeof createAppointmentRequestSchema>;
 
 /**
+ * Update Appointment Request Schema (Client Portal)
+ * Used when clients edit pending appointment requests
+ */
+export const updateAppointmentRequestSchema = z.object({
+  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
+  service_id: z.string().uuid('Service ID must be a valid UUID'),
+  requested_date: dateStringSchema,
+  requested_time: timeStringSchema,
+  requested_duration: z.number().int().min(15, 'Duration must be at least 15 minutes').max(480, 'Duration cannot exceed 8 hours'),
+  preferred_assigned_user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
+  description: z.string().max(2000, 'Description cannot exceed 2000 characters').optional().nullable(),
+  ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+});
+
+export type UpdateAppointmentRequestInput = z.infer<typeof updateAppointmentRequestSchema>;
+
+/**
  * Create Public Appointment Request Schema (Unauthenticated - Public API)
  * Used for public booking requests from website
  */

@@ -3,6 +3,7 @@
     "dashboard": "Dashboard",
     "tickets": "Ticket di supporto",
     "projects": "Progetti",
+    "appointments": "Appuntamenti",
     "billing": "Fatturazione",
     "assets": "Asset",
     "clientSettings": "Impostazioni cliente",
@@ -1015,6 +1016,7 @@
   "appointments": {
     "modal": {
       "title": "Richiedi appuntamento",
+      "editTitle": "Modifica richiesta di appuntamento",
       "step": "Passaggio",
       "of": "di"
     },
@@ -1056,7 +1058,8 @@
       "technician": "Tecnico preferito",
       "linkedTicket": "Ticket collegato",
       "approvalNote": "La tua richiesta di appuntamento sarà inviata per l'approvazione. Riceverai un'email di conferma una volta approvata.",
-      "submit": "Richiedi appuntamento"
+      "submit": "Richiedi appuntamento",
+      "update": "Aggiorna appuntamento"
     },
     "status": {
       "pending": "In attesa di approvazione",
@@ -1069,11 +1072,14 @@
       "loadDatesFailed": "Impossibile caricare le date disponibili. Riprova.",
       "loadSlotsFailed": "Impossibile caricare le fasce orarie disponibili. Riprova.",
       "createFailed": "Impossibile creare la richiesta di appuntamento. Riprova.",
+      "updateFailed": "Impossibile aggiornare la richiesta di appuntamento. Riprova.",
       "loadFailed": "Impossibile caricare gli appuntamenti. Riprova."
     },
     "messages": {
       "requestSuccess": "Richiesta di appuntamento inviata con successo!",
       "requestSuccessDetail": "Esamineremo la tua richiesta e ti invieremo un'email di conferma una volta approvata.",
+      "updateSuccess": "Richiesta di appuntamento aggiornata con successo!",
+      "updateSuccessDetail": "La tua richiesta di appuntamento è stata aggiornata.",
       "cancelSuccess": "Appuntamento annullato con successo.",
       "cancelFailed": "Impossibile annullare l'appuntamento. Riprova."
     },
@@ -1099,6 +1105,7 @@
       "minutes": "min",
       "notAssigned": "Non assegnato",
       "viewDetails": "Vedi dettagli",
+      "edit": "Modifica",
       "cancel": "Annulla"
     },
     "details": {

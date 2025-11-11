@@ -3,7 +3,7 @@
 import { createTenantKnex } from '../db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from './user-actions/userActions';
+import { getCurrentUser, getCurrentUserPermissions } from './user-actions/userActions';
 import { hasPermission } from '../auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -21,6 +21,15 @@ import {
 import { SystemEmailService } from '../email/system/SystemEmailService';
 import ScheduleEntry from '../models/scheduleEntry';
 import { publishEvent } from '../eventBus/publishers';
+import {
+  getTenantSettings,
+  generateICSLink,
+  getRequestNewAppointmentLink,
+  getClientUserIdFromContact,
+  formatDate,
+  formatTime
+} from './appointmentHelpers';
+import { createNotificationFromTemplateInternal } from './internal-notification-actions/internalNotificationActions';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -68,8 +77,9 @@ export async function getAppointmentRequests(
 
     const { knex: db, tenant } = await createTenantKnex();
 
-    // Check permissions
-    const canRead = await hasPermission(currentUser as any, 'schedule', 'read', db);
+    // Check permissions - use same permission as schedule actions
+    const userPermissions = await getCurrentUserPermissions();
+    const canRead = userPermissions.includes('user_schedule:read') || userPermissions.includes('user_schedule:update');
     if (!canRead) {
       return { success: false, error: 'Insufficient permissions to view appointment requests' };
     }
@@ -83,8 +93,8 @@ export async function getAppointmentRequests(
           this.on('ar.service_id', 'sc.service_id')
             .andOn('ar.tenant', 'sc.tenant');
         })
-        .leftJoin('companies as c', function() {
-          this.on('ar.client_id', 'c.company_id')
+        .leftJoin('clients as c', function() {
+          this.on('ar.client_id', 'c.client_id')
             .andOn('ar.tenant', 'c.tenant');
         })
         .leftJoin('contacts as con', function() {
@@ -103,7 +113,7 @@ export async function getAppointmentRequests(
         .select(
           'ar.*',
           'sc.service_name',
-          'c.company_name as client_company_name',
+          'c.client_name as client_company_name',
           'con.full_name as contact_name',
           'con.email as contact_email',
           'u.first_name as preferred_technician_first_name',
@@ -146,7 +156,7 @@ export async function getAppointmentRequests(
         const searchTerm = `%${validatedFilters.search_query}%`;
         query = query.where(function() {
           this.whereILike('sc.service_name', searchTerm)
-            .orWhereILike('c.company_name', searchTerm)
+            .orWhereILike('c.client_name', searchTerm)
             .orWhereILike('con.full_name', searchTerm)
             .orWhereILike('ar.requester_name', searchTerm)
             .orWhereILike('ar.description', searchTerm);
@@ -181,8 +191,9 @@ export async function approveAppointmentRequest(
 
     const { knex: db, tenant } = await createTenantKnex();
 
-    // Check permissions
-    const canUpdate = await hasPermission(currentUser as any, 'schedule', 'update', db);
+    // Check permissions - use same permission as schedule actions
+    const userPermissions = await getCurrentUserPermissions();
+    const canUpdate = userPermissions.includes('user_schedule:update');
     if (!canUpdate) {
       return { success: false, error: 'Insufficient permissions to approve appointment requests' };
     }
@@ -232,26 +243,75 @@ export async function approveAppointmentRequest(
         throw new Error('Service not found');
       }
 
-      // Create schedule entry
+      // Create or update schedule entry
       const scheduledStart = new Date(`${finalDate}T${finalTime}`);
       const scheduledEnd = new Date(scheduledStart.getTime() + request.requested_duration * 60000);
 
-      const scheduleEntryData = {
-        title: `Appointment: ${service.service_name}`,
-        scheduled_start: scheduledStart,
-        scheduled_end: scheduledEnd,
-        work_item_type: 'appointment_request' as const,
-        work_item_id: request.appointment_request_id,
-        status: 'scheduled',
-        notes: request.description || '',
-        assigned_user_ids: [validatedData.assigned_user_id],
-        is_recurring: false,
-        is_private: false
-      };
+      let scheduleEntry;
 
-      const scheduleEntry = await ScheduleEntry.create(trx, scheduleEntryData, {
-        assignedUserIds: [validatedData.assigned_user_id]
-      });
+      if (request.schedule_entry_id) {
+        // Update existing schedule entry (created when request was submitted)
+        await trx('schedule_entries')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .update({
+            title: `Appointment: ${service.service_name}`, // Remove [Pending Request] prefix
+            scheduled_start: scheduledStart.toISOString(),
+            scheduled_end: scheduledEnd.toISOString(),
+            notes: request.description || '',
+            updated_at: new Date()
+          });
+
+        // Update assignee if changed
+        const currentAssignee = await trx('schedule_entry_assignees')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .first();
+
+        if (currentAssignee && currentAssignee.user_id !== validatedData.assigned_user_id) {
+          // Remove old assignee
+          await trx('schedule_entry_assignees')
+            .where({
+              entry_id: request.schedule_entry_id,
+              tenant
+            })
+            .delete();
+
+          // Add new assignee
+          await trx('schedule_entry_assignees').insert({
+            entry_id: request.schedule_entry_id,
+            user_id: validatedData.assigned_user_id,
+            tenant,
+            created_at: new Date()
+          });
+        }
+
+        scheduleEntry = {
+          entry_id: request.schedule_entry_id
+        };
+      } else {
+        // Create new schedule entry (fallback for old requests)
+        const scheduleEntryData = {
+          title: `Appointment: ${service.service_name}`,
+          scheduled_start: scheduledStart,
+          scheduled_end: scheduledEnd,
+          work_item_type: 'appointment_request' as const,
+          work_item_id: request.appointment_request_id,
+          status: 'scheduled',
+          notes: request.description || '',
+          assigned_user_ids: [validatedData.assigned_user_id],
+          is_recurring: false,
+          is_private: false
+        };
+
+        scheduleEntry = await ScheduleEntry.create(trx, scheduleEntryData, {
+          assignedUserIds: [validatedData.assigned_user_id]
+        });
+      }
 
       const now = new Date();
 
@@ -338,7 +398,20 @@ export async function approveAppointmentRequest(
           recipientName = request.requester_name || '';
         }
 
-        if (recipientEmail) {
+        if (recipientEmail && tenant) {
+          // Get tenant settings
+          const tenantSettings = await getTenantSettings(tenant);
+
+          // Generate calendar link
+          const scheduleEntryWithDetails = await trx('schedule_entries')
+            .where({
+              entry_id: scheduleEntry.entry_id,
+              tenant
+            })
+            .first();
+
+          const calendarLink = await generateICSLink(scheduleEntryWithDetails);
+
           await emailService.sendAppointmentRequestApproved({
             requesterName: recipientName,
             requesterEmail: recipientEmail,
@@ -349,18 +422,39 @@ export async function approveAppointmentRequest(
             technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
             technicianEmail: assignedUser.email || '',
             technicianPhone: assignedUser.phone || '',
-            calendarLink: '', // TODO: Implement ICS generation
+            calendarLink: calendarLink,
             cancellationPolicy: 'Please cancel at least 24 hours in advance.',
             minimumNoticeHours: 24,
-            contactEmail: '', // TODO: Get from tenant settings
-            contactPhone: '', // TODO: Get from tenant settings
-            tenantName: '', // TODO: Get from tenant settings
+            contactEmail: tenantSettings.contactEmail,
+            contactPhone: tenantSettings.contactPhone,
+            tenantName: tenantSettings.tenantName,
             currentYear: new Date().getFullYear()
           }, {
             tenantId: tenant
           });
 
           console.log(`[AppointmentRequest] Approval email sent to ${recipientEmail}`);
+        }
+
+        // Send internal notification to client
+        if (request.contact_id && tenant) {
+          const clientUserId = await getClientUserIdFromContact(request.contact_id, tenant);
+          if (clientUserId) {
+            await createNotificationFromTemplateInternal(trx, {
+              tenant: request.tenant,
+              user_id: clientUserId,
+              template_name: 'appointment-request-approved',
+              type: 'success',
+              category: 'appointments',
+              link: `/client-portal/appointments/${request.appointment_request_id}`,
+              data: {
+                serviceName: service.service_name,
+                appointmentDate: await formatDate(finalDate, 'en'),
+                appointmentTime: await formatTime(finalTime, 'en'),
+                technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`
+              }
+            });
+          }
         }
 
         console.log(`[AppointmentRequest] Request ${request.appointment_request_id} approved by ${currentUser.user_id}`);
@@ -397,8 +491,9 @@ export async function declineAppointmentRequest(
 
     const { knex: db, tenant } = await createTenantKnex();
 
-    // Check permissions
-    const canUpdate = await hasPermission(currentUser as any, 'schedule', 'update', db);
+    // Check permissions - use same permission as schedule actions
+    const userPermissions = await getCurrentUserPermissions();
+    const canUpdate = userPermissions.includes('user_schedule:update');
     if (!canUpdate) {
       return { success: false, error: 'Insufficient permissions to decline appointment requests' };
     }
@@ -422,6 +517,25 @@ export async function declineAppointmentRequest(
 
       const now = new Date();
 
+      // Delete the schedule entry if it exists
+      if (request.schedule_entry_id) {
+        // Delete assignees first (foreign key constraint)
+        await trx('schedule_entry_assignees')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .delete();
+
+        // Delete the schedule entry
+        await trx('schedule_entries')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .delete();
+      }
+
       // Update request status
       await trx('appointment_requests')
         .where({
@@ -433,6 +547,7 @@ export async function declineAppointmentRequest(
           declined_reason: validatedData.decline_reason,
           approved_by_user_id: currentUser.user_id,
           approved_at: now,
+          schedule_entry_id: null, // Clear the schedule entry reference
           updated_at: now
         });
 
@@ -506,24 +621,48 @@ export async function declineAppointmentRequest(
           recipientName = request.requester_name || '';
         }
 
-        if (recipientEmail) {
+        if (recipientEmail && tenant) {
+          // Get tenant settings
+          const tenantSettings = await getTenantSettings(tenant);
+          const requestNewAppointmentLink = await getRequestNewAppointmentLink();
+
           await emailService.sendAppointmentRequestDeclined({
             requesterName: recipientName,
             requesterEmail: recipientEmail,
             serviceName: service.service_name,
             requestedDate: request.requested_date,
             requestedTime: request.requested_time,
+            referenceNumber: request.appointment_request_id.slice(0, 8).toUpperCase(),
             declineReason: validatedData.decline_reason,
-            requestNewAppointmentLink: '', // TODO: Get proper URL
-            contactEmail: '', // TODO: Get from tenant settings
-            contactPhone: '', // TODO: Get from tenant settings
-            tenantName: '', // TODO: Get from tenant settings
+            requestNewAppointmentLink,
+            contactEmail: tenantSettings.contactEmail,
+            contactPhone: tenantSettings.contactPhone,
+            tenantName: tenantSettings.tenantName,
             currentYear: new Date().getFullYear()
           }, {
             tenantId: tenant
           });
 
           console.log(`[AppointmentRequest] Decline email sent to ${recipientEmail}`);
+        }
+
+        // Send internal notification to client
+        if (request.contact_id && tenant) {
+          const clientUserId = await getClientUserIdFromContact(request.contact_id, tenant);
+          if (clientUserId) {
+            await createNotificationFromTemplateInternal(trx, {
+              tenant: request.tenant,
+              user_id: clientUserId,
+              template_name: 'appointment-request-declined',
+              type: 'warning',
+              category: 'appointments',
+              link: `/client-portal/appointments/${request.appointment_request_id}`,
+              data: {
+                serviceName: service.service_name,
+                declineReason: validatedData.decline_reason
+              }
+            });
+          }
         }
 
         console.log(`[AppointmentRequest] Request ${request.appointment_request_id} declined by ${currentUser.user_id}`);
@@ -558,8 +697,9 @@ export async function updateAppointmentRequestDateTime(
 
     const { knex: db, tenant } = await createTenantKnex();
 
-    // Check permissions
-    const canUpdate = await hasPermission(currentUser as any, 'schedule', 'update', db);
+    // Check permissions - use same permission as schedule actions
+    const userPermissions = await getCurrentUserPermissions();
+    const canUpdate = userPermissions.includes('user_schedule:update');
     if (!canUpdate) {
       return { success: false, error: 'Insufficient permissions to update appointment requests' };
     }
@@ -636,8 +776,9 @@ export async function associateRequestToTicket(
 
     const { knex: db, tenant } = await createTenantKnex();
 
-    // Check permissions
-    const canUpdate = await hasPermission(currentUser as any, 'schedule', 'update', db);
+    // Check permissions - use same permission as schedule actions
+    const userPermissions = await getCurrentUserPermissions();
+    const canUpdate = userPermissions.includes('user_schedule:update');
     if (!canUpdate) {
       return { success: false, error: 'Insufficient permissions to update appointment requests' };
     }

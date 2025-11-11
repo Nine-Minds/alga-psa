@@ -14,15 +14,28 @@ import { format } from 'date-fns';
 import { WizardProgress } from 'server/src/components/onboarding/WizardProgress';
 import {
   createAppointmentRequest,
+  updateAppointmentRequest,
   getAvailableServicesAndTickets,
   getAvailableDatesForService,
   getAvailableTimeSlotsForDate
 } from 'server/src/lib/actions/client-portal-actions/appointmentRequestActions';
 
+interface AppointmentRequest {
+  appointment_request_id: string;
+  service_id: string;
+  requested_date: string;
+  requested_time: string;
+  requested_duration: number;
+  preferred_assigned_user_id?: string | null;
+  description?: string | null;
+  ticket_id?: string | null;
+}
+
 interface RequestAppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAppointmentRequested?: () => void;
+  editingAppointment?: AppointmentRequest | null;
 }
 
 interface Service {
@@ -57,9 +70,11 @@ const STEP_LABELS = ['Service', 'Date', 'Time', 'Confirm'];
 export function RequestAppointmentModal({
   open,
   onOpenChange,
-  onAppointmentRequested
+  onAppointmentRequested,
+  editingAppointment
 }: RequestAppointmentModalProps) {
   const { t } = useTranslation('clientPortal');
+  const isEditMode = !!editingAppointment;
 
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
@@ -96,6 +111,18 @@ export function RequestAppointmentModal({
       }, 300);
     }
   }, [open]);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (open && editingAppointment) {
+      setSelectedServiceId(editingAppointment.service_id);
+      setSelectedDate(new Date(editingAppointment.requested_date));
+      setSelectedTime(editingAppointment.requested_time);
+      setPreferredTechnicianId(editingAppointment.preferred_assigned_user_id || '__no_preference__');
+      setDescription(editingAppointment.description || '');
+      setLinkedTicketId(editingAppointment.ticket_id || '__no_ticket__');
+    }
+  }, [open, editingAppointment]);
 
   // Load services when modal opens
   useEffect(() => {
@@ -214,22 +241,50 @@ export function RequestAppointmentModal({
     setError(null);
 
     try {
-      // Get duration from selected time slot
+      // Get duration from the selected time slot
       const selectedSlot = timeSlots.find(slot => slot.time === selectedTime);
-      const duration = selectedSlot?.duration || 60;
+      const duration = selectedSlot?.duration || editingAppointment?.requested_duration || 60;
 
-      const result = await createAppointmentRequest({
-        service_id: selectedServiceId,
-        requested_date: format(selectedDate!, 'yyyy-MM-dd'),
-        requested_time: selectedTime,
-        requested_duration: duration,
-        preferred_assigned_user_id: preferredTechnicianId && preferredTechnicianId !== '__no_preference__' ? preferredTechnicianId : undefined,
-        description: description || undefined,
-        ticket_id: linkedTicketId && linkedTicketId !== '__no_ticket__' ? linkedTicketId : undefined,
+      console.log('[RequestAppointmentModal] Submitting with duration:', {
+        duration,
+        preferredTechnicianId,
+        selectedTime,
+        slotDuration: selectedSlot?.duration
       });
 
+      let result;
+
+      if (isEditMode && editingAppointment) {
+        // Update existing appointment
+        result = await updateAppointmentRequest({
+          appointment_request_id: editingAppointment.appointment_request_id,
+          service_id: selectedServiceId,
+          requested_date: format(selectedDate!, 'yyyy-MM-dd'),
+          requested_time: selectedTime,
+          requested_duration: duration,
+          preferred_assigned_user_id: preferredTechnicianId && preferredTechnicianId !== '__no_preference__' ? preferredTechnicianId : undefined,
+          description: description || undefined,
+          ticket_id: linkedTicketId && linkedTicketId !== '__no_ticket__' ? linkedTicketId : undefined,
+        });
+      } else {
+        // Create new appointment
+        result = await createAppointmentRequest({
+          service_id: selectedServiceId,
+          requested_date: format(selectedDate!, 'yyyy-MM-dd'),
+          requested_time: selectedTime,
+          requested_duration: duration,
+          preferred_assigned_user_id: preferredTechnicianId && preferredTechnicianId !== '__no_preference__' ? preferredTechnicianId : undefined,
+          description: description || undefined,
+          ticket_id: linkedTicketId && linkedTicketId !== '__no_ticket__' ? linkedTicketId : undefined,
+        });
+      }
+
       if (result.success) {
-        setSuccessMessage(t('appointments.messages.requestSuccess'));
+        setSuccessMessage(
+          isEditMode
+            ? t('appointments.messages.updateSuccess')
+            : t('appointments.messages.requestSuccess')
+        );
         onAppointmentRequested?.();
 
         setTimeout(() => {
@@ -237,11 +292,11 @@ export function RequestAppointmentModal({
           resetForm();
         }, 2000);
       } else {
-        setError(result.error || t('appointments.errors.createFailed'));
+        setError(result.error || (isEditMode ? t('appointments.errors.updateFailed') : t('appointments.errors.createFailed')));
       }
     } catch (err) {
-      console.error('Error creating appointment request:', err);
-      setError(t('appointments.errors.createFailed'));
+      console.error('Error submitting appointment request:', err);
+      setError(isEditMode ? t('appointments.errors.updateFailed') : t('appointments.errors.createFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -251,6 +306,23 @@ export function RequestAppointmentModal({
   const canProceedToStep3 = selectedDate !== undefined;
   const canProceedToStep4 = selectedTime !== '';
   const canSubmit = canProceedToStep4;
+
+  // In edit mode, allow navigation to any step
+  const canNavigateToStep = (stepIndex: number) => {
+    if (!isEditMode) {
+      return false; // In create mode, no direct navigation
+    }
+
+    // In edit mode, allow navigation to any step
+    return true;
+  };
+
+  const handleStepClick = (stepIndex: number) => {
+    if (canNavigateToStep(stepIndex)) {
+      setCurrentStep(stepIndex + 1); // stepIndex is 0-based, currentStep is 1-based
+      setError(null);
+    }
+  };
 
   const selectedService = useMemo(
     () => services.find(s => s.service_id === selectedServiceId),
@@ -328,7 +400,12 @@ export function RequestAppointmentModal({
         <div className="flex flex-col items-center justify-center py-12">
           <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
           <p className="text-lg font-medium text-gray-900 mb-2">{successMessage}</p>
-          <p className="text-sm text-gray-600">{t('appointments.messages.requestSuccessDetail')}</p>
+          <p className="text-sm text-gray-600">
+            {isEditMode
+              ? t('appointments.messages.updateSuccessDetail')
+              : t('appointments.messages.requestSuccessDetail')
+            }
+          </p>
         </div>
       );
     }
@@ -626,7 +703,7 @@ export function RequestAppointmentModal({
     <Dialog
       isOpen={open}
       onClose={() => !isSubmitting && onOpenChange(false)}
-      title={t('appointments.modal.title')}
+      title={isEditMode ? t('appointments.modal.editTitle') : t('appointments.modal.title')}
       className="max-w-3xl"
     >
       <DialogContent>
@@ -643,7 +720,8 @@ export function RequestAppointmentModal({
               steps={STEP_LABELS}
               currentStep={currentStep - 1}
               completedSteps={new Set()}
-              canNavigateToStep={() => false}
+              canNavigateToStep={canNavigateToStep}
+              onStepClick={handleStepClick}
             />
           </div>
         )}
@@ -687,7 +765,12 @@ export function RequestAppointmentModal({
                 onClick={handleSubmit}
                 disabled={isSubmitting || !canSubmit}
               >
-                {isSubmitting ? t('common.submitting') : t('appointments.step4.submit')}
+                {isSubmitting
+                  ? t('common.submitting')
+                  : isEditMode
+                    ? t('appointments.step4.update')
+                    : t('appointments.step4.submit')
+                }
               </Button>
             )}
           </DialogFooter>

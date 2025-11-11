@@ -25,7 +25,8 @@ const workItemColors: Record<WorkItemType, string> = {
   project_task: 'rgb(var(--color-secondary-100))',
   non_billable_category: 'rgb(var(--color-accent-100))',
   ad_hoc: 'rgb(var(--color-border-200))',
-  interaction: 'rgb(220 252 231)' // Tailwind green-100
+  interaction: 'rgb(220 252 231)', // Tailwind green-100
+  appointment_request: 'rgb(254 205 211)' // Tailwind rose-200
 };
 
 const workItemHoverColors: Record<WorkItemType, string> = {
@@ -33,7 +34,8 @@ const workItemHoverColors: Record<WorkItemType, string> = {
   project_task: 'rgb(var(--color-secondary-200))',
   non_billable_category: 'rgb(var(--color-accent-200))',
   ad_hoc: 'rgb(var(--color-border-300))',
-  interaction: 'rgb(187 247 208)' // Tailwind green-200
+  interaction: 'rgb(187 247 208)', // Tailwind green-200
+  appointment_request: 'rgb(251 113 133)' // Tailwind rose-400
 };
 
 const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({

@@ -3,6 +3,7 @@
     "dashboard": "Dashboard",
     "tickets": "Supporttickets",
     "projects": "Projecten",
+    "appointments": "Afspraken",
     "billing": "Facturatie",
     "assets": "Assets",
     "clientSettings": "Bedrijfsinstellingen",
@@ -1014,6 +1015,7 @@
   "appointments": {
     "modal": {
       "title": "Afspraak aanvragen",
+      "editTitle": "Afspraakverzoek bewerken",
       "step": "Stap",
       "of": "van"
     },
@@ -1055,7 +1057,8 @@
       "technician": "Voorkeurstechnicus",
       "linkedTicket": "Gekoppeld ticket",
       "approvalNote": "Uw afspraakverzoek wordt ter goedkeuring ingediend. U ontvangt een bevestigingsmail zodra deze is goedgekeurd.",
-      "submit": "Afspraak aanvragen"
+      "submit": "Afspraak aanvragen",
+      "update": "Afspraak bijwerken"
     },
     "status": {
       "pending": "In afwachting van goedkeuring",
@@ -1068,11 +1071,14 @@
       "loadDatesFailed": "Kan beschikbare datums niet laden. Probeer het opnieuw.",
       "loadSlotsFailed": "Kan beschikbare tijdsloten niet laden. Probeer het opnieuw.",
       "createFailed": "Kan afspraakverzoek niet maken. Probeer het opnieuw.",
+      "updateFailed": "Kan afspraakverzoek niet bijwerken. Probeer het opnieuw.",
       "loadFailed": "Kan afspraken niet laden. Probeer het opnieuw."
     },
     "messages": {
       "requestSuccess": "Afspraakverzoek succesvol ingediend!",
       "requestSuccessDetail": "We zullen uw verzoek beoordelen en u een bevestigingsmail sturen zodra het is goedgekeurd.",
+      "updateSuccess": "Afspraakverzoek succesvol bijgewerkt!",
+      "updateSuccessDetail": "Uw afspraakverzoek is bijgewerkt.",
       "cancelSuccess": "Afspraak succesvol geannuleerd.",
       "cancelFailed": "Kan afspraak niet annuleren. Probeer het opnieuw."
     },
@@ -1098,6 +1104,7 @@
       "minutes": "min",
       "notAssigned": "Niet toegewezen",
       "viewDetails": "Bekijk details",
+      "edit": "Bewerken",
       "cancel": "Annuleren"
     },
     "details": {

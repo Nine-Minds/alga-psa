@@ -14,57 +14,12 @@ import toast from 'react-hot-toast';
 import { Check, X, Calendar, Clock, User, FileText, Briefcase } from 'lucide-react';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-
-// Placeholder types - to be replaced with actual types from implementation plan
-interface IAppointmentRequest {
-  request_id: string;
-  client_id: string;
-  client_name: string;
-  contact_name?: string;
-  service_id: string;
-  service_name: string;
-  requested_date: string;
-  requested_time: string;
-  duration_minutes: number;
-  preferred_technician_id?: string;
-  description?: string;
-  status: 'pending' | 'approved' | 'declined' | 'cancelled';
-  created_at: Date;
-  is_authenticated: boolean;
-  linked_ticket_id?: string;
-  company_name?: string;
-  email?: string;
-  phone?: string;
-}
-
-// Placeholder action functions - to be implemented in Phase 2
-async function getAppointmentRequests(filters?: {
-  status?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}): Promise<{ success: boolean; data?: IAppointmentRequest[]; error?: string }> {
-  // TODO: Implement in appointmentRequestManagementActions.ts
-  return { success: true, data: [] };
-}
-
-async function approveAppointmentRequest(
-  requestId: string,
-  assignedUserId: string,
-  finalDateTime?: Date,
-  internalNotes?: string,
-  linkedTicketId?: string
-): Promise<{ success: boolean; error?: string }> {
-  // TODO: Implement in appointmentRequestManagementActions.ts
-  return { success: true };
-}
-
-async function declineAppointmentRequest(
-  requestId: string,
-  reason: string
-): Promise<{ success: boolean; error?: string }> {
-  // TODO: Implement in appointmentRequestManagementActions.ts
-  return { success: true };
-}
+import {
+  getAppointmentRequests,
+  approveAppointmentRequest as approveRequest,
+  declineAppointmentRequest as declineRequest,
+  IAppointmentRequest
+} from 'server/src/lib/actions/appointmentRequestManagementActions';
 
 interface AppointmentRequestsPanelProps {
   isOpen: boolean;
@@ -144,10 +99,40 @@ export default function AppointmentRequestsPanel({
   const handleSelectRequest = (request: IAppointmentRequest) => {
     setSelectedRequest(request);
     setShowDeclineForm(false);
-    setAssignedTechnicianId(request.preferred_technician_id || '');
-    setFinalDateTime(new Date(`${request.requested_date}T${request.requested_time}`));
+    setAssignedTechnicianId(request.preferred_assigned_user_id || '');
+
+    // Handle date/time parsing safely
+    try {
+      if (request.requested_date && request.requested_time) {
+        // Database stores time as HH:MM:SS, need to handle that format
+        const timeStr = request.requested_time.slice(0, 5); // Get HH:MM only
+        const dateTimeString = `${request.requested_date}T${timeStr}:00`;
+
+        console.log('Parsing date/time:', {
+          date: request.requested_date,
+          time: request.requested_time,
+          combined: dateTimeString
+        });
+
+        const parsedDate = new Date(dateTimeString);
+        if (!isNaN(parsedDate.getTime())) {
+          console.log('Successfully parsed date:', parsedDate);
+          setFinalDateTime(parsedDate);
+        } else {
+          console.error('Invalid date/time:', dateTimeString);
+          setFinalDateTime(null);
+        }
+      } else {
+        console.error('Missing date or time:', { date: request.requested_date, time: request.requested_time });
+        setFinalDateTime(null);
+      }
+    } catch (error) {
+      console.error('Error parsing date/time:', error);
+      setFinalDateTime(null);
+    }
+
     setInternalNotes('');
-    setLinkedTicketId(request.linked_ticket_id || '');
+    setLinkedTicketId(request.ticket_id || '');
     setDeclineReason('');
   };
 
@@ -160,13 +145,26 @@ export default function AppointmentRequestsPanel({
     }
 
     try {
-      const result = await approveAppointmentRequest(
-        selectedRequest.request_id,
-        assignedTechnicianId,
-        finalDateTime || undefined,
-        internalNotes || undefined,
-        linkedTicketId || undefined
-      );
+      // Use finalDateTime if set, otherwise fall back to original requested date/time
+      let approvalDate: string;
+      let approvalTime: string;
+
+      if (finalDateTime && !isNaN(finalDateTime.getTime())) {
+        approvalDate = finalDateTime.toISOString().split('T')[0];
+        approvalTime = finalDateTime.toTimeString().slice(0, 5);
+      } else {
+        // Fall back to original requested date/time
+        approvalDate = selectedRequest.requested_date;
+        approvalTime = selectedRequest.requested_time;
+      }
+
+      const result = await approveRequest({
+        appointment_request_id: selectedRequest.appointment_request_id,
+        assigned_user_id: assignedTechnicianId,
+        final_date: approvalDate,
+        final_time: approvalTime,
+        ticket_id: linkedTicketId || undefined
+      });
 
       if (result.success) {
         toast.success('Appointment request approved');
@@ -191,10 +189,10 @@ export default function AppointmentRequestsPanel({
     }
 
     try {
-      const result = await declineAppointmentRequest(
-        selectedRequest.request_id,
-        declineReason
-      );
+      const result = await declineRequest({
+        appointment_request_id: selectedRequest.appointment_request_id,
+        decline_reason: declineReason
+      });
 
       if (result.success) {
         toast.success('Appointment request declined');
@@ -239,7 +237,13 @@ export default function AppointmentRequestsPanel({
 
   const formatDateTime = (date: string, time: string) => {
     try {
+      if (!date || !time) {
+        return 'Invalid date/time';
+      }
       const dateTime = new Date(`${date}T${time}`);
+      if (isNaN(dateTime.getTime())) {
+        return `${date} ${time}`;
+      }
       return dateTime.toLocaleString('en-US', {
         weekday: 'short',
         month: 'short',
@@ -256,108 +260,129 @@ export default function AppointmentRequestsPanel({
   return (
     <Drawer isOpen={isOpen} onClose={onClose} id="appointment-requests-panel">
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">Appointment Requests</h2>
-          <Badge variant="primary">{filteredRequests.length} {statusFilter === 'all' ? 'Total' : statusFilter}</Badge>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-4">
-          <CustomSelect
-            id="status-filter"
-            options={statusOptions}
-            value={statusFilter}
-            onValueChange={setStatusFilter}
-            label="Filter by Status"
-          />
-        </div>
-
-        {/* Request List */}
-        <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-          {isLoading ? (
-            <div className="text-center py-8 text-gray-500">Loading requests...</div>
-          ) : filteredRequests.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No {statusFilter !== 'all' ? statusFilter : ''} requests found
+        {!selectedRequest ? (
+          <>
+            {/* List View */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Appointment Requests</h2>
+              <Badge variant="primary">{filteredRequests.length} {statusFilter === 'all' ? 'Total' : statusFilter}</Badge>
             </div>
-          ) : (
-            filteredRequests.map(request => (
-              <Card
-                key={request.request_id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedRequest?.request_id === request.request_id ? 'border-primary border-2' : ''
-                }`}
-                onClick={() => handleSelectRequest(request)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">
-                        {request.is_authenticated ? request.client_name : request.company_name || 'Public Request'}
+
+            {/* Filters */}
+            <div className="mb-4">
+              <CustomSelect
+                id="status-filter"
+                options={statusOptions}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                label="Filter by Status"
+              />
+            </div>
+
+            {/* Request List */}
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {isLoading ? (
+                <div className="text-center py-8 text-gray-500">Loading requests...</div>
+              ) : filteredRequests.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No {statusFilter !== 'all' ? statusFilter : ''} requests found
+                </div>
+              ) : (
+                filteredRequests.map(request => (
+                  <Card
+                    key={request.appointment_request_id}
+                    className="cursor-pointer transition-all hover:shadow-md"
+                    onClick={() => handleSelectRequest(request)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <div className="font-semibold text-lg">
+                            {request.is_authenticated ? (request as any).client_company_name : request.company_name || 'Public Request'}
+                          </div>
+                          {(request as any).contact_name && (
+                            <div className="text-sm text-gray-600">{(request as any).contact_name}</div>
+                          )}
+                        </div>
+                        <Badge variant={getStatusBadgeVariant(request.status)}>
+                          {request.status}
+                        </Badge>
                       </div>
-                      {request.contact_name && (
-                        <div className="text-sm text-gray-600">{request.contact_name}</div>
-                      )}
-                    </div>
-                    <Badge variant={getStatusBadgeVariant(request.status)}>
-                      {request.status}
-                    </Badge>
-                  </div>
 
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center text-gray-600">
-                      <Briefcase className="h-4 w-4 mr-2" />
-                      {request.service_name}
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {formatDateTime(request.requested_date, request.requested_time)}
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {request.duration_minutes} minutes
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center text-gray-600">
+                          <Briefcase className="h-4 w-4 mr-2" />
+                          {(request as any).service_name}
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          {formatDateTime(request.requested_date, request.requested_time)}
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <Clock className="h-4 w-4 mr-2" />
+                          {request.requested_duration} minutes
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Detail View */}
+            <div className="mb-4">
+              <Button
+                id="back-to-list"
+                variant="ghost"
+                onClick={() => setSelectedRequest(null)}
+                className="mb-2"
+              >
+                ← Back to List
+              </Button>
+              <h2 className="text-2xl font-bold">Request Details</h2>
+            </div>
 
-        {/* Detail View */}
-        {selectedRequest && (
-          <Card className="border-t-4 border-primary">
+            <div className="flex-1 overflow-y-auto">
+              <Card>
             <CardHeader>
-              <CardTitle>Request Details</CardTitle>
+              <CardTitle>Request Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Request Information */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <div className="font-semibold text-gray-700">Client</div>
-                  <div>{selectedRequest.is_authenticated ? selectedRequest.client_name : selectedRequest.company_name}</div>
+                  <div>{selectedRequest.is_authenticated ? (selectedRequest as any).client_company_name : selectedRequest.company_name}</div>
                 </div>
-                {selectedRequest.contact_name && (
+                {(selectedRequest as any).contact_name && (
                   <div>
                     <div className="font-semibold text-gray-700">Contact</div>
-                    <div>{selectedRequest.contact_name}</div>
+                    <div>{(selectedRequest as any).contact_name}</div>
                   </div>
                 )}
-                {selectedRequest.email && (
+                {(selectedRequest as any).contact_email && (
                   <div>
                     <div className="font-semibold text-gray-700">Email</div>
-                    <div>{selectedRequest.email}</div>
+                    <div>{(selectedRequest as any).contact_email}</div>
                   </div>
                 )}
-                {selectedRequest.phone && (
+                {selectedRequest.requester_email && !selectedRequest.is_authenticated && (
+                  <div>
+                    <div className="font-semibold text-gray-700">Email</div>
+                    <div>{selectedRequest.requester_email}</div>
+                  </div>
+                )}
+                {selectedRequest.requester_phone && (
                   <div>
                     <div className="font-semibold text-gray-700">Phone</div>
-                    <div>{selectedRequest.phone}</div>
+                    <div>{selectedRequest.requester_phone}</div>
                   </div>
                 )}
                 <div>
                   <div className="font-semibold text-gray-700">Service</div>
-                  <div>{selectedRequest.service_name}</div>
+                  <div>{(selectedRequest as any).service_name}</div>
                 </div>
                 <div>
                   <div className="font-semibold text-gray-700">Requested Time</div>
@@ -365,7 +390,7 @@ export default function AppointmentRequestsPanel({
                 </div>
                 <div>
                   <div className="font-semibold text-gray-700">Duration</div>
-                  <div>{selectedRequest.duration_minutes} minutes</div>
+                  <div>{selectedRequest.requested_duration} minutes</div>
                 </div>
                 <div>
                   <div className="font-semibold text-gray-700">Status</div>
@@ -490,6 +515,8 @@ export default function AppointmentRequestsPanel({
               )}
             </CardContent>
           </Card>
+            </div>
+          </>
         )}
       </div>
     </Drawer>

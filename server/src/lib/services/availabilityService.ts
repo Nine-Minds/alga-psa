@@ -62,6 +62,20 @@ export async function getAvailableTimeSlots(
     // Get day of week (0 = Sunday, 6 = Saturday)
     const dayOfWeek = targetDate.getDay();
 
+    // Check for company-wide exceptions first (user_id is NULL)
+    const companyWideException = await knex('availability_exceptions')
+      .where({
+        tenant: tenantId,
+        date: date
+      })
+      .whereNull('user_id')
+      .first();
+
+    // If there's a company-wide "not available" exception, return empty
+    if (companyWideException && !companyWideException.is_available) {
+      return [];
+    }
+
     // Determine which users to check
     let userIds: string[] = [];
     if (userId) {
@@ -80,23 +94,48 @@ export async function getAvailableTimeSlots(
         .distinct();
 
       userIds = usersWithSettings.map((row: any) => row.user_id);
+
+      // Also check for user-specific exceptions that make them available on this date
+      // (even if they don't normally work this day of week)
+      const availableExceptions = await knex('availability_exceptions')
+        .where({
+          tenant: tenantId,
+          date: date,
+          is_available: true
+        })
+        .whereNotNull('user_id')
+        .select('user_id')
+        .distinct();
+
+      // Add users from exceptions who might not be in the regular working hours
+      availableExceptions.forEach((ex: any) => {
+        if (!userIds.includes(ex.user_id)) {
+          userIds.push(ex.user_id);
+        }
+      });
     }
 
     if (userIds.length === 0) {
       return [];
     }
 
-    // Check for availability exceptions
-    const exceptions = await knex('availability_exceptions')
+    // Check for user-specific availability exceptions
+    const userExceptions = await knex('availability_exceptions')
       .where({
         tenant: tenantId,
         date: date
       })
       .whereIn('user_id', userIds)
+      .whereNotNull('user_id')
       .select('user_id', 'is_available');
 
-    const unavailableUsers = exceptions
+    const unavailableUsers = userExceptions
       .filter((ex: any) => !ex.is_available)
+      .map((ex: any) => ex.user_id);
+
+    // Users who have availability exceptions making them available
+    const exceptionAvailableUsers = userExceptions
+      .filter((ex: any) => ex.is_available)
       .map((ex: any) => ex.user_id);
 
     // Remove unavailable users
@@ -107,7 +146,7 @@ export async function getAvailableTimeSlots(
     }
 
     // Get working hours for each user
-    const workingHours = await knex('availability_settings')
+    let workingHours = await knex('availability_settings')
       .where({
         tenant: tenantId,
         setting_type: 'user_hours',
@@ -116,6 +155,30 @@ export async function getAvailableTimeSlots(
       })
       .whereIn('user_id', userIds)
       .select('user_id', 'start_time', 'end_time', 'buffer_before_minutes', 'buffer_after_minutes');
+
+    // For users with exceptions making them available but no regular hours for this day,
+    // try to find their hours from any other day as a template
+    const usersWithoutHours = userIds.filter(
+      uid => !workingHours.find((wh: any) => wh.user_id === uid) && exceptionAvailableUsers.includes(uid)
+    );
+
+    if (usersWithoutHours.length > 0) {
+      const alternateHours = await knex('availability_settings')
+        .where({
+          tenant: tenantId,
+          setting_type: 'user_hours',
+          is_available: true
+        })
+        .whereIn('user_id', usersWithoutHours)
+        .whereNotNull('start_time')
+        .whereNotNull('end_time')
+        .select('user_id', 'start_time', 'end_time', 'buffer_before_minutes', 'buffer_after_minutes')
+        .groupBy('user_id', 'start_time', 'end_time', 'buffer_before_minutes', 'buffer_after_minutes')
+        .limit(usersWithoutHours.length);
+
+      // Add these alternate hours to the working hours array
+      workingHours = [...workingHours, ...alternateHours];
+    }
 
     // Get existing schedule entries for the date
     const startOfDay = new Date(date);
@@ -309,6 +372,20 @@ export async function isSlotAvailable(
     const date = start.toISOString().split('T')[0];
     const dayOfWeek = start.getDay();
 
+    // Check for company-wide exceptions first
+    const companyWideException = await knex('availability_exceptions')
+      .where({
+        tenant: tenantId,
+        date: date
+      })
+      .whereNull('user_id')
+      .first();
+
+    // If there's a company-wide "not available" exception, return false
+    if (companyWideException && !companyWideException.is_available) {
+      return false;
+    }
+
     // Build user query
     let userQuery = knex('availability_settings')
       .where({
@@ -326,11 +403,7 @@ export async function isSlotAvailable(
 
     const workingHours = await userQuery;
 
-    if (workingHours.length === 0) {
-      return false;
-    }
-
-    // Check availability exceptions
+    // Check for user-specific availability exceptions
     const userIds = workingHours.map((wh: any) => wh.user_id);
     const exceptions = await knex('availability_exceptions')
       .where({
@@ -338,10 +411,48 @@ export async function isSlotAvailable(
         date: date
       })
       .whereIn('user_id', userIds)
-      .where({ is_available: false })
+      .whereNotNull('user_id')
+      .select('user_id', 'is_available');
+
+    const unavailableUsers = exceptions
+      .filter((ex: any) => !ex.is_available)
+      .map((ex: any) => ex.user_id);
+
+    // Check if there are exception-available users for this date
+    const exceptionAvailableUsers = await knex('availability_exceptions')
+      .where({
+        tenant: tenantId,
+        date: date,
+        is_available: true
+      })
+      .whereNotNull('user_id')
       .select('user_id');
 
-    const unavailableUsers = exceptions.map((ex: any) => ex.user_id);
+    // If checking a specific user with an available exception, that takes priority
+    if (userId && exceptionAvailableUsers.some((ex: any) => ex.user_id === userId)) {
+      // User has an exception making them available - allow the check to proceed
+      if (workingHours.length === 0) {
+        // Get hours from another day as template
+        const alternateHours = await knex('availability_settings')
+          .where({
+            tenant: tenantId,
+            setting_type: 'user_hours',
+            user_id: userId,
+            is_available: true
+          })
+          .whereNotNull('start_time')
+          .whereNotNull('end_time')
+          .first();
+
+        if (alternateHours) {
+          workingHours.push(alternateHours);
+        }
+      }
+    }
+
+    if (workingHours.length === 0) {
+      return false;
+    }
 
     // Check if at least one user is available during this time
     for (const userHours of workingHours) {
@@ -433,9 +544,10 @@ export async function getAvailableDates(
         userId
       );
 
+      const hasAvailability = slots.length > 0;
       results.push({
         date: dateStr,
-        has_availability: slots.length > 0,
+        has_availability: hasAvailability,
         slot_count: slots.length
       });
 

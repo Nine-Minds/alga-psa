@@ -7,23 +7,24 @@ import AvailabilitySettings from 'server/src/components/schedule/AvailabilitySet
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Calendar, Settings } from 'lucide-react';
+import { getAppointmentRequests } from 'server/src/lib/actions/appointmentRequestManagementActions';
 
 export default function SchedulePage() {
   const [showRequestsPanel, setShowRequestsPanel] = useState(false);
   const [showAvailabilitySettings, setShowAvailabilitySettings] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // TODO: Implement actual pending count fetching when appointment request actions are ready
+  const fetchPendingCount = async () => {
+    const result = await getAppointmentRequests({ status: 'pending' });
+    if (result.success && result.data) {
+      setPendingCount(result.data.length);
+    }
+  };
+
   useEffect(() => {
-    // Placeholder - replace with actual API call
-    // const fetchPendingCount = async () => {
-    //   const result = await getAppointmentRequests({ status: 'pending' });
-    //   if (result.success && result.data) {
-    //     setPendingCount(result.data.length);
-    //   }
-    // };
-    // fetchPendingCount();
-  }, []);
+    fetchPendingCount();
+  }, [refreshKey]);
 
   return (
     <div className="p-4">
@@ -62,8 +63,8 @@ export default function SchedulePage() {
         isOpen={showRequestsPanel}
         onClose={() => setShowRequestsPanel(false)}
         onRequestProcessed={() => {
-          // Refresh the schedule calendar when a request is processed
-          // This will be handled by the ScheduleCalendar component's internal refresh
+          // Refresh the pending count and trigger calendar refresh
+          setRefreshKey(prev => prev + 1);
         }}
       />
 

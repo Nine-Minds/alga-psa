@@ -41,6 +41,7 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<AppointmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<AppointmentRequest | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentRequest | null>(null);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null);
@@ -50,7 +51,8 @@ export default function AppointmentsPage() {
   const loadAppointments = useCallback(async () => {
     setLoading(true);
     try {
-      const filters = filterStatus ? { status: filterStatus } : undefined;
+      // Don't send 'all' as a filter - it means no status filter
+      const filters = filterStatus && filterStatus !== 'all' ? { status: filterStatus } : undefined;
       const result = await getMyAppointmentRequests(filters);
       if (result.success && result.data) {
         setAppointments(result.data as any);
@@ -170,14 +172,27 @@ export default function AppointmentsPage() {
             {t('appointments.table.viewDetails')}
           </Button>
           {record.status === 'pending' && (
-            <Button
-              id={`cancel-appointment-${value}`}
-              variant="outline"
-              size="sm"
-              onClick={() => setAppointmentToCancel(value)}
-            >
-              {t('appointments.table.cancel')}
-            </Button>
+            <>
+              <Button
+                id={`edit-appointment-${value}`}
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  setEditingAppointment(record);
+                  setIsRequestModalOpen(true);
+                }}
+              >
+                {t('appointments.table.edit')}
+              </Button>
+              <Button
+                id={`cancel-appointment-${value}`}
+                variant="outline"
+                size="sm"
+                onClick={() => setAppointmentToCancel(value)}
+              >
+                {t('appointments.table.cancel')}
+              </Button>
+            </>
           )}
         </div>
       )
@@ -214,10 +229,11 @@ export default function AppointmentsPage() {
         </Button>
       </div>
 
-      {/* Filter Tabs */}
+      {/* Appointments Table with Filter Tabs */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex gap-2 border-b border-gray-200">
+        <CardContent className="p-0">
+          {/* Filter Tabs */}
+          <div className="flex gap-2 border-b border-gray-200 px-6 pt-4">
             {(['all', 'pending', 'approved', 'declined'] as FilterStatus[]).map((status) => (
               <button
                 key={status}
@@ -240,50 +256,54 @@ export default function AppointmentsPage() {
               </button>
             ))}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Appointments Table */}
-      <Card>
-        <CardContent className="p-6">
-          {filteredAppointments.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {t('appointments.page.noAppointments')}
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                {t('appointments.page.noAppointmentsDescription')}
-              </p>
-              <Button
-                id="request-first-appointment-button"
-                variant="default"
-                onClick={() => setIsRequestModalOpen(true)}
-              >
-                {t('appointments.page.requestButton')}
-              </Button>
-            </div>
-          ) : (
-            <DataTable
-              id="appointments-table"
-              data={filteredAppointments}
-              columns={columns}
-              pagination={true}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-              pageSize={pageSize}
-              onItemsPerPageChange={setPageSize}
-              rowClassName={() => "hover:bg-gray-50"}
-            />
-          )}
+          {/* Table Content */}
+          <div className="p-6">
+            {filteredAppointments.length === 0 ? (
+              <div className="text-center py-12">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {t('appointments.page.noAppointments')}
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  {t('appointments.page.noAppointmentsDescription')}
+                </p>
+                <Button
+                  id="request-first-appointment-button"
+                  variant="default"
+                  onClick={() => setIsRequestModalOpen(true)}
+                >
+                  {t('appointments.page.requestButton')}
+                </Button>
+              </div>
+            ) : (
+              <DataTable
+                id="appointments-table"
+                data={filteredAppointments}
+                columns={columns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={setPageSize}
+                rowClassName={() => "hover:bg-gray-50"}
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
 
       {/* Request Appointment Modal */}
       <RequestAppointmentModal
         open={isRequestModalOpen}
-        onOpenChange={setIsRequestModalOpen}
+        onOpenChange={(open) => {
+          setIsRequestModalOpen(open);
+          if (!open) {
+            setEditingAppointment(null);
+          }
+        }}
         onAppointmentRequested={loadAppointments}
+        editingAppointment={editingAppointment}
       />
 
       {/* Appointment Details Modal */}

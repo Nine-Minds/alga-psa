@@ -3,6 +3,7 @@
     "dashboard": "Panel",
     "tickets": "Tickets de soporte",
     "projects": "Proyectos",
+    "appointments": "Citas",
     "billing": "Facturación",
     "assets": "Activos",
     "clientSettings": "Configuración de la empresa",
@@ -1014,6 +1015,7 @@
   "appointments": {
     "modal": {
       "title": "Solicitar cita",
+      "editTitle": "Editar solicitud de cita",
       "step": "Paso",
       "of": "de"
     },
@@ -1055,7 +1057,8 @@
       "technician": "Técnico preferido",
       "linkedTicket": "Ticket vinculado",
       "approvalNote": "Su solicitud de cita será enviada para aprobación. Recibirá un correo de confirmación una vez aprobada.",
-      "submit": "Solicitar cita"
+      "submit": "Solicitar cita",
+      "update": "Actualizar cita"
     },
     "status": {
       "pending": "Pendiente de aprobación",
@@ -1068,11 +1071,14 @@
       "loadDatesFailed": "Error al cargar las fechas disponibles. Por favor, inténtelo de nuevo.",
       "loadSlotsFailed": "Error al cargar las franjas horarias disponibles. Por favor, inténtelo de nuevo.",
       "createFailed": "Error al crear la solicitud de cita. Por favor, inténtelo de nuevo.",
+      "updateFailed": "Error al actualizar la solicitud de cita. Por favor, inténtelo de nuevo.",
       "loadFailed": "Error al cargar las citas. Por favor, inténtelo de nuevo."
     },
     "messages": {
       "requestSuccess": "¡Solicitud de cita enviada con éxito!",
       "requestSuccessDetail": "Revisaremos su solicitud y le enviaremos un correo de confirmación una vez aprobada.",
+      "updateSuccess": "¡Solicitud de cita actualizada con éxito!",
+      "updateSuccessDetail": "Su solicitud de cita ha sido actualizada.",
       "cancelSuccess": "Cita cancelada con éxito.",
       "cancelFailed": "Error al cancelar la cita. Por favor, inténtelo de nuevo."
     },
@@ -1098,6 +1104,7 @@
       "minutes": "min",
       "notAssigned": "No asignado",
       "viewDetails": "Ver detalles",
+      "edit": "Editar",
       "cancel": "Cancelar"
     },
     "details": {

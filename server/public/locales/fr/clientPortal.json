@@ -3,6 +3,7 @@
     "dashboard": "Tableau de bord",
     "tickets": "Tickets d'assistance",
     "projects": "Projets",
+    "appointments": "Rendez-vous",
     "billing": "Facturation",
     "assets": "Actifs",
     "clientSettings": "Paramètres de l'entreprise",
@@ -1014,6 +1015,7 @@
   "appointments": {
     "modal": {
       "title": "Demander un rendez-vous",
+      "editTitle": "Modifier la demande de rendez-vous",
       "step": "Étape",
       "of": "sur"
     },
@@ -1055,7 +1057,8 @@
       "technician": "Technicien préféré",
       "linkedTicket": "Ticket lié",
       "approvalNote": "Votre demande de rendez-vous sera soumise pour approbation. Vous recevrez un e-mail de confirmation une fois approuvée.",
-      "submit": "Demander un rendez-vous"
+      "submit": "Demander un rendez-vous",
+      "update": "Mettre à jour le rendez-vous"
     },
     "status": {
       "pending": "En attente d'approbation",
@@ -1068,11 +1071,14 @@
       "loadDatesFailed": "Échec du chargement des dates disponibles. Veuillez réessayer.",
       "loadSlotsFailed": "Échec du chargement des créneaux horaires disponibles. Veuillez réessayer.",
       "createFailed": "Échec de la création de la demande de rendez-vous. Veuillez réessayer.",
+      "updateFailed": "Échec de la mise à jour de la demande de rendez-vous. Veuillez réessayer.",
       "loadFailed": "Échec du chargement des rendez-vous. Veuillez réessayer."
     },
     "messages": {
       "requestSuccess": "Demande de rendez-vous soumise avec succès !",
       "requestSuccessDetail": "Nous examinerons votre demande et vous enverrons un e-mail de confirmation une fois approuvée.",
+      "updateSuccess": "Demande de rendez-vous mise à jour avec succès !",
+      "updateSuccessDetail": "Votre demande de rendez-vous a été mise à jour.",
       "cancelSuccess": "Rendez-vous annulé avec succès.",
       "cancelFailed": "Échec de l'annulation du rendez-vous. Veuillez réessayer."
     },
@@ -1098,6 +1104,7 @@
       "minutes": "min",
       "notAssigned": "Non assigné",
       "viewDetails": "Voir les détails",
+      "edit": "Modifier",
       "cancel": "Annuler"
     },
     "details": {

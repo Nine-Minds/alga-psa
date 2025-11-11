@@ -13,6 +13,8 @@ import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { Calendar } from 'server/src/components/ui/Calendar';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'server/src/components/ui/Table';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -85,6 +87,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [userBufferAfter, setUserBufferAfter] = useState('15');
   const [userAllowClientPreference, setUserAllowClientPreference] = useState(true);
   const [userDefaultApproverId, setUserDefaultApproverId] = useState<string>('');
+  const [configuredUsers, setConfiguredUsers] = useState<Set<string>>(new Set());
 
   // Service rules state
   const [services, setServices] = useState<IService[]>([]);
@@ -97,6 +100,14 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [exceptionUserId, setExceptionUserId] = useState<string>('__company_wide__');
   const [exceptionReason, setExceptionReason] = useState('');
   const [exceptionIsAvailable, setExceptionIsAvailable] = useState(false);
+
+  // Pagination state for configured users table
+  const [usersCurrentPage, setUsersCurrentPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(10);
+
+  // Pagination state for configured services table
+  const [servicesCurrentPage, setServicesCurrentPage] = useState(1);
+  const [servicesPageSize, setServicesPageSize] = useState(10);
 
   useEffect(() => {
     if (isOpen) {
@@ -281,6 +292,22 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     }
   };
 
+  const loadConfiguredUsers = async () => {
+    const result = await getAvailabilitySettings({
+      setting_type: 'user_hours'
+    });
+
+    if (result.success && result.data && result.data.length > 0) {
+      const userIds = new Set<string>();
+      result.data.forEach(setting => {
+        if (setting.user_id) {
+          userIds.add(setting.user_id);
+        }
+      });
+      setConfiguredUsers(userIds);
+    }
+  };
+
   // Update users list when team selection changes
   useEffect(() => {
     if (isManager && selectedTeamId) {
@@ -298,6 +325,12 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       loadUserHours(selectedUserId);
     }
   }, [selectedUserId, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'user-hours') {
+      loadConfiguredUsers();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'service-rules') {
@@ -368,6 +401,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         });
       }
       toast.success('User hours saved');
+      // Reload configured users list
+      await loadConfiguredUsers();
     } catch (error) {
       console.error('Failed to save user hours:', error);
       toast.error('Failed to save user hours');
@@ -471,6 +506,83 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       label: service.service_name
     })),
     [services]
+  );
+
+  // Column definitions for configured users table
+  const configuredUsersColumns: ColumnDefinition<Omit<IUserWithRoles, 'tenant'>>[] = useMemo(() => [
+    {
+      title: 'User Name',
+      dataIndex: 'first_name' as any,
+      render: (_, user: Omit<IUserWithRoles, 'tenant'>) => `${user.first_name} ${user.last_name}`
+    },
+    {
+      title: 'Status',
+      dataIndex: 'user_id' as any,
+      render: () => <Badge variant="default">Configured</Badge>
+    },
+    {
+      title: 'Action',
+      dataIndex: 'user_id' as any,
+      render: (_, user: Omit<IUserWithRoles, 'tenant'>) => (
+        <Button
+          id={`edit-user-${user.user_id}`}
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelectedUserId(user.user_id)}
+        >
+          Edit
+        </Button>
+      )
+    }
+  ], []);
+
+  // Column definitions for configured services table
+  const configuredServicesColumns: ColumnDefinition<IService>[] = useMemo(() => [
+    {
+      title: 'Service Name',
+      dataIndex: 'service_name' as any,
+    },
+    {
+      title: 'Duration (min)',
+      dataIndex: 'service_id' as any,
+      render: (_, service: IService) => serviceSettings[service.service_id]?.config_json?.default_duration || '-'
+    },
+    {
+      title: 'Without Contract',
+      dataIndex: 'service_id' as any,
+      render: (_, service: IService) => serviceSettings[service.service_id]?.allow_without_contract ? 'Yes' : 'No'
+    },
+    {
+      title: 'Max Per Day',
+      dataIndex: 'service_id' as any,
+      render: (_, service: IService) => serviceSettings[service.service_id]?.max_appointments_per_day || 'No limit'
+    },
+    {
+      title: 'Action',
+      dataIndex: 'service_id' as any,
+      render: (_, service: IService) => (
+        <Button
+          id={`edit-service-${service.service_id}`}
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelectedServiceId(service.service_id)}
+        >
+          Edit
+        </Button>
+      )
+    }
+  ], [serviceSettings]);
+
+  // Filtered data for configured users
+  const configuredUsersData = useMemo(() =>
+    users.filter(user => configuredUsers.has(user.user_id)),
+    [users, configuredUsers]
+  );
+
+  // Filtered data for configured services
+  const configuredServicesData = useMemo(() =>
+    services.filter(service => serviceSettings[service.service_id]),
+    [services, serviceSettings]
   );
 
   return (
@@ -618,13 +730,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             )}
 
             <div>
-              <Label>Select User</Label>
+              <Label>Select User to Configure</Label>
               <CustomSelect
                 id="user-hours-selector"
                 options={userOptions}
                 value={selectedUserId || undefined}
                 onValueChange={setSelectedUserId}
-                placeholder={isManager && !selectedTeamId && managedTeams.length > 1 ? "Select a team first" : "Select a user"}
+                placeholder={isManager && !selectedTeamId && managedTeams.length > 1 ? "Select a team first" : "Select a user to configure"}
                 disabled={isManager && !selectedTeamId && managedTeams.length > 1}
               />
             </div>
@@ -759,54 +871,43 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 </Button>
               </>
             )}
+
+            {/* Configured Users Table */}
+            <div className="border-t pt-4 mt-6">
+              <h3 className="text-lg font-semibold mb-2">Configured Users</h3>
+              <p className="text-sm text-gray-600 mb-4">Users with availability settings configured</p>
+              {configuredUsersData.length === 0 ? (
+                <div className="text-center text-gray-500 py-8 border rounded-lg">
+                  No users configured yet
+                </div>
+              ) : (
+                <DataTable
+                  id="configured-users-table"
+                  data={configuredUsersData}
+                  columns={configuredUsersColumns}
+                  pagination={true}
+                  currentPage={usersCurrentPage}
+                  onPageChange={setUsersCurrentPage}
+                  pageSize={usersPageSize}
+                  onItemsPerPageChange={(newSize) => {
+                    setUsersPageSize(newSize);
+                    setUsersCurrentPage(1);
+                  }}
+                />
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="service-rules" className="space-y-4 mt-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Service Rules Overview</h3>
-              <p className="text-sm text-gray-600 mb-4">Click a service to configure its rules</p>
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Service Name</TableHead>
-                      <TableHead>Duration (min)</TableHead>
-                      <TableHead>Without Contract</TableHead>
-                      <TableHead>Max Per Day</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {services.map(service => {
-                      const setting = serviceSettings[service.service_id];
-                      const hasRules = !!setting;
-                      return (
-                        <TableRow
-                          key={service.service_id}
-                          className={`cursor-pointer hover:bg-gray-50 ${selectedServiceId === service.service_id ? 'bg-blue-50' : ''}`}
-                          onClick={() => setSelectedServiceId(service.service_id)}
-                        >
-                          <TableCell className="font-medium">{service.service_name}</TableCell>
-                          <TableCell>
-                            {setting?.config_json?.default_duration || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {hasRules ? (setting.allow_without_contract ? 'Yes' : 'No') : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {setting?.max_appointments_per_day || 'No limit'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={hasRules ? 'default' : 'secondary'}>
-                              {hasRules ? 'Configured' : 'Not configured'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+              <Label>Select Service to Configure</Label>
+              <CustomSelect
+                id="service-rules-selector"
+                options={serviceOptions}
+                value={selectedServiceId || undefined}
+                onValueChange={setSelectedServiceId}
+                placeholder="Select a service to configure"
+              />
             </div>
 
             {selectedServiceId && (
@@ -885,6 +986,31 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 </div>
               </>
             )}
+
+            {/* Configured Services Table */}
+            <div className="border-t pt-4 mt-6">
+              <h3 className="text-lg font-semibold mb-2">Configured Services</h3>
+              <p className="text-sm text-gray-600 mb-4">Services with appointment rules configured</p>
+              {configuredServicesData.length === 0 ? (
+                <div className="text-center text-gray-500 py-8 border rounded-lg">
+                  No services configured yet
+                </div>
+              ) : (
+                <DataTable
+                  id="configured-services-table"
+                  data={configuredServicesData}
+                  columns={configuredServicesColumns}
+                  pagination={true}
+                  currentPage={servicesCurrentPage}
+                  onPageChange={setServicesCurrentPage}
+                  pageSize={servicesPageSize}
+                  onItemsPerPageChange={(newSize) => {
+                    setServicesPageSize(newSize);
+                    setServicesCurrentPage(1);
+                  }}
+                />
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="exceptions" className="space-y-4 mt-4">
@@ -965,11 +1091,12 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     exceptions.map(exception => {
                       const user = users.find(u => u.user_id === exception.user_id);
                       // Format date properly - handle both string and Date object
-                      const dateStr = exception.date instanceof Date
-                        ? exception.date.toISOString().split('T')[0]
-                        : typeof exception.date === 'string'
-                        ? exception.date.split('T')[0] // Handle ISO strings
-                        : String(exception.date);
+                      const dateValue: any = exception.date;
+                      const dateStr = dateValue instanceof Date
+                        ? dateValue.toISOString().split('T')[0]
+                        : typeof dateValue === 'string'
+                        ? dateValue.split('T')[0] // Handle ISO strings
+                        : String(dateValue);
 
                       return (
                         <div key={exception.exception_id} className="border rounded p-3 flex justify-between items-start">

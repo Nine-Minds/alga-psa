@@ -9,6 +9,12 @@ import { getTenantIdBySlug } from '@/lib/actions/tenant-actions/tenantSlugAction
 import { getConnection } from '@/lib/db/db';
 import { getServicesForPublicBooking } from '@/lib/services/availabilityService';
 import { SystemEmailService } from '@/lib/email/system/SystemEmailService';
+import {
+  getTenantSettings,
+  getScheduleApprovers,
+  formatDate,
+  formatTime
+} from '@/lib/actions/appointmentHelpers';
 import logger from '@alga-psa/shared/core/logger';
 import { z } from 'zod';
 
@@ -253,47 +259,25 @@ export async function POST(req: NextRequest) {
     try {
       const emailService = SystemEmailService.getInstance();
 
-      // TODO: Use proper email template once templates are created
-      // For now, send a simple confirmation email
-      await emailService.send({
-        to: validatedData.email,
-        subject: `Appointment Request Received - Reference #${referenceNumber}`,
-        html: `
-          <h2>Appointment Request Received</h2>
-          <p>Dear ${validatedData.name},</p>
-          <p>Thank you for your appointment request. We have received your request and will review it shortly.</p>
-          <p><strong>Reference Number:</strong> ${referenceNumber}</p>
-          <p><strong>Service:</strong> ${service.service_name}</p>
-          <p><strong>Requested Date:</strong> ${validatedData.requested_date}</p>
-          <p><strong>Requested Time:</strong> ${validatedData.requested_time}</p>
-          ${validatedData.company ? `<p><strong>Company:</strong> ${validatedData.company}</p>` : ''}
-          ${validatedData.message ? `<p><strong>Message:</strong> ${validatedData.message}</p>` : ''}
-          <p>You will receive a confirmation email once your appointment is approved.</p>
-          <p>If you have any questions, please contact us with your reference number.</p>
-          <p>Best regards,<br>${tenant.client_name}</p>
-        `,
-        text: `
-Appointment Request Received
+      // Get tenant settings
+      const tenantSettings = await getTenantSettings(tenantId);
 
-Dear ${validatedData.name},
-
-Thank you for your appointment request. We have received your request and will review it shortly.
-
-Reference Number: ${referenceNumber}
-Service: ${service.service_name}
-Requested Date: ${validatedData.requested_date}
-Requested Time: ${validatedData.requested_time}
-${validatedData.company ? `Company: ${validatedData.company}\n` : ''}
-${validatedData.message ? `Message: ${validatedData.message}\n` : ''}
-
-You will receive a confirmation email once your appointment is approved.
-
-If you have any questions, please contact us with your reference number.
-
-Best regards,
-${tenant.client_name}
-        `.trim(),
-        tenantId,
+      // Send confirmation email to requester using template
+      await emailService.sendAppointmentRequestReceived({
+        requesterName: validatedData.name,
+        requesterEmail: validatedData.email,
+        serviceName: service.service_name,
+        requestedDate: await formatDate(validatedData.requested_date, 'en'),
+        requestedTime: await formatTime(validatedData.requested_time, 'en'),
+        duration: service.default_duration || 60,
+        referenceNumber: referenceNumber,
+        responseTime: '24 hours',
+        contactEmail: tenantSettings.contactEmail,
+        contactPhone: tenantSettings.contactPhone,
+        tenantName: tenantSettings.tenantName,
+        currentYear: new Date().getFullYear()
+      }, {
+        tenantId: tenantId
       });
 
       logger.info('[public-appointment-request] Confirmation email sent', {
@@ -309,8 +293,51 @@ ${tenant.client_name}
       });
     }
 
-    // TODO: Send notification email to MSP staff
-    // This should be implemented once the notification templates are ready
+    // Send notification email to MSP staff
+    try {
+      const emailService = SystemEmailService.getInstance();
+
+      // Get tenant settings
+      const tenantSettings = await getTenantSettings(tenantId);
+
+      // Get staff users who can approve appointment requests
+      const staffUsers = await getScheduleApprovers(tenantId);
+
+      for (const staffUser of staffUsers) {
+        await emailService.sendNewAppointmentRequest(staffUser.email, {
+          requesterName: validatedData.name,
+          requesterEmail: validatedData.email,
+          requesterPhone: validatedData.phone || undefined,
+          companyName: validatedData.company || undefined,
+          clientName: validatedData.company || 'Public Request',
+          serviceName: service.service_name,
+          requestedDate: await formatDate(validatedData.requested_date, 'en'),
+          requestedTime: await formatTime(validatedData.requested_time, 'en'),
+          duration: service.default_duration || 60,
+          preferredTechnician: 'Not specified',
+          description: validatedData.message || undefined,
+          referenceNumber: referenceNumber,
+          submittedAt: new Date().toISOString(),
+          isAuthenticated: false,
+          approvalLink: `${process.env.NEXT_PUBLIC_APP_URL}/msp/schedule`,
+          tenantName: tenantSettings.tenantName,
+          currentYear: new Date().getFullYear()
+        }, {
+          tenantId: tenantId
+        });
+      }
+
+      logger.info('[public-appointment-request] MSP staff notifications sent', {
+        appointmentRequestId,
+        staffUsersCount: staffUsers.length
+      });
+    } catch (emailError) {
+      // Log error but don't fail the request
+      logger.error('[public-appointment-request] Failed to send MSP staff notifications', {
+        appointmentRequestId,
+        error: emailError
+      });
+    }
 
     return NextResponse.json({
       success: true,

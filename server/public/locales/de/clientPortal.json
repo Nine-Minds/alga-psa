@@ -3,6 +3,7 @@
     "dashboard": "Dashboard",
     "tickets": "Support-Tickets",
     "projects": "Projekte",
+    "appointments": "Termine",
     "billing": "Abrechnung",
     "assets": "Assets",
     "clientSettings": "Unternehmenseinstellungen",
@@ -1014,6 +1015,7 @@
   "appointments": {
     "modal": {
       "title": "Termin anfragen",
+      "editTitle": "Terminanfrage bearbeiten",
       "step": "Schritt",
       "of": "von"
     },
@@ -1055,7 +1057,8 @@
       "technician": "Bevorzugter Techniker",
       "linkedTicket": "Verknüpftes Ticket",
       "approvalNote": "Ihre Terminanfrage wird zur Genehmigung eingereicht. Sie erhalten eine E-Mail-Bestätigung, sobald sie genehmigt wurde.",
-      "submit": "Termin anfragen"
+      "submit": "Termin anfragen",
+      "update": "Termin aktualisieren"
     },
     "status": {
       "pending": "Genehmigung ausstehend",
@@ -1068,11 +1071,14 @@
       "loadDatesFailed": "Fehler beim Laden der verfügbaren Termine. Bitte versuchen Sie es erneut.",
       "loadSlotsFailed": "Fehler beim Laden der verfügbaren Zeitslots. Bitte versuchen Sie es erneut.",
       "createFailed": "Fehler beim Erstellen der Terminanfrage. Bitte versuchen Sie es erneut.",
+      "updateFailed": "Fehler beim Aktualisieren der Terminanfrage. Bitte versuchen Sie es erneut.",
       "loadFailed": "Fehler beim Laden der Termine. Bitte versuchen Sie es erneut."
     },
     "messages": {
       "requestSuccess": "Terminanfrage erfolgreich eingereicht!",
       "requestSuccessDetail": "Wir prüfen Ihre Anfrage und senden Ihnen eine Bestätigungs-E-Mail, sobald sie genehmigt wurde.",
+      "updateSuccess": "Terminanfrage erfolgreich aktualisiert!",
+      "updateSuccessDetail": "Ihre Terminanfrage wurde aktualisiert.",
       "cancelSuccess": "Termin erfolgreich storniert.",
       "cancelFailed": "Fehler beim Stornieren des Termins. Bitte versuchen Sie es erneut."
     },
@@ -1098,6 +1104,7 @@
       "minutes": "Min.",
       "notAssigned": "Nicht zugewiesen",
       "viewDetails": "Details anzeigen",
+      "edit": "Bearbeiten",
       "cancel": "Stornieren"
     },
     "details": {

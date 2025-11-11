@@ -84,6 +84,7 @@ export interface AppointmentRequestReceivedData {
   duration: number;
   preferredTechnician?: string;
   responseTime: string;
+  portalLink: string;
   contactEmail: string;
   contactPhone?: string;
   tenantName: string;
@@ -141,6 +142,9 @@ export interface NewAppointmentRequestData {
   preferredTechnician?: string;
   description?: string;
   approvalLink?: string;
+  portalLink?: string;
+  contactEmail: string;
+  contactPhone?: string;
   tenantName: string;
   currentYear: number;
 }

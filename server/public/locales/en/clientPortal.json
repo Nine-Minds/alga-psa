@@ -3,6 +3,7 @@
     "dashboard": "Dashboard",
     "tickets": "Support Tickets",
     "projects": "Projects",
+    "appointments": "Appointments",
     "billing": "Billing",
     "assets": "Assets",
     "clientSettings": "Client Settings",
@@ -1019,6 +1020,7 @@
   "appointments": {
     "modal": {
       "title": "Request Appointment",
+      "editTitle": "Edit Appointment Request",
       "step": "Step",
       "of": "of"
     },
@@ -1063,7 +1065,8 @@
       "technician": "Preferred Technician",
       "linkedTicket": "Linked Ticket",
       "approvalNote": "Your appointment request will be submitted for approval. You'll receive an email confirmation once approved.",
-      "submit": "Request Appointment"
+      "submit": "Request Appointment",
+      "update": "Update Appointment"
     },
     "status": {
       "pending": "Pending Approval",
@@ -1076,11 +1079,14 @@
       "loadDatesFailed": "Failed to load available dates. Please try again.",
       "loadSlotsFailed": "Failed to load available time slots. Please try again.",
       "createFailed": "Failed to create appointment request. Please try again.",
+      "updateFailed": "Failed to update appointment request. Please try again.",
       "loadFailed": "Failed to load appointments. Please try again."
     },
     "messages": {
       "requestSuccess": "Appointment request submitted successfully!",
       "requestSuccessDetail": "We'll review your request and send you a confirmation email once approved.",
+      "updateSuccess": "Appointment request updated successfully!",
+      "updateSuccessDetail": "Your appointment request has been updated.",
       "cancelSuccess": "Appointment cancelled successfully.",
       "cancelFailed": "Failed to cancel appointment. Please try again."
     },
@@ -1106,6 +1112,7 @@
       "minutes": "min",
       "notAssigned": "Not assigned",
       "viewDetails": "View Details",
+      "edit": "Edit",
       "cancel": "Cancel"
     },
     "details": {
