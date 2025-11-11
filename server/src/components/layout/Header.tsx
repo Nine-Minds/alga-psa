@@ -31,6 +31,7 @@ import { checkAccountManagementPermission } from 'server/src/lib/actions/permiss
 import type { JobMetrics } from 'server/src/lib/actions/job-actions';
 import { getQueueMetricsAction } from 'server/src/lib/actions/job-actions';
 import { analytics } from 'server/src/lib/analytics/client';
+import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -43,15 +44,39 @@ interface QuickCreateOption {
   id: string;
   label: string;
   description: string;
-  href: string;
+  type: QuickCreateType;
 }
 
 const quickCreateOptions: QuickCreateOption[] = [
   {
+    id: 'create-ticket',
+    label: 'Ticket',
+    description: 'Create a new support ticket',
+    type: 'ticket'
+  },
+  {
+    id: 'create-client',
+    label: 'Client',
+    description: 'Add a new client to your system',
+    type: 'client'
+  },
+  {
+    id: 'create-contact',
+    label: 'Contact',
+    description: 'Add a new contact person',
+    type: 'contact'
+  },
+  {
+    id: 'create-project',
+    label: 'Project',
+    description: 'Start a new project',
+    type: 'project'
+  },
+  {
     id: 'create-asset',
     label: 'Asset',
     description: 'Add a new device to your workspace',
-    href: '/msp/assets?intent=new-asset'
+    type: 'asset'
   }
 ];
 
@@ -94,41 +119,54 @@ const TenantBadge: React.FC<{ tenant?: string | null }> = ({ tenant }) => {
   );
 };
 
-const QuickCreateMenu: React.FC<{ onNavigate: (href: string) => void }> = ({ onNavigate }) => {
+const QuickCreateMenu: React.FC = () => {
+  const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
+
+  const handleQuickCreateSelect = (type: QuickCreateType) => {
+    analytics.capture('ui.quick_create.select', { target: type });
+    setActiveQuickCreate(type);
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          id="global-quick-create-trigger"
-          variant="ghost"
-          size="sm"
-          className="flex items-center gap-2"
-          aria-label="Open quick create"
-        >
-          <PlusCircle className="h-5 w-5" />
-          <span className="hidden lg:inline text-sm font-medium">Quick Create</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <div className="px-3 py-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Create</p>
-        </div>
-        {quickCreateOptions.map((option) => (
-          <DropdownMenuItem
-            key={option.id}
-            id={`${option.id}-menu-item`}
-            onSelect={() => {
-              analytics.capture('ui.quick_create.select', { target: option.id });
-              onNavigate(option.href);
-            }}
-            className="flex flex-col items-start gap-0.5"
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            id="global-quick-create-trigger"
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-2"
+            aria-label="Open quick create"
           >
-            <span className="text-sm font-medium text-gray-900">{option.label}</span>
-            <span className="text-xs text-gray-500">{option.description}</span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <PlusCircle className="h-5 w-5" />
+            <span className="hidden lg:inline text-sm font-medium">Quick Create</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          <div className="px-3 py-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Create</p>
+          </div>
+          {quickCreateOptions.map((option) => (
+            <DropdownMenuItem
+              key={option.id}
+              id={`${option.id}-menu-item`}
+              onSelect={() => handleQuickCreateSelect(option.type)}
+              className="flex flex-col items-start gap-0.5"
+            >
+              <span className="text-sm font-medium text-gray-900">{option.label}</span>
+              <span className="text-xs text-gray-500">{option.description}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      
+      {activeQuickCreate && (
+        <QuickCreateDialog
+          type={activeQuickCreate}
+          onClose={() => setActiveQuickCreate(null)}
+        />
+      )}
+    </>
   );
 };
 
