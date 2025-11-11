@@ -210,12 +210,43 @@ hocuspocus:
 
 # Development-specific configuration
 config:
+  db:
+    type: postgres
+    host: postgres
+    port: 5432
+    user: app_user
+    password: password
+    server_database: server
+    server_password: password
+    server_admin_password: password
+    hocuspocus_database: hocuspocus
+    hostSecret:
+      name: ""
+      key: ""
+    server_password_secret:
+      name: ""
+      key: ""
+    server_password_admin_secret:
+      name: ""
+      key: ""
+  redis:
+    host: redis
+    port: 6379
+    password: password
+    db: 0
+    hostFQDN: ""
+    passwordSecret:
+      name: ""
+      key: ""
+  hocuspocus:
+    hostFQDN: ""
+    port: 1234
   llm:
     openai: 'dev-key-here'
     anthropic: 'dev-key-here'
   extensions:
     domainRoot: ""
-  
+
   # Local storage for development (disabled to avoid PVC issues)
   storage:
     default_provider: 'local'
@@ -232,6 +263,32 @@ config:
           - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
           - 'video/*'
         retention_days: 7  # Shorter retention for dev
+      s3:
+        enabled: false
+        region: 'us-west-2'
+        bucket: 'company-files'
+        bundle_bucket: 'alga-ext'
+        endpoint: ''
+        max_file_size: "524288000"
+        allowed_mime_types:
+          - 'image/*'
+          - 'application/pdf'
+          - 'text/plain'
+        retention_days: 30
+        secretRef:
+          name: "storage-credentials"
+          accessKeyKey: "S3_ACCESS_KEY"
+          secretKeyKey: "S3_SECRET_KEY"
+    upload:
+      temp_dir: '/tmp/uploads'
+      max_concurrent: "3"
+      chunk_size: "5242880"
+    backup:
+      enabled: false
+      schedule: '0 0 * * *'
+      retention:
+        days: "30"
+        copies: "7"
 
 # Development logging
 logging:

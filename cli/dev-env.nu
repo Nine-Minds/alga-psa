@@ -348,13 +348,103 @@ devEnv:
     codeApp: ($code_app_port)
     aiWeb: ($ai_web_port)
 
+# Alias hostedEnv to devEnv for template compatibility
+hostedEnv:
+  enabled: true
+  branch: \"($branch)\"
+  sanitizedBranch: \"($sanitized_branch)\"
+  namespace: \"($namespace)\"
+  repository:
+    url: \"https://github.com/Nine-Minds/alga-psa.git\"
+    branch: \"($branch)\"
+  git:
+    authorName: \"($git_author_name)\"
+    authorEmail: \"($git_author_email)\"
+  codeServer:
+    enabled: true
+    image:
+      repository: \"harbor.nineminds.com/nineminds/alga-code-server\"
+      tag: \"latest\"
+      pullPolicy: \"Always\"
+      is_private: true
+      credentials: \"harbor-credentials\"
+    service:
+      type: \"ClusterIP\"
+      port: 8080
+    password: \"alga-dev\"
+    resources:
+      limits:
+        cpu: \"6\"
+        memory: \"16Gi\"
+      requests:
+        cpu: \"500m\"
+        memory: \"4Gi\"
+  aiAutomation:
+    enabled: true
+    web:
+      image:
+        repository: \"harbor.nineminds.com/nineminds/alga-ai-web\"
+        tag: \"latest\"
+        pullPolicy: \"Always\"
+        is_private: true
+        credentials: \"harbor-credentials\"
+      service:
+        type: \"ClusterIP\"
+        port: 3000
+      resources:
+        limits:
+          cpu: \"1\"
+          memory: \"2Gi\"
+        requests:
+          cpu: \"250m\"
+          memory: \"512Mi\"
+    api:
+      image:
+        repository: \"harbor.nineminds.com/nineminds/alga-ai-api\"
+        tag: \"latest\"
+        pullPolicy: \"Always\"
+        is_private: true
+        credentials: \"harbor-credentials\"
+      service:
+        type: \"ClusterIP\"
+        port: 4000
+      resources:
+        limits:
+          cpu: \"4\"
+          memory: \"8Gi\"
+        requests:
+          cpu: \"4000m\"
+          memory: \"8Gi\"
+  persistence:
+    enabled: true
+    size: \"10Gi\"
+    storageClass: \"local-path\"
+    keepOnDelete: false
+  ingress:
+    enabled: true
+    className: \"nginx\"
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: \"true\"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: \"true\"
+    tls:
+      enabled: true
+      secretName: \"alga-dev-tls\"
+  tolerations: []
+  affinity: {}
+  # External port configuration
+  externalPorts:
+    app: ($app_port)
+    codeServer: ($code_server_port)
+    codeApp: ($code_app_port)
+    aiWeb: ($ai_web_port)
+
 server:
   image:
     name: \"($image_name)\"
     tag: \"($image_tag)\"
   pullPolicy: Always  # Force pull to avoid cache issues
 
-# LLM Configuration
+# Only override LLM config if custom values provided
 config:
   llm:
     customOpenaiApiKey: \"($custom_openai_api_key)\"
