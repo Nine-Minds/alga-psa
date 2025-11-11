@@ -65,8 +65,9 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   // Handle QuickAddAsset which uses a different dialog pattern
   if (type === 'asset') {
     return (
-      <QuickAddAsset 
+      <QuickAddAsset
         onAssetAdded={handleAssetAdded}
+        onClose={onClose}
         defaultOpen={true}
       />
     );
