@@ -150,7 +150,39 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      const payload = await resp.json();
+      const rawBody = await resp.text();
+      if (!rawBody) {
+        console.error('[api/ext] runner returned empty body', { status: resp.status, requestId, tenantId, extensionId });
+        return applyCorsHeaders(
+          NextResponse.json(
+            { error: 'runner_empty_response', detail: { status: resp.status } },
+            { status: 502 }
+          ),
+          corsOrigin
+        );
+      }
+      let payload: any;
+      try {
+        payload = JSON.parse(rawBody);
+      } catch (parseError) {
+        console.error('[api/ext] runner response was not JSON', {
+          status: resp.status,
+          requestId,
+          tenantId,
+          extensionId,
+          bodyPreview: rawBody.slice(0, 500),
+        });
+        return applyCorsHeaders(
+          NextResponse.json(
+            {
+              error: 'runner_invalid_response',
+              detail: { status: resp.status, bodyPreview: rawBody.slice(0, 500) },
+            },
+            { status: 502 }
+          ),
+          corsOrigin
+        );
+      }
       const respHeaders = new Headers(filterResponseHeaders(resp.headers));
       const body = payload.body_b64 ? Buffer.from(payload.body_b64, 'base64') : undefined;
       return applyCorsHeaders(
