@@ -11,6 +11,7 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Plus, X, Clock, DollarSign } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
+import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -89,20 +90,21 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     updateData({ hourly_services: next });
   };
 
-  const defaultOverlay = (): BucketOverlayInput => ({
+  const defaultOverlay = (billingFrequency: string): BucketOverlayInput => ({
     total_minutes: undefined,
     overage_rate: undefined,
     allow_rollover: false,
-    billing_period: 'monthly',
+    billing_period: billingFrequency as 'monthly' | 'weekly',
   });
 
   const toggleBucketOverlay = (index: number, enabled: boolean) => {
     const next = [...data.hourly_services];
     if (enabled) {
       const existing = next[index].bucket_overlay;
+      const effectiveBillingFrequency = data.hourly_billing_frequency ?? data.billing_frequency;
       next[index] = {
         ...next[index],
-        bucket_overlay: existing ? { ...existing } : defaultOverlay(),
+        bucket_overlay: existing ? { ...existing } : defaultOverlay(effectiveBillingFrequency),
       };
     } else {
       next[index] = {
@@ -216,7 +218,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
               <div className="space-y-2">
                 <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
                   <DollarSign className="h-3 w-3" />
-                  Hourly Rate Guidance
+                  Hourly Rate
                 </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
@@ -251,22 +253,23 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 <p className="text-xs text-gray-500">
                   {service.hourly_rate
                     ? `${formatCurrency(service.hourly_rate)}/hour`
-                    : 'Enter the suggested hourly rate'}
+                    : 'Enter the hourly rate'}
                 </p>
               </div>
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                 <SwitchWithLabel
-                  label="Recommend bucket of hours"
+                  label="Set bucket of hours"
                   checked={Boolean(service.bucket_overlay)}
                   onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                 />
                 {service.bucket_overlay && (
                   <BucketOverlayFields
                     mode="hours"
-                    value={service.bucket_overlay ?? defaultOverlay()}
+                    value={service.bucket_overlay ?? defaultOverlay(data.hourly_billing_frequency ?? data.billing_frequency)}
                     onChange={(next) => updateBucketOverlay(index, next)}
                     automationId={`hourly-bucket-${index}`}
+                    billingFrequency={data.hourly_billing_frequency ?? data.billing_frequency}
                   />
                 )}
               </div>
@@ -325,6 +328,15 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
             )}
           </div>
         </div>
+      )}
+
+      {data.hourly_services.length > 0 && (
+        <BillingFrequencyOverrideSelect
+          contractBillingFrequency={data.billing_frequency}
+          value={data.hourly_billing_frequency}
+          onChange={(value) => updateData({ hourly_billing_frequency: value })}
+          label="Alternate Billing Frequency (Optional)"
+        />
       )}
     </div>
   );

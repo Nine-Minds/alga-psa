@@ -12,11 +12,13 @@ import { TemplateWizardData } from '../TemplateWizard';
 interface TemplateContractBasicsStepProps {
   data: TemplateWizardData;
   updateData: (data: Partial<TemplateWizardData>) => void;
+  nameError?: string;
 }
 
 export function TemplateContractBasicsStep({
   data,
   updateData,
+  nameError,
 }: TemplateContractBasicsStepProps) {
   return (
     <div className="space-y-6" data-automation-id="template-contract-basics-step">
@@ -39,7 +41,13 @@ export function TemplateContractBasicsStep({
           value={data.contract_name}
           onChange={(event) => updateData({ contract_name: event.target.value })}
           placeholder="Managed Services Starter, Premium Support Bundle, etc."
+          className={nameError ? 'border-red-500' : ''}
         />
+        {nameError && (
+          <p className="text-xs text-red-600">
+            {nameError}
+          </p>
+        )}
         <p className="text-xs text-gray-500">
           Use a descriptive name so teams can quickly identify the right template.
         </p>

@@ -112,7 +112,7 @@ export function UsagePlanConfiguration({
       // Populate plan basics form fields
       setPlanName(fetchedPlan.contract_line_name);
       setBillingFrequency(fetchedPlan.billing_frequency);
-      setIsCustom(fetchedPlan.is_custom);
+      setIsCustom(fetchedPlan.is_custom ?? false);
       setIsBasicsDirty(false);
 
       // 1. Fetch the list of services associated with the plan
@@ -230,7 +230,7 @@ export function UsagePlanConfiguration({
     if (plan) {
       setPlanName(plan.contract_line_name);
       setBillingFrequency(plan.billing_frequency);
-      setIsCustom(plan.is_custom);
+      setIsCustom(plan.is_custom ?? false);
       setIsBasicsDirty(false);
       setPlanBasicsErrors([]);
     }

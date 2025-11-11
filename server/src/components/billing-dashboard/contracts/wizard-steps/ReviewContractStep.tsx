@@ -17,7 +17,7 @@ import {
   Repeat,
 } from 'lucide-react';
 import { parse } from 'date-fns';
-import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 import { getClients } from 'server/src/lib/actions/clientAction';
 
 interface ReviewContractStepProps {
@@ -211,11 +211,21 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                 </li>
               ))}
             </ul>
-            <div className="flex items-center gap-2 pt-2 border-t">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <p className="text-gray-600">
-                Proration: {data.enable_proration ? 'Enabled' : 'Disabled'}
-              </p>
+            <div className="pt-2 border-t space-y-1">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <p className="text-gray-600">
+                  Proration: {data.enable_proration ? 'Enabled' : 'Disabled'}
+                </p>
+              </div>
+              {data.fixed_billing_frequency && data.fixed_billing_frequency !== data.billing_frequency && (
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4 text-gray-400" />
+                  <p className="text-gray-600">
+                    <strong>Billing Frequency Override:</strong> {BILLING_FREQUENCY_DISPLAY[data.fixed_billing_frequency] || data.fixed_billing_frequency}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </Card>
@@ -251,7 +261,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                 ))}
               </ul>
             </div>
-            {(data.minimum_billable_time || data.round_up_to_nearest) && (
+            {(data.minimum_billable_time || data.round_up_to_nearest || (data.hourly_billing_frequency && data.hourly_billing_frequency !== data.billing_frequency)) && (
               <div className="pt-2 border-t space-y-1">
                 {data.minimum_billable_time && (
                   <p className="text-gray-600">
@@ -262,6 +272,14 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                   <p className="text-gray-600">
                     <strong>Round Up:</strong> {data.round_up_to_nearest} minutes
                   </p>
+                )}
+                {data.hourly_billing_frequency && data.hourly_billing_frequency !== data.billing_frequency && (
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-gray-400" />
+                    <p className="text-gray-600">
+                      <strong>Billing Frequency Override:</strong> {BILLING_FREQUENCY_DISPLAY[data.hourly_billing_frequency] || data.hourly_billing_frequency}
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -296,6 +314,16 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                 </li>
               ))}
             </ul>
+            {data.usage_billing_frequency && data.usage_billing_frequency !== data.billing_frequency && (
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4 text-gray-400" />
+                  <p className="text-gray-600">
+                    <strong>Billing Frequency Override:</strong> {BILLING_FREQUENCY_DISPLAY[data.usage_billing_frequency] || data.usage_billing_frequency}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       )}

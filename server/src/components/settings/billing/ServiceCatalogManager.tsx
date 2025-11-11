@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 // Import new action and types
@@ -730,10 +729,13 @@ const ServiceCatalogManager: React.FC = () => {
                 </div>
                 <div>
                   <label htmlFor="unit-of-measure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</label>
-                  <UnitOfMeasureInput
+                  <Input
+                    id="unit-of-measure"
+                    type="text"
                     value={editingService?.unit_of_measure || ''}
-                    onChange={(value) => setEditingService({ ...editingService!, unit_of_measure: value })}
+                    onChange={(e) => setEditingService({ ...editingService!, unit_of_measure: e.target.value })}
                     placeholder="e.g., GB, API call, user"
+                    required
                     className="w-full"
                   />
                   <p className="text-xs text-gray-500 mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
