@@ -22,9 +22,9 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
 
-  // Load clients when needed for projects
+  // Load clients when needed for projects and contacts
   useEffect(() => {
-    if (type === 'project' && clients.length === 0) {
+    if ((type === 'project' || type === 'contact') && clients.length === 0) {
       setIsLoadingClients(true);
       getAllClients(false)
         .then(setClients)
@@ -100,33 +100,48 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
 
   // Handle QuickAddContact
   if (type === 'contact') {
+    if (isLoadingClients) {
+      return (
+        <Dialog isOpen={true} onClose={onClose} title="Add New Contact">
+          <DialogContent className="max-w-2xl">
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
     return (
       <QuickAddContact
         isOpen={true}
         onClose={onClose}
         onContactAdded={handleContactAdded}
+        clients={clients}
       />
     );
   }
 
-  // Handle ProjectQuickAdd (needs to be wrapped in a dialog)
+  // Handle ProjectQuickAdd (has its own dialog wrapper)
   if (type === 'project') {
-    return (
-      <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {isLoadingClients ? (
+    if (isLoadingClients) {
+      return (
+        <Dialog isOpen={true} onClose={onClose} title="Add New Project">
+          <DialogContent className="max-w-2xl">
             <div className="flex justify-center items-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
-          ) : (
-            <ProjectQuickAdd
-              onClose={onClose}
-              onProjectAdded={handleProjectAdded}
-              clients={clients}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    return (
+      <ProjectQuickAdd
+        onClose={onClose}
+        onProjectAdded={handleProjectAdded}
+        clients={clients}
+      />
     );
   }
 
