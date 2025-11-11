@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { getDashboardMetrics, getRecentActivity, type RecentActivity } from 'server/src/lib/actions/client-portal-actions/dashboard';
+import { getMyAppointmentRequests } from 'server/src/lib/actions/client-portal-actions/appointmentRequestActions';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
 import { RequestAppointmentModal } from 'server/src/components/client-portal/appointments/RequestAppointmentModal';
 import { useTranslation } from 'server/src/lib/i18n/client';
@@ -38,38 +39,20 @@ export function ClientDashboard() {
   const fetchDashboardData = useCallback(async () => {
     setError(false);
     try {
-      const [metricsData, activitiesData] = await Promise.all([
+      const [metricsData, activitiesData, appointmentsResult] = await Promise.all([
         getDashboardMetrics(),
-          getRecentActivity()
-        ]);
-        setMetrics(metricsData);
+        getRecentActivity(),
+        getMyAppointmentRequests({ status: 'approved' })
+      ]);
+      setMetrics(metricsData);
       setActivities(activitiesData);
 
-      // TODO: Replace with actual action
-      // const appointmentsData = await getUpcomingAppointments();
-      // setUpcomingAppointments(appointmentsData);
-
-      // Mock data for now
-      const mockAppointments: AppointmentRequest[] = [
-        {
-          appointment_request_id: '1',
-          service_name: 'IT Support - On-site',
-          requested_date: '2025-11-15',
-          requested_time: '10:00',
-          requested_duration: 60,
-          status: 'approved',
-          preferred_assigned_user_name: 'John Smith'
-        },
-        {
-          appointment_request_id: '2',
-          service_name: 'Network Maintenance',
-          requested_date: '2025-11-20',
-          requested_time: '14:00',
-          requested_duration: 120,
-          status: 'pending'
-        }
-      ];
-      setUpcomingAppointments(mockAppointments);
+      if (appointmentsResult.success && appointmentsResult.data) {
+        // Show only upcoming appointments (approved status)
+        setUpcomingAppointments(appointmentsResult.data as any);
+      } else {
+        setUpcomingAppointments([]);
+      }
     } catch (error) {
       console.error('Error loading dashboard:', error);
       setError(true);

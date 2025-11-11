@@ -20,6 +20,7 @@ import {
 } from '../schemas/appointmentSchemas';
 import { SystemEmailService } from '../email/system/SystemEmailService';
 import ScheduleEntry from '../models/scheduleEntry';
+import { publishEvent } from '../eventBus/publishers';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -239,8 +240,8 @@ export async function approveAppointmentRequest(
         title: `Appointment: ${service.service_name}`,
         scheduled_start: scheduledStart,
         scheduled_end: scheduledEnd,
-        work_item_type: request.ticket_id ? 'ticket' : 'ad_hoc',
-        work_item_id: request.ticket_id || null,
+        work_item_type: 'appointment_request' as const,
+        work_item_id: request.appointment_request_id,
         status: 'scheduled',
         notes: request.description || '',
         assigned_user_ids: [validatedData.assigned_user_id],
@@ -277,7 +278,44 @@ export async function approveAppointmentRequest(
         })
         .first();
 
-      // Send notification email
+      // Get client user ID if available
+      let clientUserId: string | undefined;
+      if (request.is_authenticated && request.contact_id) {
+        const clientUser = await trx('users')
+          .select('user_id')
+          .where({
+            contact_id: request.contact_id,
+            tenant,
+            user_type: 'client'
+          })
+          .first();
+        clientUserId = clientUser?.user_id;
+      }
+
+      // Publish event (will trigger internal notifications automatically)
+      await publishEvent({
+        eventType: 'APPOINTMENT_REQUEST_APPROVED',
+        payload: {
+          tenantId: tenant || '',
+          appointmentRequestId: request.appointment_request_id,
+          clientId: request.client_id,
+          contactId: request.contact_id,
+          clientUserId,
+          serviceId: request.service_id,
+          serviceName: service.service_name,
+          requestedDate: finalDate,
+          requestedTime: finalTime,
+          requestedDuration: request.requested_duration,
+          isAuthenticated: request.is_authenticated,
+          requesterEmail: request.requester_email || '',
+          requesterName: request.requester_name,
+          approvedByUserId: currentUser.user_id,
+          assignedUserId: validatedData.assigned_user_id,
+          scheduleEntryId: scheduleEntry.entry_id
+        }
+      });
+
+      // Send email using SystemEmailService
       try {
         const emailService = SystemEmailService.getInstance();
         let recipientEmail = '';
@@ -301,27 +339,28 @@ export async function approveAppointmentRequest(
         }
 
         if (recipientEmail) {
-          await emailService.sendEmail({
-            to: recipientEmail,
-            subject: 'Appointment Request Approved',
-            html: `
-              <h2>Appointment Confirmed</h2>
-              <p>Dear ${recipientName || 'Customer'},</p>
-              <p>Your appointment request has been approved!</p>
-              <p><strong>Appointment Details:</strong></p>
-              <ul>
-                <li>Service: ${service.service_name}</li>
-                <li>Date: ${finalDate}</li>
-                <li>Time: ${finalTime}</li>
-                <li>Duration: ${request.requested_duration} minutes</li>
-                <li>Assigned Technician: ${assignedUser.first_name} ${assignedUser.last_name}</li>
-              </ul>
-              ${request.description ? `<p><strong>Notes:</strong> ${request.description}</p>` : ''}
-              <p>We look forward to serving you. If you need to make any changes, please contact us.</p>
-              <p>Reference Number: ${request.appointment_request_id}</p>
-            `,
+          await emailService.sendAppointmentRequestApproved({
+            requesterName: recipientName,
+            requesterEmail: recipientEmail,
+            serviceName: service.service_name,
+            appointmentDate: finalDate,
+            appointmentTime: finalTime,
+            duration: request.requested_duration,
+            technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
+            technicianEmail: assignedUser.email || '',
+            technicianPhone: assignedUser.phone || '',
+            calendarLink: '', // TODO: Implement ICS generation
+            cancellationPolicy: 'Please cancel at least 24 hours in advance.',
+            minimumNoticeHours: 24,
+            contactEmail: '', // TODO: Get from tenant settings
+            contactPhone: '', // TODO: Get from tenant settings
+            tenantName: '', // TODO: Get from tenant settings
+            currentYear: new Date().getFullYear()
+          }, {
             tenantId: tenant
           });
+
+          console.log(`[AppointmentRequest] Approval email sent to ${recipientEmail}`);
         }
 
         console.log(`[AppointmentRequest] Request ${request.appointment_request_id} approved by ${currentUser.user_id}`);
@@ -397,19 +436,58 @@ export async function declineAppointmentRequest(
           updated_at: now
         });
 
+      // Get service details
+      const service = await trx('service_catalog')
+        .where({
+          service_id: request.service_id,
+          tenant
+        })
+        .first();
+
+      if (!service) {
+        throw new Error('Service not found');
+      }
+
+      // Get client user ID if available
+      let clientUserId: string | undefined;
+      if (request.is_authenticated && request.contact_id) {
+        const clientUser = await trx('users')
+          .select('user_id')
+          .where({
+            contact_id: request.contact_id,
+            tenant,
+            user_type: 'client'
+          })
+          .first();
+        clientUserId = clientUser?.user_id;
+      }
+
+      // Publish event (will trigger internal notifications automatically)
+      await publishEvent({
+        eventType: 'APPOINTMENT_REQUEST_DECLINED',
+        payload: {
+          tenantId: tenant || '',
+          appointmentRequestId: request.appointment_request_id,
+          clientId: request.client_id,
+          contactId: request.contact_id,
+          clientUserId,
+          serviceId: request.service_id,
+          serviceName: service.service_name,
+          requestedDate: request.requested_date,
+          requestedTime: request.requested_time,
+          requestedDuration: request.requested_duration,
+          isAuthenticated: request.is_authenticated,
+          requesterEmail: request.requester_email || '',
+          requesterName: request.requester_name,
+          declineReason: validatedData.decline_reason
+        }
+      });
+
       // Send notification email
       try {
         const emailService = SystemEmailService.getInstance();
         let recipientEmail = '';
         let recipientName = '';
-
-        // Get service details
-        const service = await trx('service_catalog')
-          .where({
-            service_id: request.service_id,
-            tenant
-          })
-          .first();
 
         if (request.is_authenticated) {
           // Get contact email
@@ -429,25 +507,23 @@ export async function declineAppointmentRequest(
         }
 
         if (recipientEmail) {
-          await emailService.sendEmail({
-            to: recipientEmail,
-            subject: 'Appointment Request Update',
-            html: `
-              <h2>Appointment Request Update</h2>
-              <p>Dear ${recipientName || 'Customer'},</p>
-              <p>Thank you for your interest in our services. We regret to inform you that we are unable to accommodate your appointment request at this time.</p>
-              <p><strong>Original Request:</strong></p>
-              <ul>
-                <li>Service: ${service?.service_name || 'N/A'}</li>
-                <li>Requested Date: ${request.requested_date}</li>
-                <li>Requested Time: ${request.requested_time}</li>
-              </ul>
-              <p><strong>Reason:</strong> ${validatedData.decline_reason}</p>
-              <p>We apologize for any inconvenience. Please feel free to submit a new request for alternative times, or contact us directly to discuss options.</p>
-              <p>Reference Number: ${request.appointment_request_id}</p>
-            `,
+          await emailService.sendAppointmentRequestDeclined({
+            requesterName: recipientName,
+            requesterEmail: recipientEmail,
+            serviceName: service.service_name,
+            requestedDate: request.requested_date,
+            requestedTime: request.requested_time,
+            declineReason: validatedData.decline_reason,
+            requestNewAppointmentLink: '', // TODO: Get proper URL
+            contactEmail: '', // TODO: Get from tenant settings
+            contactPhone: '', // TODO: Get from tenant settings
+            tenantName: '', // TODO: Get from tenant settings
+            currentYear: new Date().getFullYear()
+          }, {
             tenantId: tenant
           });
+
+          console.log(`[AppointmentRequest] Decline email sent to ${recipientEmail}`);
         }
 
         console.log(`[AppointmentRequest] Request ${request.appointment_request_id} declined by ${currentUser.user_id}`);

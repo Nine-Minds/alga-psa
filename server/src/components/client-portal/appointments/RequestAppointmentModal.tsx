@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
-import { Progress } from 'server/src/components/ui/Progress';
 import Spinner from 'server/src/components/ui/Spinner';
 import { Calendar } from 'server/src/components/ui/Calendar';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -12,6 +11,13 @@ import { AlertCircle, CheckCircle2, Calendar as CalendarIcon, Clock, User, FileT
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { Badge } from 'server/src/components/ui/Badge';
 import { format } from 'date-fns';
+import { WizardProgress } from 'server/src/components/onboarding/WizardProgress';
+import {
+  createAppointmentRequest,
+  getAvailableServicesAndTickets,
+  getAvailableDatesForService,
+  getAvailableTimeSlotsForDate
+} from 'server/src/lib/actions/client-portal-actions/appointmentRequestActions';
 
 interface RequestAppointmentModalProps {
   open: boolean;
@@ -46,6 +52,7 @@ interface Technician {
 }
 
 const TOTAL_STEPS = 4;
+const STEP_LABELS = ['Service', 'Date', 'Time', 'Confirm'];
 
 export function RequestAppointmentModal({
   open,
@@ -65,7 +72,8 @@ export function RequestAppointmentModal({
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [linkedTicketId, setLinkedTicketId] = useState<string>('');
+  const [linkedTicketId, setLinkedTicketId] = useState<string>('__no_ticket__');
+  const [ticketSearchQuery, setTicketSearchQuery] = useState<string>('');
 
   // Step 2: Date selection
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -75,7 +83,7 @@ export function RequestAppointmentModal({
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [technicians, setTechnicians] = useState<Technician[]>([]);
-  const [preferredTechnicianId, setPreferredTechnicianId] = useState<string>('');
+  const [preferredTechnicianId, setPreferredTechnicianId] = useState<string>('__no_preference__');
 
   // Step 4: Description and confirmation
   const [description, setDescription] = useState<string>('');
@@ -113,10 +121,11 @@ export function RequestAppointmentModal({
   const resetForm = () => {
     setCurrentStep(1);
     setSelectedServiceId('');
-    setLinkedTicketId('');
+    setLinkedTicketId('__no_ticket__');
+    setTicketSearchQuery('');
     setSelectedDate(undefined);
     setSelectedTime('');
-    setPreferredTechnicianId('');
+    setPreferredTechnicianId('__no_preference__');
     setDescription('');
     setError(null);
     setSuccessMessage(null);
@@ -126,32 +135,14 @@ export function RequestAppointmentModal({
     setIsLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual action
-      // const result = await getAvailableServicesForClient();
-      // setServices(result.services);
-      // setTickets(result.openTickets);
+      const result = await getAvailableServicesAndTickets();
 
-      // Mock data for now
-      setServices([
-        {
-          service_id: '1',
-          service_name: 'IT Support - On-site',
-          description: 'On-site technical support',
-          service_type: 'Hourly',
-          default_rate: 150
-        },
-        {
-          service_id: '2',
-          service_name: 'Network Maintenance',
-          description: 'Network infrastructure maintenance',
-          service_type: 'Fixed',
-          default_rate: 500
-        }
-      ]);
-      setTickets([
-        { ticket_id: '1', ticket_number: 'TIC-001', title: 'Printer not working' },
-        { ticket_id: '2', ticket_number: 'TIC-002', title: 'Email issues' }
-      ]);
+      if (result.success && result.data) {
+        setServices(result.data.services);
+        setTickets(result.data.tickets);
+      } else {
+        setError(result.error || t('appointments.errors.loadServicesFailed'));
+      }
     } catch (err) {
       console.error('Error loading services:', err);
       setError(t('appointments.errors.loadServicesFailed'));
@@ -164,21 +155,15 @@ export function RequestAppointmentModal({
     setIsLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual action
-      // const dates = await getAvailableDates(selectedServiceId);
-      // setAvailableDates(dates);
+      const result = await getAvailableDatesForService(selectedServiceId);
 
-      // Mock data - next 30 days with some dates available
-      const dates: Date[] = [];
-      const today = new Date();
-      for (let i = 1; i <= 30; i++) {
-        if (i % 3 !== 0) { // Make every 3rd day unavailable
-          const date = new Date(today);
-          date.setDate(today.getDate() + i);
-          dates.push(date);
-        }
+      if (result.success && result.data) {
+        // Convert date strings to Date objects
+        const dates = result.data.map(dateStr => new Date(dateStr));
+        setAvailableDates(dates);
+      } else {
+        setError(result.error || t('appointments.errors.loadDatesFailed'));
       }
-      setAvailableDates(dates);
     } catch (err) {
       console.error('Error loading available dates:', err);
       setError(t('appointments.errors.loadDatesFailed'));
@@ -191,26 +176,17 @@ export function RequestAppointmentModal({
     setIsLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual action
-      // const slots = await getAvailableTimeSlots(selectedServiceId, selectedDate);
-      // setTimeSlots(slots.timeSlots);
-      // setTechnicians(slots.technicians);
+      if (!selectedDate) return;
 
-      // Mock data
-      const slots: TimeSlot[] = [
-        { time: '09:00', available: true, duration: 60 },
-        { time: '10:00', available: true, duration: 60 },
-        { time: '11:00', available: false, duration: 60 },
-        { time: '13:00', available: true, duration: 60 },
-        { time: '14:00', available: true, duration: 60 },
-        { time: '15:00', available: true, duration: 60 },
-        { time: '16:00', available: false, duration: 60 },
-      ];
-      setTimeSlots(slots);
-      setTechnicians([
-        { user_id: '1', full_name: 'John Smith' },
-        { user_id: '2', full_name: 'Jane Doe' },
-      ]);
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const result = await getAvailableTimeSlotsForDate(selectedServiceId, dateStr, 60);
+
+      if (result.success && result.data) {
+        setTimeSlots(result.data.timeSlots);
+        setTechnicians(result.data.technicians);
+      } else {
+        setError(result.error || t('appointments.errors.loadSlotsFailed'));
+      }
     } catch (err) {
       console.error('Error loading time slots:', err);
       setError(t('appointments.errors.loadSlotsFailed'));
@@ -238,25 +214,31 @@ export function RequestAppointmentModal({
     setError(null);
 
     try {
-      // TODO: Replace with actual action
-      // await createAppointmentRequest({
-      //   service_id: selectedServiceId,
-      //   requested_date: format(selectedDate!, 'yyyy-MM-dd'),
-      //   requested_time: selectedTime,
-      //   preferred_assigned_user_id: preferredTechnicianId || undefined,
-      //   description,
-      //   ticket_id: linkedTicketId || undefined,
-      // });
+      // Get duration from selected time slot
+      const selectedSlot = timeSlots.find(slot => slot.time === selectedTime);
+      const duration = selectedSlot?.duration || 60;
 
-      // Mock success
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await createAppointmentRequest({
+        service_id: selectedServiceId,
+        requested_date: format(selectedDate!, 'yyyy-MM-dd'),
+        requested_time: selectedTime,
+        requested_duration: duration,
+        preferred_assigned_user_id: preferredTechnicianId && preferredTechnicianId !== '__no_preference__' ? preferredTechnicianId : undefined,
+        description: description || undefined,
+        ticket_id: linkedTicketId && linkedTicketId !== '__no_ticket__' ? linkedTicketId : undefined,
+      });
 
-      setSuccessMessage(t('appointments.messages.requestSuccess'));
-      onAppointmentRequested?.();
+      if (result.success) {
+        setSuccessMessage(t('appointments.messages.requestSuccess'));
+        onAppointmentRequested?.();
 
-      setTimeout(() => {
-        onOpenChange(false);
-      }, 2000);
+        setTimeout(() => {
+          onOpenChange(false);
+          resetForm();
+        }, 2000);
+      } else {
+        setError(result.error || t('appointments.errors.createFailed'));
+      }
     } catch (err) {
       console.error('Error creating appointment request:', err);
       setError(t('appointments.errors.createFailed'));
@@ -298,20 +280,31 @@ export function RequestAppointmentModal({
     [services]
   );
 
+  const filteredTickets = useMemo(() => {
+    if (!ticketSearchQuery.trim()) {
+      return tickets;
+    }
+    const query = ticketSearchQuery.toLowerCase();
+    return tickets.filter(ticket =>
+      ticket.ticket_number.toLowerCase().includes(query) ||
+      ticket.title.toLowerCase().includes(query)
+    );
+  }, [tickets, ticketSearchQuery]);
+
   const ticketOptions = useMemo(
     () => [
-      { value: '', label: t('appointments.step1.noTicket') },
-      ...tickets.map(ticket => ({
+      { value: '__no_ticket__', label: t('appointments.step1.noTicket') },
+      ...filteredTickets.map(ticket => ({
         value: ticket.ticket_id,
         label: `${ticket.ticket_number} - ${ticket.title}`
       }))
     ],
-    [tickets, t]
+    [filteredTickets, t]
   );
 
   const technicianOptions = useMemo(
     () => [
-      { value: '', label: t('appointments.step3.noPreference') },
+      { value: '__no_preference__', label: t('appointments.step3.noPreference') },
       ...technicians.map(tech => ({
         value: tech.user_id,
         label: tech.full_name
@@ -354,7 +347,7 @@ export function RequestAppointmentModal({
 
               <CustomSelect
                 id="appointment-service-select"
-                value={selectedServiceId}
+                value={selectedServiceId || undefined}
                 onValueChange={setSelectedServiceId}
                 options={serviceOptions}
                 placeholder={t('appointments.step1.selectService')}
@@ -380,14 +373,35 @@ export function RequestAppointmentModal({
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('appointments.step1.ticketLabel')}
+              </label>
+
+              {tickets.length > 5 && (
+                <input
+                  type="text"
+                  id="ticket-search-input"
+                  placeholder={t('appointments.step1.searchTickets') || 'Search tickets...'}
+                  value={ticketSearchQuery}
+                  onChange={(e) => setTicketSearchQuery(e.target.value)}
+                  className="w-full px-3 py-2 mb-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+                />
+              )}
+
               <CustomSelect
                 id="appointment-ticket-select"
-                value={linkedTicketId}
+                value={linkedTicketId || undefined}
                 onValueChange={setLinkedTicketId}
                 options={ticketOptions}
                 placeholder={t('appointments.step1.selectTicket')}
-                label={t('appointments.step1.ticketLabel')}
               />
+
+              {ticketSearchQuery && filteredTickets.length === 0 && (
+                <p className="text-xs text-red-600 mt-1">
+                  {t('appointments.step1.noTicketsFound') || 'No tickets found matching your search'}
+                </p>
+              )}
+
               <p className="text-xs text-gray-500 mt-1">
                 {t('appointments.step1.ticketHint')}
               </p>
@@ -455,41 +469,48 @@ export function RequestAppointmentModal({
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  {t('appointments.step3.selectTime')}
+                  {t('appointments.step3.selectTime')} <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {timeSlots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      id={`time-slot-${slot.time.replace(':', '-')}`}
-                      onClick={() => slot.available && setSelectedTime(slot.time)}
-                      disabled={!slot.available}
-                      className={`
-                        p-3 rounded-lg border-2 text-sm font-medium transition-all
-                        ${selectedTime === slot.time
-                          ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
-                          : slot.available
-                            ? 'border-gray-200 hover:border-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-50))]'
-                            : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {slot.time}
-                      </div>
-                      <div className="text-xs mt-1">
-                        {slot.duration} {t('appointments.step3.minutes')}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                {timeSlots.length === 0 ? (
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-600">
+                    <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm">{t('appointments.step3.noTimeSlotsAvailable') || 'No time slots available for this date'}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {timeSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        id={`time-slot-${slot.time.replace(':', '-')}`}
+                        onClick={() => slot.available && setSelectedTime(slot.time)}
+                        disabled={!slot.available}
+                        className={`
+                          p-3 rounded-lg border-2 text-sm font-medium transition-all
+                          ${selectedTime === slot.time
+                            ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                            : slot.available
+                              ? 'border-gray-200 hover:border-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-50))]'
+                              : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {slot.time}
+                        </div>
+                        <div className="text-xs mt-1">
+                          {slot.duration} {t('appointments.step3.minutes')}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
                 <CustomSelect
                   id="appointment-technician-select"
-                  value={preferredTechnicianId}
+                  value={preferredTechnicianId || undefined}
                   onValueChange={setPreferredTechnicianId}
                   options={technicianOptions}
                   placeholder={t('appointments.step3.selectTechnician')}
@@ -617,16 +638,13 @@ export function RequestAppointmentModal({
         )}
 
         {!successMessage && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                {t('appointments.modal.step')} {currentStep} {t('appointments.modal.of')} {TOTAL_STEPS}
-              </span>
-              <span className="text-sm text-gray-500">
-                {Math.round((currentStep / TOTAL_STEPS) * 100)}%
-              </span>
-            </div>
-            <Progress value={currentStep} max={TOTAL_STEPS} />
+          <div className="mb-8">
+            <WizardProgress
+              steps={STEP_LABELS}
+              currentStep={currentStep - 1}
+              completedSteps={new Set()}
+              canNavigateToStep={() => false}
+            />
           </div>
         )}
 

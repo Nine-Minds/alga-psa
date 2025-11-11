@@ -1030,6 +1030,8 @@
       "ticketLabel": "Link to Existing Ticket (Optional)",
       "selectTicket": "Select a ticket",
       "noTicket": "No ticket",
+      "searchTickets": "Search tickets...",
+      "noTicketsFound": "No tickets found matching your search",
       "ticketHint": "Optionally link this appointment to an existing support ticket"
     },
     "step2": {
@@ -1043,7 +1045,8 @@
       "description": "Choose your preferred time slot and optionally select a technician",
       "selectTime": "Available Time Slots",
       "minutes": "min",
-      "technicianLabel": "Preferred Technician",
+      "noTimeSlotsAvailable": "No time slots available for this date. Please select a different date.",
+      "technicianLabel": "Preferred Technician (Optional)",
       "selectTechnician": "Select a technician",
       "noPreference": "No preference",
       "technicianHint": "This is a preference and may be adjusted based on availability"

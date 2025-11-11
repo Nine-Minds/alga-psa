@@ -14,6 +14,12 @@ import {
   appointmentRequestFilterSchema
 } from 'server/src/lib/schemas/appointmentSchemas';
 import { SystemEmailService } from 'server/src/lib/email/system/SystemEmailService';
+import {
+  getAvailableServicesForClient,
+  getServicesForPublicBooking,
+  getAvailableTimeSlots as getTimeSlotsFromService,
+  getAvailableDates as getDatesFromService
+} from 'server/src/lib/services/availabilityService';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -536,6 +542,246 @@ export async function cancelAppointmentRequest(
   } catch (error) {
     console.error('Error cancelling appointment request:', error);
     const message = error instanceof Error ? error.message : 'Failed to cancel appointment request';
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Get available services and open tickets for appointment booking
+ */
+export async function getAvailableServicesAndTickets(): Promise<AppointmentRequestResult<{
+  services: Array<{
+    service_id: string;
+    service_name: string;
+    description?: string;
+    service_type?: string;
+    default_rate?: number;
+  }>;
+  tickets: Array<{
+    ticket_id: string;
+    ticket_number: string;
+    title: string;
+  }>;
+}>> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    if (currentUser.user_type !== 'client') {
+      return { success: false, error: 'Only client users can access this endpoint' };
+    }
+
+    if (!currentUser.contact_id) {
+      return { success: false, error: 'Contact information not found' };
+    }
+
+    const { knex: db, tenant } = await createTenantKnex();
+
+    // Get client_id from contact
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({
+          contact_name_id: currentUser.contact_id,
+          tenant
+        })
+        .select('client_id')
+        .first();
+    });
+
+    if (!contact || !contact.client_id) {
+      return { success: false, error: 'Client information not found' };
+    }
+
+    const clientId = contact.client_id;
+
+    // Get available services for the client from two sources:
+    // 1. Services from active contracts
+    const contractServices = await getAvailableServicesForClient(tenant, clientId);
+
+    // 2. Services that allow booking without a contract
+    const publicServices = await getServicesForPublicBooking(tenant);
+
+    // Combine and deduplicate services by service_id
+    const servicesMap = new Map();
+
+    // Add contract services first (they take priority)
+    contractServices.forEach((service: any) => {
+      servicesMap.set(service.service_id, service);
+    });
+
+    // Add public services if not already in the map
+    publicServices.forEach((service: any) => {
+      if (!servicesMap.has(service.service_id)) {
+        servicesMap.set(service.service_id, service);
+      }
+    });
+
+    const services = Array.from(servicesMap.values());
+
+    // Get open tickets for the client
+    const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('tickets')
+        .where({
+          tenant,
+          client_id: clientId
+        })
+        .whereNull('closed_at')
+        .select('ticket_id', 'ticket_number', 'title')
+        .orderBy('entered_at', 'desc')
+        .limit(50); // Limit to recent 50 tickets
+    });
+
+    return {
+      success: true,
+      data: {
+        services: services.map(s => ({
+          service_id: s.service_id,
+          service_name: s.service_name,
+          description: s.service_description,
+          service_type: s.service_type,
+          default_rate: s.default_rate
+        })),
+        tickets: tickets.map(t => ({
+          ticket_id: t.ticket_id,
+          ticket_number: t.ticket_number,
+          title: t.title
+        }))
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching available services and tickets:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch data';
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Get available dates for a service (next 30 days)
+ */
+export async function getAvailableDatesForService(
+  serviceId: string
+): Promise<AppointmentRequestResult<string[]>> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    if (currentUser.user_type !== 'client') {
+      return { success: false, error: 'Only client users can access this endpoint' };
+    }
+
+    const { tenant } = await createTenantKnex();
+
+    // Calculate date range (next 30 days)
+    const today = new Date();
+    const startDate = today.toISOString().split('T')[0];
+
+    const endDateObj = new Date(today);
+    endDateObj.setDate(endDateObj.getDate() + 30);
+    const endDate = endDateObj.toISOString().split('T')[0];
+
+    // Get available dates from service
+    const availableDatesData = await getDatesFromService(
+      tenant,
+      serviceId,
+      startDate,
+      endDate
+    );
+
+    // Filter to only dates with availability
+    const availableDates = availableDatesData
+      .filter(d => d.has_availability)
+      .map(d => d.date);
+
+    return { success: true, data: availableDates };
+  } catch (error) {
+    console.error('Error fetching available dates:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch available dates';
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Get available time slots and technicians for a specific date
+ */
+export async function getAvailableTimeSlotsForDate(
+  serviceId: string,
+  date: string,
+  duration: number = 60
+): Promise<AppointmentRequestResult<{
+  timeSlots: Array<{
+    time: string;
+    available: boolean;
+    duration: number;
+  }>;
+  technicians: Array<{
+    user_id: string;
+    full_name: string;
+  }>;
+}>> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    if (currentUser.user_type !== 'client') {
+      return { success: false, error: 'Only client users can access this endpoint' };
+    }
+
+    const { knex: db, tenant } = await createTenantKnex();
+
+    // Get available time slots from service
+    const slots = await getTimeSlotsFromService(
+      tenant,
+      date,
+      serviceId,
+      duration
+    );
+
+    // Extract unique user IDs from all slots
+    const userIds = new Set<string>();
+    slots.forEach(slot => {
+      slot.available_users.forEach(userId => userIds.add(userId));
+    });
+
+    // Get technician details
+    const technicians = userIds.size > 0
+      ? await withTransaction(db, async (trx: Knex.Transaction) => {
+          return await trx('users')
+            .where({ tenant })
+            .whereIn('user_id', Array.from(userIds))
+            .select(
+              'user_id',
+              trx.raw("CONCAT(first_name, ' ', last_name) as full_name")
+            );
+        })
+      : [];
+
+    // Format time slots for UI
+    const timeSlots = slots.map(slot => ({
+      time: new Date(slot.start_time).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }),
+      available: slot.is_available,
+      duration: duration
+    }));
+
+    return {
+      success: true,
+      data: {
+        timeSlots,
+        technicians
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching time slots:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch time slots';
     return { success: false, error: message };
   }
 }

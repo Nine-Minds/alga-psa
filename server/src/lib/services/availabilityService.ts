@@ -44,6 +44,9 @@ export async function getAvailableTimeSlots(
     // Get service rules to check advance booking limits
     const serviceSettings = await getServiceSettings(knex, tenantId, serviceId);
 
+    // Store minimum notice hours for filtering individual slots later
+    let minNoticeHours = 24; // default
+
     if (serviceSettings) {
       const maxAdvanceDays = serviceSettings.advance_booking_days ?? 30;
       const maxDate = new Date();
@@ -53,14 +56,7 @@ export async function getAvailableTimeSlots(
         return [];
       }
 
-      // Check minimum notice hours
-      const minNoticeHours = serviceSettings.minimum_notice_hours ?? 24;
-      const minBookingTime = new Date();
-      minBookingTime.setHours(minBookingTime.getHours() + minNoticeHours);
-
-      if (targetDate < new Date(minBookingTime.toDateString())) {
-        return [];
-      }
+      minNoticeHours = serviceSettings.minimum_notice_hours ?? 24;
     }
 
     // Get day of week (0 = Sunday, 6 = Saturday)
@@ -273,10 +269,19 @@ export async function getAvailableTimeSlots(
       }
     }
 
-    // Sort slots by start time
-    slots.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    // Filter out slots that don't meet minimum notice hours
+    const minBookingTime = new Date();
+    minBookingTime.setHours(minBookingTime.getHours() + minNoticeHours);
 
-    return slots;
+    const availableSlots = slots.filter(slot => {
+      const slotStart = new Date(slot.start_time);
+      return slotStart >= minBookingTime;
+    });
+
+    // Sort slots by start time
+    availableSlots.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+    return availableSlots;
   });
 }
 
@@ -458,15 +463,28 @@ export async function getAvailableServicesForClient(
     // Get active contracts for the client
     const today = new Date().toISOString().split('T')[0];
 
-    const services = await knex('client_contracts as cc')
-      .join('contract_line_mappings as clm', function() {
-        this.on('cc.contract_id', 'clm.contract_id')
-            .andOn('cc.tenant', 'clm.tenant');
+    // First get the contract_id from client_contracts
+    const clientContracts = await knex('client_contracts')
+      .where({
+        tenant: tenantId,
+        client_id: clientId,
+        is_active: true
       })
-      .join('contract_lines as cl', function() {
-        this.on('clm.contract_line_id', 'cl.contract_line_id')
-            .andOn('clm.tenant', 'cl.tenant');
+      .where('start_date', '<=', today)
+      .where(function() {
+        this.whereNull('end_date')
+            .orWhere('end_date', '>=', today);
       })
+      .select('contract_id');
+
+    if (clientContracts.length === 0) {
+      return [];
+    }
+
+    const contractIds = clientContracts.map(c => c.contract_id);
+
+    // Now get services from the contract lines (contract_lines contains contract_id directly)
+    const services = await knex('contract_lines as cl')
       .join('contract_line_services as cls', function() {
         this.on('cl.contract_line_id', 'cls.contract_line_id')
             .andOn('cl.tenant', 'cls.tenant');
@@ -475,21 +493,13 @@ export async function getAvailableServicesForClient(
         this.on('cls.service_id', 'sc.service_id')
             .andOn('cls.tenant', 'sc.tenant');
       })
-      .where({
-        'cc.tenant': tenantId,
-        'cc.client_id': clientId,
-        'cc.is_active': true
-      })
-      .where('cc.start_date', '<=', today)
-      .where(function() {
-        this.whereNull('cc.end_date')
-            .orWhere('cc.end_date', '>=', today);
-      })
+      .where('cl.tenant', tenantId)
+      .whereIn('cl.contract_id', contractIds)
       .select(
         'sc.service_id',
         'sc.service_name',
-        'sc.service_description',
-        'sc.service_type',
+        'sc.description as service_description',
+        'sc.billing_method as service_type',
         'sc.default_rate'
       )
       .distinct();
@@ -522,8 +532,8 @@ export async function getServicesForPublicBooking(
       .select(
         'sc.service_id',
         'sc.service_name',
-        'sc.service_description',
-        'sc.service_type',
+        'sc.description as service_description',
+        'sc.billing_method as service_type',
         'sc.default_rate'
       )
       .distinct();

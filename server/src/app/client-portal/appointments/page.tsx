@@ -14,6 +14,7 @@ import { Calendar, Clock, User, FileText, AlertCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import toast from 'react-hot-toast';
+import { getMyAppointmentRequests, cancelAppointmentRequest } from 'server/src/lib/actions/client-portal-actions/appointmentRequestActions';
 
 interface AppointmentRequest {
   appointment_request_id: string;
@@ -49,55 +50,20 @@ export default function AppointmentsPage() {
   const loadAppointments = useCallback(async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual action
-      // const result = await getMyAppointmentRequests(filterStatus);
-      // setAppointments(result);
-
-      // Mock data for now
-      const mockData: AppointmentRequest[] = [
-        {
-          appointment_request_id: '1',
-          service_id: '1',
-          service_name: 'IT Support - On-site',
-          requested_date: '2025-11-15',
-          requested_time: '10:00',
-          requested_duration: 60,
-          status: 'pending',
-          preferred_assigned_user_name: 'John Smith',
-          description: 'Need help with printer setup',
-          ticket_id: '1',
-          ticket_number: 'TIC-001',
-          created_at: '2025-11-08T10:00:00Z'
-        },
-        {
-          appointment_request_id: '2',
-          service_id: '2',
-          service_name: 'Network Maintenance',
-          requested_date: '2025-11-20',
-          requested_time: '14:00',
-          requested_duration: 120,
-          status: 'approved',
-          preferred_assigned_user_name: 'Jane Doe',
-          approved_at: '2025-11-09T09:00:00Z',
-          created_at: '2025-11-07T14:30:00Z'
-        },
-        {
-          appointment_request_id: '3',
-          service_id: '1',
-          service_name: 'IT Support - On-site',
-          requested_date: '2025-11-12',
-          requested_time: '09:00',
-          requested_duration: 60,
-          status: 'declined',
-          declined_reason: 'No available technicians for this time slot',
-          created_at: '2025-11-06T11:00:00Z'
+      const filters = filterStatus ? { status: filterStatus } : undefined;
+      const result = await getMyAppointmentRequests(filters);
+      if (result.success && result.data) {
+        setAppointments(result.data as any);
+      } else {
+        setAppointments([]);
+        if (result.error) {
+          toast.error(result.error);
         }
-      ];
-
-      setAppointments(mockData);
+      }
     } catch (error) {
       console.error('Error loading appointments:', error);
       toast.error(t('appointments.errors.loadFailed'));
+      setAppointments([]);
     } finally {
       setLoading(false);
     }

@@ -30,6 +30,10 @@ export const EventTypeEnum = z.enum([
   'CALENDAR_CONFLICT_DETECTED',
   'MESSAGE_SENT',
   'USER_MENTIONED_IN_DOCUMENT',
+  'APPOINTMENT_REQUEST_CREATED',
+  'APPOINTMENT_REQUEST_APPROVED',
+  'APPOINTMENT_REQUEST_DECLINED',
+  'APPOINTMENT_REQUEST_CANCELLED',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -183,6 +187,33 @@ export const MessageEventPayloadSchema = BasePayloadSchema.extend({
   senderName: z.string(),
 });
 
+// Appointment request event payload schema
+export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
+  appointmentRequestId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  clientUserId: z.string().uuid().optional(), // The client portal user who created the request
+  serviceId: z.string().uuid(),
+  serviceName: z.string(),
+  requestedDate: z.string(),
+  requestedTime: z.string(),
+  requestedDuration: z.number(),
+  preferredAssignedUserId: z.string().uuid().optional(),
+  isAuthenticated: z.boolean(),
+  requesterName: z.string().optional(),
+  requesterEmail: z.string(),
+  requesterPhone: z.string().optional(),
+  companyName: z.string().optional(),
+  ticketId: z.string().uuid().optional(),
+  description: z.string().optional(),
+  // For approved events
+  approvedByUserId: z.string().uuid().optional(),
+  assignedUserId: z.string().uuid().optional(),
+  scheduleEntryId: z.string().uuid().optional(),
+  // For declined events
+  declineReason: z.string().optional(),
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -213,6 +244,10 @@ export const EventPayloadSchemas = {
   CALENDAR_CONFLICT_DETECTED: CalendarConflictEventPayloadSchema,
   MESSAGE_SENT: MessageEventPayloadSchema,
   USER_MENTIONED_IN_DOCUMENT: DocumentMentionPayloadSchema,
+  APPOINTMENT_REQUEST_CREATED: AppointmentRequestEventPayloadSchema,
+  APPOINTMENT_REQUEST_APPROVED: AppointmentRequestEventPayloadSchema,
+  APPOINTMENT_REQUEST_DECLINED: AppointmentRequestEventPayloadSchema,
+  APPOINTMENT_REQUEST_CANCELLED: AppointmentRequestEventPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -257,6 +292,10 @@ export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_
 export type CalendarConflictDetectedEvent = z.infer<typeof EventSchemas.CALENDAR_CONFLICT_DETECTED>;
 export type MessageSentEvent = z.infer<typeof EventSchemas.MESSAGE_SENT>;
 export type UserMentionedInDocumentEvent = z.infer<typeof EventSchemas.USER_MENTIONED_IN_DOCUMENT>;
+export type AppointmentRequestCreatedEvent = z.infer<typeof EventSchemas.APPOINTMENT_REQUEST_CREATED>;
+export type AppointmentRequestApprovedEvent = z.infer<typeof EventSchemas.APPOINTMENT_REQUEST_APPROVED>;
+export type AppointmentRequestDeclinedEvent = z.infer<typeof EventSchemas.APPOINTMENT_REQUEST_DECLINED>;
+export type AppointmentRequestCancelledEvent = z.infer<typeof EventSchemas.APPOINTMENT_REQUEST_CANCELLED>;
 
 export type Event =
   | TicketCreatedEvent
@@ -286,4 +325,8 @@ export type Event =
   | CalendarSyncFailedEvent
   | UserMentionedInDocumentEvent
   | CalendarConflictDetectedEvent
-  | MessageSentEvent;
+  | MessageSentEvent
+  | AppointmentRequestCreatedEvent
+  | AppointmentRequestApprovedEvent
+  | AppointmentRequestDeclinedEvent
+  | AppointmentRequestCancelledEvent;
