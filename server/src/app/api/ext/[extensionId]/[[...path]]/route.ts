@@ -78,8 +78,18 @@ function corsPreflight(origin: string | null): NextResponse {
 }
 
 async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: string; path?: string[] }> }) {
+  console.log('[api/ext] incoming request', {
+    url: req.url,
+    method: req.method,
+    headers: {
+      origin: req.headers.get('origin'),
+      host: req.headers.get('host'),
+      'x-alga-tenant': req.headers.get('x-alga-tenant'),
+    },
+  });
   const corsOrigin = pickCorsOrigin(req);
   if (req.method.toUpperCase() === 'OPTIONS') {
+    console.log('[api/ext] handling preflight', { origin: corsOrigin, url: req.url });
     return corsPreflight(corsOrigin);
   }
 
@@ -90,6 +100,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
 
   try {
     const tenantId = await getTenantFromAuth(req);
+    console.log('[api/ext] tenant resolved', { tenantId, extensionId, method });
     await assertAccess(tenantId, extensionId, method, path);
 
     const install = await getTenantInstall(tenantId, extensionId);
