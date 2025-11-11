@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
 use tower_http::{set_header::SetResponseHeaderLayer, trace::TraceLayer};
-use url::Url;
+use url::{form_urlencoded, Url};
 
 use crate::cache::fs as cache_fs;
 use crate::engine::loader::{HostExecutionContext, ModuleLoader};
@@ -482,10 +482,16 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
         }
     };
 
-    // Include tenant id as a query parameter to avoid extra lookup in ext-ui
+    // Include tenant + extension identifiers as query parameters so iframe clients can resolve context without
+    // performing additional lookups or parsing path segments.
+    let mut query = form_urlencoded::Serializer::new(String::new());
+    query.append_pair("tenant", &body.tenant_id);
+    query.append_pair("extensionId", &body.extension_id);
     let target = format!(
-        "/ext-ui/{}/{}/index.html?tenant={}",
-        body.extension_id, body.content_hash, body.tenant_id
+        "/ext-ui/{}/{}/index.html?{}",
+        body.extension_id,
+        body.content_hash,
+        query.finish()
     );
     tracing::info!("═══════════════════════════════════════════════════════");
     tracing::info!("HOST DISPATCH COMPLETE");

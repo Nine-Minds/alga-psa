@@ -11,7 +11,8 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@alga/extension-runtime": "file:../../extension-runtime"
+    "@alga/extension-runtime": "file:../../extension-runtime",
+    "@mongodb-js/zstd": "^7.0.0"
   },
   "devDependencies": {
     "@bytecodealliance/componentize-js": "^0.19.3",
