@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { useUIState } from './UIStateContext';
+import { useEffect, useRef, useCallback, useContext } from 'react';
+import { useUIState, UIStateContext } from './UIStateContext';
 import { UIComponent, ComponentAction } from './types';
 import { CommonActions } from './actionBuilders';
 
@@ -80,32 +80,48 @@ export function useRegisterUIComponent<T extends UIComponent>(
   component: T,
   parentId?: string
 ): (partial: Partial<T>) => void {
-  const { registerComponent, unregisterComponent, updateComponent } = useUIState();
-  
+  // Check if UIStateProvider is available
+  const context = useContext(UIStateContext);
+  const hasProvider = context !== undefined && typeof context.registerComponent === 'function';
+
+  // Only use UIState if provider is available
+  const { registerComponent, unregisterComponent, updateComponent } = hasProvider
+    ? context
+    : {
+        registerComponent: () => {},
+        unregisterComponent: () => {},
+        updateComponent: () => {}
+      };
+
   // Keep a ref to the latest component for the cleanup function
   const componentRef = useRef(component);
   componentRef.current = component;
 
   // Register on mount, unregister on unmount
   useEffect(() => {
+    // Skip if no provider available
+    if (!hasProvider) {
+      return;
+    }
+
     // Skip registration for components with special prefix
     if (component.id.startsWith('__skip_registration_')) {
       return; // Don't register, but also don't need cleanup
     }
-    
+
     // Add default actions if none are provided (for backward compatibility)
     const componentWithActions = {
       ...component,
       actions: component.actions || getDefaultActionsForType(component.type, component.label)
     };
-    
+
     const componentToRegister = parentId ? { ...componentWithActions, parentId } : componentWithActions;
     registerComponent(componentToRegister);
 
     return () => {
       unregisterComponent(componentRef.current.id);
     };
-  }, [registerComponent, unregisterComponent, parentId]);
+  }, [registerComponent, unregisterComponent, parentId, hasProvider]);
 
   /**
    * Update the component's metadata in the UI state
@@ -113,6 +129,11 @@ export function useRegisterUIComponent<T extends UIComponent>(
    */
   const updateMetadata = useCallback(
     (partial: Partial<T>) => {
+      // Skip if no provider available
+      if (!hasProvider) {
+        return;
+      }
+
       // Validate that we're not changing the component type
       if (partial.type && partial.type !== component.type) {
         console.warn(
@@ -123,7 +144,7 @@ export function useRegisterUIComponent<T extends UIComponent>(
 
       updateComponent(component.id, partial);
     },
-    [component.id, component.type, updateComponent]
+    [component.id, component.type, updateComponent, hasProvider]
   );
 
   return updateMetadata;

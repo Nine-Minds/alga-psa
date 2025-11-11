@@ -96,7 +96,6 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const drawerClosePendingRef = useRef(false);
 
-  const shouldAutoOpenQuickAdd = useMemo(() => searchParams?.get('intent') === 'new-asset', [searchParams]);
   const searchParamsString = useMemo(() => searchParams?.toString() ?? '', [searchParams]);
 
   const panelParamToTab = useCallback((panel: string | null): AssetDrawerTab => {
@@ -267,12 +266,6 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
 
     void loadMaintenanceSummaries();
   }, [assetsByClient]);
-
-  useEffect(() => {
-    if (shouldAutoOpenQuickAdd) {
-      router.replace('/msp/assets');
-    }
-  }, [shouldAutoOpenQuickAdd, router]);
 
   const maintenanceStats = useMemo(() => {
     return Object.values(maintenanceSummaries).reduce(
@@ -593,7 +586,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
             >
                 <RefreshCw className="h-4 w-4" /> Refresh data
               </Button>
-              <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} defaultOpen={shouldAutoOpenQuickAdd} />
+              <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />
             </div>
           </div>
 
