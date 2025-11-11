@@ -3,25 +3,34 @@ use crate::engine::stderr_pipe::StderrPipe;
 use crate::models::{
     ExecuteRequest as ModelExecuteRequest, ExecuteResponse as ModelExecuteResponse,
 };
+use anyhow::Context;
+use once_cell::sync::Lazy;
 use reqwest::Client;
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::path::Path;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
+use tar::Archive;
+use tokio::{
+    fs,
+    io::AsyncReadExt,
+    sync::{Mutex as TokioMutex, RwLock},
+};
 use wasmtime::{
     component::{Component, Linker, ResourceTable},
     Config, Engine, InstanceAllocationStrategy, PoolingAllocationConfig, ResourceLimiter, Store,
 };
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder, WasiCtxView, WasiView};
 use wasmtime_wasi_http::{WasiHttpCtx, WasiHttpView};
+use zstd::stream::read::Decoder as ZstdDecoder;
 
 use super::component;
 use super::host_api::{
     add_component_host, to_component_execute_request, to_model_execute_response, HostRuntimeConfig,
 };
-use crate::cache::fs as cache_fs;
+use crate::{cache::fs as cache_fs, util::errors::IntegrityError};
 use aws_credential_types::Credentials as AwsCredentials;
 use aws_sdk_s3::{config as s3config, Client as S3Client};
 use url::Url;
@@ -40,6 +49,8 @@ pub struct ModuleLoader {
     http: Client,
     cache: Arc<RwLock<HashMap<String, Arc<Vec<u8>>>>>,
     runtime_cfg: HostRuntimeConfig,
+    bundle_store_base: Url,
+    cache_root: PathBuf,
 }
 
 #[derive(Clone, Default)]
@@ -110,7 +121,9 @@ impl WasiHttpView for HostState {
 impl ModuleLoader {
     pub fn new() -> anyhow::Result<Self> {
         tracing::info!("Initializing Wasmtime ModuleLoader...");
-        tracing::info!("Configuring Wasmtime engine with pooling allocator and epoch-based interruption");
+        tracing::info!(
+            "Configuring Wasmtime engine with pooling allocator and epoch-based interruption"
+        );
 
         let mut cfg = Config::default();
         // Enable async + epoch interruption for cooperative timeslicing
@@ -151,11 +164,21 @@ impl ModuleLoader {
         let runtime_cfg = HostRuntimeConfig::from_env();
         tracing::info!("✓ Host runtime configuration loaded from environment");
 
+        let bundle_store_raw = env::var("BUNDLE_STORE_BASE")
+            .map_err(|_| anyhow::anyhow!("BUNDLE_STORE_BASE not configured"))?;
+        let bundle_store_base = Url::parse(&bundle_store_raw)?;
+        tracing::info!(base=%bundle_store_base.as_str(), "✓ Bundle store base URL parsed");
+
+        let cache_root = cache_fs::ext_cache_root_from_env();
+        tracing::info!(cache_root=%cache_root.to_string_lossy(), "✓ Extension cache root resolved");
+
         let loader = Self {
             engine,
             http,
             cache: Arc::new(RwLock::new(HashMap::new())),
             runtime_cfg,
+            bundle_store_base,
+            cache_root,
         };
         tracing::info!("✓ ModuleLoader fully initialized and ready");
         tracing::info!("  - In-memory object cache ready");
@@ -218,7 +241,11 @@ impl ModuleLoader {
 
         // Calculate memory limit
         let memory_limit = (memory_mb.unwrap_or(DEFAULT_MAX_MEMORY_MB) as usize) * 1024 * 1024;
-        tracing::info!("Memory limit configured: {} bytes ({} MB)", memory_limit, memory_mb.unwrap_or(DEFAULT_MAX_MEMORY_MB));
+        tracing::info!(
+            "Memory limit configured: {} bytes ({} MB)",
+            memory_limit,
+            memory_mb.unwrap_or(DEFAULT_MAX_MEMORY_MB)
+        );
 
         let host_state = HostState {
             max_memory: memory_limit,
@@ -275,71 +302,46 @@ impl ModuleLoader {
         });
     }
 
-    pub async fn fetch_object(&self, key: &str) -> anyhow::Result<Vec<u8>> {
-        tracing::info!(object_key=%key, "MinIO object fetch started");
-
-        // Check in-memory cache first
-        if let Some(v) = self.cache.read().await.get(key).cloned() {
-            tracing::info!(object_key=%key, cache_size=%v.len(), "MinIO object served from in-memory cache");
-            return Ok((*v).clone());
+    pub async fn load_wasm_module(
+        &self,
+        tenant: &str,
+        extension: &str,
+        content_hash: &str,
+        entry_path: &str,
+    ) -> anyhow::Result<Vec<u8>> {
+        let hash_hex = content_hash
+            .strip_prefix("sha256:")
+            .unwrap_or(content_hash)
+            .to_ascii_lowercase();
+        let cache_key = format!("{}::{}::{}::{}", tenant, extension, hash_hex, entry_path);
+        if let Some(bytes) = self.cache.read().await.get(&cache_key).cloned() {
+            tracing::info!(tenant=%tenant, extension=%extension, hash=%hash_hex, entry=%entry_path, "Component bytes served from in-memory cache");
+            return Ok((*bytes).clone());
         }
-        tracing::info!(object_key=%key, "MinIO object not in cache - downloading from bundle store");
 
-        // Build from BUNDLE_STORE_BASE like http://minio:9000/alga-extensions
-        let base = env::var("BUNDLE_STORE_BASE")?;
-        let url = format!(
-            "{}/{}",
-            base.trim_end_matches('/'),
-            key.trim_start_matches('/')
+        let object_key = format!(
+            "tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst",
+            tenant, extension, hash_hex
         );
-        tracing::info!(object_key=%key, bundle_url=%url, "Downloading extension object from MinIO");
+        tracing::info!(tenant=%tenant, extension=%extension, hash=%hash_hex, entry=%entry_path, object_key=%object_key, "Ensuring bundle cached locally");
+        let paths = ensure_bundle_cached(
+            &self.bundle_store_base,
+            &self.cache_root,
+            &object_key,
+            &hash_hex,
+        )
+        .await?;
 
-        let resp = self.http.get(url.clone()).send().await?;
-        if !resp.status().is_success() {
-            tracing::error!(object_key=%key, status=%resp.status(), bundle_url=%url, "MinIO download failed with non-success status");
-            tracing::error!("Expected HTTP 200-299, got HTTP {}", resp.status());
-            anyhow::bail!("fetch failed: {}", resp.status());
-        }
+        let wasm_path = paths.bundle_root.join(entry_path);
+        tracing::info!(tenant=%tenant, extension=%extension, path=%wasm_path.to_string_lossy(), "Reading WASM component from cache");
+        let bytes = fs::read(&wasm_path).await.map_err(|err| {
+            tracing::error!(error=%err.to_string(), path=%wasm_path.to_string_lossy(), "Failed to read WASM component from cache");
+            err
+        })?;
+        tracing::info!(tenant=%tenant, extension=%extension, bytes=%bytes.len(), "WASM component loaded from cache");
 
-        let bytes = resp.bytes().await?.to_vec();
-        let byte_count = bytes.len();
-        tracing::info!(object_key=%key, bytes=%byte_count, "MinIO download complete");
-
-        // Hash verification: only enforce for archive blobs (bundle.tar.*) where content_hash reflects archive bytes.
-        let is_archive_object = key.ends_with(".tar")
-            || key.ends_with(".tar.gz")
-            || key.ends_with(".tar.zst")
-            || key.ends_with(".tgz");
-
-        if is_archive_object {
-            tracing::info!(object_key=%key, "Verifying archive hash integrity");
-            if let Some((_prefix, rest)) = key.split_once("sha256/") {
-                if let Some((hash, _tail)) = rest.split_once('/') {
-                    use sha2::{Digest, Sha256};
-                    let mut hasher = Sha256::new();
-                    hasher.update(&bytes);
-                    let digest = hasher.finalize();
-                    let got = hex::encode(digest);
-
-                    if got == hash {
-                        tracing::info!(object_key=%key, expected_hash=%hash, computed_hash=%got, "Archive hash verification PASSED");
-                    } else {
-                        tracing::error!(object_key=%key, expected_hash=%hash, computed_hash=%got, "Archive hash verification FAILED");
-                        tracing::error!("HASH_MISMATCH: Object integrity check failed for {}", key);
-                        return Err(anyhow::anyhow!("hash_mismatch: expected {} got {}", hash, got));
-                    }
-                }
-            }
-        } else {
-            tracing::info!(object_key=%key, "Skipping hash verification for non-archive object");
-        }
-
-        // TODO: signature verification using SIGNING_TRUST_BUNDLE and sha256/<hash>/SIGNATURE
-        tracing::info!(object_key=%key, "Storing object in in-memory cache");
         let arc = Arc::new(bytes.clone());
-        self.cache.write().await.insert(key.to_string(), arc);
-        tracing::info!(object_key=%key, "Object cached and ready for Wasmtime instantiation");
-
+        self.cache.write().await.insert(cache_key, arc);
         Ok(bytes)
     }
 
@@ -351,7 +353,12 @@ impl ModuleLoader {
         request: &ModelExecuteRequest,
         mut context: HostExecutionContext,
     ) -> anyhow::Result<ModelExecuteResponse> {
-        let request_id = request.context.request_id.as_ref().map(|s| s.as_str()).unwrap_or("unknown");
+        let request_id = request
+            .context
+            .request_id
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("unknown");
         let tenant_id = &request.context.tenant_id;
         let extension_id = &request.context.extension_id;
 
@@ -592,7 +599,11 @@ pub async fn verify_archive_sha256(
     let mut resp = client.get(fetch_url.clone()).send().await?;
     if !resp.status().is_success() {
         tracing::error!(expected_hash=%expected_lower, status=%resp.status().as_u16(), download_url=%fetch_url.to_string(), "Bundle download failed with non-success HTTP status");
-        tracing::error!("Expected HTTP 200-299, got HTTP {} for bundle {}", resp.status(), url.to_string());
+        tracing::error!(
+            "Expected HTTP 200-299, got HTTP {} for bundle {}",
+            resp.status(),
+            url.to_string()
+        );
         anyhow::bail!("verify_archive_sha256 fetch failed: {}", resp.status());
     }
 
@@ -630,7 +641,7 @@ pub async fn verify_archive_sha256(
         tracing::error!("URL: {}", url.to_string());
         tracing::error!("═══════════════════════════════════════════════════════");
         tracing::error!(expected=%expected_lower, computed=%got, bytes=total, download_url=%url.to_string(), "HASH_MISMATCH: Bundle integrity check failed");
-        return Err(crate::util::errors::IntegrityError::ArchiveHashMismatch {
+        return Err(IntegrityError::ArchiveHashMismatch {
             expected_hex: expected_lower,
             computed_hex: got,
         }
@@ -647,6 +658,144 @@ pub async fn verify_archive_sha256(
     tracing::info!(hash=%expected_lower, bytes=%total, temp_path=%tmp_path.to_string_lossy(), "Bundle hash verification PASSED - ready for extraction");
 
     Ok(tmp_path)
+}
+
+#[derive(Clone, Debug)]
+pub struct BundleCachePaths {
+    pub bundle_root: PathBuf,
+    pub ui_root: PathBuf,
+}
+
+static BUNDLE_EXTRACT_LOCK: Lazy<TokioMutex<()>> = Lazy::new(|| TokioMutex::new(()));
+
+pub async fn ensure_bundle_cached(
+    bundle_store_base: &Url,
+    cache_root: &Path,
+    object_key: &str,
+    hash_hex: &str,
+) -> anyhow::Result<BundleCachePaths> {
+    let normalized_hash = hash_hex.to_ascii_lowercase();
+    let bundle_root = cache_root.join(&normalized_hash).join("bundle");
+    let ui_root = cache_root.join(&normalized_hash).join("ui");
+    let marker = bundle_root.join(".ready");
+
+    if fs::metadata(&marker).await.is_ok() {
+        return Ok(BundleCachePaths {
+            bundle_root,
+            ui_root,
+        });
+    }
+
+    let _guard = BUNDLE_EXTRACT_LOCK.lock().await;
+    if fs::metadata(&marker).await.is_ok() {
+        return Ok(BundleCachePaths {
+            bundle_root,
+            ui_root,
+        });
+    }
+
+    let url = bundle_url_for_key(bundle_store_base, object_key)?;
+    tracing::info!(hash=%normalized_hash, object_key=%object_key, url=%url.to_string(), "Bundle archive fetch start");
+    let tmp_archive = verify_archive_sha256(&url, &normalized_hash).await?;
+
+    if let Err(err) = extract_bundle_archive(&tmp_archive, &bundle_root, &ui_root).await {
+        let _ = fs::remove_dir_all(&bundle_root).await;
+        let _ = fs::remove_dir_all(&ui_root).await;
+        let _ = fs::remove_file(&tmp_archive).await;
+        return Err(err);
+    }
+
+    cache_fs::write_atomic(&marker, b"ok").await?;
+    let _ = fs::remove_file(&tmp_archive).await;
+    tracing::info!(hash=%normalized_hash, bundle_root=%bundle_root.to_string_lossy(), "Bundle archive cached locally");
+
+    Ok(BundleCachePaths {
+        bundle_root,
+        ui_root,
+    })
+}
+
+async fn extract_bundle_archive(
+    archive_path: &Path,
+    bundle_root: &Path,
+    ui_root: &Path,
+) -> anyhow::Result<()> {
+    tracing::info!(archive=%archive_path.to_string_lossy(), bundle_root=%bundle_root.to_string_lossy(), ui_root=%ui_root.to_string_lossy(), "Extracting bundle archive to cache");
+
+    let mut file = fs::File::open(archive_path).await?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf).await?;
+    tracing::info!(archive=%archive_path.to_string_lossy(), bytes=%buf.len(), "Archive loaded into memory for extraction");
+
+    let decoder = ZstdDecoder::new(&buf[..])?;
+    let mut archive = Archive::new(decoder);
+
+    let _ = fs::remove_dir_all(bundle_root).await;
+    cache_fs::ensure_dir(bundle_root).await?;
+    let _ = fs::remove_dir_all(ui_root).await;
+    cache_fs::ensure_dir(ui_root).await?;
+
+    enum Op {
+        Mkdir(PathBuf),
+        Write { path: PathBuf, contents: Vec<u8> },
+    }
+    let mut ops: Vec<Op> = Vec::new();
+
+    for entry in archive.entries().context("tar entries")? {
+        let mut entry = entry.context("tar entry")?;
+        let path = entry.path().context("entry path")?;
+        let mut rel = path.to_string_lossy().to_string();
+        while rel.starts_with("./") {
+            rel = rel[2..].to_string();
+        }
+        if rel.is_empty() {
+            continue;
+        }
+        if rel.starts_with('/') || rel.contains("..") {
+            continue;
+        }
+        if rel
+            .split('/')
+            .any(|seg| seg.is_empty() || seg.starts_with('.'))
+        {
+            continue;
+        }
+
+        let (target_root, relative) = if rel.starts_with("ui/") {
+            let trimmed = &rel["ui/".len()..];
+            if trimmed.is_empty() {
+                continue;
+            }
+            (ui_root, trimmed)
+        } else {
+            (bundle_root, rel.as_str())
+        };
+
+        let out_path = target_root.join(relative);
+        if entry.header().entry_type().is_dir() {
+            ops.push(Op::Mkdir(out_path));
+        } else if entry.header().entry_type().is_file() {
+            if let Some(parent) = out_path.parent() {
+                ops.push(Op::Mkdir(parent.to_path_buf()));
+            }
+            let mut contents = Vec::with_capacity(16 * 1024);
+            entry.read_to_end(&mut contents).context("read entry")?;
+            ops.push(Op::Write {
+                path: out_path,
+                contents,
+            });
+        }
+    }
+
+    for op in ops {
+        match op {
+            Op::Mkdir(path) => cache_fs::ensure_dir(&path).await?,
+            Op::Write { path, contents } => cache_fs::write_atomic(&path, contents).await?,
+        }
+    }
+
+    tracing::info!(bundle_root=%bundle_root.to_string_lossy(), ui_root=%ui_root.to_string_lossy(), "Bundle archive extraction complete");
+    Ok(())
 }
 
 fn presign_target_from_urls(base_url: &Url, bundle_url: &Url) -> Option<(String, String)> {

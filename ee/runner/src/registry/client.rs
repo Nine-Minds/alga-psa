@@ -200,6 +200,7 @@ impl RegistryClient for HttpRegistryClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
     struct AllowAll;
     #[async_trait]
     impl RegistryClient for AllowAll {

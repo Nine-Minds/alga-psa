@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::Context;
 use axum::{
     extract::{Path as AxPath, Query, State},
     http::{header, HeaderMap, HeaderValue, StatusCode},
@@ -13,17 +12,13 @@ use axum::{
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::io::ErrorKind;
-use std::io::Read;
-use tar::Archive;
 use tokio::fs;
-use tokio::io::AsyncReadExt;
 use tokio::sync::RwLock;
 use tracing::info;
 use url::Url;
-use zstd::stream::read::Decoder as ZstdDecoder;
 
 use crate::cache::fs as cache_fs;
-use crate::engine::loader::{bundle_url_for_key, verify_archive_sha256};
+use crate::engine::loader::ensure_bundle_cached;
 use crate::registry::client::RegistryClient;
 use crate::util::{
     errors::IntegrityError, etag::etag_for_file, mime::content_type_for, path_sanitize,
@@ -201,12 +196,18 @@ pub async fn handle_get(
     tracing::info!(request_id=%req_id, hash=%hash_hex, cache_index_exists=%exists, "ui cache check");
     if !exists {
         tracing::info!(request_id=%req_id, hash=%hash_hex, "ui cache ensure start");
-        // Build tenant-local key for this bundle
         let obj_key = format!(
             "tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst",
             tenant, extension_id, hash_hex
         );
-        if let Err(e) = ensure_ui_cache(&state, &hash_hex, &obj_key).await {
+        if let Err(e) = ensure_bundle_cached(
+            &state.bundle_store_base,
+            &state.cache_root,
+            &obj_key,
+            &hash_hex,
+        )
+        .await
+        {
             if let Some(IntegrityError::ArchiveHashMismatch {
                 expected_hex,
                 computed_hex,
@@ -376,164 +377,4 @@ fn etag_match(inm_header: &str, etag: &str) -> bool {
         .split(',')
         .map(|s| s.trim())
         .any(|candidate| candidate == "*" || candidate == etag)
-}
-
-/// Ensure the UI subtree is cached locally; performs first-touch download and extraction if missing.
-async fn ensure_ui_cache(state: &AppState, hash_hex: &str, key: &str) -> anyhow::Result<()> {
-    if cache_fs::exists_ui_index(&state.cache_root, hash_hex) {
-        return Ok(());
-    }
-
-    let ui_root = cache_fs::ui_cache_dir(&state.cache_root, hash_hex);
-    let tmp_dir = state.cache_root.join("tmp");
-    cache_fs::ensure_dir(&tmp_dir).await?;
-    cache_fs::ensure_dir(&ui_root).await?;
-
-    // Build tenant-local URL from provided key and fetch+verify archive sha256 to temp file
-    let url = bundle_url_for_key(&state.bundle_store_base, key)?;
-    tracing::info!(hash=%hash_hex, url=%url.to_string(), "bundle fetch start");
-    let tmp_tgz = verify_archive_sha256(&url, hash_hex).await?;
-
-    // Extract ui/ subtree
-    if let Err(e) = extract_ui_from_tar_gz(&tmp_tgz, &ui_root).await {
-        // Best-effort cleanup of partial subtree
-        let _ = fs::remove_dir_all(&ui_root).await;
-        // Cleanup tmp archive as well
-        let _ = fs::remove_file(&tmp_tgz).await;
-        return Err(e);
-    }
-    tracing::info!(hash=%hash_hex, ui_root=%ui_root.to_string_lossy(), "bundle extract ok");
-
-    // Optional quick sanity check: compute sha256 ETag for index.html
-    let index_path = ui_root.join("index.html");
-    if let Ok(etag) = etag_for_file(&index_path).await {
-        // Log the computed hash for traceability
-        tracing::info!(index_etag=%etag, hash=%hash_hex, "ui index etag computed after extraction");
-    }
-
-    // Cleanup verified temp archive
-    let _ = fs::remove_file(&tmp_tgz).await;
-    tracing::info!(hash=%hash_hex, "bundle fetch+extract done");
-
-    Ok(())
-}
-
-fn rand_suffix() -> String {
-    use rand::{distributions::Alphanumeric, Rng};
-    let s: String = rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(6)
-        .map(char::from)
-        .collect();
-    s
-}
-
-/// Extract only files under "ui/" prefix from the tar.zst into ui_root, preserving directory structure.
-/// Uses write_atomic for files and sets read-only perms.
-/// Important: Do not hold non-Send tar iterators across .await points. Collect ops first, then perform async IO.
-async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Result<()> {
-    tracing::info!(archive_path=%tgz_path.to_string_lossy(), extract_path=%ui_root.to_string_lossy(), "UI archive extraction started");
-
-    // Read file into memory, then iterate tar synchronously
-    let mut f = fs::File::open(tgz_path).await?;
-    let mut buf = Vec::new();
-    f.read_to_end(&mut buf).await?;
-    tracing::info!(archive_path=%tgz_path.to_string_lossy(), archive_size=%buf.len(), "Archive loaded into memory");
-
-    let z = ZstdDecoder::new(&buf[..])?;
-    let mut ar = Archive::new(z);
-
-    // Collect operations to perform after iteration (so no non-Send borrows cross .await)
-    enum Op {
-        Mkdir(PathBuf),
-        Write { path: PathBuf, contents: Vec<u8> },
-    }
-    let mut ops: Vec<Op> = Vec::new();
-
-    let mut files = 0usize;
-    let mut dirs = 0usize;
-    let mut skipped = 0usize;
-    let mut total_size = 0usize;
-
-    tracing::info!(extract_path=%ui_root.to_string_lossy(), "Scanning archive for UI files");
-
-    for entry in ar.entries().context("tar entries")? {
-        let mut entry = entry.context("tar entry")?;
-        let path = entry.path().context("entry path")?;
-        let mut pstr = path.to_string_lossy().to_string();
-        if let Some(stripped) = pstr.strip_prefix("./") {
-            pstr = stripped.to_string();
-        }
-
-        // Only extract under ui/
-        if !pstr.starts_with("ui/") {
-            continue;
-        }
-
-        // Normalize path (strip "ui/")
-        let rel = &pstr["ui/".len()..];
-        if rel.is_empty() {
-            continue;
-        }
-
-        // Disallow hidden dot files or dirs in archive
-        if rel.split('/').any(|seg| seg.starts_with('.')) {
-            skipped += 1;
-            continue;
-        }
-
-        let out_path = ui_root.join(rel);
-
-        if entry.header().entry_type().is_dir() {
-            ops.push(Op::Mkdir(out_path));
-            dirs += 1;
-        } else if entry.header().entry_type().is_file() {
-            if let Some(parent) = out_path.parent() {
-                ops.push(Op::Mkdir(parent.to_path_buf()));
-            }
-            // Read entry contents fully (sync) and stage write
-            let mut contents = Vec::with_capacity(16 * 1024);
-            entry.read_to_end(&mut contents).context("read entry")?;
-            let contents_size = contents.len();
-            ops.push(Op::Write {
-                path: out_path,
-                contents,
-            });
-            files += 1;
-            total_size += contents_size;
-        } else {
-            // Skip symlinks or other types for safety
-            skipped += 1;
-            continue;
-        }
-    }
-
-    tracing::info!(extract_path=%ui_root.to_string_lossy(), files=%files, dirs=%dirs, skipped=%skipped, bytes=%total_size, "Archive scan complete - writing files");
-
-    // Perform async filesystem ops
-    let mut written_files = 0usize;
-    let mut written_dirs = 0usize;
-    for op in ops {
-        match op {
-            Op::Mkdir(p) => {
-                cache_fs::ensure_dir(&p).await?;
-                written_dirs += 1;
-            }
-            Op::Write { path, contents } => {
-                cache_fs::write_atomic(&path, &contents).await?;
-                written_files += 1;
-            }
-        }
-    }
-
-    tracing::info!("═══════════════════════════════════════════════════════");
-    tracing::info!("UI ARCHIVE EXTRACTION COMPLETE");
-    tracing::info!("Archive: {}", tgz_path.to_string_lossy());
-    tracing::info!("Target: {}", ui_root.to_string_lossy());
-    tracing::info!("Directories created: {}", written_dirs);
-    tracing::info!("Files extracted: {}", written_files);
-    tracing::info!("Total size: {} bytes", total_size);
-    tracing::info!("═══════════════════════════════════════════════════════");
-
-    Ok(())
 }

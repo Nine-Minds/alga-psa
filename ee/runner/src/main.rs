@@ -36,14 +36,23 @@ async fn main() -> anyhow::Result<()> {
         build_unix_secs=%build_unix,
         "Extension Runner Service - Build Information"
     );
-    tracing::info!("Build: {} (commit {}) at Unix timestamp {}", build_sha, build_sha, build_unix);
+    tracing::info!(
+        "Build: {} (commit {}) at Unix timestamp {}",
+        build_sha,
+        build_sha,
+        build_unix
+    );
 
     // Log key environment configuration for easier diagnostics
     let reg_base = std::env::var("REGISTRY_BASE_URL").unwrap_or_else(|_| "<unset>".into());
     let bundle_base = std::env::var("BUNDLE_STORE_BASE").unwrap_or_else(|_| "<unset>".into());
     let strict = std::env::var("EXT_STATIC_STRICT_VALIDATION").unwrap_or_else(|_| "<unset>".into());
-    let cache_bytes = std::env::var("EXT_STATIC_MAX_FILE_BYTES").unwrap_or_else(|_| "<unset>".into());
-    let auth_key_present = std::env::var("ALGA_AUTH_KEY").ok().map(|k| !k.is_empty()).unwrap_or(false);
+    let cache_bytes =
+        std::env::var("EXT_STATIC_MAX_FILE_BYTES").unwrap_or_else(|_| "<unset>".into());
+    let auth_key_present = std::env::var("ALGA_AUTH_KEY")
+        .ok()
+        .map(|k| !k.is_empty())
+        .unwrap_or(false);
     let cache_root = std::env::var("EXT_CACHE_ROOT").unwrap_or_else(|_| "<unset>".into());
     let pool_total = std::env::var("WASM_POOL_TOTAL_COMPONENTS").unwrap_or_else(|_| "256".into());
 
@@ -53,7 +62,14 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("  ✓ Bundle Store Base: {}", bundle_base);
     tracing::info!("  ✓ Static File Validation: {}", strict);
     tracing::info!("  ✓ Max File Size Limit: {} bytes", cache_bytes);
-    tracing::info!("  ✓ Auth Key Configured: {}", if auth_key_present { "YES" } else { "NO - registry calls may fail" });
+    tracing::info!(
+        "  ✓ Auth Key Configured: {}",
+        if auth_key_present {
+            "YES"
+        } else {
+            "NO - registry calls may fail"
+        }
+    );
     tracing::info!("  ✓ Cache Root: {}", cache_root);
     tracing::info!("  ✓ Wasmtime Pool Size: {} components", pool_total);
     tracing::info!("═══════════════════════════════════════════════════════");

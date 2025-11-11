@@ -183,6 +183,17 @@ async fn execute(
         .unwrap_or("");
     tracing::info!(request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext, "execute start");
 
+    if tenant.is_empty() || ext.is_empty() {
+        tracing::error!(request_id=%req_id, "Missing tenant or extension headers for execute request");
+        let resp = ExecuteResponse {
+            status: 400,
+            headers: Default::default(),
+            body_b64: None,
+            error: Some("missing_routing_headers".to_string()),
+        };
+        return Json(resp);
+    }
+
     if !idem.is_empty() {
         let map = state.idempotency.lock().await;
         if let Some(prev) = map.get(&idem) {
@@ -195,8 +206,7 @@ async fn execute(
     let hash = content_hash
         .strip_prefix("sha256:")
         .unwrap_or(&content_hash);
-    let key = format!("sha256/{}/dist/main.wasm", hash);
-    tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, wasm_key=%key, "Initializing Wasmtime ModuleLoader for extension execution");
+    tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, content_hash=%hash, "Initializing Wasmtime ModuleLoader for extension execution");
     let loader = match ModuleLoader::new() {
         Ok(l) => {
             tracing::info!(request_id=%req_id, "✓ ModuleLoader initialized successfully");
@@ -215,16 +225,20 @@ async fn execute(
         }
     };
 
-    tracing::info!(request_id=%req_id, wasm_key=%key, "Fetching WASM binary from MinIO/bundle store");
-    let wasm = match loader.fetch_object(&key).await {
+    const DEFAULT_WASM_ENTRY: &str = "dist/main.wasm";
+    tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, entry=DEFAULT_WASM_ENTRY, "Ensuring WASM binary is cached locally");
+    let wasm = match loader
+        .load_wasm_module(tenant, ext, &content_hash, DEFAULT_WASM_ENTRY)
+        .await
+    {
         Ok(b) => {
             tracing::info!(request_id=%req_id, wasm_size=%b.len(), "✓ WASM binary downloaded from bundle store");
             tracing::info!(request_id=%req_id, "WASM binary ready for Wasmtime instantiation");
             b
         }
         Err(e) => {
-            tracing::error!(request_id=%req_id, wasm_key=%key, err=%e.to_string(), "FAILED: WASM binary download failed");
-            tracing::error!(request_id=%req_id, "This error indicates the extension bundle could not be retrieved from MinIO");
+            tracing::error!(request_id=%req_id, tenant=%tenant, extension=%ext, err=%e.to_string(), "FAILED: WASM binary load failed");
+            tracing::error!(request_id=%req_id, "This error indicates the extension bundle could not be retrieved or extracted");
             let resp = ExecuteResponse {
                 status: 502,
                 headers: Default::default(),
