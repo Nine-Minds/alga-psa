@@ -138,6 +138,8 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
         headers: {
           'content-type': 'application/json',
           'x-request-id': requestId,
+          'x-alga-tenant': tenantId,
+          'x-alga-extension': extensionId,
           ...(idempotencyKey ? { 'x-idempotency-key': idempotencyKey } : {}),
         },
         body: JSON.stringify({
