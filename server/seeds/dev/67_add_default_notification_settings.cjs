@@ -43,6 +43,12 @@ exports.seed = async function(knex) {
       description: 'Notifications related to time tracking and approvals',
       is_enabled: true,
       is_default_enabled: true
+    },
+    {
+      name: 'Surveys',
+      description: 'Customer satisfaction surveys and feedback loops',
+      is_enabled: true,
+      is_default_enabled: true
     }
   ]).returning('*');
 
@@ -73,6 +79,15 @@ exports.seed = async function(knex) {
       category_id: categoryMap.Tickets.id,
       name: 'Ticket Closed',
       description: 'When a ticket is closed',
+      is_enabled: true,
+      is_default_enabled: true
+    },
+
+    // Survey notifications
+    {
+      category_id: categoryMap.Surveys.id,
+      name: 'survey-ticket-closed',
+      description: 'When a customer satisfaction survey invitation is sent after a ticket is closed',
       is_enabled: true,
       is_default_enabled: true
     },

@@ -27,7 +27,8 @@ import {
   UploadCloud,
   User,
   Users,
-  Workflow
+  Workflow,
+  Star
 } from 'lucide-react';
 import { billingTabDefinitions } from '../components/billing-dashboard/billingTabsConfig';
 
@@ -76,6 +77,11 @@ export const navigationSections: NavigationSection[] = [
         name: 'Tickets',
         icon: MessageSquare,
         href: '/msp/tickets'
+      },
+      {
+        name: 'Surveys',
+        icon: Star,
+        href: '/msp/surveys/dashboard'
       },
       {
         name: 'Projects',

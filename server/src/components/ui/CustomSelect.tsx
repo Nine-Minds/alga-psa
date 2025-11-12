@@ -35,6 +35,9 @@ interface CustomSelectProps {
   allowClear?: boolean;
 }
 
+const PLACEHOLDER_VALUE = '__SELECT_PLACEHOLDER__';
+const EMPTY_SELECTION_VALUE = '__SELECT_EMPTY__';
+
 const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   options,
   value,
@@ -67,12 +70,24 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
     });
   }, [options]);
 
-  // Register with UI reflection system if id is provided
+  const normalizedOptions = useMemo(
+    () =>
+      uniqueOptions.map((option) => ({
+        ...option,
+        radixValue: option.value === '' ? EMPTY_SELECTION_VALUE : option.value,
+      })),
+    [uniqueOptions]
+  );
+
   // Memoize the mapped options to prevent recreating on every render
-  const mappedOptions = useMemo(() => uniqueOptions.map((opt): { value: string; label: string } => ({
-    value: opt.value,
-    label: typeof opt.label === 'string' ? opt.label : 'Complex Label'
-  })), [uniqueOptions]);
+  const mappedOptions = useMemo(
+    () =>
+      uniqueOptions.map((opt): { value: string; label: string } => ({
+        value: opt.value,
+        label: typeof opt.label === 'string' ? opt.label : 'Complex Label',
+      })),
+    [uniqueOptions]
+  );
   
   
   // Use provided data-automation-id or register normally
@@ -103,9 +118,13 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
     }
   }, [value, disabled, label, required, mappedOptions]); // updateMetadata intentionally omitted
 
-  // Ensure value is never undefined/null/empty string for Radix
-  const safeValue = value || 'placeholder';
-  const selectedOption = uniqueOptions.find(option => option.value === value);
+  const radixValue =
+    value === undefined || value === null
+      ? PLACEHOLDER_VALUE
+      : value === ''
+        ? EMPTY_SELECTION_VALUE
+        : value;
+  const selectedOption = uniqueOptions.find((option) => option.value === value);
 
   return (
     <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType}>
@@ -114,15 +133,19 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
           {label}
         </label>
       )}
-      <RadixSelect.Root 
-        value={safeValue}
+      <RadixSelect.Root
+        value={radixValue}
         // Use internal handler to intercept clear action
         onValueChange={(newValue) => {
           if (allowClear && newValue === '__CLEAR__') {
-            onValueChange(''); // Call external handler with empty string
-          } else if (newValue !== 'placeholder') { // Prevent placeholder from being selected
-            onValueChange(newValue);
+            onValueChange('');
+            return;
           }
+          if (newValue === PLACEHOLDER_VALUE) {
+            return;
+          }
+          const externalValue = newValue === EMPTY_SELECTION_VALUE ? '' : newValue;
+          onValueChange(externalValue);
         }}
         disabled={disabled}
         required={required}
@@ -177,22 +200,19 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             
             <RadixSelect.Viewport className="p-1">
               {/* Add a placeholder option if needed */}
-              {!uniqueOptions.some(opt => opt.value === 'placeholder') && (
-                <RadixSelect.Item
-                  value="placeholder"
-                  className={`
-                    relative flex items-center px-3 py-2 text-sm rounded text-gray-500
-                    cursor-pointer bg-white hover:bg-gray-100 focus:bg-gray-100
-                    focus:outline-none select-none whitespace-nowrap
-                    data-[highlighted]:bg-gray-100
-                    ${customStyles?.item || ''}
-                  `}
-                >
-                  <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
-                </RadixSelect.Item>
-              )}
-              {/* Add Clear Selection option if allowClear is true */}
-              {allowClear && value && ( // Only show clear if a value is selected
+              <RadixSelect.Item
+                value={PLACEHOLDER_VALUE}
+                className={`
+                  relative flex items-center px-3 py-2 text-sm rounded text-gray-500
+                  cursor-default bg-white select-none
+                  ${customStyles?.item || ''}
+                `}
+                disabled
+              >
+                <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
+              </RadixSelect.Item>
+
+              {allowClear && value !== undefined && value !== null && value !== '' && (
                 <RadixSelect.Item
                   key="__CLEAR__"
                   value="__CLEAR__"
@@ -207,10 +227,10 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
                   <RadixSelect.ItemText>Clear Selection</RadixSelect.ItemText>
                 </RadixSelect.Item>
               )}
-              {uniqueOptions.map((option): JSX.Element => (
+              {normalizedOptions.map((option): JSX.Element => (
                 <RadixSelect.Item
-                  key={option.value}
-                  value={option.value}
+                  key={option.radixValue}
+                  value={option.radixValue}
                   className={`
                     relative flex items-center px-3 py-2 text-sm rounded text-gray-900
                     cursor-pointer hover:bg-gray-100 focus:bg-gray-100

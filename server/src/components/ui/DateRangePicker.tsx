@@ -3,7 +3,7 @@ import { Label } from './Label';
 import { DatePicker } from './DatePicker';
 import { AutomationProps } from '../../types/ui-reflection/types';
 
-interface DateRange {
+export interface DateRange {
   from: Date | undefined;
   to: Date | undefined;
 }

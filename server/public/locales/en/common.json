@@ -39,7 +39,8 @@
     "copy": "Copy",
     "duplicate": "Duplicate",
     "openMenu": "Open menu",
-    "confirmDeletion": "Confirm Deletion"
+    "confirmDeletion": "Confirm Deletion",
+    "saving": "Saving..."
   },
   "status": {
     "loading": "Loading...",
@@ -459,6 +460,169 @@
         "Tickets": "Tickets",
         "Time Entries": "Time Entries"
       }
+    }
+  },
+  "surveys": {
+    "common": {
+      "loading": "Loading..."
+    },
+    "settings": {
+      "tabLabel": "Surveys",
+      "title": "Customer Satisfaction Surveys",
+      "subtitle": "Configure templates, triggers, and delivery to collect post-ticket feedback.",
+      "tabs": {
+        "templates": "Templates",
+        "triggers": "Triggers"
+      },
+      "templateList": {
+        "title": "Survey templates",
+        "description": "Manage the prompts and rating scales sent to your clients.",
+        "createButton": "New template",
+        "emptyTitle": "No survey templates yet",
+        "emptyDescription": "Create your first template to define the survey wording and rating scale.",
+        "table": {
+          "name": "Template",
+          "rating": "Rating scale",
+          "status": "Status",
+          "updated": "Updated",
+          "actions": "Actions"
+        },
+        "defaultBadge": "Default",
+        "status": {
+          "enabled": "Enabled",
+          "disabled": "Disabled"
+        },
+        "toasts": {
+          "created": "Template created",
+          "updated": "Template updated",
+          "deleted": "Template deleted",
+          "setDefault": "Default template updated",
+          "error": "Unable to save template",
+          "deleteError": "Unable to delete template"
+        },
+        "errors": {
+          "load": "Unable to load survey templates."
+        },
+        "deleteConfirm": "Delete this template? Invitations already sent will not be affected."
+      },
+      "templateForm": {
+        "titleCreate": "Create survey template",
+        "titleEdit": "Edit survey template",
+        "labels": {
+          "name": "Template name",
+          "ratingType": "Rating type",
+          "ratingScale": "Rating scale",
+          "ratingLabels": "Rating labels",
+          "promptText": "Survey prompt",
+          "commentPrompt": "Comment prompt",
+          "thankYouText": "Thank-you message",
+          "isDefault": "Set as default template",
+          "enabled": "Template enabled"
+        },
+        "placeholders": {
+          "ratingLabels": "Example:\\n1 = Very dissatisfied\\n2 = Dissatisfied\\n3 = Neutral\\n4 = Satisfied\\n5 = Very satisfied"
+        },
+        "help": {
+          "ratingLabels": "Provide one label per score using “value = label” on separate lines."
+        },
+        "ratingTypes": {
+          "stars": "Stars",
+          "numbers": "Numbers",
+          "emojis": "Emojis"
+        },
+        "actions": {
+          "create": "Create template",
+          "save": "Save changes",
+          "delete": "Delete template"
+        }
+      },
+      "triggerList": {
+        "title": "Survey triggers",
+        "description": "Automatically send invitations when tickets or projects reach completion.",
+        "createButton": "New trigger",
+        "emptyTitle": "No survey triggers configured",
+        "emptyDescription": "Create a trigger to send surveys when tickets close or projects finish.",
+        "table": {
+          "template": "Template",
+          "type": "Trigger",
+          "conditions": "Conditions",
+          "status": "Status",
+          "updated": "Updated",
+          "actions": "Actions"
+        },
+        "conditions": {
+          "boards": "Boards",
+          "statuses": "Statuses",
+          "priorities": "Priorities",
+          "any": "Any"
+        },
+        "status": {
+          "enabled": "Enabled",
+          "disabled": "Disabled"
+        },
+        "toasts": {
+          "created": "Trigger created",
+          "updated": "Trigger updated",
+          "deleted": "Trigger deleted",
+          "error": "Unable to save trigger",
+          "deleteError": "Unable to delete trigger"
+        },
+        "errors": {
+          "load": "Unable to load survey triggers."
+        },
+        "deleteConfirm": "Delete this trigger? Invitations already queued will still be sent."
+      },
+      "triggerForm": {
+        "titleCreate": "Create survey trigger",
+        "titleEdit": "Edit survey trigger",
+        "labels": {
+          "template": "Survey template",
+          "triggerType": "Trigger type",
+          "boardIds": "Board IDs",
+          "statusIds": "Status IDs",
+          "priorities": "Priorities",
+          "enabled": "Trigger enabled"
+        },
+        "placeholders": {
+          "boardIds": "Select board",
+          "statusIds": "Add status",
+          "priorities": "Add priority"
+        },
+        "help": {
+          "conditions": "Leave a field blank to match any value."
+        },
+        "actions": {
+          "create": "Create trigger",
+          "save": "Save changes",
+          "delete": "Delete trigger"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Ticket closed",
+          "project_completed": "Project completed"
+        },
+        "errors": {
+          "reference": "Unable to load trigger options. Please try again."
+        },
+        "noTemplates": "Create a survey template before adding triggers.",
+        "prioritiesMixed": "Selected boards use different priority types. Showing all priorities."
+      }
+    },
+    "response": {
+      "pageTitle": "Customer Satisfaction Survey",
+      "invalidTitle": "Survey unavailable",
+      "invalidMessage": "This feedback link is no longer valid or has already been used.",
+      "ratingPrompt": "How was your experience?",
+      "ratingAssistive": "Select a score from 1 to {{scale}}",
+      "commentLabel": "Additional comments (optional)",
+      "submitButton": "Submit feedback",
+      "submitting": "Submitting feedback…",
+      "submittedTitle": "Thank you for your response!",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Try again",
+      "ratingSubmitted": "Feedback submitted",
+      "errorMessage": "We could not record your feedback. Please try again.",
+      "selectRatingError": "Select a rating before submitting.",
+      "supportMessage": "If you have questions, please contact your technician."
     }
   }
 }

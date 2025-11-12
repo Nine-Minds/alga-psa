@@ -44,6 +44,17 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
   };
 }
 
+// Helper function to safely publish events
+async function safePublishEvent(eventType: string, payload: any) {
+  try {
+    const event = { eventType, payload };
+
+    await getEventBus().publish(event);
+    await getEventBus().publish(event, { channel: getEmailEventChannel() });
+  } catch (error) {
+    console.error(`Failed to publish ${eventType} event:`, error);
+  }
+}
 interface CreateTicketFromAssetData {
     title: string;
     description: string;
