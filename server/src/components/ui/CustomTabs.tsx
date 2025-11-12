@@ -25,10 +25,6 @@ export interface CustomTabsProps {
    * Optional prefix applied to tab trigger ids to satisfy unique id requirements
    */
   idPrefix?: string;
-  /**
-   * Optional prefix applied to tab trigger ids to satisfy unique id requirements
-   */
-  idPrefix?: string;
   orientation?: 'horizontal' | 'vertical';
 }
 
@@ -42,8 +38,6 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   orientation = 'horizontal',
 }) => {
   const [value, setValue] = React.useState(defaultTab || tabs[0].label);
-  const generatedId = React.useId();
-  const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
   const generatedId = React.useId();
   const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
 
@@ -83,7 +77,6 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
         {tabs.map((tab, index): JSX.Element => (
           <Tabs.Trigger
             key={tab.label}
-            id={`${prefix}-trigger-${index}`}
             id={`${prefix}-trigger-${index}`}
             className={`${defaultTriggerClass} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
             value={tab.label}
